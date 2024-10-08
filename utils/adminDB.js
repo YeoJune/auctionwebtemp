@@ -1,10 +1,11 @@
+// utils/adminDB.js
 const pool = require('./DB');
 const logger = require('./logger');
 
 async function initializeAdminTables() {
   const conn = await pool.getConnection();
   try {
-    // Admin settings table
+    // Admin settings table (unchanged)
     await conn.query(`
       CREATE TABLE IF NOT EXISTS admin_settings (
         id INT PRIMARY KEY AUTO_INCREMENT,
@@ -14,7 +15,7 @@ async function initializeAdminTables() {
       )
     `);
 
-    // Insert default admin settings if not exist
+    // Insert default admin settings if not exist (unchanged)
     const [settingsRows] = await conn.query('SELECT * FROM admin_settings WHERE id = 1');
     if (settingsRows.length === 0) {
       await conn.query(`
@@ -23,12 +24,13 @@ async function initializeAdminTables() {
       `, ['00:00']);
     }
 
-    // Notices table
+    // Updated notices table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS notices (
         id INT PRIMARY KEY AUTO_INCREMENT,
         title VARCHAR(255) NOT NULL,
         content TEXT NOT NULL,
+        image_url VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
@@ -101,14 +103,14 @@ async function getNotices() {
   }
 }
 
-async function addNotice(title, content) {
+async function addNotice(title, content, imageUrl) {
   const conn = await pool.getConnection();
   try {
     const [result] = await conn.query(
-      'INSERT INTO notices (title, content) VALUES (?, ?)',
-      [title, content]
+      'INSERT INTO notices (title, content, image_url) VALUES (?, ?, ?)',
+      [title, content, imageUrl]
     );
-    return { id: result.insertId, title, content };
+    return { id: result.insertId, title, content, imageUrl };
   } catch (error) {
     logger.error('Error adding notice:', error);
     throw error;
@@ -117,14 +119,14 @@ async function addNotice(title, content) {
   }
 }
 
-async function updateNotice(id, title, content) {
+async function updateNotice(id, title, content, imageUrl) {
   const conn = await pool.getConnection();
   try {
     const [result] = await conn.query(
-      'UPDATE notices SET title = ?, content = ? WHERE id = ?',
-      [title, content, id]
+      'UPDATE notices SET title = ?, content = ?, image_url = ? WHERE id = ?',
+      [title, content, imageUrl, id]
     );
-    return result.affectedRows > 0 ? { id, title, content } : null;
+    return result.affectedRows > 0 ? { id, title, content, imageUrl } : null;
   } catch (error) {
     logger.error('Error updating notice:', error);
     throw error;

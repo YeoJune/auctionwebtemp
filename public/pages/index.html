@@ -124,15 +124,14 @@
             <ul id="noticeList"></ul>
         </div>
     </div>
-
-    <!-- Notice Detail Modal -->
     <div id="noticeDetailModal" class="modal">
         <div class="modal-content">
             <div>
                 <span class="close" onclick="document.querySelector('#noticeDetailModal').style.display = 'none'">&times;</span>
                 <h2 id="noticeTitle"></h2>
             </div>
-            <p id="noticeContent"></p>
+            <div id="noticeContent"></div>
+            <img id="noticeImage" src="" alt="Notice image" style="max-width: 100%; margin-top: 10px; display: none;">
         </div>
     </div>
     <script>
@@ -771,7 +770,12 @@
                 alert('로그아웃 중 오류가 발생했습니다.');
             }
         }
-        
+
+        function showNoticeModal() {
+            const modal = document.getElementById('noticeModal');
+            modal.style.display = 'block';
+        }
+
         async function fetchNotices() {
             try {
                 const response = await fetchWithAuth(`${API_URL}/admin/notices`);
@@ -794,19 +798,22 @@
                 noticeList.appendChild(li);
             });
         }
-
-        function showNoticeModal() {
-            const modal = document.getElementById('noticeModal');
-            modal.style.display = 'block';
-        }
-
         function showNoticeDetailModal(notice) {
             const modal = document.getElementById('noticeDetailModal');
             const title = document.getElementById('noticeTitle');
             const content = document.getElementById('noticeContent');
+            const image = document.getElementById('noticeImage');
             
             title.textContent = notice.title;
-            content.textContent = notice.content;
+            content.innerHTML = notice.content.replace(/\n/g, '<br>');
+            
+            if (notice.image_url) {
+                image.src = notice.image_url;
+                image.style.display = 'block';
+            } else {
+                image.style.display = 'none';
+            }
+            
             modal.style.display = 'block';
         }
 

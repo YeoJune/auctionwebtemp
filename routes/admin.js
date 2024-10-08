@@ -1,3 +1,4 @@
+// routes/admin.js
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
@@ -6,19 +7,19 @@ const fs = require('fs');
 const logger = require('../utils/logger');
 const { getAdminSettings, updateAdminSettings, getNotices, addNotice, updateNotice, deleteNotice } = require('../utils/adminDB');
 
-// Multer configuration for logo upload
+// Multer configuration for image uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'public/images/')
+    cb(null, 'public/images/notices/')
   },
   filename: function (req, file, cb) {
-    cb(null, 'logo.png')
+    cb(null, Date.now() + path.extname(file.originalname))
   }
 });
 
 const upload = multer({ storage: storage });
 
-// Middleware to check if user is admin
+// Middleware to check if user is admin (unchanged)
 const isAdmin = (req, res, next) => {
   if (req.session.user && req.session.user.id === 'admin') {
     next();
@@ -64,7 +65,7 @@ router.post('/settings', isAdmin, async (req, res) => {
   }
 });
 
-// New routes for notice board functionality
+// Updated routes for notice board functionality
 router.get('/notices', async (req, res) => {
   try {
     const notices = await getNotices();
@@ -75,13 +76,14 @@ router.get('/notices', async (req, res) => {
   }
 });
 
-router.post('/notices', isAdmin, async (req, res) => {
+router.post('/notices', isAdmin, upload.single('image'), async (req, res) => {
   try {
     const { title, content } = req.body;
     if (!title || !content) {
       return res.status(400).json({ message: 'Title and content are required' });
     }
-    const newNotice = await addNotice(title, content);
+    const imageUrl = req.file ? `/images/notices/${req.file.filename}` : null;
+    const newNotice = await addNotice(title, content, imageUrl);
     res.status(201).json(newNotice);
   } catch (error) {
     logger.error('Error adding notice:', error);
@@ -89,14 +91,15 @@ router.post('/notices', isAdmin, async (req, res) => {
   }
 });
 
-router.put('/notices/:id', isAdmin, async (req, res) => {
+router.put('/notices/:id', isAdmin, upload.single('image'), async (req, res) => {
   try {
     const { id } = req.params;
     const { title, content } = req.body;
     if (!title || !content) {
       return res.status(400).json({ message: 'Title and content are required' });
     }
-    const updatedNotice = await updateNotice(id, title, content);
+    const imageUrl = req.file ? `/images/notices/${req.file.filename}` : req.body.existingImageUrl;
+    const updatedNotice = await updateNotice(id, title, content, imageUrl);
     if (!updatedNotice) {
       return res.status(404).json({ message: 'Notice not found' });
     }

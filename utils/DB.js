@@ -21,9 +21,8 @@ async function testConnection() {
     console.log('Successfully connected to the database');
     
     const [rows, fields] = await conn.query(`
-      DELETE FROM crawled_items
-WHERE auc_num = 1
-  AND (DAYOFWEEK(scheduled_date) = 3 OR DAYOFWEEK(scheduled_date) = 5);
+      ALTER TABLE notices
+ADD COLUMN image_url VARCHAR(255) AFTER content;
     `);
     console.log('Query executed successfully. Result:', rows);
 
