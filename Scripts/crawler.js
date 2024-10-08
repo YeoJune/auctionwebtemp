@@ -214,8 +214,8 @@ class Crawler {
 
   async initialize() {
     this.browser = await puppeteer.launch({
-      headless: 'shell',
-      args: ['--enable-gpu'],
+      headless: false,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--window-size=1920,1080']
     });
     this.browser.userAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36');
     this.page = await this.browser.newPage();
