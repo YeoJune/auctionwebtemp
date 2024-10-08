@@ -129,7 +129,7 @@ class Crawler {
   
         const translateJapanesePhrase = async () => {
           if (japanesePhrase.length > 0) {
-            const [translation] = await this.translater.translate(japanesePhrase.join(' '), 'ko');
+            const [translation] = await this.translater.translate(japanesePhrase.join(' '), {to: 'ko'});
             translatedWords.push(translation);
             japanesePhrase = [];
           }
