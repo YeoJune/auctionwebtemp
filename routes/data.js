@@ -5,6 +5,7 @@ const pool = require('../utils/DB');
 const logger = require('../utils/logger');
 const MyGoogleSheetsManager = require('../utils/googleSheets');
 
+
 router.get('/', async (req, res) => {
   const { page = 1, limit = 20, brands, categories, scheduledDates, wishlistOnly, aucNums, bidOnly } = req.query;
   const offset = (page - 1) * limit;
@@ -22,6 +23,9 @@ router.get('/', async (req, res) => {
   } else {
     query += ' WHERE 1=1';
   }
+
+  // Add condition to exclude auc_num = 1 on Tuesdays and Thursdays
+  query += ' AND NOT (ci.auc_num = 1 AND DAYOFWEEK(ci.scheduled_date) IN (3, 5))';
 
   if (brands) {
     const brandList = brands.split(',');
