@@ -21,8 +21,9 @@
                 </div>
             </div>
             <div class="notice-container">
-                <h3>공지사항</h3>
-                <p id="noticeContent">공지사항을 불러오고 있습니다...</p>
+                <button id="showNoticesBtn" class="">
+                    공지사항 보기
+                </button>
             </div>
         </div>
         <div class="filters">
@@ -111,6 +112,27 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+    
+    <div id="noticeModal" class="modal">
+        <div class="modal-content">
+            <div>
+                <span class="close" onclick="document.querySelector('#noticeModal').style.display = 'none'">&times;</span>
+                <h2>공지사항</h2>
+            </div>
+            <ul id="noticeList"></ul>
+        </div>
+    </div>
+
+    <!-- Notice Detail Modal -->
+    <div id="noticeDetailModal" class="modal">
+        <div class="modal-content">
+            <div>
+                <span class="close" onclick="document.querySelector('#noticeDetailModal').style.display = 'none'">&times;</span>
+                <h2 id="noticeTitle"></h2>
+            </div>
+            <p id="noticeContent"></p>
         </div>
     </div>
     <script>
@@ -455,6 +477,7 @@
                     <div class="product-header">
                         <div>
                             <div class="product-brand">${item.brand}</div>
+                            <div class="auctioneer-number">${item.auc_num}번</div>
                         </div>
                         <h3 class="product-title">${item.korean_title}</h3>
                     </div>
@@ -748,17 +771,51 @@
                 alert('로그아웃 중 오류가 발생했습니다.');
             }
         }
-        async function fetchNotice() {
+        
+        async function fetchNotices() {
             try {
-                const response = await fetchWithAuth(`${API_URL}/admin/settings`);
+                const response = await fetchWithAuth(`${API_URL}/admin/notices`);
                 if (response.ok) {
-                    const data = await response.json();
-                    document.getElementById('noticeContent').textContent = data.notice || '공지사항이 없습니다.';
+                    const notices = await response.json();
+                    displayNotices(notices);
                 }
             } catch (error) {
-                console.error('Error fetching notice:', error);
+                console.error('Error fetching notices:', error);
             }
         }
+
+        function displayNotices(notices) {
+            const noticeList = document.getElementById('noticeList');
+            noticeList.innerHTML = '';
+            notices.forEach(notice => {
+                const li = document.createElement('li');
+                li.textContent = notice.title;
+                li.addEventListener('click', () => showNoticeDetailModal(notice));
+                noticeList.appendChild(li);
+            });
+        }
+
+        function showNoticeModal() {
+            const modal = document.getElementById('noticeModal');
+            modal.style.display = 'block';
+        }
+
+        function showNoticeDetailModal(notice) {
+            const modal = document.getElementById('noticeDetailModal');
+            const title = document.getElementById('noticeTitle');
+            const content = document.getElementById('noticeContent');
+            
+            title.textContent = notice.title;
+            content.textContent = notice.content;
+            modal.style.display = 'block';
+        }
+
+        // 이벤트 리스너 설정
+        document.getElementById('showNoticesBtn').addEventListener('click', (event) => {
+            event.preventDefault();
+            fetchNotices();
+            showNoticeModal();
+        });
 
         // 이벤트 리스너 설정
         applyFiltersBtn.addEventListener('click', (event) => {
@@ -801,7 +858,7 @@
         async function init() {
             await checkAuthStatus();
             await fetchFilters();
-            await fetchNotice();
+            await fetchNotices();
             await fetchData();
         }
 

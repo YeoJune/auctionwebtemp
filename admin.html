@@ -32,14 +32,16 @@
         </div>
 
         <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-            <h2 class="text-xl font-semibold mb-4">Notice</h2>
+            <h2 class="text-xl font-semibold mb-4">Notices</h2>
             <form id="noticeForm" class="mb-4">
-                <textarea id="noticeInput" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-2" rows="4"></textarea>
+                <input type="hidden" id="noticeId">
+                <input type="text" id="noticeTitle" placeholder="Notice Title" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-2">
+                <textarea id="noticeContent" placeholder="Notice Content" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-2" rows="4"></textarea>
                 <button type="submit" class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded">
-                    Update Notice
+                    Add/Update Notice
                 </button>
             </form>
-            <p id="currentNotice" class="text-gray-600"></p>
+            <div id="noticeList" class="space-y-2"></div>
         </div>
     </div>
 
@@ -51,9 +53,30 @@
                 .then(data => {
                     document.getElementById('scheduleInput').value = data.crawlSchedule;
                     document.getElementById('currentSchedule').textContent = `Current schedule: ${data.crawlSchedule}`;
-                    document.getElementById('noticeInput').value = data.notice;
-                    document.getElementById('currentNotice').textContent = `Current notice: ${data.notice}`;
                 });
+
+            // Load notices
+            function loadNotices() {
+                fetch('/api/admin/notices')
+                    .then(response => response.json())
+                    .then(notices => {
+                        const noticeList = document.getElementById('noticeList');
+                        noticeList.innerHTML = '';
+                        notices.forEach(notice => {
+                            const noticeElement = document.createElement('div');
+                            noticeElement.className = 'bg-gray-100 p-2 rounded';
+                            noticeElement.innerHTML = `
+                                <h3 class="font-bold">${notice.title}</h3>
+                                <p>${notice.content}</p>
+                                <button class="edit-notice bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded mr-2" data-id="${notice.id}">Edit</button>
+                                <button class="delete-notice bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded" data-id="${notice.id}">Delete</button>
+                            `;
+                            noticeList.appendChild(noticeElement);
+                        });
+                    });
+            }
+
+            loadNotices();
 
             // Logo upload
             document.getElementById('logoForm').addEventListener('submit', function(e) {
@@ -86,9 +109,6 @@
                     if (settings.crawlSchedule) {
                         document.getElementById('currentSchedule').textContent = `Current schedule: ${settings.crawlSchedule}`;
                     }
-                    if (settings.notice) {
-                        document.getElementById('currentNotice').textContent = `Current notice: ${settings.notice}`;
-                    }
                 })
                 .catch(error => console.error('Error:', error));
             }
@@ -100,12 +120,85 @@
                 updateSettings({ crawlSchedule: schedule });
             });
 
-            // Notice
+            // Notice form
             document.getElementById('noticeForm').addEventListener('submit', function(e) {
                 e.preventDefault();
-                const notice = document.getElementById('noticeInput').value;
-                updateSettings({ notice: notice });
+                const id = document.getElementById('noticeId').value;
+                const title = document.getElementById('noticeTitle').value;
+                const content = document.getElementById('noticeContent').value;
+
+                if (id) {
+                    // Update existing notice
+                    fetch(`/api/admin/notices/${id}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ title, content }),
+                    })
+                    .then(response => response.json())
+                    .then(() => {
+                        alert('Notice updated successfully');
+                        loadNotices();
+                        resetNoticeForm();
+                    })
+                    .catch(error => console.error('Error:', error));
+                } else {
+                    // Add new notice
+                    fetch('/api/admin/notices', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ title, content }),
+                    })
+                    .then(response => response.json())
+                    .then(() => {
+                        alert('Notice added successfully');
+                        loadNotices();
+                        resetNoticeForm();
+                    })
+                    .catch(error => console.error('Error:', error));
+                }
             });
+
+            // Edit notice
+            document.getElementById('noticeList').addEventListener('click', function(e) {
+                if (e.target.classList.contains('edit-notice')) {
+                    const id = e.target.getAttribute('data-id');
+                    const noticeElement = e.target.closest('div');
+                    const title = noticeElement.querySelector('h3').textContent;
+                    const content = noticeElement.querySelector('p').textContent;
+
+                    document.getElementById('noticeId').value = id;
+                    document.getElementById('noticeTitle').value = title;
+                    document.getElementById('noticeContent').value = content;
+                }
+            });
+
+            // Delete notice
+            document.getElementById('noticeList').addEventListener('click', function(e) {
+                if (e.target.classList.contains('delete-notice')) {
+                    const id = e.target.getAttribute('data-id');
+                    if (confirm('Are you sure you want to delete this notice?')) {
+                        fetch(`/api/admin/notices/${id}`, {
+                            method: 'DELETE',
+                        })
+                        .then(response => response.json())
+                        .then(() => {
+                            alert('Notice deleted successfully');
+                            loadNotices();
+                        })
+                        .catch(error => console.error('Error:', error));
+                    }
+                }
+            });
+
+            function resetNoticeForm() {
+                document.getElementById('noticeId').value = '';
+                document.getElementById('noticeTitle').value = '';
+                document.getElementById('noticeContent').value = '';
+            }
         });
     </script>
 </body>

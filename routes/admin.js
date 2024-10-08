@@ -4,7 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const logger = require('../utils/logger');
-const { getAdminSettings, updateAdminSettings } = require('../utils/adminDB');
+const { getAdminSettings, updateAdminSettings, getNotices, addNotice, updateNotice, deleteNotice } = require('../utils/adminDB');
 
 // Multer configuration for logo upload
 const storage = multer.diskStorage({
@@ -50,17 +50,74 @@ router.get('/settings', async (req, res) => {
     res.status(500).json({ message: 'Error getting admin settings' });
   }
 });
+
 router.post('/settings', isAdmin, async (req, res) => {
   try {
     const settings = {};
     if (req.body.crawlSchedule !== undefined) settings.crawlSchedule = req.body.crawlSchedule;
-    if (req.body.notice !== undefined) settings.notice = req.body.notice;
-
+    
     await updateAdminSettings(settings);
     res.json({ message: 'Settings updated successfully' });
   } catch (error) {
     logger.error('Error updating admin settings:', error);
     res.status(500).json({ message: 'Error updating admin settings' });
+  }
+});
+
+// New routes for notice board functionality
+router.get('/notices', async (req, res) => {
+  try {
+    const notices = await getNotices();
+    res.json(notices);
+  } catch (error) {
+    logger.error('Error getting notices:', error);
+    res.status(500).json({ message: 'Error getting notices' });
+  }
+});
+
+router.post('/notices', isAdmin, async (req, res) => {
+  try {
+    const { title, content } = req.body;
+    if (!title || !content) {
+      return res.status(400).json({ message: 'Title and content are required' });
+    }
+    const newNotice = await addNotice(title, content);
+    res.status(201).json(newNotice);
+  } catch (error) {
+    logger.error('Error adding notice:', error);
+    res.status(500).json({ message: 'Error adding notice' });
+  }
+});
+
+router.put('/notices/:id', isAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, content } = req.body;
+    if (!title || !content) {
+      return res.status(400).json({ message: 'Title and content are required' });
+    }
+    const updatedNotice = await updateNotice(id, title, content);
+    if (!updatedNotice) {
+      return res.status(404).json({ message: 'Notice not found' });
+    }
+    res.json(updatedNotice);
+  } catch (error) {
+    logger.error('Error updating notice:', error);
+    res.status(500).json({ message: 'Error updating notice' });
+  }
+});
+
+router.delete('/notices/:id', isAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await deleteNotice(id);
+    if (!result) {
+      return res.status(404).json({ message: 'Notice not found' });
+    }
+    res.json({ message: 'Notice deleted successfully' });
+  } catch (error) {
+    logger.error('Error deleting notice:', error);
+    res.status(500).json({ message: 'Error deleting notice' });
   }
 });
 

@@ -21,7 +21,9 @@ async function testConnection() {
     console.log('Successfully connected to the database');
     
     const [rows, fields] = await conn.query(`
-      TRUNCATE TABLE bids
+      DELETE FROM crawled_items
+WHERE auc_num = 1
+  AND (DAYOFWEEK(scheduled_date) = 3 OR DAYOFWEEK(scheduled_date) = 5);
     `);
     console.log('Query executed successfully. Result:', rows);
 

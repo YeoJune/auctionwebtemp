@@ -1,30 +1,42 @@
 const pool = require('./DB');
 const logger = require('./logger');
 
-async function initializeAdminTable() {
+async function initializeAdminTables() {
   const conn = await pool.getConnection();
   try {
+    // Admin settings table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS admin_settings (
         id INT PRIMARY KEY AUTO_INCREMENT,
         crawl_schedule VARCHAR(5) NOT NULL,
-        notice TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
     `);
 
-    const [rows] = await conn.query('SELECT * FROM admin_settings WHERE id = 1');
-    if (rows.length === 0) {
+    // Insert default admin settings if not exist
+    const [settingsRows] = await conn.query('SELECT * FROM admin_settings WHERE id = 1');
+    if (settingsRows.length === 0) {
       await conn.query(`
-        INSERT INTO admin_settings (crawl_schedule, notice) 
-        VALUES (?, ?)
-      `, ['00:00', 'Welcome to our website!']);
+        INSERT INTO admin_settings (crawl_schedule) 
+        VALUES (?)
+      `, ['00:00']);
     }
 
-    logger.info('Admin settings table initialized successfully');
+    // Notices table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS notices (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        title VARCHAR(255) NOT NULL,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+
+    logger.info('Admin tables initialized successfully');
   } catch (error) {
-    logger.error('Error initializing admin settings table:', error);
+    logger.error('Error initializing admin tables:', error);
   } finally {
     conn.release();
   }
@@ -36,8 +48,7 @@ async function getAdminSettings() {
     const [rows] = await conn.query('SELECT * FROM admin_settings WHERE id = 1');
     if (rows.length > 0) {
       return {
-        crawlSchedule: rows[0].crawl_schedule,
-        notice: rows[0].notice
+        crawlSchedule: rows[0].crawl_schedule
       };
     }
     return null;
@@ -59,15 +70,14 @@ async function updateAdminSettings(settings) {
     }
 
     const updatedSettings = {
-      crawl_schedule: settings.crawlSchedule || currentSettings[0].crawl_schedule,
-      notice: settings.notice || currentSettings[0].notice
+      crawl_schedule: settings.crawlSchedule || currentSettings[0].crawl_schedule
     };
 
     await conn.query(`
       UPDATE admin_settings 
-      SET crawl_schedule = ?, notice = ? 
+      SET crawl_schedule = ?
       WHERE id = 1
-    `, [updatedSettings.crawl_schedule, updatedSettings.notice]);
+    `, [updatedSettings.crawl_schedule]);
 
     logger.info('Admin settings updated successfully');
   } catch (error) {
@@ -78,10 +88,72 @@ async function updateAdminSettings(settings) {
   }
 }
 
-// Initialize the table when this module is imported
-initializeAdminTable();
+async function getNotices() {
+  const conn = await pool.getConnection();
+  try {
+    const [rows] = await conn.query('SELECT * FROM notices ORDER BY created_at DESC');
+    return rows;
+  } catch (error) {
+    logger.error('Error getting notices:', error);
+    throw error;
+  } finally {
+    conn.release();
+  }
+}
+
+async function addNotice(title, content) {
+  const conn = await pool.getConnection();
+  try {
+    const [result] = await conn.query(
+      'INSERT INTO notices (title, content) VALUES (?, ?)',
+      [title, content]
+    );
+    return { id: result.insertId, title, content };
+  } catch (error) {
+    logger.error('Error adding notice:', error);
+    throw error;
+  } finally {
+    conn.release();
+  }
+}
+
+async function updateNotice(id, title, content) {
+  const conn = await pool.getConnection();
+  try {
+    const [result] = await conn.query(
+      'UPDATE notices SET title = ?, content = ? WHERE id = ?',
+      [title, content, id]
+    );
+    return result.affectedRows > 0 ? { id, title, content } : null;
+  } catch (error) {
+    logger.error('Error updating notice:', error);
+    throw error;
+  } finally {
+    conn.release();
+  }
+}
+
+async function deleteNotice(id) {
+  const conn = await pool.getConnection();
+  try {
+    const [result] = await conn.query('DELETE FROM notices WHERE id = ?', [id]);
+    return result.affectedRows > 0;
+  } catch (error) {
+    logger.error('Error deleting notice:', error);
+    throw error;
+  } finally {
+    conn.release();
+  }
+}
+
+// Initialize the tables when this module is imported
+initializeAdminTables();
 
 module.exports = {
   getAdminSettings,
-  updateAdminSettings
+  updateAdminSettings,
+  getNotices,
+  addNotice,
+  updateNotice,
+  deleteNotice
 };
