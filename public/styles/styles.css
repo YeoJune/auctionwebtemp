@@ -59,6 +59,11 @@ button:disabled {
     display: flex;
     flex-direction: column;
     max-width: 18em; /* 카드의 최대 너비 설정 */
+    cursor: pointer;
+    transition: box-shadow 0.3s ease;
+}
+.product-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 .auctioneer-number {
     font-size: 0.75em;

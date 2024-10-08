@@ -468,13 +468,17 @@
                             <button class="wishlist-btn ${isWishlisted ? 'active' : ''}" onclick="toggleWishlist('${item.item_id}')">
                                 <i class="fas fa-star"></i>
                             </button>
-                            <button class="details-btn" onclick="showDetails('${item.item_id}')">
-                                <i class="fas fa-ellipsis-h"></i>
-                            </button>
                         </div>
                     </div>
                 `;
-                
+
+                // 카드 전체에 클릭 이벤트 추가
+                card.addEventListener('click', (event) => {
+                    // 위시리스트 버튼 클릭 시 이벤트 전파 방지
+                    if (!event.target.closest('.wishlist-btn')) {
+                        showDetails(item.item_id);
+                    }
+                });
 
                 dataBody.appendChild(card);
             });
