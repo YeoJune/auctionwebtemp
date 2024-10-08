@@ -28,21 +28,24 @@ async function processQueue() {
   const { itemId, res } = queue.shift();
 
   try {
-    const [items] = await pool.query('SELECT auc_num FROM crawled_items WHERE item_id = ?', [itemId]);
-    
+    const [items] = await pool.query('SELECT * FROM crawled_items WHERE item_id = ?', [itemId]);
     if (items.length === 0) {
       res.status(404).json({ message: 'Item not found' });
     } else {
-      const crawler = items[0].auc_num == 1 ? ecoAucCrawler : brandAuctionCrawler;
-      const crawledDetails = await crawler.crawlItemDetails(itemId);
-
-      if (crawledDetails) {
-        await DBManager.updateItemDetails(itemId, crawledDetails);
-        
-        const [updatedItems] = await pool.query('SELECT * FROM crawled_items WHERE item_id = ?', [itemId]);
-        res.json(updatedItems[0]);
+      if (items[0].description) {
+        res.json(items[0]);
       } else {
-        res.status(500).json({ message: 'Failed to crawl item details' });
+        const crawler = items[0].auc_num == 1 ? ecoAucCrawler : brandAuctionCrawler;
+        const crawledDetails = await crawler.crawlItemDetails(itemId);
+  
+        if (crawledDetails) {
+          await DBManager.updateItemDetails(itemId, crawledDetails);
+          
+          const [updatedItems] = await pool.query('SELECT * FROM crawled_items WHERE item_id = ?', [itemId]);
+          res.json(updatedItems[0]);
+        } else {
+          res.status(500).json({ message: 'Failed to crawl item details' });
+        }
       }
     }
   } catch (error) {

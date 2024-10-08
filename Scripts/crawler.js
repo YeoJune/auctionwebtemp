@@ -1,8 +1,8 @@
 // Scripts/crawler.js
 const dotenv = require('dotenv');
-const {Translate} = require('@google-cloud/translate').v2;
+const AWS = require('aws-sdk');
 const puppeteer = require('puppeteer');
-const MyDBManager = require('../utils/DBManager');
+const translate = new AWS.Translate();
 
 let pLimit;
 (async () => {
@@ -98,7 +98,6 @@ class Crawler {
     this.maxRetries = 3;
     this.retryDelay = 1000;
     this.pageTimeout = 60000;
-    this.translater = new Translate({key: process.env.GOOGLE_TRANSLATE_API_KEY});
     this.isRefreshing = false;
     this.isLogin = false;
   }
@@ -121,6 +120,22 @@ class Crawler {
   async translate(text) {
     return this.retryOperation(async () => {
       try {
+        const params = {
+          Text: text,
+          SourceLanguageCode: 'ja',
+          TargetLanguageCode: 'ko'
+        };
+        const result = await translate.translateText(params).promise();
+        return result.TranslatedText;
+      } catch (error) {
+        console.error('Translation error:', error.message);
+        return text;
+      }
+    });
+  }
+  async translate2(text) {
+    return this.retryOperation(async () => {
+      try {
         const words = text.split(/\s+/);
         const translatedWords = [];
         let japanesePhrase = [];
@@ -129,7 +144,7 @@ class Crawler {
   
         const translateJapanesePhrase = async () => {
           if (japanesePhrase.length > 0) {
-            const [translation] = await this.translater.translate(japanesePhrase.join(' '), {to: 'ko'});
+            const [translation] = await this.translate_raw(japanesePhrase.join(' '));
             translatedWords.push(translation);
             japanesePhrase = [];
           }
@@ -215,7 +230,7 @@ class Crawler {
   async initialize() {
     this.browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--window-size=1920,1080']
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--window-size=1920,1080'],
     });
     this.browser.userAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36');
     this.page = await this.browser.newPage();
