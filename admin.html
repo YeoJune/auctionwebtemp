@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-8">Admin Dashboard</h1>
+        
+        <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+            <h2 class="text-xl font-semibold mb-4">Upload Logo</h2>
+            <form id="logoForm" class="mb-4">
+                <input type="file" id="logoFile" accept="image/png" class="mb-2">
+                <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                    Upload Logo
+                </button>
+            </form>
+        </div>
+
+        <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+            <h2 class="text-xl font-semibold mb-4">Crawling Schedule</h2>
+            <form id="scheduleForm" class="mb-4">
+                <input type="time" id="scheduleInput" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-2">
+                <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                    Update Schedule
+                </button>
+            </form>
+            <p id="currentSchedule" class="text-gray-600"></p>
+        </div>
+
+        <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+            <h2 class="text-xl font-semibold mb-4">Notice</h2>
+            <form id="noticeForm" class="mb-4">
+                <textarea id="noticeInput" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-2" rows="4"></textarea>
+                <button type="submit" class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded">
+                    Update Notice
+                </button>
+            </form>
+            <p id="currentNotice" class="text-gray-600"></p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load current settings
+            fetch('/api/admin/settings')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('scheduleInput').value = data.crawlSchedule;
+                    document.getElementById('currentSchedule').textContent = `Current schedule: ${data.crawlSchedule}`;
+                    document.getElementById('noticeInput').value = data.notice;
+                    document.getElementById('currentNotice').textContent = `Current notice: ${data.notice}`;
+                });
+
+            // Logo upload
+            document.getElementById('logoForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const fileInput = document.getElementById('logoFile');
+                const formData = new FormData();
+                formData.append('logo', fileInput.files[0]);
+
+                fetch('/api/admin/upload-logo', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => alert(data.message))
+                .catch(error => console.error('Error:', error));
+            });
+
+            // Update settings
+            function updateSettings(settings) {
+                fetch('/api/admin/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(settings),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                    if (settings.crawlSchedule) {
+                        document.getElementById('currentSchedule').textContent = `Current schedule: ${settings.crawlSchedule}`;
+                    }
+                    if (settings.notice) {
+                        document.getElementById('currentNotice').textContent = `Current notice: ${settings.notice}`;
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            }
+
+            // Crawling schedule
+            document.getElementById('scheduleForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const schedule = document.getElementById('scheduleInput').value;
+                updateSettings({ crawlSchedule: schedule });
+            });
+
+            // Notice
+            document.getElementById('noticeForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const notice = document.getElementById('noticeInput').value;
+                updateSettings({ notice: notice });
+            });
+        });
+    </script>
+</body>
+</html>
