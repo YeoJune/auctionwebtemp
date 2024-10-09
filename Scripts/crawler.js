@@ -1,16 +1,16 @@
 // Scripts/crawler.js
 const dotenv = require('dotenv');
 const AWS = require('aws-sdk');
-const puppeteer = require('puppeteer-extra');
+const puppeteer = require('puppeteer');
 const translate = new AWS.Translate();
-const steelthPlugin = require('puppeteer-extra-plugin-stealth');
+//const steelthPlugin = require('puppeteer-extra-plugin-stealth');
 
 let pLimit;
 (async () => {
   pLimit = (await import('p-limit')).default;
 })();
 
-puppeteer.use(steelthPlugin());
+//puppeteer.use(steelthPlugin());
 dotenv.config();
 
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36';
@@ -97,7 +97,7 @@ const brandAuctionConfig = {
 class Crawler {
   constructor(siteConfig) {
     this.config = siteConfig;
-    this.maxRetries = 1;
+    this.maxRetries = 3;
     this.retryDelay = 1000;
     this.pageTimeout = 60000;
     this.isRefreshing = false;
@@ -440,6 +440,22 @@ class Crawler {
 }
 
 class BrandAuctionCrawler extends Crawler {
+  async initialize() {
+    this.crawlerBrowser = await puppeteer.launch({
+      headless: 'false',
+      args: ['--no-sandbox', '--disable-setuid-sandbox', `--user-agent=${USER_AGENT}`, '--use-gl=angle', '--enable-unsafe-webgpu'],
+    });
+    this.crawlerPage = (await this.crawlerBrowser.pages())[0];
+
+    await this.initPage(this.crawlerPage);
+    
+    const detailInitPromises = Array(this.detailMulti).fill().map(() => this.initializeDetail());
+    const detailResults = await Promise.all(detailInitPromises);
+
+    this.detailBrowsers = detailResults.map(result => result.browser);
+    this.detailPages = detailResults.map(result => result.page);
+    console.log('complete to initialize!');
+  }
   async initializeDetail() {
     const browser = await puppeteer.launch({
       headless: 'false',
@@ -605,7 +621,7 @@ class BrandAuctionCrawler extends Crawler {
 const ecoAucCrawler = new Crawler(ecoAucConfig);
 const brandAuctionCrawler = new BrandAuctionCrawler(brandAuctionConfig);
 
-//ecoAucCrawler.loginCheck();
-//brandAuctionCrawler.loginCheck();
+ecoAucCrawler.loginCheck();
+brandAuctionCrawler.loginCheck();
 
 module.exports = { ecoAucCrawler, brandAuctionCrawler };
