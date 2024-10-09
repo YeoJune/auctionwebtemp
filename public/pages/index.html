@@ -483,6 +483,7 @@
                     <img src="${item.image}" alt="${item.korean_title} 이미지" class="product-image">
                     <div class="product-details">
                         <p class="scheduled-date">예정일: ${item.scheduled_date ? formatDate(item.scheduled_date) : '-'}</p>
+                        <p class="scheduled-date">랭크: ${item.rank}</p>
                         <div class="bid-section">
                             ${bidInfo ? getBidSectionHTML(bidInfo, item.item_id) : getDefaultBidSectionHTML(item.item_id)}
                         </div>
