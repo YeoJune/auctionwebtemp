@@ -1,5 +1,7 @@
 // utils/DBManager.js
 const pool = require('./DB');
+const fs = require('fs').promises;
+const path = require('path');
 
 class DatabaseManager {
   constructor(pool) {
