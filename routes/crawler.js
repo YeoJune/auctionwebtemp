@@ -173,16 +173,17 @@ async function crawlAll() {
       let ecoAucItems = await ecoAucCrawler.crawlAllItems();
       ecoAucItems = await processCrawledItems(ecoAucItems);
       ecoAucCrawler.isRefreshing = false;
-
+      /*
       brandAuctionCrawler.isRefreshing = true;
       let brandAuctionItems = await brandAuctionCrawler.crawlAllItems();
       brandAuctionItems = await processCrawledItems(brandAuctionItems);
       brandAuctionCrawler.isRefreshing = false;
-
       if (!ecoAucItems) ecoAucItems = [];
       if (!brandAuctionItems) brandAuctionItems = [];
 
       await DBManager.saveItems([...ecoAucItems, ...brandAuctionItems]);
+      */
+      await DBManager.saveItems(ecoAucItems);
     }
   } catch (error) {
     ecoAucCrawler.isRefreshing = false;
