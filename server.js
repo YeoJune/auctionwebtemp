@@ -11,9 +11,6 @@ const crawlerRoutes = require('./routes/crawler');
 const bidRoutes = require('./routes/bid');
 const adminRoutes = require('./routes/admin');
 const logger = require('./utils/logger');
-const {ecoAucCrawler, brandAuctionCrawler} = require('./Scripts/crawler');
-const DBManager = require('./Scripts/crawler');
-const { getAdminSettings, updateAdminSettings } = require('./utils/adminDB');
 const pool = require('./utils/DB');
 
 const app = express();
@@ -84,32 +81,6 @@ app.get('/', (req, res) => {
 app.get('/signinPage', (req, res) => {
   res.sendFile(__dirname + '/public/pages/signin.html');
 });
-
-const scheduleCrawling = async () => {
-  const settings = await getAdminSettings();
-  if (settings && settings.crawlSchedule) {
-    const [hours, minutes] = settings.crawlSchedule.split(':');
-    cron.schedule(`${minutes} ${hours} * * *`, async () => {
-      logger.info('Running scheduled crawling task');
-      try {
-        let ecoAucItems = await ecoAucCrawler.refresh();
-        let brandAuctionItems = await brandAuctionCrawler.refresh();
-        if (!ecoAucItems) ecoAucItems = [];
-        if (!brandAuctionItems) brandAuctionItems = [];
-
-        await DBManager.saveData([...ecoAucItems, ...brandAuctionItems]);
-        logger.info('Scheduled crawling completed successfully');
-      } catch (error) {
-        logger.error('Scheduled crawling error:', error);
-      }
-    }, {
-      scheduled: true,
-      timezone: "Asia/Seoul"
-    });
-  }
-};
-
-scheduleCrawling();
 
 // 에러 핸들링 미들웨어
 app.use((err, req, res, next) => {

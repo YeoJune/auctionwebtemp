@@ -8,6 +8,7 @@ const { ecoAucCrawler, brandAuctionCrawler } = require('../Scripts/crawler');
 const DBManager = require('../utils/DBManager');
 const logger = require('../utils/logger');
 const pool = require('../utils/DB');
+const cron = require('node-cron');
 
 // 이미지 저장 경로 설정
 const IMAGE_DIR = path.join(__dirname, '..', 'public', 'images', 'products');
@@ -162,10 +163,10 @@ async function processCrawledItems(items) {
   return Promise.all(items.map(processImages));
 }
 
-router.get('/crawl', async (req, res) => {
+async function crawlAll() {
   try {
     if (ecoAucCrawler.isRefreshing || brandAuctionCrawler.isRefreshing) {
-      res.json({ message: `Crawling is already in progress` });
+      throw new Error("already crawling");
     } else {
       ecoAucCrawler.isRefreshing = true;
       let ecoAucItems = await ecoAucCrawler.crawlAllItems();
@@ -181,13 +182,21 @@ router.get('/crawl', async (req, res) => {
       if (!brandAuctionItems) brandAuctionItems = [];
 
       await DBManager.saveItems([...ecoAucItems, ...brandAuctionItems]);
-      
-      res.json({ message: 'Crawling and image processing completed successfully' });
     }
   } catch (error) {
-    logger.error('Crawling error:', error);
     ecoAucCrawler.isRefreshing = false;
     brandAuctionCrawler.isRefreshing = false;
+    throw (error);
+  }
+}
+
+router.get('/crawl', async (req, res) => {
+  try {
+    await crawlAll();
+
+    res.json({ message: 'Crawling and image processing completed successfully' });
+  } catch (error) {
+    logger.error('Crawling error:', error);
     res.status(500).json({ message: 'Error during crawling' });
   }
 });
@@ -196,5 +205,26 @@ router.post('/crawl-item-details/:itemId', (req, res) => {
   const { itemId } = req.params;
   addToQueue(itemId, res);
 });
+
+const scheduleCrawling = async () => {
+  const settings = await getAdminSettings();
+  if (settings && settings.crawlSchedule) {
+    const [hours, minutes] = settings.crawlSchedule.split(':');
+    cron.schedule(`${minutes} ${hours} * * *`, async () => {
+      logger.info('Running scheduled crawling task');
+      try {
+        crawlAll();
+        logger.info('Scheduled crawling completed successfully');
+      } catch (error) {
+        logger.error('Scheduled crawling error:', error);
+      }
+    }, {
+      scheduled: true,
+      timezone: "Asia/Seoul"
+    });
+  }
+};
+
+scheduleCrawling();
 
 module.exports = router;
