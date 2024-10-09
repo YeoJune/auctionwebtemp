@@ -52,7 +52,6 @@ async function processImages(item) {
     const savedImages = await Promise.all(additionalImages.map(downloadAndSaveImage));
     item.additional_images = JSON.stringify(savedImages.filter(img => img !== null));
   }
-  
   return item;
 }
 
@@ -64,7 +63,7 @@ async function processItem(itemId, res) {
       res.status(404).json({ message: 'Item not found' });
     } else {
       if (items[0].description) {
-        res.json(await processImages(items[0]));
+        res.json(items[0]);
       } else {
         const crawler = items[0].auc_num == 1 ? ecoAucCrawler : brandAuctionCrawler;
         const detailIndex = findAvailableIndex(items[0].auc_num);
