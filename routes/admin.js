@@ -1,11 +1,10 @@
-// routes/admin.js
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const logger = require('../utils/logger');
-const { getAdminSettings, updateAdminSettings, getNotices, addNotice, updateNotice, deleteNotice } = require('../utils/adminDB');
+const { getAdminSettings, updateAdminSettings, getNotices, getNoticeById, addNotice, updateNotice, deleteNotice, getFilterSettings, updateFilterSettings } = require('../utils/adminDB');
 
 // Multer configuration for image uploads
 const storage = multer.diskStorage({
@@ -32,7 +31,7 @@ router.get('/', isAdmin, (req, res) => {
   res.sendFile(path.join(__dirname, '../admin.html'));
 });
 
-// Route to upload logo
+// Route to upload logo (unchanged)
 router.post('/upload-logo', isAdmin, upload.single('logo'), (req, res) => {
   if (req.file) {
     res.json({ message: 'Logo uploaded successfully' });
@@ -41,7 +40,7 @@ router.post('/upload-logo', isAdmin, upload.single('logo'), (req, res) => {
   }
 });
 
-// Route to get admin settings
+// Route to get admin settings (unchanged)
 router.get('/settings', async (req, res) => {
   try {
     const settings = await getAdminSettings();
@@ -76,14 +75,39 @@ router.get('/notices', async (req, res) => {
   }
 });
 
-router.post('/notices', isAdmin, upload.array('images', 5), async (req, res) => {
+router.get('/notices/:id', async (req, res) => {
+  try {
+    const notice = await getNoticeById(req.params.id);
+    if (notice) {
+      res.json(notice);
+    } else {
+      res.status(404).json({ message: 'Notice not found' });
+    }
+  } catch (error) {
+    logger.error('Error getting notice:', error);
+    res.status(500).json({ message: 'Error getting notice' });
+  }
+});
+
+// New route for TinyMCE image upload
+router.post('/upload-image', isAdmin, upload.single('file'), (req, res) => {
+  if (req.file) {
+    res.json({
+      location: `/images/notices/${req.file.filename}`
+    });
+  } else {
+    res.status(400).json({ message: 'Image upload failed' });
+  }
+});
+
+// Updated route for adding notices
+router.post('/notices', isAdmin, async (req, res) => {
   try {
     const { title, content } = req.body;
     if (!title || !content) {
       return res.status(400).json({ message: 'Title and content are required' });
     }
-    const imageUrls = req.files.map(file => `/images/notices/${file.filename}`);
-    const newNotice = await addNotice(title, content, imageUrls);
+    const newNotice = await addNotice(title, content);
     res.status(201).json(newNotice);
   } catch (error) {
     logger.error('Error adding notice:', error);
@@ -91,16 +115,15 @@ router.post('/notices', isAdmin, upload.array('images', 5), async (req, res) => 
   }
 });
 
-router.put('/notices/:id', isAdmin, upload.array('images', 5), async (req, res) => {
+// Updated route for updating notices
+router.put('/notices/:id', isAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, content, existingImageUrls } = req.body;
+    const { title, content } = req.body;
     if (!title || !content) {
       return res.status(400).json({ message: 'Title and content are required' });
     }
-    const newImageUrls = req.files.map(file => `/images/notices/${file.filename}`);
-    const imageUrls = [...JSON.parse(existingImageUrls), ...newImageUrls];
-    const updatedNotice = await updateNotice(id, title, content, imageUrls);
+    const updatedNotice = await updateNotice(id, title, content);
     if (!updatedNotice) {
       return res.status(404).json({ message: 'Notice not found' });
     }
@@ -118,12 +141,14 @@ router.delete('/notices/:id', isAdmin, async (req, res) => {
     if (!result) {
       return res.status(404).json({ message: 'Notice not found' });
     }
-    res.json({ message: 'Notice deleted successfully' });
+    res.json({ message: 'Notice and associated images deleted successfully' });
   } catch (error) {
     logger.error('Error deleting notice:', error);
-    res.status(500).json({ message: 'Error deleting notice' });
+    res.status(500).json({ message: 'Error deleting notice and associated images' });
   }
 });
+
+// Filter settings routes (unchanged)
 router.get('/filter-settings', isAdmin, async (req, res) => {
   try {
     const settings = await getFilterSettings();
@@ -144,4 +169,5 @@ router.post('/filter-settings', isAdmin, async (req, res) => {
     res.status(500).json({ message: 'Error updating filter settings' });
   }
 });
+
 module.exports = router;

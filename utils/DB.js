@@ -20,8 +20,7 @@ async function testConnection() {
     conn = await pool.getConnection();
     console.log('Successfully connected to the database');
     
-    const [rows, fields] = await conn.query(`
-      TRUNCATE crawled_items
+    const [rows, fields] = await conn.query(`ALTER TABLE notices DROP COLUMN image_urls;
     `);
     console.log('Query executed successfully. Result:', rows);
 

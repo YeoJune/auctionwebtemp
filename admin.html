@@ -1,230 +1,280 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <title>관리자 페이지</title>
+    <script src="https://cdn.tiny.cloud/1/bm7j5h26v4rar1b9h0cmi7zx8easu0xpkyc8xabsuu0kwt63/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h2 { margin-top: 30px; }
+        input, select, button { margin: 5px 0; }
+        #noticeContent { width: 100%; }
+        #noticeList { margin-top: 20px; }
+        .notice-item { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+    </style>
 </head>
-<body class="bg-gray-100">
-    <div class="container mx-auto px-4 py-8">
-        <h1 class="text-3xl font-bold mb-8">Admin Dashboard</h1>
-        
-        <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-            <h2 class="text-xl font-semibold mb-4">Upload Logo</h2>
-            <form id="logoForm" class="mb-4">
-                <input type="file" id="logoFile" accept="image/png" class="mb-2">
-                <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                    Upload Logo
-                </button>
-            </form>
-        </div>
+<body>
+    <h1>관리자 페이지</h1>
 
-        <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-            <h2 class="text-xl font-semibold mb-4">Crawling Schedule</h2>
-            <form id="scheduleForm" class="mb-4">
-                <input type="time" id="scheduleInput" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-2">
-                <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-                    Update Schedule
-                </button>
-            </form>
-            <p id="currentSchedule" class="text-gray-600"></p>
-        </div>
+    <h2>1. 로고 변경</h2>
+    <input type="file" id="logoFile" accept="image/*">
+    <button onclick="uploadLogo()">로고 업로드</button>
 
-        <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-            <h2 class="text-xl font-semibold mb-4">Notices</h2>
-            <form id="noticeForm" class="mb-4">
-                <input type="hidden" id="noticeId">
-                <input type="text" id="noticeTitle" placeholder="Notice Title" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-2">
-                <textarea id="noticeContent" placeholder="Notice Content" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-2" rows="4"></textarea>
-                <input type="file" id="noticeImage" accept="image/*" class="mb-2">
-                <div id="imagePreview" class="mb-2 hidden">
-                    <img id="previewImg" src="" alt="Image preview" class="max-w-xs max-h-40 object-contain">
-                </div>
-                <button type="submit" class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded">
-                    Add/Update Notice
-                </button>
-            </form>
-            <div id="noticeList" class="space-y-2"></div>
+    <h2>2. 크롤링 스케줄 설정</h2>
+    <input type="time" id="crawlTime">
+    <button onclick="updateCrawlSchedule()">스케줄 설정</button>
+
+    <h2>3. 공지 관리</h2>
+    <input type="hidden" id="noticeId">
+    <input type="text" id="noticeTitle" placeholder="제목">
+    <textarea id="noticeContent"></textarea>
+    <button onclick="saveNotice()">공지 저장</button>
+    <button onclick="clearNoticeForm()">새 공지</button>
+    <div id="noticeList"></div>
+
+    <h2>4. 필터 설정</h2>
+    <div id="filterSettings">
+        <div>
+            <h3>브랜드 필터</h3>
+            <div id="brandFilters"></div>
+        </div>
+        <div>
+            <h3>카테고리 필터</h3>
+            <div id="categoryFilters"></div>
+        </div>
+        <div>
+            <h3>날짜 필터</h3>
+            <div id="dateFilters"></div>
         </div>
     </div>
+    <button onclick="updateFilterSettings()">필터 설정 저장</button>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Load current settings
-            fetch('/api/admin/settings')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('scheduleInput').value = data.crawlSchedule;
-                    document.getElementById('currentSchedule').textContent = `Current schedule: ${data.crawlSchedule}`;
-                });
+        const API_URL = '/api';
 
-            // Load notices
-            function loadNotices() {
-                fetch('/api/admin/notices')
-                    .then(response => response.json())
-                    .then(notices => {
-                        const noticeList = document.getElementById('noticeList');
-                        noticeList.innerHTML = '';
-                        notices.forEach(notice => {
-                            const noticeElement = document.createElement('div');
-                            noticeElement.className = 'bg-gray-100 p-2 rounded';
-                            noticeElement.innerHTML = `
-                                <h3 class="font-bold">${notice.title}</h3>
-                                <p>${notice.content}</p>
-                                <button class="edit-notice bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded mr-2" data-id="${notice.id}">Edit</button>
-                                <button class="delete-notice bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded" data-id="${notice.id}">Delete</button>
-                            `;
-                            noticeList.appendChild(noticeElement);
-                        });
-                    });
+        // 1. 로고 변경 (변경 없음)
+        async function uploadLogo() {
+            const logoFile = document.getElementById('logoFile').files[0];
+            if (!logoFile) {
+                alert('로고 파일을 선택해주세요.');
+                return;
             }
-
-            loadNotices();
-
-            // Logo upload
-            document.getElementById('logoForm').addEventListener('submit', function(e) {
-                e.preventDefault();
-                const fileInput = document.getElementById('logoFile');
-                const formData = new FormData();
-                formData.append('logo', fileInput.files[0]);
-
-                fetch('/api/admin/upload-logo', {
+            const formData = new FormData();
+            formData.append('logo', logoFile);
+            try {
+                const response = await fetch(`${API_URL}/admin/upload-logo`, {
                     method: 'POST',
                     body: formData
-                })
-                .then(response => response.json())
-                .then(data => alert(data.message))
-                .catch(error => console.error('Error:', error));
-            });
+                });
+                if (response.ok) {
+                    alert('로고가 성공적으로 업로드되었습니다.');
+                } else {
+                    alert('로고 업로드에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('로고 업로드 중 오류가 발생했습니다.');
+            }
+        }
 
-            // Update settings
-            function updateSettings(settings) {
-                fetch('/api/admin/settings', {
+        // 2. 크롤링 스케줄 설정 (변경 없음)
+        async function updateCrawlSchedule() {
+            const crawlTime = document.getElementById('crawlTime').value;
+            if (!crawlTime) {
+                alert('크롤링 시간을 선택해주세요.');
+                return;
+            }
+            try {
+                const response = await fetch(`${API_URL}/admin/settings`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(settings),
-                })
-                .then(response => response.json())
-                .then(data => {
-                    alert(data.message);
-                    if (settings.crawlSchedule) {
-                        document.getElementById('currentSchedule').textContent = `Current schedule: ${settings.crawlSchedule}`;
-                    }
-                })
-                .catch(error => console.error('Error:', error));
-            }
-
-            // Crawling schedule
-            document.getElementById('scheduleForm').addEventListener('submit', function(e) {
-                e.preventDefault();
-                const schedule = document.getElementById('scheduleInput').value;
-                updateSettings({ crawlSchedule: schedule });
-            });
-
-            document.getElementById('noticeImage').addEventListener('change', function(e) {
-                const file = e.target.files[0];
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const preview = document.getElementById('imagePreview');
-                    const previewImg = document.getElementById('previewImg');
-                    preview.classList.remove('hidden');
-                    previewImg.src = e.target.result;
+                    body: JSON.stringify({ crawlSchedule: crawlTime })
+                });
+                if (response.ok) {
+                    alert('크롤링 스케줄이 성공적으로 설정되었습니다.');
+                } else {
+                    alert('크롤링 스케줄 설정에 실패했습니다.');
                 }
-                reader.readAsDataURL(file);
-            });
-
-            // Notice form
-            document.getElementById('noticeForm').addEventListener('submit', function(e) {
-                e.preventDefault();
-                const id = document.getElementById('noticeId').value;
-                const title = document.getElementById('noticeTitle').value;
-                const content = document.getElementById('noticeContent').value;
-                const imageFile = document.getElementById('noticeImage').files[0];
-
-                const formData = new FormData();
-                formData.append('title', title);
-                formData.append('content', content);
-                if (imageFile) {
-                    formData.append('image', imageFile);
-                }
-
-                const url = id ? `/api/admin/notices/${id}` : '/api/admin/notices';
-                const method = id ? 'PUT' : 'POST';
-
-                fetch(url, {
-                    method: method,
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(() => {
-                    alert(id ? 'Notice updated successfully' : 'Notice added successfully');
-                    loadNotices();
-                    resetNoticeForm();
-                })
-                .catch(error => console.error('Error:', error));
-            });
-
-            // Load notices
-            function loadNotices() {
-                fetch('/api/admin/notices')
-                    .then(response => response.json())
-                    .then(notices => {
-                        const noticeList = document.getElementById('noticeList');
-                        noticeList.innerHTML = '';
-                        notices.forEach(notice => {
-                            const noticeElement = document.createElement('div');
-                            noticeElement.className = 'bg-gray-100 p-2 rounded';
-                            noticeElement.innerHTML = `
-                                <h3 class="font-bold">${notice.title}</h3>
-                                <p style="white-space: pre-wrap;">${notice.content}</p>
-                                ${notice.image_url ? `<img src="${notice.image_url}" alt="Notice image" class="max-w-xs max-h-40 object-contain mt-2">` : ''}
-                                <button class="edit-notice bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded mr-2 mt-2" data-id="${notice.id}">Edit</button>
-                                <button class="delete-notice bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded mt-2" data-id="${notice.id}">Delete</button>
-                            `;
-                            noticeList.appendChild(noticeElement);
-                        });
-                    });
+            } catch (error) {
+                console.error('Error:', error);
+                alert('크롤링 스케줄 설정 중 오류가 발생했습니다.');
             }
+        }
 
-            // Edit notice
-            document.getElementById('noticeList').addEventListener('click', function(e) {
-                if (e.target.classList.contains('edit-notice')) {
-                    const id = e.target.getAttribute('data-id');
-                    const noticeElement = e.target.closest('div');
-                    const title = noticeElement.querySelector('h3').textContent;
-                    const content = noticeElement.querySelector('p').textContent;
-                    const imageUrl = noticeElement.querySelector('img') ? noticeElement.querySelector('img').src : null;
-
-                    document.getElementById('noticeId').value = id;
-                    document.getElementById('noticeTitle').value = title;
-                    document.getElementById('noticeContent').value = content;
-                    
-                    if (imageUrl) {
-                        const preview = document.getElementById('imagePreview');
-                        const previewImg = document.getElementById('previewImg');
-                        preview.classList.remove('hidden');
-                        previewImg.src = imageUrl;
-                    } else {
-                        document.getElementById('imagePreview').classList.add('hidden');
-                    }
-                }
-            });
-
-            // Delete notice function remains unchanged
-
-            function resetNoticeForm() {
-                document.getElementById('noticeId').value = '';
-                document.getElementById('noticeTitle').value = '';
-                document.getElementById('noticeContent').value = '';
-                document.getElementById('noticeImage').value = '';
-                document.getElementById('imagePreview').classList.add('hidden');
-            }
-
-            loadNotices();
+        // 3. 공지 관리 (수정됨)
+        tinymce.init({
+            selector: '#noticeContent',
+            plugins: 'advlist autolink lists link image charmap print preview hr anchor pagebreak',
+            toolbar_mode: 'floating',
+            toolbar: 'undo redo | formatselect | bold italic backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | image',
+            height: 400,
+            images_upload_url: `${API_URL}/admin/upload-image`,
         });
+
+        async function saveNotice() {
+            const noticeId = document.getElementById('noticeId').value;
+            const title = document.getElementById('noticeTitle').value;
+            const content = tinymce.get('noticeContent').getContent();
+            if (!title || !content) {
+                alert('제목과 내용을 모두 입력해주세요.');
+                return;
+            }
+
+            const method = noticeId ? 'PUT' : 'POST';
+            const url = noticeId ? `${API_URL}/admin/notices/${noticeId}` : `${API_URL}/admin/notices`;
+
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ title, content })
+                });
+                if (response.ok) {
+                    alert('공지가 성공적으로 저장되었습니다.');
+                    clearNoticeForm();
+                    fetchNotices();
+                } else {
+                    alert('공지 저장에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('공지 저장 중 오류가 발생했습니다.');
+            }
+        }
+
+        function clearNoticeForm() {
+            document.getElementById('noticeId').value = '';
+            document.getElementById('noticeTitle').value = '';
+            tinymce.get('noticeContent').setContent('');
+        }
+
+        async function fetchNotices() {
+            try {
+                const response = await fetch(`${API_URL}/admin/notices`);
+                const notices = await response.json();
+                displayNotices(notices);
+            } catch (error) {
+                console.error('Error fetching notices:', error);
+                alert('공지 목록을 불러오는데 실패했습니다.');
+            }
+        }
+
+        function displayNotices(notices) {
+            const noticeList = document.getElementById('noticeList');
+            noticeList.innerHTML = notices.map(notice => `
+                <div class="notice-item">
+                    <h3>${notice.title}</h3>
+                    <p>${notice.content.substring(0, 100)}...</p>
+                    <button onclick="editNotice(${notice.id})">수정</button>
+                    <button onclick="deleteNotice(${notice.id})">삭제</button>
+                </div>
+            `).join('');
+        }
+
+        async function editNotice(id) {
+            try {
+                const response = await fetch(`${API_URL}/admin/notices/${id}`);
+                const notice = await response.json();
+                document.getElementById('noticeId').value = notice.id;
+                document.getElementById('noticeTitle').value = notice.title;
+                tinymce.get('noticeContent').setContent(notice.content);
+            } catch (error) {
+                console.error('Error fetching notice:', error);
+                alert('공지를 불러오는데 실패했습니다.');
+            }
+        }
+
+        async function deleteNotice(id) {
+            if (!confirm('정말로 이 공지를 삭제하시겠습니까?')) return;
+
+            try {
+                const response = await fetch(`${API_URL}/admin/notices/${id}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    alert('공지가 성공적으로 삭제되었습니다.');
+                    fetchNotices();
+                } else {
+                    alert('공지 삭제에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('공지 삭제 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 4. 필터 설정 (변경 없음)
+        let allFilters = { brands: [], categories: [], dates: [] };
+
+        async function fetchFilters() {
+            try {
+                const [brandsResponse, categoriesResponse, datesResponse] = await Promise.all([
+                    fetch(`${API_URL}/data/brands-with-count`),
+                    fetch(`${API_URL}/data/categories`),
+                    fetch(`${API_URL}/data/scheduled-dates-with-count`)
+                ]);
+                const [brands, categories, dates] = await Promise.all([
+                    brandsResponse.json(),
+                    categoriesResponse.json(),
+                    datesResponse.json()
+                ]);
+                allFilters = { brands, categories, dates };
+                displayFilters();
+            } catch (error) {
+                console.error('Error fetching filters:', error);
+                alert('필터 옵션을 불러오는데 실패했습니다.');
+            }
+        }
+
+        function displayFilters() {
+            displayFilterOptions('brandFilters', allFilters.brands);
+            displayFilterOptions('categoryFilters', allFilters.categories);
+            displayFilterOptions('dateFilters', allFilters.dates);
+        }
+
+        function displayFilterOptions(containerId, options) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = options.map(option => 
+                `<label><input type="checkbox" value="${option.brand || option.category || option.Date}"> ${option.brand || option.category || option.Date}</label><br>`
+            ).join('');
+        }
+
+        async function updateFilterSettings() {
+            const brandFilters = getSelectedFilters('brandFilters');
+            const categoryFilters = getSelectedFilters('categoryFilters');
+            const dateFilters = getSelectedFilters('dateFilters');
+            try {
+                const response = await fetch(`${API_URL}/admin/filter-settings`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ brandFilters, categoryFilters, dateFilters })
+                });
+                if (response.ok) {
+                    alert('필터 설정이 성공적으로 저장되었습니다.');
+                } else {
+                    alert('필터 설정 저장에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('필터 설정 저장 중 오류가 발생했습니다.');
+            }
+        }
+
+        function getSelectedFilters(containerId) {
+            return Array.from(document.querySelectorAll(`#${containerId} input:checked`))
+                .map(el => el.value);
+        }
+
+        // 초기화
+        fetchFilters();
+        fetchNotices();
     </script>
 </body>
 </html>

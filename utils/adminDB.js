@@ -1,6 +1,8 @@
 // utils/adminDB.js
 const pool = require('./DB');
 const logger = require('./logger');
+const fs = require('fs').promises;
+const path = require('path');
 
 async function initializeAdminTables() {
   const conn = await pool.getConnection();
@@ -24,21 +26,42 @@ async function initializeAdminTables() {
       `, ['00:00']);
     }
 
-    // Updated notices table
+    // Updated notices table (removed image_urls column)
     await conn.query(`
       CREATE TABLE IF NOT EXISTS notices (
         id INT PRIMARY KEY AUTO_INCREMENT,
         title VARCHAR(255) NOT NULL,
         content TEXT NOT NULL,
-        image_url VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
     `);
 
+    // Create filter_settings table (unchanged)
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS filter_settings (
+        id INT PRIMARY KEY,
+        brand_filters JSON,
+        category_filters JSON,
+        date_filters JSON,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Insert default filter settings if not exist (unchanged)
+    const [filterSettingsRows] = await conn.query('SELECT * FROM filter_settings WHERE id = 1');
+    if (filterSettingsRows.length === 0) {
+      await conn.query(`
+        INSERT INTO filter_settings (id, brand_filters, category_filters, date_filters) 
+        VALUES (?, ?, ?, ?)
+      `, [1, '[]', '[]', '[]']);
+    }
+
     logger.info('Admin tables initialized successfully');
   } catch (error) {
     logger.error('Error initializing admin tables:', error);
+    throw error;
   } finally {
     conn.release();
   }
@@ -82,6 +105,7 @@ async function updateAdminSettings(settings) {
     `, [updatedSettings.crawl_schedule]);
 
     logger.info('Admin settings updated successfully');
+    return updatedSettings;
   } catch (error) {
     logger.error('Error updating admin settings:', error);
     throw error;
@@ -102,41 +126,54 @@ async function getNotices() {
     conn.release();
   }
 }
-async function addNotice(title, content, imageUrls) {
+
+async function getNoticeById(id) {
   const conn = await pool.getConnection();
   try {
-    const [result] = await conn.query(
-      'INSERT INTO notices (title, content, image_urls) VALUES (?, ?, ?)',
-      [title, content, JSON.stringify(imageUrls)]
-    );
-    return { id: result.insertId, title, content, image_urls: imageUrls };
+    const [rows] = await conn.query('SELECT * FROM notices WHERE id = ?', [id]);
+    return rows[0];
   } catch (error) {
-    logger.error('Error adding notice:', error);
+    logger.error('Error getting notice by id:', error);
     throw error;
   } finally {
     conn.release();
   }
 }
 
-async function updateNotice(id, title, content, imageUrls) {
-  const conn = await pool.getConnection();
-  try {
-    const [result] = await conn.query(
-      'UPDATE notices SET title = ?, content = ?, image_urls = ? WHERE id = ?',
-      [title, content, JSON.stringify(imageUrls), id]
-    );
-    return result.affectedRows > 0 ? { id, title, content, image_urls: imageUrls } : null;
-  } catch (error) {
-    logger.error('Error updating notice:', error);
-    throw error;
-  } finally {
-    conn.release();
+function extractImageUrls(content) {
+  const regex = /<img[^>]+src="([^">]+)"/g;
+  const urls = [];
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    urls.push(match[1]);
+  }
+  return urls;
+}
+
+async function deleteImages(imageUrls) {
+  for (const url of imageUrls) {
+    const fileName = path.basename(url);
+    const imagePath = path.join(__dirname, '..', 'public', 'images', 'notices', fileName);
+    try {
+      await fs.unlink(imagePath);
+      logger.info(`Deleted image: ${imagePath}`);
+    } catch (error) {
+      logger.error(`Error deleting image ${imagePath}:`, error);
+    }
   }
 }
 
 async function deleteNotice(id) {
   const conn = await pool.getConnection();
   try {
+    const notice = await getNoticeById(id);
+    if (!notice) {
+      return false;
+    }
+
+    const imageUrls = extractImageUrls(notice.content);
+    await deleteImages(imageUrls);
+
     const [result] = await conn.query('DELETE FROM notices WHERE id = ?', [id]);
     return result.affectedRows > 0;
   } catch (error) {
@@ -146,6 +183,39 @@ async function deleteNotice(id) {
     conn.release();
   }
 }
+
+async function addNotice(title, content) {
+  const conn = await pool.getConnection();
+  try {
+    const [result] = await conn.query(
+      'INSERT INTO notices (title, content) VALUES (?, ?)',
+      [title, content]
+    );
+    return { id: result.insertId, title, content };
+  } catch (error) {
+    logger.error('Error adding notice:', error);
+    throw error;
+  } finally {
+    conn.release();
+  }
+}
+
+async function updateNotice(id, title, content) {
+  const conn = await pool.getConnection();
+  try {
+    const [result] = await conn.query(
+      'UPDATE notices SET title = ?, content = ? WHERE id = ?',
+      [title, content, id]
+    );
+    return result.affectedRows > 0 ? { id, title, content } : null;
+  } catch (error) {
+    logger.error('Error updating notice:', error);
+    throw error;
+  } finally {
+    conn.release();
+  }
+}
+
 async function getFilterSettings() {
   const conn = await pool.getConnection();
   try {
@@ -177,6 +247,7 @@ async function updateFilterSettings(brandFilters, categoryFilters, dateFilters) 
       category_filters = VALUES(category_filters),
       date_filters = VALUES(date_filters)
     `, [JSON.stringify(brandFilters), JSON.stringify(categoryFilters), JSON.stringify(dateFilters)]);
+    return { brandFilters, categoryFilters, dateFilters };
   } catch (error) {
     logger.error('Error updating filter settings:', error);
     throw error;
@@ -186,12 +257,15 @@ async function updateFilterSettings(brandFilters, categoryFilters, dateFilters) 
 }
 
 // Initialize the tables when this module is imported
-initializeAdminTables();
+initializeAdminTables().catch(error => {
+  logger.error('Failed to initialize admin tables:', error);
+});
 
 module.exports = {
   getAdminSettings,
   updateAdminSettings,
   getNotices,
+  getNoticeById,
   addNotice,
   updateNotice,
   deleteNotice,
