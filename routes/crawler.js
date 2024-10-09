@@ -12,9 +12,6 @@ const pool = require('../utils/DB');
 // 이미지 저장 경로 설정
 const IMAGE_DIR = path.join(__dirname, '..', 'public', 'images', 'products');
 
-const fs = require('fs').promises;
-const path = require('path');
-
 // 이미지 다운로드 및 저장 함수
 async function downloadAndSaveImage(url) {
   try {
