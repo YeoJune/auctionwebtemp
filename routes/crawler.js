@@ -12,6 +12,9 @@ const pool = require('../utils/DB');
 // 이미지 저장 경로 설정
 const IMAGE_DIR = path.join(__dirname, '..', 'public', 'images', 'products');
 
+const fs = require('fs').promises;
+const path = require('path');
+
 // 이미지 다운로드 및 저장 함수
 async function downloadAndSaveImage(url) {
   try {
@@ -19,6 +22,18 @@ async function downloadAndSaveImage(url) {
     const buffer = Buffer.from(response.data, 'binary');
     const fileName = `${uuidv4()}.webm`;
     const filePath = path.join(IMAGE_DIR, fileName);
+
+    // 폴더가 존재하는지 확인하고, 없으면 생성
+    try {
+      await fs.access(IMAGE_DIR);
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        await fs.mkdir(IMAGE_DIR, { recursive: true });
+      } else {
+        throw error;
+      }
+    }
+
     await fs.writeFile(filePath, buffer);
     return `/images/products/${fileName}`;
   } catch (error) {
