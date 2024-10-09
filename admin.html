@@ -12,9 +12,6 @@
         #noticeContent { width: 100%; }
         #noticeList { margin-top: 20px; }
         .notice-item { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
-        #categoryManagement { margin-top: 20px; }
-        .category-item { display: flex; align-items: center; margin-bottom: 5px; }
-        .category-item span { margin-right: 10px; }
     </style>
 </head>
 <body>
@@ -36,26 +33,25 @@
     <button onclick="clearNoticeForm()">새 공지</button>
     <div id="noticeList"></div>
 
-    <h2>4. 필터 관리</h2>
-    <div id="filterManagement">
-        <div class="filter-section">
+    <h2>4. 필터 설정</h2>
+    <div id="filterSettings">
+        <div>
             <h3>브랜드 필터</h3>
             <div id="brandFilters"></div>
         </div>
-        <div class="filter-section">
+        <div>
             <h3>카테고리 필터</h3>
             <div id="categoryFilters"></div>
         </div>
-        <div class="filter-section">
+        <div>
             <h3>날짜 필터</h3>
             <div id="dateFilters"></div>
         </div>
-        <button onclick="saveFilterChanges()">필터 변경사항 저장</button>
     </div>
+    <button onclick="updateFilterSettings()">필터 설정 저장</button>
+
     <script>
         const API_URL = '/api';
-        let filters = { brands: [], categories: [], dates: [] };
-        let filterChanges = { brands: [], categories: [], dates: [] };
 
         // 1. 로고 변경 (변경 없음)
         async function uploadLogo() {
@@ -211,62 +207,69 @@
                 alert('공지 삭제 중 오류가 발생했습니다.');
             }
         }
-        // 필터 관리
+
+        // 4. 필터 설정 (변경 없음)
+        let allFilters = { brands: [], categories: [], dates: [] };
+
         async function fetchFilters() {
             try {
-                const response = await fetch(`${API_URL}/admin/filters`);
-                filters = await response.json();
+                const [brandsResponse, categoriesResponse, datesResponse] = await Promise.all([
+                    fetch(`${API_URL}/data/brands-with-count`),
+                    fetch(`${API_URL}/data/categories`),
+                    fetch(`${API_URL}/data/scheduled-dates-with-count`)
+                ]);
+                const [brands, categories, dates] = await Promise.all([
+                    brandsResponse.json(),
+                    categoriesResponse.json(),
+                    datesResponse.json()
+                ]);
+                allFilters = { brands, categories, dates };
                 displayFilters();
             } catch (error) {
                 console.error('Error fetching filters:', error);
-                alert('필터를 불러오는데 실패했습니다.');
+                alert('필터 옵션을 불러오는데 실패했습니다.');
             }
         }
 
         function displayFilters() {
-            displayFilterSection('brandFilters', filters.brands);
-            displayFilterSection('categoryFilters', filters.categories);
-            displayFilterSection('dateFilters', filters.dates);
+            displayFilterOptions('brandFilters', allFilters.brands);
+            displayFilterOptions('categoryFilters', allFilters.categories);
+            displayFilterOptions('dateFilters', allFilters.dates);
         }
 
-        function displayFilterSection(sectionId, items) {
-            const container = document.getElementById(sectionId);
-            container.innerHTML = items.map((item, index) => `
-                <div class="filter-item">
-                    <span>${item.name}</span>
-                    <input type="checkbox" ${item.disabled ? '' : 'checked'} onchange="toggleFilter('${sectionId}', ${index}, this.checked)">
-                    <label>${item.disabled ? '비활성' : '활성'}</label>
-                </div>
-            `).join('');
+        function displayFilterOptions(containerId, options) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = options.map(option => 
+                `<label><input type="checkbox" value="${option.brand || option.category || option.Date}"> ${option.brand || option.category || option.Date}</label><br>`
+            ).join('');
         }
 
-        function toggleFilter(sectionId, index, enabled) {
-            const filterType = sectionId.replace('Filters', '');
-            filters[filterType][index].disabled = !enabled;
-            filterChanges[filterType].push({ id: filters[filterType][index].id, disabled: !enabled });
-            displayFilters();
-        }
-
-        async function saveFilterChanges() {
+        async function updateFilterSettings() {
+            const brandFilters = getSelectedFilters('brandFilters');
+            const categoryFilters = getSelectedFilters('categoryFilters');
+            const dateFilters = getSelectedFilters('dateFilters');
             try {
-                const response = await fetch(`${API_URL}/admin/update-filters`, {
+                const response = await fetch(`${API_URL}/admin/filter-settings`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ changes: filterChanges })
+                    body: JSON.stringify({ brandFilters, categoryFilters, dateFilters })
                 });
                 if (response.ok) {
-                    alert('필터 변경사항이 성공적으로 저장되었습니다.');
-                    filterChanges = { brands: [], categories: [], dates: [] };
-                    await fetchFilters();
+                    alert('필터 설정이 성공적으로 저장되었습니다.');
                 } else {
-                    alert('필터 변경사항 저장에 실패했습니다.');
+                    alert('필터 설정 저장에 실패했습니다.');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('필터 변경사항 저장 중 오류가 발생했습니다.');
+                alert('필터 설정 저장 중 오류가 발생했습니다.');
             }
+        }
+
+        function getSelectedFilters(containerId) {
+            return Array.from(document.querySelectorAll(`#${containerId} input:checked`))
+                .map(el => el.value);
         }
 
         // 초기화
