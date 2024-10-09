@@ -4,7 +4,18 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const logger = require('../utils/logger');
-const { getAdminSettings, updateAdminSettings, getNotices, getNoticeById, addNotice, updateNotice, deleteNotice, getFilterSettings, updateFilterSettings } = require('../utils/adminDB');
+const { 
+  getAdminSettings, 
+  updateAdminSettings, 
+  getNotices, 
+  getNoticeById, 
+  addNotice, 
+  updateNotice, 
+  deleteNotice, 
+  getAllFilters, 
+  updateFilters,
+  incrementFilterUseCount  // New function import
+} = require('../utils/adminDB');
 
 // Multer configuration for image uploads
 const storage = multer.diskStorage({
@@ -148,25 +159,54 @@ router.delete('/notices/:id', isAdmin, async (req, res) => {
   }
 });
 
-// Filter settings routes (unchanged)
-router.get('/filter-settings', isAdmin, async (req, res) => {
+// Updated route to get all filters
+router.get('/filters', isAdmin, async (req, res) => {
   try {
-    const settings = await getFilterSettings();
-    res.json(settings);
+    const filters = await getAllFilters();
+    res.json(filters);
   } catch (error) {
-    logger.error('Error getting filter settings:', error);
-    res.status(500).json({ message: 'Error getting filter settings' });
+    logger.error('Error fetching filters:', error);
+    res.status(500).json({ message: 'Error fetching filters' });
   }
 });
 
-router.post('/filter-settings', isAdmin, async (req, res) => {
+// Updated route to update filters
+router.post('/update-filters', isAdmin, async (req, res) => {
   try {
-    const { brandFilters, categoryFilters, dateFilters } = req.body;
-    await updateFilterSettings(brandFilters, categoryFilters, dateFilters);
-    res.json({ message: 'Filter settings updated successfully' });
+    const { changes } = req.body;
+    await updateFilters(changes);
+    res.json({ message: 'Filters updated successfully' });
   } catch (error) {
-    logger.error('Error updating filter settings:', error);
-    res.status(500).json({ message: 'Error updating filter settings' });
+    logger.error('Error updating filters:', error);
+    res.status(500).json({ message: 'Error updating filters' });
+  }
+});
+
+// New route to get filter usage statistics
+router.get('/filter-stats', isAdmin, async (req, res) => {
+  try {
+    const stats = await getAllFilters();
+    // Sort filters by use_count in descending order
+    const sortedStats = Object.keys(stats).reduce((acc, key) => {
+      acc[key] = stats[key].sort((a, b) => b.use_count - a.use_count);
+      return acc;
+    }, {});
+    res.json(sortedStats);
+  } catch (error) {
+    logger.error('Error fetching filter statistics:', error);
+    res.status(500).json({ message: 'Error fetching filter statistics' });
+  }
+});
+
+// New route to increment filter use count
+router.post('/increment-filter-use', async (req, res) => {
+  try {
+    const { type, value } = req.body;
+    await incrementFilterUseCount(type, value);
+    res.json({ message: 'Filter use count incremented successfully' });
+  } catch (error) {
+    logger.error('Error incrementing filter use count:', error);
+    res.status(500).json({ message: 'Error incrementing filter use count' });
   }
 });
 

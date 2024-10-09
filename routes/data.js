@@ -4,7 +4,7 @@ const router = express.Router();
 const pool = require('../utils/DB');
 const logger = require('../utils/logger');
 const MyGoogleSheetsManager = require('../utils/googleSheets');
-
+const { incrementFilterUseCount } = require('../utils/adminDB');
 
 router.get('/', async (req, res) => {
   const { page = 1, limit = 20, brands, categories, scheduledDates, wishlistOnly, aucNums, bidOnly } = req.query;
@@ -29,14 +29,18 @@ router.get('/', async (req, res) => {
 
   if (brands) {
     const brandList = brands.split(',');
-    query += ' AND ci.brand IN (' + brandList.map(() => '?').join(',') + ')';
+    query += ` AND ci.brand IN (SELECT value FROM filters WHERE type = 'brand' AND disabled = 0 AND value IN (${brandList.map(() => '?').join(',')}))`;
     queryParams.push(...brandList);
+    // Increment use count for each brand
+    brandList.forEach(brand => incrementFilterUseCount('brand', brand));
   }
 
   if (categories) {
     const categoryList = categories.split(',');
-    query += ' AND ci.category IN (' + categoryList.map(() => '?').join(',') + ')';
+    query += ` AND ci.category IN (SELECT value FROM filters WHERE type = 'category' AND disabled = 0 AND value IN (${categoryList.map(() => '?').join(',')}))`;
     queryParams.push(...categoryList);
+    // Increment use count for each category
+    categoryList.forEach(category => incrementFilterUseCount('category', category));
   }
 
   if (scheduledDates) {
@@ -49,11 +53,13 @@ router.get('/', async (req, res) => {
         if (!match) {
           query += 'ci.scheduled_date IS NULL';
         } else {
-          query += 'ci.scheduled_date >= ? AND ci.scheduled_date < ?';
+          query += `ci.scheduled_date >= ? AND ci.scheduled_date < ? AND ? IN (SELECT value FROM filters WHERE type = 'date' AND disabled = 0)`;
           const startDate = new Date(match[0]);
           const endDate = new Date(startDate);
           endDate.setDate(endDate.getDate() + 1);
-          queryParams.push(startDate, endDate);
+          queryParams.push(startDate, endDate, match[0]);
+          // Increment use count for the date
+          incrementFilterUseCount('date', match[0]);
         }
       });
       query += ')';
@@ -122,10 +128,10 @@ router.get('/', async (req, res) => {
 router.get('/brands-with-count', async (req, res) => {
   try {
     const [results] = await pool.query(`
-      SELECT brand, COUNT(*) as count
-      FROM crawled_items
-      GROUP BY brand
-      ORDER BY count DESC, brand ASC
+      SELECT f.value as brand, f.use_count as count
+      FROM filters f
+      WHERE f.type = 'brand' AND f.disabled = 0
+      ORDER BY f.use_count DESC, f.value ASC
     `);
     res.json(results);
   } catch (error) {
@@ -137,10 +143,10 @@ router.get('/brands-with-count', async (req, res) => {
 router.get('/scheduled-dates-with-count', async (req, res) => {
   try {
     const [results] = await pool.query(`
-      SELECT DATE(scheduled_date) as Date, COUNT(*) as count
-      FROM crawled_items
-      GROUP BY DATE(scheduled_date)
-      ORDER BY count DESC, Date ASC
+      SELECT f.value as Date, f.use_count as count
+      FROM filters f
+      WHERE f.type = 'date' AND f.disabled = 0
+      ORDER BY f.use_count DESC, f.value ASC
     `);
     res.json(results);
   } catch (error) {
@@ -161,8 +167,8 @@ router.get('/auc-nums', async (req, res) => {
 
 router.get('/brands', async (req, res) => {
   try {
-    const [brands] = await pool.query('SELECT DISTINCT brand FROM crawled_items ORDER BY brand');
-    res.json(brands.map(b => b.brand));
+    const [brands] = await pool.query("SELECT value as name FROM filters WHERE type = 'brand' AND disabled = 0 ORDER BY value");
+    res.json(brands.map(b => b.name));
   } catch (error) {
     logger.error('Error fetching brands:', error);
     res.status(500).json({ message: 'Error fetching brands' });
@@ -171,11 +177,21 @@ router.get('/brands', async (req, res) => {
 
 router.get('/categories', async (req, res) => {
   try {
-    const [categories] = await pool.query('SELECT DISTINCT category FROM crawled_items ORDER BY category');
-    res.json(categories.map(c => c.category));
+    const [categories] = await pool.query("SELECT value as name FROM filters WHERE type = 'category' AND disabled = 0 ORDER BY value");
+    res.json(categories.map(c => c.name));
   } catch (error) {
     logger.error('Error fetching categories:', error);
     res.status(500).json({ message: 'Error fetching categories' });
+  }
+});
+
+router.get('/scheduled-dates', async (req, res) => {
+  try {
+    const [dates] = await pool.query("SELECT value as date FROM filters WHERE type = 'date' AND disabled = 0 ORDER BY value");
+    res.json(dates.map(d => d.date));
+  } catch (error) {
+    logger.error('Error fetching scheduled dates:', error);
+    res.status(500).json({ message: 'Error fetching scheduled dates' });
   }
 });
 

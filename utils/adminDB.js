@@ -26,7 +26,7 @@ async function initializeAdminTables() {
       `, ['00:00']);
     }
 
-    // Updated notices table (removed image_urls column)
+    // Updated notices table (unchanged)
     await conn.query(`
       CREATE TABLE IF NOT EXISTS notices (
         id INT PRIMARY KEY AUTO_INCREMENT,
@@ -37,26 +37,19 @@ async function initializeAdminTables() {
       )
     `);
 
-    // Create filter_settings table (unchanged)
+    // New unified filters table
     await conn.query(`
-      CREATE TABLE IF NOT EXISTS filter_settings (
-        id INT PRIMARY KEY,
-        brand_filters JSON,
-        category_filters JSON,
-        date_filters JSON,
+      CREATE TABLE IF NOT EXISTS filters (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        type ENUM('brand', 'category', 'date') NOT NULL,
+        value VARCHAR(255) NOT NULL,
+        disabled BOOLEAN DEFAULT FALSE,
+        use_count INT DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY type_value (type, value)
       )
     `);
-
-    // Insert default filter settings if not exist (unchanged)
-    const [filterSettingsRows] = await conn.query('SELECT * FROM filter_settings WHERE id = 1');
-    if (filterSettingsRows.length === 0) {
-      await conn.query(`
-        INSERT INTO filter_settings (id, brand_filters, category_filters, date_filters) 
-        VALUES (?, ?, ?, ?)
-      `, [1, '[]', '[]', '[]']);
-    }
 
     logger.info('Admin tables initialized successfully');
   } catch (error) {
@@ -216,41 +209,55 @@ async function updateNotice(id, title, content) {
   }
 }
 
-async function getFilterSettings() {
+async function getAllFilters() {
   const conn = await pool.getConnection();
   try {
-    const [rows] = await conn.query('SELECT * FROM filter_settings WHERE id = 1');
-    if (rows.length > 0) {
-      return {
-        brandFilters: JSON.parse(rows[0].brand_filters),
-        categoryFilters: JSON.parse(rows[0].category_filters),
-        dateFilters: JSON.parse(rows[0].date_filters)
-      };
-    }
-    return null;
+    const [filters] = await conn.query('SELECT * FROM filters ORDER BY type, value');
+    return {
+      brands: filters.filter(f => f.type === 'brand'),
+      categories: filters.filter(f => f.type === 'category'),
+      dates: filters.filter(f => f.type === 'date')
+    };
   } catch (error) {
-    logger.error('Error getting filter settings:', error);
+    logger.error('Error getting all filters:', error);
     throw error;
   } finally {
     conn.release();
   }
 }
 
-async function updateFilterSettings(brandFilters, categoryFilters, dateFilters) {
+async function updateFilters(changes) {
   const conn = await pool.getConnection();
   try {
-    await conn.query(`
-      INSERT INTO filter_settings (id, brand_filters, category_filters, date_filters)
-      VALUES (1, ?, ?, ?)
-      ON DUPLICATE KEY UPDATE
-      brand_filters = VALUES(brand_filters),
-      category_filters = VALUES(category_filters),
-      date_filters = VALUES(date_filters)
-    `, [JSON.stringify(brandFilters), JSON.stringify(categoryFilters), JSON.stringify(dateFilters)]);
-    return { brandFilters, categoryFilters, dateFilters };
+    await conn.beginTransaction();
+
+    for (const change of changes) {
+      await conn.query(
+        'UPDATE filters SET disabled = ? WHERE id = ?',
+        [change.disabled, change.id]
+      );
+    }
+
+    await conn.commit();
+    return true;
   } catch (error) {
-    logger.error('Error updating filter settings:', error);
+    await conn.rollback();
+    logger.error('Error updating filters:', error);
     throw error;
+  } finally {
+    conn.release();
+  }
+}
+
+async function incrementFilterUseCount(type, value) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.query(
+      'UPDATE filters SET use_count = use_count + 1 WHERE type = ? AND value = ?',
+      [type, value]
+    );
+  } catch (error) {
+    logger.error('Error incrementing filter use count:', error);
   } finally {
     conn.release();
   }
@@ -269,6 +276,7 @@ module.exports = {
   addNotice,
   updateNotice,
   deleteNotice,
-  getFilterSettings,
-  updateFilterSettings
+  getAllFilters,
+  updateFilters,
+  incrementFilterUseCount
 };
