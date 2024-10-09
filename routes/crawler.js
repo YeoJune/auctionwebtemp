@@ -9,7 +9,7 @@ const DBManager = require('../utils/DBManager');
 const logger = require('../utils/logger');
 const pool = require('../utils/DB');
 const cron = require('node-cron');
-const { getAdminSettings, updateAdminSettings } = require('./utils/adminDB');
+const { getAdminSettings, updateAdminSettings } = require('../utils/adminDB');
 
 // 이미지 저장 경로 설정
 const IMAGE_DIR = path.join(__dirname, '..', 'public', 'images', 'products');
