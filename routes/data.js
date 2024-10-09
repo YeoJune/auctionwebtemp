@@ -24,9 +24,6 @@ router.get('/', async (req, res) => {
     query += ' WHERE 1=1';
   }
 
-  // Add condition to exclude auc_num = 1 on Tuesdays and Thursdays
-  query += ' AND NOT (ci.auc_num = 1 AND DAYOFWEEK(ci.scheduled_date) IN (3, 5))';
-
   if (brands) {
     const brandList = brands.split(',');
     query += ' AND ci.brand IN (' + brandList.map(() => '?').join(',') + ')';
