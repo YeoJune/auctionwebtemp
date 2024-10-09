@@ -62,6 +62,23 @@ class DatabaseManager {
       if (conn) conn.release();
     }
   }
+  
+  async cleanupUnusedImages(activeImagePaths) {
+    try {
+      const files = await fs.readdir(this.IMAGE_DIR);
+      for (const file of files) {
+        const filePath = path.join(this.IMAGE_DIR, file);
+        const relativePath = `/images/products/${file}`;
+        if (!activeImagePaths.has(relativePath)) {
+          await fs.unlink(filePath);
+          console.log(`Deleted unused image: ${filePath}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error cleaning up unused images:', error);
+    }
+  }
+
   async saveItems(items, batchSize = 1000) {
     if (!items || !Array.isArray(items)) throw new Error("Invalid input: items must be an array");
     
@@ -75,7 +92,11 @@ class DatabaseManager {
         const placeholders = columns.map(() => '?').join(', ');
         const updateClauses = columns.map(col => `${col} = VALUES(${col})`).join(', ');
   
-        // 아이템을 배치 크기만큼 나누어 처리
+        // Store all item_ids and active image paths from the input
+        const inputItemIds = new Set(items.map(item => item.item_id));
+        const activeImagePaths = new Set();
+
+        // Process items in batches
         for (let i = 0; i < items.length; i += batchSize) {
           const batch = items.slice(i, i + batchSize);
           const insertQuery = `
@@ -84,19 +105,39 @@ class DatabaseManager {
             ON DUPLICATE KEY UPDATE ${updateClauses}
           `;
   
-          const values = batch.flatMap(item => columns.map(col => item[col]));
+          const values = batch.flatMap(item => {
+            columns.forEach(col => {
+              if (col === 'image') {
+                activeImagePaths.add(item[col]);
+              } else if (col === 'additional_images') {
+                const additionalImages = JSON.parse(item[col] || '[]');
+                additionalImages.forEach(img => activeImagePaths.add(img));
+              }
+            });
+            return columns.map(col => item[col]);
+          });
           await conn.query(insertQuery, values);
         }
   
-        // 업데이트된 crawled_items에 없는 wishlist 아이템 삭제
+        // Delete items not present in the input
+        const deleteQuery = `
+          DELETE FROM crawled_items
+          WHERE item_id NOT IN (?)
+        `;
+        await conn.query(deleteQuery, [Array.from(inputItemIds)]);
+  
+        // Delete wishlist items that no longer exist in crawled_items
         await conn.query(`
           DELETE w FROM wishlists w
           LEFT JOIN crawled_items ci ON w.item_id = ci.item_id
-          WHERE ci.item_id IS NULL;
+          WHERE ci.item_id IS NULL
         `);
   
         await conn.commit();
-        console.log('Items saved to database successfully');
+        console.log('Items saved to database and outdated items deleted successfully');
+
+        // Clean up unused images
+        await this.cleanupUnusedImages(activeImagePaths);
       });
     } catch (error) {
       if (conn) await conn.rollback();
@@ -106,7 +147,6 @@ class DatabaseManager {
       if (conn) conn.release();
     }
   }
-  
 }
 
 const DBManager = new DatabaseManager(pool);

@@ -21,8 +21,7 @@ async function testConnection() {
     console.log('Successfully connected to the database');
     
     const [rows, fields] = await conn.query(`
-      ALTER TABLE notices
-ADD COLUMN image_url VARCHAR(255) AFTER content;
+      TRUNCATE crawled_items
     `);
     console.log('Query executed successfully. Result:', rows);
 

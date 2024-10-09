@@ -76,14 +76,14 @@ router.get('/notices', async (req, res) => {
   }
 });
 
-router.post('/notices', isAdmin, upload.single('image'), async (req, res) => {
+router.post('/notices', isAdmin, upload.array('images', 5), async (req, res) => {
   try {
     const { title, content } = req.body;
     if (!title || !content) {
       return res.status(400).json({ message: 'Title and content are required' });
     }
-    const imageUrl = req.file ? `/images/notices/${req.file.filename}` : null;
-    const newNotice = await addNotice(title, content, imageUrl);
+    const imageUrls = req.files.map(file => `/images/notices/${file.filename}`);
+    const newNotice = await addNotice(title, content, imageUrls);
     res.status(201).json(newNotice);
   } catch (error) {
     logger.error('Error adding notice:', error);
@@ -91,15 +91,16 @@ router.post('/notices', isAdmin, upload.single('image'), async (req, res) => {
   }
 });
 
-router.put('/notices/:id', isAdmin, upload.single('image'), async (req, res) => {
+router.put('/notices/:id', isAdmin, upload.array('images', 5), async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, content } = req.body;
+    const { title, content, existingImageUrls } = req.body;
     if (!title || !content) {
       return res.status(400).json({ message: 'Title and content are required' });
     }
-    const imageUrl = req.file ? `/images/notices/${req.file.filename}` : req.body.existingImageUrl;
-    const updatedNotice = await updateNotice(id, title, content, imageUrl);
+    const newImageUrls = req.files.map(file => `/images/notices/${file.filename}`);
+    const imageUrls = [...JSON.parse(existingImageUrls), ...newImageUrls];
+    const updatedNotice = await updateNotice(id, title, content, imageUrls);
     if (!updatedNotice) {
       return res.status(404).json({ message: 'Notice not found' });
     }
@@ -123,5 +124,24 @@ router.delete('/notices/:id', isAdmin, async (req, res) => {
     res.status(500).json({ message: 'Error deleting notice' });
   }
 });
+router.get('/filter-settings', isAdmin, async (req, res) => {
+  try {
+    const settings = await getFilterSettings();
+    res.json(settings);
+  } catch (error) {
+    logger.error('Error getting filter settings:', error);
+    res.status(500).json({ message: 'Error getting filter settings' });
+  }
+});
 
+router.post('/filter-settings', isAdmin, async (req, res) => {
+  try {
+    const { brandFilters, categoryFilters, dateFilters } = req.body;
+    await updateFilterSettings(brandFilters, categoryFilters, dateFilters);
+    res.json({ message: 'Filter settings updated successfully' });
+  } catch (error) {
+    logger.error('Error updating filter settings:', error);
+    res.status(500).json({ message: 'Error updating filter settings' });
+  }
+});
 module.exports = router;

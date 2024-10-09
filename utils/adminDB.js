@@ -102,15 +102,14 @@ async function getNotices() {
     conn.release();
   }
 }
-
-async function addNotice(title, content, imageUrl) {
+async function addNotice(title, content, imageUrls) {
   const conn = await pool.getConnection();
   try {
     const [result] = await conn.query(
-      'INSERT INTO notices (title, content, image_url) VALUES (?, ?, ?)',
-      [title, content, imageUrl]
+      'INSERT INTO notices (title, content, image_urls) VALUES (?, ?, ?)',
+      [title, content, JSON.stringify(imageUrls)]
     );
-    return { id: result.insertId, title, content, imageUrl };
+    return { id: result.insertId, title, content, image_urls: imageUrls };
   } catch (error) {
     logger.error('Error adding notice:', error);
     throw error;
@@ -119,14 +118,14 @@ async function addNotice(title, content, imageUrl) {
   }
 }
 
-async function updateNotice(id, title, content, imageUrl) {
+async function updateNotice(id, title, content, imageUrls) {
   const conn = await pool.getConnection();
   try {
     const [result] = await conn.query(
-      'UPDATE notices SET title = ?, content = ?, image_url = ? WHERE id = ?',
-      [title, content, imageUrl, id]
+      'UPDATE notices SET title = ?, content = ?, image_urls = ? WHERE id = ?',
+      [title, content, JSON.stringify(imageUrls), id]
     );
-    return result.affectedRows > 0 ? { id, title, content, imageUrl } : null;
+    return result.affectedRows > 0 ? { id, title, content, image_urls: imageUrls } : null;
   } catch (error) {
     logger.error('Error updating notice:', error);
     throw error;
@@ -147,6 +146,44 @@ async function deleteNotice(id) {
     conn.release();
   }
 }
+async function getFilterSettings() {
+  const conn = await pool.getConnection();
+  try {
+    const [rows] = await conn.query('SELECT * FROM filter_settings WHERE id = 1');
+    if (rows.length > 0) {
+      return {
+        brandFilters: JSON.parse(rows[0].brand_filters),
+        categoryFilters: JSON.parse(rows[0].category_filters),
+        dateFilters: JSON.parse(rows[0].date_filters)
+      };
+    }
+    return null;
+  } catch (error) {
+    logger.error('Error getting filter settings:', error);
+    throw error;
+  } finally {
+    conn.release();
+  }
+}
+
+async function updateFilterSettings(brandFilters, categoryFilters, dateFilters) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.query(`
+      INSERT INTO filter_settings (id, brand_filters, category_filters, date_filters)
+      VALUES (1, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+      brand_filters = VALUES(brand_filters),
+      category_filters = VALUES(category_filters),
+      date_filters = VALUES(date_filters)
+    `, [JSON.stringify(brandFilters), JSON.stringify(categoryFilters), JSON.stringify(dateFilters)]);
+  } catch (error) {
+    logger.error('Error updating filter settings:', error);
+    throw error;
+  } finally {
+    conn.release();
+  }
+}
 
 // Initialize the tables when this module is imported
 initializeAdminTables();
@@ -157,5 +194,7 @@ module.exports = {
   getNotices,
   addNotice,
   updateNotice,
-  deleteNotice
+  deleteNotice,
+  getFilterSettings,
+  updateFilterSettings
 };
