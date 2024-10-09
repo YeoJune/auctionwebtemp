@@ -9,10 +9,10 @@ const { getAdminSettings, updateAdminSettings, getNotices, getNoticeById, addNot
 // Multer configuration for image uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'public/images/notices/')
+    cb(null, 'public/images/')
   },
   filename: function (req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname))
+    cb(null, 'logo.png')
   }
 });
 
