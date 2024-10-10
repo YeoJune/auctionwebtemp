@@ -456,7 +456,6 @@
             currentImageIndex = index;
             document.querySelector('.main-image').src = images[index];
         }
-
         function displayData(data) {
             currentData = data;
             dataBody.innerHTML = '';
@@ -495,10 +494,10 @@
                     </div>
                 `;
 
-                // 카드 전체에 클릭 이벤트 추가
+                // 여기서 카드 클릭 이벤트를 수정합니다
                 card.addEventListener('click', (event) => {
-                    // 위시리스트 버튼 클릭 시 이벤트 전파 방지
-                    if (!event.target.closest('.wishlist-btn')) {
+                    // product-details 클래스를 가진 요소나 그 하위 요소를 클릭한 경우 상세 보기를 열지 않음
+                    if (!event.target.closest('.product-details')) {
                         showDetails(item.item_id);
                     }
                 });
