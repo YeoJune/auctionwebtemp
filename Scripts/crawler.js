@@ -415,10 +415,6 @@ class Crawler {
 
       console.log(`Crawled ${filteredPageItems.length} items from page ${page}`);
 
-      for (const handle of itemHandles) {
-        await handle.dispose();
-      }
-
       return filteredPageItems;
     });
   }
@@ -449,12 +445,15 @@ class Crawler {
       };
     }, this.config);
 
+    await itemHandle.dispose();
+
     item.scheduled_date = this.extractDate(item.scheduled_date);
     if (!this.isCollectionDay(item.scheduledDate)) return null;
     item.korean_title = await this.translate(item.japanese_title);
     item.brand = await this.translate(item.brand);
     item.starting_price = this.currencyToInt(item.starting_price);
     item.auc_num = '1'
+
 
     return item;
   }
@@ -553,15 +552,10 @@ class BrandAuctionCrawler extends Crawler {
         const pageItems = await Promise.all(pageItemsPromises);
         
         allItems.push(...pageItems);
-
-        // 메모리 관리를 위해 핸들 해제
-        for (const handle of itemHandles) {
-          await handle.dispose();
-        }
       }
 
       this.closeCrawlerBrowser();
-      
+
       console.log(`Total items crawled: ${allItems.length}`);
       console.log(`translate count: ${TRANS_COUNT}`);
       
@@ -599,12 +593,16 @@ class BrandAuctionCrawler extends Crawler {
         category: category.textContent.trim(),
       };
     }, itemHandle, this.config);
+    
+    await itemHandle.dispose();
+    
     item.korean_title = await this.translate(this.convertFullWidthToAscii(item.japanese_title));
     item.brand = await this.translate(this.convertFullWidthToAscii(item.brand));
     item.starting_price = this.currencyToInt(item.starting_price);
     item.scheduled_date = this.extractDate(item.scheduled_date);
     item.category = await this.translate(item.category);
     item.auc_num = '2';
+    
 
     return item;
   }
