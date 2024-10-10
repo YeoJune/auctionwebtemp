@@ -6,6 +6,7 @@ const pool = require('../utils/DB');
 
 router.post('/place-reservation', async (req, res) => {
   const { itemId, bidAmount, isFinalBid } = req.body;
+  const linkFunc = {1:(itemId) => `https://www.ecoauc.com/client/auction-items/view/${itemId}`, 2:(itemId) => itemId};
 
   if (!itemId || !bidAmount) {
     return res.status(400).json({ message: 'Item ID, bid amount are required' });
@@ -49,7 +50,7 @@ router.post('/place-reservation', async (req, res) => {
         req.session.user.email,
         req.session.user.id,
         item.scheduled_date ? item.scheduled_date : "",
-        item.auc_num,
+        linkFunc[item.auc_num](item.item_id),
         item.category,
         item.brand,
         item.korean_title,

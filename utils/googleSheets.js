@@ -27,12 +27,28 @@ class GoogleSheetsManager {
       throw err;
     }
   }
-
+  async findFinal(sheetName, column) {
+    const searchResponse = await this.sheets.spreadsheets.values.get({
+      spreadsheetId: this.spreadsheetId,
+      range: `${sheetName}!${column}1:${column}`,
+    });
+    const keyColumn = searchResponse.data.values;
+    if (!keyColumn) return 1;
+    
+    for (let i = 0; i < keyColumn.length; i++) {
+      if (!keyColumn[i] || !keyColumn[i][0]) {
+        return i + 1;
+      }
+    }
+    
+    return keyColumn.length + 1;
+  }
   async appendToSpreadsheet(bidData) {
-    const range = 'Main Sheet!A2:N2';
-
     try {
-      const response = await this.sheets.spreadsheets.values.append({
+      const nextRow = await this.findFinal('Main Sheet', 'A');
+      const range = `Main Sheet!A${nextRow}:N${nextRow}`;
+  
+      const response = await this.sheets.spreadsheets.values.update({
         spreadsheetId: this.spreadsheetId,
         range,
         valueInputOption: 'USER_ENTERED',
