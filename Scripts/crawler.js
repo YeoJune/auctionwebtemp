@@ -383,6 +383,8 @@ class Crawler {
       return [];
     }
 
+    this.closeCrawlerBrowser();
+
     console.log(`Crawling completed for all categories. Total items: ${allCrawledItems.length}`);
     console.log(`translate count: ${TRANS_COUNT}`);
 
@@ -558,6 +560,8 @@ class BrandAuctionCrawler extends Crawler {
         }
       }
 
+      this.closeCrawlerBrowser();
+      
       console.log(`Total items crawled: ${allItems.length}`);
       console.log(`translate count: ${TRANS_COUNT}`);
       
