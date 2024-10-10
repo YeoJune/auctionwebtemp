@@ -46,7 +46,7 @@ router.post('/place-reservation', async (req, res) => {
         [itemId, req.session.user.id, bidAmount]
       );
       const bidData = [
-        result.insertId,
+        result.insertId + '',
         req.session.user.email,
         req.session.user.id,
         item.scheduled_date ? item.scheduled_date : "",
