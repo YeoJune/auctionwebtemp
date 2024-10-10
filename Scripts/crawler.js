@@ -230,7 +230,7 @@ class Crawler {
     });
   }
 
-  async initialize() {
+  async initializeCrawler() {
     this.crawlerBrowser = await puppeteer.launch({
       headless: 'shell',
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--window-size=1920,1080', 
@@ -240,12 +240,16 @@ class Crawler {
 
     await this.initPage(this.crawlerPage);
     
+    console.log('complete to initialize crawler!');
+  }
+  async initializeDetails() {
     const detailInitPromises = Array(this.detailMulti).fill().map(() => this.initializeDetail());
     const detailResults = await Promise.all(detailInitPromises);
 
     this.detailBrowsers = detailResults.map(result => result.browser);
     this.detailPages = detailResults.map(result => result.page);
-    console.log('complete to initialize!');
+
+    console.log('complete to initialize details!');
   }
   async initializeDetail() {
     const browser = await puppeteer.launch({
@@ -256,6 +260,30 @@ class Crawler {
     const page = (await browser.pages())[0];
     await this.initPage(page);
     return { browser, page };
+  }
+  async closeCrawlerBrowser() {
+    if (this.crawlerBrowser) {
+      await this.crawlerBrowser.close();
+      this.crawlerBrowser = null;
+      this.crawlerPage = null;
+    }
+
+    this.isCrawlerLogin = false;
+  
+    console.log('Crawler have been closed.');
+  }
+  async closeDetailBrowsers() {
+    for (const browser of this.detailBrowsers) {
+      if (browser) {
+        await browser.close();
+      }
+    }
+    this.detailBrowsers = [];
+    this.detailPages = [];
+
+    this.isDetailLogins = false;
+    
+    console.log('Detail have been closed.');
   }
 
   isCollectionDay(date) {
@@ -275,20 +303,18 @@ class Crawler {
       ]);
     });
   }
-  async loginCheck() {
+  async loginCheckCrawler() {
     if (!this.crawlerBrowser || !this.crawlerPage) {
-      await this.initialize();
+      await this.initializeCrawler();
     }
-  
+
+    await this.login(this.crawlerPage);
+  }
+  async loginCheckBrowsers() {
+    if (!this.detailBrowsers.length || !this.detailPages.length) {
+      await this.initializeDetails();
+    }
     const loginTasks = [];
-  
-    if (!this.isCrawlerLogin) {
-      loginTasks.push(
-        this.login(this.crawlerPage).then(() => {
-          this.isCrawlerLogin = true;
-        })
-      );
-    }
   
     if (!this.isDetailLogins) {
       const detailLoginTasks = this.detailPages.map(page => this.login(page));
@@ -323,7 +349,8 @@ class Crawler {
     });
   }
   async crawlAllItems(existingIds) {
-    await this.loginCheck();
+    await this.closeDetailBrowsers();
+    await this.loginCheckCrawler();
     const startTime = Date.now();
     TRANS_COUNT = 0;
     
@@ -374,7 +401,7 @@ class Crawler {
       await this.crawlerPage.goto(url, { waitUntil: 'domcontentloaded', timeout: this.pageTimeout });
 
       const itemHandles = await this.crawlerPage.$$(this.config.crawlSelectors.itemContainer);
-      const limit = pLimit(10);
+      const limit = pLimit(5);
 
       const pageItemsPromises = itemHandles.map(handle => 
         limit(() => this.extractItemInfo(handle, existingIds))
@@ -431,7 +458,7 @@ class Crawler {
   }
 
   async crawlItemDetails(idx, itemId) {
-    await this.loginCheck();
+    await this.loginCheckBrowsers();
   
     return this.retryOperation(async () => {
       const page = this.detailPages[idx];
@@ -488,7 +515,8 @@ class BrandAuctionCrawler extends Crawler {
     }
   }
   async crawlAllItems(existingIds) {
-    await this.loginCheck();
+    await this.closeDetailBrowsers();
+    await this.loginCheckCrawler();
     const startTime = Date.now();
     TRANS_COUNT = 0;
 
@@ -514,7 +542,7 @@ class BrandAuctionCrawler extends Crawler {
         await this.waitForLoading(this.crawlerPage);
         
         const itemHandles = await this.crawlerPage.$$(this.config.crawlSelectors.itemContainer);
-        const limit = pLimit(10); // 동시에 처리할 아이템 수 제한
+        const limit = pLimit(5); // 동시에 처리할 아이템 수 제한
 
         const pageItemsPromises = itemHandles.map(handle => 
           limit(() => this.extractItemInfo(handle, existingIds))
