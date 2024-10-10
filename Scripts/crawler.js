@@ -129,6 +129,7 @@ class Crawler {
 
   async rawTranslate(text) {
     return this.retryOperation(async () => {
+      TRANS_COUNT += text.length;
       try {
         const params = {
           Text: text,
@@ -324,6 +325,7 @@ class Crawler {
   async crawlAllItems(existingIds) {
     await this.loginCheck();
     const startTime = Date.now();
+    TRANS_COUNT = 0;
     
     const allCrawledItems = [];
     for (const categoryId of this.config.categoryIds) {
@@ -355,6 +357,7 @@ class Crawler {
     }
 
     console.log(`Crawling completed for all categories. Total items: ${allCrawledItems.length}`);
+    console.log(`translate count: ${TRANS_COUNT}`);
 
     const endTime = Date.now();
     const executionTime = endTime - startTime;
@@ -392,9 +395,12 @@ class Crawler {
   }
 
   async extractItemInfo(itemHandle, existingIds) {
-    const item = await itemHandle.evaluate((el, config, existingIds) => {
+    const id = await this.crawlerPage.$eval(this.config.crawlSelectors.id, el => el.getAttribute('data-auction-item-id'));
+    if (existingIds.has(id)) {
+      return null;
+    }
+    const item = await itemHandle.evaluate((el, config) => {
       const id = el.querySelector(config.crawlSelectors.id);
-      if (existingIds.has(id)) return null;
       const title = el.querySelector(config.crawlSelectors.title);
       const brand = el.querySelector(config.crawlSelectors.brand);
       const rankParent = el.querySelector(config.crawlSelectors.rank);
@@ -412,10 +418,7 @@ class Crawler {
         scheduled_date: scheduledDate ? scheduledDate.textContent.trim() : null,
         category: config.categoryTable[config.currentCategoryId],
       };
-    }, this.config, existingIds);
-    if (!item) {
-      return null;
-    }
+    }, this.config);
 
     item.scheduled_date = this.extractDate(item.scheduled_date);
     if (!this.isCollectionDay(item.scheduledDate)) return null;
@@ -487,6 +490,7 @@ class BrandAuctionCrawler extends Crawler {
   async crawlAllItems(existingIds) {
     await this.loginCheck();
     const startTime = Date.now();
+    TRANS_COUNT = 0;
 
     return this.retryOperation(async () => {
       await this.crawlerPage.goto(this.config.searchUrl, { waitUntil: 'networkidle0', timeout: this.pageTimeout });
@@ -527,6 +531,7 @@ class BrandAuctionCrawler extends Crawler {
       }
 
       console.log(`Total items crawled: ${allItems.length}`);
+      console.log(`translate count: ${TRANS_COUNT}`);
       
       const endTime = Date.now();
       const executionTime = endTime - startTime;
@@ -536,10 +541,13 @@ class BrandAuctionCrawler extends Crawler {
     });
   }
 
-  async extractItemInfo(itemHandle) {
-    const item = await this.crawlerPage.evaluate((item, config, existingIds) => {
+  async extractItemInfo(itemHandle, existingIds) {
+    const id = await this.crawlerPage.$eval(this.config.crawlSelectors.id, el => el.textContent.trim());
+    if (existingIds.has(id)) {
+      return null;
+    }
+    const item = await this.crawlerPage.evaluate((item, config) => {
       const id = item.querySelector(config.crawlSelectors.id);
-      if (existingIds.has(id)) return null;
       const title = item.querySelector(config.crawlSelectors.title);
       const brand = item.querySelector(config.crawlSelectors.brand);
       const rank = item.querySelector(config.crawlSelectors.rank);
@@ -558,10 +566,7 @@ class BrandAuctionCrawler extends Crawler {
         scheduled_date: scheduledDate ? scheduledDate.textContent.trim() : null,
         category: category.textContent.trim(),
       };
-    }, itemHandle, this.config, existingIds);
-    if (!item) {
-      return null;
-    }
+    }, itemHandle, this.config);
     item.korean_title = await this.translate(this.convertFullWidthToAscii(item.japanese_title));
     item.brand = await this.translate(this.convertFullWidthToAscii(item.brand));
     item.starting_price = this.currencyToInt(item.starting_price);
