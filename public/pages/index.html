@@ -21,10 +21,14 @@
                 </div>
             </div>
             <div class="notice-container">
-                <button id="showNoticesBtn" class="">
-                    공지사항 보기
+                <button id="showNoticesBtn">
+                    공지사항 닫기
                 </button>
             </div>
+        </div>
+        <div class="notice-section">
+            <h2>공지사항</h2>
+            <ul class="notice-list" id="noticeList"></ul>
         </div>
         <div class="filters">
             <div class="filter-section">
@@ -112,16 +116,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-    
-    <div id="noticeModal" class="modal">
-        <div class="modal-content">
-            <div>
-                <span class="close" onclick="document.querySelector('#noticeModal').style.display = 'none'">&times;</span>
-                <h2>공지사항</h2>
-            </div>
-            <ul id="noticeList"></ul>
         </div>
     </div>
     <div id="noticeDetailModal" class="modal">
@@ -771,9 +765,17 @@
             }
         }
 
-        function showNoticeModal() {
-            const modal = document.getElementById('noticeModal');
-            modal.style.display = 'block';
+        function showNoticeSection() {
+            const noticeSection = document.querySelector('.notice-section');
+            const showNoticesBtn = document.getElementById('showNoticesBtn');
+            if (noticeSection.style.display === 'none') {
+                noticeSection.style.display = 'block';
+                showNoticesBtn.textContent = '공지사항 닫기';
+                fetchNotices();
+            } else {
+                noticeSection.style.display = 'none';
+                showNoticesBtn.textContent = '공지사항 보기';
+            }
         }
 
         async function fetchNotices() {
@@ -794,11 +796,12 @@
             notices.forEach(notice => {
                 const li = document.createElement('li');
                 li.textContent = notice.title;
-                li.addEventListener('click', () => showNoticeDetailModal(notice));
+                li.addEventListener('click', () => showNoticeDetail(notice));
                 noticeList.appendChild(li);
             });
         }
-        function showNoticeDetailModal(notice) {
+
+        function showNoticeDetail(notice) {
             const modal = document.getElementById('noticeDetailModal');
             const title = document.getElementById('noticeTitle');
             const content = document.getElementById('noticeContent');
@@ -817,11 +820,22 @@
             modal.style.display = 'block';
         }
 
-        // 이벤트 리스너 설정
+        // Update event listener
+        const closeButtons = document.getElementsByClassName("close");
+        for (let i = 0; i < closeButtons.length; i++) {
+            closeButtons[i].onclick = function() {
+                this.closest('.modal').style.display = "none";
+            }
+        }
+
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = "none";
+            }
+        }
         document.getElementById('showNoticesBtn').addEventListener('click', (event) => {
             event.preventDefault();
-            fetchNotices();
-            showNoticeModal();
+            showNoticeSection();
         });
 
         // 이벤트 리스너 설정
