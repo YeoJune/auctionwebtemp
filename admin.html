@@ -4,12 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>관리자 페이지</title>
-    <script src="https://cdn.tiny.cloud/1/bm7j5h26v4rar1b9h0cmi7zx8easu0xpkyc8xabsuu0kwt63/tinymce/5/tinymce.min.js" referrerpolicy="origin"></script>
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
         h2 { margin-top: 30px; }
         input, select, button { margin: 5px 0; }
-        #noticeContent { width: 100%; }
+        #editor { height: 300px; }
         #noticeList { margin-top: 20px; }
         .notice-item { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
     </style>
@@ -28,7 +29,7 @@
     <h2>3. 공지 관리</h2>
     <input type="hidden" id="noticeId">
     <input type="text" id="noticeTitle" placeholder="제목">
-    <textarea id="noticeContent"></textarea>
+    <div id="editor"></div>
     <button onclick="saveNotice()">공지 저장</button>
     <button onclick="clearNoticeForm()">새 공지</button>
     <div id="noticeList"></div>
@@ -52,8 +53,100 @@
 
     <script>
         const API_URL = '/api';
+        // 이미지 압축 함수
+        function compressImage(file, maxWidth, maxHeight, quality) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = function (event) {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = function () {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
 
-        // 1. 로고 변경 (변경 없음)
+                if (width > height) {
+                if (width > maxWidth) {
+                    height *= maxWidth / width;
+                    width = maxWidth;
+                }
+                } else {
+                if (height > maxHeight) {
+                    width *= maxHeight / height;
+                    height = maxHeight;
+                }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob((blob) => {
+                resolve(blob);
+                }, 'image/jpeg', quality);
+            };
+            };
+            reader.onerror = (error) => reject(error);
+        });
+        }
+
+        // Quill 에디터 초기화 및 이미지 핸들러 설정
+        const quill = new Quill('#editor', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    ['image', 'code-block'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['clean']
+                ],
+                clipboard: {
+                    matchVisual: false
+                }
+            }
+        });
+
+        quill.getModule('toolbar').addHandler('image', () => {
+            const input = document.createElement('input');
+            input.setAttribute('type', 'file');
+            input.setAttribute('accept', 'image/*');
+            input.click();
+
+            input.onchange = async () => {
+                const file = input.files[0];
+                if (file) {
+                    try {
+                        // 이미지 압축 (최대 너비 800px, 최대 높이 600px, 품질 0.7)
+                        const compressedBlob = await compressImage(file, 800, 600, 0.7);
+                        
+                        // 압축된 이미지를 서버에 업로드
+                        const formData = new FormData();
+                        formData.append('image', compressedBlob, file.name);
+
+                        const response = await fetch(`${API_URL}/admin/upload-image`, {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        if (response.ok) {
+                            const result = await response.json();
+                            const range = quill.getSelection(true);
+                            quill.insertEmbed(range.index, 'image', result.file.url);
+                        } else {
+                            console.error('Image upload failed');
+                        }
+                    } catch (error) {
+                        console.error('Error processing image:', error);
+                    }
+                }
+            };
+        });
+
+        // 1. 로고 변경
         async function uploadLogo() {
             const logoFile = document.getElementById('logoFile').files[0];
             if (!logoFile) {
@@ -78,7 +171,7 @@
             }
         }
 
-        // 2. 크롤링 스케줄 설정 (변경 없음)
+        // 2. 크롤링 스케줄 설정
         async function updateCrawlSchedule() {
             const crawlTime = document.getElementById('crawlTime').value;
             if (!crawlTime) {
@@ -104,20 +197,11 @@
             }
         }
 
-        // 3. 공지 관리 (수정됨)
-        tinymce.init({
-            selector: '#noticeContent',
-            plugins: 'advlist autolink lists link image charmap print preview hr anchor pagebreak',
-            toolbar_mode: 'floating',
-            toolbar: 'undo redo | formatselect | bold italic backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | image',
-            height: 400,
-            images_upload_url: `${API_URL}/admin/upload-image`,
-        });
-
+        // 3. 공지 관리
         async function saveNotice() {
             const noticeId = document.getElementById('noticeId').value;
             const title = document.getElementById('noticeTitle').value;
-            const content = tinymce.get('noticeContent').getContent();
+            const content = quill.root.innerHTML;
             if (!title || !content) {
                 alert('제목과 내용을 모두 입력해주세요.');
                 return;
@@ -150,7 +234,7 @@
         function clearNoticeForm() {
             document.getElementById('noticeId').value = '';
             document.getElementById('noticeTitle').value = '';
-            tinymce.get('noticeContent').setContent('');
+            quill.setContents([]);
         }
 
         async function fetchNotices() {
@@ -170,19 +254,21 @@
                 <div class="notice-item">
                     <h3>${notice.title}</h3>
                     <p>${notice.content.substring(0, 100)}...</p>
-                    <button onclick="editNotice(${notice.id})">수정</button>
-                    <button onclick="deleteNotice(${notice.id})">삭제</button>
+                    <button onclick="editNotice('${notice.id}')">수정</button>
+                    <button onclick="deleteNotice('${notice.id}')">삭제</button>
                 </div>
             `).join('');
         }
-
         async function editNotice(id) {
             try {
                 const response = await fetch(`${API_URL}/admin/notices/${id}`);
                 const notice = await response.json();
                 document.getElementById('noticeId').value = notice.id;
                 document.getElementById('noticeTitle').value = notice.title;
-                tinymce.get('noticeContent').setContent(notice.content);
+                
+                // Quill 내용 설정
+                quill.setContents([]);
+                quill.clipboard.dangerouslyPasteHTML(0, notice.content);
             } catch (error) {
                 console.error('Error fetching notice:', error);
                 alert('공지를 불러오는데 실패했습니다.');
@@ -208,7 +294,7 @@
             }
         }
 
-        // 4. 필터 설정 (변경 없음)
+        // 4. 필터 설정
         let allFilters = { brands: [], categories: [], dates: [] };
 
         async function fetchFilters() {

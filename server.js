@@ -12,6 +12,7 @@ const bidRoutes = require('./routes/bid');
 const adminRoutes = require('./routes/admin');
 const logger = require('./utils/logger');
 const pool = require('./utils/DB');
+const bodyParser = require('body-parser');
 
 const app = express();
 
@@ -23,8 +24,8 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 // 세션 스토어 설정
 const sessionStore = new MySQLStore({

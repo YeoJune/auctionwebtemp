@@ -7,7 +7,7 @@ const logger = require('../utils/logger');
 const { getAdminSettings, updateAdminSettings, getNotices, getNoticeById, addNotice, updateNotice, deleteNotice, getFilterSettings, updateFilterSettings } = require('../utils/adminDB');
 
 // Multer configuration for image uploads
-const storage = multer.diskStorage({
+const logoStorage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, 'public/images/')
   },
@@ -16,7 +16,20 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ storage: storage });
+const uploadLogo = multer({ storage: logoStorage });
+
+// Multer configuration for notice image uploads
+const noticeImageStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'public/images/notices/')
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname))
+  }
+});
+
+const uploadNoticeImage = multer({ storage: noticeImageStorage });
 
 // Middleware to check if user is admin (unchanged)
 const isAdmin = (req, res, next) => {
@@ -32,7 +45,7 @@ router.get('/', isAdmin, (req, res) => {
 });
 
 // Route to upload logo (unchanged)
-router.post('/upload-logo', isAdmin, upload.single('logo'), (req, res) => {
+router.post('/upload-logo', isAdmin, uploadLogo.single('logo'), (req, res) => {
   if (req.file) {
     res.json({ message: 'Logo uploaded successfully' });
   } else {
@@ -90,13 +103,19 @@ router.get('/notices/:id', async (req, res) => {
 });
 
 // New route for TinyMCE image upload
-router.post('/upload-image', isAdmin, upload.single('file'), (req, res) => {
+router.post('/upload-image', isAdmin, uploadNoticeImage.single('image'), (req, res) => {
   if (req.file) {
     res.json({
-      location: `/images/notices/${req.file.filename}`
+      success: 1,
+      file: {
+        url: `/images/notices/${req.file.filename}`
+      }
     });
   } else {
-    res.status(400).json({ message: 'Image upload failed' });
+    res.status(400).json({ 
+      success: 0,
+      message: 'Image upload failed' 
+    });
   }
 });
 
