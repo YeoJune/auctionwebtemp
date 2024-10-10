@@ -168,7 +168,7 @@ async function crawlAll() {
     if (ecoAucCrawler.isRefreshing || brandAuctionCrawler.isRefreshing) {
       throw new Error("already crawling");
     } else {
-      const [existingItems] = await pool.query('SELECT * FROM crawled_items');
+      const [existingItems] = await pool.query('SELECT item_id, auc_num FROM crawled_items');
       const existingEcoAucIds = new Set(existingItems.filter(item => item.auc_num == 1).map(item => item.item_id));
       const existingBrandAuctionIds = new Set(existingItems.filter(item => item.auc_num == 2).map(item => item.item_id));
       ecoAucCrawler.isRefreshing = true;
@@ -182,7 +182,6 @@ async function crawlAll() {
       if (!ecoAucItems) ecoAucItems = [];
       if (!brandAuctionItems) brandAuctionItems = [];
       const allItems = [
-        ...existingItems,
         ...ecoAucItems,
         ...brandAuctionItems
       ];

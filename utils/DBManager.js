@@ -80,7 +80,6 @@ class DatabaseManager {
       console.error('Error cleaning up unused images:', error);
     }
   }
-
   async saveItems(items, batchSize = 1000) {
     if (!items || !Array.isArray(items)) throw new Error("Invalid input: items must be an array");
     
@@ -90,17 +89,20 @@ class DatabaseManager {
         conn = await this.pool.getConnection();
         await conn.beginTransaction();
   
-        const columns = this.crawledItemColumns.filter(col => items[0].hasOwnProperty(col));
-        const placeholders = columns.map(() => '?').join(', ');
-        const updateClauses = columns.map(col => `${col} = VALUES(${col})`).join(', ');
-  
         // Store all item_ids and active image paths from the input
         const inputItemIds = new Set(items.map(item => item.item_id));
         const activeImagePaths = new Set();
 
+        // Filter out items without japanese_title for insertion/update
+        const validItems = items.filter(item => item.japanese_title);
+
+        const columns = this.crawledItemColumns.filter(col => validItems[0].hasOwnProperty(col));
+        const placeholders = columns.map(() => '?').join(', ');
+        const updateClauses = columns.map(col => `${col} = VALUES(${col})`).join(', ');
+
         // Process items in batches
-        for (let i = 0; i < items.length; i += batchSize) {
-          const batch = items.slice(i, i + batchSize);
+        for (let i = 0; i < validItems.length; i += batchSize) {
+          const batch = validItems.slice(i, i + batchSize);
           const insertQuery = `
             INSERT INTO crawled_items (${columns.join(', ')})
             VALUES ${batch.map(() => `(${placeholders})`).join(', ')}

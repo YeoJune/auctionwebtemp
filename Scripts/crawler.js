@@ -397,7 +397,7 @@ class Crawler {
   async extractItemInfo(itemHandle, existingIds) {
     const id = await this.crawlerPage.$eval(this.config.crawlSelectors.id, el => el.getAttribute('data-auction-item-id'));
     if (existingIds.has(id)) {
-      return null;
+      return {item_id: id};
     }
     const item = await itemHandle.evaluate((el, config) => {
       const id = el.querySelector(config.crawlSelectors.id);
@@ -544,7 +544,7 @@ class BrandAuctionCrawler extends Crawler {
   async extractItemInfo(itemHandle, existingIds) {
     const id = await this.crawlerPage.$eval(this.config.crawlSelectors.id, el => el.textContent.trim());
     if (existingIds.has(id)) {
-      return null;
+      return {item_id: id};
     }
     const item = await this.crawlerPage.evaluate((item, config) => {
       const id = item.querySelector(config.crawlSelectors.id);
