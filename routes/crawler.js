@@ -168,21 +168,22 @@ async function crawlAll() {
     if (ecoAucCrawler.isRefreshing || brandAuctionCrawler.isRefreshing) {
       throw new Error("already crawling");
     } else {
+      const [existingItems] = await pool.query('SELECT item_id, auc_num FROM crawled_items');
+      const existingEcoAucIds = new Set(existingItems.filter(item => item.auc_num === 1).map(item => item.item_id));
+      const existingBrandAuctionIds = new Set(existingItems.filter(item => item.auc_num === 2).map(item => item.item_id));
+
       ecoAucCrawler.isRefreshing = true;
-      let ecoAucItems = await ecoAucCrawler.crawlAllItems();
+      let ecoAucItems = await ecoAucCrawler.crawlAllItems(existingEcoAucIds);
       ecoAucItems = await processCrawledItems(ecoAucItems);
       ecoAucCrawler.isRefreshing = false;
-      /*
       brandAuctionCrawler.isRefreshing = true;
-      let brandAuctionItems = await brandAuctionCrawler.crawlAllItems();
+      let brandAuctionItems = await brandAuctionCrawler.crawlAllItems(existingBrandAuctionIds);
       brandAuctionItems = await processCrawledItems(brandAuctionItems);
       brandAuctionCrawler.isRefreshing = false;
       if (!ecoAucItems) ecoAucItems = [];
       if (!brandAuctionItems) brandAuctionItems = [];
 
       await DBManager.saveItems([...ecoAucItems, ...brandAuctionItems]);
-      */
-      await DBManager.saveItems(ecoAucItems);
     }
   } catch (error) {
     ecoAucCrawler.isRefreshing = false;

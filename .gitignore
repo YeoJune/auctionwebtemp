@@ -4,3 +4,5 @@ token.json
 *.log
 .env
 service-account-key.json
+test.js
+*.csv
