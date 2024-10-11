@@ -96,41 +96,41 @@ class DatabaseManager {
 
         // Filter out items without japanese_title for insertion/update
         const validItems = items.filter(item => item.japanese_title);
-
-        const columns = this.crawledItemColumns.filter(col => validItems[0].hasOwnProperty(col));
-        const placeholders = columns.map(() => '?').join(', ');
-        const updateClauses = columns.map(col => `${col} = VALUES(${col})`).join(', ');
-
-        // Process items in batches
-        for (let i = 0; i < validItems.length; i += batchSize) {
-          const batch = validItems.slice(i, i + batchSize);
-          const insertQuery = `
-            INSERT INTO crawled_items (${columns.join(', ')})
-            VALUES ${batch.map(() => `(${placeholders})`).join(', ')}
-            ON DUPLICATE KEY UPDATE ${updateClauses}
-          `;
+        if (validItems.length) {
+          const columns = this.crawledItemColumns.filter(col => validItems[0].hasOwnProperty(col));
+          const placeholders = columns.map(() => '?').join(', ');
+          const updateClauses = columns.map(col => `${col} = VALUES(${col})`).join(', ');
   
-          const values = batch.flatMap(item => {
-            columns.forEach(col => {
-              if (col === 'image') {
-                activeImagePaths.add(item[col]);
-              } else if (col === 'additional_images') {
-                const additionalImages = JSON.parse(item[col] || '[]');
-                additionalImages.forEach(img => activeImagePaths.add(img));
-              }
+          // Process items in batches
+          for (let i = 0; i < validItems.length; i += batchSize) {
+            const batch = validItems.slice(i, i + batchSize);
+            const insertQuery = `
+              INSERT INTO crawled_items (${columns.join(', ')})
+              VALUES ${batch.map(() => `(${placeholders})`).join(', ')}
+              ON DUPLICATE KEY UPDATE ${updateClauses}
+            `;
+    
+            const values = batch.flatMap(item => {
+              columns.forEach(col => {
+                if (col === 'image') {
+                  activeImagePaths.add(item[col]);
+                } else if (col === 'additional_images') {
+                  const additionalImages = JSON.parse(item[col] || '[]');
+                  additionalImages.forEach(img => activeImagePaths.add(img));
+                }
+              });
+              return columns.map(col => item[col]);
             });
-            return columns.map(col => item[col]);
-          });
-          await conn.query(insertQuery, values);
+            await conn.query(insertQuery, values);
+          }
         }
-  
+        /*
         // Delete items not present in the input
         const deleteQuery = `
           DELETE FROM crawled_items
           WHERE item_id NOT IN (?)
         `;
         await conn.query(deleteQuery, [Array.from(inputItemIds)]);
-  
         // Delete wishlist items that no longer exist in crawled_items
         await conn.query(`
           DELETE w FROM wishlists w
@@ -138,11 +138,12 @@ class DatabaseManager {
           WHERE ci.item_id IS NULL
         `);
   
+        */
         await conn.commit();
         console.log('Items saved to database and outdated items deleted successfully');
 
         // Clean up unused images
-        await this.cleanupUnusedImages(activeImagePaths);
+        //await this.cleanupUnusedImages(activeImagePaths);
       });
     } catch (error) {
       if (conn) await conn.rollback();
