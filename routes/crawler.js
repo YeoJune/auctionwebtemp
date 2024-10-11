@@ -9,7 +9,7 @@ const DBManager = require('../utils/DBManager');
 const logger = require('../utils/logger');
 const pool = require('../utils/DB');
 const cron = require('node-cron');
-const Jimp = require('jimp');
+const sharp = require('sharp');
 const { getAdminSettings, updateAdminSettings } = require('../utils/adminDB');
 
 // 이미지 저장 경로 설정
@@ -131,16 +131,17 @@ async function downloadAndSaveImage(url, retries = 3, delay = 1000) {
       const fileName = `${uuidv4()}.jpg`;
       const filePath = path.join(IMAGE_DIR, fileName);
 
-      const image = await Jimp.read(Buffer.from(response.data));
-      await image.quality(80).writeAsync(filePath);
+      await sharp(response.data)
+        .jpeg({ quality: 80 })
+        .toFile(filePath);
 
       return `/images/products/${fileName}`;
     } catch (error) {
-      if (error.response && error.response.status === 503) {
-        console.log(`Encountered 503 error, retrying in ${delay}ms... (Attempt ${attempt + 1} of ${retries})`);
+      console.error(`Error processing image (Attempt ${attempt + 1}/${retries}): ${url}`, error.message);
+      if (attempt < retries - 1) {
+        console.log(`Retrying in ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
       } else {
-        console.error(`Error processing image: ${url}`, error);
         return null;
       }
     }

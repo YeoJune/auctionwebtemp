@@ -1,8 +1,9 @@
 // Scripts/crawler.js
 const dotenv = require('dotenv');
-const AWS = require('aws-sdk');
 const puppeteer = require('puppeteer');
-const Translate = new AWS.Translate();
+const { TranslateClient, TranslateTextCommand } = require("@aws-sdk/client-translate");
+const translate = new TranslateClient({ region: "ap-northeast-2" });
+
 const wordDictionary = require('../utils/wordDictionary');
 
 let pLimit;
@@ -136,7 +137,8 @@ class Crawler {
           SourceLanguageCode: 'ja',
           TargetLanguageCode: 'ko'
         };
-        const result = await Translate.translateText(params).promise();
+        const command = new TranslateTextCommand(params);
+        const result = await translate.send(command);
         return result.TranslatedText;
       } catch (error) {
         console.error('Translation error:', error.message);
