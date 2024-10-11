@@ -14,31 +14,41 @@ const { getAdminSettings, updateAdminSettings } = require('../utils/adminDB');
 // 이미지 저장 경로 설정
 const IMAGE_DIR = path.join(__dirname, '..', 'public', 'images', 'products');
 
-// 이미지 다운로드 및 저장 함수
-async function downloadAndSaveImage(url) {
-  try {
-    const response = await axios.get(url, { responseType: 'arraybuffer' });
-    const buffer = Buffer.from(response.data, 'binary');
-    const fileName = `${uuidv4()}.webm`;
-    const filePath = path.join(IMAGE_DIR, fileName);
-
-    // 폴더가 존재하는지 확인하고, 없으면 생성
+async function downloadAndSaveImage(url, retries = 3, delay = 1000) {
+  for (let attempt = 0; attempt < retries; attempt++) {
     try {
-      await fs.access(IMAGE_DIR);
+      const response = await axios.get(url, { 
+        responseType: 'arraybuffer',
+        validateStatus: status => status === 200
+      });
+      const buffer = Buffer.from(response.data, 'binary');
+      const fileName = `${uuidv4()}.webm`;
+      const filePath = path.join(IMAGE_DIR, fileName);
+
+      // 폴더가 존재하는지 확인하고, 없으면 생성
+      try {
+        await fs.access(IMAGE_DIR);
+      } catch (error) {
+        if (error.code === 'ENOENT') {
+          await fs.mkdir(IMAGE_DIR, { recursive: true });
+        } else {
+          throw error;
+        }
+      }
+
+      await fs.writeFile(filePath, buffer);
+      
+      return `/images/products/${fileName}`;
     } catch (error) {
-      if (error.code === 'ENOENT') {
-        await fs.mkdir(IMAGE_DIR, { recursive: true });
+      if (error.response && error.response.status === 503) {
+        console.log(`Encountered 503 error, retrying in ${delay}ms... (Attempt ${attempt + 1} of ${retries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
       } else {
         throw error;
       }
     }
-
-    await fs.writeFile(filePath, buffer);
-    return `/images/products/${fileName}`;
-  } catch (error) {
-    logger.error(`Error downloading image from ${url}: ${error.message}`);
-    return null;
   }
+  throw new Error(`Failed to download image after ${retries} attempts`);
 }
 
 // 이미지 처리 함수
