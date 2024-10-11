@@ -239,7 +239,7 @@ async function crawlAll() {
       await ecoAucCrawler.closeCrawlerBrowser();
       await ecoAucCrawler.closeDetailBrowsers();
       let brandAuctionItems = await brandAuctionCrawler.crawlAllItems(existingBrandAuctionIds);
-      brandAuctionItems = await processImagesInChunks(brandAuctionItems);
+      brandAuctionItems = await processImagesInChunks(brandAuctionItems, 50);
       brandAuctionCrawler.isRefreshing = false;
 
       if (!ecoAucItems) ecoAucItems = [];
