@@ -13,6 +13,7 @@ class DatabaseManager {
       'category', 'brand', 'rank', 'starting_price', 'image', 'description',
       'additional_images', 'accessory_code'
     ];
+    this.IMAGE_DIR = path.join(__dirname, '..', 'public', 'images', 'products');
   }
 
   async withRetry(operation) {
