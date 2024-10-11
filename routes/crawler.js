@@ -37,7 +37,7 @@ async function processItem(itemId, res) {
           const crawledDetails = await crawler.crawlItemDetails(detailIndex, itemId);
     
           if (crawledDetails) {
-            const processedDetails = await processImagesInChunks(crawledDetails);
+            const processedDetails = await processImagesInChunks([crawledDetails]);
             await DBManager.updateItemDetails(itemId, processedDetails);
             
             const [updatedItems] = await pool.query('SELECT * FROM crawled_items WHERE item_id = ?', [itemId]);
