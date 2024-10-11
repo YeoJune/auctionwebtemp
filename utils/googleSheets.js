@@ -143,7 +143,7 @@ class GoogleSheetsManager {
 
   async updateFinalBidAmount(bidId, finalBidAmount) {
     try {
-      const sheetRow = (await this.findRows('Main Sheet', 'A', bidId))[0];
+      const sheetRow = (await this.findRows('Main Sheet', 'A', [bidId]))[0];
       if (!sheetRow) return null;
       const range = `Main Sheet!N${sheetRow}`;
       await this.sheets.spreadsheets.values.update({

@@ -547,7 +547,7 @@
                     const data = await response.json();
                     alert(isFinalBid ? '최종 입찰금액이 성공적으로 등록되었습니다.' : '입찰 예정액이 성공적으로 신청되었습니다.');
                     // Update bidData
-                    const bidIndex = bidData.findIndex(b => b.item_id === itemId);
+                    const bidIndex = bidData.findIndex(b => b.item_id == itemId);
                     if (bidIndex !== -1) {
                         bidData[bidIndex] = { ...bidData[bidIndex], ...data.bidInfo };
                     } else {
@@ -576,7 +576,8 @@
         function bidButton(input, itemId) {
             if (itemId) {
                 const bidInfo = bidData.find(b => b.item_id == itemId);
-                const isFinalBid = bidInfo && (bidInfo.first_price || bidInfo.second_price);
+                const isFinalBid = !!bidInfo && (!!bidInfo.first_price || !!bidInfo.second_price);
+                console.log(itemId, input, isFinalBid);
                 placeBidReservation(itemId, input, isFinalBid);
             }
         }
