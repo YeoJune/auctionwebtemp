@@ -10,7 +10,7 @@ const chunk = (arr, size) =>
   Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
     arr.slice(i * size, i * size + size)
   );
-async function downloadAndSaveImage(url, retries = 3, delay = 1 * 60 * 1000) {
+async function downloadAndSaveImage(url, retries = 5, delay = 2 * 60 * 1000) {
 for (let attempt = 0; attempt < retries; attempt++) {
   try {
     const response = await axios({

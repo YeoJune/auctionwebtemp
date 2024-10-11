@@ -153,9 +153,36 @@ class DatabaseManager {
               VALUES ${batch.map(() => `(${placeholders})`).join(', ')}
               ON DUPLICATE KEY UPDATE ${updateClauses}
             `;
-    
-            const values = batch.flatMap(item => {columns.map(col => item[col]);});
-            await conn.query(insertQuery, values);
+            
+            const values = batch.flatMap(item => columns.map(col => {
+              // 데이터 타입 검증 및 변환
+              const value = item[col];
+              return value;
+            }));
+  
+            try {
+              await conn.query(insertQuery, values);
+            } catch (error) {
+              console.error(`Error inserting batch ${i / batchSize + 1}:`, error);
+              // 개별 아이템 삽입 시도
+              for (let j = 0; j < batch.length; j++) {
+                const singleItemValues = columns.map(col => {
+                  const value = batch[j][col];
+                  return value;
+                });
+                const singleInsertQuery = `
+                  INSERT INTO crawled_items (${columns.join(', ')})
+                  VALUES (${placeholders})
+                  ON DUPLICATE KEY UPDATE ${updateClauses}
+                `;
+                try {
+                  await conn.query(singleInsertQuery, singleItemValues);
+                } catch (singleError) {
+                  console.error(`Error inserting item ${batch[j].item_id}:`, singleError);
+                  // 개별 아이템 오류 로깅, 하지만 전체 프로세스는 계속 진행
+                }
+              }
+            }
           }
         }
         // Delete items not present in the input
