@@ -38,9 +38,9 @@ class DatabaseManager {
       
         const updateFields = [];
         const updateValues = [];
-  
+        
         for (const [key, value] of Object.entries(newDetails)) {
-          if (this.crawledItemColumns.includes(key.toLowerCase())) {
+          if (this.crawledItemColumns.includes(key)) {
             updateFields.push(`${key} = ?`);
             updateValues.push(value);
           }
