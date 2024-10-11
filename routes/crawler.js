@@ -222,14 +222,15 @@ async function crawlAll() {
       let ecoAucItems = await ecoAucCrawler.crawlAllItems(existingEcoAucIds);
       ecoAucItems = await processCrawledItems(ecoAucItems);
       ecoAucCrawler.isRefreshing = false;
-
+      /*
       brandAuctionCrawler.isRefreshing = true;
       await ecoAucCrawler.closeCrawlerBrowser();
       await ecoAucCrawler.closeDetailBrowsers();
       let brandAuctionItems = await brandAuctionCrawler.crawlAllItems(existingBrandAuctionIds);
       brandAuctionItems = await processCrawledItems(brandAuctionItems);
       brandAuctionCrawler.isRefreshing = false;
-      
+      */
+     
       if (!ecoAucItems) ecoAucItems = [];
       if (!brandAuctionItems) brandAuctionItems = [];
       const allItems = [
