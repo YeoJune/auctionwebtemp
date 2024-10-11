@@ -12,7 +12,7 @@ const cron = require('node-cron');
 const sharp = require('sharp');
 const { getAdminSettings, updateAdminSettings } = require('../utils/adminDB');
 
-const STALL_LIMIT = 10000;
+const STALL_LIMIT = 5000;
 
 // 이미지 저장 경로 설정
 const IMAGE_DIR = path.join(__dirname, '..', 'public', 'images', 'products');
@@ -155,6 +155,18 @@ async function downloadAndSaveImage(url, retries = 3, delay = 1000) {
   return null;
 }
 async function processImagesInChunks(items, chunkSize = 100) {
+  // 아이템 분류
+  const itemsWithImages = [];
+  const itemsWithoutImages = [];
+
+  items.forEach(item => {
+    if (item.image || (item.additional_images && JSON.parse(item.additional_images).length > 0)) {
+      itemsWithImages.push(item);
+    } else {
+      itemsWithoutImages.push(item);
+    }
+  });
+
   const processChunk = async (chunk) => {
     return Promise.all(chunk.map(async (item) => {
       const downloadTasks = [];
@@ -191,7 +203,7 @@ async function processImagesInChunks(items, chunkSize = 100) {
     }));
   };
 
-  const chunks = chunk(items, chunkSize);
+  const chunks = chunk(itemsWithImages, chunkSize);
   const processedItems = [];
   let i = 0;
   for (const chunkItems of chunks) {
@@ -202,10 +214,14 @@ async function processImagesInChunks(items, chunkSize = 100) {
     await new Promise(resolve => setTimeout(resolve, 100));
     if (i % 10 == 0) console.log(`${i / 10} / ${chunks.length / 10}`);
     i += 1;
-    if (i % STALL_LIMIT == 0) await new Promise(resolve => setTimeout(resolve, 5 * 60 * 1000));
+    if (i % STALL_LIMIT == 0) {
+      console.log('5 min sleep...');
+      await new Promise(resolve => setTimeout(resolve, 5 * 60 * 1000));
+    }
   }
 
-  return processedItems;
+  // 처리된 아이템과 이미지가 없는 아이템을 합쳐서 반환
+  return [...processedItems, ...itemsWithoutImages];
 }
 
 async function crawlAll() {
