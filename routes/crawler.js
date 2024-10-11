@@ -191,13 +191,15 @@ async function processImagesInChunks(items, chunkSize = 100) {
 
   const chunks = chunk(items, chunkSize);
   const processedItems = [];
-
+  let i = 0;
   for (const chunkItems of chunks) {
     const processedChunk = await processChunk(chunkItems);
     processedItems.push(...processedChunk);
     
     // 가비지 컬렉션을 위한 짧은 지연
     await new Promise(resolve => setTimeout(resolve, 100));
+    if (i % 10 == 0) console.log(`${i / 10}th / ${items.length / chunkSize}`);
+    i += 1;
   }
 
   return processedItems;
@@ -213,8 +215,9 @@ async function crawlAll() {
       throw new Error("already crawling");
     } else {
       const [existingItems] = await pool.query('SELECT item_id, auc_num FROM crawled_items');
-      const existingEcoAucIds = new Set(existingItems.filter(item => item.auc_num == 1).map(item => item.item_id));
+      //const existingEcoAucIds = new Set(existingItems.filter(item => item.auc_num == 1).map(item => item.item_id));
       const existingBrandAuctionIds = new Set(existingItems.filter(item => item.auc_num == 2).map(item => item.item_id));
+      const existingEcoAucIds = [];
 
       ecoAucCrawler.isRefreshing = true;
       await brandAuctionCrawler.closeCrawlerBrowser();
