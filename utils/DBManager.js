@@ -77,9 +77,7 @@ class DatabaseManager {
       // crawled_items에서 activeImageIds에 있는 원소들이 item_id인 아이템의 image, additional_images를 가져옴
       [activeImages] = await conn.query(`
         SELECT image, additional_images
-        FROM crawled_items
-        WHERE item_id IN (?)
-      `, [activeImageIds]);
+        FROM crawled_items`);
   
       // crawled_items의 image와 additional_images 처리
       for (const item of activeImages) {
@@ -188,5 +186,6 @@ class DatabaseManager {
 }
 
 const DBManager = new DatabaseManager(pool);
+DBManager.cleanupUnusedImages([]);
 
 module.exports = DBManager;
