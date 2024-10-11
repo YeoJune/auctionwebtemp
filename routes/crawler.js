@@ -217,7 +217,7 @@ async function crawlAll() {
       const [existingItems] = await pool.query('SELECT item_id, auc_num FROM crawled_items');
       //const existingEcoAucIds = new Set(existingItems.filter(item => item.auc_num == 1).map(item => item.item_id));
       const existingBrandAuctionIds = new Set(existingItems.filter(item => item.auc_num == 2).map(item => item.item_id));
-      const existingEcoAucIds = [];
+      const existingEcoAucIds = new Set();
 
       ecoAucCrawler.isRefreshing = true;
       await brandAuctionCrawler.closeCrawlerBrowser();
