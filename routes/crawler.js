@@ -12,6 +12,8 @@ const cron = require('node-cron');
 const sharp = require('sharp');
 const { getAdminSettings, updateAdminSettings } = require('../utils/adminDB');
 
+const STALL_LIMIT = 10000;
+
 // 이미지 저장 경로 설정
 const IMAGE_DIR = path.join(__dirname, '..', 'public', 'images', 'products');
 
@@ -198,15 +200,12 @@ async function processImagesInChunks(items, chunkSize = 100) {
     
     // 가비지 컬렉션을 위한 짧은 지연
     await new Promise(resolve => setTimeout(resolve, 100));
-    if (i % 10 == 0) console.log(`${i / 10}th / ${items.length / chunkSize}`);
+    if (i % 10 == 0) console.log(`${i / 10} / ${chunks.length / 10}`);
     i += 1;
+    if (i % STALL_LIMIT == 0) await new Promise(resolve => setTimeout(resolve, 5 * 60 * 1000));
   }
 
   return processedItems;
-}
-
-async function processCrawledItems(items) {
-  return processImagesInChunks(items);
 }
 
 async function crawlAll() {
@@ -215,26 +214,22 @@ async function crawlAll() {
       throw new Error("already crawling");
     } else {
       const [existingItems] = await pool.query('SELECT item_id, auc_num FROM crawled_items');
-      //const existingEcoAucIds = new Set(existingItems.filter(item => item.auc_num == 1).map(item => item.item_id));
+      const existingEcoAucIds = new Set(existingItems.filter(item => item.auc_num == 1).map(item => item.item_id));
       const existingBrandAuctionIds = new Set(existingItems.filter(item => item.auc_num == 2).map(item => item.item_id));
-      const existingEcoAucIds = new Set();
 
       ecoAucCrawler.isRefreshing = true;
       await brandAuctionCrawler.closeCrawlerBrowser();
       await brandAuctionCrawler.closeDetailBrowsers();
       let ecoAucItems = await ecoAucCrawler.crawlAllItems(existingEcoAucIds);
-      ecoAucItems = await processCrawledItems(ecoAucItems);
+      ecoAucItems = await processImagesInChunks(ecoAucItems);
       ecoAucCrawler.isRefreshing = false;
 
-      let brandAuctionItems = null;
-      /*
       brandAuctionCrawler.isRefreshing = true;
       await ecoAucCrawler.closeCrawlerBrowser();
       await ecoAucCrawler.closeDetailBrowsers();
       let brandAuctionItems = await brandAuctionCrawler.crawlAllItems(existingBrandAuctionIds);
-      brandAuctionItems = await processCrawledItems(brandAuctionItems);
+      brandAuctionItems = await processImagesInChunks(brandAuctionItems);
       brandAuctionCrawler.isRefreshing = false;
-      */
 
       if (!ecoAucItems) ecoAucItems = [];
       if (!brandAuctionItems) brandAuctionItems = [];

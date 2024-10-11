@@ -42,8 +42,8 @@ router.post('/place-reservation', async (req, res) => {
       }
       
       const [result] = await connection.query(
-        'INSERT INTO bids (item_id, user_id, first_price) VALUES (?, ?, ?)',
-        [itemId, req.session.user.id, bidAmount]
+        'INSERT INTO bids (item_id, user_id, first_price, image) VALUES (?, ?, ?, ?)',
+        [itemId, req.session.user.id, bidAmount, item.image]
       );
       const bidData = [
         result.insertId + '',
@@ -56,7 +56,7 @@ router.post('/place-reservation', async (req, res) => {
         item.korean_title,
         item.rank,
         item.starting_price,
-        `=IMAGE("http://casastrade.com//${item.image}")`,
+        `=IMAGE("http://casastrade.com/${item.image}")`,
         bidAmount,
       ];
       bid = {

@@ -6,3 +6,4 @@ token.json
 service-account-key.json
 test.js
 *.csv
+public/**

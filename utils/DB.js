@@ -20,7 +20,8 @@ async function testConnection() {
     conn = await pool.getConnection();
     console.log('Successfully connected to the database');
     
-    const [rows, fields] = await conn.query(`ALTER TABLE notices DROP COLUMN image_urls;
+    const [rows, fields] = await conn.query(`
+      SELECT * FROM bids
     `);
     console.log('Query executed successfully. Result:', rows);
 

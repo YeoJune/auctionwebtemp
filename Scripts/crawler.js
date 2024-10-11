@@ -533,7 +533,7 @@ class BrandAuctionCrawler extends Crawler {
       await this.waitForLoading(this.crawlerPage);
 
       const totalPageText = await this.crawlerPage.$eval(this.config.crawlSelectors.totalPagesSpan, el => el.textContent);
-      const totalPages = parseInt(totalPageText.match(/\d+/g).join(''));
+      const totalPages = 30; //parseInt(totalPageText.match(/\d+/g).join(''));
 
       const allItems = [];
       console.log(`Crawling for total page ${totalPages}`);

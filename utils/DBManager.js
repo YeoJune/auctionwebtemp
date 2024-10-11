@@ -65,9 +65,44 @@ class DatabaseManager {
       if (conn) conn.release();
     }
   }
+  async cleanupUnusedImages(activeImageIds) {
+    let conn;
+    let activeImages = null;
+    let bidImages = null;
+    const activeImagePaths = new Set();
   
-  async cleanupUnusedImages(activeImagePaths) {
     try {
+      conn = await this.pool.getConnection();
+  
+      // crawled_items에서 activeImageIds에 있는 원소들이 item_id인 아이템의 image, additional_images를 가져옴
+      [activeImages] = await conn.query(`
+        SELECT image, additional_images
+        FROM crawled_items
+        WHERE item_id IN (?)
+      `, [activeImageIds]);
+  
+      // crawled_items의 image와 additional_images 처리
+      for (const item of activeImages) {
+        if (item.image) activeImagePaths.add(item.image);
+        if (item.additional_images) {
+          JSON.parse(item.additional_images).forEach(img => activeImagePaths.add(img));
+        }
+      }
+      activeImages = null;
+
+      // bids 테이블에서 모든 image를 가져옴
+      [bidImages] = await conn.query(`
+        SELECT image
+        FROM bids
+      `);
+  
+      // bids의 image 처리
+      for (const item of bidImages) {
+        if (item.image) activeImagePaths.add(item.image);
+      }
+      bidImages = null;
+  
+      // 파일 시스템에서 이미지 정리
       const files = await fs.readdir(this.IMAGE_DIR);
       for (const file of files) {
         const filePath = path.join(this.IMAGE_DIR, file);
@@ -79,6 +114,16 @@ class DatabaseManager {
       }
     } catch (error) {
       console.error('Error cleaning up unused images:', error);
+    } finally {
+      if (conn) {
+        try {
+          await conn.release();
+        } catch (releaseError) {
+          console.error('Error releasing database connection:', releaseError);
+        }
+      }
+      // 추가적인 메모리 해제
+      activeImagePaths.clear();
     }
   }
   async saveItems(items, batchSize = 1000) {
@@ -91,8 +136,7 @@ class DatabaseManager {
         await conn.beginTransaction();
   
         // Store all item_ids and active image paths from the input
-        const inputItemIds = new Set(items.map(item => item.item_id));
-        const activeImagePaths = new Set();
+        const inputItemIds = items.map(item => item.item_id);
 
         // Filter out items without japanese_title for insertion/update
         const validItems = items.filter(item => item.japanese_title);
@@ -110,40 +154,28 @@ class DatabaseManager {
               ON DUPLICATE KEY UPDATE ${updateClauses}
             `;
     
-            const values = batch.flatMap(item => {
-              columns.forEach(col => {
-                if (col === 'image') {
-                  activeImagePaths.add(item[col]);
-                } else if (col === 'additional_images') {
-                  const additionalImages = JSON.parse(item[col] || '[]');
-                  additionalImages.forEach(img => activeImagePaths.add(img));
-                }
-              });
-              return columns.map(col => item[col]);
-            });
+            const values = batch.flatMap(item => {columns.map(col => item[col]);});
             await conn.query(insertQuery, values);
           }
         }
-        /*
         // Delete items not present in the input
         const deleteQuery = `
           DELETE FROM crawled_items
           WHERE item_id NOT IN (?)
         `;
-        await conn.query(deleteQuery, [Array.from(inputItemIds)]);
+        await conn.query(deleteQuery, [inputItemIds]);
         // Delete wishlist items that no longer exist in crawled_items
         await conn.query(`
           DELETE w FROM wishlists w
           LEFT JOIN crawled_items ci ON w.item_id = ci.item_id
           WHERE ci.item_id IS NULL
         `);
-  
-        */
+        
         await conn.commit();
         console.log('Items saved to database and outdated items deleted successfully');
 
         // Clean up unused images
-        //await this.cleanupUnusedImages(activeImagePaths);
+        await this.cleanupUnusedImages(inputItemIds);
       });
     } catch (error) {
       if (conn) await conn.rollback();
