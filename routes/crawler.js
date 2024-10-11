@@ -12,8 +12,6 @@ const cron = require('node-cron');
 const sharp = require('sharp');
 const { getAdminSettings, updateAdminSettings } = require('../utils/adminDB');
 
-const STALL_LIMIT = 5000;
-
 // 이미지 저장 경로 설정
 const IMAGE_DIR = path.join(__dirname, '..', 'public', 'images', 'products');
 
@@ -124,7 +122,7 @@ const chunk = (arr, size) =>
   Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
     arr.slice(i * size, i * size + size)
   );
-async function downloadAndSaveImage(url, retries = 3, delay = 1000) {
+async function downloadAndSaveImage(url, retries = 3, delay = 1 * 60 * 1000) {
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
       const response = await axios({
@@ -214,10 +212,6 @@ async function processImagesInChunks(items, chunkSize = 100) {
     await new Promise(resolve => setTimeout(resolve, 100));
     if (i % 10 == 0) console.log(`${i / 10} / ${chunks.length / 10}`);
     i += 1;
-    if (i % STALL_LIMIT == 0) {
-      console.log('5 min sleep...');
-      await new Promise(resolve => setTimeout(resolve, 5 * 60 * 1000));
-    }
   }
 
   // 처리된 아이템과 이미지가 없는 아이템을 합쳐서 반환
@@ -232,7 +226,8 @@ async function crawlAll() {
       const [existingItems] = await pool.query('SELECT item_id, auc_num FROM crawled_items');
       const existingEcoAucIds = new Set(existingItems.filter(item => item.auc_num == 1).map(item => item.item_id));
       const existingBrandAuctionIds = new Set(existingItems.filter(item => item.auc_num == 2).map(item => item.item_id));
-
+      console.log(existingEcoAucIds.size);
+      console.log(existingBrandAuctionIds.size);
       ecoAucCrawler.isRefreshing = true;
       await brandAuctionCrawler.closeCrawlerBrowser();
       await brandAuctionCrawler.closeDetailBrowsers();
