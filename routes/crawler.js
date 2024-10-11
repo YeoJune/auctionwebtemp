@@ -9,61 +9,11 @@ const DBManager = require('../utils/DBManager');
 const logger = require('../utils/logger');
 const pool = require('../utils/DB');
 const cron = require('node-cron');
+const Jimp = require('jimp');
 const { getAdminSettings, updateAdminSettings } = require('../utils/adminDB');
 
 // 이미지 저장 경로 설정
 const IMAGE_DIR = path.join(__dirname, '..', 'public', 'images', 'products');
-
-async function downloadAndSaveImage(url, retries = 3, delay = 1000) {
-  for (let attempt = 0; attempt < retries; attempt++) {
-    try {
-      const response = await axios.get(url, { 
-        responseType: 'arraybuffer',
-        validateStatus: status => status === 200
-      });
-      const buffer = Buffer.from(response.data, 'binary');
-      const fileName = `${uuidv4()}.webm`;
-      const filePath = path.join(IMAGE_DIR, fileName);
-
-      // 폴더가 존재하는지 확인하고, 없으면 생성
-      try {
-        await fs.access(IMAGE_DIR);
-      } catch (error) {
-        if (error.code === 'ENOENT') {
-          await fs.mkdir(IMAGE_DIR, { recursive: true });
-        } else {
-          throw error;
-        }
-      }
-
-      await fs.writeFile(filePath, buffer);
-      
-      return `/images/products/${fileName}`;
-    } catch (error) {
-      if (error.response && error.response.status === 503) {
-        console.log(`Encountered 503 error, retrying in ${delay}ms... (Attempt ${attempt + 1} of ${retries})`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      } else {
-        throw error;
-      }
-    }
-  }
-  throw new Error(`Failed to download image after ${retries} attempts`);
-}
-
-// 이미지 처리 함수
-async function processImages(item) {
-  if (item.image) {
-    item.image = await downloadAndSaveImage(item.image) || item.image;
-  }
-  
-  if (item.additional_images) {
-    const additionalImages = JSON.parse(item.additional_images);
-    const savedImages = await Promise.all(additionalImages.map(downloadAndSaveImage));
-    item.additional_images = JSON.stringify(savedImages.filter(img => img !== null));
-  }
-  return item;
-}
 
 // 기존 processItem 함수 수정
 async function processItem(itemId, res) {
@@ -169,8 +119,59 @@ async function processQueue() {
   processQueue();
 }
 
+async function downloadAndSaveImage(url, retries = 3, delay = 1000) {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const response = await axios({
+        method: 'get',
+        url: url,
+        responseType: 'arraybuffer'
+      });
+
+      const fileName = `${uuidv4()}.jpg`;
+      const filePath = path.join(IMAGE_DIR, fileName);
+
+      const image = await Jimp.read(Buffer.from(response.data));
+      await image.quality(80).writeAsync(filePath);
+
+      return `/images/products/${fileName}`;
+    } catch (error) {
+      if (error.response && error.response.status === 503) {
+        console.log(`Encountered 503 error, retrying in ${delay}ms... (Attempt ${attempt + 1} of ${retries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else {
+        console.error(`Error processing image: ${url}`, error);
+        return null;
+      }
+    }
+  }
+  console.error(`Failed to download image after ${retries} attempts: ${url}`);
+  return null;
+}
+
+async function processImages(item) {
+  if (item.image) {
+    item.image = await downloadAndSaveImage(item.image) || item.image;
+  }
+  
+  if (item.additional_images) {
+    const additionalImages = JSON.parse(item.additional_images);
+    const savedImages = [];
+    for (const imgUrl of additionalImages) {
+      const savedImage = await downloadAndSaveImage(imgUrl);
+      if (savedImage) savedImages.push(savedImage);
+    }
+    item.additional_images = JSON.stringify(savedImages);
+  }
+  return item;
+}
+
 async function processCrawledItems(items) {
-  return Promise.all(items.map(processImages));
+  const processedItems = [];
+  for (const item of items) {
+    processedItems.push(await processImages(item));
+  }
+  return processedItems;
 }
 
 async function crawlAll() {
