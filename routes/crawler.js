@@ -118,61 +118,64 @@ async function processQueue() {
   // 다음 작업 처리
   processQueue();
 }
+const chunk = (arr, size) =>
+  Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
+    arr.slice(i * size, i * size + size)
+  );
 
-async function downloadAndSaveImage(url, retries = 3, delay = 1000) {
-  for (let attempt = 0; attempt < retries; attempt++) {
-    try {
-      const response = await axios({
-        method: 'get',
-        url: url,
-        responseType: 'arraybuffer'
-      });
+async function processImagesInChunks(items, chunkSize = 100) {
+  const processChunk = async (chunk) => {
+    return Promise.all(chunk.map(async (item) => {
+      const downloadTasks = [];
 
-      const fileName = `${uuidv4()}.jpg`;
-      const filePath = path.join(IMAGE_DIR, fileName);
-
-      await sharp(response.data)
-        .jpeg({ quality: 80 })
-        .toFile(filePath);
-
-      return `/images/products/${fileName}`;
-    } catch (error) {
-      console.error(`Error processing image (Attempt ${attempt + 1}/${retries}): ${url}`, error.message);
-      if (attempt < retries - 1) {
-        console.log(`Retrying in ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      } else {
-        return null;
+      if (item.image) {
+        downloadTasks.push(
+          downloadAndSaveImage(item.image)
+            .then(savedPath => {
+              if (savedPath) item.image = savedPath;
+            })
+        );
       }
-    }
-  }
-  console.error(`Failed to download image after ${retries} attempts: ${url}`);
-  return null;
-}
+      
+      if (item.additional_images) {
+        const additionalImages = JSON.parse(item.additional_images);
+        const savedImages = [];
+        
+        additionalImages.forEach(imgUrl => {
+          downloadTasks.push(
+            downloadAndSaveImage(imgUrl)
+              .then(savedPath => {
+                if (savedPath) savedImages.push(savedPath);
+              })
+          );
+        });
 
-async function processImages(item) {
-  if (item.image) {
-    item.image = await downloadAndSaveImage(item.image) || item.image;
+        await Promise.all(downloadTasks);
+        item.additional_images = JSON.stringify(savedImages);
+      } else {
+        await Promise.all(downloadTasks);
+      }
+
+      return item;
+    }));
+  };
+
+  const chunks = chunk(items, chunkSize);
+  const processedItems = [];
+
+  for (const chunkItems of chunks) {
+    const processedChunk = await processChunk(chunkItems);
+    processedItems.push(...processedChunk);
+    
+    // 가비지 컬렉션을 위한 짧은 지연
+    await new Promise(resolve => setTimeout(resolve, 100));
   }
-  
-  if (item.additional_images) {
-    const additionalImages = JSON.parse(item.additional_images);
-    const savedImages = [];
-    for (const imgUrl of additionalImages) {
-      const savedImage = await downloadAndSaveImage(imgUrl);
-      if (savedImage) savedImages.push(savedImage);
-    }
-    item.additional_images = JSON.stringify(savedImages);
-  }
-  return item;
+
+  return processedItems;
 }
 
 async function processCrawledItems(items) {
-  const processedItems = [];
-  for (const item of items) {
-    processedItems.push(await processImages(item));
-  }
-  return processedItems;
+  return processImagesInChunks(items);
 }
 
 async function crawlAll() {
