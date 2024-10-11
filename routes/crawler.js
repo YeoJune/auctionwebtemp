@@ -122,7 +122,36 @@ const chunk = (arr, size) =>
   Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
     arr.slice(i * size, i * size + size)
   );
+async function downloadAndSaveImage(url, retries = 3, delay = 1000) {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const response = await axios({
+        method: 'get',
+        url: url,
+        responseType: 'arraybuffer'
+      });
 
+      const fileName = `${uuidv4()}.jpg`;
+      const filePath = path.join(IMAGE_DIR, fileName);
+
+      await sharp(response.data)
+        .jpeg({ quality: 80 })
+        .toFile(filePath);
+
+      return `/images/products/${fileName}`;
+    } catch (error) {
+      console.error(`Error processing image (Attempt ${attempt + 1}/${retries}): ${url}`, error.message);
+      if (attempt < retries - 1) {
+        console.log(`Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else {
+        return null;
+      }
+    }
+  }
+  console.error(`Failed to download image after ${retries} attempts: ${url}`);
+  return null;
+}
 async function processImagesInChunks(items, chunkSize = 100) {
   const processChunk = async (chunk) => {
     return Promise.all(chunk.map(async (item) => {
