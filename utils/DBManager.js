@@ -65,53 +65,63 @@ class DatabaseManager {
       if (conn) conn.release();
     }
   }
-  async cleanupUnusedImages(activeImageIds) {
+  async cleanupUnusedImages(batchSize = 100) {
     let conn;
-    let activeImages = null;
-    let bidImages = null;
     const activeImagePaths = new Set();
   
     try {
       conn = await this.pool.getConnection();
   
-      // crawled_items에서 activeImageIds에 있는 원소들이 item_id인 아이템의 image, additional_images를 가져옴
-      [activeImages] = await conn.query(`
-        SELECT image, additional_images
-        FROM crawled_items
-        WHERE item_id IN (?)
-      `, [activeImageIds]);
+      // 데이터베이스 쿼리 병렬 실행
+      const [activeImagesPromise, bidImagesPromise] = await Promise.all([
+        conn.query(`
+          SELECT image, additional_images
+          FROM crawled_items`),
+        conn.query(`
+          SELECT image
+          FROM bids`)
+      ]);
   
-      // crawled_items의 image와 additional_images 처리
-      for (const item of activeImages) {
+      const [activeImages] = activeImagesPromise;
+      const [bidImages] = bidImagesPromise;
+  
+      // 활성 이미지 경로 처리
+      activeImages.forEach(item => {
         if (item.image) activeImagePaths.add(item.image);
         if (item.additional_images) {
           JSON.parse(item.additional_images).forEach(img => activeImagePaths.add(img));
         }
-      }
-      activeImages = null;
-
-      // bids 테이블에서 모든 image를 가져옴
-      [bidImages] = await conn.query(`
-        SELECT image
-        FROM bids
-      `);
+      });
   
-      // bids의 image 처리
-      for (const item of bidImages) {
+      bidImages.forEach(item => {
         if (item.image) activeImagePaths.add(item.image);
-      }
-      bidImages = null;
+      });
   
       // 파일 시스템에서 이미지 정리
       const files = await fs.readdir(this.IMAGE_DIR);
-      for (const file of files) {
-        const filePath = path.join(this.IMAGE_DIR, file);
-        const relativePath = `/images/products/${file}`;
-        if (!activeImagePaths.has(relativePath)) {
-          await fs.unlink(filePath);
-          console.log(`Deleted unused image: ${filePath}`);
-        }
+      
+      // 배치 처리 함수
+      const processBatch = async (batch) => {
+        await Promise.all(batch.map(async (file) => {
+          const filePath = path.join(this.IMAGE_DIR, file);
+          const relativePath = `/images/products/${file}`;
+          if (!activeImagePaths.has(relativePath)) {
+            try {
+              await fs.unlink(filePath);
+              console.log(`Deleted unused image: ${filePath}`);
+            } catch (unlinkError) {
+              console.error(`Error deleting file ${filePath}:`, unlinkError);
+            }
+          }
+        }));
+      };
+  
+      // 배치 단위로 파일 처리
+      for (let i = 0; i < files.length; i += batchSize) {
+        const batch = files.slice(i, i + batchSize);
+        await processBatch(batch);
       }
+  
     } catch (error) {
       console.error('Error cleaning up unused images:', error);
     } finally {
@@ -122,7 +132,6 @@ class DatabaseManager {
           console.error('Error releasing database connection:', releaseError);
         }
       }
-      // 추가적인 메모리 해제
       activeImagePaths.clear();
     }
   }
@@ -202,7 +211,7 @@ class DatabaseManager {
         console.log('Items saved to database and outdated items deleted successfully');
 
         // Clean up unused images
-        await this.cleanupUnusedImages(inputItemIds);
+        await this.cleanupUnusedImages();
       });
     } catch (error) {
       if (conn) await conn.rollback();
