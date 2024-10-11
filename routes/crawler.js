@@ -135,7 +135,7 @@ async function downloadAndSaveImage(url, retries = 3, delay = 1000) {
       const filePath = path.join(IMAGE_DIR, fileName);
 
       await sharp(response.data)
-        .jpeg({ quality: 80 })
+        .jpeg({ quality: 100 })
         .toFile(filePath);
 
       return `/images/products/${fileName}`;
@@ -222,6 +222,8 @@ async function crawlAll() {
       let ecoAucItems = await ecoAucCrawler.crawlAllItems(existingEcoAucIds);
       ecoAucItems = await processCrawledItems(ecoAucItems);
       ecoAucCrawler.isRefreshing = false;
+
+      let brandAuctionItems = null;
       /*
       brandAuctionCrawler.isRefreshing = true;
       await ecoAucCrawler.closeCrawlerBrowser();
@@ -230,7 +232,7 @@ async function crawlAll() {
       brandAuctionItems = await processCrawledItems(brandAuctionItems);
       brandAuctionCrawler.isRefreshing = false;
       */
-     
+
       if (!ecoAucItems) ecoAucItems = [];
       if (!brandAuctionItems) brandAuctionItems = [];
       const allItems = [
