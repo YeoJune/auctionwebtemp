@@ -3,6 +3,7 @@ const dotenv = require('dotenv');
 const puppeteer = require('puppeteer');
 const { TranslateClient, TranslateTextCommand } = require("@aws-sdk/client-translate");
 const translate = new TranslateClient({ region: "ap-northeast-2" });
+const { processImagesInChunks } = require('../utils/processImage');
 
 const wordDictionary = require('../utils/wordDictionary');
 
@@ -369,7 +370,8 @@ class Crawler {
       for (let page = 1; page <= totalPages; page++) {
         const pageItems = await this.crawlPage(categoryId, page, existingIds);
         pageItems.forEach(item => item.SiteId = 1);
-        categoryItems.push(...pageItems);
+        const processedItems = await processImagesInChunks(pageItems);
+        categoryItems.push(...processedItems);
       }
 
       if (categoryItems && categoryItems.length > 0) {
@@ -552,8 +554,10 @@ class BrandAuctionCrawler extends Crawler {
         );
 
         const pageItems = await Promise.all(pageItemsPromises);
+
+        const processedItems = await processImagesInChunks(pageItems);
         
-        allItems.push(...pageItems);
+        allItems.push(...processedItems);
       }
 
       this.closeCrawlerBrowser();
