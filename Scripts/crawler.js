@@ -472,7 +472,7 @@ class Crawler {
         timeout: this.pageTimeout
       });
 
-      const descriptionElement = await page.$(this.config.crawlSelectors.description);
+      const descriptionElement = await page.$(this.config.crawlDetailSelectors.description);
       if (!descriptionElement) return null;
       
       const item = await page.evaluate((config) => {
@@ -640,7 +640,7 @@ class BrandAuctionCrawler extends Crawler {
       await this.sleep(500);
       await this.waitForLoading(newPage);
 
-      const descriptionElement = await page.$(this.config.crawlSelectors.description);
+      const descriptionElement = await page.$(this.config.crawlDetailSelectors.description);
       if (!descriptionElement) return null;
 
       const item = await newPage.evaluate((config) => {
