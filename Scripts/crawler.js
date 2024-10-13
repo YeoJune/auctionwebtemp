@@ -496,7 +496,7 @@ class Crawler {
           image: images[0],
           additional_images: JSON.stringify(images),
           scheduled_date: scheduledDate || '',
-          description: description || '',
+          description: description || '-',
           accessory_code: accessoryCode || '',
         };
       }, this.config);
