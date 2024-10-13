@@ -103,7 +103,7 @@ class Crawler {
     this.retryDelay = 1000;
     this.pageTimeout = 60000;
     this.isRefreshing = false;
-    this.detailMulti = 3;
+    this.detailMulti = 2;
 
     this.crawlerBrowser = null;
     this.crawlerPage = null;
@@ -121,7 +121,7 @@ class Crawler {
       } catch (error) {
         if (attempt === maxRetries) {
           console.error(`Operation failed after ${maxRetries} attempts:`, error);
-          throw error;
+          return null;
         }
         console.log(`Attempt ${attempt} failed, retrying in ${delay}ms...`);
         await this.sleep(delay);
@@ -471,7 +471,10 @@ class Crawler {
         waitUntil: 'domcontentloaded',
         timeout: this.pageTimeout
       });
-  
+
+      const descriptionElement = await page.$(this.config.crawlSelectors.description);
+      if (!descriptionElement) return null;
+      
       const item = await page.evaluate((config) => {
         const images = [];
         const imageElements = document.querySelectorAll(config.crawlDetailSelectors.images);
@@ -493,6 +496,7 @@ class Crawler {
         const accessoryCode = binder ? binder.children[13].textContent.trim() : null;
   
         return {
+          image: images[0],
           additional_images: JSON.stringify(images),
           scheduled_date: scheduledDate,
           description: description,
@@ -502,7 +506,7 @@ class Crawler {
       item.scheduled_date = this.extractDate(item.scheduled_date);
       item.description = await this.translate(item.description);
       item.accessory_code = await this.translate(item.accessory_code);
-  
+
       return item;
     });
   }
@@ -636,6 +640,9 @@ class BrandAuctionCrawler extends Crawler {
       await this.sleep(500);
       await this.waitForLoading(newPage);
 
+      const descriptionElement = await page.$(this.config.crawlSelectors.description);
+      if (!descriptionElement) return null;
+
       const item = await newPage.evaluate((config) => {
         const images = Array.from(document.querySelectorAll(config.crawlDetailSelectors.images))
           .map(img => {
@@ -652,6 +659,7 @@ class BrandAuctionCrawler extends Crawler {
         const accessoryCode = codeParent.children[6].children[2].children[1]?.textContent.trim() || null;
   
         return {
+          image: images[0],
           additional_images: images.length > 0 ? JSON.stringify(images) : null,
           description: description,
           accessory_code: accessoryCode,
