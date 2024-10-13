@@ -472,9 +472,6 @@ class Crawler {
         timeout: this.pageTimeout
       });
 
-      const descriptionElement = await page.$(this.config.crawlDetailSelectors.description);
-      if (!descriptionElement) return null;
-      
       const item = await page.evaluate((config) => {
         const images = [];
         const imageElements = document.querySelectorAll(config.crawlDetailSelectors.images);
@@ -491,18 +488,19 @@ class Crawler {
         });
   
         const binder = document.querySelector(config.crawlDetailSelectors.binder);
-        const scheduledDate = binder ? binder.children[5].textContent.trim() : null;
+        const scheduledDate = binder?.children[5]?.textContent.trim();
         const description = document.querySelector(config.crawlDetailSelectors.description)?.children[3].textContent.trim() || null;
-        const accessoryCode = binder ? binder.children[13].textContent.trim() : null;
+        const accessoryCode = binder?.children[13]?.textContent.trim();
   
         return {
           image: images[0],
           additional_images: JSON.stringify(images),
-          scheduled_date: scheduledDate,
-          description: description,
-          accessory_code: accessoryCode,
+          scheduled_date: scheduledDate || '',
+          description: description || '',
+          accessory_code: accessoryCode || '',
         };
       }, this.config);
+
       item.scheduled_date = this.extractDate(item.scheduled_date);
       item.description = await this.translate(item.description);
       item.accessory_code = await this.translate(item.accessory_code);
@@ -549,6 +547,7 @@ class BrandAuctionCrawler extends Crawler {
 
         await this.crawlerPage.select(this.config.crawlSelectors.pageSelect, page.toString());
         await this.waitForLoading(this.crawlerPage);
+        await this.sleep(3000);
         
         const itemHandles = await this.crawlerPage.$$(this.config.crawlSelectors.itemContainer);
         const limit = pLimit(5); // 동시에 처리할 아이템 수 제한
@@ -640,38 +639,40 @@ class BrandAuctionCrawler extends Crawler {
       await this.sleep(500);
       await this.waitForLoading(newPage);
 
-      const descriptionElement = await page.$(this.config.crawlDetailSelectors.description);
-      if (!descriptionElement) return null;
-
-      const item = await newPage.evaluate((config) => {
-        const images = Array.from(document.querySelectorAll(config.crawlDetailSelectors.images))
-          .map(img => {
-            const src = img.getAttribute('src');
-            if (src && src.startsWith('http')) {
-              return src.replace(/(brand_img\/)(\d+)/, '$16');
-            }
-            return null;
-          })
-          .filter(Boolean);
-  
-        const description = document.querySelector(config.crawlDetailSelectors.description)?.textContent.trim().replace(/\s{2,}/g, '\t') || null;
-        const codeParent = document.querySelector(config.crawlDetailSelectors.codeParent);
-        const accessoryCode = codeParent.children[6].children[2].children[1]?.textContent.trim() || null;
-  
-        return {
-          image: images[0],
-          additional_images: images.length > 0 ? JSON.stringify(images) : null,
-          description: description,
-          accessory_code: accessoryCode,
-        };
-      }, this.config);
+      let item;
+      try {
+        item = await newPage.evaluate((config) => {
+          const images = Array.from(document.querySelectorAll(config.crawlDetailSelectors.images))
+            .map(img => {
+              const src = img.getAttribute('src');
+              if (src && src.startsWith('http')) {
+                return src.replace(/(brand_img\/)(\d+)/, '$16');
+              }
+              return null;
+            })
+            .filter(Boolean);
+    
+          const description = document.querySelector(config.crawlDetailSelectors.description)?.textContent.trim().replace(/\s{2,}/g, '\t') || null;
+          const codeParent = document.querySelector(config.crawlDetailSelectors.codeParent);
+          const accessoryCode = codeParent?.children[6]?.children[2]?.children[1]?.textContent.trim() || null;
+    
+          return {
+            image: images[0],
+            additional_images: images.length > 0 ? JSON.stringify(images) : null,
+            description: description || '',
+            accessory_code: accessoryCode || '',
+          };
+        }, this.config);
+      } catch (error) {
+        throw(error);
+      } finally {
+        await newPage.close();
+        await page.click(this.config.crawlSelectors.resetButton);
+      }
   
       item.description = await this.translate(item.description);
       item.accessory_code = await this.translate(item.accessory_code);
-  
-      await newPage.close();
-      await page.click(this.config.crawlSelectors.resetButton);
-  
+
       const endTime = Date.now();
       const executionTime = endTime - startTime;
       console.log(executionTime);
