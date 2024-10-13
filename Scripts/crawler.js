@@ -504,6 +504,7 @@ class Crawler {
       item.scheduled_date = this.extractDate(item.scheduled_date);
       item.description = await this.translate(item.description);
       item.accessory_code = await this.translate(item.accessory_code);
+      if (!item.description) item.description = '-';
 
       return item;
     });
@@ -669,9 +670,9 @@ class BrandAuctionCrawler extends Crawler {
         await newPage.close();
         await page.click(this.config.crawlSelectors.resetButton);
       }
-  
       item.description = await this.translate(item.description);
       item.accessory_code = await this.translate(item.accessory_code);
+      if (!item.description) item.description = '-';
 
       const endTime = Date.now();
       const executionTime = endTime - startTime;
