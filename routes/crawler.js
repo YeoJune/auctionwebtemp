@@ -35,6 +35,7 @@ async function processItem(itemId, res) {
             const [updatedItems] = await pool.query('SELECT * FROM crawled_items WHERE item_id = ?', [itemId]);
             res.json(updatedItems[0]);
           } else {
+            crawler.closeDetailBrowsers();
             res.status(500).json({ message: 'Failed to crawl item details' });
           }
         } finally {
