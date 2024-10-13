@@ -489,7 +489,7 @@ class Crawler {
   
         const binder = document.querySelector(config.crawlDetailSelectors.binder);
         const scheduledDate = binder?.children[5]?.textContent.trim();
-        const description = document.querySelector(config.crawlDetailSelectors.description)?.children[3].textContent.trim() || null;
+        const description = document.querySelector(config.crawlDetailSelectors.description)?.children[3].textContent.trim();
         const accessoryCode = binder?.children[13]?.textContent.trim();
   
         return {
