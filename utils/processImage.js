@@ -46,9 +46,6 @@ async function downloadAndSaveImage(url, retries = 5, delay = 2 * 60 * 1000) {
   }
   return null;
 }
-console.error(`Failed to download image after ${retries} attempts: ${url}`);
-return null;
-}
 async function processImagesInChunks(items, chunkSize = 100) {
   // 아이템 분류
   const itemsWithImages = [];
