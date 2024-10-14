@@ -8,9 +8,9 @@ const pool = mysql.createPool({
   password: process.env.DB_PASSWORD,
   port: process.env.DB_PORT || 3306,
   database: process.env.DB_NAME,
-  connectionLimit: 5,
+  connectionLimit: 50,
   charset: 'utf8mb4',
-  connectTimeout: 120000, // 120초
+  connectTimeout: 10000, // 10초
 });
 
 // test 쿼리
