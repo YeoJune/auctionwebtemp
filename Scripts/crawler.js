@@ -103,7 +103,7 @@ class Crawler {
     this.retryDelay = 1000;
     this.pageTimeout = 60000;
     this.isRefreshing = false;
-    this.detailMulti = 3;
+    this.detailMulti = 2;
 
     this.crawlerBrowser = null;
     this.crawlerPage = null;
