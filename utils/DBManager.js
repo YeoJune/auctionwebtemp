@@ -200,13 +200,14 @@ class DatabaseManager {
           WHERE item_id NOT IN (?)
         `;
         await conn.query(deleteQuery, [inputItemIds]);
+        /*
         // Delete wishlist items that no longer exist in crawled_items
         await conn.query(`
           DELETE w FROM wishlists w
           LEFT JOIN crawled_items ci ON w.item_id = ci.item_id
           WHERE ci.item_id IS NULL
         `);
-        
+        */
         await conn.commit();
         console.log('Items saved to database and outdated items deleted successfully');
 
