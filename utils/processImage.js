@@ -11,31 +11,40 @@ const chunk = (arr, size) =>
     arr.slice(i * size, i * size + size)
   );
 async function downloadAndSaveImage(url, retries = 5, delay = 2 * 60 * 1000) {
-for (let attempt = 0; attempt < retries; attempt++) {
-  try {
-    const response = await axios({
-      method: 'get',
-      url: url,
-      responseType: 'arraybuffer'
-    });
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const response = await axios({
+        method: 'get',
+        url: url,
+        responseType: 'arraybuffer'
+      });
 
-    const fileName = `${uuidv4()}.jpg`;
-    const filePath = path.join(IMAGE_DIR, fileName);
+      const fileName = `${uuidv4()}.jpg`;
+      const filePath = path.join(IMAGE_DIR, fileName);
 
-    await sharp(response.data)
-      .jpeg({ quality: 100 })
-      .toFile(filePath);
+      await sharp(response.data)
+        .jpeg({ quality: 100 })
+        .toFile(filePath);
 
-    return `/images/products/${fileName}`;
+      return `/images/products/${fileName}`;
     } catch (error) {
-    console.error(`Error processing image (Attempt ${attempt + 1}/${retries}): ${url}`, error.message);
-    if (attempt < retries - 1) {
-      console.log(`Retrying in ${delay}ms...`);
-      await new Promise(resolve => setTimeout(resolve, delay));
-    } else {
-      return null;
+      console.error(`Error processing image (Attempt ${attempt + 1}/${retries}): ${url}`, error.message);
+      
+      // Check if the error is a 404 (Not Found) error
+      if (error.response && error.response.status === 404) {
+        console.log(`404 error encountered. Stopping retry attempts.`);
+        return null;
+      }
+
+      if (attempt < retries - 1) {
+        console.log(`Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else {
+        return null;
+      }
     }
   }
+  return null;
 }
 console.error(`Failed to download image after ${retries} attempts: ${url}`);
 return null;
