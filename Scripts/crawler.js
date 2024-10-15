@@ -366,10 +366,11 @@ class Crawler {
 
       const totalPages = await this.getTotalPages(categoryId);
       console.log(`Total pages in category ${categoryId}: ${totalPages}`);
+      let pageItems, processedItems;
 
       for (let page = 1; page <= totalPages; page++) {
-        const pageItems = await this.crawlPage(categoryId, page, existingIds);
-        const processedItems = await processImagesInChunks(pageItems);
+        pageItems = await this.crawlPage(categoryId, page, existingIds);
+        processedItems = await processImagesInChunks(pageItems);
         categoryItems.push(...processedItems);
       }
 
@@ -543,6 +544,7 @@ class BrandAuctionCrawler extends Crawler {
 
       const allItems = [];
       console.log(`Crawling for total page ${totalPages}`);
+      let itemHandles, limit, pageItemsPromises, pageItems;
       
       for (let page = 1; page <= totalPages; page++) {
         console.log(`Crawling page ${page} of ${totalPages}`);
@@ -551,10 +553,10 @@ class BrandAuctionCrawler extends Crawler {
         await this.waitForLoading(this.crawlerPage);
         await this.sleep(3000);
         
-        const itemHandles = await this.crawlerPage.$$(this.config.crawlSelectors.itemContainer);
-        const limit = pLimit(5); // 동시에 처리할 아이템 수 제한
+        itemHandles = await this.crawlerPage.$$(this.config.crawlSelectors.itemContainer);
+        limit = pLimit(5); // 동시에 처리할 아이템 수 제한
 
-        const pageItemsPromises = itemHandles.map(handle => 
+        pageItemsPromises = itemHandles.map(handle => 
           limit(async () => {
             const item = await this.extractItemInfo(handle, existingIds);
             handle.dispose();
@@ -562,7 +564,7 @@ class BrandAuctionCrawler extends Crawler {
           })
         );
 
-        let pageItems = await Promise.all(pageItemsPromises);
+        pageItems = await Promise.all(pageItemsPromises);
         pageItems = pageItems.filter((e) => e.item_id);
 
         pageItems = await processImagesInChunks(pageItems);
