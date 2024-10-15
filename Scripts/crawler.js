@@ -409,8 +409,8 @@ class Crawler {
       const limit = pLimit(5);
 
       const pageItemsPromises = itemHandles.map(handle => 
-        limit(() => {
-          const item = this.extractItemInfo(handle, existingIds);
+        limit(async () => {
+          const item = await this.extractItemInfo(handle, existingIds);
           handle.dispose();
           return item;
         })
@@ -555,8 +555,8 @@ class BrandAuctionCrawler extends Crawler {
         const limit = pLimit(5); // 동시에 처리할 아이템 수 제한
 
         const pageItemsPromises = itemHandles.map(handle => 
-          limit(() => {
-            const item = this.extractItemInfo(handle, existingIds);
+          limit(async () => {
+            const item = await this.extractItemInfo(handle, existingIds);
             handle.dispose();
             return item;
           })
