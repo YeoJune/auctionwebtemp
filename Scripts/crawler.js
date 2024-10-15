@@ -522,6 +522,7 @@ class BrandAuctionCrawler extends Crawler {
           return e && e.children.length == 0;
         }, {timeout: 30000}, e);
       }
+      e.dispose();
     }
   }
   async crawlAllItems(existingIds) {
