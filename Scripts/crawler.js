@@ -652,7 +652,7 @@ class BrandAuctionCrawler extends Crawler {
         });
       });
       await this.waitForLoading(page);
-      console.log(await browser.pages());
+      
       await page.click(this.config.crawlSelectors.itemContainer);
       const newPage = await newPagePromise;
       await this.initPage(newPage);
