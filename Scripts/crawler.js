@@ -369,7 +369,6 @@ class Crawler {
 
       for (let page = 1; page <= totalPages; page++) {
         const pageItems = await this.crawlPage(categoryId, page, existingIds);
-        pageItems.forEach(item => item.SiteId = 1);
         const processedItems = await processImagesInChunks(pageItems);
         categoryItems.push(...processedItems);
       }
@@ -410,7 +409,10 @@ class Crawler {
       const limit = pLimit(5);
 
       const pageItemsPromises = itemHandles.map(handle => 
-        limit(() => this.extractItemInfo(handle, existingIds))
+        limit(() => {
+          this.extractItemInfo(handle, existingIds);
+          handle.dispose();
+        })
       );
 
       const pageItems = await Promise.all(pageItemsPromises);
@@ -426,7 +428,6 @@ class Crawler {
   async extractItemInfo(itemHandle, existingIds) {
     const id = await itemHandle.$eval(this.config.crawlSelectors.id, el => el.getAttribute('data-auction-item-id'));
     if (existingIds.has(id)) {
-      await itemHandle.dispose();
       return {item_id: id};
     }
     const item = await itemHandle.evaluate((el, config) => {
@@ -449,8 +450,6 @@ class Crawler {
         category: config.categoryTable[config.currentCategoryId],
       };
     }, this.config);
-
-    await itemHandle.dispose();
 
     item.scheduled_date = this.extractDate(item.scheduled_date);
     if (!this.isCollectionDay(item.scheduledDate)) return null;
@@ -555,13 +554,16 @@ class BrandAuctionCrawler extends Crawler {
         const limit = pLimit(5); // 동시에 처리할 아이템 수 제한
 
         const pageItemsPromises = itemHandles.map(handle => 
-          limit(() => this.extractItemInfo(handle, existingIds))
+          limit(() => {
+            this.extractItemInfo(handle, existingIds);
+            handle.dispose();
+          })
         );
 
-        const pageItems = await Promise.all(pageItemsPromises);
-        const filteredItems = pageItems.filter((e) => e.item_id);
+        let pageItems = await Promise.all(pageItemsPromises);
+        pageItems = pageItems.filter((e) => e.item_id);
 
-        const processedItems = await processImagesInChunks(filteredItems);
+        pageItems = await processImagesInChunks(pageItems);
         
         allItems.push(...processedItems);
       }
@@ -582,12 +584,10 @@ class BrandAuctionCrawler extends Crawler {
   async extractItemInfo(itemHandle, existingIds) {
     const status = await itemHandle.$eval(this.config.crawlSelectors.status, el => el.textContent.trim());
     if (status == '保留成約' || status == '成約') {
-      await itemHandle.dispose();
       return {status: status};
     }
     const id = await itemHandle.$eval(this.config.crawlSelectors.id, el => el.textContent.trim());
     if (existingIds.has(id)) {
-      await itemHandle.dispose();
       return {item_id: id};
     }
     const item = await itemHandle.evaluate((el, config) => {
@@ -611,8 +611,6 @@ class BrandAuctionCrawler extends Crawler {
         category: category.textContent.trim(),
       };
     }, this.config);
-    
-    await itemHandle.dispose();
     
     item.korean_title = await this.translate(this.convertFullWidthToAscii(item.japanese_title));
     item.brand = await this.translate(this.convertFullWidthToAscii(item.brand));
