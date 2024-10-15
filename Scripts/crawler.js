@@ -77,7 +77,7 @@ const brandAuctionConfig = {
     resetButton: '#search_times button',
     search1: 'input[name=uketsukeNoFrom]',
     search2: 'input[name=uketsukeNoTo]',
-    itemContainer: '#item_list_area li',
+    itemContainer: '#item_list_area > li',
     id: '.receipt_number_header',
     title: '.item_date .item_name_header',
     brand: '.item_date .maker_header',
@@ -86,7 +86,7 @@ const brandAuctionConfig = {
     image: '.thumbnail img',
     scheduledDate: '.held_date div:last-child span',
     category: '.genre_type_date .genre_header',
-
+    status: '.state_content',
   },
   crawlDetailSelectors: {
     images: '.other_images img',
@@ -424,8 +424,9 @@ class Crawler {
   }
 
   async extractItemInfo(itemHandle, existingIds) {
-    const id = await this.crawlerPage.$eval(this.config.crawlSelectors.id, el => el.getAttribute('data-auction-item-id'));
+    const id = await itemHandle.$eval(this.config.crawlSelectors.id, el => el.getAttribute('data-auction-item-id'));
     if (existingIds.has(id)) {
+      await itemHandle.dispose();
       return {item_id: id};
     }
     const item = await itemHandle.evaluate((el, config) => {
@@ -558,8 +559,9 @@ class BrandAuctionCrawler extends Crawler {
         );
 
         const pageItems = await Promise.all(pageItemsPromises);
+        const filteredItems = pageItems.filter((e) => e.item_id);
 
-        const processedItems = await processImagesInChunks(pageItems);
+        const processedItems = await processImagesInChunks(filteredItems);
         
         allItems.push(...processedItems);
       }
@@ -578,19 +580,25 @@ class BrandAuctionCrawler extends Crawler {
   }
 
   async extractItemInfo(itemHandle, existingIds) {
-    const id = await this.crawlerPage.$eval(this.config.crawlSelectors.id, el => el.textContent.trim());
+    const status = await itemHandle.$eval(this.config.crawlSelectors.status, el => el.textContent.trim());
+    if (status == '保留成約' || status == '成約') {
+      await itemHandle.dispose();
+      return {status: status};
+    }
+    const id = await itemHandle.$eval(this.config.crawlSelectors.id, el => el.textContent.trim());
     if (existingIds.has(id)) {
+      await itemHandle.dispose();
       return {item_id: id};
     }
-    const item = await this.crawlerPage.evaluate((item, config) => {
-      const id = item.querySelector(config.crawlSelectors.id);
-      const title = item.querySelector(config.crawlSelectors.title);
-      const brand = item.querySelector(config.crawlSelectors.brand);
-      const rank = item.querySelector(config.crawlSelectors.rank);
-      const startingPrice = item.querySelector(config.crawlSelectors.startingPrice);
-      const image = item.querySelector(config.crawlSelectors.image);
-      const scheduledDate = item.querySelector(config.crawlSelectors.scheduledDate);
-      const category = item.querySelector(config.crawlSelectors.category);
+    const item = await itemHandle.evaluate((el, config) => {
+      const id = el.querySelector(config.crawlSelectors.id);
+      const title = el.querySelector(config.crawlSelectors.title);
+      const brand = el.querySelector(config.crawlSelectors.brand);
+      const rank = el.querySelector(config.crawlSelectors.rank);
+      const startingPrice = el.querySelector(config.crawlSelectors.startingPrice);
+      const image = el.querySelector(config.crawlSelectors.image);
+      const scheduledDate = el.querySelector(config.crawlSelectors.scheduledDate);
+      const category = el.querySelector(config.crawlSelectors.category);
 
       return {
         item_id: id ? id.textContent.trim() : null,
@@ -602,7 +610,7 @@ class BrandAuctionCrawler extends Crawler {
         scheduled_date: scheduledDate ? scheduledDate.textContent.trim() : null,
         category: category.textContent.trim(),
       };
-    }, itemHandle, this.config);
+    }, this.config);
     
     await itemHandle.dispose();
     
@@ -612,7 +620,6 @@ class BrandAuctionCrawler extends Crawler {
     item.scheduled_date = this.extractDate(item.scheduled_date);
     item.category = await this.translate(item.category);
     item.auc_num = '2';
-    
 
     return item;
   }
@@ -684,5 +691,7 @@ class BrandAuctionCrawler extends Crawler {
 
 const ecoAucCrawler = new Crawler(ecoAucConfig);
 const brandAuctionCrawler = new BrandAuctionCrawler(brandAuctionConfig);
+
+brandAuctionCrawler.crawlAllItems(new Set());
 
 module.exports = { ecoAucCrawler, brandAuctionCrawler };
