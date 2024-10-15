@@ -99,7 +99,7 @@ const brandAuctionConfig = {
 class Crawler {
   constructor(siteConfig) {
     this.config = siteConfig;
-    this.maxRetries = 1;
+    this.maxRetries = 3;
     this.retryDelay = 1000;
     this.pageTimeout = 60000;
     this.isRefreshing = false;
@@ -641,7 +641,6 @@ class BrandAuctionCrawler extends Crawler {
       await page.type(this.config.crawlSelectors.search1, itemId);
       await page.type(this.config.crawlSelectors.search2, itemId);
       await page.click(this.config.crawlSelectors.searchButton);
-      await this.waitForLoading(page);
       const newPagePromise = new Promise((resolve, reject) => {
         const timeoutId = setTimeout(() => {
           reject(new Error('Timeout waiting for new page'));
@@ -652,7 +651,7 @@ class BrandAuctionCrawler extends Crawler {
           resolve(target.page());
         });
       });
-      this.sleep(500);
+      await this.waitForLoading(page);
       await page.click(this.config.crawlSelectors.itemContainer);
       const newPage = await newPagePromise;
       await this.initPage(newPage);
