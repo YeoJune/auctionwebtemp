@@ -520,7 +520,7 @@ class BrandAuctionCrawler extends Crawler {
       if (e) {
         await page.waitForFunction((e) => {
           return e && e.children.length == 0;
-        }, {timeout: 30000}, e);
+        }, {timeout: 5000}, e);
       }
       e.dispose();
     }
@@ -648,7 +648,6 @@ class BrandAuctionCrawler extends Crawler {
       const newPage = await newPagePromise;
       await this.initPage(newPage);
       await this.sleep(500);
-      await this.waitForLoading(newPage);
 
       let item;
       try {
