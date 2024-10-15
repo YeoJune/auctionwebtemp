@@ -410,8 +410,9 @@ class Crawler {
 
       const pageItemsPromises = itemHandles.map(handle => 
         limit(() => {
-          this.extractItemInfo(handle, existingIds);
+          const item = this.extractItemInfo(handle, existingIds);
           handle.dispose();
+          return item;
         })
       );
 
@@ -555,8 +556,9 @@ class BrandAuctionCrawler extends Crawler {
 
         const pageItemsPromises = itemHandles.map(handle => 
           limit(() => {
-            this.extractItemInfo(handle, existingIds);
+            const item = this.extractItemInfo(handle, existingIds);
             handle.dispose();
+            return item;
           })
         );
 
