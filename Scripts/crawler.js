@@ -567,7 +567,7 @@ class BrandAuctionCrawler extends Crawler {
 
         pageItems = await processImagesInChunks(pageItems);
         
-        allItems.push(...processedItems);
+        allItems.push(...pageItems);
       }
 
       this.closeCrawlerBrowser();
