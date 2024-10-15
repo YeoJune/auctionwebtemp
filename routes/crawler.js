@@ -123,13 +123,13 @@ async function crawlAll() {
       ecoAucCrawler.isRefreshing = true;
       await brandAuctionCrawler.closeCrawlerBrowser();
       await brandAuctionCrawler.closeDetailBrowsers();
-      let ecoAucItems = await ecoAucCrawler.crawlAllItems(new Set());
+      let ecoAucItems = await ecoAucCrawler.crawlAllItems(existingEcoAucIds);
       ecoAucCrawler.isRefreshing = false;
 
       brandAuctionCrawler.isRefreshing = true;
       await ecoAucCrawler.closeCrawlerBrowser();
       await ecoAucCrawler.closeDetailBrowsers();
-      let brandAuctionItems = await brandAuctionCrawler.crawlAllItems(new Set());
+      let brandAuctionItems = await brandAuctionCrawler.crawlAllItems(existingBrandAuctionIds);
       brandAuctionCrawler.isRefreshing = false;
 
       if (!ecoAucItems) ecoAucItems = [];
