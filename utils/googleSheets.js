@@ -124,7 +124,7 @@ class GoogleSheetsManager {
         spreadsheetId: this.spreadsheetId,
         range,
       });
-      const values = response?.data?.values[0]?.map((e) => e.replace(/\D/g, ''));
+      const values = response?.data?.values?[0]?.map((e) => e.replace(/\D/g, ''));
 
       if (values) {
         return {
