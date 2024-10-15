@@ -108,7 +108,7 @@ class DatabaseManager {
           if (!activeImagePaths.has(relativePath)) {
             try {
               await fs.unlink(filePath);
-              console.log(`Deleted unused image: ${filePath}`);
+              //console.log(`Deleted unused image: ${filePath}`);
             } catch (unlinkError) {
               console.error(`Error deleting file ${filePath}:`, unlinkError);
             }
