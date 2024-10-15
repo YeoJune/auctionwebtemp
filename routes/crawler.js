@@ -119,18 +119,17 @@ async function crawlAll() {
       const [existingItems] = await pool.query('SELECT item_id, auc_num FROM crawled_items');
       const existingEcoAucIds = new Set(existingItems.filter(item => item.auc_num == 1).map(item => item.item_id));
       const existingBrandAuctionIds = new Set(existingItems.filter(item => item.auc_num == 2).map(item => item.item_id));
-      console.log(existingEcoAucIds.size);
-      console.log(existingBrandAuctionIds.size);
+      
       ecoAucCrawler.isRefreshing = true;
       await brandAuctionCrawler.closeCrawlerBrowser();
       await brandAuctionCrawler.closeDetailBrowsers();
-      let ecoAucItems = await ecoAucCrawler.crawlAllItems(existingEcoAucIds);
+      let ecoAucItems = await ecoAucCrawler.crawlAllItems(new Set());
       ecoAucCrawler.isRefreshing = false;
 
       brandAuctionCrawler.isRefreshing = true;
       await ecoAucCrawler.closeCrawlerBrowser();
       await ecoAucCrawler.closeDetailBrowsers();
-      let brandAuctionItems = await brandAuctionCrawler.crawlAllItems(existingBrandAuctionIds);
+      let brandAuctionItems = await brandAuctionCrawler.crawlAllItems(new Set());
       brandAuctionCrawler.isRefreshing = false;
 
       if (!ecoAucItems) ecoAucItems = [];
