@@ -660,6 +660,7 @@ class BrandAuctionCrawler extends Crawler {
       console.log('p4');
       await this.initPage(newPage);
       await this.sleep(500);
+      await this.waitForLoading(newPage);
       console.log('p5');
 
       let item;
