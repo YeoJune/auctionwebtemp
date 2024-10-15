@@ -643,7 +643,16 @@ class BrandAuctionCrawler extends Crawler {
       await page.click(this.config.crawlSelectors.searchButton);
       await this.waitForLoading(page);
       console.log('p1');
-      const newPagePromise = new Promise(resolve => browser.once('targetcreated', target => resolve(target.page())));
+      const newPagePromise = new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+          reject(new Error('Timeout waiting for new page'));
+        }, 5000);
+  
+        browser.once('targetcreated', (target) => {
+          clearTimeout(timeoutId);
+          resolve(target.page());
+        });
+      });
       console.log('p2');
       await page.click(this.config.crawlSelectors.itemContainer);
       console.log('p3');
