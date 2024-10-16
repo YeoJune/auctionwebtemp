@@ -120,7 +120,7 @@ class Crawler {
         return await operation();
       } catch (error) {
         if (attempt === maxRetries) {
-          console.error(`Operation failed after ${maxRetries} attempts:`, error);
+          console.log(`Operation failed after ${maxRetries} attempts:`, error);
           return null;
         }
         console.log(`Attempt ${attempt} failed, retrying in ${delay}ms...`);
@@ -514,13 +514,13 @@ class Crawler {
 }
 
 class BrandAuctionCrawler extends Crawler {
-  async waitForLoading(page) {
+  async waitForLoading(page, timeout = 30 * 1000) {
     const loadingElements = await page.$$('app-loading');
     for (const e of loadingElements) {
       if (e) {
         await page.waitForFunction((e) => {
           return e && e.children.length == 0;
-        }, {timeout: 5000}, e);
+        }, {timeout: timeout}, e);
       }
       e.dispose();
     }
@@ -657,7 +657,7 @@ class BrandAuctionCrawler extends Crawler {
       const newPage = await newPagePromise;
       await this.initPage(newPage);
       await this.sleep(500);
-      await this.waitForLoading(newPage);
+      await this.waitForLoading(newPage, 5000);
 
       let item;
       try {
