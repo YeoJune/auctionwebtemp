@@ -101,7 +101,7 @@ const brandAuctionConfig = {
 class Crawler {
   constructor(siteConfig) {
     this.config = siteConfig;
-    this.maxRetries = 1;
+    this.maxRetries = 3;
     this.retryDelay = 1000;
     this.pageTimeout = 60000;
     this.isRefreshing = false;
@@ -551,7 +551,7 @@ class BrandAuctionCrawler extends Crawler {
         await this.sleep(3000);
         
         const itemHandles = await this.crawlerPage.$$(this.config.crawlSelectors.itemContainer);
-        const limit = pLimit(10);
+        const limit = pLimit(5);
 
         const pageItems = await Promise.all(itemHandles.map(handle => 
           limit(async () => {

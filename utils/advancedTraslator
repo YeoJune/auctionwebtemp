@@ -96,6 +96,7 @@ class AdvancedTranslator {
   }
 
   async translateWord(word) {
+    /*
     // Check if the word or any substring is in the cache
     for (let i = word.length; i > 0; i--) {
       const subWord = word.substring(0, i);
@@ -104,7 +105,7 @@ class AdvancedTranslator {
         return this.cache[subWord].translation + word.substring(i);
       }
     }
-
+    */
     // If not in cache, translate using API
     const translation = await this.rawTranslate(word);
     this.cache[word] = { translation, lastUsed: new Date().toISOString() };
