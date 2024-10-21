@@ -385,7 +385,6 @@ class Crawler {
     }
 
     this.closeCrawlerBrowser();
-    translator.saveCache();
     translator.cleanupCache();
 
     console.log(`Crawling completed for all categories. Total items: ${allCrawledItems.length}`);
@@ -565,7 +564,6 @@ class BrandAuctionCrawler extends Crawler {
       }
 
       this.closeCrawlerBrowser();
-      translator.saveCache();
       translator.cleanupCache();
 
       console.log(`Total items crawled: ${allItems.length}`);
