@@ -256,7 +256,7 @@ class Crawler {
   }
   async initializeDetail() {
     const browser = await puppeteer.launch({
-      headless: 'shell',
+      headless: 'true',
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--window-size=1920,1080', 
         `--user-agent=${USER_AGENT}`, '--use-gl=angle', '--enable-unsafe-webgpu',],
     });
