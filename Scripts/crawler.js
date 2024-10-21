@@ -683,8 +683,7 @@ class BrandAuctionCrawler extends Crawler {
       await page.click(this.config.crawlSelectors.itemContainer);
       const newPage = await newPagePromise;
       await this.waitForLoading(newPage, 10000);
-  
-      await newPage.screenshot({ path: 'screenshot.png' }); // 스크린샷 캡처
+      
       let item;
       try {
         const images = await newPage.$$eval(this.config.crawlDetailSelectors.images, imgs => 
