@@ -685,7 +685,7 @@ class BrandAuctionCrawler extends Crawler {
       const newPage = await newPagePromise;
       await this.initPage(newPage);
       await this.waitForLoading(newPage, 10000);
-      await this.sleep(500);
+      await this.sleep(1000);
 
       let item;
       try {
