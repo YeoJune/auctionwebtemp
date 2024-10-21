@@ -12,6 +12,7 @@ class AdvancedTranslator {
     this.callInterval = 50; // Minimum time between API calls in milliseconds
     this.maxRetries = 3; // Maximum number of retries for API calls
     this.retryDelay = 1000; // Delay between retries in milliseconds
+    this.englishRegex = /^[a-zA-Z0-9\s!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~]*$/;
   }
 
   async initialize() {
@@ -84,8 +85,12 @@ class AdvancedTranslator {
     const words = text.split(/\s+/);
     const translatedWords = [];
     for (const word of words) {
-      const translatedWord = await this.translateWord(word);
-      translatedWords.push(translatedWord);
+      if (this.englishRegex.test(word)) {
+        translatedWords.push(word);
+      } else {
+        const translatedWord = await this.translateWord(word);
+        translatedWords.push(translatedWord);
+      }
     }
     return translatedWords.join(' ');
   }
