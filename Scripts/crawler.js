@@ -250,8 +250,7 @@ class Crawler {
         '--disable-setuid-sandbox', 
         '--window-size=1920,1080', 
         `--user-agent=${USER_AGENT}`, 
-        '--use-gl=angle', 
-        '--enable-unsafe-webgpu',
+        '--disable-gl-drawing-for-tests',
         '--disable-dev-shm-usage', 
         '--disable-background-timer-throttling', 
         '--disable-backgrounding-occluded-windows', 
@@ -389,7 +388,7 @@ class Crawler {
     }
 
     this.closeCrawlerBrowser();
-    AdvancedTranslator.cleanupCache();
+    translator.cleanupCache();
 
     console.log(`Crawling completed for all categories. Total items: ${allCrawledItems.length}`);
     console.log(`translate count: ${TRANS_COUNT}`);
@@ -409,6 +408,7 @@ class Crawler {
       await this.crawlerPage.goto(url, { waitUntil: 'domcontentloaded', timeout: this.pageTimeout });
 
       const itemHandles = await this.crawlerPage.$$(this.config.crawlSelectors.itemContainer);
+
       const limit = pLimit(10);
 
       const pageItemsPromises = itemHandles.map(handle => 
@@ -462,8 +462,8 @@ class Crawler {
       for(const key in item) item[key] = item[key].trim();
       
       item.scheduled_date = this.extractDate(item.scheduled_date);
-      item.korean_title = await AdvancedTranslator.wordTranslate(item.japanese_title);
-      item.brand = await AdvancedTranslator.wordTranslate(item.brand);
+      item.korean_title = await translator.wordTranslate(item.japanese_title);
+      item.brand = await translator.wordTranslate(item.brand);
       item.starting_price = this.currencyToInt(item.starting_price);
       item.auc_num = '1'
       
@@ -505,8 +505,8 @@ class Crawler {
       };
   
       item.scheduled_date = this.extractDate(item.scheduled_date);
-      item.description = await AdvancedTranslator.rawTranslate(item.description?.trim());
-      item.accessory_code = await AdvancedTranslator.wordTranslate(item.accessory_code);
+      item.description = await translator.rawTranslate(item.description?.trim());
+      item.accessory_code = await translator.wordTranslate(item.accessory_code);
   
       return item;
     });
@@ -567,7 +567,7 @@ class BrandAuctionCrawler extends Crawler {
       }
 
       this.closeCrawlerBrowser();
-      AdvancedTranslator.cleanupCache();
+      translator.cleanupCache();
 
       console.log(`Total items crawled: ${allItems.length}`);
       console.log(`translate count: ${TRANS_COUNT}`);
@@ -622,11 +622,11 @@ class BrandAuctionCrawler extends Crawler {
         item.image = image.startsWith('http') ? image.replace(/(brand_img\/)(\d+)/, '$16') : '';
       }
       
-      item.korean_title = await AdvancedTranslator.wordTranslate(this.convertFullWidthToAscii(item.japanese_title));
-      item.brand = await AdvancedTranslator.wordTranslate(this.convertFullWidthToAscii(item.brand));
+      item.korean_title = await translator.wordTranslate(this.convertFullWidthToAscii(item.japanese_title));
+      item.brand = await translator.wordTranslate(this.convertFullWidthToAscii(item.brand));
       item.starting_price = this.currencyToInt(item.starting_price);
       item.scheduled_date = this.extractDate(item.scheduled_date);
-      item.category = await AdvancedTranslator.wordTranslate(item.category);
+      item.category = await translator.wordTranslate(item.category);
       item.auc_num = '2';
   
       return item;
@@ -688,8 +688,8 @@ class BrandAuctionCrawler extends Crawler {
         await page.click(this.config.crawlSelectors.resetButton);
       }
   
-      item.description = await AdvancedTranslator.rawTranslate(item.description);
-      item.accessory_code = await AdvancedTranslator.wordTranslate(item.accessory_code);
+      item.description = await translator.rawTranslate(item.description);
+      item.accessory_code = await translator.wordTranslate(item.accessory_code);
       if (!item.description) item.description = '-';
   
       const endTime = Date.now();
