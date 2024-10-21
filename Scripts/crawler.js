@@ -212,7 +212,6 @@ class Crawler {
   async initializeCrawler() {
     this.crawlerContext = await chromium.launchPersistentContext('', {
       headless: true,
-      javaScriptEnabled: false,
       args: [
         '--no-sandbox', 
         '--disable-setuid-sandbox', 
