@@ -1,6 +1,6 @@
 // Scripts/crawler.js
 const dotenv = require('dotenv');
-const puppeteer = require('puppeteer');
+const { chromium } = require('playwright');
 const { TranslateClient, TranslateTextCommand } = require("@aws-sdk/client-translate");
 const translate = new TranslateClient({ region: "ap-northeast-2" });
 const { processImagesInChunks } = require('../utils/processImage');
@@ -27,7 +27,7 @@ const ecoAucConfig = {
     'userId': process.env.CRAWLER_EMAIL1,
     'password': process.env.CRAWLER_PASSWORD1,
   },
-  categoryIds: ['1', '2', '3', '4', '5', '8', '9', '27'],
+  categoryIds: ['4'],//['1', '2', '3', '4', '5', '8', '9', '27'],
   categoryTable: {1: "시계", 2: "가방", 3: "귀금속", 4: "악세서리", 5: "소품", 8: "의류", 9: "신발", 27: "기타"},
   signinSelectors: {
     userId: 'input[name="email_address"]',
@@ -105,11 +105,11 @@ class Crawler {
     this.isRefreshing = false;
     this.detailMulti = 2;
 
-    this.crawlerBrowser = null;
+    this.crawlerContext = null;
     this.crawlerPage = null;
     this.isCrawlerLogin = false;
 
-    this.detailBrowsers = [];
+    this.detailContexts = [];
     this.detailPages = [];
     this.isDetailLogins = false;
   }
@@ -234,40 +234,43 @@ class Crawler {
   }
 
   async initializeCrawler() {
-    this.crawlerBrowser = await puppeteer.launch({
-      headless: 'shell',
+    this.crawlerContext = await chromium.launchPersistentContext('', {
+      headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--window-size=1920,1080', 
-        `--user-agent=${USER_AGENT}`, '--use-gl=angle', '--enable-unsafe-webgpu',],
+        `--user-agent=${USER_AGENT}`, '--use-gl=angle', '--enable-unsafe-webgpu'],
     });
-    this.crawlerPage = (await this.crawlerBrowser.pages())[0];
+    this.crawlerPage = await this.crawlerContext.newPage();
 
     await this.initPage(this.crawlerPage);
     
     console.log('complete to initialize crawler!');
   }
+
   async initializeDetails() {
     const detailInitPromises = Array(this.detailMulti).fill().map(() => this.initializeDetail());
     const detailResults = await Promise.all(detailInitPromises);
 
-    this.detailBrowsers = detailResults.map(result => result.browser);
+    this.detailContexts = detailResults.map(result => result.context);
     this.detailPages = detailResults.map(result => result.page);
 
     console.log('complete to initialize details!');
   }
+
   async initializeDetail() {
-    const browser = await puppeteer.launch({
-      headless: 'true',
+    const context = await chromium.launchPersistentContext('', {
+      headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--window-size=1920,1080', 
-        `--user-agent=${USER_AGENT}`, '--use-gl=angle', '--enable-unsafe-webgpu',],
+        `--user-agent=${USER_AGENT}`, '--use-gl=angle', '--enable-unsafe-webgpu'],
     });
-    const page = (await browser.pages())[0];
+    const page = await context.newPage();
     await this.initPage(page);
-    return { browser, page };
+    return { context, page };
   }
+  
   async closeCrawlerBrowser() {
-    if (this.crawlerBrowser) {
-      await this.crawlerBrowser.close();
-      this.crawlerBrowser = null;
+    if (this.crawlerContext) {
+      await this.crawlerContext.close();
+      this.crawlerContext = null;
       this.crawlerPage = null;
     }
 
@@ -275,13 +278,14 @@ class Crawler {
   
     console.log('Crawler have been closed.');
   }
+
   async closeDetailBrowsers() {
-    for (const browser of this.detailBrowsers) {
-      if (browser) {
-        await browser.close();
+    for (const context of this.detailContexts) {
+      if (context) {
+        await context.close();
       }
     }
-    this.detailBrowsers = [];
+    this.detailContexts = [];
     this.detailPages = [];
 
     this.isDetailLogins = false;
@@ -428,7 +432,7 @@ class Crawler {
   }
 
   async extractItemInfo(itemHandle, existingIds) {
-    const id = await itemHandle.$eval(this.config.crawlSelectors.id, el => el.getAttribute('data-auction-item-id'));
+    const id = await itemHandle.getAttribute(this.config.crawlSelectors.id, 'data-auction-item-id');
     if (existingIds.has(id)) {
       return {item_id: id};
     }
@@ -515,15 +519,7 @@ class Crawler {
 
 class BrandAuctionCrawler extends Crawler {
   async waitForLoading(page, timeout = 30 * 1000) {
-    const loadingElements = await page.$$('app-loading');
-    for (const e of loadingElements) {
-      if (e) {
-        await page.waitForFunction((e) => {
-          return e && e.children.length == 0;
-        }, {timeout: timeout}, e);
-      }
-      e.dispose();
-    }
+    await page.waitForSelector('app-loading:empty', { state: 'hidden', timeout: timeout });
   }
   async crawlAllItems(existingIds) {
     await this.closeDetailBrowsers();
@@ -541,7 +537,7 @@ class BrandAuctionCrawler extends Crawler {
       await this.waitForLoading(this.crawlerPage);
 
       const totalPageText = await this.crawlerPage.$eval(this.config.crawlSelectors.totalPagesSpan, el => el.textContent);
-      const totalPages = parseInt(totalPageText.match(/\d+/g).join(''));
+      const totalPages = 2;//parseInt(totalPageText.match(/\d+/g).join(''));
 
       const allItems = [];
       console.log(`Crawling for total page ${totalPages}`);
@@ -587,13 +583,13 @@ class BrandAuctionCrawler extends Crawler {
   }
 
   async extractItemInfo(itemHandle, existingIds) {
-    const status = await itemHandle.$eval(this.config.crawlSelectors.status, el => el.textContent.trim());
-    if (status == '保留成約' || status == '成約') {
-      return {status: status};
+    const status = await itemHandle.textContent(this.config.crawlSelectors.status);
+    if (status.trim() == '保留成約' || status.trim() == '成約') {
+      return {status: status.trim()};
     }
-    const id = await itemHandle.$eval(this.config.crawlSelectors.id, el => el.textContent.trim());
-    if (existingIds.has(id)) {
-      return {item_id: id};
+    const id = await itemHandle.textContent(this.config.crawlSelectors.id);
+    if (existingIds.has(id.trim())) {
+      return {item_id: id.trim()};
     }
     const item = await itemHandle.evaluate((el, config) => {
       const id = el.querySelector(config.crawlSelectors.id);
