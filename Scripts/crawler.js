@@ -204,7 +204,6 @@ class Crawler {
         route.continue();
       }
     });
-    await page.setDefaultTimeout(60 * 60 * 1000)
   }
 
   async initializeCrawler() {
@@ -541,6 +540,7 @@ class BrandAuctionCrawler extends Crawler {
       console.log(`Crawling for total page ${totalPages}`);
       
       for (let page = 1; page <= totalPages; page++) {
+        await page.reload({ waitUntil: 'networkidle' });
         console.log(`Crawling page ${page} of ${totalPages}`);
 
         await this.crawlerPage.selectOption(this.config.crawlSelectors.pageSelect, page.toString());
@@ -557,11 +557,11 @@ class BrandAuctionCrawler extends Crawler {
             return item;
           })
         ));
-
         const filteredPageItems = pageItems.filter((e) => e && e.item_id);
         const processedItems = await processImagesInChunks(filteredPageItems);
         
         allItems.push(...processedItems);
+        
       }
 
       this.closeCrawlerBrowser();
