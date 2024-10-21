@@ -98,7 +98,7 @@ const brandAuctionConfig = {
 class Crawler {
   constructor(siteConfig) {
     this.config = siteConfig;
-    this.maxRetries = 3;
+    this.maxRetries = 1;
     this.retryDelay = 1000;
     this.pageTimeout = 60000;
     this.isRefreshing = false;

@@ -7,7 +7,7 @@ class AdvancedTranslator {
     this.expireDays = expireDays;
     this.lastCallTime = Date.now();
     this.callInterval = 50; // Minimum time between API calls in milliseconds
-    this.maxRetries = 3; // Maximum number of retries for API calls
+    this.maxRetries = 1; // Maximum number of retries for API calls
     this.retryDelay = 1000; // Delay between retries in milliseconds
     this.englishRegex = /^[a-zA-Z0-9\s!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~]*$/;
   }
