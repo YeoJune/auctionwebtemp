@@ -204,6 +204,7 @@ class Crawler {
         route.continue();
       }
     });
+    await page.setDefaultTimeout(60 * 60 * 1000)
   }
 
   async initializeCrawler() {
