@@ -27,7 +27,7 @@ const ecoAucConfig = {
     'userId': process.env.CRAWLER_EMAIL1,
     'password': process.env.CRAWLER_PASSWORD1,
   },
-  categoryIds: ['4'],//['1', '2', '3', '4', '5', '8', '9', '27'],
+  categoryIds: ['27'],//['1', '2', '3', '4', '5', '8', '9', '27'],
   categoryTable: {1: "시계", 2: "가방", 3: "귀금속", 4: "악세서리", 5: "소품", 8: "의류", 9: "신발", 27: "기타"},
   signinSelectors: {
     userId: 'input[name="email_address"]',
@@ -99,7 +99,7 @@ const brandAuctionConfig = {
 class Crawler {
   constructor(siteConfig) {
     this.config = siteConfig;
-    this.maxRetries = 3;
+    this.maxRetries = 1;
     this.retryDelay = 1000;
     this.pageTimeout = 60000;
     this.isRefreshing = false;
@@ -132,6 +132,7 @@ class Crawler {
   async rawTranslate(text) {
     return this.retryOperation(async () => {
       TRANS_COUNT += text.length;
+      return text;
       try {
         const params = {
           Text: text,
@@ -226,23 +227,52 @@ class Crawler {
   sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
-  async initPage(page) {
-    await page.setViewport({
-      width: 1920,
-      height: 1080
+
+  isCollectionDay(date) {
+    if (!date) return true;
+    const day = new Date(date).getDay();
+    return ![2, 4].includes(day);
+  }
+
+  async login(page) {
+    return this.retryOperation(async () => {
+      await page.goto(this.config.loginPageUrl, { waitUntil: 'networkidle0', timeout: this.pageTimeout });
+      await page.type(this.config.signinSelectors.userId, this.config.loginData.userId);
+      await page.type(this.config.signinSelectors.password, this.config.loginData.password);
+      await Promise.all([
+        page.click(this.config.signinSelectors.loginButton),
+        page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: this.pageTimeout }),
+      ]);
     });
   }
 
   async initializeCrawler() {
     this.crawlerContext = await chromium.launchPersistentContext('', {
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--window-size=1920,1080', 
-        `--user-agent=${USER_AGENT}`, '--use-gl=angle', '--enable-unsafe-webgpu'],
+      args: [
+        '--no-sandbox', 
+        '--disable-setuid-sandbox', 
+        '--window-size=1920,1080', 
+        `--user-agent=${USER_AGENT}`, 
+        '--use-gl=angle', 
+        '--enable-unsafe-webgpu',
+        '--disable-dev-shm-usage', 
+        '--disable-background-timer-throttling', 
+        '--disable-backgrounding-occluded-windows', 
+        '--disable-renderer-backgrounding', 
+        '--disable-features=IsolateOrigins,site-per-process'
+      ],
     });
     this.crawlerPage = await this.crawlerContext.newPage();
+    await this.crawlerPage.route('**/*', (route) => {
+      const url = route.request().url();
+      if (url.endsWith('.png') || url.endsWith('.jpg') || url.endsWith('.css') || url.endsWith('.woff')) {
+        route.abort();
+      } else {
+        route.continue();
+      }
+    });
 
-    await this.initPage(this.crawlerPage);
-    
     console.log('complete to initialize crawler!');
   }
 
@@ -259,11 +289,29 @@ class Crawler {
   async initializeDetail() {
     const context = await chromium.launchPersistentContext('', {
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--window-size=1920,1080', 
-        `--user-agent=${USER_AGENT}`, '--use-gl=angle', '--enable-unsafe-webgpu'],
+      args: [
+        '--no-sandbox', 
+        '--disable-setuid-sandbox', 
+        '--window-size=1920,1080', 
+        `--user-agent=${USER_AGENT}`, 
+        '--use-gl=angle', 
+        '--enable-unsafe-webgpu',
+        '--disable-dev-shm-usage', 
+        '--disable-background-timer-throttling', 
+        '--disable-backgrounding-occluded-windows', 
+        '--disable-renderer-backgrounding', 
+        '--disable-features=IsolateOrigins,site-per-process'
+      ],
     });
     const page = await context.newPage();
-    await this.initPage(page);
+    await page.route('**/*', (route) => {
+      const url = route.request().url();
+      if (url.endsWith('.png') || url.endsWith('.jpg') || url.endsWith('.css') || url.endsWith('.woff')) {
+        route.abort();
+      } else {
+        route.continue();
+      }
+    });
     return { context, page };
   }
   
@@ -293,32 +341,28 @@ class Crawler {
     console.log('Detail have been closed.');
   }
 
-  isCollectionDay(date) {
-    if (!date) return true;
-    const day = new Date(date).getDay();
-    return ![2, 4].includes(day);
-  }
-
   async login(page) {
     return this.retryOperation(async () => {
-      await page.goto(this.config.loginPageUrl, { waitUntil: 'networkidle0', timeout: this.pageTimeout });
-      await page.type(this.config.signinSelectors.userId, this.config.loginData.userId);
-      await page.type(this.config.signinSelectors.password, this.config.loginData.password);
+      await page.goto(this.config.loginPageUrl, { waitUntil: 'networkidle', timeout: this.pageTimeout });
+      await page.fill(this.config.signinSelectors.userId, this.config.loginData.userId);
+      await page.fill(this.config.signinSelectors.password, this.config.loginData.password);
       await Promise.all([
         page.click(this.config.signinSelectors.loginButton),
-        page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: this.pageTimeout }),
+        page.waitForLoadState('domcontentloaded'),
       ]);
     });
   }
+
   async loginCheckCrawler() {
-    if (!this.crawlerBrowser || !this.crawlerPage) {
+    if (!this.crawlerContext || !this.crawlerPage) {
       await this.initializeCrawler();
     }
 
     await this.login(this.crawlerPage);
   }
+  
   async loginCheckBrowsers() {
-    if (!this.detailBrowsers.length || !this.detailPages.length) {
+    if (!this.detailContexts.length || !this.detailPages.length) {
       await this.initializeDetails();
     }
     const loginTasks = [];
@@ -340,21 +384,22 @@ class Crawler {
       const url = this.config.searchUrl + this.config.searchParams(categoryId, 1);
       await this.crawlerPage.goto(url, { waitUntil: 'domcontentloaded', timeout: this.pageTimeout });
   
-      const paginationExists = await this.crawlerPage.$(this.config.crawlSelectors.paginationLast);
+      const paginationExists = await this.crawlerPage.locator(this.config.crawlSelectors.paginationLast).count() > 0;
       
       if (paginationExists) {
-        const href = await this.crawlerPage.$eval(this.config.crawlSelectors.paginationLast, el => el.getAttribute('href'));
+        const href = await this.crawlerPage.locator(this.config.crawlSelectors.paginationLast).first().getAttribute('href');
         const match = href.match(/page=(\d+)/);
         if (match) {
           return parseInt(match[1], 10);
         }
       } else {
-        const itemExists = await this.crawlerPage.$(this.config.crawlSelectors.itemContainer);
+        const itemExists = await this.crawlerPage.locator(this.config.crawlSelectors.itemContainer).count() > 0;
         return itemExists ? 1 : 0;
       }
       throw new Error('Unable to determine total pages');
     });
   }
+
   async crawlAllItems(existingIds) {
     await this.closeDetailBrowsers();
     await this.loginCheckCrawler();
@@ -374,6 +419,7 @@ class Crawler {
 
       for (let page = 1; page <= totalPages; page++) {
         pageItems = await this.crawlPage(categoryId, page, existingIds);
+        
         processedItems = await processImagesInChunks(pageItems);
         categoryItems.push(...processedItems);
       }
@@ -430,44 +476,42 @@ class Crawler {
       return filteredPageItems;
     });
   }
-
   async extractItemInfo(itemHandle, existingIds) {
-    const id = await itemHandle.getAttribute(this.config.crawlSelectors.id, 'data-auction-item-id');
-    if (existingIds.has(id)) {
-      return {item_id: id};
-    }
-    const item = await itemHandle.evaluate((el, config) => {
-      const id = el.querySelector(config.crawlSelectors.id);
-      const title = el.querySelector(config.crawlSelectors.title);
-      const brand = el.querySelector(config.crawlSelectors.brand);
-      const rankParent = el.querySelector(config.crawlSelectors.rank);
-      const rank = rankParent ? rankParent.childNodes[4] : null;
-      const startingPrice = el.querySelector(config.crawlSelectors.startingPrice);
-      const image = el.querySelector(config.crawlSelectors.image);
-      const scheduledDate = el.querySelector(config.crawlSelectors.scheduledDate);
-      return {
-        item_id: id ? id.getAttribute('data-auction-item-id') : null,
-        japanese_title: title ? title.textContent.trim() : null,
-        brand: brand ? brand.textContent.trim() : null,
-        rank: rank ? rank.textContent.trim() : null,
-        starting_price: startingPrice ? startingPrice.textContent.trim() : null,
-        image: image ? image.src.replace(/\?.*$/, '') + '?w=300&h=300' : null,
-        scheduled_date: scheduledDate ? scheduledDate.textContent.trim() : null,
-        category: config.categoryTable[config.currentCategoryId],
+    try {
+      const id = await itemHandle.$(this.config.crawlSelectors.id).then(el => el?.getAttribute('data-auction-item-id'));
+      if (existingIds.has(id)) {
+        return {item_id: id};
+      }
+  
+      const item = {
+        item_id: id,
+        japanese_title: await itemHandle.$(this.config.crawlSelectors.title).then(el => el?.textContent()) || '',
+        brand: await itemHandle.$(this.config.crawlSelectors.brand).then(el => el?.textContent()) || '',
+        rank: await itemHandle.$(this.config.crawlSelectors.rank).then(el => el?.textContent()) || '',
+        starting_price: await itemHandle.$(this.config.crawlSelectors.startingPrice).then(el => el?.textContent()) || '',
+        image: await itemHandle.$(this.config.crawlSelectors.image).then(el => el?.getAttribute('src')) || null,
+        scheduled_date: await itemHandle.$(this.config.crawlSelectors.scheduledDate).then(el => el?.textContent()) || '',
+        category: this.config.categoryTable[this.config.currentCategoryId] || '',
       };
-    }, this.config);
+  
+      if (!this.isCollectionDay(item.scheduled_date)) return null;
+      if (item.image) item.image = item.image.replace(/\?.*$/, '') + '?w=300&h=300';
+      if (item.rank) item.rank = item.rank.replace(/ランク/, '');
 
-    item.scheduled_date = this.extractDate(item.scheduled_date);
-    if (!this.isCollectionDay(item.scheduledDate)) return null;
-    item.korean_title = await this.translate(item.japanese_title);
-    item.brand = await this.translate(item.brand);
-    item.starting_price = this.currencyToInt(item.starting_price);
-    item.auc_num = '1'
-
-
-    return item;
+      for(const key in item) item[key] = item[key].trim();
+      
+      item.scheduled_date = this.extractDate(item.scheduled_date);
+      item.korean_title = await this.translate(item.japanese_title);
+      item.brand = await this.translate(item.brand);
+      item.starting_price = this.currencyToInt(item.starting_price);
+      item.auc_num = '1'
+      
+      return item;
+    } catch (error) {
+      console.error('Error in extractItemInfo:', error);
+      return null;
+    }
   }
-
   async crawlItemDetails(idx, itemId) {
     await this.loginCheckBrowsers();
   
@@ -477,41 +521,32 @@ class Crawler {
         waitUntil: 'domcontentloaded',
         timeout: this.pageTimeout
       });
-
-      const item = await page.evaluate((config) => {
-        const images = [];
-        const imageElements = document.querySelectorAll(config.crawlDetailSelectors.images);
   
-        imageElements.forEach((e, i) => {
-          if (i % 3 === 0) {
-            const style = e.getAttribute('style').replace(/[\'\"]/g, '');
-            const urlMatch = style.match(/url\((.*?)\)/);
-            if (urlMatch) {
-              const imageUrl = urlMatch[1].replace(/&quot;/g, '').split('?')[0].trim();
-              images.push(imageUrl + '?w=300&h=300');
-            }
-          }
-        });
+      const images = [];
+      const imageElements = await page.$$(this.config.crawlDetailSelectors.images);
+      for (let i = 0; i < imageElements.length; i += 3) {
+        const style = await imageElements[i].getAttribute('style') || '';
+        const urlMatch = style.match(/url\((.*?)\)/);
+        if (urlMatch) {
+          const imageUrl = urlMatch[1].replace(/&quot;/g, '').split('?')[0].trim();
+          images.push(imageUrl + '?w=300&h=300');
+        }
+      }
   
-        const binder = document.querySelector(config.crawlDetailSelectors.binder);
-        const scheduledDate = binder?.children[5]?.textContent.trim();
-        const description = document.querySelector(config.crawlDetailSelectors.description)?.children[3].textContent.trim();
-        const accessoryCode = binder?.children[13]?.textContent.trim();
+      const binder = await page.$(this.config.crawlDetailSelectors.binder);
+      
+      const item = {
+        image: images[0] || null,
+        additional_images: JSON.stringify(images),
+        scheduled_date: binder ? await binder.$eval(':nth-child(6)', el => el.textContent.trim()) : '',
+        description: await page.locator(this.config.crawlDetailSelectors.description + ' > :nth-child(4)').textContent() || '-',
+        accessory_code: binder ? await binder.$eval(':nth-child(14)', el => el.textContent.trim()) : '',
+      };
   
-        return {
-          image: images[0],
-          additional_images: JSON.stringify(images),
-          scheduled_date: scheduledDate || '',
-          description: description || '-',
-          accessory_code: accessoryCode || '',
-        };
-      }, this.config);
-
       item.scheduled_date = this.extractDate(item.scheduled_date);
-      item.description = await this.translate(item.description);
+      item.description = await this.translate(item.description?.trim());
       item.accessory_code = await this.translate(item.accessory_code);
-      if (!item.description) item.description = '-';
-
+  
       return item;
     });
   }
@@ -519,8 +554,12 @@ class Crawler {
 
 class BrandAuctionCrawler extends Crawler {
   async waitForLoading(page, timeout = 30 * 1000) {
-    await page.waitForSelector('app-loading:empty', { state: 'hidden', timeout: timeout });
+    await page.waitForFunction(() => {
+      const loadingElements = document.querySelectorAll('app-loading');
+      return Array.from(loadingElements).every(el => el.children.length === 0);
+    }, { timeout: timeout });
   }
+
   async crawlAllItems(existingIds) {
     await this.closeDetailBrowsers();
     await this.loginCheckCrawler();
@@ -528,45 +567,41 @@ class BrandAuctionCrawler extends Crawler {
     TRANS_COUNT = 0;
 
     return this.retryOperation(async () => {
-      await this.crawlerPage.goto(this.config.searchUrl, { waitUntil: 'networkidle0', timeout: this.pageTimeout });
+      await this.crawlerPage.goto(this.config.searchUrl, { waitUntil: 'networkidle', timeout: this.pageTimeout });
       await this.crawlerPage.click(this.config.crawlSelectors.searchButton);
 
       await this.waitForLoading(this.crawlerPage);
       await this.crawlerPage.$eval(this.config.crawlSelectors.itemsPerPageSelecter, el => el.value = '500');
-      await this.crawlerPage.select(this.config.crawlSelectors.itemsPerPageSelect, '500');
+      await this.crawlerPage.selectOption(this.config.crawlSelectors.itemsPerPageSelect, '500');
       await this.waitForLoading(this.crawlerPage);
 
-      const totalPageText = await this.crawlerPage.$eval(this.config.crawlSelectors.totalPagesSpan, el => el.textContent);
-      const totalPages = 2;//parseInt(totalPageText.match(/\d+/g).join(''));
+      const totalPageText = await this.crawlerPage.locator(this.config.crawlSelectors.totalPagesSpan).first().textContent();
+      const totalPages = 1;//parseInt(totalPageText.match(/\d+/g).join(''));
 
       const allItems = [];
       console.log(`Crawling for total page ${totalPages}`);
-      let itemHandles, limit, pageItemsPromises, pageItems;
       
       for (let page = 1; page <= totalPages; page++) {
         console.log(`Crawling page ${page} of ${totalPages}`);
 
-        await this.crawlerPage.select(this.config.crawlSelectors.pageSelect, page.toString());
+        await this.crawlerPage.selectOption(this.config.crawlSelectors.pageSelect, page.toString());
         await this.waitForLoading(this.crawlerPage);
         await this.sleep(3000);
         
-        itemHandles = await this.crawlerPage.$$(this.config.crawlSelectors.itemContainer);
-        limit = pLimit(5); // 동시에 처리할 아이템 수 제한
+        const itemHandles = await this.crawlerPage.$$(this.config.crawlSelectors.itemContainer);
+        const limit = pLimit(5);
 
-        pageItemsPromises = itemHandles.map(handle => 
+        const pageItems = await Promise.all(itemHandles.map(handle => 
           limit(async () => {
             const item = await this.extractItemInfo(handle, existingIds);
-            handle.dispose();
             return item;
           })
-        );
+        ));
 
-        pageItems = await Promise.all(pageItemsPromises);
-        pageItems = pageItems.filter((e) => e.item_id);
-
-        pageItems = await processImagesInChunks(pageItems);
+        const filteredPageItems = pageItems.filter((e) => e && e.item_id);
+        const processedItems = await processImagesInChunks(filteredPageItems);
         
-        allItems.push(...pageItems);
+        allItems.push(...processedItems);
       }
 
       this.closeCrawlerBrowser();
@@ -581,114 +616,106 @@ class BrandAuctionCrawler extends Crawler {
       return allItems;
     });
   }
-
   async extractItemInfo(itemHandle, existingIds) {
-    const status = await itemHandle.textContent(this.config.crawlSelectors.status);
-    if (status.trim() == '保留成約' || status.trim() == '成約') {
-      return {status: status.trim()};
-    }
-    const id = await itemHandle.textContent(this.config.crawlSelectors.id);
-    if (existingIds.has(id.trim())) {
-      return {item_id: id.trim()};
-    }
-    const item = await itemHandle.evaluate((el, config) => {
-      const id = el.querySelector(config.crawlSelectors.id);
-      const title = el.querySelector(config.crawlSelectors.title);
-      const brand = el.querySelector(config.crawlSelectors.brand);
-      const rank = el.querySelector(config.crawlSelectors.rank);
-      const startingPrice = el.querySelector(config.crawlSelectors.startingPrice);
-      const image = el.querySelector(config.crawlSelectors.image);
-      const scheduledDate = el.querySelector(config.crawlSelectors.scheduledDate);
-      const category = el.querySelector(config.crawlSelectors.category);
-
-      return {
-        item_id: id ? id.textContent.trim() : null,
-        japanese_title: title ? title.textContent.trim() : null,
-        brand: brand ? brand.textContent.trim() : null,
-        rank: rank ? rank.textContent.trim() : null,
-        starting_price: startingPrice ? startingPrice.textContent.trim() : null,
-        image: image ? image.src.replace(/(brand_img\/)(\d+)/, '$16') : null,
-        scheduled_date: scheduledDate ? scheduledDate.textContent.trim() : null,
-        category: category.textContent.trim(),
+    try {
+      const status = await itemHandle.$(this.config.crawlSelectors.status).then(el => el?.textContent());
+      if (status?.trim() == '保留成約' || status?.trim() == '成約') {
+        return {status: status.trim()};
+      }
+  
+      const id = await itemHandle.$(this.config.crawlSelectors.id).then(el => el?.textContent());
+      if (existingIds.has(id?.trim())) {
+        return {item_id: id.trim()};
+      }
+  
+      const item = {
+        item_id: id?.trim(),
+        japanese_title: await itemHandle.$(this.config.crawlSelectors.title).then(el => el?.textContent()),
+        brand: await itemHandle.$(this.config.crawlSelectors.brand).then(el => el?.textContent()),
+        rank: await itemHandle.$(this.config.crawlSelectors.rank).then(el => el?.textContent()),
+        starting_price: await itemHandle.$(this.config.crawlSelectors.startingPrice).then(el => el?.textContent()),
+        image: await itemHandle.$(this.config.crawlSelectors.image).then(el => el?.getAttribute('src')),
+        scheduled_date: await itemHandle.$(this.config.crawlSelectors.scheduledDate).then(el => el?.textContent()),
+        category: await itemHandle.$(this.config.crawlSelectors.category).then(el => el?.textContent()),
       };
-    }, this.config);
-    
-    item.korean_title = await this.translate(this.convertFullWidthToAscii(item.japanese_title));
-    item.brand = await this.translate(this.convertFullWidthToAscii(item.brand));
-    item.starting_price = this.currencyToInt(item.starting_price);
-    item.scheduled_date = this.extractDate(item.scheduled_date);
-    item.category = await this.translate(item.category);
-    item.auc_num = '2';
-
-    return item;
+  
+      for (const key in item) {
+        if (typeof item[key] === 'string') {
+          item[key] = item[key].trim();
+        }
+      }
+  
+      if (item.image) {
+        item.image = item.image.replace(/(brand_img\/)(\d+)/, '$16');
+      }
+      
+      item.korean_title = await this.translate(this.convertFullWidthToAscii(item.japanese_title));
+      item.brand = await this.translate(this.convertFullWidthToAscii(item.brand));
+      item.starting_price = this.currencyToInt(item.starting_price);
+      item.scheduled_date = this.extractDate(item.scheduled_date);
+      item.category = await this.translate(item.category);
+      item.auc_num = '2';
+  
+      return item;
+    } catch (error) {
+      console.error('Error in extractItemInfo:', error);
+      return null;
+    }
   }
+  
   async crawlItemDetails(idx, itemId) {
     await this.loginCheckBrowsers();
   
     const startTime = Date.now();
     return this.retryOperation(async () => {
-      const browser = this.detailBrowsers[idx];
+      const context = this.detailContexts[idx];
       const page = this.detailPages[idx];
-      await page.goto(this.config.searchUrl, { waitUntil: 'networkidle0', timeout: this.pageTimeout });
+      await page.goto(this.config.searchUrl, { waitUntil: 'networkidle', timeout: this.pageTimeout });
       console.log('search Url loaded');
       
       await page.click(this.config.crawlSelectors.resetButton);
   
-      await page.type(this.config.crawlSelectors.search1, itemId);
-      await page.type(this.config.crawlSelectors.search2, itemId);
+      await page.fill(this.config.crawlSelectors.search1, itemId);
+      await page.fill(this.config.crawlSelectors.search2, itemId);
       await page.click(this.config.crawlSelectors.searchButton);
-      const newPagePromise = new Promise((resolve, reject) => {
-        const timeoutId = setTimeout(() => {
-          reject(new Error('Timeout waiting for new page'));
-        }, 5000);
-  
-        browser.once('targetcreated', (target) => {
-          clearTimeout(timeoutId);
-          resolve(target.page());
-        });
-      });
-      await this.waitForLoading(page);
       
+      const newPagePromise = context.waitForEvent('page');
       await page.click(this.config.crawlSelectors.itemContainer);
       const newPage = await newPagePromise;
-      await this.initPage(newPage);
-      await this.sleep(500);
-      await this.waitForLoading(newPage, 5000);
-
+      await this.waitForLoading(newPage, 10000);
+  
+      await newPage.screenshot({ path: 'screenshot.png' }); // 스크린샷 캡처
       let item;
       try {
-        item = await newPage.evaluate((config) => {
-          const images = Array.from(document.querySelectorAll(config.crawlDetailSelectors.images))
-            .map(img => {
-              const src = img.getAttribute('src');
-              if (src && src.startsWith('http')) {
-                return src.replace(/(brand_img\/)(\d+)/, '$16');
-              }
-              return null;
-            })
-            .filter(Boolean);
-    
-          const description = document.querySelector(config.crawlDetailSelectors.description)?.textContent.trim().replace(/\s{2,}/g, '\t') || null;
-          const codeParent = document.querySelector(config.crawlDetailSelectors.codeParent);
-          const accessoryCode = codeParent?.children[6]?.children[2]?.children[1]?.textContent.trim() || null;
-    
-          return {
-            image: images[0],
-            additional_images: images.length > 0 ? JSON.stringify(images) : null,
-            description: description || '',
-            accessory_code: accessoryCode || '',
-          };
-        }, this.config);
+        const images = await newPage.$$eval(this.config.crawlDetailSelectors.images, imgs => 
+          imgs.map(img => {
+            const src = img.getAttribute('src');
+            return src && src.startsWith('http') ? src.replace(/(brand_img\/)(\d+)/, '$16') : null;
+          }).filter(Boolean)
+        );
+  
+        item = {
+          image: images[0] || null,
+          additional_images: JSON.stringify(images),
+          description: await newPage.$(this.config.crawlDetailSelectors.description).then(el => el?.textContent()) || '',
+          accessory_code: await newPage.$(`${this.config.crawlDetailSelectors.codeParent} > :nth-child(7) > :nth-child(3) > :nth-child(2)`).then(el => el?.textContent()) || '',
+        };
+  
+        item.description = item.description.trim().replace(/\s{2,}/g, '\t');
+        item.accessory_code = item.accessory_code.trim();
+  
       } catch (error) {
-        throw(error);
+        console.error('Error in crawlItemDetails:', error);
+        throw error;
       } finally {
         await newPage.close();
         await page.click(this.config.crawlSelectors.resetButton);
       }
+  
       item.description = await this.translate(item.description);
       item.accessory_code = await this.translate(item.accessory_code);
       if (!item.description) item.description = '-';
-
+  
       const endTime = Date.now();
       const executionTime = endTime - startTime;
       console.log(executionTime);
