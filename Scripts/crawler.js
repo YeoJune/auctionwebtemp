@@ -210,6 +210,7 @@ class Crawler {
     this.crawlerContext = await chromium.launchPersistentContext('', {
       headless: true,
       args: [
+        '--js-flags=--max-old-space-size=4096',
         '--no-sandbox', 
         '--disable-setuid-sandbox', 
         '--window-size=1920,1080', 
