@@ -671,21 +671,23 @@ class BrandAuctionCrawler extends Crawler {
     return this.retryOperation(async () => {
       const context = this.detailContexts[idx];
       const page = this.detailPages[idx];
-      await page.goto(this.config.searchUrl, { waitUntil: 'networkidle', timeout: this.pageTimeout });
-      console.log('search Url loaded');
-      
-      await page.click(this.config.crawlSelectors.resetButton);
-  
-      await page.fill(this.config.crawlSelectors.search1, itemId);
-      await page.fill(this.config.crawlSelectors.search2, itemId);
+      await page.goto(this.config.searchUrl, { waitUntil: 'domcontentloaded', timeout: this.pageTimeout });
+
+      await Promise.all([
+        page.click(this.config.crawlSelectors.resetButton),
+        page.fill(this.config.crawlSelectors.search1, itemId),
+        page.fill(this.config.crawlSelectors.search2, itemId)
+      ]);
       await page.click(this.config.crawlSelectors.searchButton);
       
       const newPagePromise = context.waitForEvent('page');
       await page.click(this.config.crawlSelectors.itemContainer);
       const newPage = await newPagePromise;
       await this.initPage(newPage);
+      
+      const currentUrl = newPage.url();
+      await newPage.goto(currentUrl, { waitUntil: 'domcontentloaded' });
       await this.waitForLoading(newPage, 10000);
-      await this.sleep(1000);
 
       let item;
       try {
