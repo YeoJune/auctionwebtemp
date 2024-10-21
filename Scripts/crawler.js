@@ -388,6 +388,7 @@ class Crawler {
     }
 
     this.closeCrawlerBrowser();
+    translator.saveCache();
     translator.cleanupCache();
 
     console.log(`Crawling completed for all categories. Total items: ${allCrawledItems.length}`);
@@ -536,7 +537,7 @@ class BrandAuctionCrawler extends Crawler {
       await this.crawlerPage.selectOption(this.config.crawlSelectors.itemsPerPageSelect, '500');
       await this.waitForLoading(this.crawlerPage);
 
-      const totalPageText = await this.crawlerPage.locator(this.config.crawlSelectors.totalPagesSpan).first().textContent();
+      const totalPageText = await this.crawlerPage.$eval(this.config.crawlSelectors.totalPagesSpan, el => el.textContent());
       const totalPages = 5;//parseInt(totalPageText.match(/\d+/g).join(''));
 
       const allItems = [];
@@ -567,6 +568,7 @@ class BrandAuctionCrawler extends Crawler {
       }
 
       this.closeCrawlerBrowser();
+      translator.saveCache();
       translator.cleanupCache();
 
       console.log(`Total items crawled: ${allItems.length}`);
