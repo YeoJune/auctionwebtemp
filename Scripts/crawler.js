@@ -246,6 +246,18 @@ class Crawler {
     });
   }
 
+  async initPage(page) {
+    await page.route('**/*', (route) => {
+      const url = route.request().url();
+      if (url.endsWith('.png') || url.endsWith('.jpg') || url.endsWith('.jpeg') || url.endsWith('.gif') || url.endsWith('.svg') ||
+        url.endsWith('.css') || url.endsWith('.woff') || url.endsWith('.woff2') || url.endsWith('.ttf')) {
+        route.abort();
+      } else {
+        route.continue();
+      }
+    });
+  }
+
   async initializeCrawler() {
     this.crawlerContext = await chromium.launchPersistentContext('', {
       headless: true,
@@ -264,14 +276,8 @@ class Crawler {
       ],
     });
     this.crawlerPage = await this.crawlerContext.newPage();
-    await this.crawlerPage.route('**/*', (route) => {
-      const url = route.request().url();
-      if (url.endsWith('.png') || url.endsWith('.jpg') || url.endsWith('.css') || url.endsWith('.woff')) {
-        route.abort();
-      } else {
-        route.continue();
-      }
-    });
+
+    await this.initPage(this.crawlerPage);
 
     console.log('complete to initialize crawler!');
   }
@@ -304,14 +310,9 @@ class Crawler {
       ],
     });
     const page = await context.newPage();
-    await page.route('**/*', (route) => {
-      const url = route.request().url();
-      if (url.endsWith('.png') || url.endsWith('.jpg') || url.endsWith('.css') || url.endsWith('.woff')) {
-        route.abort();
-      } else {
-        route.continue();
-      }
-    });
+    
+    await this.initPage(page);
+
     return { context, page };
   }
   
@@ -525,7 +526,7 @@ class Crawler {
       const images = [];
       const imageElements = await page.$$(this.config.crawlDetailSelectors.images);
       for (let i = 0; i < imageElements.length; i += 3) {
-        const style = await imageElements[i].getAttribute('style') || '';
+        const style = (await imageElements[i].getAttribute('style')).replace(/[\'\"]/g, '') || '';
         const urlMatch = style.match(/url\((.*?)\)/);
         if (urlMatch) {
           const imageUrl = urlMatch[1].replace(/&quot;/g, '').split('?')[0].trim();
@@ -682,8 +683,11 @@ class BrandAuctionCrawler extends Crawler {
       const newPagePromise = context.waitForEvent('page');
       await page.click(this.config.crawlSelectors.itemContainer);
       const newPage = await newPagePromise;
+      await this.initPage(newPage);
       await this.waitForLoading(newPage, 10000);
-      
+
+      await newPage.screenshot({ path: 'screenshot.png' }); // 스크린샷 캡처
+
       let item;
       try {
         const images = await newPage.$$eval(this.config.crawlDetailSelectors.images, imgs => 
@@ -717,7 +721,7 @@ class BrandAuctionCrawler extends Crawler {
   
       const endTime = Date.now();
       const executionTime = endTime - startTime;
-      console.log(executionTime);
+      console.log(this.formatExecutionTime(executionTime));
       return item;
     });
   }
