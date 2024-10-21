@@ -27,7 +27,7 @@ const ecoAucConfig = {
     'userId': process.env.CRAWLER_EMAIL1,
     'password': process.env.CRAWLER_PASSWORD1,
   },
-  categoryIds: ['27'],//['1', '2', '3', '4', '5', '8', '9', '27'],
+  categoryIds: ['1', '2', '3', '4', '5', '8', '9', '27'],
   categoryTable: {1: "시계", 2: "가방", 3: "귀금속", 4: "악세서리", 5: "소품", 8: "의류", 9: "신발", 27: "기타"},
   signinSelectors: {
     userId: 'input[name="email_address"]',
@@ -577,7 +577,7 @@ class BrandAuctionCrawler extends Crawler {
       await this.waitForLoading(this.crawlerPage);
 
       const totalPageText = await this.crawlerPage.locator(this.config.crawlSelectors.totalPagesSpan).first().textContent();
-      const totalPages = 1;//parseInt(totalPageText.match(/\d+/g).join(''));
+      const totalPages = parseInt(totalPageText.match(/\d+/g).join(''));
 
       const allItems = [];
       console.log(`Crawling for total page ${totalPages}`);
