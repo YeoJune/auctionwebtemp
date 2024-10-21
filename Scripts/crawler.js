@@ -540,7 +540,7 @@ class BrandAuctionCrawler extends Crawler {
       console.log(`Crawling for total page ${totalPages}`);
       
       for (let page = 1; page <= totalPages; page++) {
-        await page.reload({ waitUntil: 'networkidle' });
+        await this.crawlerPage.reload({ waitUntil: 'networkidle' });
         console.log(`Crawling page ${page} of ${totalPages}`);
 
         await this.crawlerPage.selectOption(this.config.crawlSelectors.pageSelect, page.toString());
