@@ -56,7 +56,6 @@ class AdvancedTranslator {
     }
     return translatedWords.join(' ');
   }
-
   async translateWord(word) {
     let conn;
     try {
@@ -68,8 +67,8 @@ class AdvancedTranslator {
         return rows[0].translation;
       } else {
         const translation = await this.rawTranslate(word);
-        await conn.query('INSERT INTO translations (word, translation, last_used) VALUES (?, ?, ?)',
-          [word, translation, new Date()]);
+        await conn.query('INSERT INTO translations (word, translation, last_used) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE translation = ?, last_used = ?',
+          [word, translation, new Date(), translation, new Date()]);
         return translation;
       }
     } catch (error) {
