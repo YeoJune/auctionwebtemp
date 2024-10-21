@@ -4,10 +4,7 @@ const { chromium } = require('playwright');
 const { processImagesInChunks } = require('../utils/processImage');
 const AdvancedTranslator = require('../utils/advancedTraslator');
 
-const translator = new AdvancedTranslator('ap-northeast-2', 'translation_cache.json');
-(async () => {
-  await translator.initialize();
-})();
+const translator = new AdvancedTranslator('ap-northeast-2');
 
 let pLimit;
 (async () => {
