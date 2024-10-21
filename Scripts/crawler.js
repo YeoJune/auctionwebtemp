@@ -541,27 +541,28 @@ class BrandAuctionCrawler extends Crawler {
       console.log(`Crawling for total page ${totalPages}`);
       
       for (let page = 1; page <= totalPages; page++) {
-        console.log(`Crawling page ${page} of ${totalPages}`);
+        this.retryOperation(async () => {
+          console.log(`Crawling page ${page} of ${totalPages}`);
 
-        await this.crawlerPage.selectOption(this.config.crawlSelectors.pageSelect, page.toString());
-        await this.waitForLoading(this.crawlerPage);
-        await this.sleep(3000);
-        
-        const itemHandles = await this.crawlerPage.$$(this.config.crawlSelectors.itemContainer);
-        const limit = pLimit(5);
+          await this.crawlerPage.selectOption(this.config.crawlSelectors.pageSelect, page.toString());
+          await this.waitForLoading(this.crawlerPage);
+          await this.sleep(5000);
+          
+          const itemHandles = await this.crawlerPage.$$(this.config.crawlSelectors.itemContainer);
+          const limit = pLimit(5);
 
-        const pageItems = await Promise.all(itemHandles.map(handle => 
-          limit(async () => {
-            const item = await this.extractItemInfo(handle, existingIds);
-            handle.dispose();
-            return item;
-          })
-        ));
-        const filteredPageItems = pageItems.filter((e) => e && e.item_id);
-        const processedItems = await processImagesInChunks(filteredPageItems);
-        
-        allItems.push(...processedItems);
-        
+          const pageItems = await Promise.all(itemHandles.map(handle => 
+            limit(async () => {
+              const item = await this.extractItemInfo(handle, existingIds);
+              handle.dispose();
+              return item;
+            })
+          ));
+          const filteredPageItems = pageItems.filter((e) => e && e.item_id);
+          const processedItems = await processImagesInChunks(filteredPageItems);
+          
+          allItems.push(...processedItems);
+        });
       }
 
       this.closeCrawlerBrowser();

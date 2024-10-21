@@ -123,8 +123,7 @@ async function crawlAll() {
       ecoAucCrawler.isRefreshing = true;
       await brandAuctionCrawler.closeCrawlerBrowser();
       await brandAuctionCrawler.closeDetailBrowsers();
-      //let ecoAucItems = await ecoAucCrawler.crawlAllItems(existingEcoAucIds);
-      let ecoAucItems = existingItems.filter(item => item.auc_num == 1);
+      let ecoAucItems = await ecoAucCrawler.crawlAllItems(existingEcoAucIds);
       ecoAucCrawler.isRefreshing = false;
 
       brandAuctionCrawler.isRefreshing = true;
