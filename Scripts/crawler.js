@@ -210,6 +210,7 @@ class Crawler {
     this.crawlerContext = await chromium.launchPersistentContext('', {
       headless: true,
       args: [
+        '--js-flags=--max-old-space-size=4096',
         '--no-sandbox', 
         '--disable-setuid-sandbox', 
         '--window-size=1920,1080', 
@@ -360,7 +361,7 @@ class Crawler {
       console.log(`Starting crawl for category ${categoryId}`);
       this.config.currentCategoryId = categoryId;
 
-      const totalPages = await this.getTotalPages(categoryId);
+      let totalPages = await this.getTotalPages(categoryId);
       console.log(`Total pages in category ${categoryId}: ${totalPages}`);
       let pageItems, processedItems;
 
