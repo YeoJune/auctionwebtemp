@@ -296,7 +296,6 @@ class Crawler {
       await Promise.all([
         page.click(this.config.signinSelectors.loginButton),
       ]);
-      await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: this.pageTimeout });
     });
   }
   async initPage(page) {
