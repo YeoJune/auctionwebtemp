@@ -362,7 +362,7 @@ class Crawler {
       this.config.currentCategoryId = categoryId;
 
       let totalPages = await this.getTotalPages(categoryId);
-      if (totalPages > 5) totalPages = 5;
+      if (totalPages > 10) totalPages = 10;
       console.log(`Total pages in category ${categoryId}: ${totalPages}`);
       let pageItems, processedItems;
 
