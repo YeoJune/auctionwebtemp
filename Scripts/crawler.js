@@ -334,11 +334,6 @@ class Crawler {
       // CSS와 JavaScript는 허용 (페이지 기능 유지에 중요)
       await route.continue();
     });
-  
-    await page.context().setExtraHTTPHeaders({
-      'Accept-Language': 'en-US,en;q=0.9',
-      'Accept-Encoding': 'gzip, deflate, br',
-    });
   }
 
   async loginCheckCrawler() {
