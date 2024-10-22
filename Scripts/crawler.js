@@ -213,7 +213,13 @@ class Crawler {
         '--no-sandbox', 
         '--disable-setuid-sandbox', 
         '--window-size=1920,1080', 
-        `--user-agent=${USER_AGENT}`,
+        `--user-agent=${USER_AGENT}`, 
+        '--disable-gl-drawing-for-tests',
+        '--disable-dev-shm-usage', 
+        '--disable-background-timer-throttling', 
+        '--disable-backgrounding-occluded-windows', 
+        '--disable-renderer-backgrounding', 
+        '--disable-features=IsolateOrigins,site-per-process'
       ],
     });
     this.crawlerPage = await this.crawlerContext.newPage();
@@ -240,7 +246,13 @@ class Crawler {
         '--no-sandbox', 
         '--disable-setuid-sandbox', 
         '--window-size=1920,1080', 
-        `--user-agent=${USER_AGENT}`,
+        `--user-agent=${USER_AGENT}`, 
+        '--disable-gl-drawing-for-tests',
+        '--disable-dev-shm-usage', 
+        '--disable-background-timer-throttling', 
+        '--disable-backgrounding-occluded-windows', 
+        '--disable-renderer-backgrounding', 
+        '--disable-features=IsolateOrigins,site-per-process'
       ],
     });
     const page = await context.newPage();
