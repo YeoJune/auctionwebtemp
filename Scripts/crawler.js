@@ -210,19 +210,13 @@ class Crawler {
     this.crawlerContext = await chromium.launchPersistentContext('', {
       headless: true,
       args: [
-        '--js-flags=--max-old-space-size=4096',
-        '--no-sandbox', 
-        '--disable-setuid-sandbox', 
+        '--disable-dev-shm-usage',
+        '--no-sandbox',  // 리소스 사용 감소
+        '--disable-setuid-sandbox',
+        '--disable-gpu'  // GPU 리소스 사용 안함
         `--user-agent=${USER_AGENT}`, 
-        '--disable-gl-drawing-for-tests',
-        '--disable-dev-shm-usage', 
-        '--disable-background-timer-throttling', 
-        '--disable-backgrounding-occluded-windows', 
-        '--disable-renderer-backgrounding', 
-        '--disable-features=IsolateOrigins,site-per-process'
       ],
       viewport: { width: 1280, height: 720 },
-      deviceScaleFactor: 1,
     });
     this.crawlerPage = await this.crawlerContext.newPage();
 
@@ -245,18 +239,13 @@ class Crawler {
     const context = await chromium.launchPersistentContext('', {
       headless: true,
       args: [
-        '--no-sandbox', 
-        '--disable-setuid-sandbox', 
+        '--disable-dev-shm-usage',
+        '--no-sandbox',  // 리소스 사용 감소
+        '--disable-setuid-sandbox',
+        '--disable-gpu'  // GPU 리소스 사용 안함
         `--user-agent=${USER_AGENT}`, 
-        '--disable-gl-drawing-for-tests',
-        '--disable-dev-shm-usage', 
-        '--disable-background-timer-throttling', 
-        '--disable-backgrounding-occluded-windows', 
-        '--disable-renderer-backgrounding', 
-        '--disable-features=IsolateOrigins,site-per-process'
       ],
       viewport: { width: 1280, height: 720 },
-      deviceScaleFactor: 1,
     });
     const page = await context.newPage();
     
