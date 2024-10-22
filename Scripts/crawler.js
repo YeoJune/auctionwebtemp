@@ -213,7 +213,6 @@ class Crawler {
         '--disable-dev-shm-usage',
         '--no-sandbox',  // 리소스 사용 감소
         '--disable-setuid-sandbox',
-        '--disable-gpu'  // GPU 리소스 사용 안함
         `--user-agent=${USER_AGENT}`, 
       ],
       viewport: { width: 1280, height: 720 },
@@ -242,7 +241,6 @@ class Crawler {
         '--disable-dev-shm-usage',
         '--no-sandbox',  // 리소스 사용 감소
         '--disable-setuid-sandbox',
-        '--disable-gpu'  // GPU 리소스 사용 안함
         `--user-agent=${USER_AGENT}`, 
       ],
       viewport: { width: 1280, height: 720 },
