@@ -322,9 +322,7 @@ class Crawler {
       // 최소한의 리소스만 차단
       if (
         resourceType === 'image' || // 이미지만 차단
-        resourceType === 'font' ||  // 폰트만 차단
-        url.includes('analytics') || // 분석 도구
-        url.includes('advertising') // 광고
+        resourceType === 'font'  // 폰트만 차단
       ) {
         await route.abort();
         return;
