@@ -297,7 +297,6 @@ class Crawler {
     });
   }
   async initPage(page) {
-    return;
     await page.route('**/*', async (route) => {
       const request = route.request();
       const resourceType = request.resourceType();
