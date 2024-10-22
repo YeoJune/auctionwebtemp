@@ -213,7 +213,6 @@ class Crawler {
         '--js-flags=--max-old-space-size=4096',
         '--no-sandbox', 
         '--disable-setuid-sandbox', 
-        '--window-size=1920,1080', 
         `--user-agent=${USER_AGENT}`, 
         '--disable-gl-drawing-for-tests',
         '--disable-dev-shm-usage', 
@@ -222,6 +221,8 @@ class Crawler {
         '--disable-renderer-backgrounding', 
         '--disable-features=IsolateOrigins,site-per-process'
       ],
+      viewport: { width: 1280, height: 720 },
+      deviceScaleFactor: 1,
     });
     this.crawlerPage = await this.crawlerContext.newPage();
 
@@ -246,7 +247,6 @@ class Crawler {
       args: [
         '--no-sandbox', 
         '--disable-setuid-sandbox', 
-        '--window-size=1920,1080', 
         `--user-agent=${USER_AGENT}`, 
         '--disable-gl-drawing-for-tests',
         '--disable-dev-shm-usage', 
@@ -255,6 +255,8 @@ class Crawler {
         '--disable-renderer-backgrounding', 
         '--disable-features=IsolateOrigins,site-per-process'
       ],
+      viewport: { width: 1280, height: 720 },
+      deviceScaleFactor: 1,
     });
     const page = await context.newPage();
     
