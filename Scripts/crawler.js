@@ -123,6 +123,20 @@ class Crawler {
           '--disable-dev-shm-usage',
           '--no-sandbox',
           '--disable-setuid-sandbox',
+          '--disable-gpu',
+          '--disable-accelerated-2d-canvas',
+          '--disable-accelerated-jpeg-decoding',
+          '--disable-accelerated-mjpeg-decode',
+          '--disable-accelerated-video-decode',
+          '--disable-gl-drawing-for-tests',
+          '--disable-canvas-aa',
+          '--disable-2d-canvas-clip-aa',
+          '--disable-web-security',
+          '--memory-pressure-off',
+          '--use-gl=swiftshader',
+          '--single-process',  // 단일 프로세스 모드
+          '--no-zygote',      // Zygote 프로세스 비활성화
+          '--mute-audio',     // 오디오 비활성화
         ],
       });
     }
@@ -283,6 +297,7 @@ class Crawler {
     });
   }
   async initPage(page) {
+    return;
     await page.route('**/*', async (route) => {
       const request = route.request();
       const resourceType = request.resourceType();
