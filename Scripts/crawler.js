@@ -100,10 +100,11 @@ class Crawler {
     this.config = siteConfig;
     this.maxRetries = 1;
     this.retryDelay = 1000;
-    this.pageTimeout = 60000;
+    this.pageTimeout = 30000; // 30초로 줄임
     this.isRefreshing = false;
-    this.detailMulti = 2;
+    this.detailMulti = 1; // 동시 컨텍스트 수 줄임
 
+    this.browser = null;
     this.crawlerContext = null;
     this.crawlerPage = null;
     this.isCrawlerLogin = false;
@@ -111,6 +112,104 @@ class Crawler {
     this.detailContexts = [];
     this.detailPages = [];
     this.isDetailLogins = false;
+  }
+
+  async initializeBrowser() {
+    if (!this.browser) {
+      this.browser = await chromium.launch({
+        headless: true,
+        args: [
+          '--disable-dev-shm-usage',
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-gpu',
+          '--disable-accelerated-2d-canvas',
+          '--disable-accelerated-jpeg-decoding',
+          '--disable-accelerated-mjpeg-decode',
+          '--disable-accelerated-video-decode',
+          '--disable-gl-drawing-for-tests',
+          '--disable-canvas-aa',
+          '--disable-2d-canvas-clip-aa',
+          '--disable-web-security',
+          '--memory-pressure-off',
+          '--use-gl=swiftshader',
+        ],
+      });
+    }
+    return this.browser;
+  }
+
+  async initializeCrawler() {
+    await this.initializeBrowser();
+    
+    this.crawlerContext = await this.browser.newContext({
+      userAgent: USER_AGENT,
+      viewport: { width: 1280, height: 720 },
+    });
+    
+    this.crawlerPage = await this.crawlerContext.newPage();
+    await this.initPage(this.crawlerPage);
+
+    console.log('complete to initialize crawler!');
+  }
+
+  async initializeDetails() {
+    await this.initializeBrowser();
+    
+    const detailInitPromises = Array(this.detailMulti).fill().map(() => this.initializeDetail());
+    const detailResults = await Promise.all(detailInitPromises);
+
+    this.detailContexts = detailResults.map(result => result.context);
+    this.detailPages = detailResults.map(result => result.page);
+
+    console.log('complete to initialize details!');
+  }
+
+  async initializeDetail() {
+    const context = await this.browser.newContext({
+      userAgent: USER_AGENT,
+      viewport: { width: 1280, height: 720 },
+    });
+    
+    const page = await context.newPage();
+    await this.initPage(page);
+
+    return { context, page };
+  }
+
+  async closeCrawlerBrowser() {
+    if (this.crawlerContext) {
+      await this.crawlerContext.close();
+      this.crawlerContext = null;
+      this.crawlerPage = null;
+    }
+
+    this.isCrawlerLogin = false;
+    console.log('Crawler context have been closed.');
+  }
+
+  async closeDetailBrowsers() {
+    for (const context of this.detailContexts) {
+      if (context) {
+        await context.close();
+      }
+    }
+    this.detailContexts = [];
+    this.detailPages = [];
+
+    this.isDetailLogins = false;
+    console.log('Detail contexts have been closed.');
+  }
+
+  async closeAllBrowsers() {
+    await this.closeCrawlerBrowser();
+    await this.closeDetailBrowsers();
+    
+    if (this.browser) {
+      await this.browser.close();
+      this.browser = null;
+      console.log('Browser has been closed.');
+    }
   }
 
   async retryOperation(operation, maxRetries = this.maxRetries, delay = this.retryDelay) {
@@ -205,113 +304,7 @@ class Crawler {
       }
     });
   }
-
-  async initializeCrawler() {
-    this.crawlerContext = await chromium.launchPersistentContext('', {
-      headless: true,
-      args: [
-        '--disable-dev-shm-usage',
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-gpu',
-        '--disable-accelerated-2d-canvas',
-        '--disable-accelerated-jpeg-decoding',
-        '--disable-accelerated-mjpeg-decode',
-        '--disable-accelerated-video-decode',
-        '--disable-gl-drawing-for-tests',
-        '--disable-canvas-aa',
-        '--disable-2d-canvas-clip-aa',
-        '--disable-web-security',
-        '--memory-pressure-off',
-        '--use-gl=swiftshader',
-        `--user-agent=${USER_AGENT}`,
-      ],
-      viewport: { width: 1280, height: 720 },
-    });
-    this.crawlerPage = await this.crawlerContext.newPage();
-
-    await this.initPage(this.crawlerPage);
-
-    console.log('complete to initialize crawler!');
-  }
-
-  async initializeDetails() {
-    const detailInitPromises = Array(this.detailMulti).fill().map(() => this.initializeDetail());
-    const detailResults = await Promise.all(detailInitPromises);
-
-    this.detailContexts = detailResults.map(result => result.context);
-    this.detailPages = detailResults.map(result => result.page);
-
-    console.log('complete to initialize details!');
-  }
-
-  async initializeDetail() {
-    const context = await chromium.launchPersistentContext('', {
-      headless: true,
-      args: [
-        '--disable-dev-shm-usage',
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-gpu',
-        '--disable-accelerated-2d-canvas',
-        '--disable-accelerated-jpeg-decoding',
-        '--disable-accelerated-mjpeg-decode',
-        '--disable-accelerated-video-decode',
-        '--disable-gl-drawing-for-tests',
-        '--disable-canvas-aa',
-        '--disable-2d-canvas-clip-aa',
-        '--disable-web-security',
-        '--memory-pressure-off',
-        '--use-gl=swiftshader',
-        `--user-agent=${USER_AGENT}`,
-      ],
-      viewport: { width: 1280, height: 720 },
-    });
-    const page = await context.newPage();
-    
-    await this.initPage(page);
-
-    return { context, page };
-  }
   
-  async closeCrawlerBrowser() {
-    if (this.crawlerContext) {
-      await this.crawlerContext.close();
-      this.crawlerContext = null;
-      this.crawlerPage = null;
-    }
-
-    this.isCrawlerLogin = false;
-  
-    console.log('Crawler have been closed.');
-  }
-
-  async closeDetailBrowsers() {
-    for (const context of this.detailContexts) {
-      if (context) {
-        await context.close();
-      }
-    }
-    this.detailContexts = [];
-    this.detailPages = [];
-
-    this.isDetailLogins = false;
-    
-    console.log('Detail have been closed.');
-  }
-
-  async login(page) {
-    return this.retryOperation(async () => {
-      await page.goto(this.config.loginPageUrl, { waitUntil: 'networkidle', timeout: this.pageTimeout });
-      await page.fill(this.config.signinSelectors.userId, this.config.loginData.userId);
-      await page.fill(this.config.signinSelectors.password, this.config.loginData.password);
-      await Promise.all([
-        page.click(this.config.signinSelectors.loginButton),
-        page.waitForLoadState('domcontentloaded'),
-      ]);
-    });
-  }
-
   async loginCheckCrawler() {
     if (!this.crawlerContext || !this.crawlerPage) {
       await this.initializeCrawler();
