@@ -361,7 +361,8 @@ class Crawler {
       console.log(`Starting crawl for category ${categoryId}`);
       this.config.currentCategoryId = categoryId;
 
-      const totalPages = await this.getTotalPages(categoryId);
+      let totalPages = await this.getTotalPages(categoryId);
+      if (totalPages > 5) totalPages = 5;
       console.log(`Total pages in category ${categoryId}: ${totalPages}`);
       let pageItems, processedItems;
 
