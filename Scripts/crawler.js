@@ -292,19 +292,72 @@ class Crawler {
       ]);
     });
   }
-
   async initPage(page) {
-    await page.route('**/*', (route) => {
-      const url = route.request().url();
-      if (url.endsWith('.png') || url.endsWith('.jpg') || url.endsWith('.jpeg') || url.endsWith('.gif') || url.endsWith('.svg') ||
-        url.endsWith('.css') || url.endsWith('.woff') || url.endsWith('.woff2') || url.endsWith('.ttf')) {
-        route.abort();
-      } else {
-        route.continue();
+    await page.route('**/*', async (route) => {
+      const request = route.request();
+      const resourceType = request.resourceType();
+      const url = request.url();
+  
+      // 리소스 타입 기반 필터링 (더 정확함)
+      if (
+        resourceType === 'image' ||
+        resourceType === 'font' ||
+        resourceType === 'stylesheet' ||
+        resourceType === 'media' ||
+        url.includes('analytics') ||
+        url.includes('advertising') ||
+        url.includes('tracker')
+      ) {
+        await route.abort();
+        return;
       }
+  
+      // 확장자 기반 추가 필터링
+      const blockedExtensions = [
+        '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp',
+        '.css', '.less', '.scss',
+        '.woff', '.woff2', '.ttf', '.eot',
+        '.mp4', '.webm', '.ogg',
+        '.pdf'
+      ];
+  
+      if (blockedExtensions.some(ext => url.toLowerCase().endsWith(ext))) {
+        await route.abort();
+        return;
+      }
+  
+      // 예외 처리 (특정 필수 리소스는 허용)
+      const essentialResources = [
+        '/api/', 
+        '/login',
+        '/auth'
+      ];
+  
+      if (essentialResources.some(resource => url.includes(resource))) {
+        await route.continue();
+        return;
+      }
+  
+      // 기본적으로 계속 진행
+      await route.continue();
+    });
+  
+    // 추가 페이지 최적화 설정
+    await page.setRequestInterception(true);
+    
+    // JavaScript 비활성화 (필요한 경우)
+    // await page.setJavaScriptEnabled(false);
+  
+    // 페이지 캐시 비활성화
+    await page.setCacheEnabled(false);
+  
+    // 기타 유용한 설정들
+    await page.setExtraHTTPHeaders({
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept-Encoding': 'gzip, deflate, br',
     });
   }
-  
+
   async loginCheckCrawler() {
     if (!this.crawlerContext || !this.crawlerPage) {
       await this.initializeCrawler();
