@@ -137,9 +137,9 @@ class Crawler {
           '--single-process',  // 단일 프로세스 모드
           '--no-zygote',      // Zygote 프로세스 비활성화
           '--mute-audio',     // 오디오 비활성화
-          '--js-flags=--max-old-space-size=8192',  // Node.js 힙 메모리 8GB로 설정
-          '--max-memory=8192',  // 전체 메모리 제한 8GB
-          '--initial-memory-pool-size=8192',  // 초기 메모리 풀 크기
+          '--js-flags=--max-old-space-size=4096',  // Node.js 힙 메모리 8GB로 설정
+          '--max-memory=4096',  // 전체 메모리 제한 8GB
+          '--initial-memory-pool-size=4096',  // 초기 메모리 풀 크기
         ],
       });
     }
