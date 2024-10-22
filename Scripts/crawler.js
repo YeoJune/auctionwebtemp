@@ -122,21 +122,6 @@ class Crawler {
           `--user-agent=${USER_AGENT}`,
           '--disable-dev-shm-usage',
           '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-gpu',
-          '--disable-accelerated-2d-canvas',
-          '--disable-accelerated-jpeg-decoding',
-          '--disable-accelerated-mjpeg-decode',
-          '--disable-accelerated-video-decode',
-          '--disable-gl-drawing-for-tests',
-          '--disable-canvas-aa',
-          '--disable-2d-canvas-clip-aa',
-          '--disable-web-security',
-          '--memory-pressure-off',
-          '--use-gl=swiftshader',
-          '--single-process',  // 단일 프로세스 모드
-          '--no-zygote',      // Zygote 프로세스 비활성화
-          '--mute-audio',     // 오디오 비활성화
           '--js-flags=--max-old-space-size=4096',  // Node.js 힙 메모리 8GB로 설정
           '--max-memory=4096',  // 전체 메모리 제한 8GB
           '--initial-memory-pool-size=4096',  // 초기 메모리 풀 크기
