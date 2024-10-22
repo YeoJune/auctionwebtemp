@@ -456,6 +456,8 @@ class Crawler {
       
       await this.crawlerPage.goto(url, { waitUntil: 'domcontentloaded', timeout: this.pageTimeout });
 
+      await this.sleep(3000);
+
       const itemHandles = await this.crawlerPage.$$(this.config.crawlSelectors.itemContainer);
 
       const limit = pLimit(5);
@@ -474,7 +476,6 @@ class Crawler {
 
       console.log(`Crawled ${filteredPageItems.length} items from page ${page}`);
 
-      await this.sleep(1000);
 
       return filteredPageItems;
     });
