@@ -336,12 +336,32 @@ class Crawler {
   }
 
   async loginCheckCrawler() {
-    if (!this.crawlerContext || !this.crawlerPage) {
-      await this.initializeCrawler();
-    }
+    try {
+      if (!this.browser) {
+        await this.initializeBrowser();
+      }
+      
+      if (!this.crawlerContext || !this.crawlerPage) {
+        await this.initializeCrawler();
+      }
 
-    await this.login(this.crawlerPage);
+      await this.login(this.crawlerPage);
+    } catch (error) {
+      console.error('Error in loginCheckCrawler:', error);
+      // 브라우저가 닫혔다면 재시도
+      if (error.message.includes('Browser has been closed')) {
+        this.browser = null;
+        this.crawlerContext = null;
+        this.crawlerPage = null;
+        await this.initializeBrowser();
+        await this.initializeCrawler();
+        await this.login(this.crawlerPage);
+      } else {
+        throw error;
+      }
+    }
   }
+
   
   async loginCheckBrowsers() {
     if (!this.detailContexts.length || !this.detailPages.length) {
