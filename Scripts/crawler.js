@@ -133,6 +133,9 @@ class Crawler {
           '--disable-web-security',
           '--memory-pressure-off',
           '--use-gl=swiftshader',
+          '--single-process',  // 단일 프로세스 모드
+          '--no-zygote',      // Zygote 프로세스 비활성화
+          '--mute-audio',     // 오디오 비활성화
         ],
       });
     }
@@ -470,6 +473,8 @@ class Crawler {
       const filteredPageItems = pageItems.filter(item => item !== null);
 
       console.log(`Crawled ${filteredPageItems.length} items from page ${page}`);
+
+      await this.sleep(1000);
 
       return filteredPageItems;
     });
