@@ -210,17 +210,10 @@ class Crawler {
     this.crawlerContext = await chromium.launchPersistentContext('', {
       headless: true,
       args: [
-        '--js-flags=--max-old-space-size=4096',
         '--no-sandbox', 
         '--disable-setuid-sandbox', 
         '--window-size=1920,1080', 
-        `--user-agent=${USER_AGENT}`, 
-        '--disable-gl-drawing-for-tests',
-        '--disable-dev-shm-usage', 
-        '--disable-background-timer-throttling', 
-        '--disable-backgrounding-occluded-windows', 
-        '--disable-renderer-backgrounding', 
-        '--disable-features=IsolateOrigins,site-per-process'
+        `--user-agent=${USER_AGENT}`,
       ],
     });
     this.crawlerPage = await this.crawlerContext.newPage();
@@ -247,13 +240,7 @@ class Crawler {
         '--no-sandbox', 
         '--disable-setuid-sandbox', 
         '--window-size=1920,1080', 
-        `--user-agent=${USER_AGENT}`, 
-        '--disable-gl-drawing-for-tests',
-        '--disable-dev-shm-usage', 
-        '--disable-background-timer-throttling', 
-        '--disable-backgrounding-occluded-windows', 
-        '--disable-renderer-backgrounding', 
-        '--disable-features=IsolateOrigins,site-per-process'
+        `--user-agent=${USER_AGENT}`,
       ],
     });
     const page = await context.newPage();
@@ -362,7 +349,6 @@ class Crawler {
       this.config.currentCategoryId = categoryId;
 
       let totalPages = await this.getTotalPages(categoryId);
-      if (totalPages > 10) totalPages = 10;
       console.log(`Total pages in category ${categoryId}: ${totalPages}`);
       let pageItems, processedItems;
 
@@ -408,7 +394,7 @@ class Crawler {
 
       const itemHandles = await this.crawlerPage.$$(this.config.crawlSelectors.itemContainer);
 
-      const limit = pLimit(10);
+      const limit = pLimit(5);
 
       const pageItemsPromises = itemHandles.map(handle => 
         limit(async () => {
