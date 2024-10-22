@@ -360,7 +360,7 @@ class Crawler {
       console.log(`Starting crawl for category ${categoryId}`);
       this.config.currentCategoryId = categoryId;
 
-      let totalPages = await this.getTotalPages(categoryId);
+      const totalPages = await this.getTotalPages(categoryId);
       console.log(`Total pages in category ${categoryId}: ${totalPages}`);
       let pageItems, processedItems;
 
