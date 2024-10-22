@@ -346,6 +346,7 @@ class Crawler {
       }
 
       await this.login(this.crawlerPage);
+      await this.sleep(3000);
     } catch (error) {
       console.error('Error in loginCheckCrawler:', error);
       // 브라우저가 닫혔다면 재시도
