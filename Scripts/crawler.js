@@ -341,16 +341,7 @@ class Crawler {
       // 기본적으로 계속 진행
       await route.continue();
     });
-  
-    // 추가 페이지 최적화 설정
-    await page.setRequestInterception(true);
-    
-    // JavaScript 비활성화 (필요한 경우)
-    // await page.setJavaScriptEnabled(false);
-  
-    // 페이지 캐시 비활성화
-    await page.setCacheEnabled(false);
-  
+
     // 기타 유용한 설정들
     await page.setExtraHTTPHeaders({
       'Accept-Language': 'en-US,en;q=0.9',
