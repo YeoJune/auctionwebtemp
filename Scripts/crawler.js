@@ -305,52 +305,37 @@ class Crawler {
       const resourceType = request.resourceType();
       const url = request.url();
   
-      // 리소스 타입 기반 필터링 (더 정확함)
+      // 필수 리소스는 항상 허용
+      const essentialPaths = [
+        '/api/',
+        '/login',
+        '/auth',
+        '/users',
+        '/auctions',
+        '/client'
+      ];
+  
+      if (essentialPaths.some(path => url.includes(path))) {
+        await route.continue();
+        return;
+      }
+  
+      // 최소한의 리소스만 차단
       if (
-        resourceType === 'image' ||
-        resourceType === 'font' ||
-        resourceType === 'stylesheet' ||
-        resourceType === 'media' ||
-        url.includes('analytics') ||
-        url.includes('advertising') ||
-        url.includes('tracker')
+        resourceType === 'image' || // 이미지만 차단
+        resourceType === 'font' ||  // 폰트만 차단
+        url.includes('analytics') || // 분석 도구
+        url.includes('advertising') // 광고
       ) {
         await route.abort();
         return;
       }
   
-      // 확장자 기반 추가 필터링
-      const blockedExtensions = [
-        '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp',
-        '.css', '.less', '.scss',
-        '.woff', '.woff2', '.ttf', '.eot',
-        '.mp4', '.webm', '.ogg',
-        '.pdf'
-      ];
-  
-      if (blockedExtensions.some(ext => url.toLowerCase().endsWith(ext))) {
-        await route.abort();
-        return;
-      }
-  
-      // 예외 처리 (특정 필수 리소스는 허용)
-      const essentialResources = [
-        '/api/', 
-        '/login',
-        '/auth'
-      ];
-  
-      if (essentialResources.some(resource => url.includes(resource))) {
-        await route.continue();
-        return;
-      }
-  
-      // 기본적으로 계속 진행
+      // CSS와 JavaScript는 허용 (페이지 기능 유지에 중요)
       await route.continue();
     });
-
-    // 기타 유용한 설정들
-    await page.setExtraHTTPHeaders({
+  
+    await page.context().setExtraHTTPHeaders({
       'Accept-Language': 'en-US,en;q=0.9',
       'Accept-Encoding': 'gzip, deflate, br',
     });
