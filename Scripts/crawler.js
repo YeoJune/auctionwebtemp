@@ -119,6 +119,7 @@ class Crawler {
       this.browser = await chromium.launch({
         headless: true,
         args: [
+          `--user-agent=${USER_AGENT}`,
           '--disable-dev-shm-usage',
           '--no-sandbox',
           '--disable-setuid-sandbox',
