@@ -184,6 +184,7 @@ class Crawler {
 
   async initializeCrawler() {
     this.crawlerBrowser = await puppeteer.launch({
+      executablePath: '/usr/bin/chromium-browser',
       headless: 'shell',
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--window-size=1920,1080', 
         `--user-agent=${USER_AGENT}`, '--use-gl=angle', '--enable-unsafe-webgpu',],
@@ -205,6 +206,7 @@ class Crawler {
   }
   async initializeDetail() {
     const browser = await puppeteer.launch({
+      executablePath: '/usr/bin/chromium-browser',
       headless: 'true',
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--window-size=1920,1080', 
         `--user-agent=${USER_AGENT}`, '--use-gl=angle', '--enable-unsafe-webgpu',],
