@@ -4,8 +4,6 @@ const puppeteer = require('puppeteer');
 const translator = require('../utils/advancedTraslator');
 const { processImagesInChunks } = require('../utils/processImage');
 
-const myTranslator = new translator('ap-northeast-2');
-
 let pLimit;
 (async () => {
   pLimit = (await import('p-limit')).default;
@@ -337,7 +335,7 @@ class Crawler {
     await this.closeDetailBrowsers();
     await this.loginCheckCrawler();
 
-    myTranslator.TRANS_COUNT = 0;
+    translator.TRANS_COUNT = 0;
     const startTime = Date.now();
     
     const allCrawledItems = [];
@@ -373,7 +371,7 @@ class Crawler {
     this.closeCrawlerBrowser();
 
     console.log(`Crawling completed for all categories. Total items: ${allCrawledItems.length}`);
-    console.log(`translate count: ${myTranslator.TRANS_COUNT}`);
+    console.log(`translate count: ${translator.TRANS_COUNT}`);
 
     const endTime = Date.now();
     const executionTime = endTime - startTime;
@@ -469,8 +467,8 @@ class Crawler {
     }, this.config);
 
     [item.korean_title, item.brand] = await Promise.all([
-      await myTranslator.wordTranslate(item.japanese_title),
-      await myTranslator.wordTranslate(item.brand)
+      await translator.wordTranslate(item.japanese_title),
+      await translator.wordTranslate(item.brand)
     ]);
     item.starting_price = this.currencyToInt(item.starting_price);
     item.auc_num = '1'
@@ -519,8 +517,8 @@ class Crawler {
       console.log(item.scheduled_date);
       item.scheduled_date = this.extractDate(item.scheduled_date);
       [item.description, item.accessory_code] = await Promise.all([
-        await myTranslator.rawTranslate(item.description),
-        await myTranslator.wordTranslate(item.accessory_code),
+        await translator.rawTranslate(item.description),
+        await translator.wordTranslate(item.accessory_code),
       ]);
       if (!item.description) item.description = '-';
 
@@ -564,7 +562,7 @@ class BrandAuctionCrawler extends Crawler {
     await this.closeDetailBrowsers();
     await this.loginCheckCrawler();
     const startTime = Date.now();
-    myTranslator.TRANS_COUNT = 0;
+    translator.TRANS_COUNT = 0;
 
     return this.retryOperation(async () => {
       await this.crawlerPage.goto(this.config.searchUrl, { waitUntil: 'networkidle0', timeout: this.pageTimeout });
@@ -605,6 +603,8 @@ class BrandAuctionCrawler extends Crawler {
 
         filteredPageItems = pageItems.filter(item => item !== null);
 
+        filteredPageItems = await processImagesInChunks(filteredPageItems);
+
         console.log(`Crawled ${filteredPageItems.length} items from page ${page}`);
 
         allItems.push(...filteredPageItems, ...remainItems);
@@ -613,7 +613,7 @@ class BrandAuctionCrawler extends Crawler {
       this.closeCrawlerBrowser();
 
       console.log(`Total items crawled: ${allItems.length}`);
-      console.log(`translate count: ${myTranslator.TRANS_COUNT}`);
+      console.log(`translate count: ${translator.TRANS_COUNT}`);
       
       const endTime = Date.now();
       const executionTime = endTime - startTime;
@@ -642,9 +642,9 @@ class BrandAuctionCrawler extends Crawler {
       };
     }, this.config);
     [item.korean_title, item.brand, item.category] = await Promise.all([
-      await myTranslator.wordTranslate(this.convertFullWidthToAscii(item.japanese_title)),
-      await myTranslator.wordTranslate(this.convertFullWidthToAscii(item.brand)),
-      await myTranslator.wordTranslate(item.category),
+      await translator.wordTranslate(this.convertFullWidthToAscii(item.japanese_title)),
+      await translator.wordTranslate(this.convertFullWidthToAscii(item.brand)),
+      await translator.wordTranslate(item.category),
     ]);
     item.starting_price = this.currencyToInt(item.starting_price);
     item.auc_num = '2';
@@ -715,8 +715,8 @@ class BrandAuctionCrawler extends Crawler {
         await page.click(this.config.crawlSelectors.resetButton);
       }
       [item.description, item.accessory_code] = await Promise.all([
-        await myTranslator.rawTranslate(item.description),
-        await myTranslator.wordTranslate(item.accessory_code),
+        await translator.rawTranslate(item.description),
+        await translator.wordTranslate(item.accessory_code),
       ]);
       if (!item.description) item.description = '-';
 
@@ -730,9 +730,5 @@ class BrandAuctionCrawler extends Crawler {
 
 const ecoAucCrawler = new Crawler(ecoAucConfig);
 const brandAuctionCrawler = new BrandAuctionCrawler(brandAuctionConfig);
-
-ecoAucCrawler.crawlAllItems(new Set()).then((data) => {console.log(data[0])})
-.then(() => brandAuctionCrawler.crawlAllItems(new Set()))
-.then((data) => console.log(data[0]));
 
 module.exports = { ecoAucCrawler, brandAuctionCrawler };

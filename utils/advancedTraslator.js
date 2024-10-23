@@ -10,7 +10,6 @@ class AdvancedTranslator {
     this.callInterval = 50; // Minimum time between API calls in milliseconds
     this.maxRetries = 1; // Maximum number of retries for API calls
     this.retryDelay = 1000; // Delay between retries in milliseconds
-    this.englishRegex = /^[a-zA-Z0-9\s!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~]*$/;
     this.TRANS_COUNT = 0;
   }
 
@@ -45,21 +44,24 @@ class AdvancedTranslator {
       return text;
     }
   }
-
   async wordTranslate(text) {
-    const words = text.split(/\s+/);
-    const translatedWords = [];
-    for (const word of words) {
-      if (this.englishRegex.test(word)) {
-        translatedWords.push(word);
-      } else {
-        const translatedWord = await this.translateWord(word);
-        translatedWords.push(translatedWord);
-      }
+    const japaneseRegex = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]+/g;
+    
+    const matches = [...text.matchAll(japaneseRegex)];
+    if (!matches.length) return text;
+    
+    const translations = await Promise.all(
+      matches.map(match => this.translateWord(match[0]))
+    );
+    let result = text;
+    for (let i = 0; i < matches.length; i++) {
+      result = result.replace(matches[i][0], translations[i]);
     }
-    return translatedWords.join(' ');
+
+    return result;
   }
   async translateWord(word) {
+    console.log(word);
     let conn;
     try {
       conn = await pool.getConnection();
@@ -97,4 +99,6 @@ class AdvancedTranslator {
   }
 }
 
-module.exports = AdvancedTranslator;
+const translator= new AdvancedTranslator('ap-northeast-2');
+
+module.exports = translator;
