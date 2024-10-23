@@ -236,6 +236,7 @@ class Crawler {
         '--force-color-profile=srgb',
         '--metrics-recording-only',
         '--mute-audio',
+        '--lang=ja-JP,ja',
         `--user-agent=${USER_AGENT}`,],
     });
     const page = (await browser.pages())[0];
