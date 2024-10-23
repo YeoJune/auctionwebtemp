@@ -140,27 +140,41 @@ class DatabaseManager {
     let conn;
     try {
       conn = await this.pool.getConnection();
-      // Delete items not present in the input
-      const deleteQuery = `
-        DELETE FROM crawled_items
-        WHERE item_id NOT IN (?)
-        AND auc_num = ?
-      `;
       
+      // Handle empty itemIds array
+      if (!itemIds.length) {
+        // If no items provided, delete all items for this auction
+        const deleteAllQuery = `
+          DELETE FROM crawled_items
+          WHERE auc_num = ?
+        `;
+        await conn.query(deleteAllQuery, [aucNum]);
+      } else {
+        // MariaDB compliant query using FIND_IN_SET alternative
+        const deleteQuery = `
+          DELETE FROM crawled_items
+          WHERE item_id NOT IN (${itemIds.join(',')})
+          AND auc_num = ?
+        `;
+        
+        await conn.query(deleteQuery, [aucNum]);
+      }
+  
       /*
-      // Delete wishlist items that no longer exist in crawled_items
+      // If you need to clean up wishlists, use this query:
       await conn.query(`
         DELETE w FROM wishlists w
         LEFT JOIN crawled_items ci ON w.item_id = ci.item_id
         WHERE ci.item_id IS NULL
       `);
       */
-      await conn.query(deleteQuery, [itemIds, aucNum]);
+      
       console.log('Complete to delete outdated items');
     } catch (error) {
-      console.error(error.message);
+      console.error('Error deleting items:', error.message);
+      throw error; // Propagate error to caller
     } finally {
-      await conn.release();
+      if (conn) await conn.release();
     }
   }
   async saveItems(items, batchSize = 1000) {
