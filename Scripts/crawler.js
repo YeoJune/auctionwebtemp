@@ -424,7 +424,7 @@ class Crawler {
 
       const itemHandles = await this.crawlerPage.$$(this.config.crawlSelectors.itemContainer);
       const [filteredHandles, filteredItems, remainItems]= await this.filterHandles(itemHandles, existingIds);
-      const limit = pLimit(5);
+      const limit = pLimit(10);
 
       const pageItemsPromises = [];
       for(let i = 0; i < filteredItems.length; i++) {
