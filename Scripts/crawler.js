@@ -25,7 +25,7 @@ const ecoAucConfig = {
     'userId': process.env.CRAWLER_EMAIL1,
     'password': process.env.CRAWLER_PASSWORD1,
   },
-  categoryIds: ['1'],//, '2', '3', '4', '5', '8', '9', '27'],
+  categoryIds: ['1', '2', '3', '4', '5', '8', '9', '27'],
   categoryTable: {1: "시계", 2: "가방", 3: "귀금속", 4: "악세서리", 5: "소품", 8: "의류", 9: "신발", 27: "기타"},
   signinSelectors: {
     userId: 'input[name="email_address"]',
@@ -577,7 +577,7 @@ class BrandAuctionCrawler extends Crawler {
       await this.sleep(3000);
 
       const totalPageText = await this.crawlerPage.$eval(this.config.crawlSelectors.totalPagesSpan, el => el.textContent);
-      const totalPages = 5;//parseInt(totalPageText.match(/\d+/g).join(''));
+      const totalPages = parseInt(totalPageText.match(/\d+/g).join(''));
 
       const allItems = [];
       console.log(`Crawling for total page ${totalPages}`);
@@ -731,8 +731,8 @@ class BrandAuctionCrawler extends Crawler {
 const ecoAucCrawler = new Crawler(ecoAucConfig);
 const brandAuctionCrawler = new BrandAuctionCrawler(brandAuctionConfig);
 
-ecoAucCrawler.crawlAllItems(new Set()).then((data) => {console.log(data)})
+ecoAucCrawler.crawlAllItems(new Set()).then((data) => {console.log(data[0])})
 .then(() => brandAuctionCrawler.crawlAllItems(new Set()))
-.then((data) => console.log(data));
+.then((data) => console.log(data[0]));
 
 module.exports = { ecoAucCrawler, brandAuctionCrawler };
