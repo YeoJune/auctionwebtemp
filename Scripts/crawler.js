@@ -652,11 +652,11 @@ class BrandAuctionCrawler extends Crawler {
       const page = this.detailPages[idx];
       await page.goto(this.config.searchUrl, { waitUntil: 'networkidle0', timeout: this.pageTimeout });
       console.log('search Url loaded');
-      
       await page.click(this.config.crawlSelectors.resetButton);
-  
-      await page.type(this.config.crawlSelectors.search1, itemId);
-      await page.type(this.config.crawlSelectors.search2, itemId);
+      await Promise.all([
+        page.type(this.config.crawlSelectors.search1, itemId),
+        page.type(this.config.crawlSelectors.search2, itemId),
+      ]);
       await page.click(this.config.crawlSelectors.searchButton);
       const newPagePromise = new Promise((resolve, reject) => {
         const timeoutId = setTimeout(() => {
@@ -706,8 +706,10 @@ class BrandAuctionCrawler extends Crawler {
         await newPage.close();
         await page.click(this.config.crawlSelectors.resetButton);
       }
-      item.description = await myTranslator.rawTranslate(item.description);
-      item.accessory_code = await myTranslator.wordTranslate(item.accessory_code);
+      [item.description, item.accessory_code] = await Promise.all([
+        await myTranslator.rawTranslate(item.description),
+        await myTranslator.wordTranslate(item.accessory_code),
+      ]);
       if (!item.description) item.description = '-';
 
       const endTime = Date.now();
@@ -721,6 +723,6 @@ class BrandAuctionCrawler extends Crawler {
 const ecoAucCrawler = new Crawler(ecoAucConfig);
 const brandAuctionCrawler = new BrandAuctionCrawler(brandAuctionConfig);
 
-brandAuctionCrawler.crawlAllItems(new Set()).then((data) => {console.log(data[0])});
+brandAuctionCrawler.crawlItemDetails(0, '730-12861').then((data) => {console.log(data)});
 
 module.exports = { ecoAucCrawler, brandAuctionCrawler };
