@@ -122,6 +122,7 @@ class DatabaseManager {
         await processBatch(batch);
       }
   
+      console.log('Complete to cleaning up unused images');
     } catch (error) {
       console.error('Error cleaning up unused images:', error);
     } finally {
@@ -155,6 +156,7 @@ class DatabaseManager {
       `);
       */
       await conn.query(deleteQuery, [itemIds, aucNum]);
+      console.log('Complete to delete outdated items');
     } catch (error) {
       console.error(error.message);
     } finally {

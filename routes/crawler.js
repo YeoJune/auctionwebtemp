@@ -138,6 +138,9 @@ async function crawlAll() {
         ...brandAuctionItems
       ];
       await DBManager.saveItems(allItems);
+      await DBManager.deleteItemsWithout(existingItems.filter(item => item.auc_num == 1), 1);
+      await DBManager.deleteItemsWithout(existingItems.filter(item => item.auc_num == 2), 2);
+      await DBManager.cleanupUnusedImages();
     }
   } catch (error) {
     ecoAucCrawler.isRefreshing = false;
