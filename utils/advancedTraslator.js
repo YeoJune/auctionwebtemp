@@ -11,6 +11,7 @@ class AdvancedTranslator {
     this.maxRetries = 1; // Maximum number of retries for API calls
     this.retryDelay = 1000; // Delay between retries in milliseconds
     this.englishRegex = /^[a-zA-Z0-9\s!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~]*$/;
+    this.TRANS_COUNT = 0;
   }
 
   async delay(ms) {
@@ -31,6 +32,7 @@ class AdvancedTranslator {
     };
     const command = new TranslateTextCommand(params);
     try {
+      this.TRANS_COUNT += text.length;
       const result = await this.translate.send(command);
       return result.TranslatedText;
     } catch (error) {

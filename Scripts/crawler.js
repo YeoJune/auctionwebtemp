@@ -25,7 +25,7 @@ const ecoAucConfig = {
     'userId': process.env.CRAWLER_EMAIL1,
     'password': process.env.CRAWLER_PASSWORD1,
   },
-  categoryIds: ['1', '2', '3', '4', '5', '8', '9', '27'],
+  categoryIds: ['1'],//, '2', '3', '4', '5', '8', '9', '27'],
   categoryTable: {1: "시계", 2: "가방", 3: "귀금속", 4: "악세서리", 5: "소품", 8: "의류", 9: "신발", 27: "기타"},
   signinSelectors: {
     userId: 'input[name="email_address"]',
@@ -171,6 +171,11 @@ class Crawler {
       return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
     }).replace(/　/g, ' ');
   }
+  isCollectionDay(date) {
+    if (!date) return true;
+    const day = new Date(date).getDay();
+    return ![2, 4].includes(day);
+  }
   sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
@@ -181,22 +186,8 @@ class Crawler {
       height: 1080
     });
   }
-
-  async initializeCrawler() {
-    this.crawlerBrowser = await puppeteer.launch({
-      executablePath: '/usr/bin/chromium-browser',
-      headless: 'shell',
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--window-size=1920,1080', 
-        `--user-agent=${USER_AGENT}`, '--use-gl=angle', '--enable-unsafe-webgpu',],
-    });
-    this.crawlerPage = (await this.crawlerBrowser.pages())[0];
-
-    await this.initPage(this.crawlerPage);
-    
-    console.log('complete to initialize crawler!');
-  }
   async initializeDetails() {
-    const detailInitPromises = Array(this.detailMulti).fill().map(() => this.initializeDetail());
+    const detailInitPromises = Array(this.detailMulti).fill().map(() => this.initializeCrawler());
     const detailResults = await Promise.all(detailInitPromises);
 
     this.detailBrowsers = detailResults.map(result => result.browser);
@@ -204,7 +195,7 @@ class Crawler {
 
     console.log('complete to initialize details!');
   }
-  async initializeDetail() {
+  async initializeCrawler() {
     const browser = await puppeteer.launch({
       executablePath: '/usr/bin/chromium-browser',
       headless: 'true',
@@ -240,31 +231,27 @@ class Crawler {
     console.log('Detail have been closed.');
   }
 
-  isCollectionDay(date) {
-    if (!date) return true;
-    const day = new Date(date).getDay();
-    return ![2, 4].includes(day);
-  }
-
   async login(page) {
     return this.retryOperation(async () => {
       await page.goto(this.config.loginPageUrl, { waitUntil: 'networkidle0', timeout: this.pageTimeout });
-      await page.type(this.config.signinSelectors.userId, this.config.loginData.userId);
-      await page.type(this.config.signinSelectors.password, this.config.loginData.password);
       await Promise.all([
-        page.click(this.config.signinSelectors.loginButton),
-        page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: this.pageTimeout }),
+        page.type(this.config.signinSelectors.userId, this.config.loginData.userId),
+        page.type(this.config.signinSelectors.password, this.config.loginData.password),
       ]);
+      await page.click(this.config.signinSelectors.loginButton);
+      await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: this.pageTimeout });
     });
   }
   async loginCheckCrawler() {
     if (!this.crawlerBrowser || !this.crawlerPage) {
-      await this.initializeCrawler();
+      const result = await this.initializeCrawler();
+      this.crawlerBrowser = result.browser;
+      this.crawlerPage = result.page;
     }
 
     await this.login(this.crawlerPage);
   }
-  async loginCheckBrowsers() {
+  async loginCheckDetails() {
     if (!this.detailBrowsers.length || !this.detailPages.length) {
       await this.initializeDetails();
     }
@@ -305,8 +292,9 @@ class Crawler {
   async crawlAllItems(existingIds) {
     await this.closeDetailBrowsers();
     await this.loginCheckCrawler();
+
+    myTranslator.TRANS_COUNT = 0;
     const startTime = Date.now();
-    TRANS_COUNT = 0;
     
     const allCrawledItems = [];
     for (const categoryId of this.config.categoryIds) {
@@ -341,13 +329,49 @@ class Crawler {
     this.closeCrawlerBrowser();
 
     console.log(`Crawling completed for all categories. Total items: ${allCrawledItems.length}`);
-    console.log(`translate count: ${TRANS_COUNT}`);
+    console.log(`translate count: ${myTranslator.TRANS_COUNT}`);
 
     const endTime = Date.now();
     const executionTime = endTime - startTime;
     console.log(`Refresh operation completed in ${this.formatExecutionTime(executionTime)}`);
 
     return allCrawledItems;
+  }
+
+  async filterHandles(handles, existingIds) {
+    const limit = pLimit(10);
+    const filterPromises = handles.map(handle => limit(async () => {await this.filterHandle(handle, existingIds)}));
+    const items = await Promise.all(filterPromises);
+    let filteredHandles = [], filteredItems, remainItems = [];
+    for(let i = 0; i < items.length; i++) {
+      if (items[i]) {
+        if (items[i].scheduled_date) {
+          filteredHandles.push(handles[i]);
+          filteredItems.push(items[i]);
+        } else {
+          handles[i].dispose();
+          remainItems.push(items[i]);
+        }
+      } else {
+        handles[i].dispose();
+      }
+    }
+    return [filteredHandles, filteredItems, remainItems];
+  }
+
+  async filterHandle(itemHandle) {
+    const item = await itemHandle.evaluate((el, config) => {
+      const id = el.querySelector(config.crawlSelectors.id);
+      const scheduledDate = el.querySelector(config.crawlSelectors.scheduledDate);
+      return {
+        item_id: id ? id.getAttribute('data-auction-item-id') : null,
+        scheduled_date: scheduledDate ? scheduledDate.textContent.trim() : null,
+      };
+    }, this.config);
+    item.scheduled_date = this.extractDate(item.scheduledDate);
+    if (!this.isCollectionDay(item.scheduled_date)) return null;
+    if (existingIds.has(item.item_id)) return {item_id: item.item_id};
+    else return item;
   }
 
   async crawlPage(categoryId, page, existingIds) {
@@ -358,15 +382,17 @@ class Crawler {
       await this.crawlerPage.goto(url, { waitUntil: 'domcontentloaded', timeout: this.pageTimeout });
 
       const itemHandles = await this.crawlerPage.$$(this.config.crawlSelectors.itemContainer);
+      const [filteredHandles, filteredItems, remainItems]= await filterHandles(itemHandles, existingIds);
       const limit = pLimit(5);
 
-      const pageItemsPromises = itemHandles.map(handle => 
-        limit(async () => {
-          const item = await this.extractItemInfo(handle, existingIds);
-          handle.dispose();
+      const pageItemsPromises = [];
+      for(const i = 0; i < filteredItems.length; i++) {
+        pageItemsPromises.push(limit(async () => {
+          const item = await this.extractItemInfo(filteredHandles[i], filteredItems[i]);
+          filteredHandles[i].dispose();
           return item;
-        })
-      );
+        }));
+      }
 
       const pageItems = await Promise.all(pageItemsPromises);
 
@@ -374,49 +400,40 @@ class Crawler {
 
       console.log(`Crawled ${filteredPageItems.length} items from page ${page}`);
 
-      return filteredPageItems;
+      return [...filteredPageItems, ...remainItems];
     });
   }
 
-  async extractItemInfo(itemHandle, existingIds) {
-    const id = await itemHandle.$eval(this.config.crawlSelectors.id, el => el.getAttribute('data-auction-item-id'));
-    if (existingIds.has(id)) {
-      return {item_id: id};
-    }
+  async extractItemInfo(itemHandle, item0) {
     const item = await itemHandle.evaluate((el, config) => {
-      const id = el.querySelector(config.crawlSelectors.id);
       const title = el.querySelector(config.crawlSelectors.title);
       const brand = el.querySelector(config.crawlSelectors.brand);
       const rankParent = el.querySelector(config.crawlSelectors.rank);
       const rank = rankParent ? rankParent.childNodes[4] : null;
       const startingPrice = el.querySelector(config.crawlSelectors.startingPrice);
       const image = el.querySelector(config.crawlSelectors.image);
-      const scheduledDate = el.querySelector(config.crawlSelectors.scheduledDate);
       return {
-        item_id: id ? id.getAttribute('data-auction-item-id') : null,
         japanese_title: title ? title.textContent.trim() : null,
         brand: brand ? brand.textContent.trim() : null,
         rank: rank ? rank.textContent.trim() : null,
         starting_price: startingPrice ? startingPrice.textContent.trim() : null,
         image: image ? image.src.replace(/\?.*$/, '') + '?w=520&h=390' : null,
-        scheduled_date: scheduledDate ? scheduledDate.textContent.trim() : null,
         category: config.categoryTable[config.currentCategoryId],
       };
     }, this.config);
 
-    item.scheduled_date = this.extractDate(item.scheduled_date);
-    if (!this.isCollectionDay(item.scheduledDate)) return null;
-    item.korean_title = await myTranslator.wordTranslate(item.japanese_title);
-    item.brand = await myTranslator.wordTranslate(item.brand);
+    [item.korean_title, item.brand] = await Promise.all([
+      await myTranslator.wordTranslate(item.japanese_title),
+      await myTranslator.wordTranslate(item.brand)
+    ]);
     item.starting_price = this.currencyToInt(item.starting_price);
     item.auc_num = '1'
 
-
-    return item;
+    return Object.assign(item0, item);
   }
 
   async crawlItemDetails(idx, itemId) {
-    await this.loginCheckBrowsers();
+    await this.loginCheckDetails();
   
     return this.retryOperation(async () => {
       const page = this.detailPages[idx];
@@ -578,7 +595,7 @@ class BrandAuctionCrawler extends Crawler {
     return item;
   }
   async crawlItemDetails(idx, itemId) {
-    await this.loginCheckBrowsers();
+    await this.loginCheckDetails();
   
     const startTime = Date.now();
     return this.retryOperation(async () => {
@@ -654,5 +671,7 @@ class BrandAuctionCrawler extends Crawler {
 
 const ecoAucCrawler = new Crawler(ecoAucConfig);
 const brandAuctionCrawler = new BrandAuctionCrawler(brandAuctionConfig);
+
+ecoAucCrawler.crawlAllItems(new Set()).then((data) => {console.log(data)});
 
 module.exports = { ecoAucCrawler, brandAuctionCrawler };
