@@ -204,7 +204,7 @@ class Crawler {
         '--disable-setuid-sandbox',
         '--disable-infobars',
         '--no-first-run',
-        `--window-size=${options.width || 1280},${options.height || 800}`,
+        `--window-size=1280,800`,
         '--window-position=0,0',
         '--ignore-certificate-errors',
         '--ignore-certificate-errors-skip-list',
