@@ -180,6 +180,16 @@ class Crawler {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
   async initPage(page) {
+    await page.setRequestInterception(true);
+    page.on('request', (request) => {
+      const blockResources = ['image', 'stylesheet', 'font', 'media'];
+      
+      if (blockResources.includes(request.resourceType())) {
+        request.abort();
+      } else {
+        request.continue();
+      }
+    });
     return;
     await page.setViewport({
       width: 1920,
