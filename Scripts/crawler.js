@@ -510,9 +510,9 @@ class Crawler {
           accessory_code: accessoryCode || '',
         };
       }, this.config);
-
+      console.log(item.scheduled_date);
       item.scheduled_date = this.extractDate(item.scheduled_date);
-      [item.description, item.accessoryCode] = await Promise.all([
+      [item.description, item.accessory_code] = await Promise.all([
         await myTranslator.rawTranslate(item.description),
         await myTranslator.wordTranslate(item.accessory_code),
       ]);
