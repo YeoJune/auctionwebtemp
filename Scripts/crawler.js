@@ -180,7 +180,16 @@ class Crawler {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
   async initPage(page) {
-    await page.setRequestInterception(true);
+    await Promise.all([
+      await page.setRequestInterception(true),
+      await page.setViewport({
+        width: 1920,
+        height: 1080
+      }),
+      await page.setExtraHTTPHeaders({
+        'Accept-Language': 'ja-JP,ja;q=0.9'
+      }),
+    ]);
     page.on('request', (request) => {
       const blockResources = ['image', 'stylesheet', 'font', 'media'];
       
@@ -189,13 +198,6 @@ class Crawler {
       } else {
         request.continue();
       }
-    });
-    await page.setViewport({
-      width: 1920,
-      height: 1080
-    });
-    await page.setExtraHTTPHeaders({
-      'Accept-Language': 'ja-JP,ja;q=0.9'
     });
   }
   async initializeDetails() {
@@ -729,6 +731,8 @@ class BrandAuctionCrawler extends Crawler {
 const ecoAucCrawler = new Crawler(ecoAucConfig);
 const brandAuctionCrawler = new BrandAuctionCrawler(brandAuctionConfig);
 
-ecoAucCrawler.crawlItemDetails(0, '5889929').then((data) => {console.log(data)});
+ecoAucCrawler.crawlAllItems(new Set()).then((data) => {console.log(data)})
+.then(() => brandAuctionCrawler.crawlAllItems(new Set()))
+.then((data) => console.log(data));
 
 module.exports = { ecoAucCrawler, brandAuctionCrawler };
