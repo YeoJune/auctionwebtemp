@@ -190,7 +190,6 @@ class Crawler {
         request.continue();
       }
     });
-    return;
     await page.setViewport({
       width: 1920,
       height: 1080
