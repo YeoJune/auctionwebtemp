@@ -541,6 +541,29 @@ class BrandAuctionCrawler extends Crawler {
     }
   }
 
+  async filterHandles(handles, existingIds) {
+    const limit = pLimit(20);
+    const filterPromises = handles.map(handle => 
+      limit(async () => await this.filterHandle(handle, existingIds))
+    );
+    const items = await Promise.all(filterPromises);
+    let filteredHandles = [], filteredItems = [], remainItems = [];
+    for(let i = 0; i < items.length; i++) {
+      if (items[i]) {
+        if (items[i].scheduled_date) {
+          filteredHandles.push(handles[i]);
+          filteredItems.push(items[i]);
+        } else {
+          handles[i].dispose();
+          remainItems.push(items[i]);
+        }
+      } else {
+        handles[i].dispose();
+      }
+    }
+    return [filteredHandles, filteredItems, remainItems];
+  }
+  
   async filterHandle(itemHandle, existingIds) {
     const item = await itemHandle.evaluate((el, config) => {
       const id = el.querySelector(config.crawlSelectors.id);
