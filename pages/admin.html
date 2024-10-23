@@ -316,6 +316,12 @@
             document.getElementById('categoryFilters').innerHTML = categoryFilters.map(createFilterToggle).join('');
         }
 
+        function displayPrevDay(day) {
+            let date = new Date(day);
+            date.setDate(date.getDate() - 1);
+            return date.toLocaleDateString();
+        }
+
         function createFilterToggle(filter) {
             return `
                 <div class="filter-item">
@@ -325,7 +331,7 @@
                             onchange="updateFilter('${filter.filter_type}', '${filter.filter_value}', this.checked)">
                         <span class="toggle-slider"></span>
                     </label>
-                    <span class="filter-value">${filter.filter_type == 'date' ? (new Date(filter.filter_value) - 1) : filter.filter_value}</span>
+                    <span class="filter-value">${filter.filter_type == 'date' ? displayPrevDay(filter.filter_value) : filter.filter_value}</span>
                 </div>
             `;
         }
