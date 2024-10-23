@@ -342,7 +342,9 @@ class Crawler {
 
   async filterHandles(handles, existingIds) {
     const limit = pLimit(10);
-    const filterPromises = handles.map(handle => limit(async () => {await this.filterHandle(handle, existingIds)}));
+    const filterPromises = handles.map(handle => 
+      limit(async () => await this.filterHandle(handle, existingIds))
+    );
     const items = await Promise.all(filterPromises);
     let filteredHandles = [], filteredItems = [], remainItems = [];
     console.log(items);
@@ -372,7 +374,7 @@ class Crawler {
       };
     }, this.config);
     item.scheduled_date = this.extractDate(item.scheduled_date);
-    if (!this.isCollectionDay(item.scheduled_date)) return item;
+    if (!this.isCollectionDay(item.scheduled_date)) return null;
     if (existingIds.has(item.item_id)) return {item_id: item.item_id};
     else return item;
   }
@@ -389,7 +391,7 @@ class Crawler {
       const limit = pLimit(5);
 
       const pageItemsPromises = [];
-      for(const i = 0; i < filteredItems.length; i++) {
+      for(let i = 0; i < filteredItems.length; i++) {
         pageItemsPromises.push(limit(async () => {
           const item = await this.extractItemInfo(filteredHandles[i], filteredItems[i]);
           filteredHandles[i].dispose();
