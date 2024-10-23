@@ -344,7 +344,7 @@ class Crawler {
     const limit = pLimit(10);
     const filterPromises = handles.map(handle => limit(async () => {await this.filterHandle(handle, existingIds)}));
     const items = await Promise.all(filterPromises);
-    let filteredHandles = [], filteredItems, remainItems = [];
+    let filteredHandles = [], filteredItems = [], remainItems = [];
     for(let i = 0; i < items.length; i++) {
       if (items[i]) {
         if (items[i].scheduled_date) {
