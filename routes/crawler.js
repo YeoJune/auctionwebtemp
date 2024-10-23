@@ -1,7 +1,7 @@
 // routes/crawler.js
 const express = require('express');
 const router = express.Router();
-const { ecoAucCrawler, brandAuctionCrawler } = require('../Scripts/crawler');
+const { ecoAucCrawler, brandAucCrawler, ecoAucValueCrawler, brandAucValueCrawler } = require('../Scripts/crawler');
 const DBManager = require('../utils/DBManager');
 const pool = require('../utils/DB');
 const cron = require('node-cron');
@@ -17,7 +17,7 @@ async function processItem(itemId, res) {
       if (items[0].description) {
         res.json(items[0]);
       } else {
-        const crawler = items[0].auc_num == 1 ? ecoAucCrawler : brandAuctionCrawler;
+        const crawler = items[0].auc_num == 1 ? ecoAucCrawler : brandAucCrawler;
         const detailIndex = findAvailableIndex(items[0].auc_num);
         
         if (detailIndex === -1) {
@@ -55,11 +55,11 @@ const MAX_CONCURRENT_TASKS = 3; // 동시에 처리할 최대 작업 수
 
 const crawlerIndexTracker = {
   Crawler: new Array(ecoAucCrawler.detailMulti).fill(false),
-  BrandAuctionCrawler: new Array(brandAuctionCrawler.detailMulti).fill(false)
+  brandAucCrawler: new Array(brandAucCrawler.detailMulti).fill(false)
 };
 
 function findAvailableIndex(crawlerIndex) {
-  const trackerKey = crawlerIndex == 1 ? 'Crawler' : 'BrandAuctionCrawler';
+  const trackerKey = crawlerIndex == 1 ? 'Crawler' : 'brandAucCrawler';
   const tracker = crawlerIndexTracker[trackerKey];
   if (!tracker) {
     console.error(`No tracker found for crawler type: ${trackerKey}`);
@@ -75,7 +75,7 @@ function findAvailableIndex(crawlerIndex) {
 }
 
 function releaseIndex(crawlerIndex, index) {
-  const trackerKey = crawlerIndex == 1 ? 'Crawler' : 'BrandAuctionCrawler';
+  const trackerKey = crawlerIndex == 1 ? 'Crawler' : 'brandAucCrawler';
   if (crawlerIndexTracker[trackerKey]) {
     crawlerIndexTracker[trackerKey][index] = false;
   } else {
@@ -112,7 +112,7 @@ async function processQueue() {
 }
 async function crawlAll() {
   try {
-    if (ecoAucCrawler.isRefreshing || brandAuctionCrawler.isRefreshing) {
+    if (ecoAucCrawler.isRefreshing || brandAucCrawler.isRefreshing) {
       throw new Error("already crawling");
     } else {
       const [existingItems] = await pool.query('SELECT item_id, auc_num FROM crawled_items');
@@ -120,16 +120,16 @@ async function crawlAll() {
       const existingBrandAuctionIds = new Set(existingItems.filter(item => item.auc_num == 2).map(item => item.item_id));
       
       ecoAucCrawler.isRefreshing = true;
-      await brandAuctionCrawler.closeCrawlerBrowser();
-      await brandAuctionCrawler.closeDetailBrowsers();
+      await brandAucCrawler.closeCrawlerBrowser();
+      await brandAucCrawler.closeDetailBrowsers();
       let ecoAucItems = await ecoAucCrawler.crawlAllItems(existingEcoAucIds);
       ecoAucCrawler.isRefreshing = false;
 
-      brandAuctionCrawler.isRefreshing = true;
+      brandAucCrawler.isRefreshing = true;
       await ecoAucCrawler.closeCrawlerBrowser();
       await ecoAucCrawler.closeDetailBrowsers();
-      let brandAuctionItems = await brandAuctionCrawler.crawlAllItems(existingBrandAuctionIds);
-      brandAuctionCrawler.isRefreshing = false;
+      let brandAuctionItems = await brandAucCrawler.crawlAllItems(existingBrandAuctionIds);
+      brandAucCrawler.isRefreshing = false;
 
       if (!ecoAucItems) ecoAucItems = [];
       if (!brandAuctionItems) brandAuctionItems = [];
@@ -144,7 +144,7 @@ async function crawlAll() {
     }
   } catch (error) {
     ecoAucCrawler.isRefreshing = false;
-    brandAuctionCrawler.isRefreshing = false;
+    brandAucCrawler.isRefreshing = false;
     throw (error);
   }
 }

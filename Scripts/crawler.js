@@ -49,7 +49,7 @@ const ecoAucConfig = {
   searchParams: (categoryId, page) => `?limit=200&sortKey=1&tableType=grid&master_item_categories[0]=${categoryId}&page=${page}`,
   detailUrl: (itemId) => `https://www.ecoauc.com/client/auction-items/view/${itemId}`,
 };
-const brandAuctionConfig = {
+const brandAucConfig = {
   name: 'Brand Auction',
   baseUrl: 'https://member.brand-auc.com',
   accountUrl: 'https://u.brand-auc.com/configuration',
@@ -89,7 +89,6 @@ const brandAuctionConfig = {
     description: '.tokki',
     codeParent: '#detail_date'
   },
-  searchParams: (categoryId, page = 1) => `?kaijoKbn=0&genre_select=${categoryId}&page=${page}`,
 };
 
 const ecoAucValueConfig = {
@@ -116,7 +115,7 @@ const ecoAucValueConfig = {
     title: '.card b',
     brand: 'small.show-case-bland',
     rank: '.canopy.canopy-3.text-default > li:nth-child(1)',
-    startingPrice: '.canopy.canopy-3.text-default > li:nth-child(2) big',
+    finalPrice: '.pull-right.show-value',
     image: '.pc-image-area img',
     scheduledDate: 'span.market-title',
   },
@@ -131,12 +130,12 @@ const ecoAucValueConfig = {
   },
   detailUrl: (itemId) => `https://www.ecoauc.com/client/auction-items/view/${itemId}`,
 };
-const brandAuctionValueConfig = {
+const brandAucValueConfig = {
   name: 'Brand Auction',
   baseUrl: 'https://member.brand-auc.com',
   accountUrl: 'https://u.brand-auc.com/configuration',
   loginPageUrl: 'https://member.brand-auc.com/login',
-  searchUrl: 'https://u.brand-auc.com/previewSearch',
+  searchUrl: 'https://e-auc.brand-auc.com/marketPriceItems',
   loginData: {
     userId: process.env.CRAWLER_EMAIL2,
     password: process.env.CRAWLER_PASSWORD2,
@@ -171,7 +170,6 @@ const brandAuctionValueConfig = {
     description: '.tokki',
     codeParent: '#detail_date'
   },
-  searchParams: (categoryId, page = 1) => `?kaijoKbn=0&genre_select=${categoryId}&page=${page}`,
 };
 
 class Crawler {
@@ -394,7 +392,7 @@ class Crawler {
   }
 }
 
-class EcoAuctionCrawler extends Crawler {
+class EcoAucCrawler extends Crawler {
   async getTotalPages(categoryId) {
     return this.retryOperation(async () => {
       const url = this.config.searchUrl + this.config.searchParams(categoryId, 1);
@@ -431,12 +429,11 @@ class EcoAuctionCrawler extends Crawler {
 
       const totalPages = await this.getTotalPages(categoryId);
       console.log(`Total pages in category ${categoryId}: ${totalPages}`);
-      let pageItems, processedItems;
+      let pageItems;
 
       for (let page = 1; page <= totalPages; page++) {
         pageItems = await this.crawlPage(categoryId, page, existingIds);
-        processedItems = await processImagesInChunks(pageItems);
-        categoryItems.push(...processedItems);
+        categoryItems.push(...pageItems);
       }
 
       if (categoryItems && categoryItems.length > 0) {
@@ -525,11 +522,11 @@ class EcoAuctionCrawler extends Crawler {
 
       const pageItems = await Promise.all(pageItemsPromises);
 
-      const filteredPageItems = pageItems.filter(item => item !== null);
+      const processedItems = await processImagesInChunks(pageItems);
 
-      console.log(`Crawled ${filteredPageItems.length} items from page ${page}`);
+      console.log(`Crawled ${processedItems.length} items from page ${page}`);
 
-      return [...filteredPageItems, ...remainItems];
+      return [...processedItems, ...remainItems];
     });
   }
 
@@ -612,7 +609,7 @@ class EcoAuctionCrawler extends Crawler {
   }
 }
 
-class BrandAuctionCrawler extends Crawler {
+class BrandAucCrawler extends Crawler {
   async waitForLoading(page, timeout = 30 * 1000) {
     const loadingElements = await page.$$('app-loading');
     for (const e of loadingElements) {
@@ -687,7 +684,7 @@ class BrandAuctionCrawler extends Crawler {
 
       const allItems = [];
       console.log(`Crawling for total page ${totalPages}`);
-      let itemHandles, filteredHandles, filteredItems, remainItems, pageItemsPromises, pageItems, filteredPageItems;      
+      let itemHandles, filteredHandles, filteredItems, remainItems, pageItemsPromises, pageItems, processedItems;      
       const limit = pLimit(5);
 
       for (let page = 1; page <= totalPages; page++) {
@@ -695,6 +692,7 @@ class BrandAuctionCrawler extends Crawler {
 
         await this.crawlerPage.select(this.config.crawlSelectors.pageSelect, page.toString());
         await this.waitForLoading(this.crawlerPage);
+        await this.crawlerPage.waitForSelector(this.config.crawlSelectors.itemContainer);
         
         itemHandles = await this.crawlerPage.$$(this.config.crawlSelectors.itemContainer);
         [filteredHandles, filteredItems, remainItems]= await this.filterHandles(itemHandles, existingIds);
@@ -709,13 +707,11 @@ class BrandAuctionCrawler extends Crawler {
 
         pageItems = await Promise.all(pageItemsPromises);
 
-        filteredPageItems = pageItems.filter(item => item !== null);
+        processedItems = await processImagesInChunks(pageItems);
 
-        filteredPageItems = await processImagesInChunks(filteredPageItems);
+        console.log(`Crawled ${processedItems.length} items from page ${page}`);
 
-        console.log(`Crawled ${filteredPageItems.length} items from page ${page}`);
-
-        allItems.push(...filteredPageItems, ...remainItems);
+        allItems.push(...processedItems, ...remainItems);
       }
 
       this.closeCrawlerBrowser();
@@ -836,7 +832,7 @@ class BrandAuctionCrawler extends Crawler {
     });
   }
 }
-class EcoAuctionValueCrawler extends Crawler {
+class EcoAucValueCrawler extends Crawler {
   async getTotalPages(categoryId) {
     return this.retryOperation(async () => {
       const url = this.config.searchUrl + this.config.searchParams(categoryId, 1);
@@ -936,21 +932,6 @@ class EcoAuctionValueCrawler extends Crawler {
     });
   }
 
-  async filterHandle(itemHandle, existingIds) {
-    const item = await itemHandle.evaluate((el, config) => {
-      const id = el.querySelector(config.crawlSelectors.id);
-      const scheduledDate = el.querySelector(config.crawlSelectors.scheduledDate);
-      return {
-        item_id: id ? id.getAttribute('data-auction-item-id') : null,
-        scheduled_date: scheduledDate ? scheduledDate.textContent.trim() : null,
-      };
-    }, this.config);
-    item.scheduled_date = this.extractDate(item.scheduled_date);
-    if (!this.isCollectionDay(item.scheduled_date)) return null;
-    if (existingIds.has(item.item_id)) return {item_id: item.item_id};
-    else return item;
-  }
-
   async extractItemInfo(itemHandle, existingIds) {
     const item = await itemHandle.evaluate((el, config) => {
       const id = el.querySelector(config.crawlSelectors.id);
@@ -959,7 +940,7 @@ class EcoAuctionValueCrawler extends Crawler {
       const brand = el.querySelector(config.crawlSelectors.brand);
       const rankParent = el.querySelector(config.crawlSelectors.rank);
       const rank = rankParent ? rankParent.childNodes[4] : null;
-      const startingPrice = el.querySelector(config.crawlSelectors.startingPrice);
+      const finalPrice = el.querySelector(config.crawlSelectors.finalPrice);
       const image = el.querySelector(config.crawlSelectors.image);
       return {
         item_id: id ? id.getAttribute('data-auction-item-id') : null,
@@ -967,7 +948,7 @@ class EcoAuctionValueCrawler extends Crawler {
         japanese_title: title ? title.textContent.trim() : null,
         brand: brand ? brand.textContent.trim() : null,
         rank: rank ? rank.textContent.trim() : null,
-        starting_price: startingPrice ? startingPrice.textContent.trim() : null,
+        final_price: finalPrice ? finalPrice.textContent.trim() : null,
         image: image ? image.src.replace(/\?.*$/, '') + '?w=520&h=390' : null,
         category: config.categoryTable[config.currentCategoryId],
       };
@@ -975,7 +956,7 @@ class EcoAuctionValueCrawler extends Crawler {
 
     item.scheduled_date = this.extractDate(item.scheduled_date);
     if (existingIds.has(item.item_id)) return {item_id: item.item_id};
-    item.starting_price = this.currencyToInt(item.starting_price);
+    item.final_price = this.currencyToInt(item.starting_price);
     item.auc_num = '1'
 
     return item;
@@ -1027,7 +1008,7 @@ class EcoAuctionValueCrawler extends Crawler {
   }
 }
 
-class BrandAuctionValueCrawler extends Crawler {
+class BrandAucValueCrawler extends Crawler {
   async waitForLoading(page, timeout = 30 * 1000) {
     const loadingElements = await page.$$('app-loading');
     for (const e of loadingElements) {
@@ -1044,7 +1025,6 @@ class BrandAuctionValueCrawler extends Crawler {
     await this.closeDetailBrowsers();
     await this.loginCheckCrawler();
     const startTime = Date.now();
-    translator.TRANS_COUNT = 0;
 
     return this.retryOperation(async () => {
       await this.crawlerPage.goto(this.config.searchUrl, { waitUntil: 'networkidle0', timeout: this.pageTimeout });
@@ -1094,10 +1074,8 @@ class BrandAuctionValueCrawler extends Crawler {
       }
 
       this.closeCrawlerBrowser();
-      translator.cleanupCache();
 
       console.log(`Total items crawled: ${allItems.length}`);
-      console.log(`translate count: ${translator.TRANS_COUNT}`);
       
       const endTime = Date.now();
       const executionTime = endTime - startTime;
@@ -1114,7 +1092,7 @@ class BrandAuctionValueCrawler extends Crawler {
       const title = el.querySelector(config.crawlSelectors.title);
       const brand = el.querySelector(config.crawlSelectors.brand);
       const rank = el.querySelector(config.crawlSelectors.rank);
-      const startingPrice = el.querySelector(config.crawlSelectors.startingPrice);
+      const prices = el.querySelectorAll(config.crawlSelectors.startingPrice);
       const image = el.querySelector(config.crawlSelectors.image);
       const category = el.querySelector(config.crawlSelectors.category);
 
@@ -1124,7 +1102,8 @@ class BrandAuctionValueCrawler extends Crawler {
         japanese_title: title ? title.textContent.trim() : null,
         brand: brand ? brand.textContent.trim() : null,
         rank: rank ? rank.textContent.trim() : null,
-        starting_price: startingPrice ? startingPrice.textContent.trim() : null,
+        starting_price: prices ? prices[0].textContent.trim() : null,
+        final_price: prices ? prices[1].textContent.trim() : null,
         image: image ? image.src.replace(/(brand_img\/)(\d+)/, '$16') : null,
         category: category.textContent.trim(),
       };
@@ -1135,6 +1114,7 @@ class BrandAuctionValueCrawler extends Crawler {
     item.brand = this.convertFullWidthToAscii(item.brand);
     item.scheduled_date = this.extractDate(item.scheduled_date);
     item.starting_price = this.currencyToInt(item.starting_price);
+    item.final_price = this.currencyToInt(item.final_price);
     item.auc_num = '2';
 
     return item;
@@ -1212,7 +1192,9 @@ class BrandAuctionValueCrawler extends Crawler {
   }
 }
 
-const ecoAucCrawler = new EcoAuctionCrawler(ecoAucConfig);
-const brandAuctionCrawler = new BrandAuctionCrawler(brandAuctionConfig);
+const ecoAucCrawler = new EcoAucCrawler(ecoAucConfig);
+const brandAucCrawler = new BrandAucCrawler(brandAucConfig);
+const ecoAucValueCrawler = new EcoAucValueCrawler(ecoAucValueConfig);
+const brandAucValueCrawler = new BrandAucValueCrawler(brandAucConfig);
 
-module.exports = { ecoAucCrawler, brandAuctionCrawler };
+module.exports = { ecoAucCrawler, brandAucCrawler, ecoAucValueCrawler, brandAucValueCrawler };
