@@ -61,7 +61,6 @@ class AdvancedTranslator {
     return result;
   }
   async translateWord(word) {
-    console.log(word);
     let conn;
     try {
       conn = await pool.getConnection();
