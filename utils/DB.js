@@ -21,7 +21,13 @@ async function testConnection() {
     console.log('Successfully connected to the database');
     
     const [rows, fields] = await conn.query(`
-      DELETE FROM crawled_items
+      DELETE FROM crawled_items 
+      WHERE auc_num = 1 
+      AND (
+        (DATE(scheduled_date) = '2024-10-22')
+        OR
+        (DATE(scheduled_date) = '2024-10-24')
+      )
     `);
     console.log('Query executed successfully. Result:', rows);
 
