@@ -125,7 +125,7 @@ const ecoAucValueConfig = {
     binder: '.col-md-8.col-lg-7 .dl-horizontal',
   },
   searchParams: (categoryId, page) => {
-    const date = new Date.now();
+    const date = new Date();
     return `?limit=200&sortKey=1&tableType=grid&master_item_categories[0]=${categoryId}&page=${page}&target_start_year=${date.getFullYear()}&target_start_month=${date.getMonth()}&target_end_year=${date.getFullYear()}&target_end_month=${date.getMonth() + 1}&`;
   },
   detailUrl: (itemId) => `https://www.ecoauc.com/client/auction-items/view/${itemId}`,
@@ -1194,6 +1194,6 @@ class BrandAucValueCrawler extends Crawler {
 const ecoAucCrawler = new EcoAucCrawler(ecoAucConfig);
 const brandAucCrawler = new BrandAucCrawler(brandAucConfig);
 const ecoAucValueCrawler = new EcoAucValueCrawler(ecoAucValueConfig);
-const brandAucValueCrawler = new BrandAucValueCrawler(brandAucConfig);
+const brandAucValueCrawler = new BrandAucValueCrawler(brandAucValueConfig);
 
 module.exports = { ecoAucCrawler, brandAucCrawler, ecoAucValueCrawler, brandAucValueCrawler };
