@@ -240,7 +240,6 @@ class Crawler {
       ]);
       await page.click(this.config.signinSelectors.loginButton);
       await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: this.pageTimeout });
-      console.log('completet to login page!');
     });
   }
   async loginCheckCrawler() {
@@ -248,13 +247,15 @@ class Crawler {
       const result = await this.initializeCrawler();
       this.crawlerBrowser = result.browser;
       this.crawlerPage = result.page;
-      console.log('crawler init!');
+      console.log('complete to crawler init!');
     }
     await this.login(this.crawlerPage);
+    console.log('complete to crawler login!');
   }
   async loginCheckDetails() {
     if (!this.detailBrowsers.length || !this.detailPages.length) {
       await this.initializeDetails();
+      console.log('complete to details init!');
     }
     const loginTasks = [];
   
@@ -360,7 +361,7 @@ class Crawler {
     return [filteredHandles, filteredItems, remainItems];
   }
 
-  async filterHandle(itemHandle) {
+  async filterHandle(itemHandle, existingIds) {
     const item = await itemHandle.evaluate((el, config) => {
       const id = el.querySelector(config.crawlSelectors.id);
       const scheduledDate = el.querySelector(config.crawlSelectors.scheduledDate);
