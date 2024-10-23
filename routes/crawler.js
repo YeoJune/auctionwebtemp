@@ -5,7 +5,7 @@ const { ecoAucCrawler, brandAucCrawler, ecoAucValueCrawler, brandAucValueCrawler
 const DBManager = require('../utils/DBManager');
 const pool = require('../utils/DB');
 const cron = require('node-cron');
-const { getAdminSettings, updateAdminSettings } = require('../utils/adminDB');
+const { getAdminSettings } = require('../utils/adminDB');
 
 // 기존 processItem 함수 수정
 async function processItem(itemId, res) {
@@ -128,18 +128,18 @@ async function crawlAll() {
       brandAucCrawler.isRefreshing = true;
       await ecoAucCrawler.closeCrawlerBrowser();
       await ecoAucCrawler.closeDetailBrowsers();
-      let brandAuctionItems = await brandAucCrawler.crawlAllItems(existingBrandAuctionIds);
+      let brandAucItems = await brandAucCrawler.crawlAllItems(existingBrandAuctionIds);
       brandAucCrawler.isRefreshing = false;
 
       if (!ecoAucItems) ecoAucItems = [];
-      if (!brandAuctionItems) brandAuctionItems = [];
+      if (!brandAucItems) brandAucItems = [];
       const allItems = [
         ...ecoAucItems,
-        ...brandAuctionItems
+        ...brandAucItems
       ];
       await DBManager.saveItems(allItems);
       await DBManager.deleteItemsWithout(ecoAucItems.map(item => item.item_id), 1);
-      await DBManager.deleteItemsWithout(brandAuctionItems.map(item => item.item_id), 2);
+      await DBManager.deleteItemsWithout(brandAucItems.map(item => item.item_id), 2);
       await DBManager.cleanupUnusedImages();
     }
   } catch (error) {

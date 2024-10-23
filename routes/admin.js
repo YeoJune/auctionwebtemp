@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const { getAdminSettings, updateAdminSettings, getNotices, getNoticeById, addNotice, updateNotice, deleteNotice, getFilterSettings, updateFilterSettings } = require('../utils/adminDB');
+const { getAdminSettings, updateAdminSettings, getNotices, getNoticeById, addNotice, updateNotice, deleteNotice } = require('../utils/adminDB');
 
 // Multer configuration for image uploads
 const logoStorage = multer.diskStorage({
@@ -162,28 +162,6 @@ router.delete('/notices/:id', isAdmin, async (req, res) => {
   } catch (error) {
     console.error('Error deleting notice:', error);
     res.status(500).json({ message: 'Error deleting notice and associated images' });
-  }
-});
-
-// Filter settings routes (unchanged)
-router.get('/filter-settings', isAdmin, async (req, res) => {
-  try {
-    const settings = await getFilterSettings();
-    res.json(settings);
-  } catch (error) {
-    console.error('Error getting filter settings:', error);
-    res.status(500).json({ message: 'Error getting filter settings' });
-  }
-});
-
-router.post('/filter-settings', isAdmin, async (req, res) => {
-  try {
-    const { brandFilters, categoryFilters, dateFilters } = req.body;
-    await updateFilterSettings(brandFilters, categoryFilters, dateFilters);
-    res.json({ message: 'Filter settings updated successfully' });
-  } catch (error) {
-    console.error('Error updating filter settings:', error);
-    res.status(500).json({ message: 'Error updating filter settings' });
   }
 });
 

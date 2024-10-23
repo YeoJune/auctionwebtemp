@@ -658,7 +658,6 @@ class BrandAucCrawler extends Crawler {
     }, this.config);
     item.scheduled_date = this.extractDate(item.scheduled_date);
     if (item.status == '保留成約' || item.status == '成約') return null;
-    delete item.status;
     if (existingIds.has(item.item_id)) return {item_id: item.item_id};
     else return item;
   }
@@ -868,14 +867,13 @@ class EcoAucValueCrawler extends Crawler {
 
       const totalPages = await this.getTotalPages(categoryId);
       console.log(`Total pages in category ${categoryId}: ${totalPages}`);
-      let pageItems, processedItems, isEnd = false;
+      let pageItems, isEnd = false;
 
       for (let page = 1; page <= totalPages; page++) {
         pageItems = await this.crawlPage(categoryId, page, existingIds);
         
         for(let item of pageItems) if (item.item_id && !item.japanese_title) isEnd = true;
-        processedItems = await processImagesInChunks(pageItems);
-        categoryItems.push(...processedItems);
+        categoryItems.push(...pageItems);
         if (isEnd) break;
       }
 
@@ -924,11 +922,11 @@ class EcoAucValueCrawler extends Crawler {
 
       const pageItems = await Promise.all(pageItemsPromises);
 
-      const filteredPageItems = pageItems.filter(item => item !== null);
+      const processedItems = await processImagesInChunks(pageItems);
 
-      console.log(`Crawled ${filteredPageItems.length} items from page ${page}`);
+      console.log(`Crawled ${processedItems.length} items from page ${page}`);
 
-      return [...filteredPageItems];
+      return [...processedItems];
     });
   }
 
@@ -1041,7 +1039,7 @@ class BrandAucValueCrawler extends Crawler {
 
       const allItems = [];
       console.log(`Crawling for total page ${totalPages}`);
-      let itemHandles, pageItemsPromises, pageItems, filteredPageItems;      
+      let itemHandles, pageItemsPromises, pageItems;      
       const limit = pLimit(5);
       let isEnd = false;
 
@@ -1065,12 +1063,11 @@ class BrandAucValueCrawler extends Crawler {
 
         for(let item of pageItems) if (item.item_id && !item.japanese_title) isEnd = true;
         processedItems = await processImagesInChunks(pageItems);
-        filteredPageItems.push(...processedItems);
         if (isEnd) break;
 
-        console.log(`Crawled ${filteredPageItems.length} items from page ${page}`);
+        console.log(`Crawled ${processedItems.length} items from page ${page}`);
 
-        allItems.push(...filteredPageItems);
+        allItems.push(...processedItems);
       }
 
       this.closeCrawlerBrowser();
@@ -1196,5 +1193,7 @@ const ecoAucCrawler = new EcoAucCrawler(ecoAucConfig);
 const brandAucCrawler = new BrandAucCrawler(brandAucConfig);
 const ecoAucValueCrawler = new EcoAucValueCrawler(ecoAucValueConfig);
 const brandAucValueCrawler = new BrandAucValueCrawler(brandAucConfig);
+
+brandAucCrawler.crawlAllItems(new Set()).then((data) => {console.log(data[0], data.length)});
 
 module.exports = { ecoAucCrawler, brandAucCrawler, ecoAucValueCrawler, brandAucValueCrawler };

@@ -34,23 +34,6 @@
     <button onclick="clearNoticeForm()">새 공지</button>
     <div id="noticeList"></div>
 
-    <h2>4. 필터 설정</h2>
-    <div id="filterSettings">
-        <div>
-            <h3>브랜드 필터</h3>
-            <div id="brandFilters"></div>
-        </div>
-        <div>
-            <h3>카테고리 필터</h3>
-            <div id="categoryFilters"></div>
-        </div>
-        <div>
-            <h3>날짜 필터</h3>
-            <div id="dateFilters"></div>
-        </div>
-    </div>
-    <button onclick="updateFilterSettings()">필터 설정 저장</button>
-
     <script>
         const API_URL = '/api';
         // 이미지 압축 함수
@@ -294,72 +277,6 @@
             }
         }
 
-        // 4. 필터 설정
-        let allFilters = { brands: [], categories: [], dates: [] };
-
-        async function fetchFilters() {
-            try {
-                const [brandsResponse, categoriesResponse, datesResponse] = await Promise.all([
-                    fetch(`${API_URL}/data/brands-with-count`),
-                    fetch(`${API_URL}/data/categories`),
-                    fetch(`${API_URL}/data/scheduled-dates-with-count`)
-                ]);
-                const [brands, categories, dates] = await Promise.all([
-                    brandsResponse.json(),
-                    categoriesResponse.json(),
-                    datesResponse.json()
-                ]);
-                allFilters = { brands, categories, dates };
-                displayFilters();
-            } catch (error) {
-                console.error('Error fetching filters:', error);
-                alert('필터 옵션을 불러오는데 실패했습니다.');
-            }
-        }
-
-        function displayFilters() {
-            displayFilterOptions('brandFilters', allFilters.brands);
-            displayFilterOptions('categoryFilters', allFilters.categories);
-            displayFilterOptions('dateFilters', allFilters.dates);
-        }
-
-        function displayFilterOptions(containerId, options) {
-            const container = document.getElementById(containerId);
-            container.innerHTML = options.map(option => 
-                `<label><input type="checkbox" value="${option.brand || option.category || option.Date}"> ${option.brand || option.category || option.Date}</label><br>`
-            ).join('');
-        }
-
-        async function updateFilterSettings() {
-            const brandFilters = getSelectedFilters('brandFilters');
-            const categoryFilters = getSelectedFilters('categoryFilters');
-            const dateFilters = getSelectedFilters('dateFilters');
-            try {
-                const response = await fetch(`${API_URL}/admin/filter-settings`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ brandFilters, categoryFilters, dateFilters })
-                });
-                if (response.ok) {
-                    alert('필터 설정이 성공적으로 저장되었습니다.');
-                } else {
-                    alert('필터 설정 저장에 실패했습니다.');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('필터 설정 저장 중 오류가 발생했습니다.');
-            }
-        }
-
-        function getSelectedFilters(containerId) {
-            return Array.from(document.querySelectorAll(`#${containerId} input:checked`))
-                .map(el => el.value);
-        }
-
-        // 초기화
-        fetchFilters();
         fetchNotices();
     </script>
 </body>
