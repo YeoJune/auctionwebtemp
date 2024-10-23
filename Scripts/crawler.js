@@ -347,7 +347,6 @@ class Crawler {
     );
     const items = await Promise.all(filterPromises);
     let filteredHandles = [], filteredItems = [], remainItems = [];
-    console.log(items);
     for(let i = 0; i < items.length; i++) {
       if (items[i]) {
         if (items[i].scheduled_date) {
@@ -677,6 +676,6 @@ class BrandAuctionCrawler extends Crawler {
 const ecoAucCrawler = new Crawler(ecoAucConfig);
 const brandAuctionCrawler = new BrandAuctionCrawler(brandAuctionConfig);
 
-ecoAucCrawler.crawlAllItems(new Set()).then((data) => {console.log(data)});
+ecoAucCrawler.crawlAllItems(new Set()).then((data) => {console.log(data[0])});
 
 module.exports = { ecoAucCrawler, brandAuctionCrawler };
