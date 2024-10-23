@@ -538,7 +538,7 @@ class BrandAuctionCrawler extends Crawler {
     await this.closeDetailBrowsers();
     await this.loginCheckCrawler();
     const startTime = Date.now();
-    TRANS_COUNT = 0;
+    myTranslator.TRANS_COUNT = 0;
 
     return this.retryOperation(async () => {
       await this.crawlerPage.goto(this.config.searchUrl, { waitUntil: 'networkidle0', timeout: this.pageTimeout });
@@ -585,7 +585,7 @@ class BrandAuctionCrawler extends Crawler {
       this.closeCrawlerBrowser();
 
       console.log(`Total items crawled: ${allItems.length}`);
-      console.log(`translate count: ${TRANS_COUNT}`);
+      console.log(`translate count: ${myTranslator.TRANS_COUNT}`);
       
       const endTime = Date.now();
       const executionTime = endTime - startTime;
