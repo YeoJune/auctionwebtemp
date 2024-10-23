@@ -1,3 +1,4 @@
+// utils/advancedTranslator.js
 const { TranslateClient, TranslateTextCommand } = require("@aws-sdk/client-translate");
 const pool = require('./DB')
 

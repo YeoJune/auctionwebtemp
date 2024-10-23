@@ -1,7 +1,6 @@
 // routes/wishlist.js
 const express = require('express');
 const router = express.Router();
-const logger = require('../utils/logger');
 const pool = require('../utils/DB');
 
 // Add item to wishlist
@@ -30,7 +29,7 @@ router.post('/', async (req, res) => {
     await pool.query('INSERT INTO wishlists (user_id, item_id) VALUES (?, ?)', [userId, itemId]);
     res.status(201).json({ message: 'Item added to wishlist' });
   } catch (err) {
-    logger.error('Error adding to wishlist:', err);
+    console.error('Error adding to wishlist:', err);
     res.status(500).json({ message: 'Error adding to wishlist' });
   }
 });
@@ -48,7 +47,7 @@ router.get('/', async (req, res) => {
 
     res.json(wishlist);
   } catch (err) {
-    logger.error('Error fetching wishlist:', err);
+    console.error('Error fetching wishlist:', err);
     res.status(500).json({ message: 'Error fetching wishlist' });
   }
 });
@@ -66,7 +65,7 @@ router.delete('/', async (req, res) => {
     await pool.query('DELETE FROM wishlists WHERE user_id = ? AND item_id = ?', [userId, itemId]);
     res.json({ message: 'Item removed from wishlist' });
   } catch (err) {
-    logger.error('Error removing from wishlist:', err);
+    console.error('Error removing from wishlist:', err);
     res.status(500).json({ message: 'Error removing from wishlist' });
   }
 });

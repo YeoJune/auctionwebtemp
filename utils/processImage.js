@@ -1,16 +1,18 @@
+// utils/processImages.js
 const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
 const sharp = require('sharp');
 const path = require('path');
 
-// 이미지 저장 경로 설정
 const IMAGE_DIR = path.join(__dirname, '..', 'public', 'images', 'products');
 
 const chunk = (arr, size) =>
   Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
     arr.slice(i * size, i * size + size)
   );
+
 async function downloadAndSaveImage(url, retries = 5, delay = 2 * 60 * 1000) {
+  const dateString = new Date().toISOString();
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
       const response = await axios({
@@ -19,18 +21,17 @@ async function downloadAndSaveImage(url, retries = 5, delay = 2 * 60 * 1000) {
         responseType: 'arraybuffer'
       });
 
-      const fileName = `${uuidv4()}.jpg`;
+      const fileName = `${dateString}_${uuidv4()}.webp`;
       const filePath = path.join(IMAGE_DIR, fileName);
 
       await sharp(response.data)
-        .jpeg({ quality: 100 })
+        .webp({ quality: 80 })
         .toFile(filePath);
 
       return `/images/products/${fileName}`;
     } catch (error) {
       console.error(`Error processing image (Attempt ${attempt + 1}/${retries}): ${url}`, error.message);
       
-      // Check if the error is a 404 (Not Found) error
       if (error.response && error.response.status === 404) {
         console.log(`404 error encountered. Stopping retry attempts.`);
         return null;
@@ -46,8 +47,8 @@ async function downloadAndSaveImage(url, retries = 5, delay = 2 * 60 * 1000) {
   }
   return null;
 }
+
 async function processImagesInChunks(items, chunkSize = 100) {
-  // 아이템 분류
   const itemsWithImages = [];
   const itemsWithoutImages = [];
 
@@ -61,37 +62,37 @@ async function processImagesInChunks(items, chunkSize = 100) {
 
   const processChunk = async (chunk) => {
     return Promise.all(chunk.map(async (item) => {
-    const downloadTasks = [];
+      const downloadTasks = [];
 
-    if (item.image) {
-      downloadTasks.push(
-      downloadAndSaveImage(item.image)
-        .then(savedPath => {
-        if (savedPath) item.image = savedPath;
-        })
-      );
-    }
-    
-    if (item.additional_images) {
-      const additionalImages = JSON.parse(item.additional_images);
-      const savedImages = [];
-      
-      additionalImages.forEach(imgUrl => {
+      if (item.image) {
         downloadTasks.push(
-          downloadAndSaveImage(imgUrl)
-          .then(savedPath => {
-              if (savedPath) savedImages.push(savedPath);
-          })
+          downloadAndSaveImage(item.image)
+            .then(savedPath => {
+              if (savedPath) item.image = savedPath;
+            })
         );
-      });
+      }
 
-      await Promise.all(downloadTasks);
-      item.additional_images = JSON.stringify(savedImages);
-    } else {
-      await Promise.all(downloadTasks);
-    }
+      if (item.additional_images) {
+        const additionalImages = JSON.parse(item.additional_images);
+        const savedImages = [];
+        
+        additionalImages.forEach(imgUrl => {
+          downloadTasks.push(
+            downloadAndSaveImage(imgUrl)
+              .then(savedPath => {
+                if (savedPath) savedImages.push(savedPath);
+              })
+          );
+        });
 
-    return item;
+        await Promise.all(downloadTasks);
+        item.additional_images = JSON.stringify(savedImages);
+      } else {
+        await Promise.all(downloadTasks);
+      }
+
+      return item;
     }));
   };
 
@@ -102,14 +103,12 @@ async function processImagesInChunks(items, chunkSize = 100) {
     const processedChunk = await processChunk(chunkItems);
     processedItems.push(...processedChunk);
     
-    // 가비지 컬렉션을 위한 짧은 지연
     await new Promise(resolve => setTimeout(resolve, 100));
-    if (i % 10 == 0) console.log(`${i / 10} / ${chunks.length / 10}`);
+    if (i % 10 == 0) console.log(`Downloading progress: ${i} / ${chunks.length}`);
     i += 1;
   }
 
-  // 처리된 아이템과 이미지가 없는 아이템을 합쳐서 반환
   return [...processedItems, ...itemsWithoutImages];
 }
 
-module.exports = {processImagesInChunks};
+module.exports = { processImagesInChunks };

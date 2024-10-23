@@ -3,16 +3,14 @@ const express = require('express');
 const cors = require("cors");
 const session = require('express-session');
 const MySQLStore = require('express-mysql-session')(session);
-const cron = require('node-cron');
+const bodyParser = require('body-parser');
 const authRoutes = require('./routes/auth');
 const wishlistRoutes = require('./routes/wishlist');
 const dataRoutes = require('./routes/data');
 const crawlerRoutes = require('./routes/crawler');
 const bidRoutes = require('./routes/bid');
 const adminRoutes = require('./routes/admin');
-const logger = require('./utils/logger');
 const pool = require('./utils/DB');
-const bodyParser = require('body-parser');
 
 const app = express();
 
@@ -59,8 +57,8 @@ app.use(session({
 
 // 세션 디버깅을 위한 미들웨어
 app.use((req, res, next) => {
-  logger.debug('Session ID:', req.sessionID);
-  logger.debug('Session Data:', req.session);
+  console.debug('Session ID:', req.sessionID);
+  console.debug('Session Data:', req.session);
   next();
 });
 
@@ -85,11 +83,11 @@ app.get('/signinPage', (req, res) => {
 
 // 에러 핸들링 미들웨어
 app.use((err, req, res, next) => {
-  logger.error(err.stack);
+  console.error(err.stack);
   res.status(500).json({ message: 'Something went wrong!' });
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
-  logger.info(`Server is running on ${PORT}`);
+  console.log(`Server is running on ${PORT}`);
 });

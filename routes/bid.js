@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const logger = require('../utils/logger');
 const MyGoogleSheetsManager = require('../utils/googleSheets');
 const pool = require('../utils/DB');
 
@@ -75,14 +74,14 @@ router.post('/place-reservation', async (req, res) => {
     });
   } catch (err) {
     await connection.rollback();
-    logger.error('Error placing bid reservation:', err);
+    console.error('Error placing bid reservation:', err);
 
     if (!isFinalBid && bid) {
       try {
         await connection.query('DELETE FROM bids WHERE item_id = ? AND user_id = ?', [itemId, req.session.user.id]);
-        logger.info('Rolled back bid insertion due to error');
+        console.log('Rolled back bid insertion due to error');
       } catch (deleteErr) {
-        logger.error('Error deleting bid after rollback:', deleteErr);
+        console.error('Error deleting bid after rollback:', deleteErr);
       }
     }
 

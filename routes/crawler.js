@@ -1,9 +1,8 @@
+// routes/crawler.js
 const express = require('express');
 const router = express.Router();
-const path = require('path');
 const { ecoAucCrawler, brandAuctionCrawler } = require('../Scripts/crawler');
 const DBManager = require('../utils/DBManager');
-const logger = require('../utils/logger');
 const pool = require('../utils/DB');
 const cron = require('node-cron');
 const { getAdminSettings, updateAdminSettings } = require('../utils/adminDB');
@@ -44,7 +43,7 @@ async function processItem(itemId, res) {
       }
     }
   } catch (error) {
-    logger.error('Error crawling item details:', error);
+    console.error('Error crawling item details:', error);
     res.status(500).json({ message: 'Error crawling item details' });
   }
 }
@@ -63,7 +62,7 @@ function findAvailableIndex(crawlerIndex) {
   const trackerKey = crawlerIndex == 1 ? 'Crawler' : 'BrandAuctionCrawler';
   const tracker = crawlerIndexTracker[trackerKey];
   if (!tracker) {
-    logger.error(`No tracker found for crawler type: ${trackerKey}`);
+    console.error(`No tracker found for crawler type: ${trackerKey}`);
     return -1;
   }
   for (let i = 0; i < tracker.length; i++) {
@@ -80,7 +79,7 @@ function releaseIndex(crawlerIndex, index) {
   if (crawlerIndexTracker[trackerKey]) {
     crawlerIndexTracker[trackerKey][index] = false;
   } else {
-    logger.error(`No tracker found for crawler type: ${trackerKey}`);
+    console.error(`No tracker found for crawler type: ${trackerKey}`);
   }
 }
 
@@ -105,7 +104,7 @@ async function processQueue() {
   try {
     await Promise.all(tasks.map(task => processItem(task.itemId, task.res)));
   } catch (error) {
-    logger.error('Error processing queue:', error);
+    console.error('Error processing queue:', error);
   }
 
   // 다음 작업 처리
@@ -153,7 +152,7 @@ router.get('/crawl', async (req, res) => {
 
     res.json({ message: 'Crawling and image processing completed successfully' });
   } catch (error) {
-    logger.error('Crawling error:', error);
+    console.error('Crawling error:', error);
     res.status(500).json({ message: 'Error during crawling' });
   }
 });
@@ -168,12 +167,12 @@ const scheduleCrawling = async () => {
   if (settings && settings.crawlSchedule) {
     const [hours, minutes] = settings.crawlSchedule.split(':');
     cron.schedule(`${minutes} ${hours} * * *`, async () => {
-      logger.info('Running scheduled crawling task');
+      console.log('Running scheduled crawling task');
       try {
         crawlAll();
-        logger.info('Scheduled crawling completed successfully');
+        console.log('Scheduled crawling completed successfully');
       } catch (error) {
-        logger.error('Scheduled crawling error:', error);
+        console.error('Scheduled crawling error:', error);
       }
     }, {
       scheduled: true,

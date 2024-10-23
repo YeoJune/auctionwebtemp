@@ -2,8 +2,6 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
-const logger = require('../utils/logger');
 const { getAdminSettings, updateAdminSettings, getNotices, getNoticeById, addNotice, updateNotice, deleteNotice, getFilterSettings, updateFilterSettings } = require('../utils/adminDB');
 
 // Multer configuration for image uploads
@@ -59,7 +57,7 @@ router.get('/settings', async (req, res) => {
     const settings = await getAdminSettings();
     res.json(settings);
   } catch (error) {
-    logger.error('Error getting admin settings:', error);
+    console.error('Error getting admin settings:', error);
     res.status(500).json({ message: 'Error getting admin settings' });
   }
 });
@@ -72,7 +70,7 @@ router.post('/settings', isAdmin, async (req, res) => {
     await updateAdminSettings(settings);
     res.json({ message: 'Settings updated successfully' });
   } catch (error) {
-    logger.error('Error updating admin settings:', error);
+    console.error('Error updating admin settings:', error);
     res.status(500).json({ message: 'Error updating admin settings' });
   }
 });
@@ -83,7 +81,7 @@ router.get('/notices', async (req, res) => {
     const notices = await getNotices();
     res.json(notices);
   } catch (error) {
-    logger.error('Error getting notices:', error);
+    console.error('Error getting notices:', error);
     res.status(500).json({ message: 'Error getting notices' });
   }
 });
@@ -97,7 +95,7 @@ router.get('/notices/:id', async (req, res) => {
       res.status(404).json({ message: 'Notice not found' });
     }
   } catch (error) {
-    logger.error('Error getting notice:', error);
+    console.error('Error getting notice:', error);
     res.status(500).json({ message: 'Error getting notice' });
   }
 });
@@ -129,7 +127,7 @@ router.post('/notices', isAdmin, async (req, res) => {
     const newNotice = await addNotice(title, content);
     res.status(201).json(newNotice);
   } catch (error) {
-    logger.error('Error adding notice:', error);
+    console.error('Error adding notice:', error);
     res.status(500).json({ message: 'Error adding notice' });
   }
 });
@@ -148,7 +146,7 @@ router.put('/notices/:id', isAdmin, async (req, res) => {
     }
     res.json(updatedNotice);
   } catch (error) {
-    logger.error('Error updating notice:', error);
+    console.error('Error updating notice:', error);
     res.status(500).json({ message: 'Error updating notice' });
   }
 });
@@ -162,7 +160,7 @@ router.delete('/notices/:id', isAdmin, async (req, res) => {
     }
     res.json({ message: 'Notice and associated images deleted successfully' });
   } catch (error) {
-    logger.error('Error deleting notice:', error);
+    console.error('Error deleting notice:', error);
     res.status(500).json({ message: 'Error deleting notice and associated images' });
   }
 });
@@ -173,7 +171,7 @@ router.get('/filter-settings', isAdmin, async (req, res) => {
     const settings = await getFilterSettings();
     res.json(settings);
   } catch (error) {
-    logger.error('Error getting filter settings:', error);
+    console.error('Error getting filter settings:', error);
     res.status(500).json({ message: 'Error getting filter settings' });
   }
 });
@@ -184,7 +182,7 @@ router.post('/filter-settings', isAdmin, async (req, res) => {
     await updateFilterSettings(brandFilters, categoryFilters, dateFilters);
     res.json({ message: 'Filter settings updated successfully' });
   } catch (error) {
-    logger.error('Error updating filter settings:', error);
+    console.error('Error updating filter settings:', error);
     res.status(500).json({ message: 'Error updating filter settings' });
   }
 });

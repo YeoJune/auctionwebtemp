@@ -2,7 +2,6 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../utils/DB');
-const logger = require('../utils/logger');
 const MyGoogleSheetsManager = require('../utils/googleSheets');
 
 
@@ -111,7 +110,7 @@ router.get('/', async (req, res) => {
       totalPages
     });
   } catch (error) {
-    logger.error('Error fetching data from database:', error);
+    console.error('Error fetching data from database:', error);
     res.status(500).json({ message: 'Error fetching data' });
   }
 });
@@ -126,7 +125,7 @@ router.get('/brands-with-count', async (req, res) => {
     `);
     res.json(results);
   } catch (error) {
-    logger.error('Error fetching brands with count:', error);
+    console.error('Error fetching brands with count:', error);
     res.status(500).json({ message: 'Error fetching brands with count' });
   }
 });
@@ -141,7 +140,7 @@ router.get('/scheduled-dates-with-count', async (req, res) => {
     `);
     res.json(results);
   } catch (error) {
-    logger.error('Error fetching scheduled dates with count:', error);
+    console.error('Error fetching scheduled dates with count:', error);
     res.status(500).json({ message: 'Error fetching scheduled dates with count' });
   }
 });
@@ -151,7 +150,7 @@ router.get('/auc-nums', async (req, res) => {
     const [aucNums] = await pool.query('SELECT DISTINCT auc_num FROM crawled_items ORDER BY auc_num');
     res.json(aucNums.map(a => a.auc_num));
   } catch (error) {
-    logger.error('Error fetching auction numbers:', error);
+    console.error('Error fetching auction numbers:', error);
     res.status(500).json({ message: 'Error fetching auction numbers' });
   }
 });
@@ -161,7 +160,7 @@ router.get('/brands', async (req, res) => {
     const [brands] = await pool.query('SELECT DISTINCT brand FROM crawled_items ORDER BY brand');
     res.json(brands.map(b => b.brand));
   } catch (error) {
-    logger.error('Error fetching brands:', error);
+    console.error('Error fetching brands:', error);
     res.status(500).json({ message: 'Error fetching brands' });
   }
 });
@@ -171,7 +170,7 @@ router.get('/categories', async (req, res) => {
     const [categories] = await pool.query('SELECT DISTINCT category FROM crawled_items ORDER BY category');
     res.json(categories.map(c => c.category));
   } catch (error) {
-    logger.error('Error fetching categories:', error);
+    console.error('Error fetching categories:', error);
     res.status(500).json({ message: 'Error fetching categories' });
   }
 });

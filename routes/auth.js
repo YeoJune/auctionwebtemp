@@ -2,7 +2,6 @@
 const express = require('express');
 const router = express.Router();
 const MyGoogleSheetsManager = require('../utils/googleSheets');
-const logger = require('../utils/logger');
 
 router.post('/login', async (req, res) => {
   try {
@@ -27,7 +26,7 @@ router.post('/login', async (req, res) => {
 
     res.json({ message: '로그인 성공', user: req.session.user });
   } catch (err) {
-      logger.error('로그인 중 오류 발생:', err);
+      console.error('로그인 중 오류 발생:', err);
       res.status(500).json({ message: '로그인 처리 중 오류가 발생했습니다.' });
   }
 });
@@ -35,7 +34,7 @@ router.post('/login', async (req, res) => {
 router.post('/logout', (req, res) => {
   req.session.destroy((err) => {
     if (err) {
-      logger.error('로그아웃 중 오류 발생:', err);
+      console.error('로그아웃 중 오류 발생:', err);
       return res.status(500).json({ message: '로그아웃 처리 중 오류가 발생했습니다.' });
     }
     res.json({ message: '로그아웃 성공' });
