@@ -624,7 +624,6 @@ class BrandAuctionCrawler extends Crawler {
       const category = el.querySelector(config.crawlSelectors.category);
 
       return {
-        item_id: id ? id.textContent.trim() : null,
         japanese_title: title ? title.textContent.trim() : null,
         brand: brand ? brand.textContent.trim() : null,
         rank: rank ? rank.textContent.trim() : null,
