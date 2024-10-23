@@ -12,7 +12,7 @@ const chunk = (arr, size) =>
   );
 
 async function downloadAndSaveImage(url, retries = 5, delay = 2 * 60 * 1000) {
-  const dateString = new Date().toISOString();
+  const dateString = new Date().toISOString().replaceAll(':', '-').split('.')[0];
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
       const response = await axios({
@@ -25,7 +25,7 @@ async function downloadAndSaveImage(url, retries = 5, delay = 2 * 60 * 1000) {
       const filePath = path.join(IMAGE_DIR, fileName);
 
       await sharp(response.data)
-        .webp({ quality: 80 })
+        .webp({ quality: 70 })
         .toFile(filePath);
 
       return `/images/products/${fileName}`;

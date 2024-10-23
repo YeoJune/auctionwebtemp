@@ -14,7 +14,6 @@ let pLimit;
 dotenv.config();
 
 const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36';
-let TRANS_COUNT = 0;
 
 const ecoAucConfig = {
   name: 'EcoAuc',
@@ -96,8 +95,8 @@ const brandAuctionConfig = {
 };
 
 class Crawler {
-  constructor(siteConfig) {
-    this.config = siteConfig;
+  constructor(config) {
+    this.config = config;
     this.maxRetries = 3;
     this.retryDelay = 1000;
     this.pageTimeout = 60000;
@@ -138,12 +137,12 @@ class Crawler {
 
     let timeString = '';
     if (hours > 0) {
-      timeString += `${hours}시간 `;
+      timeString += `${hours}h `;
     }
     if (remainingMinutes > 0 || hours > 0) {
-      timeString += `${remainingMinutes}분 `;
+      timeString += `${remainingMinutes}m `;
     }
-    timeString += `${remainingSeconds}초`;
+    timeString += `${remainingSeconds}s`;
 
     return timeString;
   }
@@ -176,6 +175,7 @@ class Crawler {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
   async initPage(page) {
+    return;
     await page.setViewport({
       width: 1920,
       height: 1080
@@ -398,7 +398,7 @@ class Crawler {
         brand: brand ? brand.textContent.trim() : null,
         rank: rank ? rank.textContent.trim() : null,
         starting_price: startingPrice ? startingPrice.textContent.trim() : null,
-        image: image ? image.src.replace(/\?.*$/, '') + '?w=300&h=300' : null,
+        image: image ? image.src.replace(/\?.*$/, '') + '?w=520&h=390' : null,
         scheduled_date: scheduledDate ? scheduledDate.textContent.trim() : null,
         category: config.categoryTable[config.currentCategoryId],
       };
@@ -435,7 +435,7 @@ class Crawler {
             const urlMatch = style.match(/url\((.*?)\)/);
             if (urlMatch) {
               const imageUrl = urlMatch[1].replace(/&quot;/g, '').split('?')[0].trim();
-              images.push(imageUrl + '?w=300&h=300');
+              images.push(imageUrl + '?w=520&h=390');
             }
           }
         });
@@ -654,7 +654,5 @@ class BrandAuctionCrawler extends Crawler {
 
 const ecoAucCrawler = new Crawler(ecoAucConfig);
 const brandAuctionCrawler = new BrandAuctionCrawler(brandAuctionConfig);
-
-ecoAucCrawler.crawlAllItems(new Set()).then((data) => console.log(data[0]));
 
 module.exports = { ecoAucCrawler, brandAuctionCrawler };

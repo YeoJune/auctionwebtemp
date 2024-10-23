@@ -135,6 +135,32 @@ class DatabaseManager {
       activeImagePaths.clear();
     }
   }
+  async deleteItemsWithout(itemIds, aucNum) {
+    let conn;
+    try {
+      conn = await this.pool.getConnection();
+      // Delete items not present in the input
+      const deleteQuery = `
+        DELETE FROM crawled_items
+        WHERE item_id NOT IN (?)
+        AND auc_num = ?
+      `;
+      
+      /*
+      // Delete wishlist items that no longer exist in crawled_items
+      await conn.query(`
+        DELETE w FROM wishlists w
+        LEFT JOIN crawled_items ci ON w.item_id = ci.item_id
+        WHERE ci.item_id IS NULL
+      `);
+      */
+      await conn.query(deleteQuery, [itemIds, aucNum]);
+    } catch (error) {
+      console.error(error.message);
+    } finally {
+      await conn.release();
+    }
+  }
   async saveItems(items, batchSize = 1000) {
     if (!items || !Array.isArray(items)) throw new Error("Invalid input: items must be an array");
     
@@ -143,9 +169,6 @@ class DatabaseManager {
       await this.withRetry(async () => {
         conn = await this.pool.getConnection();
         await conn.beginTransaction();
-  
-        // Store all item_ids and active image paths from the input
-        const inputItemIds = items.map(item => item.item_id);
 
         // Filter out items without japanese_title for insertion/update
         const validItems = items.filter(item => item.japanese_title);
@@ -164,7 +187,6 @@ class DatabaseManager {
             `;
             
             const values = batch.flatMap(item => columns.map(col => {
-              // 데이터 타입 검증 및 변환
               const value = item[col];
               return value;
             }));
@@ -188,31 +210,13 @@ class DatabaseManager {
                   await conn.query(singleInsertQuery, singleItemValues);
                 } catch (singleError) {
                   console.error(`Error inserting item ${batch[j].item_id}:`, singleError);
-                  // 개별 아이템 오류 로깅, 하지만 전체 프로세스는 계속 진행
                 }
               }
             }
           }
         }
-        // Delete items not present in the input
-        const deleteQuery = `
-          DELETE FROM crawled_items
-          WHERE item_id NOT IN (?)
-        `;
-        await conn.query(deleteQuery, [inputItemIds]);
-        /*
-        // Delete wishlist items that no longer exist in crawled_items
-        await conn.query(`
-          DELETE w FROM wishlists w
-          LEFT JOIN crawled_items ci ON w.item_id = ci.item_id
-          WHERE ci.item_id IS NULL
-        `);
-        */
         await conn.commit();
-        console.log('Items saved to database and outdated items deleted successfully');
-
-        // Clean up unused images
-        await this.cleanupUnusedImages();
+        console.log('Items saved to database');
       });
     } catch (error) {
       if (conn) await conn.rollback();

@@ -39,7 +39,7 @@ const isAdmin = (req, res, next) => {
 };
 
 router.get('/', isAdmin, (req, res) => {
-  res.sendFile(path.join(__dirname, '../admin.html'));
+  res.sendFile(path.join(__dirname, '../pages/admin.html'));
 });
 
 // Route to upload logo (unchanged)
