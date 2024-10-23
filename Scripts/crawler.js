@@ -372,7 +372,7 @@ class Crawler {
       };
     }, this.config);
     item.scheduled_date = this.extractDate(item.scheduled_date);
-    if (!this.isCollectionDay(item.scheduled_date)) return null;
+    if (!this.isCollectionDay(item.scheduled_date)) return item;
     if (existingIds.has(item.item_id)) return {item_id: item.item_id};
     else return item;
   }
