@@ -139,7 +139,7 @@ async function crawlAll() {
       ];
       await DBManager.saveItems(allItems);
       await DBManager.deleteItemsWithout(ecoAucItems.map(item => item.item_id), 1);
-      await DBManager.deleteItemsWithout(existingItems.map(item => item.item_id), 2);
+      await DBManager.deleteItemsWithout(brandAuctionItems.map(item => item.item_id), 2);
       await DBManager.cleanupUnusedImages();
     }
   } catch (error) {
