@@ -41,11 +41,19 @@ router.get('/', async (req, res) => {
     }
 
     // Apply enabled filter restrictions
-    query += ' AND ci.brand IN (' + enabledBrands.map(() => '?').join(',') + ')';
-    queryParams.push(...enabledBrands);
+    if (enabledBrands.length > 0) {
+      query += ' AND ci.brand IN (' + enabledBrands.map(() => '?').join(',') + ')';
+      queryParams.push(...enabledBrands);
+    } else {
+      query += ' AND 1=0'; // No enabled brands, return no results
+    }
     
-    query += ' AND ci.category IN (' + enabledCategories.map(() => '?').join(',') + ')';
-    queryParams.push(...enabledCategories);
+    if (enabledCategories.length > 0) {
+      query += ' AND ci.category IN (' + enabledCategories.map(() => '?').join(',') + ')';
+      queryParams.push(...enabledCategories);
+    } else {
+      query += ' AND 1=0'; // No enabled categories, return no results
+    }
 
     if (enabledDates.length > 0) {
       query += ' AND DATE(ci.scheduled_date) IN (' + enabledDates.map(() => '?').join(',') + ')';
@@ -154,8 +162,11 @@ router.get('/', async (req, res) => {
 router.get('/brands-with-count', async (req, res) => {
   try {
     const enabledBrands = await getEnabledFilters('brand');
-    const placeholders = enabledBrands.map(() => '?').join(',');
+    if (enabledBrands.length === 0) {
+      return res.json([]);
+    }
     
+    const placeholders = enabledBrands.map(() => '?').join(',');
     const [results] = await pool.query(`
       SELECT brand, COUNT(*) as count
       FROM crawled_items
@@ -174,8 +185,11 @@ router.get('/brands-with-count', async (req, res) => {
 router.get('/scheduled-dates-with-count', async (req, res) => {
   try {
     const enabledDates = await getEnabledFilters('date');
-    const placeholders = enabledDates.map(() => '?').join(',');
+    if (enabledDates.length === 0) {
+      return res.json([]);
+    }
     
+    const placeholders = enabledDates.map(() => '?').join(',');
     const [results] = await pool.query(`
       SELECT DATE(scheduled_date) as Date, COUNT(*) as count
       FROM crawled_items
