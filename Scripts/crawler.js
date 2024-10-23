@@ -370,7 +370,7 @@ class Crawler {
         scheduled_date: scheduledDate ? scheduledDate.textContent.trim() : null,
       };
     }, this.config);
-    item.scheduled_date = this.extractDate(item.scheduledDate);
+    item.scheduled_date = this.extractDate(item.scheduled_date);
     if (!this.isCollectionDay(item.scheduled_date)) return null;
     if (existingIds.has(item.item_id)) return {item_id: item.item_id};
     else return item;
