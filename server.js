@@ -10,6 +10,7 @@ const dataRoutes = require('./routes/data');
 const crawlerRoutes = require('./routes/crawler');
 const bidRoutes = require('./routes/bid');
 const adminRoutes = require('./routes/admin');
+const valuesRoutes = require('./routes/values');
 const pool = require('./utils/DB');
 
 const app = express();
@@ -69,6 +70,7 @@ app.use('/api/data', dataRoutes);
 app.use('/api/crawler', crawlerRoutes);
 app.use('/api/bid', bidRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/values', valuesRoutes);
 
 // 정적 파일 서빙
 app.use(express.static('public'));
