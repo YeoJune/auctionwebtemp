@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const { getAdminSettings, updateAdminSettings, getNotices, getNoticeById, addNotice, updateNotice, deleteNotice } = require('../utils/adminDB');
+const { getFilterSettings, getFilterSettingsByType, updateFilterSetting, initializeFilterSettings } = require('../utils/adminDB');
 
 // Multer configuration for image uploads
 const logoStorage = multer.diskStorage({
@@ -162,6 +163,97 @@ router.delete('/notices/:id', isAdmin, async (req, res) => {
   } catch (error) {
     console.error('Error deleting notice:', error);
     res.status(500).json({ message: 'Error deleting notice and associated images' });
+  }
+});
+
+// Filter Settings Routes
+router.get('/filter-settings', async (req, res) => {
+  try {
+    const settings = await getFilterSettings();
+    res.json(settings);
+  } catch (error) {
+    console.error('Error getting filter settings:', error);
+    res.status(500).json({ message: 'Error getting filter settings' });
+  }
+});
+
+router.get('/filter-settings/:type', async (req, res) => {
+  try {
+    const { type } = req.params;
+    if (!['date', 'brand', 'category'].includes(type)) {
+      return res.status(400).json({ message: 'Invalid filter type' });
+    }
+    const settings = await getFilterSettingsByType(type);
+    res.json(settings);
+  } catch (error) {
+    console.error('Error getting filter settings by type:', error);
+    res.status(500).json({ message: 'Error getting filter settings' });
+  }
+});
+
+router.put('/filter-settings', isAdmin, async (req, res) => {
+  try {
+    const { filterType, filterValue, isEnabled } = req.body;
+    
+    if (!filterType || filterValue === undefined || isEnabled === undefined) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+    
+    if (!['date', 'brand', 'category'].includes(filterType)) {
+      return res.status(400).json({ message: 'Invalid filter type' });
+    }
+
+    const result = await updateFilterSetting(filterType, filterValue, isEnabled);
+    res.json(result);
+  } catch (error) {
+    console.error('Error updating filter setting:', error);
+    res.status(500).json({ message: 'Error updating filter setting' });
+  }
+});
+
+// Route to initialize all filter settings
+router.post('/filter-settings/initialize', isAdmin, async (req, res) => {
+  try {
+    await initializeFilterSettings();
+    res.json({ message: 'Filter settings initialized successfully' });
+  } catch (error) {
+    console.error('Error initializing filter settings:', error);
+    res.status(500).json({ message: 'Error initializing filter settings' });
+  }
+});
+
+// Batch update filter settings
+router.put('/filter-settings/batch', isAdmin, async (req, res) => {
+  try {
+    const { settings } = req.body;
+    
+    if (!Array.isArray(settings)) {
+      return res.status(400).json({ message: 'Settings must be an array' });
+    }
+
+    const results = [];
+    for (const setting of settings) {
+      const { filterType, filterValue, isEnabled } = setting;
+      
+      if (!filterType || filterValue === undefined || isEnabled === undefined) {
+        continue;
+      }
+      
+      if (!['date', 'brand', 'category'].includes(filterType)) {
+        continue;
+      }
+
+      const result = await updateFilterSetting(filterType, filterValue, isEnabled);
+      results.push(result);
+    }
+
+    res.json({ 
+      message: 'Batch update completed',
+      updated: results
+    });
+  } catch (error) {
+    console.error('Error performing batch update of filter settings:', error);
+    res.status(500).json({ message: 'Error updating filter settings' });
   }
 });
 

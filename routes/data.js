@@ -4,71 +4,106 @@ const router = express.Router();
 const pool = require('../utils/DB');
 const MyGoogleSheetsManager = require('../utils/googleSheets');
 
+// Helper function to get enabled filter values
+async function getEnabledFilters(filterType) {
+  const [enabled] = await pool.query(`
+    SELECT filter_value 
+    FROM filter_settings 
+    WHERE filter_type = ? AND is_enabled = TRUE
+  `, [filterType]);
+  return enabled.map(item => item.filter_value);
+}
 
 router.get('/', async (req, res) => {
   const { page = 1, limit = 20, brands, categories, scheduledDates, wishlistOnly, aucNums, bidOnly } = req.query;
   const offset = (page - 1) * limit;
   const userId = req.session.user?.id;
 
-  let query = 'SELECT ci.* FROM crawled_items ci';
-  const queryParams = [];
-
-  if (wishlistOnly === 'true' && userId) {
-    query += ' INNER JOIN wishlists w ON ci.item_id = w.item_id AND w.user_id = ?';
-    queryParams.push(userId);
-  } else if (bidOnly === 'true' && userId) {
-    query += ' INNER JOIN bids b ON ci.item_id = b.item_id AND b.user_id = ?';
-    queryParams.push(userId);
-  } else {
-    query += ' WHERE 1=1';
-  }
-
-  if (brands) {
-    const brandList = brands.split(',');
-    query += ' AND ci.brand IN (' + brandList.map(() => '?').join(',') + ')';
-    queryParams.push(...brandList);
-  }
-
-  if (categories) {
-    const categoryList = categories.split(',');
-    query += ' AND ci.category IN (' + categoryList.map(() => '?').join(',') + ')';
-    queryParams.push(...categoryList);
-  }
-
-  if (scheduledDates) {
-    const dateList = scheduledDates.split(',');
-    if (dateList.length > 0) {
-      query += ' AND (';
-      dateList.forEach((date, index) => {
-        if (index > 0) query += ' OR ';
-        const match = date.match(/(\d{4}-\d{2}-\d{2})/);
-        if (!match) {
-          query += 'ci.scheduled_date IS NULL';
-        } else {
-          query += 'ci.scheduled_date >= ? AND ci.scheduled_date < ?';
-          const startDate = new Date(match[0]);
-          const endDate = new Date(startDate);
-          endDate.setDate(endDate.getDate() + 1);
-          queryParams.push(startDate, endDate);
-        }
-      });
-      query += ')';
-    }
-  }
-
-  // Add auc_num filter
-  if (aucNums) {
-    query += ' AND ci.auc_num = ?';
-    queryParams.push(aucNums);
-  }
-
-  query += ' ORDER BY ci.korean_title ASC';
-  query += ' LIMIT ? OFFSET ?';
-  queryParams.push(parseInt(limit), offset);
-
-  const countQuery = `SELECT COUNT(*) as total FROM (${query.split('ORDER BY')[0]}) as subquery`;
-
   try {
+    // Get enabled filters
+    const [enabledBrands, enabledCategories, enabledDates] = await Promise.all([
+      getEnabledFilters('brand'),
+      getEnabledFilters('category'),
+      getEnabledFilters('date')
+    ]);
+
+    let query = 'SELECT ci.* FROM crawled_items ci';
+    const queryParams = [];
+
+    if (wishlistOnly === 'true' && userId) {
+      query += ' INNER JOIN wishlists w ON ci.item_id = w.item_id AND w.user_id = ?';
+      queryParams.push(userId);
+    } else if (bidOnly === 'true' && userId) {
+      query += ' INNER JOIN bids b ON ci.item_id = b.item_id AND b.user_id = ?';
+      queryParams.push(userId);
+    } else {
+      query += ' WHERE 1=1';
+    }
+
+    // Apply enabled filter restrictions
+    query += ' AND ci.brand IN (' + enabledBrands.map(() => '?').join(',') + ')';
+    queryParams.push(...enabledBrands);
+    
+    query += ' AND ci.category IN (' + enabledCategories.map(() => '?').join(',') + ')';
+    queryParams.push(...enabledCategories);
+
+    if (enabledDates.length > 0) {
+      query += ' AND DATE(ci.scheduled_date) IN (' + enabledDates.map(() => '?').join(',') + ')';
+      queryParams.push(...enabledDates);
+    }
+
+    // Apply user-selected filters
+    if (brands) {
+      const brandList = brands.split(',').filter(brand => enabledBrands.includes(brand));
+      if (brandList.length > 0) {
+        query += ' AND ci.brand IN (' + brandList.map(() => '?').join(',') + ')';
+        queryParams.push(...brandList);
+      }
+    }
+
+    if (categories) {
+      const categoryList = categories.split(',').filter(category => enabledCategories.includes(category));
+      if (categoryList.length > 0) {
+        query += ' AND ci.category IN (' + categoryList.map(() => '?').join(',') + ')';
+        queryParams.push(...categoryList);
+      }
+    }
+
+    if (scheduledDates) {
+      const dateList = scheduledDates.split(',');
+      if (dateList.length > 0) {
+        query += ' AND (';
+        const validDates = [];
+        dateList.forEach((date, index) => {
+          const match = date.match(/(\d{4}-\d{2}-\d{2})/);
+          if (match && enabledDates.includes(match[0])) {
+            if (validDates.length > 0) query += ' OR ';
+            query += 'ci.scheduled_date >= ? AND ci.scheduled_date < ?';
+            const startDate = new Date(match[0]);
+            const endDate = new Date(startDate);
+            endDate.setDate(endDate.getDate() + 1);
+            queryParams.push(startDate, endDate);
+            validDates.push(date);
+          }
+        });
+        if (validDates.length === 0) {
+          query += '1=0'; // No valid dates, return no results
+        }
+        query += ')';
+      }
+    }
+
+    if (aucNums) {
+      query += ' AND ci.auc_num = ?';
+      queryParams.push(aucNums);
+    }
+
+    query += ' ORDER BY ci.korean_title ASC';
+    query += ' LIMIT ? OFFSET ?';
+    queryParams.push(parseInt(limit), offset);
+
+    const countQuery = `SELECT COUNT(*) as total FROM (${query.split('ORDER BY')[0]}) as subquery`;
+
     const [items] = await pool.query(query, queryParams);
     const [countResult] = await pool.query(countQuery, queryParams.slice(0, -2));
     const totalItems = countResult[0].total;
@@ -79,6 +114,7 @@ router.get('/', async (req, res) => {
       [wishlist] = await pool.query('SELECT item_id FROM wishlists WHERE user_id = ?', [userId]);
       wishlist = wishlist.map(w => w.item_id);
     }
+
     let bidData = [];
     if (userId) {
       const [bids] = await pool.query(`
@@ -117,12 +153,17 @@ router.get('/', async (req, res) => {
 
 router.get('/brands-with-count', async (req, res) => {
   try {
+    const enabledBrands = await getEnabledFilters('brand');
+    const placeholders = enabledBrands.map(() => '?').join(',');
+    
     const [results] = await pool.query(`
       SELECT brand, COUNT(*) as count
       FROM crawled_items
+      WHERE brand IN (${placeholders})
       GROUP BY brand
       ORDER BY count DESC, brand ASC
-    `);
+    `, enabledBrands);
+    
     res.json(results);
   } catch (error) {
     console.error('Error fetching brands with count:', error);
@@ -132,12 +173,17 @@ router.get('/brands-with-count', async (req, res) => {
 
 router.get('/scheduled-dates-with-count', async (req, res) => {
   try {
+    const enabledDates = await getEnabledFilters('date');
+    const placeholders = enabledDates.map(() => '?').join(',');
+    
     const [results] = await pool.query(`
       SELECT DATE(scheduled_date) as Date, COUNT(*) as count
       FROM crawled_items
+      WHERE DATE(scheduled_date) IN (${placeholders})
       GROUP BY DATE(scheduled_date)
       ORDER BY count DESC, Date ASC
-    `);
+    `, enabledDates);
+    
     res.json(results);
   } catch (error) {
     console.error('Error fetching scheduled dates with count:', error);
@@ -145,20 +191,10 @@ router.get('/scheduled-dates-with-count', async (req, res) => {
   }
 });
 
-router.get('/auc-nums', async (req, res) => {
-  try {
-    const [aucNums] = await pool.query('SELECT DISTINCT auc_num FROM crawled_items ORDER BY auc_num');
-    res.json(aucNums.map(a => a.auc_num));
-  } catch (error) {
-    console.error('Error fetching auction numbers:', error);
-    res.status(500).json({ message: 'Error fetching auction numbers' });
-  }
-});
-
 router.get('/brands', async (req, res) => {
   try {
-    const [brands] = await pool.query('SELECT DISTINCT brand FROM crawled_items ORDER BY brand');
-    res.json(brands.map(b => b.brand));
+    const enabledBrands = await getEnabledFilters('brand');
+    res.json(enabledBrands);
   } catch (error) {
     console.error('Error fetching brands:', error);
     res.status(500).json({ message: 'Error fetching brands' });
@@ -167,8 +203,8 @@ router.get('/brands', async (req, res) => {
 
 router.get('/categories', async (req, res) => {
   try {
-    const [categories] = await pool.query('SELECT DISTINCT category FROM crawled_items ORDER BY category');
-    res.json(categories.map(c => c.category));
+    const enabledCategories = await getEnabledFilters('category');
+    res.json(enabledCategories);
   } catch (error) {
     console.error('Error fetching categories:', error);
     res.status(500).json({ message: 'Error fetching categories' });

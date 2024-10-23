@@ -628,6 +628,8 @@ class BrandAucCrawler extends Crawler {
       limit(async () => await this.filterHandle(handle, existingIds))
     );
     const items = await Promise.all(filterPromises);
+    
+    console.log('items:', ''.join(items));
     let filteredHandles = [], filteredItems = [], remainItems = [];
     for(let i = 0; i < items.length; i++) {
       if (items[i]) {
@@ -694,6 +696,8 @@ class BrandAucCrawler extends Crawler {
         await this.crawlerPage.waitForSelector(this.config.crawlSelectors.itemContainer);
         
         itemHandles = await this.crawlerPage.$$(this.config.crawlSelectors.itemContainer);
+        
+        console.log('itemhandlength:', itemHandles.length);
         [filteredHandles, filteredItems, remainItems]= await this.filterHandles(itemHandles, existingIds);
         pageItemsPromises = [];
         for(let i = 0; i < filteredItems.length; i++) {
@@ -910,7 +914,6 @@ class EcoAucValueCrawler extends Crawler {
 
       const itemHandles = await this.crawlerPage.$$(this.config.crawlSelectors.itemContainer);
       const limit = pLimit(5);
-
       const pageItemsPromises = [];
       for(let i = 0; i < itemHandles.length; i++) {
         pageItemsPromises.push(limit(async () => {
@@ -1032,7 +1035,7 @@ class BrandAucValueCrawler extends Crawler {
       await this.crawlerPage.$eval(this.config.crawlSelectors.itemsPerPageSelecter, el => el.value = '500');
       await this.crawlerPage.select(this.config.crawlSelectors.itemsPerPageSelect, '500');
       await this.waitForLoading(this.crawlerPage);
-      await this.crawlerPage.waitForSelector(this.config.crawlSelectors.itemContainer);
+      await this.sleep(3000);
 
       const totalPageText = await this.crawlerPage.$eval(this.config.crawlSelectors.totalPagesSpan, el => el.textContent);
       const totalPages = parseInt(totalPageText.match(/\d+/g).join(''));
@@ -1047,7 +1050,7 @@ class BrandAucValueCrawler extends Crawler {
         console.log(`Crawling page ${page} of ${totalPages}`);
 
         await this.crawlerPage.select(this.config.crawlSelectors.pageSelect, page.toString());
-        await this.waitForLoading(this.crawlerPage);
+        await this.sleep(3000);
         
         itemHandles = await this.crawlerPage.$$(this.config.crawlSelectors.itemContainer);
         pageItemsPromises = [];

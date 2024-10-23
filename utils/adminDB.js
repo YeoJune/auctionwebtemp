@@ -152,6 +152,103 @@ async function updateNotice(id, title, content) {
   }
 }
 
+async function getFilterSettings() {
+  const conn = await pool.getConnection();
+  try {
+    const [rows] = await conn.query(`
+      SELECT filter_type, filter_value, is_enabled 
+      FROM filter_settings 
+      ORDER BY filter_type, filter_value
+    `);
+    return rows;
+  } catch (error) {
+    console.error('Error getting filter settings:', error);
+    throw error;
+  } finally {
+    conn.release();
+  }
+}
+
+async function getFilterSettingsByType(filterType) {
+  const conn = await pool.getConnection();
+  try {
+    const [rows] = await conn.query(`
+      SELECT filter_type, filter_value, is_enabled 
+      FROM filter_settings 
+      WHERE filter_type = ?
+      ORDER BY filter_value
+    `, [filterType]);
+    return rows;
+  } catch (error) {
+    console.error('Error getting filter settings by type:', error);
+    throw error;
+  } finally {
+    conn.release();
+  }
+}
+
+async function updateFilterSetting(filterType, filterValue, isEnabled) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.query(`
+      INSERT INTO filter_settings (filter_type, filter_value, is_enabled)
+      VALUES (?, ?, ?)
+      ON DUPLICATE KEY UPDATE is_enabled = ?
+    `, [filterType, filterValue, isEnabled, isEnabled]);
+
+    return { filterType, filterValue, isEnabled };
+  } catch (error) {
+    console.error('Error updating filter setting:', error);
+    throw error;
+  } finally {
+    conn.release();
+  }
+}
+
+async function initializeFilterSettings() {
+  const conn = await pool.getConnection();
+  try {
+    // Get all unique values for each filter type
+    const [dates] = await conn.query(`
+      SELECT DISTINCT DATE(scheduled_date) as value 
+      FROM crawled_items 
+      ORDER BY value
+    `);
+    const [brands] = await conn.query(`
+      SELECT DISTINCT brand as value 
+      FROM crawled_items 
+      ORDER BY value
+    `);
+    const [categories] = await conn.query(`
+      SELECT DISTINCT category as value 
+      FROM crawled_items 
+      ORDER BY value
+    `);
+
+    // Insert all values with default enabled status
+    const queries = [
+      ...dates.map(d => ['date', d.value]),
+      ...brands.map(b => ['brand', b.value]),
+      ...categories.map(c => ['category', c.value])
+    ];
+
+    for (const [filterType, filterValue] of queries) {
+      if (filterValue) {  // Skip null values
+        await conn.query(`
+          INSERT IGNORE INTO filter_settings (filter_type, filter_value, is_enabled)
+          VALUES (?, ?, TRUE)
+        `, [filterType, filterValue]);
+      }
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error initializing filter settings:', error);
+    throw error;
+  } finally {
+    conn.release();
+  }
+}
 module.exports = {
   getAdminSettings,
   updateAdminSettings,
@@ -160,4 +257,8 @@ module.exports = {
   addNotice,
   updateNotice,
   deleteNotice,
+  getFilterSettings,
+  getFilterSettingsByType,
+  updateFilterSetting,
+  initializeFilterSettings,
 };

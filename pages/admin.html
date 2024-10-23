@@ -34,6 +34,25 @@
     <button onclick="clearNoticeForm()">새 공지</button>
     <div id="noticeList"></div>
 
+    <h2>4. 필터 설정</h2>
+    <div class="filter-section">
+        <button class="initialize-button" onclick="initializeFilters()">필터 초기화</button>
+        
+        <div class="filter-group">
+            <div class="filter-title">날짜 필터</div>
+            <div id="dateFilters" class="filter-grid"></div>
+        </div>
+        
+        <div class="filter-group">
+            <div class="filter-title">브랜드 필터</div>
+            <div id="brandFilters" class="filter-grid"></div>
+        </div>
+        
+        <div class="filter-group">
+            <div class="filter-title">카테고리 필터</div>
+            <div id="categoryFilters" class="filter-grid"></div>
+        </div>
+    </div>
     <script>
         const API_URL = '/api';
         // 이미지 압축 함수
@@ -277,6 +296,90 @@
             }
         }
 
+        async function fetchFilterSettings() {
+            try {
+                const response = await fetch(`${API_URL}/admin/filter-settings`);
+                const settings = await response.json();
+                displayFilterSettings(settings);
+            } catch (error) {
+                console.error('Error fetching filter settings:', error);
+                alert('필터 설정을 불러오는데 실패했습니다.');
+            }
+        }
+
+        function displayFilterSettings(settings) {
+            const dateFilters = settings.filter(s => s.filter_type === 'date');
+            const brandFilters = settings.filter(s => s.filter_type === 'brand');
+            const categoryFilters = settings.filter(s => s.filter_type === 'category');
+
+            document.getElementById('dateFilters').innerHTML = dateFilters.map(createFilterToggle).join('');
+            document.getElementById('brandFilters').innerHTML = brandFilters.map(createFilterToggle).join('');
+            document.getElementById('categoryFilters').innerHTML = categoryFilters.map(createFilterToggle).join('');
+        }
+
+        function createFilterToggle(filter) {
+            return `
+                <div class="filter-item">
+                    <label class="toggle-switch">
+                        <input type="checkbox" 
+                            ${filter.is_enabled ? 'checked' : ''} 
+                            onchange="updateFilter('${filter.filter_type}', '${filter.filter_value}', this.checked)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span class="filter-value">${filter.filter_value}</span>
+                </div>
+            `;
+        }
+
+        async function updateFilter(filterType, filterValue, isEnabled) {
+            try {
+                const response = await fetch(`${API_URL}/admin/filter-settings`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ filterType, filterValue, isEnabled })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to update filter');
+                }
+                
+                // 업데이트가 성공적으로 이루어졌음을 사용자에게 알림
+                const action = isEnabled ? '활성화' : '비활성화';
+                console.log(`${filterType} 필터 "${filterValue}"가 ${action}되었습니다.`);
+            } catch (error) {
+                console.error('Error updating filter:', error);
+                alert('필터 설정 업데이트에 실패했습니다.');
+                // 실패 시 토글 되돌리기
+                await fetchFilterSettings();
+            }
+        }
+
+        async function initializeFilters() {
+            if (!confirm('모든 필터를 초기화하시겠습니까? 현재 데이터를 기반으로 필터가 재설정됩니다.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/admin/filter-settings/initialize`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    alert('필터가 성공적으로 초기화되었습니다.');
+                    await fetchFilterSettings();
+                } else {
+                    alert('필터 초기화에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('Error initializing filters:', error);
+                alert('필터 초기화 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 페이지 로드 시 필터 설정 불러오기
+        fetchFilterSettings();
         fetchNotices();
     </script>
 </body>
