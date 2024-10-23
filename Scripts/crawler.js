@@ -512,8 +512,10 @@ class Crawler {
       }, this.config);
 
       item.scheduled_date = this.extractDate(item.scheduled_date);
-      item.description = await myTranslator.rawTranslate(item.description);
-      item.accessory_code = await myTranslator.wordTranslate(item.accessory_code);
+      [item.description, item.accessoryCode] = await Promise.all([
+        await myTranslator.rawTranslate(item.description),
+        await myTranslator.wordTranslate(item.accessory_code),
+      ]);
       if (!item.description) item.description = '-';
 
       return item;
@@ -723,6 +725,6 @@ class BrandAuctionCrawler extends Crawler {
 const ecoAucCrawler = new Crawler(ecoAucConfig);
 const brandAuctionCrawler = new BrandAuctionCrawler(brandAuctionConfig);
 
-brandAuctionCrawler.crawlItemDetails(0, '730-12861').then((data) => {console.log(data)});
+ecoAucCrawler.crawlItemDetails(0, '5889929').then((data) => {console.log(data)});
 
 module.exports = { ecoAucCrawler, brandAuctionCrawler };
