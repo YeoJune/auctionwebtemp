@@ -234,17 +234,13 @@ class Crawler {
   async login(page) {
     return this.retryOperation(async () => {
       await page.goto(this.config.loginPageUrl, { waitUntil: 'networkidle0', timeout: this.pageTimeout });
-      console.log('a');
       await Promise.all([
         await page.type(this.config.signinSelectors.userId, this.config.loginData.userId),
         await page.type(this.config.signinSelectors.password, this.config.loginData.password),
       ]);
-      console.log('b');
-
       await page.click(this.config.signinSelectors.loginButton);
-      console.log('c');
-
       await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: this.pageTimeout });
+      console.log('completet to login page!');
     });
   }
   async loginCheckCrawler() {
@@ -252,8 +248,8 @@ class Crawler {
       const result = await this.initializeCrawler();
       this.crawlerBrowser = result.browser;
       this.crawlerPage = result.page;
+      console.log('crawler init!');
     }
-    console.log('crawler init!');
     await this.login(this.crawlerPage);
   }
   async loginCheckDetails() {
@@ -270,7 +266,7 @@ class Crawler {
     if (loginTasks.length > 0) {
       await Promise.all(loginTasks);
       this.isDetailLogins = true;
-      console.log('complete to login all!');
+      console.log('complete to login details!');
     }
   }
 
@@ -387,7 +383,7 @@ class Crawler {
       await this.crawlerPage.goto(url, { waitUntil: 'domcontentloaded', timeout: this.pageTimeout });
 
       const itemHandles = await this.crawlerPage.$$(this.config.crawlSelectors.itemContainer);
-      const [filteredHandles, filteredItems, remainItems]= await filterHandles(itemHandles, existingIds);
+      const [filteredHandles, filteredItems, remainItems]= await this.filterHandles(itemHandles, existingIds);
       const limit = pLimit(5);
 
       const pageItemsPromises = [];
