@@ -164,10 +164,10 @@ class DatabaseManager {
         // MariaDB compliant query using FIND_IN_SET alternative
         const deleteQuery = `
           DELETE FROM ${tableName}
-          WHERE item_id NOT IN (${itemIds.join(',')})
+          WHERE item_id NOT IN (?)
         `;
         
-        await conn.query(deleteQuery);
+        await conn.query(deleteQuery, [itemIds]);
       }
   
       /*
