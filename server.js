@@ -57,8 +57,8 @@ app.use(session({
 
 // 세션 디버깅을 위한 미들웨어
 app.use((req, res, next) => {
-  console.debug('Session ID:', req.sessionID);
-  console.debug('Session Data:', req.session);
+  //console.debug('Session ID:', req.sessionID);
+  //console.debug('Session Data:', req.session);
   next();
 });
 

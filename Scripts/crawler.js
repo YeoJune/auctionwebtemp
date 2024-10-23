@@ -92,6 +92,88 @@ const brandAuctionConfig = {
   searchParams: (categoryId, page = 1) => `?kaijoKbn=0&genre_select=${categoryId}&page=${page}`,
 };
 
+const ecoAucValueConfig = {
+  name: 'EcoAuc',
+  baseUrl: 'https://www.ecoauc.com',
+  accountUrl: 'https://www.ecoauc.com/client/users',
+  loginPageUrl: 'https://www.ecoauc.com/client/users/sign-in',
+  searchUrl: 'https://www.ecoauc.com/client/market-prices',
+  loginData: {
+    'userId': process.env.CRAWLER_EMAIL1,
+    'password': process.env.CRAWLER_PASSWORD1,
+  },
+  categoryIds: ['1', '2', '3', '4', '5', '8', '9', '27'],
+  categoryTable: {1: "시계", 2: "가방", 3: "귀금속", 4: "악세서리", 5: "소품", 8: "의류", 9: "신발", 27: "기타"},
+  signinSelectors: {
+    userId: 'input[name="email_address"]',
+    password: 'input[name="password"]',
+    loginButton: 'button.btn-signin[type="submit"]',
+  },
+  crawlSelectors: {
+    paginationLast: '.last a',
+    itemContainer: '.col-sm-6.col-md-4.col-lg-3.mb-grid-card',
+    id: '.fa.fa-times.view-current',
+    title: '.card b',
+    brand: 'small.show-case-bland',
+    rank: '.canopy.canopy-3.text-default > li:nth-child(1)',
+    startingPrice: '.canopy.canopy-3.text-default > li:nth-child(2) big',
+    image: '.pc-image-area img',
+    scheduledDate: 'span.market-title',
+  },
+  crawlDetailSelectors: {
+    images: '.item-thumbnail',
+    description: '.item-info.view-form',
+    binder: '.col-md-8.col-lg-7 .dl-horizontal',
+  },
+  searchParams: (categoryId, page) => {
+    const date = new Date.now();
+    return `?limit=200&sortKey=1&tableType=grid&master_item_categories[0]=${categoryId}&page=${page}&target_start_year=${date.getFullYear()}&target_start_month=${date.getMonth()}&target_end_year=${date.getFullYear()}&target_end_month=${date.getMonth() + 1}&`;
+  },
+  detailUrl: (itemId) => `https://www.ecoauc.com/client/auction-items/view/${itemId}`,
+};
+const brandAuctionValueConfig = {
+  name: 'Brand Auction',
+  baseUrl: 'https://member.brand-auc.com',
+  accountUrl: 'https://u.brand-auc.com/configuration',
+  loginPageUrl: 'https://member.brand-auc.com/login',
+  searchUrl: 'https://u.brand-auc.com/previewSearch',
+  loginData: {
+    userId: process.env.CRAWLER_EMAIL2,
+    password: process.env.CRAWLER_PASSWORD2,
+  },
+  signinSelectors: {
+    userId: 'input[name="username"]',
+    password: 'input[name="password"]',
+    loginButton: '#pcLoginButton',
+  },
+  crawlSelectors: {
+    searchButton: '.main_action_button button',
+    itemsPerPageSelect: '.view_count_select select',
+    itemsPerPageSelecter: '.view_count_select  option:nth-child(3)',
+    totalPagesSpan: '.now_page span',
+    pageSelect: '.now_page .select_box select',
+    resetButton: '#search_times button',
+    search1: 'input[name=uketsukeNoFrom]',
+    search2: 'input[name=uketsukeNoTo]',
+    itemContainer: '#item_list_area > li',
+    id: '.receipt_number_header',
+    title: '.item_date .item_name_header',
+    brand: '.item_date .maker_header',
+    rank: '.appraisal',
+    startingPrice: '.price',
+    image: '.thumbnail img',
+    scheduledDate: '.held_date div:last-child span',
+    category: '.genre_type_date .genre_header',
+    status: '.state_content',
+  },
+  crawlDetailSelectors: {
+    images: '.other_images img',
+    description: '.tokki',
+    codeParent: '#detail_date'
+  },
+  searchParams: (categoryId, page = 1) => `?kaijoKbn=0&genre_select=${categoryId}&page=${page}`,
+};
+
 class Crawler {
   constructor(config) {
     this.config = config;
@@ -310,7 +392,9 @@ class Crawler {
       console.log('complete to login details!');
     }
   }
+}
 
+class EcoAuctionCrawler extends Crawler {
   async getTotalPages(categoryId) {
     return this.retryOperation(async () => {
       const url = this.config.searchUrl + this.config.searchParams(categoryId, 1);
@@ -752,8 +836,383 @@ class BrandAuctionCrawler extends Crawler {
     });
   }
 }
+class EcoAuctionValueCrawler extends Crawler {
+  async getTotalPages(categoryId) {
+    return this.retryOperation(async () => {
+      const url = this.config.searchUrl + this.config.searchParams(categoryId, 1);
+      await this.crawlerPage.goto(url, { waitUntil: 'domcontentloaded', timeout: this.pageTimeout });
+  
+      const paginationExists = await this.crawlerPage.$(this.config.crawlSelectors.paginationLast);
+      
+      if (paginationExists) {
+        const href = await this.crawlerPage.$eval(this.config.crawlSelectors.paginationLast, el => el.getAttribute('href'));
+        const match = href.match(/page=(\d+)/);
+        if (match) {
+          return parseInt(match[1], 10);
+        }
+      } else {
+        const itemExists = await this.crawlerPage.$(this.config.crawlSelectors.itemContainer);
+        return itemExists ? 1 : 0;
+      }
+      throw new Error('Unable to determine total pages');
+    });
+  }
+  async crawlAllItems(existingIds) {
+    await this.closeDetailBrowsers();
+    await this.loginCheckCrawler();
 
-const ecoAucCrawler = new Crawler(ecoAucConfig);
+    const startTime = Date.now();
+    
+    const allCrawledItems = [];
+    for (const categoryId of this.config.categoryIds) {
+      const categoryItems = [];
+
+      console.log(`Starting crawl for category ${categoryId}`);
+      this.config.currentCategoryId = categoryId;
+
+      const totalPages = await this.getTotalPages(categoryId);
+      console.log(`Total pages in category ${categoryId}: ${totalPages}`);
+      let pageItems, processedItems, isEnd = false;
+
+      for (let page = 1; page <= totalPages; page++) {
+        pageItems = await this.crawlPage(categoryId, page, existingIds);
+        
+        for(let item of pageItems) if (item.item_id && !item.japanese_title) isEnd = true;
+        processedItems = await processImagesInChunks(pageItems);
+        categoryItems.push(...processedItems);
+        if (isEnd) break;
+      }
+
+      if (categoryItems && categoryItems.length > 0) {
+        allCrawledItems.push(...categoryItems);
+        console.log(`Completed crawl for category ${categoryId}. Items found: ${categoryItems.length}`);
+      } else {
+        console.log(`No items found for category ${categoryId}`);
+      }
+    }
+
+    if (allCrawledItems.length === 0) {
+      console.log('No items were crawled. Aborting save operation.');
+      return [];
+    }
+
+    this.closeCrawlerBrowser();
+
+    console.log(`Crawling completed for all categories. Total items: ${allCrawledItems.length}`);
+
+    const endTime = Date.now();
+    const executionTime = endTime - startTime;
+    console.log(`Refresh operation completed in ${this.formatExecutionTime(executionTime)}`);
+
+    return allCrawledItems;
+  }
+
+  async crawlPage(categoryId, page, existingIds) {
+    return this.retryOperation(async () => {
+      console.log(`Crawling page ${page} in category ${categoryId}...`);
+      const url = this.config.searchUrl + this.config.searchParams(categoryId, page);
+      
+      await this.crawlerPage.goto(url, { waitUntil: 'domcontentloaded', timeout: this.pageTimeout });
+
+      const itemHandles = await this.crawlerPage.$$(this.config.crawlSelectors.itemContainer);
+      const limit = pLimit(5);
+
+      const pageItemsPromises = [];
+      for(let i = 0; i < itemHandles.length; i++) {
+        pageItemsPromises.push(limit(async () => {
+          const item = await this.extractItemInfo(itemHandles[i], existingIds);
+          itemHandles[i].dispose();
+          return item;
+        }));
+      }
+
+      const pageItems = await Promise.all(pageItemsPromises);
+
+      const filteredPageItems = pageItems.filter(item => item !== null);
+
+      console.log(`Crawled ${filteredPageItems.length} items from page ${page}`);
+
+      return [...filteredPageItems];
+    });
+  }
+
+  async filterHandle(itemHandle, existingIds) {
+    const item = await itemHandle.evaluate((el, config) => {
+      const id = el.querySelector(config.crawlSelectors.id);
+      const scheduledDate = el.querySelector(config.crawlSelectors.scheduledDate);
+      return {
+        item_id: id ? id.getAttribute('data-auction-item-id') : null,
+        scheduled_date: scheduledDate ? scheduledDate.textContent.trim() : null,
+      };
+    }, this.config);
+    item.scheduled_date = this.extractDate(item.scheduled_date);
+    if (!this.isCollectionDay(item.scheduled_date)) return null;
+    if (existingIds.has(item.item_id)) return {item_id: item.item_id};
+    else return item;
+  }
+
+  async extractItemInfo(itemHandle, existingIds) {
+    const item = await itemHandle.evaluate((el, config) => {
+      const id = el.querySelector(config.crawlSelectors.id);
+      const scheduledDate = el.querySelector(config.crawlSelectors.scheduledDate);
+      const title = el.querySelector(config.crawlSelectors.title);
+      const brand = el.querySelector(config.crawlSelectors.brand);
+      const rankParent = el.querySelector(config.crawlSelectors.rank);
+      const rank = rankParent ? rankParent.childNodes[4] : null;
+      const startingPrice = el.querySelector(config.crawlSelectors.startingPrice);
+      const image = el.querySelector(config.crawlSelectors.image);
+      return {
+        item_id: id ? id.getAttribute('data-auction-item-id') : null,
+        scheduled_date: scheduledDate ? scheduledDate.textContent.trim() : null,
+        japanese_title: title ? title.textContent.trim() : null,
+        brand: brand ? brand.textContent.trim() : null,
+        rank: rank ? rank.textContent.trim() : null,
+        starting_price: startingPrice ? startingPrice.textContent.trim() : null,
+        image: image ? image.src.replace(/\?.*$/, '') + '?w=520&h=390' : null,
+        category: config.categoryTable[config.currentCategoryId],
+      };
+    }, this.config);
+
+    item.scheduled_date = this.extractDate(item.scheduled_date);
+    if (existingIds.has(item.item_id)) return {item_id: item.item_id};
+    item.starting_price = this.currencyToInt(item.starting_price);
+    item.auc_num = '1'
+
+    return item;
+  }
+
+  async crawlItemDetails(idx, itemId) {
+    await this.loginCheckDetails();
+  
+    return this.retryOperation(async () => {
+      const page = this.detailPages[idx];
+      await page.goto(this.config.detailUrl(itemId), {
+        waitUntil: 'domcontentloaded',
+        timeout: this.pageTimeout
+      });
+
+      const item = await page.evaluate((config) => {
+        const images = [];
+        const imageElements = document.querySelectorAll(config.crawlDetailSelectors.images);
+  
+        imageElements.forEach((e, i) => {
+          if (i % 3 === 0) {
+            const style = e.getAttribute('style').replace(/[\'\"]/g, '');
+            const urlMatch = style.match(/url\((.*?)\)/);
+            if (urlMatch) {
+              const imageUrl = urlMatch[1].replace(/&quot;/g, '').split('?')[0].trim();
+              images.push(imageUrl + '?w=520&h=390');
+            }
+          }
+        });
+  
+        const binder = document.querySelector(config.crawlDetailSelectors.binder);
+        const scheduledDate = binder?.children[5]?.textContent.trim();
+        const description = document.querySelector(config.crawlDetailSelectors.description)?.children[3].textContent.trim();
+        const accessoryCode = binder?.children[13]?.textContent.trim();
+  
+        return {
+          image: images[0],
+          additional_images: JSON.stringify(images),
+          scheduled_date: scheduledDate || '',
+          description: description || '-',
+          accessory_code: accessoryCode || '',
+        };
+      }, this.config);
+      item.scheduled_date = this.extractDate(item.scheduled_date);
+      if (!item.description) item.description = '-';
+
+      return item;
+    });
+  }
+}
+
+class BrandAuctionValueCrawler extends Crawler {
+  async waitForLoading(page, timeout = 30 * 1000) {
+    const loadingElements = await page.$$('app-loading');
+    for (const e of loadingElements) {
+      if (e) {
+        await page.waitForFunction((e) => {
+          return e && e.children.length == 0;
+        }, {timeout: timeout}, e);
+      }
+      e.dispose();
+    }
+  }
+
+  async crawlAllItems(existingIds) {
+    await this.closeDetailBrowsers();
+    await this.loginCheckCrawler();
+    const startTime = Date.now();
+    translator.TRANS_COUNT = 0;
+
+    return this.retryOperation(async () => {
+      await this.crawlerPage.goto(this.config.searchUrl, { waitUntil: 'networkidle0', timeout: this.pageTimeout });
+      await this.crawlerPage.click(this.config.crawlSelectors.searchButton);
+      await this.waitForLoading(this.crawlerPage);
+
+      await this.crawlerPage.$eval(this.config.crawlSelectors.itemsPerPageSelecter, el => el.value = '500');
+      await this.crawlerPage.select(this.config.crawlSelectors.itemsPerPageSelect, '500');
+      await this.waitForLoading(this.crawlerPage);
+      await this.crawlerPage.waitForSelector(this.config.crawlSelectors.itemContainer);
+
+      const totalPageText = await this.crawlerPage.$eval(this.config.crawlSelectors.totalPagesSpan, el => el.textContent);
+      const totalPages = parseInt(totalPageText.match(/\d+/g).join(''));
+
+      const allItems = [];
+      console.log(`Crawling for total page ${totalPages}`);
+      let itemHandles, pageItemsPromises, pageItems, filteredPageItems;      
+      const limit = pLimit(5);
+      let isEnd = false;
+
+      for (let page = 1; page <= totalPages; page++) {
+        console.log(`Crawling page ${page} of ${totalPages}`);
+
+        await this.crawlerPage.select(this.config.crawlSelectors.pageSelect, page.toString());
+        await this.waitForLoading(this.crawlerPage);
+        
+        itemHandles = await this.crawlerPage.$$(this.config.crawlSelectors.itemContainer);
+        pageItemsPromises = [];
+        for(let i = 0; i < itemHandles.length; i++) {
+          pageItemsPromises.push(limit(async () => {
+            const item = await this.extractItemInfo(itemHandles[i], existingIds);
+            itemHandles[i].dispose();
+            return item;
+          }));
+        }
+
+        pageItems = await Promise.all(pageItemsPromises);
+
+        for(let item of pageItems) if (item.item_id && !item.japanese_title) isEnd = true;
+        processedItems = await processImagesInChunks(pageItems);
+        filteredPageItems.push(...processedItems);
+        if (isEnd) break;
+
+        console.log(`Crawled ${filteredPageItems.length} items from page ${page}`);
+
+        allItems.push(...filteredPageItems);
+      }
+
+      this.closeCrawlerBrowser();
+      translator.cleanupCache();
+
+      console.log(`Total items crawled: ${allItems.length}`);
+      console.log(`translate count: ${translator.TRANS_COUNT}`);
+      
+      const endTime = Date.now();
+      const executionTime = endTime - startTime;
+      console.log(`Refresh operation completed in ${this.formatExecutionTime(executionTime)}`);
+
+      return allItems;
+    });
+  }
+
+  async extractItemInfo(itemHandle, existingIds) {
+    const item = await itemHandle.evaluate((el, config) => {
+      const id = el.querySelector(config.crawlSelectors.id);
+      const scheduledDate = el.querySelector(config.crawlSelectors.scheduledDate);
+      const title = el.querySelector(config.crawlSelectors.title);
+      const brand = el.querySelector(config.crawlSelectors.brand);
+      const rank = el.querySelector(config.crawlSelectors.rank);
+      const startingPrice = el.querySelector(config.crawlSelectors.startingPrice);
+      const image = el.querySelector(config.crawlSelectors.image);
+      const category = el.querySelector(config.crawlSelectors.category);
+
+      return {
+        item_id: id ? id.textContent.trim() : null,
+        scheduled_date: scheduledDate ? scheduledDate.textContent.trim() : null,
+        japanese_title: title ? title.textContent.trim() : null,
+        brand: brand ? brand.textContent.trim() : null,
+        rank: rank ? rank.textContent.trim() : null,
+        starting_price: startingPrice ? startingPrice.textContent.trim() : null,
+        image: image ? image.src.replace(/(brand_img\/)(\d+)/, '$16') : null,
+        category: category.textContent.trim(),
+      };
+    }, this.config);
+
+    if (existingIds.has(item.item_id)) return {item_id: item.item_id};
+    item.japanese_title = this.convertFullWidthToAscii(item.japanese_title);
+    item.brand = this.convertFullWidthToAscii(item.brand);
+    item.scheduled_date = this.extractDate(item.scheduled_date);
+    item.starting_price = this.currencyToInt(item.starting_price);
+    item.auc_num = '2';
+
+    return item;
+  }
+  async crawlItemDetails(idx, itemId) {
+    await this.loginCheckDetails();
+  
+    const startTime = Date.now();
+    return this.retryOperation(async () => {
+      const browser = this.detailBrowsers[idx];
+      const page = this.detailPages[idx];
+      await page.goto(this.config.searchUrl, { waitUntil: 'networkidle0', timeout: this.pageTimeout });
+      console.log('search Url loaded');
+      await page.click(this.config.crawlSelectors.resetButton);
+      await Promise.all([
+        await page.type(this.config.crawlSelectors.search1, itemId),
+        await page.type(this.config.crawlSelectors.search2, itemId),
+      ]);
+      await page.click(this.config.crawlSelectors.searchButton);
+      const newPagePromise = new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+          reject(new Error('Timeout waiting for new page'));
+        }, 5000);
+  
+        browser.once('targetcreated', (target) => {
+          clearTimeout(timeoutId);
+          resolve(target.page());
+        });
+      });
+      await this.waitForLoading(page);
+      
+      await page.click(this.config.crawlSelectors.itemContainer);
+      const newPage = await newPagePromise;
+      await this.initPage(newPage);
+      await this.sleep(500);
+      await this.waitForLoading(newPage, 5000);
+
+      let item;
+      try {
+        item = await newPage.evaluate((config) => {
+          const images = Array.from(document.querySelectorAll(config.crawlDetailSelectors.images))
+            .map(img => {
+              const src = img.getAttribute('src');
+              if (src && src.startsWith('http')) {
+                return src.replace(/(brand_img\/)(\d+)/, '$16');
+              }
+              return null;
+            })
+            .filter(Boolean);
+    
+          const description = document.querySelector(config.crawlDetailSelectors.description)?.textContent.trim().replace(/\s{2,}/g, '\t') || null;
+          const codeParent = document.querySelector(config.crawlDetailSelectors.codeParent);
+          const accessoryCode = codeParent?.children[6]?.children[2]?.children[1]?.textContent.trim() || null;
+    
+          return {
+            image: images[0],
+            additional_images: images.length > 0 ? JSON.stringify(images) : null,
+            description: description || '',
+            accessory_code: accessoryCode || '',
+          };
+        }, this.config);
+      } catch (error) {
+        throw(error);
+      } finally {
+        await newPage.close();
+        await page.click(this.config.crawlSelectors.resetButton);
+      }
+      if (!item.description) item.description = '-';
+
+      const endTime = Date.now();
+      const executionTime = endTime - startTime;
+      console.log(this.formatExecutionTime(executionTime));
+      return item;
+    });
+  }
+}
+
+const ecoAucCrawler = new EcoAuctionCrawler(ecoAucConfig);
 const brandAuctionCrawler = new BrandAuctionCrawler(brandAuctionConfig);
 
 module.exports = { ecoAucCrawler, brandAuctionCrawler };
