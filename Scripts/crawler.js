@@ -533,6 +533,25 @@ class BrandAuctionCrawler extends Crawler {
       e.dispose();
     }
   }
+
+  async filterHandle(itemHandle, existingIds) {
+    const item = await itemHandle.evaluate((el, config) => {
+      const id = el.querySelector(config.crawlSelectors.id);
+      const status = el.querySelector(config.crawlSelectors.status);
+      const scheduledDate = el.querySelector(config.crawlSelectors.scheduledDate);
+      return {
+        item_id: id ? id.textContent.trim() : null,
+        status: status ? status.textContent.trim() : null,
+        scheduled_date: scheduledDate ? scheduledDate.textContent.trim() : null,
+      };
+    }, this.config);
+    item.scheduled_date = this.extractDate(item.scheduled_date);
+    if (item.status == '保留成約' || item.status == '成約') return null;
+    delete item.status;
+    if (existingIds.has(item.item_id)) return {item_id: item.item_id};
+    else return item;
+  }
+
   async crawlAllItems(existingIds) {
     await this.closeDetailBrowsers();
     await this.loginCheckCrawler();
@@ -542,8 +561,8 @@ class BrandAuctionCrawler extends Crawler {
     return this.retryOperation(async () => {
       await this.crawlerPage.goto(this.config.searchUrl, { waitUntil: 'networkidle0', timeout: this.pageTimeout });
       await this.crawlerPage.click(this.config.crawlSelectors.searchButton);
-
       await this.waitForLoading(this.crawlerPage);
+
       await this.crawlerPage.$eval(this.config.crawlSelectors.itemsPerPageSelecter, el => el.value = '500');
       await this.crawlerPage.select(this.config.crawlSelectors.itemsPerPageSelect, '500');
       await this.waitForLoading(this.crawlerPage);
@@ -553,32 +572,33 @@ class BrandAuctionCrawler extends Crawler {
 
       const allItems = [];
       console.log(`Crawling for total page ${totalPages}`);
-      let itemHandles, limit, pageItemsPromises, pageItems;
-      
+      let itemHandles, filteredHandles, filteredItems, remainItems, pageItemsPromises, pageItems, filteredPageItems;      
+      const limit = pLimit(5);
+
       for (let page = 1; page <= totalPages; page++) {
         console.log(`Crawling page ${page} of ${totalPages}`);
 
         await this.crawlerPage.select(this.config.crawlSelectors.pageSelect, page.toString());
         await this.waitForLoading(this.crawlerPage);
-        await this.sleep(3000);
         
         itemHandles = await this.crawlerPage.$$(this.config.crawlSelectors.itemContainer);
-        limit = pLimit(5); // 동시에 처리할 아이템 수 제한
-
-        pageItemsPromises = itemHandles.map(handle => 
-          limit(async () => {
-            const item = await this.extractItemInfo(handle, existingIds);
-            handle.dispose();
+        [filteredHandles, filteredItems, remainItems]= await this.filterHandles(itemHandles, existingIds);
+        pageItemsPromises = [];
+        for(let i = 0; i < filteredItems.length; i++) {
+          pageItemsPromises.push(limit(async () => {
+            const item = await this.extractItemInfo(filteredHandles[i], filteredItems[i]);
+            filteredHandles[i].dispose();
             return item;
-          })
-        );
+          }));
+        }
 
         pageItems = await Promise.all(pageItemsPromises);
-        pageItems = pageItems.filter((e) => e.item_id);
 
-        pageItems = await processImagesInChunks(pageItems);
-        
-        allItems.push(...pageItems);
+        filteredPageItems = pageItems.filter(item => item !== null);
+
+        console.log(`Crawled ${filteredPageItems.length} items from page ${page}`);
+
+        allItems.push(...filteredPageItems, ...remainItems);
       }
 
       this.closeCrawlerBrowser();
@@ -594,23 +614,13 @@ class BrandAuctionCrawler extends Crawler {
     });
   }
 
-  async extractItemInfo(itemHandle, existingIds) {
-    const status = await itemHandle.$eval(this.config.crawlSelectors.status, el => el.textContent.trim());
-    if (status == '保留成約' || status == '成約') {
-      return {status: status};
-    }
-    const id = await itemHandle.$eval(this.config.crawlSelectors.id, el => el.textContent.trim());
-    if (existingIds.has(id)) {
-      return {item_id: id};
-    }
+  async extractItemInfo(itemHandle, item0) {
     const item = await itemHandle.evaluate((el, config) => {
-      const id = el.querySelector(config.crawlSelectors.id);
       const title = el.querySelector(config.crawlSelectors.title);
       const brand = el.querySelector(config.crawlSelectors.brand);
       const rank = el.querySelector(config.crawlSelectors.rank);
       const startingPrice = el.querySelector(config.crawlSelectors.startingPrice);
       const image = el.querySelector(config.crawlSelectors.image);
-      const scheduledDate = el.querySelector(config.crawlSelectors.scheduledDate);
       const category = el.querySelector(config.crawlSelectors.category);
 
       return {
@@ -620,19 +630,18 @@ class BrandAuctionCrawler extends Crawler {
         rank: rank ? rank.textContent.trim() : null,
         starting_price: startingPrice ? startingPrice.textContent.trim() : null,
         image: image ? image.src.replace(/(brand_img\/)(\d+)/, '$16') : null,
-        scheduled_date: scheduledDate ? scheduledDate.textContent.trim() : null,
         category: category.textContent.trim(),
       };
     }, this.config);
-    
-    item.korean_title = await myTranslator.wordTranslate(this.convertFullWidthToAscii(item.japanese_title));
-    item.brand = await myTranslator.wordTranslate(this.convertFullWidthToAscii(item.brand));
+    [item.korean_title, item.brand, item.category] = await Promise.all([
+      await myTranslator.wordTranslate(this.convertFullWidthToAscii(item.japanese_title)),
+      await myTranslator.wordTranslate(this.convertFullWidthToAscii(item.brand)),
+      await myTranslator.wordTranslate(item.category),
+    ]);
     item.starting_price = this.currencyToInt(item.starting_price);
-    item.scheduled_date = this.extractDate(item.scheduled_date);
-    item.category = await myTranslator.wordTranslate(item.category);
     item.auc_num = '2';
 
-    return item;
+    return Object.assign(item0, item);
   }
   async crawlItemDetails(idx, itemId) {
     await this.loginCheckDetails();
