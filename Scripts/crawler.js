@@ -629,7 +629,7 @@ class BrandAucCrawler extends Crawler {
     );
     const items = await Promise.all(filterPromises);
     
-    console.log('items:', ''.join(items));
+    console.log('items:', items.map(item => JSON.stringify(item)).join('|'));
     let filteredHandles = [], filteredItems = [], remainItems = [];
     for(let i = 0; i < items.length; i++) {
       if (items[i]) {
@@ -1197,6 +1197,6 @@ const brandAucCrawler = new BrandAucCrawler(brandAucConfig);
 const ecoAucValueCrawler = new EcoAucValueCrawler(ecoAucValueConfig);
 const brandAucValueCrawler = new BrandAucValueCrawler(brandAucConfig);
 
-brandAucCrawler.crawlAllItems(new Set()).then((data) => {console.log(data[0], data.length)});
+//brandAucCrawler.crawlAllItems(new Set()).then((data) => {console.log(data[0], data.length)});
 
 module.exports = { ecoAucCrawler, brandAucCrawler, ecoAucValueCrawler, brandAucValueCrawler };
