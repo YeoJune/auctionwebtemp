@@ -325,7 +325,7 @@
                             onchange="updateFilter('${filter.filter_type}', '${filter.filter_value}', this.checked)">
                         <span class="toggle-slider"></span>
                     </label>
-                    <span class="filter-value">${filter.filter_type == date ? (new Date(filter.filter_value) - 1) : filter.filter_value}</span>
+                    <span class="filter-value">${filter.filter_type == 'date' ? (new Date(filter.filter_value) - 1) : filter.filter_value}</span>
                 </div>
             `;
         }
