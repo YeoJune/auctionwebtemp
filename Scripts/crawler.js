@@ -234,14 +234,17 @@ class Crawler {
   async login(page) {
     return this.retryOperation(async () => {
       await page.goto(this.config.loginPageUrl, { waitUntil: 'networkidle0', timeout: this.pageTimeout });
+      console.log('a');
       await Promise.all([
-        page.type(this.config.signinSelectors.userId, this.config.loginData.userId),
-        page.type(this.config.signinSelectors.password, this.config.loginData.password),
+        await page.type(this.config.signinSelectors.userId, this.config.loginData.userId),
+        await page.type(this.config.signinSelectors.password, this.config.loginData.password),
       ]);
-      await Promise.all([
-        await page.click(this.config.signinSelectors.loginButton),
-        await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: this.pageTimeout }),
-      ]);
+      console.log('b');
+
+      await page.click(this.config.signinSelectors.loginButton);
+      console.log('c');
+
+      await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: this.pageTimeout });
     });
   }
   async loginCheckCrawler() {
@@ -250,7 +253,7 @@ class Crawler {
       this.crawlerBrowser = result.browser;
       this.crawlerPage = result.page;
     }
-
+    console.log('crawler init!');
     await this.login(this.crawlerPage);
   }
   async loginCheckDetails() {
