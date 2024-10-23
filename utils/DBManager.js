@@ -11,7 +11,7 @@ class DatabaseManager {
     this.crawledItemColumns = [
       'item_id', 'korean_title', 'japanese_title', 'scheduled_date', 'auc_num',
       'category', 'brand', 'rank', 'starting_price', 'image', 'description',
-      'additional_images', 'accessory_code'
+      'additional_images', 'accessory_code', 'final_price'
     ];
     this.IMAGE_DIR = path.join(__dirname, '..', 'public', 'images', 'products');
   }
@@ -30,7 +30,7 @@ class DatabaseManager {
     }
   }
 
-  async updateItemDetails(itemId, newDetails) {
+  async updateItemDetails(itemId, newDetails, tableName) {
     let conn;
     try {
       await this.withRetry( async () => {
@@ -51,7 +51,7 @@ class DatabaseManager {
           return;
         }
   
-        const updateQuery = `UPDATE crawled_items SET ${updateFields.join(', ')} WHERE item_id = ?`;
+        const updateQuery = `UPDATE ${tableName} SET ${updateFields.join(', ')} WHERE item_id = ?`;
         updateValues.push(itemId);
   
         await conn.query(updateQuery, updateValues);
@@ -73,20 +73,31 @@ class DatabaseManager {
       conn = await this.pool.getConnection();
   
       // 데이터베이스 쿼리 병렬 실행
-      const [activeImagesPromise, bidImagesPromise] = await Promise.all([
+      const [activeImagesPromise, activeValueImagesPromise, bidImagesPromise] = await Promise.all([
         conn.query(`
           SELECT image, additional_images
           FROM crawled_items`),
         conn.query(`
+          SELECT image, additional_images
+          FROM values_items`),
+        conn.query(`
           SELECT image
-          FROM bids`)
+          FROM bids`),
       ]);
   
       const [activeImages] = activeImagesPromise;
+      const [activeValueImages] = activeValueImagesPromise;
       const [bidImages] = bidImagesPromise;
   
       // 활성 이미지 경로 처리
       activeImages.forEach(item => {
+        if (item.image) activeImagePaths.add(item.image);
+        if (item.additional_images) {
+          JSON.parse(item.additional_images).forEach(img => activeImagePaths.add(img));
+        }
+      });
+
+      activeValueImages.forEach(item => {
         if (item.image) activeImagePaths.add(item.image);
         if (item.additional_images) {
           JSON.parse(item.additional_images).forEach(img => activeImagePaths.add(img));
@@ -136,7 +147,7 @@ class DatabaseManager {
       activeImagePaths.clear();
     }
   }
-  async deleteItemsWithout(itemIds) {
+  async deleteItemsWithout(itemIds, tableName) {
     let conn;
     try {
       conn = await this.pool.getConnection();
@@ -145,14 +156,14 @@ class DatabaseManager {
       if (!itemIds.length) {
         // If no items provided, delete all items for this auction
         const deleteAllQuery = `
-          DELETE FROM crawled_items
+          DELETE FROM ${tableName}
           WHERE auc_num = ?
         `;
         await conn.query(deleteAllQuery);
       } else {
         // MariaDB compliant query using FIND_IN_SET alternative
         const deleteQuery = `
-          DELETE FROM crawled_items
+          DELETE FROM ${tableName}
           WHERE item_id NOT IN (${itemIds.join(',')})
         `;
         
@@ -163,7 +174,7 @@ class DatabaseManager {
       // If you need to clean up wishlists, use this query:
       await conn.query(`
         DELETE w FROM wishlists w
-        LEFT JOIN crawled_items ci ON w.item_id = ci.item_id
+        LEFT JOIN ${tableName} ci ON w.item_id = ci.item_id
         WHERE ci.item_id IS NULL
       `);
       */
@@ -176,7 +187,7 @@ class DatabaseManager {
       if (conn) await conn.release();
     }
   }
-  async saveItems(items, batchSize = 1000) {
+  async saveItems(items, tableName, batchSize = 1000) {
     if (!items || !Array.isArray(items)) throw new Error("Invalid input: items must be an array");
     
     let conn;
@@ -196,7 +207,7 @@ class DatabaseManager {
           for (let i = 0; i < validItems.length; i += batchSize) {
             const batch = validItems.slice(i, i + batchSize);
             const insertQuery = `
-              INSERT INTO crawled_items (${columns.join(', ')})
+              INSERT INTO ${tableName} (${columns.join(', ')})
               VALUES ${batch.map(() => `(${placeholders})`).join(', ')}
               ON DUPLICATE KEY UPDATE ${updateClauses}
             `;
@@ -217,7 +228,7 @@ class DatabaseManager {
                   return value;
                 });
                 const singleInsertQuery = `
-                  INSERT INTO crawled_items (${columns.join(', ')})
+                  INSERT INTO ${tableName} (${columns.join(', ')})
                   VALUES (${placeholders})
                   ON DUPLICATE KEY UPDATE ${updateClauses}
                 `;
