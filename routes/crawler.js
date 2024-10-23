@@ -150,6 +150,44 @@ async function crawlAll() {
   }
 }
 
+async function crawlAllValues() {
+  try {
+    if (ecoAucValueCrawler.isRefreshing || brandAucValueCrawler.isRefreshing) {
+      throw new Error("already crawling");
+    } else {
+      const [existingItems] = await pool.query('SELECT item_id, auc_num FROM values_items');
+      const existingEcoAucIds = new Set(existingItems.filter(item => item.auc_num == 1).map(item => item.item_id));
+      const existingBrandAuctionIds = new Set(existingItems.filter(item => item.auc_num == 2).map(item => item.item_id));
+      
+      ecoAucValueCrawler.isRefreshing = true;
+      await brandAucValueCrawler.closeCrawlerBrowser();
+      await brandAucValueCrawler.closeDetailBrowsers();
+      let ecoAucItems = await ecoAucValueCrawler.crawlAllItems(existingEcoAucIds);
+      ecoAucValueCrawler.isRefreshing = false;
+
+      brandAucValueCrawler.isRefreshing = true;
+      await ecoAucValueCrawler.closeCrawlerBrowser();
+      await ecoAucValueCrawler.closeDetailBrowsers();
+      let brandAucItems = await brandAucValueCrawler.crawlAllItems(existingBrandAuctionIds);
+      brandAucValueCrawler.isRefreshing = false;
+
+      if (!ecoAucItems) ecoAucItems = [];
+      if (!brandAucItems) brandAucItems = [];
+      const allItems = [
+        ...ecoAucItems,
+        ...brandAucItems
+      ];
+      await DBManager.saveItems(allItems, 'values_items');
+      await DBManager.deleteItemsWithout(allItems.map((item) => item.item_id), 'values_items');
+      await DBManager.cleanupUnusedImages();
+      await initializeFilterSettings();
+    }
+  } catch (error) {
+    ecoAucCrawler.isRefreshing = false;
+    brandAucCrawler.isRefreshing = false;
+    throw (error);
+  }
+}
 router.get('/crawl', async (req, res) => {
   try {
     await crawlAll();
@@ -164,6 +202,17 @@ router.get('/crawl', async (req, res) => {
 router.post('/crawl-item-details/:itemId', (req, res) => {
   const { itemId } = req.params;
   addToQueue(itemId, res);
+});
+
+router.get('/crawl-values', async (req, res) => {
+  try {
+    await crawlAllValues();
+
+    res.json({ message: 'Crawling and image processing completed successfully' });
+  } catch (error) {
+    console.error('Crawling error:', error);
+    res.status(500).json({ message: 'Error during crawling' });
+  }
 });
 
 const scheduleCrawling = async () => {
