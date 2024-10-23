@@ -673,7 +673,6 @@ class BrandAuctionCrawler extends Crawler {
       await page.click(this.config.crawlSelectors.itemContainer);
       const newPage = await newPagePromise;
       await this.initPage(newPage);
-      await this.sleep(500);
       await this.waitForLoading(newPage, 5000);
 
       let item;
@@ -714,7 +713,7 @@ class BrandAuctionCrawler extends Crawler {
 
       const endTime = Date.now();
       const executionTime = endTime - startTime;
-      console.log(executionTime);
+      console.log(this.formatExecutionTime(executionTime));
       return item;
     });
   }
