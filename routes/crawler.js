@@ -43,7 +43,7 @@ async function crawlAll() {
     
     const allItems = [...ecoAucItems, ...brandAucItems];
     await DBManager.saveItems(allItems, 'crawled_items');
-    await DBManager.deleteItemsWithout(allItems.map((item) => item.item_id), 'crawled_items');
+    await DBManager.deleteItemsWithout(allItems.map((item) => item.item_id + ''), 'crawled_items');
     await DBManager.cleanupUnusedImages();
     await initializeFilterSettings();
   } finally {
