@@ -1197,6 +1197,6 @@ const brandAucCrawler = new BrandAucCrawler(brandAucConfig);
 const ecoAucValueCrawler = new EcoAucValueCrawler(ecoAucValueConfig);
 const brandAucValueCrawler = new BrandAucValueCrawler(brandAucConfig);
 
-//brandAucCrawler.crawlAllItems(new Set()).then((data) => {console.log(data[0], data.length)});
+brandAucCrawler.crawlAllItems(new Set()).then((data) => {console.log(data[0], data.length)});
 
 module.exports = { ecoAucCrawler, brandAucCrawler, ecoAucValueCrawler, brandAucValueCrawler };
