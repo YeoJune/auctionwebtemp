@@ -194,6 +194,9 @@ class Crawler {
       width: 1920,
       height: 1080
     });
+    await page.setExtraHTTPHeaders({
+      'Accept-Language': 'ja-JP,ja;q=0.9'
+    });
   }
   async initializeDetails() {
     const detailInitPromises = Array(this.detailMulti).fill().map(() => this.initializeCrawler());
