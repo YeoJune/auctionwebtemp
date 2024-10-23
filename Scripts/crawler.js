@@ -424,7 +424,7 @@ class Crawler {
 
       const itemHandles = await this.crawlerPage.$$(this.config.crawlSelectors.itemContainer);
       const [filteredHandles, filteredItems, remainItems]= await this.filterHandles(itemHandles, existingIds);
-      const limit = pLimit(10);
+      const limit = pLimit(5);
 
       const pageItemsPromises = [];
       for(let i = 0; i < filteredItems.length; i++) {
@@ -713,6 +713,6 @@ class BrandAuctionCrawler extends Crawler {
 const ecoAucCrawler = new Crawler(ecoAucConfig);
 const brandAuctionCrawler = new BrandAuctionCrawler(brandAuctionConfig);
 
-ecoAucCrawler.crawlAllItems(new Set()).then((data) => {console.log(data[0])});
+brandAuctionCrawler.crawlAllItems(new Set()).then((data) => {console.log(data[0])});
 
 module.exports = { ecoAucCrawler, brandAuctionCrawler };
