@@ -653,4 +653,6 @@ class BrandAuctionCrawler extends Crawler {
 const ecoAucCrawler = new Crawler(ecoAucConfig);
 const brandAuctionCrawler = new BrandAuctionCrawler(brandAuctionConfig);
 
+ecoAucCrawler.crawlAllItems(new Set()).then((data) => console.log(data[0]));
+
 module.exports = { ecoAucCrawler, brandAuctionCrawler };
