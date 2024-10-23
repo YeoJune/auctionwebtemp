@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const { getAdminSettings, updateAdminSettings, getNotices, getNoticeById, addNotice, updateNotice, deleteNotice } = require('../utils/adminDB');
-const { getFilterSettings, getFilterSettingsByType, updateFilterSetting, initializeFilterSettings } = require('../utils/adminDB');
+const { getFilterSettings, getFilterSettingsByType, updateFilterSetting, initializeFilterSettings } = require('../utils/filterDB');
 
 // Multer configuration for image uploads
 const logoStorage = multer.diskStorage({
