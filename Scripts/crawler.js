@@ -573,7 +573,7 @@ class BrandAuctionCrawler extends Crawler {
       await this.crawlerPage.$eval(this.config.crawlSelectors.itemsPerPageSelecter, el => el.value = '500');
       await this.crawlerPage.select(this.config.crawlSelectors.itemsPerPageSelect, '500');
       await this.waitForLoading(this.crawlerPage);
-      await this.sleep(3000);
+      await this.crawlerPage.waitForSelector(this.config.crawlSelectors.itemContainer);
 
       const totalPageText = await this.crawlerPage.$eval(this.config.crawlSelectors.totalPagesSpan, el => el.textContent);
       const totalPages = parseInt(totalPageText.match(/\d+/g).join(''));
