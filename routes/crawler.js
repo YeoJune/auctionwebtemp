@@ -6,6 +6,7 @@ const DBManager = require('../utils/DBManager');
 const pool = require('../utils/DB');
 const cron = require('node-cron');
 const { getAdminSettings } = require('../utils/adminDB');
+const { initializeFilterSettings } = require('../utils/filterDB');
 
 // 기존 processItem 함수 수정
 async function processItem(itemId, res) {
@@ -141,6 +142,7 @@ async function crawlAll() {
       await DBManager.deleteItemsWithout(ecoAucItems.map(item => item.item_id), 1);
       await DBManager.deleteItemsWithout(brandAucItems.map(item => item.item_id), 2);
       await DBManager.cleanupUnusedImages();
+      await initializeFilterSettings();
     }
   } catch (error) {
     ecoAucCrawler.isRefreshing = false;

@@ -4,25 +4,11 @@ const pool = require('./DB');
 async function getFilterSettings() {
   const conn = await pool.getConnection();
   try {
-    // 먼저 설정이 있는지 확인
     const [rows] = await conn.query(`
       SELECT filter_type, filter_value, is_enabled 
       FROM filter_settings 
       ORDER BY filter_type, filter_value
     `);
-
-    // 설정이 없으면 초기화 실행
-    if (rows.length === 0) {
-      await initializeFilterSettings();
-      // 초기화된 설정을 다시 조회
-      const [initializedRows] = await conn.query(`
-        SELECT filter_type, filter_value, is_enabled 
-        FROM filter_settings 
-        ORDER BY filter_type, filter_value
-      `);
-      return initializedRows;
-    }
-
     return rows;
   } catch (error) {
     console.error('Error getting filter settings:', error);
@@ -32,34 +18,18 @@ async function getFilterSettings() {
   }
 }
 
-async function getFilterSettingsByType(filterType) {
+async function getEnabledFilters(filterType) {
   const conn = await pool.getConnection();
   try {
-    // 먼저 해당 타입의 설정이 있는지 확인
-    const [rows] = await conn.query(`
-      SELECT filter_type, filter_value, is_enabled 
+    const [enabled] = await conn.query(`
+      SELECT filter_value 
       FROM filter_settings 
-      WHERE filter_type = ?
-      ORDER BY filter_value
+      WHERE filter_type = ? AND is_enabled = TRUE
     `, [filterType]);
-
-    // 해당 타입의 설정이 없으면 초기화 실행
-    if (rows.length === 0) {
-      await initializeFilterSettings();
-      // 초기화된 설정 중 해당 타입만 다시 조회
-      const [initializedRows] = await conn.query(`
-        SELECT filter_type, filter_value, is_enabled 
-        FROM filter_settings 
-        WHERE filter_type = ?
-        ORDER BY filter_value
-      `, [filterType]);
-      return initializedRows;
-    }
-
-    return rows;
+    return enabled.map(item => item.filter_value);
   } catch (error) {
-    console.error('Error getting filter settings by type:', error);
-    throw error;
+    console.error('Error getting enabled filters:', error);
+    return []; // 에러가 발생하거나 설정이 없으면 빈 배열 반환
   } finally {
     conn.release();
   }
@@ -68,14 +38,6 @@ async function getFilterSettingsByType(filterType) {
 async function updateFilterSetting(filterType, filterValue, isEnabled) {
   const conn = await pool.getConnection();
   try {
-    // 설정이 없으면 먼저 초기화
-    const [existing] = await conn.query(
-      'SELECT COUNT(*) as count FROM filter_settings'
-    );
-    if (existing[0].count === 0) {
-      await initializeFilterSettings();
-    }
-
     await conn.query(`
       INSERT INTO filter_settings (filter_type, filter_value, is_enabled)
       VALUES (?, ?, ?)
@@ -90,14 +52,10 @@ async function updateFilterSetting(filterType, filterValue, isEnabled) {
     conn.release();
   }
 }
-
 async function initializeFilterSettings() {
   const conn = await pool.getConnection();
   try {
-    // 기존 설정 모두 삭제
-    await conn.query('DELETE FROM filter_settings');
-
-    // Get all unique values for each filter type
+    // 1. 현재 DB에 있는 모든 값들을 가져옴
     const [dates] = await conn.query(`
       SELECT DISTINCT DATE(scheduled_date) as value 
       FROM crawled_items 
@@ -117,23 +75,69 @@ async function initializeFilterSettings() {
       ORDER BY value
     `);
 
-    // Insert all values with default enabled status
-    const queries = [
-      ...dates.map(d => ['date', d.value]),
-      ...brands.map(b => ['brand', b.value]),
-      ...categories.map(c => ['category', c.value])
-    ];
+    // 2. 현재 필터 설정을 가져옴
+    const [currentSettings] = await conn.query(`
+      SELECT filter_type, filter_value, is_enabled
+      FROM filter_settings
+    `);
 
-    for (const [filterType, filterValue] of queries) {
-      if (filterValue) {  // Skip null values
-        await conn.query(`
-          INSERT IGNORE INTO filter_settings (filter_type, filter_value, is_enabled)
-          VALUES (?, ?, TRUE)
-        `, [filterType, filterValue]);
-      }
+    // 3. 현재 값들을 타입별로 맵으로 변환 (빠른 검색을 위해)
+    const currentSettingsMap = new Map();
+    currentSettings.forEach(setting => {
+      currentSettingsMap.set(`${setting.filter_type}:${setting.filter_value}`, setting.is_enabled);
+    });
+
+    // 4. DB에서 가져온 현재 값들의 집합 생성
+    const newValuesSet = new Set([
+      ...dates.map(d => `date:${d.value}`),
+      ...brands.map(b => `brand:${b.value}`),
+      ...categories.map(c => `category:${c.value}`)
+    ]);
+
+    // 5. 더 이상 DB에 없는 값들을 필터 설정에서 제거
+    const outdatedSettings = Array.from(currentSettingsMap.keys())
+      .filter(key => !newValuesSet.has(key));
+    
+    if (outdatedSettings.length > 0) {
+      const deletePromises = outdatedSettings.map(key => {
+        const [type, value] = key.split(':');
+        return conn.query(
+          'DELETE FROM filter_settings WHERE filter_type = ? AND filter_value = ?',
+          [type, value]
+        );
+      });
+      await Promise.all(deletePromises);
     }
 
-    return true;
+    // 6. 새로운 값들 추가 (기존 값은 유지)
+    const insertPromises = [];
+    const processNewValue = (type, value) => {
+      const key = `${type}:${value}`;
+      if (!currentSettingsMap.has(key)) {
+        insertPromises.push(
+          conn.query(`
+            INSERT IGNORE INTO filter_settings (filter_type, filter_value, is_enabled)
+            VALUES (?, ?, TRUE)
+          `, [type, value])
+        );
+      }
+    };
+
+    dates.forEach(d => processNewValue('date', d.value));
+    brands.forEach(b => processNewValue('brand', b.value));
+    categories.forEach(c => processNewValue('category', c.value));
+
+    if (insertPromises.length > 0) {
+      await Promise.all(insertPromises);
+    }
+
+    // 7. 변경 사항 요약 반환
+    return {
+      added: insertPromises.length,
+      removed: outdatedSettings.length,
+      maintained: currentSettings.length - outdatedSettings.length
+    };
+
   } catch (error) {
     console.error('Error initializing filter settings:', error);
     throw error;
@@ -144,7 +148,7 @@ async function initializeFilterSettings() {
 
 module.exports = {
   getFilterSettings,
-  getFilterSettingsByType,
+  getEnabledFilters,
   updateFilterSetting,
   initializeFilterSettings
 };
