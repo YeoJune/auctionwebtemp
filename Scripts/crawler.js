@@ -341,7 +341,7 @@ class Crawler {
   }
 
   async filterHandles(handles, existingIds) {
-    const limit = pLimit(10);
+    const limit = pLimit(20);
     const filterPromises = handles.map(handle => 
       limit(async () => await this.filterHandle(handle, existingIds))
     );
