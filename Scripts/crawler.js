@@ -629,11 +629,11 @@ class BrandAucCrawler extends Crawler {
     );
     const items = await Promise.all(filterPromises);
     
-    console.log('items:', items.map(item => JSON.stringify(item)).join('|'));
     let filteredHandles = [], filteredItems = [], remainItems = [];
     for(let i = 0; i < items.length; i++) {
       if (items[i]) {
-        if (items[i].scheduled_date) {
+        if (items[i].status) {
+          delete items[i].status;
           filteredHandles.push(handles[i]);
           filteredItems.push(items[i]);
         } else {
@@ -651,14 +651,11 @@ class BrandAucCrawler extends Crawler {
     const item = await itemHandle.evaluate((el, config) => {
       const id = el.querySelector(config.crawlSelectors.id);
       const status = el.querySelector(config.crawlSelectors.status);
-      const scheduledDate = el.querySelector(config.crawlSelectors.scheduledDate);
       return {
         item_id: id ? id.textContent.trim() : null,
         status: status ? status.textContent.trim() : null,
-        scheduled_date: scheduledDate ? scheduledDate.textContent.trim() : null,
       };
     }, this.config);
-    item.scheduled_date = this.extractDate(item.scheduled_date);
     if (item.status == '保留成約' || item.status == '成約') return null;
     if (existingIds.has(item.item_id)) return {item_id: item.item_id};
     else return item;
@@ -697,7 +694,6 @@ class BrandAucCrawler extends Crawler {
         
         itemHandles = await this.crawlerPage.$$(this.config.crawlSelectors.itemContainer);
         
-        console.log('itemhandlength:', itemHandles.length);
         [filteredHandles, filteredItems, remainItems]= await this.filterHandles(itemHandles, existingIds);
         pageItemsPromises = [];
         for(let i = 0; i < filteredItems.length; i++) {
@@ -739,6 +735,7 @@ class BrandAucCrawler extends Crawler {
       const startingPrice = el.querySelector(config.crawlSelectors.startingPrice);
       const image = el.querySelector(config.crawlSelectors.image);
       const category = el.querySelector(config.crawlSelectors.category);
+      const scheduledDate = el.querySelector(config.crawlSelectors.scheduledDate);
 
       return {
         japanese_title: title ? title.textContent.trim() : null,
@@ -747,6 +744,7 @@ class BrandAucCrawler extends Crawler {
         starting_price: startingPrice ? startingPrice.textContent.trim() : null,
         image: image ? image.src.replace(/(brand_img\/)(\d+)/, '$16') : null,
         category: category.textContent.trim(),
+        scheduled_date: scheduledDate ? scheduledDate.textContent.trim() : null,
       };
     }, this.config);
     [item.korean_title, item.brand, item.category] = await Promise.all([
@@ -754,6 +752,7 @@ class BrandAucCrawler extends Crawler {
       await translator.wordTranslate(this.convertFullWidthToAscii(item.brand)),
       await translator.wordTranslate(item.category),
     ]);
+    item.scheduled_date = this.extractDate(item.scheduled_date);
     item.starting_price = this.currencyToInt(item.starting_price);
     item.auc_num = '2';
 
@@ -1196,7 +1195,5 @@ const ecoAucCrawler = new EcoAucCrawler(ecoAucConfig);
 const brandAucCrawler = new BrandAucCrawler(brandAucConfig);
 const ecoAucValueCrawler = new EcoAucValueCrawler(ecoAucValueConfig);
 const brandAucValueCrawler = new BrandAucValueCrawler(brandAucConfig);
-
-brandAucCrawler.crawlAllItems(new Set()).then((data) => {console.log(data[0], data.length)});
 
 module.exports = { ecoAucCrawler, brandAucCrawler, ecoAucValueCrawler, brandAucValueCrawler };
