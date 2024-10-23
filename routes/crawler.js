@@ -139,8 +139,7 @@ async function crawlAll() {
         ...brandAucItems
       ];
       await DBManager.saveItems(allItems);
-      await DBManager.deleteItemsWithout(ecoAucItems.map(item => item.item_id), 1);
-      await DBManager.deleteItemsWithout(brandAucItems.map(item => item.item_id), 2);
+      await DBManager.saveItems(allItems.map((item) => item.item_id));
       await DBManager.cleanupUnusedImages();
       await initializeFilterSettings();
     }

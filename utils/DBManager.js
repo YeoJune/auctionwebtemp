@@ -136,7 +136,7 @@ class DatabaseManager {
       activeImagePaths.clear();
     }
   }
-  async deleteItemsWithout(itemIds, aucNum) {
+  async deleteItemsWithout(itemIds) {
     let conn;
     try {
       conn = await this.pool.getConnection();
@@ -148,16 +148,15 @@ class DatabaseManager {
           DELETE FROM crawled_items
           WHERE auc_num = ?
         `;
-        await conn.query(deleteAllQuery, [aucNum]);
+        await conn.query(deleteAllQuery);
       } else {
         // MariaDB compliant query using FIND_IN_SET alternative
         const deleteQuery = `
           DELETE FROM crawled_items
           WHERE item_id NOT IN (${itemIds.join(',')})
-          AND auc_num = ?
         `;
         
-        await conn.query(deleteQuery, [aucNum]);
+        await conn.query(deleteQuery);
       }
   
       /*
