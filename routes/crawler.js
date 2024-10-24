@@ -30,7 +30,7 @@ async function processItem(itemId, res) {
           const crawledDetails = await crawler.crawlItemDetails(detailIndex, itemId);
     
           if (crawledDetails) {
-            await DBManager.updateItemDetails(itemId, crawledDetails);
+            await DBManager.updateItemDetails(itemId, crawledDetails, 'crawled_items');
             
             const [updatedItems] = await pool.query('SELECT * FROM crawled_items WHERE item_id = ?', [itemId]);
             res.json(updatedItems[0]);
