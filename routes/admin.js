@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const { getAdminSettings, updateAdminSettings, getNotices, getNoticeById, addNotice, updateNotice, deleteNotice } = require('../utils/adminDB');
-const { getFilterSettings, getFilterSettingsByType, updateFilterSetting, initializeFilterSettings } = require('../utils/filterDB');
+const { getFilterSettings, updateFilterSetting, initializeFilterSettings } = require('../utils/filterDB');
 
 // Multer configuration for image uploads
 const logoStorage = multer.diskStorage({
@@ -173,20 +173,6 @@ router.get('/filter-settings', async (req, res) => {
     res.json(settings);
   } catch (error) {
     console.error('Error getting filter settings:', error);
-    res.status(500).json({ message: 'Error getting filter settings' });
-  }
-});
-
-router.get('/filter-settings/:type', async (req, res) => {
-  try {
-    const { type } = req.params;
-    if (!['date', 'brand', 'category'].includes(type)) {
-      return res.status(400).json({ message: 'Invalid filter type' });
-    }
-    const settings = await getFilterSettingsByType(type);
-    res.json(settings);
-  } catch (error) {
-    console.error('Error getting filter settings by type:', error);
     res.status(500).json({ message: 'Error getting filter settings' });
   }
 });
