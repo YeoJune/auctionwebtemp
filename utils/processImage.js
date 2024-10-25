@@ -11,7 +11,7 @@ const chunk = (arr, size) =>
     arr.slice(i * size, i * size + size)
   );
 
-async function downloadAndSaveImage(url, retries = 5, delay = 2 * 60 * 1000) {
+async function downloadAndSaveImage(url, retries = 5, delay = 1000) {
   const dateString = new Date().toISOString().replaceAll(':', '-').split('.')[0];
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
@@ -39,7 +39,8 @@ async function downloadAndSaveImage(url, retries = 5, delay = 2 * 60 * 1000) {
 
       if (attempt < retries - 1) {
         console.log(`Retrying in ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        if (error.response && error.response.status != 403) await new Promise(resolve => setTimeout(resolve, 2 * 60 * 1000));
+        else await new Promise(resolve => setTimeout(resolve, delay));
       } else {
         return null;
       }
