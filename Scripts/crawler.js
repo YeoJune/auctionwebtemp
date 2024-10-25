@@ -359,8 +359,10 @@ class Crawler {
         await page.type(this.config.signinSelectors.userId, this.config.loginData.userId),
         await page.type(this.config.signinSelectors.password, this.config.loginData.password),
       ]);
-      await page.click(this.config.signinSelectors.loginButton);
-      //await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: this.pageTimeout });
+      await Promise.all([
+        await page.click(this.config.signinSelectors.loginButton),
+        await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: this.pageTimeout }),
+      ]);
     });
   }
   async loginCheckCrawler() {
