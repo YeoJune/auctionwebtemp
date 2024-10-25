@@ -131,6 +131,7 @@ async function crawlAll() {
       const existingEcoAucIds = new Set(existingItems.filter(item => item.auc_num == 1).map(item => item.item_id));
       const existingBrandAuctionIds = new Set(existingItems.filter(item => item.auc_num == 2).map(item => item.item_id));
       
+      isCrawling = true;
       await closeAllCrawler();
       let ecoAucItems = await ecoAucCrawler.crawlAllItems(existingEcoAucIds);
       await closeAllCrawler();
@@ -164,6 +165,8 @@ async function crawlAllValues() {
       const [existingItems] = await pool.query('SELECT item_id, auc_num FROM values_items');
       const existingEcoAucIds = new Set(existingItems.filter(item => item.auc_num == 1).map(item => item.item_id));
       const existingBrandAuctionIds = new Set(existingItems.filter(item => item.auc_num == 2).map(item => item.item_id));
+
+      isValueCrawling = true;
       
       await closeAllCrawler();
       let ecoAucItems = await ecoAucValueCrawler.crawlAllItems(existingEcoAucIds);
@@ -177,13 +180,12 @@ async function crawlAllValues() {
         ...brandAucItems
       ];
       await DBManager.saveItems(allItems, 'values_items');
-      await DBManager.deleteItemsWithout(allItems.map((item) => item.item_id), 'values_items');
       await DBManager.cleanupUnusedImages();
       await initializeFilterSettings();
     }
   } catch (error) {
     await closeAllCrawler();
-    isCrawling = false;
+    isValueCrawling = false;
     throw (error);
   }
 }
@@ -222,8 +224,8 @@ const scheduleCrawling = async () => {
     cron.schedule(`${minutes} ${hours} * * *`, async () => {
       console.log('Running scheduled crawling task');
       try {
-        console.log('ah');
-        crawlAll();
+        await crawlAll();
+        await crawlAllValues();
         console.log('Scheduled crawling completed successfully');
       } catch (error) {
         console.error('Scheduled crawling error:', error);

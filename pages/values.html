@@ -139,7 +139,6 @@
             const noScheduledDateItem = createFilterItem('NO_DATE', 'date', selectedDates, '날짜 없음');
             scheduledDateFilters.appendChild(noScheduledDateItem);
             
-            dates.sort((a, b) => b.count - a.count);
             dates.forEach(date => {
                 if (date.Date) {
                     const formattedDate = formatDate(date.Date).split(' ')[0];
