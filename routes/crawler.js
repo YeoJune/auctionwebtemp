@@ -154,14 +154,14 @@ async function crawlAll() {
   }
 }
 
-async function crawlAll() {
+async function crawlAllValues() {
   try {
     if (isValueCrawling) {
       throw new Error("already crawling");
     } else if (isCrawling) {
       throw new Error("crawler is activating");
     } else {
-      const [existingItems] = await pool.query('SELECT item_id, auc_num FROM value_items');
+      const [existingItems] = await pool.query('SELECT item_id, auc_num FROM values_items');
       const existingEcoAucIds = new Set(existingItems.filter(item => item.auc_num == 1).map(item => item.item_id));
       const existingBrandAuctionIds = new Set(existingItems.filter(item => item.auc_num == 2).map(item => item.item_id));
       
@@ -176,8 +176,8 @@ async function crawlAll() {
         ...ecoAucItems,
         ...brandAucItems
       ];
-      await DBManager.saveItems(allItems, 'value_items');
-      await DBManager.deleteItemsWithout(allItems.map((item) => item.item_id), 'value_items');
+      await DBManager.saveItems(allItems, 'values_items');
+      await DBManager.deleteItemsWithout(allItems.map((item) => item.item_id), 'values_items');
       await DBManager.cleanupUnusedImages();
       await initializeFilterSettings();
     }
@@ -222,6 +222,7 @@ const scheduleCrawling = async () => {
     cron.schedule(`${minutes} ${hours} * * *`, async () => {
       console.log('Running scheduled crawling task');
       try {
+        console.log('ah');
         crawlAll();
         console.log('Scheduled crawling completed successfully');
       } catch (error) {
