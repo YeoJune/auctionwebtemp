@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="jp">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -195,7 +195,7 @@
 
         function initializeModal(item) {
             document.querySelector('.modal-brand').textContent = item.brand;
-            document.querySelector('.modal-title').textContent = item.korean_title;
+            document.querySelector('.modal-title').textContent = item.japanese_title;
             document.querySelector('.main-image').src = item.image;
             document.querySelector('.modal-description').textContent = item.description || "설명 없음";
             document.querySelector('.modal-category').textContent = item.category || "카테고리 없음";
@@ -404,9 +404,9 @@
                             <div class="product-brand">${item.brand}</div>
                             <div class="auctioneer-number">${item.auc_num}번</div>
                         </div>
-                        <h3 class="product-title">${item.korean_title}</h3>
+                        <h3 class="product-title">${item.japanese_title}</h3>
                     </div>
-                    <img src="${item.image}" alt="${item.korean_title} 이미지" class="product-image">
+                    <img src="${item.image}" alt="${item.japanese_title} 이미지" class="product-image">
                     <div class="product-details">
                         <p class="scheduled-date">예정일: ${item.scheduled_date ? formatDate(item.scheduled_date) : '-'}</p>
                         <p class="scheduled-date">랭크: ${item.rank}</p>
