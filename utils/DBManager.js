@@ -157,7 +157,6 @@ class DatabaseManager {
         // If no items provided, delete all items for this auction
         const deleteAllQuery = `
           DELETE FROM ${tableName}
-          WHERE auc_num = ?
         `;
         await conn.query(deleteAllQuery);
       } else {
