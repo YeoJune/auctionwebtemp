@@ -163,8 +163,7 @@ router.get('/', async (req, res) => {
             if (updateFields.length > 0) {
               const updateQuery = `
                 UPDATE bids 
-                SET ${updateFields.join(', ')},
-                    updated_at = CURRENT_TIMESTAMP
+                SET ${updateFields.join(', ')}
                 WHERE id = ?
               `;
               
