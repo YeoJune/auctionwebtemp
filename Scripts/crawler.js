@@ -597,7 +597,7 @@ class EcoAucCrawler extends Crawler {
           accessory_code: accessoryCode || '',
         };
       }, this.config);
-      console.log(item.scheduled_date);
+      
       item.scheduled_date = this.extractDate(item.scheduled_date);
       [item.description, item.accessory_code] = await Promise.all([
         await translator.rawTranslate(item.description),
@@ -923,7 +923,6 @@ class EcoAucValueCrawler extends Crawler {
         }));
       }
       const pageItems = await Promise.all(pageItemsPromises);
-      console.log(pageItems);
       const processedItems = await processImagesInChunks(pageItems);
 
       console.log(`Crawled ${processedItems.length} items from page ${page}`);
