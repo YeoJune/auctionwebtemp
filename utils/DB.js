@@ -21,7 +21,7 @@ async function testConnection() {
     console.log('Successfully connected to the database');
     
     const [rows, fields] = await conn.query(`
-      SELECT * FROM bids
+      DELETE FROM values_items
     `);
     console.log('Query executed successfully. Result:', rows);
 
