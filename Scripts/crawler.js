@@ -835,6 +835,7 @@ class BrandAucCrawler extends Crawler {
     });
   }
 }
+
 class EcoAucValueCrawler extends Crawler {
   async getTotalPages(categoryId) {
     return this.retryOperation(async () => {
@@ -869,7 +870,7 @@ class EcoAucValueCrawler extends Crawler {
       console.log(`Starting crawl for category ${categoryId}`);
       this.config.currentCategoryId = categoryId;
 
-      const totalPages = 1;//await this.getTotalPages(categoryId);
+      const totalPages = await this.getTotalPages(categoryId);
       console.log(`Total pages in category ${categoryId}: ${totalPages}`);
       let pageItems, isEnd = false;
 
@@ -1035,7 +1036,7 @@ class BrandAucValueCrawler extends Crawler {
       await this.crawlerPage.waitForSelector(this.config.crawlSelectors.itemContainer);
 
       const totalPageText = await this.crawlerPage.$eval(this.config.crawlSelectors.totalPagesSpan, el => el.textContent);
-      const totalPages = 5;//parseInt(totalPageText.match(/\d+/g).join(''));
+      const totalPages = parseInt(totalPageText.match(/\d+/g).join(''));
 
       const allItems = [];
       console.log(`Crawling for total page ${totalPages}`);
