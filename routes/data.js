@@ -230,7 +230,7 @@ router.get('/scheduled-dates-with-count', async (req, res) => {
       FROM crawled_items
       WHERE DATE(scheduled_date) IN (${placeholders})
       GROUP BY DATE(scheduled_date)
-      ORDER BY count DESC, Date ASC
+      ORDER BY Date ASC
     `, enabledDates);
     
     res.json(results);

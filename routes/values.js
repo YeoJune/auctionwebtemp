@@ -104,7 +104,7 @@ router.get('/scheduled-dates-with-count', async (req, res) => {
       SELECT DATE(scheduled_date) as Date, COUNT(*) as count
       FROM values_items
       GROUP BY DATE(scheduled_date)
-      ORDER BY count DESC, Date ASC
+      ORDER BY Date ASC
     `);
     
     res.json(results);

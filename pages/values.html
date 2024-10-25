@@ -58,7 +58,7 @@
                             <p class="modal-description"></p>
                         </div>
                         <div class="detail-item">
-                            <span class="detail-label">예정일:</span>
+                            <span class="detail-label">경매일:</span>
                             <span class="modal-scheduled-date"></span>
                         </div>
                         <div class="detail-item">
@@ -408,7 +408,7 @@
                     </div>
                     <img src="${item.image}" alt="${item.japanese_title} 이미지" class="product-image">
                     <div class="product-details">
-                        <p class="scheduled-date">예정일: ${item.scheduled_date ? formatDate(item.scheduled_date) : '-'}</p>
+                        <p class="scheduled-date">경매일: ${item.scheduled_date ? formatDate(item.scheduled_date) : '-'}</p>
                         <p class="scheduled-date">랭크: ${item.rank}</p>
                         ${item.final_prices ? `<p class="final-price">최종가격: ${item.final_prices} ¥</p>` : ''}
                     </div>
