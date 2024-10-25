@@ -43,6 +43,10 @@ router.get('/', isAdmin, (req, res) => {
   res.sendFile(path.join(__dirname, '../pages/admin.html'));
 });
 
+router.get('/values', isAdmin, (req, res) => {
+  res.sendFile(path.join(__dirname, '../pages/values.html'));
+});
+
 // Route to upload logo (unchanged)
 router.post('/upload-logo', isAdmin, uploadLogo.single('logo'), (req, res) => {
   if (req.file) {

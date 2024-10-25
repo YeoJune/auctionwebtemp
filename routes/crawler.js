@@ -8,6 +8,9 @@ const cron = require('node-cron');
 const { getAdminSettings } = require('../utils/adminDB');
 const { initializeFilterSettings } = require('../utils/filterDB');
 
+let isCrawling = false;
+let isValueCrawling = false;
+
 // 기존 processItem 함수 수정
 async function processItem(itemId, res) {
   try {
@@ -111,26 +114,27 @@ async function processQueue() {
   // 다음 작업 처리
   processQueue();
 }
+async function closeAllCrawler() {
+  for(let c of [ecoAucCrawler, brandAucCrawler, ecoAucValueCrawler, brandAucValueCrawler]) {
+    await c.closeCrawlerBrowser();
+    await c.closeDetailBrowsers();
+  }
+}
 async function crawlAll() {
   try {
-    if (ecoAucCrawler.isRefreshing || brandAucCrawler.isRefreshing) {
+    if (isCrawling) {
       throw new Error("already crawling");
+    } else if (isValueCrawling) {
+      throw new Error("value crawler is activating");
     } else {
       const [existingItems] = await pool.query('SELECT item_id, auc_num FROM crawled_items');
       const existingEcoAucIds = new Set(existingItems.filter(item => item.auc_num == 1).map(item => item.item_id));
       const existingBrandAuctionIds = new Set(existingItems.filter(item => item.auc_num == 2).map(item => item.item_id));
       
-      ecoAucCrawler.isRefreshing = true;
-      await brandAucCrawler.closeCrawlerBrowser();
-      await brandAucCrawler.closeDetailBrowsers();
+      await closeAllCrawler();
       let ecoAucItems = await ecoAucCrawler.crawlAllItems(existingEcoAucIds);
-      ecoAucCrawler.isRefreshing = false;
-
-      brandAucCrawler.isRefreshing = true;
-      await ecoAucCrawler.closeCrawlerBrowser();
-      await ecoAucCrawler.closeDetailBrowsers();
+      await closeAllCrawler();
       let brandAucItems = await brandAucCrawler.crawlAllItems(existingBrandAuctionIds);
-      brandAucCrawler.isRefreshing = false;
 
       if (!ecoAucItems) ecoAucItems = [];
       if (!brandAucItems) brandAucItems = [];
@@ -144,32 +148,27 @@ async function crawlAll() {
       await initializeFilterSettings();
     }
   } catch (error) {
-    ecoAucCrawler.isRefreshing = false;
-    brandAucCrawler.isRefreshing = false;
+    await closeAllCrawler();
+    isCrawling = false;
     throw (error);
   }
 }
 
-async function crawlAllValues() {
+async function crawlAll() {
   try {
-    if (ecoAucValueCrawler.isRefreshing || brandAucValueCrawler.isRefreshing) {
+    if (isValueCrawling) {
       throw new Error("already crawling");
+    } else if (isCrawling) {
+      throw new Error("crawler is activating");
     } else {
-      const [existingItems] = await pool.query('SELECT item_id, auc_num FROM values_items');
+      const [existingItems] = await pool.query('SELECT item_id, auc_num FROM value_items');
       const existingEcoAucIds = new Set(existingItems.filter(item => item.auc_num == 1).map(item => item.item_id));
       const existingBrandAuctionIds = new Set(existingItems.filter(item => item.auc_num == 2).map(item => item.item_id));
       
-      ecoAucValueCrawler.isRefreshing = true;
-      await brandAucValueCrawler.closeCrawlerBrowser();
-      await brandAucValueCrawler.closeDetailBrowsers();
+      await closeAllCrawler();
       let ecoAucItems = await ecoAucValueCrawler.crawlAllItems(existingEcoAucIds);
-      ecoAucValueCrawler.isRefreshing = false;
-
-      brandAucValueCrawler.isRefreshing = true;
-      await ecoAucValueCrawler.closeCrawlerBrowser();
-      await ecoAucValueCrawler.closeDetailBrowsers();
+      await closeAllCrawler();
       let brandAucItems = await brandAucValueCrawler.crawlAllItems(existingBrandAuctionIds);
-      brandAucValueCrawler.isRefreshing = false;
 
       if (!ecoAucItems) ecoAucItems = [];
       if (!brandAucItems) brandAucItems = [];
@@ -177,17 +176,18 @@ async function crawlAllValues() {
         ...ecoAucItems,
         ...brandAucItems
       ];
-      await DBManager.saveItems(allItems, 'values_items');
-      await DBManager.deleteItemsWithout(allItems.map((item) => item.item_id), 'values_items');
+      await DBManager.saveItems(allItems, 'value_items');
+      await DBManager.deleteItemsWithout(allItems.map((item) => item.item_id), 'value_items');
       await DBManager.cleanupUnusedImages();
       await initializeFilterSettings();
     }
   } catch (error) {
-    ecoAucCrawler.isRefreshing = false;
-    brandAucCrawler.isRefreshing = false;
+    await closeAllCrawler();
+    isCrawling = false;
     throw (error);
   }
 }
+
 router.get('/crawl', async (req, res) => {
   try {
     await crawlAll();

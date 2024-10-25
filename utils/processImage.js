@@ -32,8 +32,8 @@ async function downloadAndSaveImage(url, retries = 5, delay = 2 * 60 * 1000) {
     } catch (error) {
       console.error(`Error processing image (Attempt ${attempt + 1}/${retries}): ${url}`, error.message);
       
-      if (error.response && error.response.status === 404) {
-        console.log(`404 error encountered. Stopping retry attempts.`);
+      if (error.response && error.response.status != 403) {
+        console.log(`error encountered. Stopping retry attempts.`);
         return null;
       }
 

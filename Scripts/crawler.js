@@ -159,7 +159,7 @@ const brandAucValueConfig = {
     title: '.item_date .item_name_header',
     brand: '.item_date .maker_header',
     rank: '.appraisal',
-    startingPrice: '.price',
+    finalPrice: '.price',
     image: '.thumbnail img',
     scheduledDate: '.held_date div:last-child span',
     category: '.genre_type_date .genre_header',
@@ -178,7 +178,6 @@ class Crawler {
     this.maxRetries = 3;
     this.retryDelay = 1000;
     this.pageTimeout = 60000;
-    this.isRefreshing = false;
     this.detailMulti = 2;
 
     this.crawlerBrowser = null;
@@ -1092,7 +1091,7 @@ class BrandAucValueCrawler extends Crawler {
       const title = el.querySelector(config.crawlSelectors.title);
       const brand = el.querySelector(config.crawlSelectors.brand);
       const rank = el.querySelector(config.crawlSelectors.rank);
-      const prices = el.querySelectorAll(config.crawlSelectors.startingPrice);
+      const finalPrice = el.querySelectorAll(config.crawlSelectors.finalPrice);
       const image = el.querySelector(config.crawlSelectors.image);
       const category = el.querySelector(config.crawlSelectors.category);
 
@@ -1102,8 +1101,7 @@ class BrandAucValueCrawler extends Crawler {
         japanese_title: title ? title.textContent.trim() : null,
         brand: brand ? brand.textContent.trim() : null,
         rank: rank ? rank.textContent.trim() : null,
-        starting_price: prices ? prices[1].textContent.trim() : null,
-        final_price: prices ? prices[0].textContent.trim() : null,
+        final_price: finalPrice ? finalPrice[0].textContent.trim() : null,
         image: image ? image.src.replace(/(brand_img\/)(\d+)/, '$16') : null,
         category: category.textContent.trim(),
       };
@@ -1113,7 +1111,6 @@ class BrandAucValueCrawler extends Crawler {
     item.japanese_title = this.convertFullWidthToAscii(item.japanese_title);
     item.brand = this.convertFullWidthToAscii(item.brand);
     item.scheduled_date = this.extractDate(item.scheduled_date);
-    item.starting_price = this.currencyToInt(item.starting_price);
     item.final_price = this.currencyToInt(item.final_price);
     item.auc_num = '2';
 
