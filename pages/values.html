@@ -107,9 +107,25 @@
         const paginationContainer = document.getElementById('pagination');
         const modal = document.getElementById('detailModal');
         const span = document.getElementsByClassName("close")[0];
-
-        // [이전에 있던 filter 관련 함수들은 그대로 유지]
-        // displayFilters, displayBrandFilters, displayCategoryFilters, displayDateFilters, createFilterItem, formatDate 함수들...
+        async function fetchWithAuth(url, options = {}) {
+            options.credentials = 'include';
+            try {
+                const response = await fetch(url, options);
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        isAuthenticated = false;
+                        updateAuthUI();
+                        throw new Error('Unauthorized');
+                    }
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+                }
+                return response;
+            } catch (error) {
+                console.error('Fetch error:', error);
+                throw error;
+            }
+        }
         function displayFilters(brands, categories, dates) {
             displayBrandFilters(brands);
             displayCategoryFilters(categories);
@@ -214,7 +230,7 @@
         
         async function fetchItemDetails(itemId) {
             try {
-                const response = await fetch(`${API_URL}/crawler/crawl-item-value-details/${itemId}`, {
+                const response = await fetchWithAuth(`${API_URL}/crawler/crawl-item-value-details/${itemId}`, {
                     method: 'POST'
                 });
                 if (response.ok) {
