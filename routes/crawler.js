@@ -14,7 +14,8 @@ let isValueCrawling = false;
 // 기존 processItem 함수 수정
 async function processItem(itemId, isValue, res) {
   try {
-    const [items] = await pool.query('SELECT * FROM crawled_items WHERE item_id = ?', [itemId]);
+    const tableName = isValue ? 'values_items' : 'crawled_items';
+    const [items] = await pool.query(`SELECT * FROM ${tableName} WHERE item_id = ?`, [itemId]);
     if (items.length === 0) {
       res.status(404).json({ message: 'Item not found' });
     } else {
@@ -30,7 +31,7 @@ async function processItem(itemId, isValue, res) {
           else crawler = brandAucCrawler;
         }
         const detailIndex = findAvailableIndex(items[0].auc_num, isValue);
-        
+
         if (detailIndex === -1) {
           res.status(503).json({ message: 'All crawlers are busy. Please try again later.' });
           return;
@@ -40,9 +41,9 @@ async function processItem(itemId, isValue, res) {
           const crawledDetails = await crawler.crawlItemDetails(detailIndex, itemId);
     
           if (crawledDetails) {
-            await DBManager.updateItemDetails(itemId, crawledDetails, 'crawled_items');
+            await DBManager.updateItemDetails(itemId, crawledDetails, tableName);
             
-            const [updatedItems] = await pool.query('SELECT * FROM crawled_items WHERE item_id = ?', [itemId]);
+            const [updatedItems] = await pool.query(`SELECT * FROM ${tableName} WHERE item_id = ?`, [itemId]);
             res.json(updatedItems[0]);
           } else {
             crawler.closeDetailBrowsers();
