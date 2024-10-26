@@ -73,8 +73,8 @@ const crawlerIndexTracker = {
 
 function findAvailableIndex(crawlerIndex, isValue) {
   let trackerKey;
-  if (isValue) crawlerIndex == 1 ? 'ecoAucValueCrawler' : 'brandAucValueCrawler';
-  else crawlerIndex == 1 ? 'ecoAucCrawler' : 'brandAucCrawler';
+  if (isValue) trackerKey = crawlerIndex == 1 ? 'ecoAucValueCrawler' : 'brandAucValueCrawler';
+  else trackerKey = crawlerIndex == 1 ? 'ecoAucCrawler' : 'brandAucCrawler';
   const tracker = crawlerIndexTracker[trackerKey];
   if (!tracker) {
     console.error(`No tracker found for crawler type: ${trackerKey}`);
@@ -91,8 +91,8 @@ function findAvailableIndex(crawlerIndex, isValue) {
 
 function releaseIndex(crawlerIndex, isValue, index) {
   let trackerKey;
-  if (isValue) crawlerIndex == 1 ? 'ecoAucValueCrawler' : 'brandAucValueCrawler';
-  else crawlerIndex == 1 ? 'ecoAucCrawler' : 'brandAucCrawler';
+  if (isValue) trackerKey = crawlerIndex == 1 ? 'ecoAucValueCrawler' : 'brandAucValueCrawler';
+  else trackerKey = crawlerIndex == 1 ? 'ecoAucCrawler' : 'brandAucCrawler';
   if (crawlerIndexTracker[trackerKey]) {
     crawlerIndexTracker[trackerKey][index] = false;
   } else {

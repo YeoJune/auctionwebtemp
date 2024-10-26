@@ -190,6 +190,75 @@
 
             initializeModal(item);
             modal.style.display = "flex";
+            
+            // 상세 정보 로딩 표시
+            showLoadingInModal();
+
+            // 상세 정보 비동기적으로 가져오기
+            fetchItemDetails(itemId);
+        }
+
+        function showLoadingInModal() {
+            const loadingElement = document.createElement('div');
+            loadingElement.id = 'modal-loading';
+            loadingElement.textContent = '상세 정보를 불러오는 중...';
+            loadingElement.style.position = 'absolute';
+            loadingElement.style.top = '50%';
+            loadingElement.style.left = '50%';
+            loadingElement.style.transform = 'translate(-50%, -50%)';
+            loadingElement.style.background = 'rgba(255, 255, 255, 0.8)';
+            loadingElement.style.padding = '10px';
+            loadingElement.style.borderRadius = '5px';
+            document.querySelector('.modal-content').appendChild(loadingElement);
+        }
+        
+        async function fetchItemDetails(itemId) {
+            try {
+                const response = await fetchWithAuth(`${API_URL}/crawler/crawl-item-value-details/${itemId}`, {
+                    method: 'POST'
+                });
+                if (response.ok) {
+                    const updatedItem = await response.json();
+                    updateModalWithDetails(updatedItem);
+                } else {
+                    console.error('Failed to fetch item details');
+                    alert('상세 정보를 불러오는 데 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('Error fetching item details:', error);
+                alert('상세 정보를 불러오는 데 실패했습니다.');
+            } finally {
+                hideLoadingInModal();
+            }
+        }
+
+        function updateModalWithDetails(item) {
+            document.querySelector('.modal-description').textContent = item.description || "설명 없음";
+            document.querySelector('.modal-category').textContent = item.category || "카테고리 없음";
+            document.querySelector('.modal-accessory-code').textContent = item.accessory_code || "액세서리 코드 없음";
+            document.querySelector('.modal-scheduled-date').textContent = item.scheduled_date ? formatDate(item.scheduled_date) : "날짜 정보 없음";
+            document.querySelector('.modal-brand').textContent = item.brand;
+            document.querySelector('.modal-brand2').textContent = item.brand;
+            document.querySelector('.modal-title').textContent = item.korean_title || "제목 없음";
+
+            if (item.condition) {
+                document.querySelector('.modal-condition').textContent = item.condition;
+            }
+            if (item.size) {
+                document.querySelector('.modal-size').textContent = item.size;
+            }
+
+            // 추가 이미지 업데이트
+            if (item.additional_images) {
+                initializeImages(JSON.parse(item.additional_images));
+            }
+        }
+        
+        function hideLoadingInModal() {
+            const loadingElement = document.getElementById('modal-loading');
+            if (loadingElement) {
+                loadingElement.remove();
+            }
         }
 
         function initializeModal(item) {
