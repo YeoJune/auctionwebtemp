@@ -12,7 +12,7 @@ let isCrawling = false;
 let isValueCrawling = false;
 
 // 기존 processItem 함수 수정
-async function processItem(itemId, res) {
+async function processItem(itemId, isValue, res) {
   try {
     const [items] = await pool.query('SELECT * FROM crawled_items WHERE item_id = ?', [itemId]);
     if (items.length === 0) {
@@ -21,8 +21,15 @@ async function processItem(itemId, res) {
       if (items[0].description) {
         res.json(items[0]);
       } else {
-        const crawler = items[0].auc_num == 1 ? ecoAucCrawler : brandAucCrawler;
-        const detailIndex = findAvailableIndex(items[0].auc_num);
+        let crawler;
+        if (items[0].auc_num == 1) {
+          if (isValue) crawler = ecoAucValueCrawler;
+          else crawler = ecoAucCrawler;
+        } else {
+          if (isValue) crawler = brandAucValueCrawler;
+          else crawler = brandAucCrawler;
+        }
+        const detailIndex = findAvailableIndex(items[0].auc_num, isValue);
         
         if (detailIndex === -1) {
           res.status(503).json({ message: 'All crawlers are busy. Please try again later.' });
@@ -42,7 +49,7 @@ async function processItem(itemId, res) {
             res.status(500).json({ message: 'Failed to crawl item details' });
           }
         } finally {
-          releaseIndex(items[0].auc_num, detailIndex);
+          releaseIndex(items[0].auc_num, isValue, detailIndex);
         }
       }
     }
@@ -55,15 +62,19 @@ async function processItem(itemId, res) {
 // 병렬 처리를 위한 작업 큐와 상태 관리
 const queue = [];
 let isProcessing = false;
-const MAX_CONCURRENT_TASKS = 3; // 동시에 처리할 최대 작업 수
+const MAX_CONCURRENT_TASKS = 4; // 동시에 처리할 최대 작업 수
 
 const crawlerIndexTracker = {
-  Crawler: new Array(ecoAucCrawler.detailMulti).fill(false),
-  brandAucCrawler: new Array(brandAucCrawler.detailMulti).fill(false)
+  ecoAucCrawler: new Array(ecoAucCrawler.detailMulti).fill(false),
+  brandAucCrawler: new Array(brandAucCrawler.detailMulti).fill(false),
+  ecoAucValueCrawler: new Array(ecoAucValueCrawler.detailMulti).fill(false),
+  brandAucValueCrawler: new Array(brandAucValueCrawler.detailMulti).fill(false),
 };
 
-function findAvailableIndex(crawlerIndex) {
-  const trackerKey = crawlerIndex == 1 ? 'Crawler' : 'brandAucCrawler';
+function findAvailableIndex(crawlerIndex, isValue) {
+  let trackerKey;
+  if (isValue) crawlerIndex == 1 ? 'ecoAucValueCrawler' : 'brandAucValueCrawler';
+  else crawlerIndex == 1 ? 'ecoAucCrawler' : 'brandAucCrawler';
   const tracker = crawlerIndexTracker[trackerKey];
   if (!tracker) {
     console.error(`No tracker found for crawler type: ${trackerKey}`);
@@ -78,8 +89,10 @@ function findAvailableIndex(crawlerIndex) {
   return -1; // All indices are in use
 }
 
-function releaseIndex(crawlerIndex, index) {
-  const trackerKey = crawlerIndex == 1 ? 'Crawler' : 'brandAucCrawler';
+function releaseIndex(crawlerIndex, isValue, index) {
+  let trackerKey;
+  if (isValue) crawlerIndex == 1 ? 'ecoAucValueCrawler' : 'brandAucValueCrawler';
+  else crawlerIndex == 1 ? 'ecoAucCrawler' : 'brandAucCrawler';
   if (crawlerIndexTracker[trackerKey]) {
     crawlerIndexTracker[trackerKey][index] = false;
   } else {
@@ -88,8 +101,8 @@ function releaseIndex(crawlerIndex, index) {
 }
 
 // 큐에 작업을 추가하고 처리를 시작하는 함수
-function addToQueue(itemId, res) {
-  queue.push({ itemId, res });
+function addToQueue(itemId, isValue, res) {
+  queue.push({ itemId, isValue, res });
   if (!isProcessing) {
     processQueue();
   }
@@ -106,7 +119,7 @@ async function processQueue() {
   const tasks = queue.splice(0, MAX_CONCURRENT_TASKS);
 
   try {
-    await Promise.all(tasks.map(task => processItem(task.itemId, task.res)));
+    await Promise.all(tasks.map(task => processItem(task.itemId, task.isValue, task.res)));
   } catch (error) {
     console.error('Error processing queue:', error);
   }
@@ -201,11 +214,6 @@ router.get('/crawl', async (req, res) => {
   }
 });
 
-router.post('/crawl-item-details/:itemId', (req, res) => {
-  const { itemId } = req.params;
-  addToQueue(itemId, res);
-});
-
 router.get('/crawl-values', async (req, res) => {
   try {
     await crawlAllValues();
@@ -215,6 +223,16 @@ router.get('/crawl-values', async (req, res) => {
     console.error('Crawling error:', error);
     res.status(500).json({ message: 'Error during crawling' });
   }
+});
+
+router.post('/crawl-item-details/:itemId', (req, res) => {
+  const { itemId } = req.params;
+  addToQueue(itemId, false, res);
+});
+
+router.post('/crawl-item-value-details/:itemId', (req, res) => {
+  const { itemId } = req.params;
+  addToQueue(itemId, true, res);
 });
 
 const scheduleCrawling = async () => {
