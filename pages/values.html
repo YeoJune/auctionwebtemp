@@ -214,7 +214,7 @@
         
         async function fetchItemDetails(itemId) {
             try {
-                const response = await fetchWithAuth(`${API_URL}/crawler/crawl-item-value-details/${itemId}`, {
+                const response = await fetch(`${API_URL}/crawler/crawl-item-value-details/${itemId}`, {
                     method: 'POST'
                 });
                 if (response.ok) {
