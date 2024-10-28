@@ -83,11 +83,10 @@ router.get('/', async (req, res) => {
         query += ' AND (';
         const validDates = [];
         dateList.forEach((date, index) => {
-          const match = date.match(/(\d{4}-\d{2}-\d{2})/);
-          if (match && enabledDates.includes(match[0])) {
+          if (enabledDates.includes(date)) {
             if (validDates.length > 0) query += ' OR ';
             query += 'ci.scheduled_date >= ? AND ci.scheduled_date < ?';
-            const startDate = new Date(match[0]);
+            const startDate = new Date(date);
             const endDate = new Date(startDate);
             endDate.setDate(endDate.getDate() + 1);
             queryParams.push(startDate, endDate);
