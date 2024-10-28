@@ -3,6 +3,13 @@ const router = express.Router();
 const MyGoogleSheetsManager = require('../utils/googleSheets');
 const pool = require('../utils/DB');
 
+function formatDate(dateString) {
+  const date = new Date(dateString);
+  // UTC 시간에 9시간(KST)을 더함
+  const kstDate = new Date(date.getTime() + (9 * 60 * 60 * 1000));
+  return kstDate.toISOString().split('T')[0];
+}
+
 router.post('/place-reservation', async (req, res) => {
   const { itemId, bidAmount, isFinalBid } = req.body;
   const linkFunc = {1:(itemId) => `https://www.ecoauc.com/client/auction-items/view/${itemId}`, 2:(itemId) => itemId};
@@ -44,11 +51,12 @@ router.post('/place-reservation', async (req, res) => {
         'INSERT INTO bids (item_id, user_id, first_price, image) VALUES (?, ?, ?, ?)',
         [itemId, req.session.user.id, bidAmount, item.image]
       );
+      
       const bidData = [
         result.insertId + '',
         req.session.user.email,
         req.session.user.id,
-        item.scheduled_date ? item.scheduled_date : "",
+        item.scheduled_date ? formatDate(item.scheduled_date) : "",
         linkFunc[item.auc_num](item.item_id),
         item.category,
         item.brand,

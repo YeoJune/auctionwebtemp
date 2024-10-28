@@ -442,7 +442,7 @@
             try {
                 const brandsParam = selectedBrands.join(',');
                 const categoriesParam = selectedCategories.join(',');
-                const datesParam = selectedDates.map(date => date === 'NO_DATE' ? 'null' : formatDate(date)).join(',');
+                const datesParam = selectedDates.map(date => date === 'NO_DATE' ? 'null' : date).join(',');
 
                 const url = new URL(`${window.location.origin}${API_URL}/values`);
                 url.searchParams.append('page', currentPage);

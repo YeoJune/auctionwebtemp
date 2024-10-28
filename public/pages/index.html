@@ -271,7 +271,7 @@
             try {
                 const brandsParam = selectedBrands.join(',');
                 const categoriesParam = selectedCategories.join(',');
-                const datesParam = selectedDates.map(date => date === 'NO_DATE' ? 'null' : formatDate(date)).join(',');
+                const datesParam = selectedDates.map(date => date === 'NO_DATE' ? 'null' : date).join(',');
                 const wishlistOnly = wishlistFilter.checked;
                 const bidOnly = document.getElementById('bidFilter').checked;
 
