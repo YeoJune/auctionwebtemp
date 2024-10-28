@@ -1,6 +1,7 @@
 // utils/googleSheets.js
 const { google } = require('googleapis');
 const path = require('path');
+const pool = require('./DB');
 
 class GoogleSheetsManager {
   constructor() {
@@ -8,6 +9,9 @@ class GoogleSheetsManager {
     this.spreadsheetId = process.env.GOOGLE_SHEET_ID;
     this.auth = null;
     this.sheets = null;
+    this.drive = null;
+    this.lastModifiedTime = null;
+    this.checkInterval = null;
 
     this.authorize();
   }
@@ -16,18 +20,57 @@ class GoogleSheetsManager {
     try {
       this.auth = new google.auth.GoogleAuth({
         keyFile: this.CREDENTIALS_PATH,
-        scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+        scopes: [
+          'https://www.googleapis.com/auth/spreadsheets',
+          'https://www.googleapis.com/auth/drive.readonly',
+        ],
       });
 
       const client = await this.auth.getClient();
       this.sheets = google.sheets({ version: 'v4', auth: client });
+      this.drive = google.drive({ version: 'v3', auth: client });
       
       console.log('Authorization successful');
+      this.startModificationCheck();
     } catch (err) {
       console.error('Error in authorization:', err);
       throw err;
     }
   }
+
+  async checkLastModified() {
+    try {
+      const response = await this.drive.files.get({
+        fileId: this.spreadsheetId,
+        fields: 'modifiedTime'
+      });
+
+      const currentModifiedTime = new Date(response.data.modifiedTime);
+
+      if (!this.lastModifiedTime) {
+        this.lastModifiedTime = currentModifiedTime;
+      } else if (currentModifiedTime > this.lastModifiedTime) {
+        console.log('Spreadsheet was modified. Running refresh...');
+        await this.refreshAllBidInfo();
+        this.lastModifiedTime = currentModifiedTime;
+      }
+    } catch (error) {
+      console.error('Error checking last modified time:', error);
+    }
+  }
+
+  startModificationCheck() {
+    // 기존 인터벌이 있다면 제거
+    if (this.checkInterval) {
+      clearInterval(this.checkInterval);
+    }
+
+    // 1분마다 체크
+    this.checkInterval = setInterval(() => {
+      this.checkLastModified();
+    }, 60 * 1000); // 60000ms = 1분
+  }
+
   async findFinal(sheetName, column) {
     const searchResponse = await this.sheets.spreadsheets.values.get({
       spreadsheetId: this.spreadsheetId,
@@ -162,8 +205,52 @@ class GoogleSheetsManager {
       throw err;
     }
   }
-}
 
+  async refreshAllBidInfo() {
+    try {
+      const [bids] = await pool.query(`SELECT id FROM bids WHERE second_price IS NULL`);
+      const bidIds = bids.map((bid) => bid.id);
+      if (bidIds.length > 0) {
+        const bidInfos = await this.getBidInfos(bidIds);
+        for (let i = 0; i < bidIds.length; i++) {
+          const bidIndex = bids.findIndex(bid => bid.id === bidIds[i]);
+          if (bidIndex !== -1 && bidInfos[i]) {
+            Object.assign(bids[bidIndex], bidInfos[i]);
+            
+            const updateFields = [];
+            const updateValues = [];
+            
+            if (bidInfos[i].second_price !== undefined) {
+              updateFields.push('second_price = ?');
+              updateValues.push(bidInfos[i].second_price);
+            }
+            if (bidInfos[i].final_price !== undefined) {
+              updateFields.push('final_price = ?');
+              updateValues.push(bidInfos[i].final_price);
+            }
+            
+            if (updateFields.length > 0) {
+              const updateQuery = `
+                UPDATE bids 
+                SET ${updateFields.join(', ')}
+                WHERE id = ?
+              `;
+              
+              try {
+                await pool.query(updateQuery, [...updateValues, bidIds[i]]);
+                console.log(`Updated bid ${bidIds[i]} with new values`);
+              } catch (error) {
+                console.error(`Failed to update bid ${bidIds[i]}:`, error);
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error in refreshAllBidInfo:', error);
+    }
+  }
+}
 const MyGoogleSheetsManager = new GoogleSheetsManager();
 
 module.exports = MyGoogleSheetsManager;

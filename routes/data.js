@@ -92,7 +92,7 @@ router.get('/', async (req, res) => {
         dateList.forEach((date, index) => {
           if (date == 'null') {
             if (validDates.length > 0) query += ' OR ';
-            query += 'ci.scheduled_date = NULL';
+            query += 'ci.scheduled_date IS NULL';
             validDates.push(date);
           } else {
             const kstDate = formatDate(date) + ' 00:00:00.000';
@@ -134,62 +134,13 @@ router.get('/', async (req, res) => {
       [wishlist] = await pool.query('SELECT item_id FROM wishlists WHERE user_id = ?', [userId]);
       wishlist = wishlist.map(w => w.item_id);
     }
-    let bidData = [];
+    let bidData;
     if (userId) {
-      // 먼저 기존 bid 데이터를 가져옵니다
-      const [bids] = await pool.query(`
+      [bidData] = await pool.query(`
         SELECT b.id, b.item_id, b.first_price, b.second_price, b.final_price
         FROM bids b
         WHERE b.user_id = ?
       `, [userId]);
-      
-      // second_price가 없는 입찰 ID들을 필터링합니다
-      const bidIds = bids.filter(bid => !bid.second_price).map(bid => bid.id);
-      
-      if (bidIds.length > 0) {
-        // 구글 시트에서 정보를 가져옵니다
-        const bidInfos = await MyGoogleSheetsManager.getBidInfos(bidIds);
-        
-        // 각 bid에 대해 처리합니다
-        for (let i = 0; i < bidIds.length; i++) {
-          const bidIndex = bids.findIndex(bid => bid.id === bidIds[i]);
-          if (bidIndex !== -1 && bidInfos[i]) {
-            // 메모리상의 bid 객체를 업데이트
-            Object.assign(bids[bidIndex], bidInfos[i]);
-            
-            // DB 업데이트 쿼리를 실행
-            const updateFields = [];
-            const updateValues = [];
-            
-            // bidInfos에서 받아올 수 있는 필드들을 동적으로 처리
-            if (bidInfos[i].second_price !== undefined) {
-              updateFields.push('second_price = ?');
-              updateValues.push(bidInfos[i].second_price);
-            }
-            if (bidInfos[i].final_price !== undefined) {
-              updateFields.push('final_price = ?');
-              updateValues.push(bidInfos[i].final_price);
-            }
-            
-            // 업데이트할 필드가 있는 경우에만 쿼리 실행
-            if (updateFields.length > 0) {
-              const updateQuery = `
-                UPDATE bids 
-                SET ${updateFields.join(', ')}
-                WHERE id = ?
-              `;
-              
-              try {
-                await pool.query(updateQuery, [...updateValues, bidIds[i]]);
-              } catch (error) {
-                console.error(`Failed to update bid ${bidIds[i]}:`, error);
-                // 에러 처리는 요구사항에 따라 조정
-              }
-            }
-          }
-        }
-      }
-      bidData = bids;
     }
     res.json({
       data: items,
