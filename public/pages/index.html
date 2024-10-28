@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TITLE</title>
+    <title>상품 페이지</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="/styles/styles.css">
 </head>
@@ -499,15 +499,18 @@
                 dataBody.appendChild(card);
             });
         }
+        function currucyString(num) {
+            return (num - 0).toLocaleString();
+        }
         function getBidSectionHTML(bidInfo, itemId) {
             if (bidInfo.final_price) {
-                return `<p>최종 입찰금액: ${bidInfo.final_price} ¥</p>`;
+                return `<p>최종 입찰금액: ${currucyString(bidInfo.final_price)} ¥</p>`;
             } else {
                 let html = '<div class="bid-info">';
                 if (bidInfo.first_price || bidInfo.second_price) {
                     html += `<div>
-                            <p>1차 입찰금액: ${bidInfo.first_price || '-'} ¥</p>
-                            <p>2차 제안금액: ${bidInfo.second_price || '-'} ¥</p>
+                            <p>1차 입찰금액: ${currucyString(bidInfo.first_price) || '-'} ¥</p>
+                            <p>2차 제안금액: ${currucyString(bidInfo.second_price) || '-'} ¥</p>
                         </div>
                     `;
                 }
