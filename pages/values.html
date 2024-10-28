@@ -189,14 +189,11 @@
             item.appendChild(labelElement);
             return item;
         }
-
         function formatDate(dateString) {
             const date = new Date(dateString);
-            const isoString = date.toISOString();
-            const [datePart, timePart] = isoString.split('T');
-            const timeWithoutSeconds = timePart.substr(0, 5);
-            
-            return `${datePart}`; // Return date and time
+            // 한국 시간대로 변환
+            const kstDate = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+            return kstDate.toISOString().split('T')[0];
         }
 
         async function showDetails(itemId) {
