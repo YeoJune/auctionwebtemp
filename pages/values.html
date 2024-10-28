@@ -158,7 +158,7 @@
             dates.forEach(date => {
                 if (date.Date) {
                     const formattedDate = formatDate(date.Date).split(' ')[0];
-                    const dateItem = createFilterItem(formattedDate, 'date', selectedDates, `${formattedDate} (${date.count})`);
+                    const dateItem = createFilterItem(date.Date, 'date', selectedDates, `${formattedDate} (${date.count})`);
                     scheduledDateFilters.appendChild(dateItem);
                 }
             });
