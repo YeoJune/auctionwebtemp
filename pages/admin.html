@@ -14,12 +14,39 @@
         #editor { height: 300px; }
         #noticeList { margin-top: 20px; }
         .notice-item { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+        .crawl-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+        }
+        .crawl-button {
+            padding: 10px 20px;
+            margin-right: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .crawl-button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .status-text {
+            margin-left: 10px;
+            color: #666;
+        }
     </style>
 </head>
 <body>
     <h1>관리자 페이지</h1>
 
-    <button onclick="window.location.href = './admin/values'">시세표 페이지</button>
+    <div class="crawl-section">
+        <button id="productCrawlBtn" class="crawl-button" onclick="startProductCrawling()">상품 크롤링</button>
+        <button id="valueCrawlBtn" class="crawl-button" onclick="startValueCrawling()">시세표 크롤링</button>
+        <span id="crawlStatus" class="status-text"></span>
+    </div>
 
     <h2>1. 로고 변경</h2>
     <input type="file" id="logoFile" accept="image/*">
@@ -56,6 +83,109 @@
     </div>
     <script>
         const API_URL = '/api';
+        
+        let isCrawlingProduct = false;
+        let isCrawlingValue = false;
+
+        // 크롤링 상태 체크 함수
+        async function checkCrawlingStatus() {
+            try {
+                const response = await fetch(`${API_URL}/crawler/crawl-status`);
+                const status = await response.json();
+                
+                isCrawlingProduct = status.isCrawling;
+                isCrawlingValue = status.isValueCrawling;
+                
+                updateCrawlingUI();
+            } catch (error) {
+                console.error('크롤링 상태 확인 중 오류 발생:', error);
+            }
+        }
+
+        // UI 업데이트 함수
+        function updateCrawlingUI() {
+            const productBtn = document.getElementById('productCrawlBtn');
+            const valueBtn = document.getElementById('valueCrawlBtn');
+            const statusText = document.getElementById('crawlStatus');
+
+            productBtn.disabled = isCrawlingProduct || isCrawlingValue;
+            valueBtn.disabled = isCrawlingProduct || isCrawlingValue;
+
+            if (isCrawlingProduct) {
+                statusText.textContent = "상품 크롤링 중...";
+                productBtn.textContent = "상품 크롤링 중...";
+            } else if (isCrawlingValue) {
+                statusText.textContent = "시세표 크롤링 중...";
+                valueBtn.textContent = "시세표 크롤링 중...";
+            } else {
+                statusText.textContent = "";
+                productBtn.textContent = "상품 크롤링";
+                valueBtn.textContent = "시세표 크롤링";
+            }
+        }
+
+        // 상품 크롤링 시작
+        async function startProductCrawling() {
+            if (isCrawlingProduct || isCrawlingValue) return;
+
+            try {
+                isCrawlingProduct = true;
+                updateCrawlingUI();
+
+                const response = await fetch(`${API_URL}/crawler/crawl`, {
+                    method: 'GET'
+                });
+
+                if (!response.ok) throw new Error('크롤링 요청 실패');
+
+                // 크롤링이 시작되면 주기적으로 상태 체크
+                startStatusCheck();
+            } catch (error) {
+                console.error('상품 크롤링 시작 중 오류 발생:', error);
+                isCrawlingProduct = false;
+                updateCrawlingUI();
+            }
+        }
+
+        // 시세표 크롤링 시작
+        async function startValueCrawling() {
+            if (isCrawlingProduct || isCrawlingValue) return;
+
+            try {
+                isCrawlingValue = true;
+                updateCrawlingUI();
+
+                const response = await fetch(`${API_URL}/crawler/crawl-values`, {
+                    method: 'GET'
+                });
+
+                if (!response.ok) throw new Error('크롤링 요청 실패');
+
+                // 크롤링이 시작되면 주기적으로 상태 체크
+                startStatusCheck();
+            } catch (error) {
+                console.error('시세표 크롤링 시작 중 오류 발생:', error);
+                isCrawlingValue = false;
+                updateCrawlingUI();
+            }
+        }
+
+        // 주기적 상태 체크 시작
+        let statusCheckInterval;
+        function startStatusCheck() {
+            // 이전 인터벌이 있다면 제거
+            if (statusCheckInterval) clearInterval(statusCheckInterval);
+            
+            // 5초마다 상태 체크
+            statusCheckInterval = setInterval(async () => {
+                await checkCrawlingStatus();
+                
+                // 크롤링이 모두 끝났으면 인터벌 종료
+                if (!isCrawlingProduct && !isCrawlingValue) {
+                    clearInterval(statusCheckInterval);
+                }
+            }, 5000);
+        }
         // 이미지 압축 함수
         function compressImage(file, maxWidth, maxHeight, quality) {
         return new Promise((resolve, reject) => {
@@ -367,6 +497,7 @@
         // 페이지 로드 시 필터 설정 불러오기
         fetchFilterSettings();
         fetchNotices();
+        checkCrawlingStatus();
     </script>
 </body>
 </html>

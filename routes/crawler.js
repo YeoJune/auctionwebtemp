@@ -11,6 +11,14 @@ const { initializeFilterSettings } = require('../utils/filterDB');
 let isCrawling = false;
 let isValueCrawling = false;
 
+const isAdmin = (req, res, next) => {
+  if (req.session.user && req.session.user.id === 'admin') {
+    next();
+  } else {
+    res.status(403).json({ message: 'Access denied. Admin only.' });
+  }
+};
+
 // 기존 processItem 함수 수정
 async function processItem(itemId, isValue, res) {
   try {
@@ -204,7 +212,7 @@ async function crawlAllValues() {
   }
 }
 
-router.get('/crawl', async (req, res) => {
+router.get('/crawl', isAdmin, async (req, res) => {
   try {
     await crawlAll();
 
@@ -215,7 +223,7 @@ router.get('/crawl', async (req, res) => {
   }
 });
 
-router.get('/crawl-values', async (req, res) => {
+router.get('/crawl-values', isAdmin, async (req, res) => {
   try {
     await crawlAllValues();
 
@@ -225,6 +233,15 @@ router.get('/crawl-values', async (req, res) => {
     res.status(500).json({ message: 'Error during crawling' });
   }
 });
+
+router.get('/crawl-status', isAdmin, (req, res) => {
+  try {
+    res.json({ isCrawling, isValueCrawling });
+  } catch (error) {
+    console.error('Crawling error:', error);
+    res.status(500).json({ message: 'Error during crawling' });
+  }
+})
 
 router.post('/crawl-item-details/:itemId', (req, res) => {
   const { itemId } = req.params;
