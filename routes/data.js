@@ -90,15 +90,19 @@ router.get('/', async (req, res) => {
         query += ' AND (';
         const validDates = [];
         dateList.forEach((date, index) => {
-          const kstDate = formatDate(date) + ' 00:00:00.000';
-          if (enabledDates.includes(kstDate)) {
-            if (validDates.length > 0) query += ' OR ';
-            query += 'ci.scheduled_date >= ? AND ci.scheduled_date < ?';
-            const startDate = new Date(kstDate);
-            const endDate = new Date(startDate);
-            endDate.setDate(endDate.getDate() + 1);
-            queryParams.push(startDate, endDate);
-            validDates.push(date);
+          try {
+            const kstDate = formatDate(date) + ' 00:00:00.000';
+            if (enabledDates.includes(kstDate)) {
+              if (validDates.length > 0) query += ' OR ';
+              query += 'ci.scheduled_date >= ? AND ci.scheduled_date < ?';
+              const startDate = new Date(kstDate);
+              const endDate = new Date(startDate);
+              endDate.setDate(endDate.getDate() + 1);
+              queryParams.push(startDate, endDate);
+              validDates.push(date);
+            }
+          } catch (err) {
+            
           }
         });
         if (validDates.length === 0) {
