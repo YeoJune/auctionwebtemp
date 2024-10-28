@@ -244,7 +244,7 @@ class GoogleSheetsManager {
             }
           }
         }
-        console.log(`Updated bid ${bids.filter((bid) => bid.second_price).join(', ')} with new values`);
+        console.log(`Updated bid ${bids.filter((bid) => bid.second_price).map((item) => item.id).join(', ')} with new values`);
       }
     } catch (error) {
       console.error('Error in refreshAllBidInfo:', error);
