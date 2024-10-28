@@ -90,7 +90,11 @@ router.get('/', async (req, res) => {
         query += ' AND (';
         const validDates = [];
         dateList.forEach((date, index) => {
-          try {
+          if (date == 'NO_DATE') {
+            if (validDates.length > 0) query += ' OR ';
+            query += 'ci.scheduled_date == null';
+            validDates.push(date);
+          } else {
             const kstDate = formatDate(date) + ' 00:00:00.000';
             if (enabledDates.includes(kstDate)) {
               if (validDates.length > 0) query += ' OR ';
@@ -101,8 +105,6 @@ router.get('/', async (req, res) => {
               queryParams.push(startDate, endDate);
               validDates.push(date);
             }
-          } catch (err) {
-            
           }
         });
         if (validDates.length === 0) {
