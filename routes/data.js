@@ -80,24 +80,20 @@ router.get('/', async (req, res) => {
     if (scheduledDates) {
       const dateList = scheduledDates.split(',');
       if (dateList.length > 0) {
-        query += ' AND (';
-        const validDates = [];
-        dateList.forEach((date, index) => {
+        const dateConds = [];
+        dateList.forEach(date => {
           const match = date.match(/(\d{4}-\d{2}-\d{2})/);
-          if (match && enabledDates.includes(match[0])) {
-            if (validDates.length > 0) query += ' OR ';
-            query += 'ci.scheduled_date >= ? AND ci.scheduled_date < ?';
+          if (match) {
+            dateConds.push('(scheduled_date >= ? AND scheduled_date < ?)');
             const startDate = new Date(match[0]);
             const endDate = new Date(startDate);
             endDate.setDate(endDate.getDate() + 1);
             queryParams.push(startDate, endDate);
-            validDates.push(date);
           }
         });
-        if (validDates.length === 0) {
-          query += '1=0'; // No valid dates, return no results
+        if (dateConds.length > 0) {
+          conditions.push(`(${dateConds.join(' OR ')})`);
         }
-        query += ')';
       }
     }
 
