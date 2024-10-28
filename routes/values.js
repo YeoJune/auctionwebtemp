@@ -8,7 +8,11 @@ router.get('/', async (req, res) => {
   const offset = (page - 1) * limit;
 
   try {
-    let query = 'SELECT * FROM values_items';
+    let query = `
+      SELECT 
+        *,
+        CONVERT_TZ(scheduled_date, 'UTC', 'Asia/Seoul') as scheduled_date 
+      FROM values_items`;
     const queryParams = [];
     let conditions = [];
 
@@ -36,7 +40,7 @@ router.get('/', async (req, res) => {
         dateList.forEach(date => {
           const match = date.match(/(\d{4}-\d{2}-\d{2})/);
           if (match) {
-            dateConds.push('(scheduled_date >= ? AND scheduled_date < ?)');
+            dateConds.push('(DATE(CONVERT_TZ(scheduled_date, "UTC", "Asia/Seoul")) >= ? AND DATE(CONVERT_TZ(scheduled_date, "UTC", "Asia/Seoul")) < ?)');
             const startDate = new Date(match[0]);
             const endDate = new Date(startDate);
             endDate.setDate(endDate.getDate() + 1);
@@ -101,9 +105,11 @@ router.get('/brands-with-count', async (req, res) => {
 router.get('/scheduled-dates-with-count', async (req, res) => {
   try {
     const [results] = await pool.query(`
-      SELECT DATE(scheduled_date) as Date, COUNT(*) as count
+      SELECT 
+        DATE(CONVERT_TZ(scheduled_date, 'UTC', 'Asia/Seoul')) as Date, 
+        COUNT(*) as count
       FROM values_items
-      GROUP BY DATE(scheduled_date)
+      GROUP BY DATE(CONVERT_TZ(scheduled_date, 'UTC', 'Asia/Seoul'))
       ORDER BY Date ASC
     `);
     
@@ -113,6 +119,7 @@ router.get('/scheduled-dates-with-count', async (req, res) => {
     res.status(500).json({ message: 'Error fetching scheduled dates with count' });
   }
 });
+
 
 router.get('/brands', async (req, res) => {
   try {

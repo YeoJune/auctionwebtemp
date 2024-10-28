@@ -27,7 +27,11 @@ router.get('/', async (req, res) => {
       getEnabledFilters('date')
     ]);
 
-    let query = 'SELECT ci.* FROM crawled_items ci';
+    let query = `
+    SELECT 
+      ci.*,
+      CONVERT_TZ(ci.scheduled_date, 'UTC', 'Asia/Seoul') as scheduled_date 
+    FROM crawled_items ci`;
     const queryParams = [];
 
     if (wishlistOnly === 'true' && userId) {
@@ -86,7 +90,7 @@ router.get('/', async (req, res) => {
           const match = date.match(/(\d{4}-\d{2}-\d{2})/);
           if (match && enabledDates.includes(match[0])) {
             if (validDates.length > 0) query += ' OR ';
-            query += 'ci.scheduled_date >= ? AND ci.scheduled_date < ?';
+            query += 'DATE(CONVERT_TZ(ci.scheduled_date, "UTC", "Asia/Seoul")) >= ? AND DATE(CONVERT_TZ(ci.scheduled_date, "UTC", "Asia/Seoul")) < ?';
             const startDate = new Date(match[0]);
             const endDate = new Date(startDate);
             endDate.setDate(endDate.getDate() + 1);
@@ -95,7 +99,7 @@ router.get('/', async (req, res) => {
           }
         });
         if (validDates.length === 0) {
-          query += '1=0'; // No valid dates, return no results
+          query += '1=0';
         }
         query += ')';
       }
@@ -226,10 +230,12 @@ router.get('/scheduled-dates-with-count', async (req, res) => {
     
     const placeholders = enabledDates.map(() => '?').join(',');
     const [results] = await pool.query(`
-      SELECT DATE(scheduled_date) as Date, COUNT(*) as count
+      SELECT 
+        DATE(CONVERT_TZ(scheduled_date, 'UTC', 'Asia/Seoul')) as Date, 
+        COUNT(*) as count
       FROM crawled_items
-      WHERE DATE(scheduled_date) IN (${placeholders})
-      GROUP BY DATE(scheduled_date)
+      WHERE DATE(CONVERT_TZ(scheduled_date, 'UTC', 'Asia/Seoul')) IN (${placeholders})
+      GROUP BY DATE(CONVERT_TZ(scheduled_date, 'UTC', 'Asia/Seoul'))
       ORDER BY Date ASC
     `, enabledDates);
     
