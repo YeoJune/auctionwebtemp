@@ -90,7 +90,7 @@ router.get('/', async (req, res) => {
         query += ' AND (';
         const validDates = [];
         dateList.forEach((date, index) => {
-          const kstDate = formatDate(date);
+          const kstDate = formatDate(date) + ' 00:00:00.000';
           if (enabledDates.includes(kstDate)) {
             if (validDates.length > 0) query += ' OR ';
             query += 'ci.scheduled_date >= ? AND ci.scheduled_date < ?';
