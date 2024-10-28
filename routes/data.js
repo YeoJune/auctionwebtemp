@@ -92,7 +92,7 @@ router.get('/', async (req, res) => {
         dateList.forEach((date, index) => {
           if (date == 'null') {
             if (validDates.length > 0) query += ' OR ';
-            query += 'ci.scheduled_date == NULL';
+            query += 'ci.scheduled_date = NULL';
             validDates.push(date);
           } else {
             const kstDate = formatDate(date) + ' 00:00:00.000';
