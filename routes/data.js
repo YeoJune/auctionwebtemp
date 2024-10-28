@@ -90,7 +90,7 @@ router.get('/', async (req, res) => {
         query += ' AND (';
         const validDates = [];
         dateList.forEach((date, index) => {
-          if (date == 'NO_DATE') {
+          if (date == 'null') {
             if (validDates.length > 0) query += ' OR ';
             query += 'ci.scheduled_date == null';
             validDates.push(date);
