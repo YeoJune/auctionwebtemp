@@ -20,7 +20,7 @@ async function getEnabledFilters(filterType) {
   `, [filterType]);
   return enabled.map(item => item.filter_value);
 }
-getEnabledFilters('date').then((data) => console.log(data));
+
 router.get('/', async (req, res) => {
   const { page = 1, limit = 20, brands, categories, scheduledDates, wishlistOnly, aucNums, bidOnly } = req.query;
   const offset = (page - 1) * limit;
@@ -90,10 +90,11 @@ router.get('/', async (req, res) => {
         query += ' AND (';
         const validDates = [];
         dateList.forEach((date, index) => {
-          if (enabledDates.includes(date)) {
+          const kstDate = formatDate(date);
+          if (enabledDates.includes(kstDate)) {
             if (validDates.length > 0) query += ' OR ';
             query += 'ci.scheduled_date >= ? AND ci.scheduled_date < ?';
-            const startDate = new Date(formatDate(date));
+            const startDate = new Date(kstDate);
             const endDate = new Date(startDate);
             endDate.setDate(endDate.getDate() + 1);
             queryParams.push(startDate, endDate);
