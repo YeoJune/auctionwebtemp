@@ -191,8 +191,8 @@
         }
         function formatDate(dateString) {
             const date = new Date(dateString);
-            // 한국 시간대로 변환
-            const kstDate = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+            // UTC 시간에 9시간(KST)을 더함
+            const kstDate = new Date(date.getTime() + (9 * 60 * 60 * 1000));
             return kstDate.toISOString().split('T')[0];
         }
 
