@@ -238,13 +238,13 @@ class GoogleSheetsManager {
               
               try {
                 await pool.query(updateQuery, [...updateValues, bidIds[i]]);
-                console.log(`Updated bid ${bidIds[i]} with new values`);
               } catch (error) {
                 console.error(`Failed to update bid ${bidIds[i]}:`, error);
               }
             }
           }
         }
+        console.log(`Updated bid ${bids.filter((bid) => bid.second_price).join(', ')} with new values`);
       }
     } catch (error) {
       console.error('Error in refreshAllBidInfo:', error);
