@@ -1,8 +1,8 @@
 // Scripts/crawler.js
 const dotenv = require('dotenv');
 const puppeteer = require('puppeteer');
-const translator = require('../utils/advancedTraslator');
 const { processImagesInChunks } = require('../utils/processImage');
+const { language } = require('googleapis/build/src/apis/language');
 
 let pLimit;
 (async () => {
@@ -24,7 +24,7 @@ const ecoAucConfig = {
     'password': process.env.CRAWLER_PASSWORD1,
   },
   categoryIds: ['1', '2', '3', '4', '5', '8', '9', '27'],
-  categoryTable: {1: "시계", 2: "가방", 3: "귀금속", 4: "악세서리", 5: "소품", 8: "의류", 9: "신발", 27: "기타"},
+  categoryTable: {1: "Watch", 2: "Bag", 3: "Jewelry", 4: "Accessory", 5: "Fashion accessories", 8: "Apparel", 9: "Shoes", 27: "Brand empty box"},
   signinSelectors: {
     userId: 'input[name="email_address"]',
     password: 'input[name="password"]',
@@ -65,6 +65,7 @@ const brandAucConfig = {
     loginButton: '#pcLoginButton',
   },
   crawlSelectors: {
+    languageSelect: '.languageselect select',
     searchButton: '.main_action_button button',
     itemsPerPageSelect: '.view_count_select select',
     itemsPerPageSelecter: '.view_count_select  option:nth-child(3)',
@@ -90,7 +91,6 @@ const brandAucConfig = {
     codeParent: '#detail_date'
   },
 };
-
 const ecoAucValueConfig = {
   name: 'EcoAuc',
   baseUrl: 'https://www.ecoauc.com',
@@ -102,7 +102,7 @@ const ecoAucValueConfig = {
     'password': process.env.CRAWLER_PASSWORD1,
   },
   categoryIds: ['1', '2', '3', '4', '5', '8', '9', '27'],
-  categoryTable: {1: "시계", 2: "가방", 3: "귀금속", 4: "악세서리", 5: "소품", 8: "의류", 9: "신발", 27: "기타"},
+  categoryTable: {1: "Watch", 2: "Bag", 3: "Jewelry", 4: "Accessory", 5: "Fashion accessories", 8: "Apparel", 9: "Shoes", 27: "Brand empty box"},
   signinSelectors: {
     userId: 'input[name="email_address"]',
     password: 'input[name="password"]',
@@ -146,6 +146,7 @@ const brandAucValueConfig = {
     loginButton: '#pcLoginButton',
   },
   crawlSelectors: {
+    languageSelect: '.languageselect select',
     searchButton: '.main_action_button button',
     itemsPerPageSelect: '.view_count_select select',
     itemsPerPageSelecter: '.view_count_select  option:nth-child(3)',
@@ -266,7 +267,7 @@ class Crawler {
         height: 1080
       }),
       await page.setExtraHTTPHeaders({
-        'Accept-Language': 'ja-JP,ja;q=0.9'
+        'Accept-Language': 'en-US,en;q=0.9'
       }),
     ]);
     page.on('request', (request) => {
@@ -320,7 +321,7 @@ class Crawler {
         '--force-color-profile=srgb',
         '--metrics-recording-only',
         '--mute-audio',
-        '--lang=ja-JP,ja',
+        '--lang=en-US,en',
         `--user-agent=${USER_AGENT}`,],
     });
     const page = (await browser.pages())[0];
@@ -420,7 +421,6 @@ class EcoAucCrawler extends Crawler {
     await this.closeDetailBrowsers();
     await this.loginCheckCrawler();
 
-    translator.TRANS_COUNT = 0;
     const startTime = Date.now();
     
     const allCrawledItems = [];
@@ -448,7 +448,6 @@ class EcoAucCrawler extends Crawler {
     }
 
     this.closeCrawlerBrowser();
-    translator.cleanupCache();
 
     if (allCrawledItems.length === 0) {
       console.log('No items were crawled. Aborting save operation.');
@@ -456,7 +455,6 @@ class EcoAucCrawler extends Crawler {
     }
 
     console.log(`Crawling completed for all categories. Total items: ${allCrawledItems.length}`);
-    console.log(`translate count: ${translator.TRANS_COUNT}`);
 
     const endTime = Date.now();
     const executionTime = endTime - startTime;
@@ -551,10 +549,7 @@ class EcoAucCrawler extends Crawler {
       };
     }, this.config);
 
-    [item.korean_title, item.brand] = await Promise.all([
-      await translator.wordTranslate(item.japanese_title),
-      await translator.wordTranslate(item.brand)
-    ]);
+    item.korean_title = item.japanese_title;
     item.starting_price = this.currencyToInt(item.starting_price);
     item.auc_num = '1'
 
@@ -601,10 +596,6 @@ class EcoAucCrawler extends Crawler {
       }, this.config);
       
       item.scheduled_date = this.extractDate(item.scheduled_date);
-      [item.description, item.accessory_code] = await Promise.all([
-        await translator.rawTranslate(item.description),
-        await translator.wordTranslate(item.accessory_code),
-      ]);
       if (!item.description) item.description = '-';
 
       return item;
@@ -659,7 +650,7 @@ class BrandAucCrawler extends Crawler {
         status: status ? status.textContent.trim() : null,
       };
     }, this.config);
-    if (item.status == '保留成約' || item.status == '成約') return null;
+    if (item.status == 'SOLD BY HOLD' || item.status == 'SOLD') return null;
     if (existingIds.has(item.item_id)) return {item_id: item.item_id};
     else return item;
   }
@@ -668,10 +659,10 @@ class BrandAucCrawler extends Crawler {
     await this.closeDetailBrowsers();
     await this.loginCheckCrawler();
     const startTime = Date.now();
-    translator.TRANS_COUNT = 0;
 
     return this.retryOperation(async () => {
       await this.crawlerPage.goto(this.config.searchUrl, { waitUntil: 'networkidle0', timeout: this.pageTimeout });
+      await this.crawlerPage.select(this.config.crawlSelectors.languageSelect, 'en');
       await this.crawlerPage.click(this.config.crawlSelectors.searchButton);
       await this.waitForLoading(this.crawlerPage);
 
@@ -717,10 +708,8 @@ class BrandAucCrawler extends Crawler {
       }
 
       this.closeCrawlerBrowser();
-      translator.cleanupCache();
 
       console.log(`Total items crawled: ${allItems.length}`);
-      console.log(`translate count: ${translator.TRANS_COUNT}`);
       
       const endTime = Date.now();
       const executionTime = endTime - startTime;
@@ -750,11 +739,9 @@ class BrandAucCrawler extends Crawler {
         scheduled_date: scheduledDate ? scheduledDate.textContent.trim() : null,
       };
     }, this.config);
-    [item.korean_title, item.brand, item.category] = await Promise.all([
-      await translator.wordTranslate(this.convertFullWidthToAscii(item.japanese_title)),
-      await translator.wordTranslate(this.convertFullWidthToAscii(item.brand)),
-      await translator.wordTranslate(item.category),
-    ]);
+    item.japanese_title = this.convertFullWidthToAscii(item.japanese_title);
+    item.brand = this.convertFullWidthToAscii(item.brand);
+    item.korean_title = item.japanese_title
     item.scheduled_date = this.extractDate(item.scheduled_date);
     item.starting_price = this.currencyToInt(item.starting_price);
     item.auc_num = '2';
@@ -770,6 +757,7 @@ class BrandAucCrawler extends Crawler {
       const page = this.detailPages[idx];
       await page.goto(this.config.searchUrl, { waitUntil: 'networkidle0', timeout: this.pageTimeout });
       console.log('search Url loaded');
+      await page.select(this.config.crawlSelectors.languageSelect, 'en');
       await page.click(this.config.crawlSelectors.resetButton);
       await Promise.all([
         await page.type(this.config.crawlSelectors.search1, itemId),
@@ -824,10 +812,6 @@ class BrandAucCrawler extends Crawler {
         await newPage.close();
         await page.click(this.config.crawlSelectors.resetButton);
       }
-      [item.description, item.accessory_code] = await Promise.all([
-        await translator.rawTranslate(item.description),
-        await translator.wordTranslate(item.accessory_code),
-      ]);
       if (!item.description) item.description = '-';
 
       const endTime = Date.now();
@@ -837,6 +821,7 @@ class BrandAucCrawler extends Crawler {
     });
   }
 }
+
 class EcoAucValueCrawler extends Crawler {
   async getTotalPages(categoryId) {
     return this.retryOperation(async () => {
@@ -1028,6 +1013,7 @@ class BrandAucValueCrawler extends Crawler {
 
     return this.retryOperation(async () => {
       await this.crawlerPage.goto(this.config.searchUrl, { waitUntil: 'networkidle0', timeout: this.pageTimeout });
+      await this.crawlerPage.select(this.config.crawlSelectors.languageSelect, 'en');
       await this.crawlerPage.click(this.config.crawlSelectors.searchButton);
       await this.waitForLoading(this.crawlerPage);
 
@@ -1126,6 +1112,7 @@ class BrandAucValueCrawler extends Crawler {
       const page = this.detailPages[idx];
       await page.goto(this.config.searchUrl, { waitUntil: 'networkidle0', timeout: this.pageTimeout });
       console.log('search Url loaded');
+      await page.select(this.config.crawlSelectors.languageSelect, 'en');
       await page.click(this.config.crawlSelectors.resetButton);
       await Promise.all([
         await page.type(this.config.crawlSelectors.search1, itemId),
