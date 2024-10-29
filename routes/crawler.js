@@ -171,9 +171,10 @@ async function crawlAll() {
       await initializeFilterSettings();
     }
   } catch (error) {
+    throw (error);
+  } finally {
     await closeAllCrawler();
     isCrawling = false;
-    throw (error);
   }
 }
 
@@ -206,9 +207,10 @@ async function crawlAllValues() {
       await initializeFilterSettings();
     }
   } catch (error) {
+    throw (error);
+  } finally {
     await closeAllCrawler();
     isValueCrawling = false;
-    throw (error);
   }
 }
 
