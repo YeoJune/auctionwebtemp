@@ -118,9 +118,15 @@ router.post('/upload-image', isAdmin, uploadNoticeImage.single('image'), async (
     const filename = `notice-${uniqueSuffix}.webp`;
     const outputPath = path.join(__dirname, '../public/images/notices', filename);
 
+    // 원본 이미지 메타데이터 가져오기
+    const metadata = await sharp(req.file.buffer).metadata();
+
     await sharp(req.file.buffer)
+      .resize(metadata.width, metadata.height) // 원본 크기 유지
       .webp({ 
-        quality: 100,
+        quality: 100,        // 최대 품질
+        lossless: true,      // 무손실 압축
+        nearLossless: true   // 거의 무손실에 가까운 압축
       })
       .toFile(outputPath);
 
