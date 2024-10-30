@@ -985,7 +985,7 @@
             await fetchFilters();
             await fetchNotices();
             await fetchData();
-            EXCHANGE_RATE = (await fetch(API_URL + '/data/exchange-rate')).rate;
+            EXCHANGE_RATE = (await fetch(API_URL + '/data/exchange-rate').then((data) => data.json())).rate;
         }
 
         init();

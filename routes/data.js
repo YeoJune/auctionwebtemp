@@ -234,7 +234,7 @@ router.get('/exchange-rate', async (req, res) => {
   const currentTime = new Date().getTime();
 
   if (cachedRate && lastFetchedTime && (currentTime - lastFetchedTime < cacheDuration)) {
-    console.log('Returning cached data');
+    //console.log('Returning cached data');
     return res.json({ rate: cachedRate });
   }
 
@@ -244,7 +244,7 @@ router.get('/exchange-rate', async (req, res) => {
     cachedRate =  response.data.rates.KRW / response.data.rates.JPY;
     lastFetchedTime = currentTime;
 
-    console.log('Fetched new data from API');
+    //console.log('Fetched new data from API');
     res.json({ rate: cachedRate });
   } catch (error) {
     console.error('Error fetching exchange rate:', error);
