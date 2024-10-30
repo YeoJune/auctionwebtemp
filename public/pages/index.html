@@ -402,7 +402,7 @@
 
             if (item.bidInfo) {
                 const bidSection = document.querySelector('.modal-content .bid-info');
-                bidSection.innerHTML = getBidSectionHTML(item.bidInfo, item.item_id);
+                bidSection.innerHTML = getBidSectionHTML(item.bidInfo, item.item_id, item.auc_num, item.category);
             }
 
             const wishlistBtn = document.querySelector('.modal-content .wishlist-btn');
@@ -478,7 +478,7 @@
                         <p class="scheduled-date">예정일: ${item.scheduled_date ? formatDate(item.scheduled_date) : '-'}</p>
                         <p class="scheduled-date">랭크: ${item.rank}</p>
                         <div class="bid-section">
-                            ${bidInfo ? getBidSectionHTML(bidInfo, item.item_id) : getDefaultBidSectionHTML(item.item_id)}
+                            ${bidInfo ? getBidSectionHTML(bidInfo, item.item_id) : getDefaultBidSectionHTML(item.item_id, item.auc_num, item.category)}
                         </div>
                         <div class="action-buttons">
                             <button class="wishlist-btn ${isWishlisted ? 'active' : ''}" onclick="toggleWishlist('${item.item_id}')">
