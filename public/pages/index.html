@@ -86,13 +86,7 @@
                     <div class="thumbnail-container"></div>
                 </div>
                 <div class="modal-right">
-                    <div class="bid-info">
-                        <div></div>
-                        <div>
-                            <input type="number" class="modal-bid-input" placeholder="입찰 예정액">
-                            <span class="modal-bid-currency">¥</span>
-                            <button class="modal-bid-button" onclick="bidButton(this.parentElement.children[0].value, currentData[modalIdx].item_id)">입찰</button>
-                        </div>
+                    <div class="bid-info-holder">
                     </div>
                     <div class="product-details">
                         <div class="detail-item description">
@@ -399,7 +393,7 @@
             }
 
             if (item.bidInfo) {
-                const bidSection = document.querySelector('.modal-content .bid-info');
+                const bidSection = document.querySelector('.modal-content .bid-info-holder');
                 bidSection.innerHTML = getBidSectionHTML(item.bidInfo, item.item_id, item.auc_num, item.category);
                 initializePriceCalculators();
             }
@@ -418,7 +412,7 @@
         function initializeBidInfo(itemId) {
             const bidInfo = bidData.find(b => b.item_id == itemId);
             const item = findItemById(itemId);
-            const bidSection = document.querySelector('.modal-content .bid-info');
+            const bidSection = document.querySelector('.modal-content .bid-info-holder');
             if (bidInfo) {
                 bidSection.innerHTML = getBidSectionHTML(bidInfo, itemId, item.auc_num, item.category);
             } else {
@@ -567,7 +561,7 @@
                         </div>
                     </div>`;
             } else {
-                let html = '<div class="bid-info">';
+                let html = `<div class="bid-info" data-item-id="${itemId}">`;
                 if (bidInfo.first_price || bidInfo.second_price) {
                     html += `
                         <div>
@@ -600,7 +594,7 @@
             document.querySelectorAll('.bid-input').forEach(input => {
                 const container = input.parentElement.parentElement.querySelector('.price-details-container');
                 const card = input.closest('.product-card');
-                const itemId = card.getAttribute('data-item-id');
+                const itemId = input.getAttribute('data-item-id');
                 const item = findItemById(itemId);
                 if (card && container) {
                     setupPriceCalculation(input, container, item.auc_num, item.category);
@@ -610,7 +604,7 @@
 
         function getDefaultBidSectionHTML(itemId) {
             return `
-            <div class="bid-info">
+            <div class="bid-info" data-item-id="${itemId}">
                 <div>
                     <div>
                         <input type="number" placeholder="입찰 예정액" class="bid-input">
@@ -657,7 +651,7 @@
                     }
                     // Also update the modal if it's open
                     if (modal.style.display === "flex") {
-                        const modalBidSection = modal.querySelector('.bid-info');
+                        const modalBidSection = modal.querySelector('.bid-info-holder');
                         modalBidSection.innerHTML = getBidSectionHTML(data.bidInfo, itemId, item.auc_num, item.category);
                     }
                 } else {
