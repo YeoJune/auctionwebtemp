@@ -307,6 +307,8 @@
 
             // 기본 정보로 모달 내용 초기화
             initializeModal(item);
+
+            initializePriceCalculators();
             
             // 모달 표시
             modal.style.display = "flex";
@@ -395,7 +397,6 @@
             if (item.bidInfo) {
                 const bidSection = document.querySelector('.modal-content .bid-info-holder');
                 bidSection.innerHTML = getBidSectionHTML(item.bidInfo, item.item_id, item.auc_num, item.category);
-                initializePriceCalculators();
             }
 
             const wishlistBtn = document.querySelector('.modal-content .wishlist-btn');
