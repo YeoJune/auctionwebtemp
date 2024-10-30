@@ -497,8 +497,8 @@
                 });
 
                 dataBody.appendChild(card);
-                initializePriceCalculators();
             });
+            initializePriceCalculators();
         }
         function currucyString(num) {
             return (num - 0).toLocaleString();
@@ -582,8 +582,8 @@
                         <input type="number" placeholder="입찰 예정액" class="bid-input">
                         <span class="bid-currency">¥</span>
                         <button class="bid-button" onclick="bidButton(this.parentElement.children[0].value, '${itemId}')">입찰</button>
-                        <div class="price-details-container"></div>
                     </div>
+                    <div class="price-details-container"></div>
                 </div>`;
                 return html;
             }
@@ -594,10 +594,10 @@
             document.querySelectorAll('.bid-input').forEach(input => {
                 const container = input.parentElement.querySelector('.price-details-container');
                 const card = input.closest('.product-card');
+                const itemId = card.getAttribute('data-item-id');
+                const item = findItemById(itemId);
                 if (card && container) {
-                    const auctionNumber = parseInt(card.querySelector('.auctioneer-number').textContent);
-                    const category = card.querySelector('.product-category').textContent;
-                    setupPriceCalculation(input, container, auctionNumber, category);
+                    setupPriceCalculation(input, container, item.auc_num, item.category);
                 }
             });
         }
