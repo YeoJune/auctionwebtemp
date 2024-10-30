@@ -547,7 +547,7 @@
         }
 
         function getTotalPriceHTML(price, auctionNumber, category) {
-            return `(수수료, 세금 포함 ${currucyString(calculateTotalPrice(bidInfo.final_price, aucNum, category))}원)`;
+            return `(수수료, 세금 포함 ${currucyString(calculateTotalPrice(price, aucNum, category))}원)`;
         }
 
         function setupPriceCalculation(inputElement, priceDetailsContainer, aucNum, category) {
