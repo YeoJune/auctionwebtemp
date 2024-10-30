@@ -20,11 +20,17 @@ async function testConnection() {
     conn = await pool.getConnection();
     console.log('Successfully connected to the database');
     
-    const [rows, fields] = await conn.query(`
-      DELETE FROM values_items
-    `);
-    console.log('Query executed successfully. Result:', rows);
+    const queries = [
+      "UPDATE crawled_items SET category = '소품' WHERE category = 'Fashion accessories';",
+      "UPDATE crawled_items SET category = '귀금속' WHERE category = 'Jewelry';",
+      "UPDATE crawled_items SET category = '신발' WHERE category = 'Shoes';",
+    ];
 
+    // 각 쿼리 순차 실행
+    for (const query of queries) {
+      const [result] = await conn.query(query);
+      console.log(`Executed: ${query}, Affected rows: ${result.affectedRows}`);
+    }
   } catch (err) {
     if (err.code === 'ER_ACCESS_DENIED_ERROR') {
       console.error('Invalid credentials:', err.message);

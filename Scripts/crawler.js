@@ -23,7 +23,7 @@ const ecoAucConfig = {
     'password': process.env.CRAWLER_PASSWORD1,
   },
   categoryIds: ['1', '2', '3', '4', '5', '8', '9', '27'],
-  categoryTable: {1: "Watch", 2: "Bag", 3: "Jewelry", 4: "Accessories", 5: "Fashion accessories", 8: "Clothing", 9: "Shoes", 27: "Brand empty box"},
+  categoryTable: {1: "시계", 2: "가방", 3: "귀금속", 4: "악세서리", 5: "소품", 8: "의류", 9: "신발", 27: "기타"},
   signinSelectors: {
     userId: 'input[name="email_address"]',
     password: 'input[name="password"]',
@@ -58,6 +58,7 @@ const brandAucConfig = {
     userId: process.env.CRAWLER_EMAIL2,
     password: process.env.CRAWLER_PASSWORD2,
   },
+  categoryTable: {'Watch': "시계", 'Bag': "가방", 'Precious metal': "귀금속", 'Clothing': "의류", 'Accessories': "악세서리", 'Tableware': "식기", 'Variety': "기타", "Painting･Art": "회화·미술품", "Coin":"코인"},
   signinSelectors: {
     userId: 'input[name="username"]',
     password: 'input[name="password"]',
@@ -101,7 +102,7 @@ const ecoAucValueConfig = {
     'password': process.env.CRAWLER_PASSWORD1,
   },
   categoryIds: ['1', '2', '3', '4', '5', '8', '9', '27'],
-  categoryTable: {1: "Watch", 2: "Bag", 3: "Jewelry", 4: "Accessories", 5: "Fashion accessories", 8: "Clothing", 9: "Shoes", 27: "Brand empty box"},
+  categoryTable: {1: "시계", 2: "가방", 3: "귀금속", 4: "악세서리", 5: "소품", 8: "의류", 9: "신발", 27: "기타"},
   signinSelectors: {
     userId: 'input[name="email_address"]',
     password: 'input[name="password"]',
@@ -139,6 +140,7 @@ const brandAucValueConfig = {
     userId: process.env.CRAWLER_EMAIL2,
     password: process.env.CRAWLER_PASSWORD2,
   },
+  categoryTable: {'Watch': "시계", 'Bag': "가방", 'Precious metal': "귀금속", 'Clothing': "의류", 'Accessories': "악세서리", 'Tableware': "식기", 'Variety': "기타", "Painting･Art": "회화·미술품", "Coin":"코인"},
   signinSelectors: {
     userId: 'input[name="username"]',
     password: 'input[name="password"]',
