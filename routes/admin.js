@@ -20,21 +20,11 @@ const logoStorage = multer.diskStorage({
 const uploadLogo = multer({ storage: logoStorage });
 
 // Multer configuration for notice image uploads
-const noticeImageStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'public/images/notices/')
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + uuidv4();
-    const ext = path.extname(file.originalname);
-    cb(null, `notice-${uniqueSuffix}${ext}`);
-  }
-});
-
+const noticeImageStorage = multer.memoryStorage();
 const uploadNoticeImage = multer({ 
   storage: noticeImageStorage,
   limits: {
-    fileSize: 20 * 1024 * 1024 // 20MB limit
+    fileSize: 10 * 1024 * 1024 // 10MB limit
   },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
@@ -115,7 +105,6 @@ router.get('/notices/:id', async (req, res) => {
     res.status(500).json({ message: 'Error getting notice' });
   }
 });
-
 router.post('/upload-image', isAdmin, uploadNoticeImage.single('image'), async (req, res) => {
   try {
     if (!req.file) {
@@ -125,18 +114,28 @@ router.post('/upload-image', isAdmin, uploadNoticeImage.single('image'), async (
       });
     }
 
+    const uniqueSuffix = Date.now() + '-' + uuidv4();
+    const filename = `notice-${uniqueSuffix}.webp`;
+    const outputPath = path.join(__dirname, '../public/images/notices', filename);
+
+    await sharp(req.file.buffer)
+      .webp({ 
+        quality: 100,
+      })
+      .toFile(outputPath);
+
     res.json({
       success: 1,
       file: {
-        url: `/images/notices/${req.file.filename}`
+        url: `/images/notices/${filename}`
       }
     });
 
   } catch (error) {
-    console.error('Error uploading image:', error);
+    console.error('Error processing notice image:', error);
     res.status(400).json({ 
       success: 0,
-      message: 'Image upload failed' 
+      message: 'Image processing failed' 
     });
   }
 });

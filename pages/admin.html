@@ -217,12 +217,9 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    // WebP 포맷으로 변환
                     canvas.toBlob((blob) => {
-                        resolve(new File([blob], 'image.webp', {
-                            type: 'image/webp'
-                        }));
-                    }, 'image/webp', quality);
+                    resolve(blob);
+                    }, 'image/jpeg', quality);
                 };
             };
             reader.onerror = (error) => reject(error);
