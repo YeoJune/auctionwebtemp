@@ -5,7 +5,7 @@ const axios = require('axios');
 const pool = require('../utils/DB');
 
 const apiKey = 'aeec85277b774a4abaa58ac8ef93e1bc';
-const apiUrl = `https://v6.exchangerate-api.com/v6/${apiKey}/latest/JPY`;
+const apiUrl = `https://api.currencyfreaks.com/v2.0/convert/latest?apikey=${apiKey}&from=JPY&to=KRW&`;
 
 let cachedRate = null;
 let lastFetchedTime = null;
@@ -240,13 +240,12 @@ router.get('/exchange-rate', async (req, res) => {
 
   try {
     const response = await axios.get(apiUrl);
-    const krwToJpy = response.data.conversion_rates.KRW; 
 
-    cachedRate = krwToJpy;
+    cachedRate = response;
     lastFetchedTime = currentTime;
 
     console.log('Fetched new data from API');
-    res.json({ rate: krwToJpy });
+    res.json({ rate: cachedRate });
   } catch (error) {
     console.error('Error fetching exchange rate:', error);
     res.status(500).json({ error: 'Failed to fetch exchange rate' });
