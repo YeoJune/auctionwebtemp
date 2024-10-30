@@ -594,10 +594,9 @@
         function initializePriceCalculators() {
             document.querySelectorAll('.bid-input').forEach(input => {
                 const container = input.parentElement.parentElement.querySelector('.price-details-container');
-                const card = input.closest('.product-card');
                 const itemId = input.getAttribute('data-item-id');
                 const item = findItemById(itemId);
-                if (card && container) {
+                if (container) {
                     setupPriceCalculation(input, container, item.auc_num, item.category);
                 }
             });
