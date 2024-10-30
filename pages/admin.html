@@ -254,11 +254,11 @@
                 if (file) {
                     try {
                         // 이미지 압축 (최대 너비 800px, 최대 높이 600px, 품질 0.7)
-                        const compressedBlob = await compressImage(file, 800, 600, 0.7);
+                        //const compressedBlob = await compressImage(file, 800, 600, 0.7);
                         
                         // 압축된 이미지를 서버에 업로드
                         const formData = new FormData();
-                        formData.append('image', compressedBlob, file.name);
+                        formData.append('image', file, file.name);
 
                         const response = await fetch(`${API_URL}/admin/upload-image`, {
                             method: 'POST',
