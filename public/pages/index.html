@@ -546,10 +546,14 @@
             return Math.round(finalTotal);
         }
 
+        function getTotalPriceHTML(price, auctionNumber, category) {
+            return `(수수료, 세금 포함 ${currucyString(calculateTotalPrice(bidInfo.final_price, aucNum, category))}원)`;
+        }
+
         function setupPriceCalculation(inputElement, priceDetailsContainer, aucNum, category) {
             inputElement.addEventListener('input', function() {
                 const price = parseFloat(this.value);
-                priceDetailsContainer.innerHTML = price ? calculateTotalPrice(price, aucNum, category) : '';
+                priceDetailsContainer.innerHTML = price ? getTotalPriceHTML(price, aucNum, category) : '';
             });
         }
 
@@ -559,7 +563,7 @@
                     <div>
                         <p>최종 입찰금액: ${currucyString(bidInfo.final_price)} ¥</p>
                         <div class="price-details-container">
-                            (수수료, 세금 포함 ${currucyString(calculateTotalPrice(bidInfo.final_price, aucNum, category))}원)
+                            ${getTotalPriceHTML(bidInfo.final_price, aucNum, category)}
                         </div>
                     </div>`;
             } else {
@@ -569,20 +573,22 @@
                         <div>
                             <p>1차 입찰금액: ${currucyString(bidInfo.first_price) || '-'} ¥</p>
                             <div class="price-details-container">
-                                (수수료, 세금 포함 ${currucyString(calculateTotalPrice(bidInfo.first_price, aucNum, category))}원)
+                                ${getTotalPriceHTML(bidInfo.final_price, aucNum, category)}
                             </div>
                             <p>2차 제안금액: ${currucyString(bidInfo.second_price) || '-'} ¥</p>
                             <div class="price-details-container">
-                                (수수료, 세금 포함 ${currucyString(calculateTotalPrice(bidInfo.second_price, aucNum, category))}원)
+                                ${getTotalPriceHTML(bidInfo.final_price, aucNum, category)}
                             </div>
                         </div>`;
                 }
                 html += `
                     <div>
                         <div>
-                            <input type="number" placeholder="입찰 예정액" class="bid-input">
-                            <span class="bid-currency">¥</span>
-                            <button class="bid-button" onclick="bidButton(this.parentElement.children[0].value, '${itemId}')">입찰</button>
+                            <div>
+                                <input type="number" placeholder="입찰 예정액" class="bid-input">
+                                <span class="bid-currency">¥</span>
+                                <button class="bid-button" onclick="bidButton(this.parentElement.children[0].value, '${itemId}')">입찰</button>
+                            </div>
                         </div>
                         <div class="price-details-container"></div>
                     </div>
