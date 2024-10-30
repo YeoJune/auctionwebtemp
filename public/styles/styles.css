@@ -592,6 +592,7 @@ button:disabled {
 }
 
 .price-details-container {
-    font-size: .5em;
+    font-size: .7em;
     color: red;
+    align-content: end;
 }
