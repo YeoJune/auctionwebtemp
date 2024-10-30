@@ -590,3 +590,8 @@ button:disabled {
         width: 100%;
     }
 }
+
+.price-details-container {
+    font-size: .5em;
+    color: red;
+}

@@ -560,7 +560,7 @@
                     <div>
                         <p>최종 입찰금액: ${currucyString(bidInfo.final_price)} ¥</p>
                         <div class="price-details-container">
-                            ${calculateTotalPrice(bidInfo.final_price, aucNum, category)}
+                            (수수료, 세금 포함 ${currucyString(calculateTotalPrice(bidInfo.final_price, aucNum, category))}원)
                         </div>
                     </div>`;
             } else {
@@ -570,11 +570,11 @@
                         <div>
                             <p>1차 입찰금액: ${currucyString(bidInfo.first_price) || '-'} ¥</p>
                             <div class="price-details-container">
-                                ${calculateTotalPrice(bidInfo.first_price, aucNum, category)}
+                                (수수료, 세금 포함 ${currucyString(calculateTotalPrice(bidInfo.first_price, aucNum, category))}원)
                             </div>
                             <p>2차 제안금액: ${currucyString(bidInfo.second_price) || '-'} ¥</p>
                             <div class="price-details-container">
-                                ${calculateTotalPrice(bidInfo.second_price, aucNum, category)}
+                                (수수료, 세금 포함 ${currucyString(calculateTotalPrice(bidInfo.second_price, aucNum, category))}원)
                             </div>
                         </div>`;
                 }
