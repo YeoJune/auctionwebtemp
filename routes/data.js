@@ -230,7 +230,7 @@ router.get('/categories', async (req, res) => {
   }
 });
 
-app.get('/exchange-rate', async (req, res) => {
+router.get('/exchange-rate', async (req, res) => {
   const currentTime = new Date().getTime();
 
   if (cachedRate && lastFetchedTime && (currentTime - lastFetchedTime < cacheDuration)) {
