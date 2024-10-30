@@ -240,7 +240,7 @@ router.get('/exchange-rate', async (req, res) => {
 
   try {
     const response = await axios.get(apiUrl);
-    const res = await response.json();
+    console.log(response);
 
     cachedRate = res.rates.JPY / res.rates.KRW;
     lastFetchedTime = currentTime;
