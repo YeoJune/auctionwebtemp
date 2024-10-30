@@ -188,39 +188,42 @@
         }
         // 이미지 압축 함수
         function compressImage(file, maxWidth, maxHeight, quality) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = function (event) {
-            const img = new Image();
-            img.src = event.target.result;
-            img.onload = function () {
-                const canvas = document.createElement('canvas');
-                let width = img.width;
-                let height = img.height;
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = function (event) {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = function () {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
 
-                if (width > height) {
-                if (width > maxWidth) {
-                    height *= maxWidth / width;
-                    width = maxWidth;
-                }
-                } else {
-                if (height > maxHeight) {
-                    width *= maxHeight / height;
-                    height = maxHeight;
-                }
-                }
+                    if (width > height) {
+                    if (width > maxWidth) {
+                        height *= maxWidth / width;
+                        width = maxWidth;
+                    }
+                    } else {
+                    if (height > maxHeight) {
+                        width *= maxHeight / height;
+                        height = maxHeight;
+                    }
+                    }
 
-                canvas.width = width;
-                canvas.height = height;
+                    canvas.width = width;
+                    canvas.height = height;
 
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
 
-                canvas.toBlob((blob) => {
-                resolve(blob);
-                }, 'image/jpeg', quality);
-            };
+                    // WebP 포맷으로 변환
+                    canvas.toBlob((blob) => {
+                        resolve(new File([blob], 'image.webp', {
+                            type: 'image/webp'
+                        }));
+                    }, 'image/webp', quality);
+                };
             };
             reader.onerror = (error) => reject(error);
         });
@@ -253,7 +256,6 @@
                 const file = input.files[0];
                 if (file) {
                     try {
-                        // 이미지 압축 (최대 너비 800px, 최대 높이 600px, 품질 0.7)
                         const compressedBlob = await compressImage(file, 1920, 1080, 0.85);
                         
                         // 압축된 이미지를 서버에 업로드
