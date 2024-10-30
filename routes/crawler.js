@@ -143,12 +143,13 @@ async function closeAllCrawler() {
   }
 }
 async function crawlAll() {
-  try {
-    if (isCrawling) {
-      throw new Error("already crawling");
-    } else if (isValueCrawling) {
-      throw new Error("value crawler is activating");
-    } else {
+
+  if (isCrawling) {
+    throw new Error("already crawling");
+  } else if (isValueCrawling) {
+    throw new Error("value crawler is activating");
+  } else {
+    try {
       const [existingItems] = await pool.query('SELECT item_id, auc_num FROM crawled_items');
       const existingEcoAucIds = new Set(existingItems.filter(item => item.auc_num == 1).map(item => item.item_id));
       const existingBrandAuctionIds = new Set(existingItems.filter(item => item.auc_num == 2).map(item => item.item_id));
@@ -169,22 +170,23 @@ async function crawlAll() {
       await DBManager.deleteItemsWithout(allItems.map((item) => item.item_id), 'crawled_items');
       await DBManager.cleanupUnusedImages();
       await initializeFilterSettings();
+    } catch (error) {
+      throw (error);
+    } finally {
+      await closeAllCrawler();
+      isCrawling = false;
     }
-  } catch (error) {
-    throw (error);
-  } finally {
-    await closeAllCrawler();
-    isCrawling = false;
   }
 }
 
 async function crawlAllValues() {
-  try {
-    if (isValueCrawling) {
-      throw new Error("already crawling");
-    } else if (isCrawling) {
-      throw new Error("crawler is activating");
-    } else {
+  
+  if (isValueCrawling) {
+    throw new Error("already crawling");
+  } else if (isCrawling) {
+    throw new Error("crawler is activating");
+  } else {
+    try {
       const [existingItems] = await pool.query('SELECT item_id, auc_num FROM values_items');
       const existingEcoAucIds = new Set(existingItems.filter(item => item.auc_num == 1).map(item => item.item_id));
       const existingBrandAuctionIds = new Set(existingItems.filter(item => item.auc_num == 2).map(item => item.item_id));
@@ -205,12 +207,12 @@ async function crawlAllValues() {
       await DBManager.saveItems(allItems, 'values_items');
       await DBManager.cleanupUnusedImages();
       await initializeFilterSettings();
+    } catch (error) {
+      throw (error);
+    } finally {
+      await closeAllCrawler();
+      isValueCrawling = false;
     }
-  } catch (error) {
-    throw (error);
-  } finally {
-    await closeAllCrawler();
-    isValueCrawling = false;
   }
 }
 
