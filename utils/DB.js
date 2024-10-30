@@ -21,15 +21,16 @@ async function testConnection() {
     console.log('Successfully connected to the database');
     
     const queries = [
-      "UPDATE crawled_items SET category = '소품' WHERE category = 'Fashion accessories';",
-      "UPDATE crawled_items SET category = '귀금속' WHERE category = 'Jewelry';",
-      "UPDATE crawled_items SET category = '신발' WHERE category = 'Shoes';",
+      `SELECT DISTINCT DATE(scheduled_date) as value 
+      FROM crawled_items 
+      WHERE scheduled_date IS NOT NULL
+      ORDER BY value`,
     ];
 
     // 각 쿼리 순차 실행
     for (const query of queries) {
-      const [result] = await conn.query(query);
-      console.log(`Executed: ${query}, Affected rows: ${result.affectedRows}`);
+      const [rows, fields] = await conn.query(query);
+      console.log(`Executed: ${query}, Result: `, rows);
     }
   } catch (err) {
     if (err.code === 'ER_ACCESS_DENIED_ERROR') {
