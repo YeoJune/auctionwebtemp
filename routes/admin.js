@@ -20,11 +20,21 @@ const logoStorage = multer.diskStorage({
 const uploadLogo = multer({ storage: logoStorage });
 
 // Multer configuration for notice image uploads
-const noticeImageStorage = multer.memoryStorage();
+const noticeImageStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'public/images/notices/')
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + uuidv4();
+    const ext = path.extname(file.originalname);
+    cb(null, `notice-${uniqueSuffix}${ext}`);
+  }
+});
+
 const uploadNoticeImage = multer({ 
   storage: noticeImageStorage,
   limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
+    fileSize: 20 * 1024 * 1024 // 20MB limit
   },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
@@ -105,6 +115,7 @@ router.get('/notices/:id', async (req, res) => {
     res.status(500).json({ message: 'Error getting notice' });
   }
 });
+
 router.post('/upload-image', isAdmin, uploadNoticeImage.single('image'), async (req, res) => {
   try {
     if (!req.file) {
@@ -114,34 +125,18 @@ router.post('/upload-image', isAdmin, uploadNoticeImage.single('image'), async (
       });
     }
 
-    const uniqueSuffix = Date.now() + '-' + uuidv4();
-    const filename = `notice-${uniqueSuffix}.webp`;
-    const outputPath = path.join(__dirname, '../public/images/notices', filename);
-
-    // 원본 이미지 메타데이터 가져오기
-    const metadata = await sharp(req.file.buffer).metadata();
-
-    await sharp(req.file.buffer)
-      .resize(metadata.width, metadata.height) // 원본 크기 유지
-      .webp({ 
-        quality: 100,        // 최대 품질
-        lossless: true,      // 무손실 압축
-        nearLossless: true   // 거의 무손실에 가까운 압축
-      })
-      .toFile(outputPath);
-
     res.json({
       success: 1,
       file: {
-        url: `/images/notices/${filename}`
+        url: `/images/notices/${req.file.filename}`
       }
     });
 
   } catch (error) {
-    console.error('Error processing notice image:', error);
+    console.error('Error uploading image:', error);
     res.status(400).json({ 
       success: 0,
-      message: 'Image processing failed' 
+      message: 'Image upload failed' 
     });
   }
 });
