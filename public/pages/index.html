@@ -573,22 +573,20 @@
                         <div>
                             <p>1차 입찰금액: ${currucyString(bidInfo.first_price) || '-'} ¥</p>
                             <div class="price-details-container">
-                                ${getTotalPriceHTML(bidInfo.final_price, aucNum, category)}
+                                ${getTotalPriceHTML(bidInfo.first_price, aucNum, category)}
                             </div>
                             <p>2차 제안금액: ${currucyString(bidInfo.second_price) || '-'} ¥</p>
                             <div class="price-details-container">
-                                ${getTotalPriceHTML(bidInfo.final_price, aucNum, category)}
+                                ${getTotalPriceHTML(bidInfo.second_price, aucNum, category)}
                             </div>
                         </div>`;
                 }
                 html += `
                     <div>
                         <div>
-                            <div>
-                                <input type="number" placeholder="입찰 예정액" class="bid-input">
-                                <span class="bid-currency">¥</span>
-                                <button class="bid-button" onclick="bidButton(this.parentElement.children[0].value, '${itemId}')">입찰</button>
-                            </div>
+                            <input type="number" placeholder="입찰 예정액" class="bid-input">
+                            <span class="bid-currency">¥</span>
+                            <button class="bid-button" onclick="bidButton(this.parentElement.children[0].value, '${itemId}')">입찰</button>
                         </div>
                         <div class="price-details-container"></div>
                     </div>
@@ -614,9 +612,11 @@
             return `
             <div class="bid-info">
                 <div>
-                    <input type="number" placeholder="입찰 예정액" class="bid-input">
-                    <span class="bid-currency">¥</span>
-                    <button class="bid-button" onclick="bidButton(this.parentElement.children[0].value, '${itemId}')">입찰</button>
+                    <div>
+                        <input type="number" placeholder="입찰 예정액" class="bid-input">
+                        <span class="bid-currency">¥</span>
+                        <button class="bid-button" onclick="bidButton(this.parentElement.children[0].value, '${itemId}')">입찰</button>
+                    </div>
                 </div>
             </div>
             `;
