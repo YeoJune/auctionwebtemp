@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
+const { v4: uuidv4 } = require('uuid');
+const sharp = require('sharp');
 const { getAdminSettings, updateAdminSettings, getNotices, getNoticeById, addNotice, updateNotice, deleteNotice } = require('../utils/adminDB');
 const { getFilterSettings, updateFilterSetting, initializeFilterSettings } = require('../utils/filterDB');
 
@@ -112,7 +114,7 @@ router.post('/upload-image', isAdmin, uploadNoticeImage.single('image'), async (
       });
     }
 
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const uniqueSuffix = Date.now() + '-' + uuidv4();
     const filename = `notice-${uniqueSuffix}.webp`;
     const outputPath = path.join(__dirname, '../public/images/notices', filename);
 
