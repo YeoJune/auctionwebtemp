@@ -742,6 +742,7 @@ class BrandAucCrawler extends Crawler {
     }, this.config);
     item.japanese_title = this.convertFullWidthToAscii(item.japanese_title);
     item.brand = this.convertFullWidthToAscii(item.brand);
+    item.category = this.config.categoryTable[item.category];
     item.korean_title = item.japanese_title
     item.scheduled_date = this.extractDate(item.scheduled_date);
     item.starting_price = this.currencyToInt(item.starting_price);
@@ -1097,6 +1098,7 @@ class BrandAucValueCrawler extends Crawler {
 
     if (existingIds.has(item.item_id)) return {item_id: item.item_id};
     item.japanese_title = this.convertFullWidthToAscii(item.japanese_title);
+    item.category = this.config.categoryTable[item.category];
     item.brand = this.convertFullWidthToAscii(item.brand);
     item.scheduled_date = this.extractDate(item.scheduled_date);
     item.final_price = this.currencyToInt(item.final_price);

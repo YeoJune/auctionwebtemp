@@ -562,7 +562,7 @@
                         </div>
                     </div>`;
             } else {
-                let html = `<div class="bid-info" data-item-id="${itemId}">`;
+                let html = `<div class="bid-info">`;
                 if (bidInfo.first_price || bidInfo.second_price) {
                     html += `
                         <div>
@@ -579,7 +579,7 @@
                 html += `
                     <div>
                         <div>
-                            <input type="number" placeholder="입찰 예정액" class="bid-input">
+                            <input type="number" placeholder="입찰 예정액" class="bid-input" data-item-id="${itemId}">
                             <span class="bid-currency">¥</span>
                             <button class="bid-button" onclick="bidButton(this.parentElement.children[0].value, '${itemId}')">입찰</button>
                         </div>
@@ -604,10 +604,10 @@
 
         function getDefaultBidSectionHTML(itemId) {
             return `
-            <div class="bid-info" data-item-id="${itemId}">
+            <div class="bid-info">
                 <div>
                     <div>
-                        <input type="number" placeholder="입찰 예정액" class="bid-input">
+                        <input type="number" placeholder="입찰 예정액" class="bid-input" data-item-id="${itemId}">
                         <span class="bid-currency">¥</span>
                         <button class="bid-button" onclick="bidButton(this.parentElement.children[0].value, '${itemId}')">입찰</button>
                     </div>
