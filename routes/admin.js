@@ -18,20 +18,20 @@ const logoStorage = multer.diskStorage({
 const uploadLogo = multer({ storage: logoStorage });
 
 // Multer configuration for notice image uploads
-const noticeImageStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'public/images/notices/')
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname))
-  }
-});
-
+const noticeImageStorage = multer.memoryStorage();
 const uploadNoticeImage = multer({ 
   storage: noticeImageStorage,
-  limits: { fileSize: 4096 * 4096 },
- });
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Please upload an image.'), false);
+    }
+  }
+});
 
 // Middleware to check if user is admin (unchanged)
 const isAdmin = (req, res, next) => {
@@ -103,20 +103,37 @@ router.get('/notices/:id', async (req, res) => {
     res.status(500).json({ message: 'Error getting notice' });
   }
 });
+router.post('/upload-image', isAdmin, uploadNoticeImage.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ 
+        success: 0,
+        message: 'No file uploaded' 
+      });
+    }
 
-// New route for TinyMCE image upload
-router.post('/upload-image', isAdmin, uploadNoticeImage.single('image'), (req, res) => {
-  if (req.file) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const filename = `notice-${uniqueSuffix}.webp`;
+    const outputPath = path.join(__dirname, '../public/images/notices', filename);
+
+    await sharp(req.file.buffer)
+      .webp({ 
+        quality: 85,
+      })
+      .toFile(outputPath);
+
     res.json({
       success: 1,
       file: {
-        url: `/images/notices/${req.file.filename}`
+        url: `/images/notices/${filename}`
       }
     });
-  } else {
+
+  } catch (error) {
+    console.error('Error processing notice image:', error);
     res.status(400).json({ 
       success: 0,
-      message: 'Image upload failed' 
+      message: 'Image processing failed' 
     });
   }
 });
