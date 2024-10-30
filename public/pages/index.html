@@ -133,8 +133,6 @@
     <script>
         const API_URL = '/api';
         let isAuthenticated = false;
-        const category_tags = ["시계", "가방", "귀금속", "악세서리", "소품", "의류", "신발", "기타"];
-        const category_ids = ["1", "2", "3", "4", "5", "8", "9", "27"];
         let selectedBrands = [];
         let selectedCategories = [];
         let selectedDates = [];
@@ -403,6 +401,7 @@
             if (item.bidInfo) {
                 const bidSection = document.querySelector('.modal-content .bid-info');
                 bidSection.innerHTML = getBidSectionHTML(item.bidInfo, item.item_id, item.auc_num, item.category);
+                initializePriceCalculators();
             }
 
             const wishlistBtn = document.querySelector('.modal-content .wishlist-btn');
@@ -418,9 +417,10 @@
 
         function initializeBidInfo(itemId) {
             const bidInfo = bidData.find(b => b.item_id == itemId);
+            const item = findItemById(itemId);
             const bidSection = document.querySelector('.modal-content .bid-info');
             if (bidInfo) {
-                bidSection.innerHTML = getBidSectionHTML(bidInfo, itemId);
+                bidSection.innerHTML = getBidSectionHTML(bidInfo, itemId, item.auc_num, item.category);
             } else {
                 bidSection.innerHTML = getDefaultBidSectionHTML(itemId);
             }
@@ -478,7 +478,7 @@
                         <p class="scheduled-date">예정일: ${item.scheduled_date ? formatDate(item.scheduled_date) : '-'}</p>
                         <p class="scheduled-date">랭크: ${item.rank}</p>
                         <div class="bid-section">
-                            ${bidInfo ? getBidSectionHTML(bidInfo, item.item_id) : getDefaultBidSectionHTML(item.item_id, item.auc_num, item.category)}
+                            ${bidInfo ? getBidSectionHTML(bidInfo, item.item_id, item.auc_num, item.category) : getDefaultBidSectionHTML(item.item_id, item.auc_num, item.category)}
                         </div>
                         <div class="action-buttons">
                             <button class="wishlist-btn ${isWishlisted ? 'active' : ''}" onclick="toggleWishlist('${item.item_id}')">
@@ -497,6 +497,7 @@
                 });
 
                 dataBody.appendChild(card);
+                initializePriceCalculators();
             });
         }
         function currucyString(num) {
@@ -545,7 +546,6 @@
             return Math.round(finalTotal);
         }
 
-        // 입찰 입력 필드에 대한 실시간 가격 계산 이벤트 설정
         function setupPriceCalculation(inputElement, priceDetailsContainer, aucNum, category) {
             inputElement.addEventListener('input', function() {
                 const price = parseFloat(this.value);
@@ -553,7 +553,6 @@
             });
         }
 
-        // getBidSectionHTML 함수 수정
         function getBidSectionHTML(bidInfo, itemId, aucNum, category) {
             if (bidInfo.final_price) {
                 return `
@@ -614,6 +613,12 @@
             </div>
             `;
         }
+        function findItemById(itemId) {
+            for(let item of currentData) {
+                if (item.item_id == itemId) return item;
+            }
+            return {};
+        }
         
         async function placeBidReservation(itemId, bidAmount, isFinalBid = false) {
             try {
@@ -636,14 +641,15 @@
                     }
                     // Update the UI
                     const card = document.querySelector(`.product-card[data-item-id="${itemId}"]`);
+                    const item = findItemById(itemId);
                     if (card) {
                         const bidSection = card.querySelector('.bid-section');
-                        bidSection.innerHTML = getBidSectionHTML(data.bidInfo);
+                        bidSection.innerHTML = getBidSectionHTML(data.bidInfo, itemId, item.auc_num, item.category);
                     }
                     // Also update the modal if it's open
                     if (modal.style.display === "flex") {
                         const modalBidSection = modal.querySelector('.bid-info');
-                        modalBidSection.innerHTML = getBidSectionHTML(data.bidInfo);
+                        modalBidSection.innerHTML = getBidSectionHTML(data.bidInfo, itemId, item.auc_num, item.category);
                     }
                 } else {
                     const errorData = await response.json();
