@@ -5,7 +5,7 @@ const axios = require('axios');
 const pool = require('../utils/DB');
 
 const apiKey = 'aeec85277b774a4abaa58ac8ef93e1bc';
-const apiUrl = `https://api.currencyfreaks.com/v2.0/convert/latest?apikey=${apiKey}&from=JPY&to=KRW&`;
+const apiUrl = `https://api.currencyfreaks.com/v2.0/rates/latest?apikey=${apiKey}`;
 
 let cachedRate = null;
 let lastFetchedTime = null;
@@ -241,7 +241,7 @@ router.get('/exchange-rate', async (req, res) => {
   try {
     const response = await axios.get(apiUrl);
 
-    cachedRate = response;
+    cachedRate = response.rates.JPY / response.rates.KRW;
     lastFetchedTime = currentTime;
 
     console.log('Fetched new data from API');
