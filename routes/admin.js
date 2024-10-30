@@ -120,7 +120,7 @@ router.post('/upload-image', isAdmin, uploadNoticeImage.single('image'), async (
 
     await sharp(req.file.buffer)
       .webp({ 
-        quality: 85,
+        quality: 100,
       })
       .toFile(outputPath);
 
