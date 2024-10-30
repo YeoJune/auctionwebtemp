@@ -28,7 +28,10 @@ const noticeImageStorage = multer.diskStorage({
   }
 });
 
-const uploadNoticeImage = multer({ storage: noticeImageStorage });
+const uploadNoticeImage = multer({ 
+  storage: noticeImageStorage,
+  limits: { fileSize: 1024 * 1024 },
+ });
 
 // Middleware to check if user is admin (unchanged)
 const isAdmin = (req, res, next) => {

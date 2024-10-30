@@ -502,27 +502,105 @@
         function currucyString(num) {
             return (num - 0).toLocaleString();
         }
-        function getBidSectionHTML(bidInfo, itemId) {
+        const EXCHANGE_RATE = 9.5;
+
+        function calculateLocalFee(price, auctionNumber) {
+            if (auctionNumber === 1) {
+                if (price === 0) return 0;
+                if (price < 10000) return 1100;
+                if (price < 50000) return 1650;
+                return 2750;
+            } else if (auctionNumber === 2) {
+                return price < 100000 ? price * 0.1 + 1990 : price * 0.07 + 1990;
+            }
+            return 0;
+        }
+
+        function calculateCustomsDuty(amountKRW, category) {
+            if (['가방', '악세서리', '소품・액세서리', '소품'].includes(category)) {
+                return amountKRW * 0.18;
+            }
+            if (['의류', '신발'].includes(category)) {
+                return amountKRW * 0.23;
+            }
+            if (category === '시계') {
+                const basicDuty = amountKRW * 0.08;
+                const extraDuty = amountKRW > 2000000 ? (amountKRW - 2000000) * 0.2 : 0;
+                const additionalTax1 = extraDuty * 0.3;
+                const additionalTax2 = extraDuty * 0.1;
+                const vat = (amountKRW + basicDuty + extraDuty) * 0.1;
+                return basicDuty + extraDuty + additionalTax1 + additionalTax2 + vat;
+            }
+            return 0;
+        }
+
+        // 총액 계산
+        function calculateTotalPrice(price, auctionNumber, category) {
+            const localFee = calculateLocalFee(price, auctionNumber);
+            const totalAmountKRW = (price + localFee) * EXCHANGE_RATE;
+            const customsDuty = calculateCustomsDuty(totalAmountKRW, category);
+            const serviceFee = (totalAmountKRW + customsDuty) * 0.05;
+            const finalTotal = totalAmountKRW + customsDuty + serviceFee;
+
+            return finalTotal;
+        }
+
+        // 입찰 입력 필드에 대한 실시간 가격 계산 이벤트 설정
+        function setupPriceCalculation(inputElement, priceDetailsContainer, aucNum, category) {
+            inputElement.addEventListener('input', function() {
+                const price = parseFloat(this.value);
+                priceDetailsContainer.innerHTML = price ? calculateTotalPrice(price, aucNum, category) : '';
+            });
+        }
+
+        // getBidSectionHTML 함수 수정
+        function getBidSectionHTML(bidInfo, itemId, aucNum, category) {
             if (bidInfo.final_price) {
-                return `<p>최종 입찰금액: ${currucyString(bidInfo.final_price)} ¥</p>`;
+                return `
+                    <div>
+                        <p>최종 입찰금액: ${currucyString(bidInfo.final_price)} ¥</p>
+                        <div class="price-details-container">
+                            ${calculateTotalPrice(bidInfo.final_price, aucNum, category)}
+                        </div>
+                    </div>`;
             } else {
                 let html = '<div class="bid-info">';
                 if (bidInfo.first_price || bidInfo.second_price) {
-                    html += `<div>
+                    html += `
+                        <div>
                             <p>1차 입찰금액: ${currucyString(bidInfo.first_price) || '-'} ¥</p>
+                            <div class="price-details-container">
+                                ${calculateTotalPrice(bidInfo.first_price, aucNum, category)}
+                            </div>
                             <p>2차 제안금액: ${currucyString(bidInfo.second_price) || '-'} ¥</p>
-                        </div>
-                    `;
+                            <div class="price-details-container">
+                                ${calculateTotalPrice(bidInfo.second_price, aucNum, category)}
+                            </div>
+                        </div>`;
                 }
                 html += `
                     <div>
-                        <input type="number" placeholder="최종 입찰금액" class="bid-input">
+                        <input type="number" placeholder="입찰 예정액" class="bid-input">
                         <span class="bid-currency">¥</span>
                         <button class="bid-button" onclick="bidButton(this.parentElement.children[0].value, '${itemId}')">입찰</button>
+                        <div class="price-details-container"></div>
                     </div>
                 </div>`;
                 return html;
             }
+        }
+
+        // 입찰 섹션이 추가된 후 실시간 계산 설정
+        function initializePriceCalculators() {
+            document.querySelectorAll('.bid-input').forEach(input => {
+                const container = input.parentElement.querySelector('.price-details-container');
+                const card = input.closest('.product-card');
+                if (card && container) {
+                    const auctionNumber = parseInt(card.querySelector('.auctioneer-number').textContent);
+                    const category = card.querySelector('.product-category').textContent;
+                    setupPriceCalculation(input, container, auctionNumber, category);
+                }
+            });
         }
 
         function getDefaultBidSectionHTML(itemId) {

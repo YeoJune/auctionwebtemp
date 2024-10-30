@@ -2,7 +2,6 @@
 const dotenv = require('dotenv');
 const puppeteer = require('puppeteer');
 const { processImagesInChunks } = require('../utils/processImage');
-const { language } = require('googleapis/build/src/apis/language');
 
 let pLimit;
 (async () => {
@@ -24,7 +23,7 @@ const ecoAucConfig = {
     'password': process.env.CRAWLER_PASSWORD1,
   },
   categoryIds: ['1', '2', '3', '4', '5', '8', '9', '27'],
-  categoryTable: {1: "Watch", 2: "Bag", 3: "Jewelry", 4: "Accessory", 5: "Fashion accessories", 8: "Apparel", 9: "Shoes", 27: "Brand empty box"},
+  categoryTable: {1: "Watch", 2: "Bag", 3: "Jewelry", 4: "Accessories", 5: "Fashion accessories", 8: "Clothing", 9: "Shoes", 27: "Brand empty box"},
   signinSelectors: {
     userId: 'input[name="email_address"]',
     password: 'input[name="password"]',
@@ -102,7 +101,7 @@ const ecoAucValueConfig = {
     'password': process.env.CRAWLER_PASSWORD1,
   },
   categoryIds: ['1', '2', '3', '4', '5', '8', '9', '27'],
-  categoryTable: {1: "Watch", 2: "Bag", 3: "Jewelry", 4: "Accessory", 5: "Fashion accessories", 8: "Apparel", 9: "Shoes", 27: "Brand empty box"},
+  categoryTable: {1: "Watch", 2: "Bag", 3: "Jewelry", 4: "Accessories", 5: "Fashion accessories", 8: "Clothing", 9: "Shoes", 27: "Brand empty box"},
   signinSelectors: {
     userId: 'input[name="email_address"]',
     password: 'input[name="password"]',
