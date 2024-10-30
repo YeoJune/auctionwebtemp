@@ -140,6 +140,7 @@
         let modalIdx = -1;
         let images = [];
         let currentImageIndex = 0;
+        let EXCHANGE_RATE = 9.0;
 
         // DOM 요소 선택
         const applyFiltersBtn = document.getElementById('applyFiltersBtn');
@@ -498,7 +499,6 @@
         function currucyString(num) {
             return (num - 0).toLocaleString();
         }
-        const EXCHANGE_RATE = 9.0;
 
         function calculateLocalFee(price, auctionNumber) {
             if (auctionNumber === 1) {
@@ -985,6 +985,7 @@
             await fetchFilters();
             await fetchNotices();
             await fetchData();
+            EXCHANGE_RATE = (await fetch(API_URL + '/data/exchange-rate')).rate;
         }
 
         init();

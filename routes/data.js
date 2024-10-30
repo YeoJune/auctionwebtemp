@@ -1,8 +1,15 @@
 // routes/data.js
 const express = require('express');
 const router = express.Router();
+const axios = require('axios');
 const pool = require('../utils/DB');
-const MyGoogleSheetsManager = require('../utils/googleSheets');
+
+const apiKey = 'aeec85277b774a4abaa58ac8ef93e1bc';
+const apiUrl = `https://v6.exchangerate-api.com/v6/${apiKey}/latest/JPY`;
+
+let cachedRate = null;
+let lastFetchedTime = null;
+const cacheDuration = 60 * 60 * 1000;
 
 function formatDate(dateString) {
   const date = new Date(dateString);
@@ -222,5 +229,29 @@ router.get('/categories', async (req, res) => {
     res.status(500).json({ message: 'Error fetching categories' });
   }
 });
+
+app.get('/exchange-rate', async (req, res) => {
+  const currentTime = new Date().getTime();
+
+  if (cachedRate && lastFetchedTime && (currentTime - lastFetchedTime < cacheDuration)) {
+    console.log('Returning cached data');
+    return res.json({ rate: cachedRate });
+  }
+
+  try {
+    const response = await axios.get(apiUrl);
+    const krwToJpy = response.data.conversion_rates.KRW; 
+
+    cachedRate = krwToJpy;
+    lastFetchedTime = currentTime;
+
+    console.log('Fetched new data from API');
+    res.json({ rate: krwToJpy });
+  } catch (error) {
+    console.error('Error fetching exchange rate:', error);
+    res.status(500).json({ error: 'Failed to fetch exchange rate' });
+  }
+});
+
 
 module.exports = router;
