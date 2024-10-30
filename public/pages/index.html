@@ -502,7 +502,7 @@
         function currucyString(num) {
             return (num - 0).toLocaleString();
         }
-        const EXCHANGE_RATE = 9.5;
+        const EXCHANGE_RATE = 9.0;
 
         function calculateLocalFee(price, auctionNumber) {
             if (auctionNumber === 1) {
@@ -517,13 +517,13 @@
         }
 
         function calculateCustomsDuty(amountKRW, category) {
-            if (['가방', '악세서리', '소품・액세서리', '소품'].includes(category)) {
+            if (['Bag', 'Accessories', 'Fashion accessories'].includes(category)) {
                 return amountKRW * 0.18;
             }
-            if (['의류', '신발'].includes(category)) {
+            if (['Clothing', 'Shoes'].includes(category)) {
                 return amountKRW * 0.23;
             }
-            if (category === '시계') {
+            if (category === 'Watch') {
                 const basicDuty = amountKRW * 0.08;
                 const extraDuty = amountKRW > 2000000 ? (amountKRW - 2000000) * 0.2 : 0;
                 const additionalTax1 = extraDuty * 0.3;
