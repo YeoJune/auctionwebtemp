@@ -501,12 +501,12 @@
         }
 
         function calculateLocalFee(price, auctionNumber) {
-            if (auctionNumber === 1) {
+            if (auctionNumber == 1) {
                 if (price === 0) return 0;
                 if (price < 10000) return 1100;
                 if (price < 50000) return 1650;
                 return 2750;
-            } else if (auctionNumber === 2) {
+            } else if (auctionNumber == 2) {
                 return price < 100000 ? price * 0.1 + 1990 : price * 0.07 + 1990;
             }
             return 0;
@@ -519,7 +519,7 @@
             if (['의류', '신발'].includes(category)) {
                 return amountKRW * 0.23;
             }
-            if (category === '시계') {
+            if (category == '시계') {
                 const basicDuty = amountKRW * 0.08;
                 const extraDuty = amountKRW > 2000000 ? (amountKRW - 2000000) * 0.2 : 0;
                 const additionalTax1 = extraDuty * 0.3;
