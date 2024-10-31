@@ -21,10 +21,7 @@ async function testConnection() {
     console.log('Successfully connected to the database');
     
     const queries = [
-      `SELECT DISTINCT DATE(scheduled_date) as value 
-      FROM crawled_items 
-      WHERE scheduled_date IS NOT NULL
-      ORDER BY value`,
+      `DELETE FROM values_items WHERE auc_num = 2`,
     ];
 
     // 각 쿼리 순차 실행
