@@ -671,6 +671,7 @@ class BrandAucCrawler extends Crawler {
       await this.crawlerPage.select(this.config.crawlSelectors.itemsPerPageSelect, '500');
       await this.waitForLoading(this.crawlerPage);
       await this.crawlerPage.waitForSelector(this.config.crawlSelectors.itemContainer);
+      await this.sleep(3000);
 
       const totalPageText = await this.crawlerPage.$eval(this.config.crawlSelectors.totalPagesSpan, el => el.textContent);
       const totalPages = parseInt(totalPageText.match(/\d+/g).join(''));
@@ -1039,7 +1040,8 @@ class BrandAucValueCrawler extends Crawler {
         await this.crawlerPage.select(this.config.crawlSelectors.pageSelect, page.toString());
         await this.waitForLoading(this.crawlerPage);
         await this.crawlerPage.waitForSelector(this.config.crawlSelectors.itemContainer);
-        
+        await this.sleep(3000);
+
         itemHandles = await this.crawlerPage.$$(this.config.crawlSelectors.itemContainer);
         pageItemsPromises = [];
         for(let i = 0; i < itemHandles.length; i++) {
