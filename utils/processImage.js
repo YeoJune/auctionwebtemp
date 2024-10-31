@@ -31,15 +31,10 @@ async function downloadAndSaveImage(url, retries = 5, delay = 1000) {
       return `/images/products/${fileName}`;
     } catch (error) {
       console.error(`Error processing image (Attempt ${attempt + 1}/${retries}): ${url}`, error.message);
-      
-      if (error.response && error.response.status != 403) {
-        console.log(`error encountered. Stopping retry attempts.`);
-        return null;
-      }
 
       if (attempt < retries - 1) {
         console.log(`Retrying in ${delay}ms...`);
-        if (error.response && error.response.status != 403) await new Promise(resolve => setTimeout(resolve, 2 * 60 * 1000));
+        if (error.response && error.response.status == 403) await new Promise(resolve => setTimeout(resolve, 2 * 60 * 1000));
         else await new Promise(resolve => setTimeout(resolve, delay));
       } else {
         return null;
