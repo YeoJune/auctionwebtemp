@@ -61,7 +61,7 @@ router.get('/', async (req, res) => {
 
     // Add pagination
     const countQuery = `SELECT COUNT(*) as total FROM (${query}) as subquery`;
-    query += ' ORDER BY item_id ASC LIMIT ? OFFSET ?';
+    query += ' ORDER BY scheduled_date DESC, item_id DESC LIMIT ? OFFSET ?';
     queryParams.push(parseInt(limit), offset);
 
     const [items] = await pool.query(query, queryParams);
