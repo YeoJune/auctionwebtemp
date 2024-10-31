@@ -246,6 +246,10 @@
             }
         }
 
+        function currucyString(num) {
+            return (num - 0).toLocaleString();
+        }
+
         function updateModalWithDetails(item) {
             document.querySelector('.modal-description').textContent = item.description || "설명 없음";
             document.querySelector('.modal-category').textContent = item.category || "카테고리 없음";
@@ -284,7 +288,7 @@
             document.querySelector('.modal-brand2').textContent = item.brand;
             document.querySelector('.modal-accessory-code').textContent = item.accessory_code || "액세서리 코드 없음";
             document.querySelector('.modal-scheduled-date').textContent = formatDate(item.scheduled_date) || "날짜 정보 없음";
-            document.querySelector('.modal-final-price').textContent = item.final_price ? `${item.final_price} ¥` : "가격 정보 없음";
+            document.querySelector('.modal-final-price').textContent = item.final_price ? `${currucyString(parseInt(item.final_price))} ¥` : "가격 정보 없음";
 
             initializeImages([item.image]);
         }
@@ -492,7 +496,7 @@
                     <div class="product-details">
                         <p class="scheduled-date">경매일: ${item.scheduled_date ? formatDate(item.scheduled_date) : '-'}</p>
                         <p class="scheduled-date">랭크: ${item.rank}</p>
-                        ${item.final_price ? `<p class="final-price">최종가격: ${item.final_price} ¥</p>` : ''}
+                        ${item.final_price ? `<p class="final-price">최종가격: ${currucyString(parseInt(item.final_price))} ¥</p>` : ''}
                     </div>
                 `;
 
