@@ -617,7 +617,7 @@
             `;
         }
         function findItemById(itemId) {
-            console.log(itemId);
+            console.log(itemId, currentData);
             for(let item of currentData) {
                 if (item.item_id == itemId) return item;
             }
