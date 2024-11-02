@@ -982,11 +982,11 @@
 
         // 초기화 함수
         async function init() {
+            EXCHANGE_RATE = (await fetch(API_URL + '/data/exchange-rate').then((data) => data.json())).rate;
             await checkAuthStatus();
             await fetchFilters();
             await fetchNotices();
             await fetchData();
-            EXCHANGE_RATE = (await fetch(API_URL + '/data/exchange-rate').then((data) => data.json())).rate;
         }
 
         init();
