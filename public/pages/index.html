@@ -532,6 +532,7 @@
 
         // 총액 계산
         function calculateTotalPrice(price, auctionNumber, category) {
+            price = parseFloat(price);
             const localFee = calculateLocalFee(price, auctionNumber);
             const totalAmountKRW = (price + localFee) * EXCHANGE_RATE;
             const customsDuty = calculateCustomsDuty(totalAmountKRW, category);
@@ -542,7 +543,7 @@
         }
 
         function getTotalPriceHTML(price, aucNum, category) {
-            console.log(price, aucNum, category, calculateTotalPrice(price, aucNum, category), currucyString(calculateTotalPrice(price, aucNum, category)));
+            //console.log(price, aucNum, category, calculateTotalPrice(price, aucNum, category), currucyString(calculateTotalPrice(price, aucNum, category)));
             return `(수수료, 세금 포함 ${currucyString(calculateTotalPrice(price, aucNum, category))}원)`;
         }
 
