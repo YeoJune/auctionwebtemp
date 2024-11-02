@@ -542,6 +542,7 @@
         }
 
         function getTotalPriceHTML(price, aucNum, category) {
+            console.log(price, aucNum, category, calculateTotalPrice(price, aucNum, category), currucyString(calculateTotalPrice(price, aucNum, category)));
             return `(수수료, 세금 포함 ${currucyString(calculateTotalPrice(price, aucNum, category))}원)`;
         }
 
@@ -617,7 +618,6 @@
             `;
         }
         function findItemById(itemId) {
-            console.log(itemId, currentData);
             for(let item of currentData) {
                 if (item.item_id == itemId) return item;
             }
