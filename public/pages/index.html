@@ -532,7 +532,7 @@
 
         // 총액 계산
         function calculateTotalPrice(price, auctionNumber, category) {
-            price = parseFloat(price);
+            price = parseFloat(price) || 0;
             const localFee = calculateLocalFee(price, auctionNumber);
             const totalAmountKRW = (price + localFee) * EXCHANGE_RATE;
             const customsDuty = calculateCustomsDuty(totalAmountKRW, category);
