@@ -617,8 +617,9 @@
             `;
         }
         function findItemById(itemId) {
+            console.log(itemId);
             for(let item of currentData) {
-                if (item.item_id == String(itemId)) return item;
+                if (item.item_id == itemId) return item;
             }
             return {};
         }
