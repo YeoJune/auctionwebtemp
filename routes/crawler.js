@@ -142,6 +142,11 @@ async function closeAllCrawler() {
     await c.closeDetailBrowsers();
   }
 }
+async function loginAllDetails() {
+  for(let c of [ecoAucCrawler, brandAucCrawler, ecoAucValueCrawler, brandAucValueCrawler]) {
+    await c.loginCheckDetails();
+  }
+}
 async function crawlAll() {
 
   if (isCrawling) {
@@ -173,8 +178,8 @@ async function crawlAll() {
     } catch (error) {
       throw (error);
     } finally {
-      await closeAllCrawler();
       isCrawling = false;
+      await loginAllDetails();
     }
   }
 }
@@ -205,13 +210,13 @@ async function crawlAllValues() {
         ...brandAucItems
       ];
       await DBManager.saveItems(allItems, 'values_items');
+      await DBManager.cleanupOldValueItems();
       await DBManager.cleanupUnusedImages();
-      await initializeFilterSettings();
     } catch (error) {
       throw (error);
     } finally {
-      await closeAllCrawler();
       isValueCrawling = false;
+      await loginAllDetails();
     }
   }
 }
@@ -278,5 +283,6 @@ const scheduleCrawling = async () => {
 };
 
 scheduleCrawling();
+loginAllDetails();
 
 module.exports = router;

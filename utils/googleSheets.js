@@ -206,17 +206,57 @@ class GoogleSheetsManager {
     }
   }
 
+  
   async refreshAllBidInfo() {
+    let conn;
     try {
-      const [bids] = await pool.query(`SELECT id FROM bids WHERE second_price IS NULL`);
-      const bidIds = bids.map((bid) => bid.id);
-      if (bidIds.length > 0) {
-        const bidInfos = await this.getBidInfos(bidIds);
-        for (let i = 0; i < bidIds.length; i++) {
-          const bidIndex = bids.findIndex(bid => bid.id === bidIds[i]);
-          if (bidIndex !== -1 && bidInfos[i]) {
-            Object.assign(bids[bidIndex], bidInfos[i]);
-            
+      conn = await pool.getConnection();
+      await conn.beginTransaction();
+
+      // 1. DB에서 모든 입찰 ID 가져오기
+      const [allBids] = await conn.query(`SELECT id FROM bids`);
+      const allBidIds = allBids.map(bid => bid.id);
+
+      // 2. 구글 시트에서 모든 입찰 ID 가져오기
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: this.spreadsheetId,
+        range: 'Main Sheet!A:A',
+      });
+      const sheetBidIds = response.data.values
+        ?.slice(1) // 헤더 제외
+        .filter(row => row[0]) // 빈 행 제외
+        .map(row => row[0]); // ID만 추출
+
+      if (!sheetBidIds) {
+        throw new Error('Failed to fetch bid IDs from Google Sheet');
+      }
+
+      // 3. 구글 시트에 없는 입찰 ID 찾기
+      const bidsToDelete = allBidIds.filter(id => !sheetBidIds.includes(id.toString()));
+
+      // 4. 구글 시트에 없는 입찰 삭제
+      if (bidsToDelete.length > 0) {
+        await conn.query(`
+          DELETE FROM bids 
+          WHERE id IN (?)
+        `, [bidsToDelete]);
+        console.log(`Deleted bids not in Google Sheet: ${bidsToDelete.join(', ')}`);
+      }
+
+      // 5. 구글 시트에 있는 입찰 정보 업데이트
+      const [bidsToUpdate] = await conn.query(`
+        SELECT id 
+        FROM bids 
+        WHERE second_price IS NULL OR final_price IS NULL
+      `);
+      
+      const bidIdsToUpdate = bidsToUpdate.map(bid => bid.id);
+      
+      if (bidIdsToUpdate.length > 0) {
+        const bidInfos = await this.getBidInfos(bidIdsToUpdate);
+        
+        for (let i = 0; i < bidIdsToUpdate.length; i++) {
+          if (bidInfos[i]) {
             const updateFields = [];
             const updateValues = [];
             
@@ -237,17 +277,25 @@ class GoogleSheetsManager {
               `;
               
               try {
-                await pool.query(updateQuery, [...updateValues, bidIds[i]]);
+                await conn.query(updateQuery, [...updateValues, bidIdsToUpdate[i]]);
               } catch (error) {
-                console.error(`Failed to update bid ${bidIds[i]}:`, error);
+                console.error(`Failed to update bid ${bidIdsToUpdate[i]}:`, error);
+                throw error;
               }
             }
           }
         }
-        console.log(`Updated bid ${bids.filter((bid) => bid.second_price).map((item) => item.id).join(', ')} with new values`);
+        
+        console.log(`Updated bids ${bidIdsToUpdate.filter((_, i) => bidInfos[i]).join(', ')} with new values`);
       }
+
+      await conn.commit();
     } catch (error) {
+      if (conn) await conn.rollback();
       console.error('Error in refreshAllBidInfo:', error);
+      throw error;
+    } finally {
+      if (conn) conn.release();
     }
   }
 }
