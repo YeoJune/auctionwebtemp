@@ -63,7 +63,7 @@ router.post('/place-reservation', async (req, res) => {
         item.korean_title,
         item.rank,
         item.starting_price,
-        `=IMAGE("http://casastrade.com/${item.image}")`,
+        `=IMAGE("${item.image[0] == '/' ? 'http://casastrade.com/' + item.image : item.image}")`,
         bidAmount,
       ];
       bid = {
