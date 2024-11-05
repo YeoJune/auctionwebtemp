@@ -296,6 +296,7 @@
                 const datesParam = selectedDates.map(date => date === 'NO_DATE' ? 'null' : date).join(',');
                 const wishlistOnly = wishlistFilter.checked;
                 const bidOnly = document.getElementById('bidFilter').checked;
+                const ranksParam = selectedRanks.join(',');
 
                 const url = new URL(`${window.location.origin}${API_URL}/data`);
                 url.searchParams.append('page', currentPage);
