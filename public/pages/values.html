@@ -27,6 +27,10 @@
                 <div id="scheduledDateFilters"></div>
             </div>
             <div class="filter-section">
+                <h2>랭크</h2>
+                <div id="rankFilters"></div>
+            </div>
+            <div class="filter-section">
                 <h2>검색</h2>
                 <div class="search-container">
                     <input type="text" id="searchInput" placeholder="상품명 검색...">
@@ -137,10 +141,11 @@
                 throw error;
             }
         }
-        function displayFilters(brands, categories, dates) {
+        function displayFilters(brands, categories, dates, ranks) {
             displayBrandFilters(brands);
             displayCategoryFilters(categories);
             displayDateFilters(dates);
+            displayRankFilters(ranks);
         }
 
         function displayBrandFilters(brands) {
@@ -172,6 +177,15 @@
                     const dateItem = createFilterItem(date.Date, 'date', selectedDates, `${formattedDate} (${date.count})`);
                     scheduledDateFilters.appendChild(dateItem);
                 }
+            });
+        }
+        function displayRankFilters(ranks) {
+            const rankFilters = document.getElementById('rankFilters');
+            rankFilters.innerHTML = '';
+            
+            ranks.forEach(rank => {
+                const rankItem = createFilterItem(rank.rank, 'rank', selectedRanks, `${rank.rank} (${rank.count})`);
+                rankFilters.appendChild(rankItem);
             });
         }
         function createFilterItem(value, type, selectedArray, label = value) {
@@ -437,15 +451,17 @@
         }
         async function fetchFilters() {
             try {
-                const [brandsResponse, categoriesResponse, datesResponse] = await Promise.all([
+                const [brandsResponse, categoriesResponse, datesResponse, ranksResponse] = await Promise.all([
                     fetch(`${API_URL}/values/brands-with-count`),
                     fetch(`${API_URL}/values/categories`),
                     fetch(`${API_URL}/values/scheduled-dates-with-count`),
+                    fetch(`${API_URL}/values/ranks`)
                 ]);
                 const brands = await brandsResponse.json();
                 const categories = await categoriesResponse.json();
                 const dates = await datesResponse.json();
-                displayFilters(brands, categories, dates);
+                const ranks = await ranksResponse.json();
+                displayFilters(brands, categories, dates, ranks);
             } catch (error) {
                 console.error('Error fetching filters:', error);
                 alert('필터를 불러오는 데 실패했습니다.');
@@ -458,6 +474,7 @@
                 const brandsParam = selectedBrands.join(',');
                 const categoriesParam = selectedCategories.join(',');
                 const datesParam = selectedDates.map(date => date === 'NO_DATE' ? 'null' : date).join(',');
+                const ranksParam = selectedRanks.join(',');
 
                 const url = new URL(`${window.location.origin}${API_URL}/values`);
                 url.searchParams.append('page', currentPage);
@@ -466,6 +483,7 @@
                 if (categoriesParam) url.searchParams.append('categories', categoriesParam);
                 if (datesParam) url.searchParams.append('scheduledDates', datesParam);
                 if (searchTerm) url.searchParams.append('search', searchTerm.trim()); // 검색어 파라미터 추가
+                if (ranksParam) url.searchParams.append('ranks', ranksParam);
 
                 const response = await fetch(url.toString());
                 const data = await response.json();

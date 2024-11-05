@@ -38,7 +38,8 @@ router.get('/', async (req, res) => {
     wishlistOnly, 
     aucNums, 
     bidOnly,
-    search  // 새로운 검색 파라미터 추가
+    search,
+    ranks,  // 새로운 검색 파라미터 추가
   } = req.query;
   const offset = (page - 1) * limit;
   const userId = req.session.user?.id;
@@ -73,6 +74,27 @@ router.get('/', async (req, res) => {
       searchTerms.forEach(term => {
         queryParams.push(`%${term}%`);
       });
+    }
+
+    if (ranks) {
+      const rankList = ranks.split(',');
+      if (rankList.length > 0) {
+        const rankConditions = rankList.map(rank => {
+          switch(rank) {
+            case 'AB':
+              return "rank LIKE 'AB%'";
+            case 'A':
+              return "rank LIKE 'A%' AND rank NOT LIKE 'AB%'";
+            case 'BC':
+              return "rank LIKE 'BC%'";
+            case 'B':
+              return "rank LIKE 'B%' AND rank NOT LIKE 'BC%'";
+            default:
+              return `rank LIKE '${rank}%'`;
+          }
+        });
+        conditions.push(`(${rankConditions.join(' OR ')})`);
+      }
     }
 
     // Apply enabled filter restrictions
@@ -273,5 +295,47 @@ router.get('/exchange-rate', async (req, res) => {
   }
 });
 
+router.get('/ranks', async (req, res) => {
+  try {
+    const [results] = await pool.query(`
+      SELECT DISTINCT 
+        CASE 
+          WHEN rank LIKE 'N%' THEN 'N'
+          WHEN rank LIKE 'S%' THEN 'S'
+          WHEN rank LIKE 'AB%' THEN 'AB'
+          WHEN rank LIKE 'A%' AND rank NOT LIKE 'AB%' THEN 'A'
+          WHEN rank LIKE 'BC%' THEN 'BC'
+          WHEN rank LIKE 'B%' AND rank NOT LIKE 'BC%' THEN 'B'
+          WHEN rank LIKE 'C%' THEN 'C'
+          WHEN rank LIKE 'D%' THEN 'D'
+          WHEN rank LIKE 'E%' THEN 'E'
+          WHEN rank LIKE 'F%' THEN 'F'
+          ELSE 'N'
+        END as rank,
+        COUNT(*) as count
+      FROM values_items
+      GROUP BY 
+        CASE 
+          WHEN rank LIKE 'N%' THEN 'N'
+          WHEN rank LIKE 'S%' THEN 'S'
+          WHEN rank LIKE 'AB%' THEN 'AB'
+          WHEN rank LIKE 'A%' AND rank NOT LIKE 'AB%' THEN 'A'
+          WHEN rank LIKE 'BC%' THEN 'BC'
+          WHEN rank LIKE 'B%' AND rank NOT LIKE 'BC%' THEN 'B'
+          WHEN rank LIKE 'C%' THEN 'C'
+          WHEN rank LIKE 'D%' THEN 'D'
+          WHEN rank LIKE 'E%' THEN 'E'
+          WHEN rank LIKE 'F%' THEN 'F'
+          ELSE 'N'
+        END
+      ORDER BY 
+        FIELD(rank, 'N', 'S', 'A', 'AB', 'B', 'BC', 'C', 'D', 'E', 'F')
+    `);
+    res.json(results);
+  } catch (error) {
+    console.error('Error fetching ranks:', error);
+    res.status(500).json({ message: 'Error fetching ranks' });
+  }
+});
 
 module.exports = router;
