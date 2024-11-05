@@ -26,6 +26,15 @@
                 <h2>경매 날짜</h2>
                 <div id="scheduledDateFilters"></div>
             </div>
+            <div class="filter-section">
+                <h2>검색</h2>
+                <div class="search-container">
+                    <input type="text" id="searchInput" placeholder="상품명 검색...">
+                    <button id="searchButton">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
         </div>
         <button id="applyFiltersBtn">필터 적용</button>
         
@@ -97,6 +106,7 @@
         let modalIdx = -1;
         let images = [];
         let currentImageIndex = 0;
+        let searchTerm = '';
 
         // DOM 요소 선택
         const applyFiltersBtn = document.getElementById('applyFiltersBtn');
@@ -455,6 +465,7 @@
                 if (brandsParam) url.searchParams.append('brands', brandsParam);
                 if (categoriesParam) url.searchParams.append('categories', categoriesParam);
                 if (datesParam) url.searchParams.append('scheduledDates', datesParam);
+                if (searchTerm) url.searchParams.append('search', searchTerm.trim()); // 검색어 파라미터 추가
 
                 const response = await fetch(url.toString());
                 const data = await response.json();
@@ -472,6 +483,36 @@
             }
         }
 
+        // 검색 이벤트 핸들러 설정 함수
+        function setupSearchHandlers() {
+            const searchInput = document.getElementById('searchInput');
+            const searchButton = document.getElementById('searchButton');
+
+            // 검색 버튼 클릭 이벤트
+            searchButton.addEventListener('click', () => {
+                searchTerm = searchInput.value;
+                currentPage = 1;
+                fetchData();
+            });
+
+            // Enter 키 입력 이벤트
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    searchTerm = searchInput.value;
+                    currentPage = 1;
+                    fetchData();
+                }
+            });
+
+            // 검색어가 비워질 때 결과 초기화
+            searchInput.addEventListener('input', (e) => {
+                if (e.target.value === '') {
+                    searchTerm = '';
+                    currentPage = 1;
+                    fetchData();
+                }
+            });
+        }
         function displayData(data) {
             dataBody.innerHTML = '';
             if (!data || data.length === 0) {
@@ -534,6 +575,7 @@
         // 초기화
         fetchFilters();
         fetchData();
+        setupSearchHandlers(); // 검색 핸들러 설정 추가
     </script>
 </body>
 </html>

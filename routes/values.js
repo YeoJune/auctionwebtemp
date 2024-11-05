@@ -4,13 +4,23 @@ const router = express.Router();
 const pool = require('../utils/DB');
 
 router.get('/', async (req, res) => {
-  const { page = 1, limit = 20, brands, categories, scheduledDates, aucNums } = req.query;
+  const { page = 1, limit = 20, brands, categories, scheduledDates, aucNums, search } = req.query;
   const offset = (page - 1) * limit;
 
   try {
     let query = 'SELECT * FROM values_items';
     const queryParams = [];
     let conditions = [];
+
+    // Add search condition
+    if (search && search.trim()) {
+      const searchTerms = search.trim().split(/\s+/);
+      const searchConditions = searchTerms.map(() => 'korean_title LIKE ?');
+      conditions.push(`(${searchConditions.join(' AND ')})`);
+      searchTerms.forEach(term => {
+        queryParams.push(`%${term}%`);
+      });
+    }
 
     // Apply filters
     if (brands) {

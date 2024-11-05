@@ -596,3 +596,30 @@ button:disabled {
     color: red;
     align-content: end;
 }
+.search-container {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.search-container input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.search-container button {
+    padding: 8px 16px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.search-container button:hover {
+    background-color: #0056b3;
+}

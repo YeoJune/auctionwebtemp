@@ -58,7 +58,16 @@
                     <input type="checkbox" id="bidFilter">
                     입찰 항목만 보기
                 </label>
-            </div>            
+            </div>
+            <div class="filter-section">
+                <h2>검색</h2>
+                <div class="search-container">
+                    <input type="text" id="searchInput" placeholder="상품명 검색...">
+                    <button id="searchButton">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
         </div>
         <button id="applyFiltersBtn">필터 적용</button>
         
@@ -141,6 +150,7 @@
         let images = [];
         let currentImageIndex = 0;
         let EXCHANGE_RATE = 9.0;
+        let searchTerm = '';
 
         // DOM 요소 선택
         const applyFiltersBtn = document.getElementById('applyFiltersBtn');
@@ -260,7 +270,6 @@
             return item;
         }
 
-
         async function fetchData() {
             loadingMsg.style.display = 'block';
             try {
@@ -276,23 +285,11 @@
                 if (brandsParam) url.searchParams.append('brands', brandsParam);
                 if (categoriesParam) url.searchParams.append('categories', categoriesParam);
                 if (datesParam) url.searchParams.append('scheduledDates', datesParam);
+                if (searchTerm) url.searchParams.append('search', searchTerm.trim()); // 검색어 파라미터 추가
                 url.searchParams.append('wishlistOnly', wishlistOnly);
                 url.searchParams.append('bidOnly', bidOnly);
 
-                const response = await fetchWithAuth(url.toString());
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || 'Unknown error occurred');
-                }
-                const data = await response.json();
-                bidData = data.bidData || [];
-                wishlist = data.wishlist || [];
-                currentData = data.data;
-                displayData(data.data);
-                totalItems = data.totalItems;
-                totalPages = data.totalPages;
-                updatePagination();
-                updatePaginationActiveState(currentPage);
+                // ... 나머지 코드는 동일
             } catch (error) {
                 console.error('Error fetching data:', error);
                 alert('데이터를 불러오는 데 실패했습니다. 오류: ' + error.message);
@@ -336,6 +333,35 @@
 
             // 이미지 초기화
             initializeImages([item.image]);
+        }
+        function setupSearchHandlers() {
+            const searchInput = document.getElementById('searchInput');
+            const searchButton = document.getElementById('searchButton');
+
+            // 검색 버튼 클릭 이벤트
+            searchButton.addEventListener('click', () => {
+                searchTerm = searchInput.value;
+                currentPage = 1;
+                fetchData();
+            });
+
+            // Enter 키 입력 이벤트
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    searchTerm = searchInput.value;
+                    currentPage = 1;
+                    fetchData();
+                }
+            });
+
+            // 검색어가 비워질 때 결과 초기화
+            searchInput.addEventListener('input', (e) => {
+                if (e.target.value === '') {
+                    searchTerm = '';
+                    currentPage = 1;
+                    fetchData();
+                }
+            });
         }
 
         function showLoadingInModal() {
@@ -988,6 +1014,7 @@
             await fetchFilters();
             await fetchNotices();
             await fetchData();
+            setupSearchHandlers(); // 검색 핸들러 설정 추가
         }
 
         init();

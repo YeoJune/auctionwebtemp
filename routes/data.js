@@ -29,7 +29,17 @@ async function getEnabledFilters(filterType) {
 }
 
 router.get('/', async (req, res) => {
-  const { page = 1, limit = 20, brands, categories, scheduledDates, wishlistOnly, aucNums, bidOnly } = req.query;
+  const { 
+    page = 1, 
+    limit = 20, 
+    brands, 
+    categories, 
+    scheduledDates, 
+    wishlistOnly, 
+    aucNums, 
+    bidOnly,
+    search  // 새로운 검색 파라미터 추가
+  } = req.query;
   const offset = (page - 1) * limit;
   const userId = req.session.user?.id;
 
@@ -54,19 +64,30 @@ router.get('/', async (req, res) => {
       query += ' WHERE 1=1';
     }
 
+    // 검색어 처리 추가
+    if (search && search.trim()) {
+      const searchTerms = search.trim().split(/\s+/);  // 공백으로 검색어 분리
+      const searchConditions = searchTerms.map(() => 'ci.korean_title LIKE ?').join(' AND ');
+      query += ` AND (${searchConditions})`;
+      // 각 검색어에 대해 '%검색어%' 형태로 파라미터 추가
+      searchTerms.forEach(term => {
+        queryParams.push(`%${term}%`);
+      });
+    }
+
     // Apply enabled filter restrictions
     if (enabledBrands.length > 0) {
       query += ' AND ci.brand IN (' + enabledBrands.map(() => '?').join(',') + ')';
       queryParams.push(...enabledBrands);
     } else {
-      query += ' AND 1=0'; // No enabled brands, return no results
+      query += ' AND 1=0';
     }
     
     if (enabledCategories.length > 0) {
       query += ' AND ci.category IN (' + enabledCategories.map(() => '?').join(',') + ')';
       queryParams.push(...enabledCategories);
     } else {
-      query += ' AND 1=0'; // No enabled categories, return no results
+      query += ' AND 1=0';
     }
 
     if (enabledDates.length > 0) {
@@ -115,7 +136,7 @@ router.get('/', async (req, res) => {
           }
         });
         if (validDates.length === 0) {
-          query += '1=0'; // No valid dates, return no results
+          query += '1=0';
         }
         query += ')';
       }
