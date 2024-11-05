@@ -256,9 +256,24 @@
             const rankFilters = document.getElementById('rankFilters');
             rankFilters.innerHTML = '';
             
-            ranks.forEach(rank => {
-                const rankItem = createFilterItem(rank.rank, 'rank', selectedRanks, `${rank.rank} (${rank.count})`);
-                rankFilters.appendChild(rankItem);
+            // 랭크 순서 정의
+            const rankOrder = ['N', 'S', 'A', 'AB', 'B', 'BC', 'C', 'D', 'E', 'F'];
+            
+            // 랭크 데이터를 Map으로 변환하여 쉽게 찾을 수 있도록 함
+            const rankMap = new Map(ranks.map(r => [r.rank, r]));
+            
+            // 정의된 순서대로 랭크 필터 생성
+            rankOrder.forEach(rank => {
+                const rankData = rankMap.get(rank);
+                if (rankData) {
+                    const rankItem = createFilterItem(
+                        rankData.rank, 
+                        'rank', 
+                        selectedRanks, 
+                        `${rankData.rank} (${rankData.count})`
+                    );
+                    rankFilters.appendChild(rankItem);
+                }
             });
         }
         function createFilterItem(value, type, selectedArray, label = value) {
