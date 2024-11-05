@@ -583,20 +583,17 @@ class EcoAucCrawler extends Crawler {
         });
   
         const binder = document.querySelector(config.crawlDetailSelectors.binder);
-        const scheduledDate = binder?.children[5]?.textContent.trim();
         const description = document.querySelector(config.crawlDetailSelectors.description)?.children[3].textContent.trim();
         const accessoryCode = binder?.children[13]?.textContent.trim();
   
         return {
           image: images[0],
           additional_images: JSON.stringify(images),
-          scheduled_date: scheduledDate || '',
           description: description || '-',
           accessory_code: accessoryCode || '',
         };
       }, this.config);
       
-      item.scheduled_date = this.extractDate(item.scheduled_date);
       if (!item.description) item.description = '-';
 
       return item;
