@@ -313,7 +313,7 @@ router.get('/ranks', async (req, res) => {
           ELSE 'N'
         END as rank,
         COUNT(*) as count
-      FROM values_items
+      FROM crawled_items
       GROUP BY 
         CASE 
           WHEN rank LIKE 'N%' THEN 'N'
