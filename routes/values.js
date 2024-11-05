@@ -15,7 +15,7 @@ router.get('/', async (req, res) => {
     // Add search condition
     if (search && search.trim()) {
       const searchTerms = search.trim().split(/\s+/);
-      const searchConditions = searchTerms.map(() => 'korean_title LIKE ?');
+      const searchConditions = searchTerms.map(() => 'japanese_title LIKE ?');
       conditions.push(`(${searchConditions.join(' AND ')})`);
       searchTerms.forEach(term => {
         queryParams.push(`%${term}%`);

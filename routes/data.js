@@ -27,7 +27,6 @@ async function getEnabledFilters(filterType) {
   `, [filterType]);
   return enabled.map(item => item.filter_value);
 }
-
 router.get('/', async (req, res) => {
   const { 
     page = 1, 
@@ -39,7 +38,7 @@ router.get('/', async (req, res) => {
     aucNums, 
     bidOnly,
     search,
-    ranks,  // 새로운 검색 파라미터 추가
+    ranks
   } = req.query;
   const offset = (page - 1) * limit;
   const userId = req.session.user?.id;
@@ -54,6 +53,7 @@ router.get('/', async (req, res) => {
 
     let query = 'SELECT ci.* FROM crawled_items ci';
     const queryParams = [];
+    let conditions = []; // conditions 배열 추가
 
     if (wishlistOnly === 'true' && userId) {
       query += ' INNER JOIN wishlists w ON ci.item_id = w.item_id AND w.user_id = ?';
@@ -65,32 +65,32 @@ router.get('/', async (req, res) => {
       query += ' WHERE 1=1';
     }
 
-    // 검색어 처리 추가
+    // 검색어 처리
     if (search && search.trim()) {
-      const searchTerms = search.trim().split(/\s+/);  // 공백으로 검색어 분리
+      const searchTerms = search.trim().split(/\s+/);
       const searchConditions = searchTerms.map(() => 'ci.korean_title LIKE ?').join(' AND ');
-      query += ` AND (${searchConditions})`;
-      // 각 검색어에 대해 '%검색어%' 형태로 파라미터 추가
+      conditions.push(`(${searchConditions})`);
       searchTerms.forEach(term => {
         queryParams.push(`%${term}%`);
       });
     }
 
+    // 랭크 필터 처리
     if (ranks) {
       const rankList = ranks.split(',');
       if (rankList.length > 0) {
         const rankConditions = rankList.map(rank => {
           switch(rank) {
             case 'AB':
-              return "rank LIKE 'AB%'";
+              return "ci.rank LIKE 'AB%'";
             case 'A':
-              return "rank LIKE 'A%' AND rank NOT LIKE 'AB%'";
+              return "ci.rank LIKE 'A%' AND ci.rank NOT LIKE 'AB%'";
             case 'BC':
-              return "rank LIKE 'BC%'";
+              return "ci.rank LIKE 'BC%'";
             case 'B':
-              return "rank LIKE 'B%' AND rank NOT LIKE 'BC%'";
+              return "ci.rank LIKE 'B%' AND ci.rank NOT LIKE 'BC%'";
             default:
-              return `rank LIKE '${rank}%'`;
+              return `ci.rank LIKE '${rank}%'`;
           }
         });
         conditions.push(`(${rankConditions.join(' OR ')})`);
@@ -99,21 +99,21 @@ router.get('/', async (req, res) => {
 
     // Apply enabled filter restrictions
     if (enabledBrands.length > 0) {
-      query += ' AND ci.brand IN (' + enabledBrands.map(() => '?').join(',') + ')';
+      conditions.push('ci.brand IN (' + enabledBrands.map(() => '?').join(',') + ')');
       queryParams.push(...enabledBrands);
     } else {
-      query += ' AND 1=0';
+      conditions.push('1=0');
     }
     
     if (enabledCategories.length > 0) {
-      query += ' AND ci.category IN (' + enabledCategories.map(() => '?').join(',') + ')';
+      conditions.push('ci.category IN (' + enabledCategories.map(() => '?').join(',') + ')');
       queryParams.push(...enabledCategories);
     } else {
-      query += ' AND 1=0';
+      conditions.push('1=0');
     }
 
     if (enabledDates.length > 0) {
-      query += ' AND DATE(ci.scheduled_date) IN (' + enabledDates.map(() => '?').join(',') + ')';
+      conditions.push('DATE(ci.scheduled_date) IN (' + enabledDates.map(() => '?').join(',') + ')');
       queryParams.push(...enabledDates);
     }
 
@@ -121,7 +121,7 @@ router.get('/', async (req, res) => {
     if (brands) {
       const brandList = brands.split(',').filter(brand => enabledBrands.includes(brand));
       if (brandList.length > 0) {
-        query += ' AND ci.brand IN (' + brandList.map(() => '?').join(',') + ')';
+        conditions.push('ci.brand IN (' + brandList.map(() => '?').join(',') + ')');
         queryParams.push(...brandList);
       }
     }
@@ -129,7 +129,7 @@ router.get('/', async (req, res) => {
     if (categories) {
       const categoryList = categories.split(',').filter(category => enabledCategories.includes(category));
       if (categoryList.length > 0) {
-        query += ' AND ci.category IN (' + categoryList.map(() => '?').join(',') + ')';
+        conditions.push('ci.category IN (' + categoryList.map(() => '?').join(',') + ')');
         queryParams.push(...categoryList);
       }
     }
@@ -137,18 +137,16 @@ router.get('/', async (req, res) => {
     if (scheduledDates) {
       const dateList = scheduledDates.split(',');
       if (dateList.length > 0) {
-        query += ' AND (';
+        const dateConds = [];
         const validDates = [];
-        dateList.forEach((date, index) => {
+        dateList.forEach(date => {
           if (date == 'null') {
-            if (validDates.length > 0) query += ' OR ';
-            query += 'ci.scheduled_date IS NULL';
+            dateConds.push('ci.scheduled_date IS NULL');
             validDates.push(date);
           } else {
             const kstDate = formatDate(date) + ' 00:00:00.000';
             if (enabledDates.includes(kstDate)) {
-              if (validDates.length > 0) query += ' OR ';
-              query += 'ci.scheduled_date >= ? AND ci.scheduled_date < ?';
+              dateConds.push('(ci.scheduled_date >= ? AND ci.scheduled_date < ?)');
               const startDate = new Date(kstDate);
               const endDate = new Date(startDate);
               endDate.setDate(endDate.getDate() + 1);
@@ -157,15 +155,22 @@ router.get('/', async (req, res) => {
             }
           }
         });
-        if (validDates.length === 0) {
-          query += '1=0';
+        if (dateConds.length > 0) {
+          conditions.push(`(${dateConds.join(' OR ')})`);
+        } else {
+          conditions.push('1=0');
         }
-        query += ')';
       }
     }
+
     if (aucNums) {
-      query += ' AND ci.auc_num = ?';
+      conditions.push('ci.auc_num = ?');
       queryParams.push(aucNums);
+    }
+
+    // Add all conditions to the query
+    if (conditions.length > 0) {
+      query += ' AND ' + conditions.join(' AND ');
     }
 
     query += ' ORDER BY ci.korean_title ASC';
