@@ -450,6 +450,31 @@ function updateModalWithDetails(item) {
     document.querySelector('.modal-brand2').textContent = item.brand;
     document.querySelector('.modal-title').textContent = item.korean_title || "제목 없음";
 }
+function initializeBidInfo(itemId) {
+    const bidInfo = state.bidData.find(b => b.item_id == itemId);
+    const item = state.currentData.find(i => i.item_id == itemId);
+    const bidSection = document.querySelector('.modal-content .bid-info-holder');
+    
+    if (!bidSection) return;
+    
+    if (bidInfo) {
+        bidSection.innerHTML = getBidSectionHTML(bidInfo, itemId, item.auc_num, item.category);
+    } else {
+        bidSection.innerHTML = getDefaultBidSectionHTML(itemId);
+    }
+    
+    // 입찰 금액 입력 시 가격 계산기 초기화
+    const input = bidSection.querySelector('.bid-input');
+    const priceContainer = bidSection.querySelector('.price-details-container');
+    
+    if (input && priceContainer && item) {
+        input.addEventListener('input', function() {
+            const price = parseFloat(this.value) || 0;
+            const totalPrice = calculateTotalPrice(price, item.auc_num, item.category);
+            priceContainer.innerHTML = price ? `(수수료, 세금 포함 ${formatNumber(totalPrice)}원)` : '';
+        });
+    }
+}
 
 async function initialize() {
     await API.initialize();
