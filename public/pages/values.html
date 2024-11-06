@@ -5,63 +5,84 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>시세표 페이지</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="/styles/styles.css">
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/main.css">
 </head>
 <body>
-    <button onclick="location.href = '/'">상품 페이지</button>
     <div class="container">
-        <div class="filters">
-            <div class="filter-section">
-                <h2>브랜드</h2>
-                <div class="filter-search">
-                    <input type="text" id="brandSearch" placeholder="브랜드 검색...">
+        <header class="main-header">
+            <div class="header-content">
+                <nav class="nav-container">
+                    <button class="nav-button" onclick="location.href = '/'">상품 페이지</button>
+                </nav>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <section class="filters-container">
+                <div class="filter-group">
+                    <h2>브랜드</h2>
+                    <div class="filter-search">
+                        <input type="text" id="brandSearch" placeholder="브랜드 검색...">
+                    </div>
+                    <div id="brandFilters" class="filter-options"></div>
                 </div>
-                <div id="brandFilters"></div>
-            </div>
-            <div class="filter-section">
-                <h2>품목</h2>
-                <div id="categoryFilters"></div>
-            </div>
-            <div class="filter-section">
-                <h2>경매 날짜</h2>
-                <div id="scheduledDateFilters"></div>
-            </div>
-            <div class="filter-section">
-                <h2>랭크</h2>
-                <div id="rankFilters"></div>
-            </div>
-            <div class="filter-section">
-                <h2>검색</h2>
-                <div class="search-container">
-                    <input type="text" id="searchInput" placeholder="상품명 검색...">
-                    <button id="searchButton">
-                        <i class="fas fa-search"></i>
-                    </button>
+
+                <div class="filter-group">
+                    <h2>품목</h2>
+                    <div id="categoryFilters" class="filter-options"></div>
                 </div>
-            </div>
-        </div>
-        <button id="applyFiltersBtn">필터 적용</button>
-        
-        <div class="loading-msg" id="loadingMsg">로딩 중...</div>
-        <div class="product-grid" id="dataBody"></div>
-        <div class="pagination" id="pagination"></div>
+
+                <div class="filter-group">
+                    <h2>경매 날짜</h2>
+                    <div id="scheduledDateFilters" class="filter-options"></div>
+                </div>
+
+                <div class="filter-group">
+                    <h2>랭크</h2>
+                    <div id="rankFilters" class="filter-options"></div>
+                </div>
+
+                <div class="filter-group">
+                    <h2>검색</h2>
+                    <div class="search-container">
+                        <input type="text" id="searchInput" placeholder="상품명 검색...">
+                        <button id="searchButton">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button id="applyFiltersBtn" class="apply-filters">필터 적용</button>
+                <button id="mobileFilterBtn" class="mobile-filter-toggle">
+                    필터 <i class="fas fa-filter"></i>
+                </button>
+            </section>
+
+            <section class="products-section">
+                <div class="loading-msg" id="loadingMsg">로딩 중...</div>
+                <div class="product-grid" id="dataBody"></div>
+                <div class="pagination" id="pagination"></div>
+            </section>
+        </main>
     </div>
 
+    <!-- 상품 상세 모달 -->
     <div id="detailModal" class="modal">
         <div class="modal-content">
-            <div class="modal-top">
+            <div class="modal-header">
                 <div class="product-info">
                     <p class="modal-brand"></p>
                     <h2 class="modal-title"></h2>
                 </div>
-                <span class="close">&times;</span>
+                <button class="close" aria-label="Close modal">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="modal-left">
                     <div class="main-image-container">
-                        <button class="image-nav prev">&lt;</button>
+                        <button class="image-nav prev" aria-label="Previous image">&lt;</button>
                         <img src="" alt="Main product image" class="main-image">
-                        <button class="image-nav next">&gt;</button>
+                        <button class="image-nav next" aria-label="Next image">&gt;</button>
                     </div>
                     <div class="thumbnail-container"></div>
                 </div>
@@ -97,520 +118,8 @@
         </div>
     </div>
 
-    <script>
-        const API_URL = '/api';
-        let selectedBrands = [];
-        let selectedCategories = [];
-        let selectedDates = [];
-        let selectedRanks = [];
-        let currentPage = 1;
-        let itemsPerPage = 20;
-        let totalItems = 0;
-        let totalPages = 0;
-        let currentData = [];
-        let modalIdx = -1;
-        let images = [];
-        let currentImageIndex = 0;
-        let searchTerm = '';
-
-        // DOM 요소 선택
-        const applyFiltersBtn = document.getElementById('applyFiltersBtn');
-        const loadingMsg = document.getElementById('loadingMsg');
-        const dataBody = document.getElementById('dataBody');
-        const brandFilters = document.getElementById('brandFilters');
-        const categoryFilters = document.getElementById('categoryFilters');
-        const scheduledDateFilters = document.getElementById('scheduledDateFilters');
-        const paginationContainer = document.getElementById('pagination');
-        const modal = document.getElementById('detailModal');
-        const span = document.getElementsByClassName("close")[0];
-        async function fetchWithAuth(url, options = {}) {
-            options.credentials = 'include';
-            try {
-                const response = await fetch(url, options);
-                if (!response.ok) {
-                    if (response.status === 401) {
-                        isAuthenticated = false;
-                        updateAuthUI();
-                        throw new Error('Unauthorized');
-                    }
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-                }
-                return response;
-            } catch (error) {
-                console.error('Fetch error:', error);
-                throw error;
-            }
-        }
-        function displayFilters(brands, categories, dates, ranks) {
-            displayBrandFilters(brands);
-            displayCategoryFilters(categories);
-            displayDateFilters(dates);
-            displayRankFilters(ranks);
-        }
-
-        function displayBrandFilters(brands) {
-            brandFilters.innerHTML = '';
-            brands.sort((a, b) => b.count - a.count);
-            brands.forEach(brand => {
-                const brandItem = createFilterItem(brand.brand, 'brand', selectedBrands, `${brand.brand} (${brand.count})`);
-                brandFilters.appendChild(brandItem);
-            });
-            setupFilterSearch('brandSearch', 'brandFilters');
-        }
-
-        function displayCategoryFilters(categories) {
-            categoryFilters.innerHTML = '';
-            categories.forEach((category, index) => {
-                const categoryItem = createFilterItem(category, 'category', selectedCategories, category ? category : '기타');
-                categoryFilters.appendChild(categoryItem);
-            });
-        }
-        function displayDateFilters(dates) {
-            scheduledDateFilters.innerHTML = '';
-            
-            const noScheduledDateItem = createFilterItem('NO_DATE', 'date', selectedDates, '날짜 없음');
-            scheduledDateFilters.appendChild(noScheduledDateItem);
-            
-            dates.forEach(date => {
-                if (date.Date) {
-                    const formattedDate = formatDate(date.Date).split(' ')[0];
-                    const dateItem = createFilterItem(date.Date, 'date', selectedDates, `${formattedDate} (${date.count})`);
-                    scheduledDateFilters.appendChild(dateItem);
-                }
-            });
-        }
-        
-        function displayRankFilters(ranks) {
-            const rankFilters = document.getElementById('rankFilters');
-            rankFilters.innerHTML = '';
-            
-            // 랭크 순서 정의
-            const rankOrder = ['N', 'S', 'A', 'AB', 'B', 'BC', 'C', 'D', 'E', 'F'];
-            
-            // 랭크 데이터를 Map으로 변환하여 쉽게 찾을 수 있도록 함
-            const rankMap = new Map(ranks.map(r => [r.rank, r]));
-            
-            // 정의된 순서대로 랭크 필터 생성
-            rankOrder.forEach(rank => {
-                const rankData = rankMap.get(rank);
-                if (rankData) {
-                    const rankItem = createFilterItem(
-                        rankData.rank, 
-                        'rank', 
-                        selectedRanks, 
-                        `${rankData.rank} (${rankData.count})`
-                    );
-                    rankFilters.appendChild(rankItem);
-                }
-            });
-        }
-        function createFilterItem(value, type, selectedArray, label = value) {
-            const item = document.createElement('div');
-            item.className = 'filter-item';
-            
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.value = value;
-            checkbox.id = `${type}-${value}`;
-            checkbox.addEventListener('change', () => {
-                if (checkbox.checked) {
-                    selectedArray.push(value);
-                } else {
-                    const index = selectedArray.indexOf(value);
-                    if (index > -1) selectedArray.splice(index, 1);
-                }
-                console.log(`${type} 선택됨:`, selectedArray);
-            });
-            
-            const labelElement = document.createElement('label');
-            labelElement.htmlFor = `${type}-${value}`;
-            labelElement.innerText = label;
-            
-            item.appendChild(checkbox);
-            item.appendChild(labelElement);
-            return item;
-        }
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            // UTC 시간에 9시간(KST)을 더함
-            const kstDate = new Date(date.getTime() + (9 * 60 * 60 * 1000));
-            return kstDate.toISOString().split('T')[0];
-        }
-
-        async function showDetails(itemId) {
-            modalIdx = currentData.findIndex((data) => data.item_id == itemId);
-            const item = currentData[modalIdx];
-            if (!item) return;
-
-            initializeModal(item);
-            modal.style.display = "flex";
-            
-            // 상세 정보 로딩 표시
-            showLoadingInModal();
-
-            // 상세 정보 비동기적으로 가져오기
-            fetchItemDetails(itemId);
-        }
-
-        function showLoadingInModal() {
-            const loadingElement = document.createElement('div');
-            loadingElement.id = 'modal-loading';
-            loadingElement.textContent = '상세 정보를 불러오는 중...';
-            loadingElement.style.position = 'absolute';
-            loadingElement.style.top = '50%';
-            loadingElement.style.left = '50%';
-            loadingElement.style.transform = 'translate(-50%, -50%)';
-            loadingElement.style.background = 'rgba(255, 255, 255, 0.8)';
-            loadingElement.style.padding = '10px';
-            loadingElement.style.borderRadius = '5px';
-            document.querySelector('.modal-content').appendChild(loadingElement);
-        }
-        
-        async function fetchItemDetails(itemId) {
-            try {
-                const response = await fetchWithAuth(`${API_URL}/crawler/crawl-item-value-details/${itemId}`, {
-                    method: 'POST'
-                });
-                if (response.ok) {
-                    const updatedItem = await response.json();
-                    updateModalWithDetails(updatedItem);
-                } else {
-                    console.error('Failed to fetch item details');
-                    alert('상세 정보를 불러오는 데 실패했습니다.');
-                }
-            } catch (error) {
-                console.error('Error fetching item details:', error);
-                alert('상세 정보를 불러오는 데 실패했습니다.');
-            } finally {
-                hideLoadingInModal();
-            }
-        }
-
-        function currucyString(num) {
-            return (num - 0).toLocaleString();
-        }
-
-        function updateModalWithDetails(item) {
-            document.querySelector('.modal-description').textContent = item.description || "설명 없음";
-            document.querySelector('.modal-category').textContent = item.category || "카테고리 없음";
-            document.querySelector('.modal-accessory-code').textContent = item.accessory_code || "액세서리 코드 없음";
-            document.querySelector('.modal-scheduled-date').textContent = item.scheduled_date ? formatDate(item.scheduled_date) : "날짜 정보 없음";
-            document.querySelector('.modal-brand').textContent = item.brand;
-            document.querySelector('.modal-brand2').textContent = item.brand;
-            document.querySelector('.modal-title').textContent = item.japanese_title || "제목 없음";
-
-            if (item.condition) {
-                document.querySelector('.modal-condition').textContent = item.condition;
-            }
-            if (item.size) {
-                document.querySelector('.modal-size').textContent = item.size;
-            }
-
-            // 추가 이미지 업데이트
-            if (item.additional_images) {
-                initializeImages(JSON.parse(item.additional_images));
-            }
-        }
-        
-        function hideLoadingInModal() {
-            const loadingElement = document.getElementById('modal-loading');
-            if (loadingElement) {
-                loadingElement.remove();
-            }
-        }
-
-        function initializeModal(item) {
-            document.querySelector('.modal-brand').textContent = item.brand;
-            document.querySelector('.modal-title').textContent = item.japanese_title;
-            document.querySelector('.main-image').src = item.image;
-            document.querySelector('.modal-description').textContent = item.description || "설명 없음";
-            document.querySelector('.modal-category').textContent = item.category || "카테고리 없음";
-            document.querySelector('.modal-brand2').textContent = item.brand;
-            document.querySelector('.modal-accessory-code').textContent = item.accessory_code || "액세서리 코드 없음";
-            document.querySelector('.modal-scheduled-date').textContent = formatDate(item.scheduled_date) || "날짜 정보 없음";
-            document.querySelector('.modal-final-price').textContent = item.final_price ? `${currucyString(parseInt(item.final_price))} ¥` : "가격 정보 없음";
-
-            initializeImages([item.image]);
-        }
-
-        function initializeImages(imageUrls) {
-            images = imageUrls;
-            currentImageIndex = 0;
-            document.querySelector('.main-image').src = images[0];
-
-            const thumbnailContainer = document.querySelector('.thumbnail-container');
-            thumbnailContainer.innerHTML = '';
-            images.forEach((img, index) => {
-                const thumbnailWrapper = document.createElement('div');
-                thumbnailWrapper.className = 'thumbnail';
-                const thumbnail = document.createElement('img');
-                thumbnail.src = img;
-                thumbnail.alt = `Thumbnail ${index + 1}`;
-                thumbnail.addEventListener('click', () => changeMainImage(index));
-                thumbnailWrapper.appendChild(thumbnail);
-                thumbnailContainer.appendChild(thumbnailWrapper);
-            });
-        }
-        function changeMainImage(index) {
-            currentImageIndex = index;
-            document.querySelector('.main-image').src = images[index];
-        }
-        function setupFilterSearch(inputId, filterId) {
-            const searchInput = document.getElementById(inputId);
-            const filterContainer = document.getElementById(filterId);
-            searchInput.addEventListener('input', function() {
-                const searchTerm = this.value.toLowerCase();
-                const filterItems = filterContainer.getElementsByClassName('filter-item');
-                
-                Array.from(filterItems).forEach(item => {
-                    const label = item.getElementsByTagName('label')[0].innerText.toLowerCase();
-                    if (label.includes(searchTerm)) {
-                        item.style.display = '';
-                    } else {
-                        item.style.display = 'none';
-                    }
-                });
-            });
-        }
-        
-        function updatePagination() {
-            paginationContainer.innerHTML = '';
-            if (totalPages > 1) {
-                const prevButton = createPaginationButton('이전', currentPage > 1, () => {
-                    if (currentPage > 1) {
-                        currentPage--;
-                        fetchData();
-                    }
-                });
-                paginationContainer.appendChild(prevButton);
-
-                const pageNumbers = getPageNumbers();
-                pageNumbers.forEach(pageNum => {
-                    if (pageNum === '...') {
-                        paginationContainer.appendChild(document.createTextNode('...'));
-                    } else {
-                        const pageButton = createPaginationButton(pageNum, true, () => {
-                            if (pageNum !== currentPage) {
-                                currentPage = pageNum;
-                                fetchData();
-                            }
-                        });
-                        if (pageNum === currentPage) {
-                            pageButton.classList.add('active');
-                        }
-                        paginationContainer.appendChild(pageButton);
-                    }
-                });
-
-                const nextButton = createPaginationButton('다음', currentPage < totalPages, () => {
-                    if (currentPage < totalPages) {
-                        currentPage++;
-                        fetchData();
-                    }
-                });
-                paginationContainer.appendChild(nextButton);
-            }
-        }
-
-        function getPageNumbers() {
-            const pageNumbers = [];
-            const totalPagesToShow = 5;
-            const sidePages = Math.floor(totalPagesToShow / 2);
-
-            let startPage = Math.max(currentPage - sidePages, 1);
-            let endPage = Math.min(startPage + totalPagesToShow - 1, totalPages);
-
-            if (endPage - startPage + 1 < totalPagesToShow) {
-                startPage = Math.max(endPage - totalPagesToShow + 1, 1);
-            }
-
-            if (startPage > 1) {
-                pageNumbers.push(1);
-                if (startPage > 2) {
-                    pageNumbers.push('...');
-                }
-            }
-
-            for (let i = startPage; i <= endPage; i++) {
-                pageNumbers.push(i);
-            }
-
-            if (endPage < totalPages) {
-                if (endPage < totalPages - 1) {
-                    pageNumbers.push('...');
-                }
-                pageNumbers.push(totalPages);
-            }
-
-            return pageNumbers;
-        }
-        function createPaginationButton(text, isEnabled, onClick) {
-            const button = document.createElement('button');
-            button.textContent = text;
-            button.disabled = !isEnabled;
-            button.addEventListener('click', () => {
-                onClick();
-                updatePaginationActiveState(text);
-            });
-            return button;
-        }
-
-        function updatePaginationActiveState(activePage) {
-            const buttons = paginationContainer.querySelectorAll('button');
-            buttons.forEach(button => {
-                if (button.textContent === activePage.toString()) {
-                    button.classList.add('active');
-                } else {
-                    button.classList.remove('active');
-                }
-            });
-        }
-        async function fetchFilters() {
-            try {
-                const [brandsResponse, categoriesResponse, datesResponse, ranksResponse] = await Promise.all([
-                    fetch(`${API_URL}/values/brands-with-count`),
-                    fetch(`${API_URL}/values/categories`),
-                    fetch(`${API_URL}/values/scheduled-dates-with-count`),
-                    fetch(`${API_URL}/values/ranks`)
-                ]);
-                const brands = await brandsResponse.json();
-                const categories = await categoriesResponse.json();
-                const dates = await datesResponse.json();
-                const ranks = await ranksResponse.json();
-                displayFilters(brands, categories, dates, ranks);
-            } catch (error) {
-                console.error('Error fetching filters:', error);
-                alert('필터를 불러오는 데 실패했습니다.');
-            }
-        }
-
-        async function fetchData() {
-            loadingMsg.style.display = 'block';
-            try {
-                const brandsParam = selectedBrands.join(',');
-                const categoriesParam = selectedCategories.join(',');
-                const datesParam = selectedDates.map(date => date === 'NO_DATE' ? 'null' : date).join(',');
-                const ranksParam = selectedRanks.join(',');
-
-                const url = new URL(`${window.location.origin}${API_URL}/values`);
-                url.searchParams.append('page', currentPage);
-                url.searchParams.append('limit', itemsPerPage);
-                if (brandsParam) url.searchParams.append('brands', brandsParam);
-                if (categoriesParam) url.searchParams.append('categories', categoriesParam);
-                if (datesParam) url.searchParams.append('scheduledDates', datesParam);
-                if (searchTerm) url.searchParams.append('search', searchTerm.trim()); // 검색어 파라미터 추가
-                if (ranksParam) url.searchParams.append('ranks', ranksParam);
-
-                const response = await fetch(url.toString());
-                const data = await response.json();
-                currentData = data.data;
-                displayData(data.data);
-                totalItems = data.totalItems;
-                totalPages = data.totalPages;
-                updatePagination();
-                updatePaginationActiveState(currentPage);
-            } catch (error) {
-                console.error('Error fetching data:', error);
-                alert('데이터를 불러오는 데 실패했습니다.');
-            } finally {
-                loadingMsg.style.display = 'none';
-            }
-        }
-
-        // 검색 이벤트 핸들러 설정 함수
-        function setupSearchHandlers() {
-            const searchInput = document.getElementById('searchInput');
-            const searchButton = document.getElementById('searchButton');
-
-            // 검색 버튼 클릭 이벤트
-            searchButton.addEventListener('click', () => {
-                searchTerm = searchInput.value;
-                currentPage = 1;
-                fetchData();
-            });
-
-            // Enter 키 입력 이벤트
-            searchInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    searchTerm = searchInput.value;
-                    currentPage = 1;
-                    fetchData();
-                }
-            });
-
-            // 검색어가 비워질 때 결과 초기화
-            searchInput.addEventListener('input', (e) => {
-                if (e.target.value === '') {
-                    searchTerm = '';
-                    currentPage = 1;
-                    fetchData();
-                }
-            });
-        }
-        function displayData(data) {
-            dataBody.innerHTML = '';
-            if (!data || data.length === 0) {
-                dataBody.innerHTML = '<p>선택한 필터에 맞는 항목이 없습니다.</p>';
-                return;
-            }
-            
-            data.forEach((item) => {
-                const card = document.createElement('div');
-                card.className = 'product-card';
-                card.dataset.itemId = item.item_id;
-
-                card.innerHTML = `
-                    <div class="product-header">
-                        <div>
-                            <div class="product-brand">${item.brand}</div>
-                            <div class="auctioneer-number">${item.auc_num}번</div>
-                        </div>
-                        <h3 class="product-title">${item.japanese_title}</h3>
-                    </div>
-                    <img src="${item.image}" alt="${item.japanese_title} 이미지" class="product-image">
-                    <div class="product-details">
-                        <p class="scheduled-date">경매일: ${item.scheduled_date ? formatDate(item.scheduled_date) : '-'}</p>
-                        <p class="scheduled-date">랭크: ${item.rank}</p>
-                        ${item.final_price ? `<p class="final-price">최종가격: ${currucyString(parseInt(item.final_price))} ¥</p>` : ''}
-                    </div>
-                `;
-
-                card.addEventListener('click', () => showDetails(item.item_id));
-                dataBody.appendChild(card);
-            });
-        }
-        // Event Listeners
-        applyFiltersBtn.addEventListener('click', (event) => {
-            event.preventDefault();
-            currentPage = 1;
-            fetchData();
-        });
-
-        document.querySelector('.prev').addEventListener('click', () => {
-            currentImageIndex = (currentImageIndex - 1 + images.length) % images.length;
-            changeMainImage(currentImageIndex);
-        });
-
-        document.querySelector('.next').addEventListener('click', () => {
-            currentImageIndex = (currentImageIndex + 1) % images.length;
-            changeMainImage(currentImageIndex);
-        });
-        
-        span.onclick = function() {
-            modal.style.display = "none";
-        }
-
-        window.onclick = function(event) {
-            if (event.target == modal) {
-                modal.style.display = "none";
-            }
-        }
-
-        // 초기화
-        fetchFilters();
-        fetchData();
-        setupSearchHandlers(); // 검색 핸들러 설정 추가
-    </script>
+    <script src="/js/common.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/values.js"></script>
 </body>
 </html>

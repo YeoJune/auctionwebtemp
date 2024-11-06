@@ -1,0 +1,186 @@
+// 날짜 포맷팅
+function formatDate(dateString) {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    const kstDate = new Date(date.getTime() + (9 * 60 * 60 * 1000));
+    return kstDate.toISOString().split('T')[0];
+}
+
+// 숫자 포맷팅 (1000 -> 1,000)
+function formatNumber(num) {
+    return (num || 0).toLocaleString();
+}
+
+// DOM 요소 생성 헬퍼 함수
+function createElement(tag, className, textContent) {
+    const element = document.createElement(tag);
+    if (className) element.className = className;
+    if (textContent) element.textContent = textContent;
+    return element;
+}
+
+// 필터 아이템 생성 함수
+function createFilterItem(value, type, selectedArray, label = value) {
+    const item = createElement('div', 'filter-item');
+    
+    const checkbox = createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.value = value;
+    checkbox.id = `${type}-${value}`;
+    
+    checkbox.addEventListener('change', () => {
+        if (checkbox.checked) {
+            selectedArray.push(value);
+        } else {
+            const index = selectedArray.indexOf(value);
+            if (index > -1) selectedArray.splice(index, 1);
+        }
+    });
+    
+    const labelElement = createElement('label');
+    labelElement.htmlFor = `${type}-${value}`;
+    labelElement.textContent = label;
+    
+    item.appendChild(checkbox);
+    item.appendChild(labelElement);
+    return item;
+}
+
+// 필터 검색 설정
+function setupFilterSearch(inputId, filterId) {
+    const searchInput = document.getElementById(inputId);
+    const filterContainer = document.getElementById(filterId);
+    
+    searchInput?.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const filterItems = filterContainer.getElementsByClassName('filter-item');
+        
+        Array.from(filterItems).forEach(item => {
+            const label = item.getElementsByTagName('label')[0].innerText.toLowerCase();
+            item.style.display = label.includes(searchTerm) ? '' : 'none';
+        });
+    });
+}
+
+// 페이지네이션 생성 함수
+function createPagination(currentPage, totalPages, onPageChange) {
+    const container = document.getElementById('pagination');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    if (totalPages <= 1) return;
+
+    // 이전 버튼
+    const prevButton = createElement('button', '', '이전');
+    prevButton.disabled = currentPage <= 1;
+    prevButton.addEventListener('click', () => onPageChange(currentPage - 1));
+    container.appendChild(prevButton);
+
+    // 페이지 번호
+    const pageNumbers = getPageNumbers(currentPage, totalPages);
+    pageNumbers.forEach(pageNum => {
+        if (pageNum === '...') {
+            container.appendChild(document.createTextNode('...'));
+        } else {
+            const pageButton = createElement('button', pageNum === currentPage ? 'active' : '');
+            pageButton.textContent = pageNum;
+            pageButton.addEventListener('click', () => onPageChange(pageNum));
+            container.appendChild(pageButton);
+        }
+    });
+
+    // 다음 버튼
+    const nextButton = createElement('button', '', '다음');
+    nextButton.disabled = currentPage >= totalPages;
+    nextButton.addEventListener('click', () => onPageChange(currentPage + 1));
+    container.appendChild(nextButton);
+}
+
+// 페이지 번호 생성
+function getPageNumbers(currentPage, totalPages) {
+    const pages = [];
+    const totalPagesToShow = 5;
+    const sidePages = Math.floor(totalPagesToShow / 2);
+
+    let startPage = Math.max(currentPage - sidePages, 1);
+    let endPage = Math.min(startPage + totalPagesToShow - 1, totalPages);
+
+    if (endPage - startPage + 1 < totalPagesToShow) {
+        startPage = Math.max(endPage - totalPagesToShow + 1, 1);
+    }
+
+    if (startPage > 1) {
+        pages.push(1);
+        if (startPage > 2) pages.push('...');
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+        pages.push(i);
+    }
+
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) pages.push('...');
+        pages.push(totalPages);
+    }
+
+    return pages;
+}
+
+// 모달 관련 함수
+function setupModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return null;
+
+    const closeBtn = modal.querySelector('.close');
+    
+    if (closeBtn) {
+        closeBtn.onclick = () => modal.style.display = 'none';
+    }
+
+    window.onclick = (event) => {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    };
+
+    return {
+        show: () => modal.style.display = 'flex',
+        hide: () => modal.style.display = 'none',
+        element: modal
+    };
+}
+
+// 로딩 상태 관리
+function toggleLoading(show) {
+    const loadingMsg = document.getElementById('loadingMsg');
+    if (loadingMsg) {
+        loadingMsg.style.display = show ? 'block' : 'none';
+    }
+}
+
+// 모바일 필터 토글
+function setupMobileFilters() {
+    const filterBtn = document.getElementById('mobileFilterBtn');
+    const filtersContainer = document.querySelector('.filters-container');
+    
+    if (filterBtn && filtersContainer) {
+        filterBtn.addEventListener('click', () => {
+            filtersContainer.classList.toggle('active');
+        });
+
+        // 필터 영역 외 클릭시 닫기
+        document.addEventListener('click', (e) => {
+            if (!filtersContainer.contains(e.target) && !filterBtn.contains(e.target)) {
+                filtersContainer.classList.remove('active');
+            }
+        });
+    }
+}
+
+// 초기화 함수
+function initializeCommonFeatures() {
+    setupMobileFilters();
+}
+
+// DOMContentLoaded 이벤트
+document.addEventListener('DOMContentLoaded', initializeCommonFeatures);
