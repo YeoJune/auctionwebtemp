@@ -204,39 +204,54 @@ function hideLoadingInModal() {
         loadingElement.remove();
     }
 }
-
-// 초기화 및 이벤트 리스너 설정
 async function initialize() {
     await API.initialize();
     
-    // 필터 데이터 가져오기
-    const filters = await API.fetchCommonFilters('/values');
-    displayFilters(filters.brands, filters.categories, filters.dates, filters.ranks);
-    
-    // 이벤트 리스너 설정
-    document.getElementById('searchButton')?.addEventListener('click', handleSearch);
-    document.getElementById('searchInput')?.addEventListener('keypress', e => {
-        if (e.key === 'Enter') handleSearch();
-    });
-    
-    document.getElementById('applyFiltersBtn')?.addEventListener('click', () => {
-        state.currentPage = 1;
-        fetchData();
-    });
+    try {
+        // 필터 데이터 가져오기
+        const [brandsResponse, categoriesResponse, datesResponse, ranksResponse] = await Promise.all([
+            API.fetchAPI('/values/brands-with-count'),
+            API.fetchAPI('/values/categories'),
+            API.fetchAPI('/values/scheduled-dates-with-count'),
+            API.fetchAPI('/values/ranks')
+        ]);
 
-    // 이미지 네비게이션 버튼 이벤트
-    document.querySelector('.prev')?.addEventListener('click', () => {
-        const newIndex = (state.currentImageIndex - 1 + state.images.length) % state.images.length;
-        changeMainImage(newIndex);
-    });
+        // 각각의 필터 데이터 전달
+        displayFilters(
+            brandsResponse,
+            categoriesResponse,
+            datesResponse,
+            ranksResponse
+        );
+        
+        // 이벤트 리스너 설정
+        document.getElementById('searchButton')?.addEventListener('click', handleSearch);
+        document.getElementById('searchInput')?.addEventListener('keypress', e => {
+            if (e.key === 'Enter') handleSearch();
+        });
+        
+        document.getElementById('applyFiltersBtn')?.addEventListener('click', () => {
+            state.currentPage = 1;
+            fetchData();
+        });
 
-    document.querySelector('.next')?.addEventListener('click', () => {
-        const newIndex = (state.currentImageIndex + 1) % state.images.length;
-        changeMainImage(newIndex);
-    });
+        // 이미지 네비게이션 버튼 이벤트
+        document.querySelector('.prev')?.addEventListener('click', () => {
+            const newIndex = (state.currentImageIndex - 1 + state.images.length) % state.images.length;
+            changeMainImage(newIndex);
+        });
 
-    // 초기 데이터 로드
-    await fetchData();
+        document.querySelector('.next')?.addEventListener('click', () => {
+            const newIndex = (state.currentImageIndex + 1) % state.images.length;
+            changeMainImage(newIndex);
+        });
+
+        // 초기 데이터 로드
+        await fetchData();
+    } catch (error) {
+        console.error('Error initializing filters:', error);
+        alert('필터 데이터를 불러오는 데 실패했습니다.');
+    }
 }
 
 // 페이지 로드 시 초기화

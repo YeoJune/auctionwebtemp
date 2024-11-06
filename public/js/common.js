@@ -177,11 +177,11 @@ function setupMobileFilters() {
     }
 }
 // common.js에 추가
-function displayFilters(filters) {
-    displayBrandFilters(filters.brands);
-    displayCategoryFilters(filters.categories);
-    displayDateFilters(filters.dates);
-    displayRankFilters(filters.ranks);
+function displayFilters(brands, categories, dates, ranks) {
+    displayBrandFilters(brands);
+    displayCategoryFilters(categories);
+    displayDateFilters(dates);
+    displayRankFilters(ranks);
 }
 
 function displayBrandFilters(brands) {

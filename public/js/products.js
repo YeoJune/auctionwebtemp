@@ -389,36 +389,51 @@ function showNoticeDetail(notice) {
     
     modal.style.display = 'block';
 }
-
-// 초기화 및 이벤트 리스너 설정
 async function initialize() {
     await API.initialize();
     await checkAuthStatus();
     
-    // 필터 데이터 가져오기
-    const filters = await API.fetchCommonFilters('/data');
-    displayFilters(filters.brands, filters.categories, filters.dates, filters.ranks);
-    
-    // 이벤트 리스너 설정
-    document.getElementById('searchButton')?.addEventListener('click', handleSearch);
-    document.getElementById('searchInput')?.addEventListener('keypress', e => {
-        if (e.key === 'Enter') handleSearch();
-    });
-    
-    document.getElementById('applyFiltersBtn')?.addEventListener('click', () => {
-        state.currentPage = 1;
-        fetchData();
-    });
-    
-    document.getElementById('signinBtn')?.addEventListener('click', () => {
-        window.location.href = './pages/signin.html';
-    });
-    
-    document.getElementById('signoutBtn')?.addEventListener('click', handleSignout);
-    
-    document.getElementById('showNoticesBtn')?.addEventListener('click', showNoticeSection);
-    // 초기 데이터 로드
-    await fetchData();
+    try {
+        // 필터 데이터 가져오기
+        const [brandsResponse, categoriesResponse, datesResponse, ranksResponse] = await Promise.all([
+            API.fetchAPI('/data/brands-with-count'),
+            API.fetchAPI('/data/categories'),
+            API.fetchAPI('/data/scheduled-dates-with-count'),
+            API.fetchAPI('/data/ranks')
+        ]);
+
+        // 각각의 필터 데이터 전달
+        displayFilters(
+            brandsResponse,
+            categoriesResponse,
+            datesResponse,
+            ranksResponse
+        );
+        
+        // 이벤트 리스너 설정
+        document.getElementById('searchButton')?.addEventListener('click', handleSearch);
+        document.getElementById('searchInput')?.addEventListener('keypress', e => {
+            if (e.key === 'Enter') handleSearch();
+        });
+        
+        document.getElementById('applyFiltersBtn')?.addEventListener('click', () => {
+            state.currentPage = 1;
+            fetchData();
+        });
+        
+        document.getElementById('signinBtn')?.addEventListener('click', () => {
+            window.location.href = './pages/signin.html';
+        });
+        
+        document.getElementById('signoutBtn')?.addEventListener('click', handleSignout);
+        document.getElementById('showNoticesBtn')?.addEventListener('click', showNoticeSection);
+
+        // 초기 데이터 로드
+        await fetchData();
+    } catch (error) {
+        console.error('Error initializing filters:', error);
+        alert('필터 데이터를 불러오는 데 실패했습니다.');
+    }
 }
 
 // 페이지 로드 시 초기화
