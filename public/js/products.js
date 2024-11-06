@@ -475,6 +475,108 @@ function initializeBidInfo(itemId) {
         });
     }
 }
+function initializeImages(imageUrls) {
+    state.images = imageUrls.filter(url => url); // 유효한 URL만 필터링
+    state.currentImageIndex = 0;
+
+    const mainImage = document.querySelector('.main-image');
+    const thumbnailContainer = document.querySelector('.thumbnail-container');
+    
+    if (!mainImage || !thumbnailContainer) return;
+
+    // 메인 이미지 설정
+    mainImage.src = API.validateImageUrl(state.images[0]);
+
+    // 썸네일 초기화
+    thumbnailContainer.innerHTML = '';
+    state.images.forEach((img, index) => {
+        const thumbnailWrapper = createElement('div', 'thumbnail');
+        thumbnailWrapper.classList.toggle('active', index === 0);
+        
+        const thumbnail = createElement('img');
+        thumbnail.src = API.validateImageUrl(img);
+        thumbnail.alt = `Thumbnail ${index + 1}`;
+        thumbnail.loading = 'lazy';
+        
+        thumbnail.addEventListener('click', () => changeMainImage(index));
+        thumbnailWrapper.appendChild(thumbnail);
+        thumbnailContainer.appendChild(thumbnailWrapper);
+    });
+
+    // 네비게이션 버튼 상태 업데이트
+    updateNavigationButtons();
+}
+
+function changeMainImage(index) {
+    if (index < 0 || index >= state.images.length) return;
+
+    state.currentImageIndex = index;
+    const mainImage = document.querySelector('.main-image');
+    if (!mainImage) return;
+
+    mainImage.src = API.validateImageUrl(state.images[index]);
+
+    // 썸네일 active 상태 업데이트
+    const thumbnails = document.querySelectorAll('.thumbnail');
+    thumbnails.forEach((thumb, i) => {
+        thumb.classList.toggle('active', i === index);
+    });
+
+    updateNavigationButtons();
+}
+
+function updateNavigationButtons() {
+    const prevBtn = document.querySelector('.image-nav.prev');
+    const nextBtn = document.querySelector('.image-nav.next');
+    
+    if (!prevBtn || !nextBtn) return;
+
+    prevBtn.disabled = state.currentImageIndex === 0;
+    nextBtn.disabled = state.currentImageIndex === state.images.length - 1;
+}
+
+// 모달 로딩 관련 함수들
+function showLoadingInModal() {
+    const existingLoader = document.getElementById('modal-loading');
+    if (existingLoader) return;
+
+    const loadingElement = createElement('div', 'modal-loading');
+    loadingElement.id = 'modal-loading';
+    loadingElement.textContent = '상세 정보를 불러오는 중...';
+    
+    document.querySelector('.modal-content')?.appendChild(loadingElement);
+}
+
+function hideLoadingInModal() {
+    document.getElementById('modal-loading')?.remove();
+}
+
+// 위시리스트 UI 업데이트
+function updateWishlistUI(itemId) {
+    // 카드의 위시리스트 버튼 업데이트
+    const card = document.querySelector(`.product-card[data-item-id="${itemId}"]`);
+    const wishlistBtn = card?.querySelector('.wishlist-btn');
+    if (wishlistBtn) {
+        wishlistBtn.classList.toggle('active', state.wishlist.includes(itemId));
+    }
+
+    // 모달의 위시리스트 버튼 업데이트 (있는 경우)
+    const modalWishlistBtn = document.querySelector('.modal-content .wishlist-btn');
+    if (modalWishlistBtn) {
+        modalWishlistBtn.classList.toggle('active', state.wishlist.includes(itemId));
+    }
+}
+
+// 이미지 네비게이션 이벤트 리스너 설정
+function setupImageNavigation() {
+    document.querySelector('.prev')?.addEventListener('click', () => {
+        changeMainImage(state.currentImageIndex - 1);
+    });
+
+    document.querySelector('.next')?.addEventListener('click', () => {
+        changeMainImage(state.currentImageIndex + 1);
+    });
+}
 
 async function initialize() {
     await API.initialize();
