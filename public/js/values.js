@@ -169,7 +169,7 @@ async function showDetails(itemId) {
 
 // 이벤트 핸들러
 function handlePageChange(page) {
-    state.currentPage = 1;
+    state.currentPage = page;
     fetchData();
 }
 
