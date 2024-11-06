@@ -111,13 +111,12 @@ button:disabled {
 }
 
 .filter-options {
-    max-height: 200px; /* 최대 높이 설정 */
-    overflow-y: auto; /* 세로 스크롤 활성화 */
-    padding-right: var(--spacing-sm); /* 스크롤바 공간 확보 */
-    
-    /* 스크롤바 스타일링 */
-    scrollbar-width: thin; /* Firefox */
-    scrollbar-color: var(--primary-color) var(--background-light); /* Firefox */
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    max-height: 200px;
+    overflow-y: auto;
+    padding-right: var(--spacing-sm);
 }
 
 .filter-options::-webkit-scrollbar {
@@ -141,11 +140,15 @@ button:disabled {
 }
 
 .filter-item {
+    flex: 0 1 auto;
+    min-width: 150px; /* 최소 너비 설정 */
     padding: var(--spacing-xs);
     display: flex;
     align-items: center;
     gap: var(--spacing-xs);
-    transition: background-color var(--transition-fast);
+    background-color: var(--background-light);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
 }
 
 .filter-item:hover {
@@ -253,7 +256,7 @@ button:disabled {
     .filters-container.active {
         left: 0;
     }
-    
+
     .filter-options {
         max-height: 150px; /* 모바일에서는 더 작은 높이 */
     }
@@ -262,7 +265,11 @@ button:disabled {
     .search-container {
         max-height: 200px;
     }
-    
+
+    .filter-item {
+        min-width: calc(50% - var(--spacing-sm)); /* 2열 레이아웃 */
+    }
+
     .filter-item label {
         font-size: var(--font-size-xs);
     }
@@ -293,4 +300,94 @@ button:disabled {
     max-height: 2.5rem; /* 40px 정도의 높이 */
     width: auto;
     margin-right: var(--spacing-sm);
+}
+
+/* common.css에 공지사항 관련 스타일 추가/수정 */
+.notice-bar {
+    width: 100%;
+    margin-top: var(--spacing-sm);
+}
+
+.notice-toggle {
+    width: 100%;
+    text-align: left;
+    background-color: var(--background-light);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+}
+
+.notice-toggle:hover {
+    background-color: var(--secondary-color);
+}
+
+.notice-section {
+    background-color: var(--background-light);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    margin-top: var(--spacing-md);
+    padding: var(--spacing-md);
+}
+
+.notice-section h2 {
+    margin-bottom: var(--spacing-md);
+    color: var(--text-primary);
+    font-size: var(--font-size-lg);
+}
+
+.notice-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.notice-list li {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+}
+
+.notice-list li:last-child {
+    border-bottom: none;
+}
+
+.notice-list li:hover {
+    background-color: var(--secondary-color);
+}
+
+/* 공지사항 모달 스타일 */
+#noticeDetailModal .modal-content {
+    max-width: 800px;
+    max-height: 80vh;
+}
+
+#noticeDetailModal .modal-header {
+    background-color: var(--secondary-color);
+    border-bottom: 1px solid var(--border-color);
+    padding: var(--spacing-md);
+}
+
+#noticeDetailModal .modal-body {
+    padding: var(--spacing-md);
+    overflow-y: auto;
+}
+
+#noticeDetailModal #noticeContent {
+    line-height: 1.6;
+    white-space: pre-line;
+}
+
+#noticeDetailModal #noticeImage {
+    max-width: 100%;
+    height: auto;
+    margin-top: var(--spacing-md);
+    display: none; /* 기본적으로 숨김 */
+}
+
+#noticeDetailModal #noticeImage[src] {
+    display: block; /* 이미지 소스가 있을 때만 표시 */
 }

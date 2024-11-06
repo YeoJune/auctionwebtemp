@@ -389,6 +389,68 @@ function showNoticeDetail(notice) {
     
     modal.style.display = 'block';
 }
+// products.js에 추가
+async function showDetails(itemId) {
+    const modalManager = setupModal('detailModal');
+    if (!modalManager) return;
+
+    const item = state.currentData.find(data => data.item_id == itemId);
+    if (!item) return;
+
+    // 기본 정보로 모달 초기화
+    initializeModal(item);
+    modalManager.show();
+
+    // 로딩 표시
+    showLoadingInModal();
+
+    try {
+        // 상세 정보 가져오기
+        const updatedItem = await API.fetchAPI(`/crawler/crawl-item-details/${itemId}`, {
+            method: 'POST'
+        });
+
+        // 상세 정보 업데이트
+        updateModalWithDetails(updatedItem);
+
+        // 추가 이미지가 있다면 업데이트
+        if (updatedItem.additional_images) {
+            initializeImages(JSON.parse(updatedItem.additional_images));
+        }
+    } catch (error) {
+        console.error('Failed to fetch item details:', error);
+    } finally {
+        hideLoadingInModal();
+    }
+}
+
+function initializeModal(item) {
+    document.querySelector('.modal-brand').textContent = item.brand;
+    document.querySelector('.modal-title').textContent = item.korean_title;
+    document.querySelector('.main-image').src = API.validateImageUrl(item.image);
+    document.querySelector('.modal-description').textContent = "로딩 중...";
+    document.querySelector('.modal-category').textContent = item.category || "로딩 중...";
+    document.querySelector('.modal-brand2').textContent = item.brand;
+    document.querySelector('.modal-accessory-code').textContent = item.accessory_code || "로딩 중...";
+    document.querySelector('.modal-scheduled-date').textContent = formatDate(item.scheduled_date) || "로딩 중...";
+
+    // 입찰 정보 초기화
+    initializeBidInfo(item.item_id);
+
+    // 이미지 초기화
+    initializeImages([item.image]);
+}
+
+function updateModalWithDetails(item) {
+    document.querySelector('.modal-description').textContent = item.description || "설명 없음";
+    document.querySelector('.modal-category').textContent = item.category || "카테고리 없음";
+    document.querySelector('.modal-accessory-code').textContent = item.accessory_code || "액세서리 코드 없음";
+    document.querySelector('.modal-scheduled-date').textContent = item.scheduled_date ? formatDate(item.scheduled_date) : "날짜 정보 없음";
+    document.querySelector('.modal-brand').textContent = item.brand;
+    document.querySelector('.modal-brand2').textContent = item.brand;
+    document.querySelector('.modal-title').textContent = item.korean_title || "제목 없음";
+}
+
 async function initialize() {
     await API.initialize();
     await checkAuthStatus();
