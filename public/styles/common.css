@@ -111,15 +111,78 @@ button:disabled {
 }
 
 .filter-options {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: var(--spacing-sm);
+    max-height: 200px; /* 최대 높이 설정 */
+    overflow-y: auto; /* 세로 스크롤 활성화 */
+    padding-right: var(--spacing-sm); /* 스크롤바 공간 확보 */
+    
+    /* 스크롤바 스타일링 */
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: var(--primary-color) var(--background-light); /* Firefox */
+}
+
+.filter-options::-webkit-scrollbar {
+    width: 8px;
+}
+
+.filter-options::-webkit-scrollbar-track {
+    background: var(--background-light);
+    border-radius: 4px;
+}
+
+.filter-options::-webkit-scrollbar-thumb {
+    background-color: var(--primary-color);
+    border-radius: 4px;
+    border: 2px solid var(--background-light);
+}
+
+#brandFilters,
+.search-container {
+    max-height: 300px;
 }
 
 .filter-item {
+    padding: var(--spacing-xs);
     display: flex;
     align-items: center;
     gap: var(--spacing-xs);
+    transition: background-color var(--transition-fast);
+}
+
+.filter-item:hover {
+    background-color: var(--secondary-color);
+}
+
+.filter-item input[type="checkbox"] {
+    margin: 0;
+}
+
+.filter-item label {
+    flex: 1;
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+}
+
+/* 검색 컨테이너 스타일 개선 */
+.filter-search {
+    position: sticky;
+    top: 0;
+    background: var(--background-light);
+    padding: var(--spacing-xs) 0;
+    margin-bottom: var(--spacing-sm);
+    z-index: 1;
+}
+
+.filter-search input {
+    width: 100%;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-sm);
+}
+
+.filter-search input:focus {
+    outline: none;
+    border-color: var(--primary-color);
 }
 
 /* Product Grid */
@@ -190,6 +253,19 @@ button:disabled {
     .filters-container.active {
         left: 0;
     }
+    
+    .filter-options {
+        max-height: 150px; /* 모바일에서는 더 작은 높이 */
+    }
+    
+    #brandFilters,
+    .search-container {
+        max-height: 200px;
+    }
+    
+    .filter-item label {
+        font-size: var(--font-size-xs);
+    }
 
     .mobile-filter-toggle {
         display: block;
@@ -210,4 +286,11 @@ button:disabled {
 
 .hidden {
     display: none;
+}
+
+
+.logo-container img {
+    max-height: 2.5rem; /* 40px 정도의 높이 */
+    width: auto;
+    margin-right: var(--spacing-sm);
 }
