@@ -1,5 +1,5 @@
 // 상태 관리
-const state = {
+window.state = {
     selectedBrands: [],
     selectedCategories: [],
     selectedDates: [],
@@ -178,6 +178,31 @@ function handleSearch() {
     state.searchTerm = searchInput.value;
     state.currentPage = 1;
     fetchData();
+}
+// values.js에 추가
+function showLoadingInModal() {
+    const existingLoader = document.getElementById('modal-loading');
+    if (existingLoader) return;
+
+    const loadingElement = createElement('div', '', '상세 정보를 불러오는 중...');
+    loadingElement.id = 'modal-loading';
+    loadingElement.style.cssText = `
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(255, 255, 255, 0.8);
+        padding: 10px;
+        border-radius: 5px;
+    `;
+    document.querySelector('.modal-content').appendChild(loadingElement);
+}
+
+function hideLoadingInModal() {
+    const loadingElement = document.getElementById('modal-loading');
+    if (loadingElement) {
+        loadingElement.remove();
+    }
 }
 
 // 초기화 및 이벤트 리스너 설정

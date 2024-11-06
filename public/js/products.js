@@ -1,5 +1,5 @@
 // 상태 관리
-const state = {
+window.state = {
     selectedBrands: [],
     selectedCategories: [],
     selectedDates: [],
@@ -274,6 +274,122 @@ async function handleSignout() {
     }
 }
 
+// products.js에 추가
+function getDefaultBidSectionHTML(itemId) {
+    return `
+        <div class="bid-info">
+            <div>
+                <div class="bid-input-group">
+                    <input type="number" placeholder="입찰 예정액" class="bid-input" data-item-id="${itemId}">
+                    <span class="bid-currency">¥</span>
+                    <button class="bid-button" onclick="handleBidSubmit(this.parentElement.children[0].value, '${itemId}')">입찰</button>
+                </div>
+                <div class="price-details-container"></div>
+            </div>
+        </div>
+    `;
+}
+
+function initializePriceCalculators() {
+    document.querySelectorAll('.bid-input').forEach(input => {
+        const container = input.parentElement.parentElement.querySelector('.price-details-container');
+        const itemId = input.getAttribute('data-item-id');
+        const item = state.currentData.find(item => item.item_id == itemId);
+        
+        if (container && item) {
+            input.addEventListener('input', function() {
+                const price = parseFloat(this.value) || 0;
+                const totalPrice = calculateTotalPrice(price, item.auc_num, item.category);
+                container.innerHTML = price ? `(수수료, 세금 포함 ${formatNumber(totalPrice)}원)` : '';
+            });
+        }
+    });
+}
+
+async function handleBidSubmit(value, itemId) {
+    if (!state.isAuthenticated) {
+        alert('입찰하려면 로그인이 필요합니다.');
+        return;
+    }
+    
+    const bidInfo = state.bidData.find(b => b.item_id == itemId);
+    const isFinalBid = !!bidInfo && (!!bidInfo.first_price || !!bidInfo.second_price);
+    
+    try {
+        await API.fetchAPI('/bid/place-reservation', {
+            method: 'POST',
+            body: JSON.stringify({ 
+                itemId, 
+                bidAmount: value, 
+                isFinalBid 
+            })
+        });
+        
+        alert(isFinalBid ? '최종 입찰금액이 등록되었습니다.' : '입찰 예정액이 신청되었습니다.');
+        await fetchData(); // 데이터 새로고침
+    } catch (error) {
+        alert(`입찰 신청 중 오류가 발생했습니다: ${error.message}`);
+    }
+}
+// products.js에 추가
+async function showNoticeSection() {
+    const noticeSection = document.querySelector('.notice-section');
+    const showNoticesBtn = document.getElementById('showNoticesBtn');
+    
+    if (!noticeSection || !showNoticesBtn) return;
+
+    if (noticeSection.style.display === 'none') {
+        noticeSection.style.display = 'block';
+        showNoticesBtn.textContent = '공지사항 닫기';
+        await fetchNotices();
+    } else {
+        noticeSection.style.display = 'none';
+        showNoticesBtn.textContent = '공지사항 보기';
+    }
+}
+
+async function fetchNotices() {
+    try {
+        const notices = await API.fetchAPI('/admin/notices');
+        displayNotices(notices);
+    } catch (error) {
+        console.error('Error fetching notices:', error);
+    }
+}
+
+function displayNotices(notices) {
+    const noticeList = document.getElementById('noticeList');
+    if (!noticeList) return;
+
+    noticeList.innerHTML = '';
+    notices.forEach(notice => {
+        const li = createElement('li', '', notice.title);
+        li.addEventListener('click', () => showNoticeDetail(notice));
+        noticeList.appendChild(li);
+    });
+}
+
+function showNoticeDetail(notice) {
+    const modal = document.getElementById('noticeDetailModal');
+    const title = document.getElementById('noticeTitle');
+    const content = document.getElementById('noticeContent');
+    const image = document.getElementById('noticeImage');
+    
+    if (!modal || !title || !content || !image) return;
+    
+    title.textContent = notice.title;
+    content.innerHTML = notice.content.replace(/\n/g, '<br>');
+    
+    if (notice.image_url) {
+        image.src = notice.image_url;
+        image.style.display = 'block';
+    } else {
+        image.style.display = 'none';
+    }
+    
+    modal.style.display = 'block';
+}
+
 // 초기화 및 이벤트 리스너 설정
 async function initialize() {
     await API.initialize();
@@ -299,7 +415,8 @@ async function initialize() {
     });
     
     document.getElementById('signoutBtn')?.addEventListener('click', handleSignout);
-
+    
+    document.getElementById('showNoticesBtn')?.addEventListener('click', showNoticeSection);
     // 초기 데이터 로드
     await fetchData();
 }

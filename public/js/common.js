@@ -176,6 +176,97 @@ function setupMobileFilters() {
         });
     }
 }
+// common.js에 추가
+function displayFilters(filters) {
+    displayBrandFilters(filters.brands);
+    displayCategoryFilters(filters.categories);
+    displayDateFilters(filters.dates);
+    displayRankFilters(filters.ranks);
+}
+
+function displayBrandFilters(brands) {
+    const brandFilters = document.getElementById('brandFilters');
+    if (!brandFilters) return;
+    
+    brandFilters.innerHTML = '';
+    brands.sort((a, b) => b.count - a.count);
+    brands.forEach(brand => {
+        const brandItem = createFilterItem(
+            brand.brand, 
+            'brand', 
+            state.selectedBrands, 
+            `${brand.brand} (${brand.count})`
+        );
+        brandFilters.appendChild(brandItem);
+    });
+    setupFilterSearch('brandSearch', 'brandFilters');
+}
+
+function displayCategoryFilters(categories) {
+    const categoryFilters = document.getElementById('categoryFilters');
+    if (!categoryFilters) return;
+
+    categoryFilters.innerHTML = '';
+    categories.forEach(category => {
+        const categoryItem = createFilterItem(
+            category, 
+            'category', 
+            state.selectedCategories, 
+            category || '기타'
+        );
+        categoryFilters.appendChild(categoryItem);
+    });
+}
+
+function displayDateFilters(dates) {
+    const scheduledDateFilters = document.getElementById('scheduledDateFilters');
+    if (!scheduledDateFilters) return;
+    
+    scheduledDateFilters.innerHTML = '';
+    
+    const noScheduledDateItem = createFilterItem(
+        'NO_DATE', 
+        'date', 
+        state.selectedDates, 
+        '날짜 없음'
+    );
+    scheduledDateFilters.appendChild(noScheduledDateItem);
+    
+    dates.forEach(date => {
+        if (date.Date) {
+            const formattedDate = formatDate(date.Date);
+            const dateItem = createFilterItem(
+                date.Date, 
+                'date', 
+                state.selectedDates, 
+                `${formattedDate} (${date.count})`
+            );
+            scheduledDateFilters.appendChild(dateItem);
+        }
+    });
+}
+
+function displayRankFilters(ranks) {
+    const rankFilters = document.getElementById('rankFilters');
+    if (!rankFilters) return;
+    
+    rankFilters.innerHTML = '';
+    const rankOrder = ['N', 'S', 'A', 'AB', 'B', 'BC', 'C', 'D', 'E', 'F'];
+    const rankMap = new Map(ranks.map(r => [r.rank, r]));
+    
+    rankOrder.forEach(rank => {
+        const rankData = rankMap.get(rank);
+        if (rankData) {
+            const rankItem = createFilterItem(
+                rankData.rank, 
+                'rank', 
+                state.selectedRanks, 
+                `${rankData.rank} (${rankData.count})`
+            );
+            rankFilters.appendChild(rankItem);
+        }
+    });
+}
 
 // 초기화 함수
 function initializeCommonFeatures() {
