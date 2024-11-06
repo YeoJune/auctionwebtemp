@@ -368,7 +368,7 @@ function displayNotices(notices) {
         noticeList.appendChild(li);
     });
 }
-
+// products.js의 showNoticeDetail 함수 수정
 function showNoticeDetail(notice) {
     const modal = document.getElementById('noticeDetailModal');
     const title = document.getElementById('noticeTitle');
@@ -377,9 +377,11 @@ function showNoticeDetail(notice) {
     
     if (!modal || !title || !content || !image) return;
     
+    // 내용 설정
     title.textContent = notice.title;
     content.innerHTML = notice.content.replace(/\n/g, '<br>');
     
+    // 이미지 처리
     if (notice.image_url) {
         image.src = notice.image_url;
         image.style.display = 'block';
@@ -387,7 +389,24 @@ function showNoticeDetail(notice) {
         image.style.display = 'none';
     }
     
+    // 모달 표시 및 닫기 버튼 이벤트 설정
     modal.style.display = 'block';
+    
+    const closeBtn = modal.querySelector('.close');
+    const closeModal = () => {
+        modal.style.display = 'none';
+    };
+
+    // 기존 이벤트 리스너 제거 후 새로 추가
+    closeBtn?.removeEventListener('click', closeModal);
+    closeBtn?.addEventListener('click', closeModal);
+
+    // 모달 외부 클릭시 닫기
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
 }
 // products.js에 추가
 async function showDetails(itemId) {

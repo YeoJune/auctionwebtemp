@@ -206,81 +206,79 @@ button:disabled {
     background-color: rgba(0,0,0,0.5);
     z-index: 1000;
 }
-
 .modal-content {
     background-color: var(--background-light);
-    margin: 5% auto;
+    margin: 2% auto;
     width: 90%;
-    max-width: 1000px;
+    max-width: 1200px;
     border-radius: var(--border-radius-md);
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    max-height: 96vh;
 }
 
 .modal-header {
     padding: var(--spacing-md);
     border-bottom: 1px solid var(--border-color);
-    display: flex;
-    justify-content: space-between;
-    align-items: start;
 }
 
 .modal-body {
-    padding: var(--spacing-md);
     display: flex;
     gap: var(--spacing-lg);
+    padding: var(--spacing-md);
+    flex: 1;
+    min-height: 0; /* 중요: flex 레이아웃에서 스크롤을 위해 필요 */
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-    .modal-content {
-        width: 95%;
-        margin: 2% auto;
-    }
+.modal-left,
+.modal-right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0; /* 중요: 자식 요소가 부모를 넘어가지 않도록 */
+    max-height: 100%;
+}
 
-    .modal-body {
-        flex-direction: column;
-    }
+.modal-left {
+    padding-right: var(--spacing-md);
+    border-right: 1px solid var(--border-color);
+}
 
-    .filters-container {
-        position: fixed;
-        top: 0;
-        left: -100%;
-        width: 80%;
-        height: 100%;
-        background-color: var(--background-light);
-        z-index: 900;
-        transition: left var(--transition-normal);
-        overflow-y: auto;
-    }
+.main-image-container {
+    position: relative;
+    width: 100%;
+    padding-top: 100%; /* 1:1 비율 유지 */
+    margin-bottom: var(--spacing-md);
+}
 
-    .filters-container.active {
-        left: 0;
-    }
+.main-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background-color: var(--background-dark);
+}
 
-    .filter-options {
-        max-height: 150px; /* 모바일에서는 더 작은 높이 */
-    }
-    
-    #brandFilters,
-    .search-container {
-        max-height: 200px;
-    }
+.thumbnail-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+    gap: var(--spacing-xs);
+    max-height: 100px;
+    overflow-y: auto;
+}
 
-    .filter-item {
-        min-width: calc(50% - var(--spacing-sm)); /* 2열 레이아웃 */
-    }
+.modal-right {
+    overflow-y: auto;
+    padding-left: var(--spacing-md);
+}
 
-    .filter-item label {
-        font-size: var(--font-size-xs);
-    }
-
-    .mobile-filter-toggle {
-        display: block;
-        position: fixed;
-        bottom: var(--spacing-md);
-        right: var(--spacing-md);
-        z-index: 800;
-    }
+.product-details {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
 }
 
 /* Utility Classes */
@@ -363,34 +361,47 @@ button:disabled {
 #noticeDetailModal .modal-content {
     max-width: 800px;
     max-height: 80vh;
+    display: flex;
+    flex-direction: column;
 }
 
 #noticeDetailModal .modal-header {
     background-color: var(--secondary-color);
-    border-bottom: 1px solid var(--border-color);
     padding: var(--spacing-md);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
 }
 
 #noticeDetailModal .modal-body {
+    flex: 1;
     padding: var(--spacing-md);
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
 }
 
-#noticeDetailModal #noticeContent {
+#noticeContent {
     line-height: 1.6;
     white-space: pre-line;
+    overflow-wrap: break-word;
+    word-break: break-all;
 }
 
-#noticeDetailModal #noticeImage {
+#noticeTitle {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    color: var(--text-primary);
+}
+
+#noticeImage {
     max-width: 100%;
     height: auto;
-    margin-top: var(--spacing-md);
-    display: none; /* 기본적으로 숨김 */
+    align-self: center;
 }
 
-#noticeDetailModal #noticeImage[src] {
-    display: block; /* 이미지 소스가 있을 때만 표시 */
-}
 /* common.css 수정 */
 
 .product-header {
@@ -458,4 +469,70 @@ button:disabled {
 
 .image-nav:hover:not(:disabled) {
     opacity: 1;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .modal-content {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+
+    .modal-body {
+        flex-direction: column;
+    }
+
+    .modal-left,
+    .modal-right {
+        padding: 0;
+        border: none;
+    }
+
+    .main-image-container {
+        padding-top: 75%; /* 모바일에서는 4:3 비율 */
+    }
+
+    .filters-container {
+        position: fixed;
+        top: 0;
+        left: -100%;
+        width: 80%;
+        height: 100%;
+        background-color: var(--background-light);
+        z-index: 900;
+        transition: left var(--transition-normal);
+        overflow-y: auto;
+    }
+
+    .filters-container.active {
+        left: 0;
+    }
+
+    .filter-options {
+        max-height: 150px; /* 모바일에서는 더 작은 높이 */
+    }
+    
+    #brandFilters,
+    .search-container {
+        max-height: 200px;
+    }
+
+    .filter-item {
+        min-width: calc(50% - var(--spacing-sm)); /* 2열 레이아웃 */
+    }
+
+    .filter-item label {
+        font-size: var(--font-size-xs);
+    }
+
+    .mobile-filter-toggle {
+        display: block;
+        position: fixed;
+        bottom: var(--spacing-md);
+        right: var(--spacing-md);
+        z-index: 800;
+    }
 }
