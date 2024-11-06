@@ -59,54 +59,95 @@ function displayData(data) {
 
 // 상세 정보 모달 초기화
 function initializeModal(item) {
-    const modal = document.querySelector('.modal-content');
-    if (!modal) return;
-
-    document.querySelector('.modal-brand').textContent = item.brand;
-    document.querySelector('.modal-title').textContent = item.japanese_title;
+    document.querySelector('.modal-brand').textContent = item.brand || '';
+    document.querySelector('.modal-title').textContent = item.japanese_title || '';
     document.querySelector('.main-image').src = API.validateImageUrl(item.image);
-    document.querySelector('.modal-description').textContent = item.description || "설명 없음";
+    document.querySelector('.modal-description').textContent = "로딩 중...";
     document.querySelector('.modal-category').textContent = item.category || "카테고리 없음";
-    document.querySelector('.modal-brand2').textContent = item.brand;
+    document.querySelector('.modal-brand2').textContent = item.brand || '';
     document.querySelector('.modal-accessory-code').textContent = item.accessory_code || "액세서리 코드 없음";
     document.querySelector('.modal-scheduled-date').textContent = formatDate(item.scheduled_date) || "날짜 정보 없음";
     document.querySelector('.modal-final-price').textContent = item.final_price ? 
         `${formatNumber(parseInt(item.final_price))} ¥` : "가격 정보 없음";
 
+    // 기본 이미지로 초기화
     initializeImages([item.image]);
 }
 
-// 이미지 갤러리 초기화
 function initializeImages(imageUrls) {
-    state.images = imageUrls;
+    // 유효한 이미지 URL만 필터링
+    const validImages = (Array.isArray(imageUrls) ? imageUrls : [])
+        .filter(url => url)
+        .map(url => API.validateImageUrl(url));
+
+    if (validImages.length === 0) {
+        console.log('No valid images found');
+        return;
+    }
+
+    state.images = validImages;
     state.currentImageIndex = 0;
 
     const mainImage = document.querySelector('.main-image');
     const thumbnailContainer = document.querySelector('.thumbnail-container');
     
-    if (mainImage) mainImage.src = state.images[0];
-    if (thumbnailContainer) {
-        thumbnailContainer.innerHTML = '';
-        state.images.forEach((img, index) => {
-            const thumbnailWrapper = createElement('div', 'thumbnail');
-            const thumbnail = createElement('img');
-            thumbnail.src = img;
-            thumbnail.alt = `Thumbnail ${index + 1}`;
-            thumbnail.loading = 'lazy';
-            thumbnail.addEventListener('click', () => changeMainImage(index));
-            thumbnailWrapper.appendChild(thumbnail);
-            thumbnailContainer.appendChild(thumbnailWrapper);
-        });
-    }
-}
+    if (!mainImage || !thumbnailContainer) return;
 
-// 메인 이미지 변경
+    // 메인 이미지 설정
+    mainImage.src = state.images[0];
+    mainImage.alt = '상품 이미지';
+
+    // 썸네일 초기화
+    thumbnailContainer.innerHTML = '';
+    state.images.forEach((img, index) => {
+        const thumbnailWrapper = createElement('div', 'thumbnail');
+        thumbnailWrapper.classList.toggle('active', index === 0);
+        
+        const thumbnail = createElement('img');
+        thumbnail.src = img;
+        thumbnail.alt = `상품 이미지 ${index + 1}`;
+        thumbnail.loading = 'lazy';
+        
+        thumbnail.addEventListener('click', () => {
+            changeMainImage(index);
+            updateThumbnailSelection(index);
+        });
+        
+        thumbnailWrapper.appendChild(thumbnail);
+        thumbnailContainer.appendChild(thumbnailWrapper);
+    });
+
+    // 네비게이션 버튼 상태 업데이트
+    updateNavigationButtons();
+}
 function changeMainImage(index) {
+    if (index < 0 || index >= state.images.length) return;
+    
     state.currentImageIndex = index;
     const mainImage = document.querySelector('.main-image');
-    if (mainImage) mainImage.src = state.images[index];
+    if (mainImage) {
+        mainImage.src = state.images[index];
+    }
+    
+    updateThumbnailSelection(index);
+    updateNavigationButtons();
 }
-
+function updateThumbnailSelection(activeIndex) {
+    document.querySelectorAll('.thumbnail').forEach((thumb, i) => {
+        thumb.classList.toggle('active', i === activeIndex);
+    });
+}
+function updateNavigationButtons() {
+    const prevBtn = document.querySelector('.image-nav.prev');
+    const nextBtn = document.querySelector('.image-nav.next');
+    
+    if (prevBtn) {
+        prevBtn.disabled = state.currentImageIndex <= 0;
+    }
+    if (nextBtn) {
+        nextBtn.disabled = state.currentImageIndex >= state.images.length - 1;
+    }
+}
 // 데이터 가져오기
 async function fetchData() {
     toggleLoading(true);
@@ -137,6 +178,7 @@ async function fetchData() {
 }
 
 // 상세 정보 표시
+
 async function showDetails(itemId) {
     const modalManager = setupModal('detailModal');
     if (!modalManager) return;
@@ -144,27 +186,61 @@ async function showDetails(itemId) {
     const item = state.currentData.find(data => data.item_id == itemId);
     if (!item) return;
 
+    // 기본 정보로 모달 초기화
     initializeModal(item);
     modalManager.show();
 
     try {
+        // 상세 정보 가져오기 전에 로딩 표시
+        showLoadingInModal();
+
         const updatedItem = await API.fetchAPI(`/crawler/crawl-item-value-details/${itemId}`, {
             method: 'POST'
+        }).catch(error => {
+            console.log('Unable to fetch details, using basic item info:', error);
+            return item; // 오류 시 기본 정보 사용
         });
 
-        // 추가 이미지가 있다면 업데이트
-        if (updatedItem.additional_images) {
-            const images = JSON.parse(updatedItem.additional_images);
-            initializeImages(images);
-        }
+        // 상세 정보 업데이트 (기본 정보와 병합)
+        const mergedItem = { ...item, ...updatedItem };
+        updateModalWithDetails(mergedItem);
 
-        // 기타 상세 정보 업데이트
-        document.querySelector('.modal-description').textContent = updatedItem.description || "설명 없음";
-        document.querySelector('.modal-category').textContent = updatedItem.category || "카테고리 없음";
-        document.querySelector('.modal-accessory-code').textContent = updatedItem.accessory_code || "액세서리 코드 없음";
+        // 추가 이미지가 있다면 업데이트
+        if (mergedItem.additional_images) {
+            try {
+                const images = JSON.parse(mergedItem.additional_images);
+                initializeImages(images);
+            } catch (e) {
+                console.log('Error parsing additional images:', e);
+                initializeImages([mergedItem.image]);
+            }
+        }
     } catch (error) {
         console.error('Failed to fetch item details:', error);
+        // 오류 발생 시 기본 정보로만 표시
+        updateModalWithDetails(item);
+    } finally {
+        hideLoadingInModal();
     }
+}
+function updateModalWithDetails(item) {
+    // 각 필드를 개별적으로 안전하게 업데이트
+    const updateField = (selector, value, defaultValue = "정보 없음") => {
+        const element = document.querySelector(selector);
+        if (element) {
+            element.textContent = value || defaultValue;
+        }
+    };
+
+    updateField('.modal-description', item.description);
+    updateField('.modal-category', item.category);
+    updateField('.modal-accessory-code', item.accessory_code);
+    updateField('.modal-scheduled-date', formatDate(item.scheduled_date));
+    updateField('.modal-brand', item.brand);
+    updateField('.modal-brand2', item.brand);
+    updateField('.modal-title', item.japanese_title);
+    updateField('.modal-final-price', 
+        item.final_price ? `${formatNumber(parseInt(item.final_price))} ¥` : null);
 }
 
 // 이벤트 핸들러
