@@ -221,6 +221,50 @@ button:disabled {
 .modal-header {
     padding: var(--spacing-md);
     border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    position: relative; /* 위치 기준점 */
+}
+
+.modal-header .product-info {
+    flex: 1;
+    padding-right: var(--spacing-xl); /* 닫기 버튼 공간 확보 */
+}
+
+.close {
+    position: absolute;
+    right: var(--spacing-md);
+    top: var(--spacing-md);
+    font-size: 1.8rem;
+    line-height: 1;
+    padding: var(--spacing-xs);
+    cursor: pointer;
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color var(--transition-fast);
+    z-index: 1;
+}
+
+.close:hover {
+    color: var(--text-primary);
+}
+
+.modal-brand {
+    font-size: var(--font-size-md);
+    color: var(--text-secondary);
+    margin: 0;
+    margin-bottom: var(--spacing-xs);
+}
+
+.modal-title {
+    font-size: var(--font-size-xl);
+    margin: 0;
+    word-break: break-word;
 }
 
 .modal-body {
@@ -359,19 +403,26 @@ button:disabled {
 
 /* 공지사항 모달 스타일 */
 #noticeDetailModal .modal-content {
-    max-width: 800px;
-    max-height: 80vh;
+    max-width: 1000px; /* 더 넓은 최대 너비 */
+    width: 95%;
+    height: 90vh; /* 더 큰 높이 */
+    max-height: 90vh;
     display: flex;
     flex-direction: column;
+    margin: 5vh auto; /* 상하 여백 조정 */
+    background-color: var(--background-light);
+    border-radius: var(--border-radius-lg);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
 #noticeDetailModal .modal-header {
+    padding: var(--spacing-lg);
     background-color: var(--secondary-color);
-    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid var(--border-color);
 }
 
 #noticeDetailModal .modal-body {
@@ -383,16 +434,41 @@ button:disabled {
     gap: var(--spacing-md);
 }
 
+#noticeDetailModal #noticeTitle {
+    margin: 0;
+    font-size: var(--font-size-xl);
+    color: var(--text-primary);
+    flex: 1;
+    padding-right: var(--spacing-lg);
+}
+
+#noticeDetailModal .close {
+    font-size: 1.8rem;
+    padding: var(--spacing-xs);
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: color var(--transition-fast);
+}
+
+#noticeDetailModal .close:hover {
+    color: var(--text-primary);
+}
+
+#noticeDetailModal .modal-body {
+    flex: 1;
+    padding: var(--spacing-lg);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
 #noticeContent {
-    line-height: 1.6;
+    font-size: var(--font-size-lg); /* 더 큰 폰트 사이즈 */
+    line-height: 1.8;
     white-space: pre-line;
     overflow-wrap: break-word;
     word-break: break-all;
-}
-
-#noticeTitle {
-    margin: 0;
-    font-size: var(--font-size-lg);
     color: var(--text-primary);
 }
 
@@ -400,9 +476,24 @@ button:disabled {
     max-width: 100%;
     height: auto;
     align-self: center;
+    border-radius: var(--border-radius-md);
+    margin-top: var(--spacing-md);
 }
 
-/* common.css 수정 */
+#noticeDetailModal .modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+#noticeDetailModal .modal-body::-webkit-scrollbar-track {
+    background: var(--background-light);
+    border-radius: 4px;
+}
+
+#noticeDetailModal .modal-body::-webkit-scrollbar-thumb {
+    background-color: var(--primary-color);
+    border-radius: 4px;
+    border: 2px solid var(--background-light);
+}
 
 .product-header {
     padding: var(--spacing-sm);
@@ -473,6 +564,20 @@ button:disabled {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+    .close {
+        font-size: 1.5rem;
+        right: var(--spacing-sm);
+        top: var(--spacing-sm);
+    }
+
+    .modal-header .product-info {
+        padding-right: var(--spacing-lg);
+    }
+
+    .modal-title {
+        font-size: var(--font-size-lg);
+    }
+
     .modal-content {
         margin: 0;
         width: 100%;
@@ -534,5 +639,29 @@ button:disabled {
         bottom: var(--spacing-md);
         right: var(--spacing-md);
         z-index: 800;
+    }
+
+    #noticeDetailModal .modal-content {
+        width: 100%;
+        height: 100vh;
+        max-height: 100vh;
+        margin: 0;
+        border-radius: 0;
+    }
+
+    #noticeDetailModal .modal-header {
+        padding: var(--spacing-md);
+    }
+
+    #noticeDetailModal .modal-body {
+        padding: var(--spacing-md);
+    }
+
+    #noticeDetailModal #noticeTitle {
+        font-size: var(--font-size-lg);
+    }
+
+    #noticeContent {
+        font-size: var(--font-size-md);
     }
 }
