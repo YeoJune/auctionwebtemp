@@ -221,6 +221,30 @@ button:disabled {
     overflow: hidden;
 }
 
+.modal-body {
+    display: flex;
+    gap: var(--spacing-lg);
+    padding: var(--spacing-md);
+    flex: 1;
+    overflow: hidden;
+}
+
+.modal-left,
+.modal-right {
+    flex: 1;
+    min-width: 0;
+}
+
+.modal-left {
+    padding-right: var(--spacing-md);
+    border-right: 1px solid var(--border-color);
+}
+
+.modal-right {
+    overflow-y: auto;
+    padding-left: var(--spacing-md);
+}
+
 .modal-header {
     padding: var(--spacing-md);
     border-bottom: 1px solid var(--border-color);
@@ -268,29 +292,6 @@ button:disabled {
     font-size: var(--font-size-xl);
     margin: 0;
     word-break: break-word;
-}
-
-.modal-body {
-    display: flex;
-    gap: var(--spacing-lg);
-    padding: var(--spacing-md);
-    flex: 1;
-    overflow: hidden;
-}
-
-.modal-left,
-.modal-right {
-    flex: 1;
-    min-width: 0;
-}
-
-.modal-right {
-    overflow-y: auto;
-}
-
-.modal-left {
-    padding-right: var(--spacing-md);
-    border-right: 1px solid var(--border-color);
 }
 
 .main-image-container {
@@ -577,6 +578,7 @@ button:disabled {
         font-size: var(--font-size-lg);
     }
 
+    
     .modal-content {
         width: 100%;
         height: 100vh;
@@ -584,28 +586,80 @@ button:disabled {
         border-radius: 0;
     }
 
-    .modal-left,
-    .modal-right {
-        width: 100%;
-        flex: none;
+    .modal-body {
+        flex-direction: column;
+        overflow-y: auto; /* 전체 모달 body에 스크롤 적용 */
+        padding: var(--spacing-sm);
+        gap: var(--spacing-md);
     }
 
     .modal-left {
-        min-height: 50vh;
+        flex: none;
+        padding-right: 0;
+        border-right: none;
+        padding: 0;
+        /* 이미지 영역 고정 높이 */
+        height: auto;
+        max-height: 50vh;
+        min-height: auto;
+        display: flex;
+        flex-direction: column;
     }
 
     .modal-right {
-        overflow-y: visible;
-        padding-bottom: var(--spacing-lg);
+        flex: none;
+        padding-left: 0;
+        overflow-y: visible; /* 개별 스크롤 제거 */
+        height: auto;
     }
 
     .main-image-container {
-        height: 40vh;
-        padding-top: 0;
+        position: relative;
+        height: 0;
+        padding-top: 75%; /* 4:3 비율 */
+        width: 100%;
+        overflow: hidden;
     }
-    
+
+    .main-image {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
     .thumbnail-container {
-        height: 10vh;
+        margin-top: var(--spacing-sm);
+        height: auto;
+        max-height: 80px;
+    }
+
+    .modal-body::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .modal-body::-webkit-scrollbar-track {
+        background: var(--background-light);
+    }
+
+    .modal-body::-webkit-scrollbar-thumb {
+        background-color: var(--primary-color);
+        border-radius: 3px;
+    }
+
+    .modal-left,
+    .modal-right,
+    .thumbnail-container {
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* 필요한 경우 부모 요소의 스크롤 방지 */
+    .modal.open {
+        position: fixed;
+        width: 100%;
+        height: 100%;
     }
 
     .filters-container {
