@@ -73,17 +73,25 @@ function getBidSectionHTML(bidInfo, itemId, aucNum, category) {
     if (bidInfo?.first_price || bidInfo?.second_price) {
         html += `
             <div>
-                <p>1차 입찰금액: ${formatNumber(bidInfo.first_price) || '-'} ¥</p>
-                <div class="price-details-container">
-                    ${bidInfo.first_price ? `(수수료, 세금 포함 ${formatNumber(calculateTotalPrice(bidInfo.first_price, aucNum, category))}원)` : ''}
+                <div class="bid-price-info">
+                    <p>1차 입찰금액: ${formatNumber(bidInfo.first_price) || '-'} ¥</p>
+                    ${bidInfo.first_price ? 
+                        `<div class="price-details-container first-price">
+                            (수수료, 세금 포함 ${formatNumber(calculateTotalPrice(bidInfo.first_price, aucNum, category))}원)
+                        </div>` : 
+                        ''}
                 </div>
-                <p>2차 제안금액: ${formatNumber(bidInfo.second_price) || '-'} ¥</p>
-                <div class="price-details-container">
-                    ${bidInfo.second_price ? `(수수료, 세금 포함 ${formatNumber(calculateTotalPrice(bidInfo.second_price, aucNum, category))}원)` : ''}
+                <div class="bid-price-info">
+                    <p>2차 제안금액: ${formatNumber(bidInfo.second_price) || '-'} ¥</p>
+                    ${bidInfo.second_price ? 
+                        `<div class="price-details-container second-price">
+                            (수수료, 세금 포함 ${formatNumber(calculateTotalPrice(bidInfo.second_price, aucNum, category))}원)
+                        </div>` : 
+                        ''}
                 </div>
             </div>`;
     }
-
+    
     html += `
         <div>
             <div class="bid-input-group">
@@ -488,6 +496,7 @@ function initializeBidInfo(itemId) {
     
     if (input && priceContainer && item) {
         input.addEventListener('input', function() {
+            const priceContainer = this.closest('.bid-input-group').nextElementSibling;
             const price = parseFloat(this.value) || 0;
             const totalPrice = calculateTotalPrice(price, item.auc_num, item.category);
             priceContainer.innerHTML = price ? `(수수료, 세금 포함 ${formatNumber(totalPrice)}원)` : '';
