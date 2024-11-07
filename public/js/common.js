@@ -162,20 +162,46 @@ function toggleLoading(show) {
 function setupMobileFilters() {
     const filterBtn = document.getElementById('mobileFilterBtn');
     const filtersContainer = document.querySelector('.filters-container');
-    
+    const backdrop = document.createElement('div');
+    backdrop.className = 'filter-backdrop';
+    backdrop.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 899;
+        display: none;
+    `;
+    document.body.appendChild(backdrop);
+
     if (filterBtn && filtersContainer) {
         filterBtn.addEventListener('click', () => {
-            filtersContainer.classList.toggle('active');
+            filtersContainer.classList.add('active');
+            backdrop.style.display = 'block';
+            document.body.style.overflow = 'hidden';
         });
 
-        // 필터 영역 외 클릭시 닫기
-        document.addEventListener('click', (e) => {
-            if (!filtersContainer.contains(e.target) && !filterBtn.contains(e.target)) {
+        // 백드롭 클릭시 필터 닫기
+        backdrop.addEventListener('click', () => {
+            filtersContainer.classList.remove('active');
+            backdrop.style.display = 'none';
+            document.body.style.overflow = '';
+        });
+
+        // ESC 키로 필터 닫기
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && filtersContainer.classList.contains('active')) {
                 filtersContainer.classList.remove('active');
+                backdrop.style.display = 'none';
+                document.body.style.overflow = '';
             }
         });
     }
 }
+
+
 // common.js에 추가
 function displayFilters(brands, categories, dates, ranks) {
     displayBrandFilters(brands);

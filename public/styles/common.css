@@ -562,6 +562,22 @@ button:disabled {
     opacity: 1;
 }
 
+.mobile-filter-toggle {
+    display: none; /* 기본적으로는 숨김 */
+    position: fixed;
+    bottom: var(--spacing-lg);
+    right: var(--spacing-lg);
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    width: 3.5rem;
+    height: 3.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    z-index: 800;
+    align-items: center;
+    justify-content: center;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .close {
@@ -665,19 +681,21 @@ button:disabled {
     .filters-container {
         position: fixed;
         top: 0;
-        left: -100%;
-        width: 80%;
-        height: 100%;
+        left: 0;
+        width: 85%;
+        height: 100vh;
         background-color: var(--background-light);
         z-index: 900;
-        transition: left var(--transition-normal);
+        transform: translateX(-100%);
         overflow-y: auto;
+        padding: var(--spacing-lg);
+        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
     }
 
     .filters-container.active {
-        left: 0;
+        transform: translateX(0);
     }
-
+    
     .filter-options {
         max-height: 150px; /* 모바일에서는 더 작은 높이 */
     }
@@ -696,11 +714,7 @@ button:disabled {
     }
 
     .mobile-filter-toggle {
-        display: block;
-        position: fixed;
-        bottom: var(--spacing-md);
-        right: var(--spacing-md);
-        z-index: 800;
+        display: flex; /* 모바일에서만 표시 */
     }
 
     #noticeDetailModal .modal-content {
