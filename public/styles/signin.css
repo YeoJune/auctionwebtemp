@@ -1,4 +1,4 @@
-/* Login Container */
+/* Sign In Container */
 .container {
     max-width: 400px;
     margin: 40px auto;
@@ -8,7 +8,7 @@
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-/* Login Header */
+/* Form Header */
 h2 {
     text-align: center;
     color: var(--text-primary);
@@ -16,7 +16,7 @@ h2 {
     font-size: var(--font-size-xl);
 }
 
-/* Form Elements */
+/* Form Groups */
 .form-group {
     margin-bottom: var(--spacing-lg);
 }
@@ -43,7 +43,7 @@ h2 {
     box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
 }
 
-/* Button Styles */
+/* Sign In Button */
 .btn {
     width: 100%;
     padding: var(--spacing-md);
@@ -81,7 +81,7 @@ h2 {
     min-height: 20px;
 }
 
-/* Footer Text */
+/* Contact Info */
 .text-center {
     text-align: center;
     margin-top: var(--spacing-xl);
@@ -101,7 +101,7 @@ h2 {
     text-decoration: underline;
 }
 
-/* Autofill Styles */
+/* Autofill Style Override */
 input:-webkit-autofill,
 input:-webkit-autofill:hover, 
 input:-webkit-autofill:focus {
@@ -126,10 +126,7 @@ input:-webkit-autofill:focus {
         margin-bottom: var(--spacing-md);
     }
 
-    .form-group input {
-        padding: var(--spacing-sm);
-    }
-
+    .form-group input,
     .btn {
         padding: var(--spacing-sm);
     }

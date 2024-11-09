@@ -1,4 +1,4 @@
-/* Root Variables - Global Design Tokens */
+/* CSS Variables */
 :root {
     /* Colors */
     --primary-color: #4CAF50;
@@ -14,37 +14,36 @@
     --success-color: #28a745;
     
     /* Spacing */
-    --spacing-xs: 0.25rem;  /* 4px */
-    --spacing-sm: 0.5rem;   /* 8px */
-    --spacing-md: 1rem;     /* 16px */
-    --spacing-lg: 1.5rem;   /* 24px */
-    --spacing-xl: 2rem;     /* 32px */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
     
     /* Border Radius */
     --border-radius-sm: 0.25rem;
     --border-radius-md: 0.5rem;
     --border-radius-lg: 1rem;
     
-    /* Typography */
-    --font-size-xs: 0.75rem;   /* 12px */
-    --font-size-sm: 0.875rem;  /* 14px */
-    --font-size-md: 1rem;      /* 16px */
-    --font-size-lg: 1.25rem;   /* 20px */
-    --font-size-xl: 1.5rem;    /* 24px */
+    /* Font Sizes */
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-md: 1rem;
+    --font-size-lg: 1.25rem;
+    --font-size-xl: 1.5rem;
     
     /* Transitions */
     --transition-fast: 0.2s;
     --transition-normal: 0.3s;
 }
 
-/* Base Reset */
+/* Reset & Base Styles */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
-/* Base Typography */
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     line-height: 1.6;
@@ -52,14 +51,14 @@ body {
     background-color: var(--background-dark);
 }
 
-/* Layout Components */
+/* Layout */
 .container {
     max-width: 1200px;
     margin: 0 auto;
     padding: var(--spacing-md);
 }
 
-/* Header Components */
+/* Common Header */
 .main-header {
     background-color: var(--background-light);
     padding: var(--spacing-md);
@@ -73,19 +72,13 @@ body {
     align-items: center;
 }
 
-/* Navigation Components */
-.nav-container {
-    display: flex;
-    gap: var(--spacing-sm);
+.logo-container img {
+    max-height: 2.5rem;
+    width: auto;
+    margin-right: var(--spacing-sm);
 }
 
-.nav-button {
-    background-color: var(--primary-color);
-    color: white;
-    transition: background-color var(--transition-fast);
-}
-
-/* Button Base Styles */
+/* Common Button Styles */
 button {
     background-color: var(--primary-color);
     color: white;
@@ -104,10 +97,9 @@ button:hover:not(:disabled) {
 button:disabled {
     background-color: var(--border-color);
     cursor: not-allowed;
-    opacity: 0.7;
 }
 
-/* Modal Base Styles */
+/* Common Modal Base Styles */
 .modal {
     display: none;
     position: fixed;
@@ -133,7 +125,63 @@ button:disabled {
     overflow: hidden;
 }
 
-/* Scrollbar Styles */
+.modal-header {
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    position: relative;
+}
+
+.modal-body {
+    flex: 1;
+    padding: var(--spacing-md);
+    overflow-y: auto;
+}
+
+.close {
+    position: absolute;
+    right: var(--spacing-md);
+    top: var(--spacing-md);
+    font-size: 1.8rem;
+    line-height: 1;
+    padding: var(--spacing-xs);
+    cursor: pointer;
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color var(--transition-fast);
+    z-index: 1;
+}
+
+.close:hover {
+    color: var(--text-primary);
+}
+
+/* Common Form Elements */
+input[type="text"],
+input[type="password"],
+input[type="time"],
+input[type="search"] {
+    padding: var(--spacing-sm);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-sm);
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="time"]:focus,
+input[type="search"]:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+/* Common Scrollbar Styles */
 ::-webkit-scrollbar {
     width: 8px;
 }
@@ -154,10 +202,6 @@ button:disabled {
     display: none;
 }
 
-.text-center {
-    text-align: center;
-}
-
 .loading-msg {
     text-align: center;
     padding: var(--spacing-lg);
@@ -165,7 +209,7 @@ button:disabled {
     color: var(--text-secondary);
 }
 
-/* Media Queries */
+/* Common Responsive Design */
 @media (max-width: 768px) {
     .container {
         padding: var(--spacing-sm);
@@ -178,8 +222,17 @@ button:disabled {
         border-radius: 0;
     }
 
-    button {
-        padding: var(--spacing-xs) var(--spacing-sm);
-        font-size: var(--font-size-xs);
+    .close {
+        font-size: 1.5rem;
+        right: var(--spacing-sm);
+        top: var(--spacing-sm);
+    }
+
+    .modal-body {
+        padding: var(--spacing-sm);
+    }
+
+    ::-webkit-scrollbar {
+        width: 6px;
     }
 }
