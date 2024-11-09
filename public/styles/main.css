@@ -91,6 +91,16 @@
     box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
+.product-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+}
+
+.product-details {
+    padding: var(--spacing-sm);
+}
+
 .product-header {
     padding: var(--spacing-sm);
     background-color: var(--secondary-color);
@@ -128,6 +138,51 @@
     background-color: var(--background-dark);
     border-radius: var(--border-radius-sm);
     margin-left: var(--spacing-sm);
+}
+
+/* Bid Section */
+.bid-section {
+    margin: var(--spacing-sm) 0;
+}
+
+.bid-input-group {
+    display: flex;
+    gap: var(--spacing-xs);
+}
+
+.bid-input {
+    flex-grow: 1;
+    padding: var(--spacing-xs);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+}
+
+.bid-currency {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background-color: var(--secondary-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+}
+
+/* Price Details */
+.price-details-container {
+    font-size: var(--font-size-sm);
+    color: var(--error-color);
+    margin-top: var(--spacing-xs);
+}
+
+/* Wishlist Button */
+.wishlist-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    padding: var(--spacing-xs);
+    cursor: pointer;
+    transition: color var(--transition-fast);
+}
+
+.wishlist-btn.active {
+    color: var(--accent-color);
 }
 
 /* Product Modal Specific */
@@ -369,5 +424,17 @@
     .pagination button {
         padding: var(--spacing-xs);
         font-size: var(--font-size-sm);
+    }
+    
+    .product-image {
+        height: 150px;
+    }
+
+    .bid-input-group {
+        flex-direction: column;
+    }
+
+    .bid-currency {
+        text-align: center;
     }
 }
