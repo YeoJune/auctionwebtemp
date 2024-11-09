@@ -263,18 +263,33 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
     gap: var(--spacing-xs);
+    padding: var(--spacing-xs);
     max-height: 100px;
     overflow-y: auto;
 }
 
 .thumbnail {
+    position: relative;
+    padding-top: 100%; /* 1:1 비율 유지 */
     cursor: pointer;
     border: 2px solid transparent;
+    border-radius: var(--border-radius-sm);
     transition: border-color var(--transition-fast);
+    overflow: hidden;
 }
 
 .thumbnail.active {
     border-color: var(--primary-color);
+}
+
+.thumbnail img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background-color: var(--background-dark);
 }
 
 /* Notice Section */
@@ -284,25 +299,35 @@
     border-radius: var(--border-radius-md);
     margin-top: var(--spacing-md);
     padding: var(--spacing-md);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .notice-section h2 {
     margin-bottom: var(--spacing-md);
     color: var(--text-primary);
     font-size: var(--font-size-lg);
+    font-weight: 600;
 }
 
 .notice-list {
     list-style: none;
     padding: 0;
     margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
 }
 
 .notice-list li {
-    padding: var(--spacing-sm) var(--spacing-md);
-    border-bottom: 1px solid var(--border-color);
+    padding: var(--spacing-md) var(--spacing-lg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
     cursor: pointer;
-    transition: background-color var(--transition-fast);
+    transition: all var(--transition-fast);
+    background-color: var(--background-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .notice-list li:last-child {
@@ -311,6 +336,15 @@
 
 .notice-list li:hover {
     background-color: var(--secondary-color);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.notice-list li::after {
+    content: '›';
+    color: var(--text-secondary);
+    font-size: var(--font-size-lg);
+    margin-left: var(--spacing-md);
 }
 
 /* Pagination */
@@ -425,7 +459,7 @@
         padding: var(--spacing-xs);
         font-size: var(--font-size-sm);
     }
-    
+
     .product-image {
         height: 150px;
     }
@@ -436,5 +470,14 @@
 
     .bid-currency {
         text-align: center;
+    }
+
+    .thumbnail-container {
+        max-height: 80px;
+        grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+    }
+
+    .notice-list li {
+        padding: var(--spacing-sm) var(--spacing-md);
     }
 }
