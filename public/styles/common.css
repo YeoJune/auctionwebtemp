@@ -403,7 +403,6 @@ button:disabled {
 
 /* 공지사항 모달 스타일 */
 #noticeDetailModal .modal-content {
-    max-width: 1000px; /* 더 넓은 최대 너비 */
     width: 95%;
     height: 90vh; /* 더 큰 높이 */
     max-height: 90vh;
@@ -527,7 +526,7 @@ button:disabled {
     margin: 0;
     color: var(--text-primary);
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+    -line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     line-height: 1.2;
