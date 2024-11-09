@@ -6,8 +6,8 @@
     <title>관리자 페이지</title>
     <link rel="stylesheet" href="/styles/common.css">
     <link rel="stylesheet" href="/styles/admin.css">
-    <link href="https://cdn.quilljs.com/2.0.0/quill.snow.css" rel="stylesheet">
-    <script src="https://cdn.quilljs.com/2.0.0/quill.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
 </head>
 <body>
     <div class="admin-container">
@@ -57,7 +57,9 @@
                         <input type="text" id="noticeTitle" placeholder="제목을 입력하세요">
                     </div>
                     <div class="editor-container">
-                        <div id="editor"></div>
+                        <div id="editor">
+                            <p><br></p>
+                        </div>
                     </div>
                     <div class="button-group">
                         <button onclick="saveNotice()" class="primary-button">공지 저장</button>

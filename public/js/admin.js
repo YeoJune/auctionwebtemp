@@ -153,14 +153,13 @@ const quill = new Quill('#editor', {
             ['image', 'code-block'],
             [{ 'list': 'ordered'}, { 'list': 'bullet' }],
             ['clean']
-        ],
-        clipboard: {
-            matchVisual: false
-        }
-    }
+        ]
+    },
+    placeholder: '내용을 입력하세요...'
 });
 
-quill.getModule('toolbar').addHandler('image', () => {
+const toolbar = quill.getModule('toolbar');
+toolbar.addHandler('image', () => {
     const input = document.createElement('input');
     input.setAttribute('type', 'file');
     input.setAttribute('accept', 'image/*');
@@ -172,7 +171,6 @@ quill.getModule('toolbar').addHandler('image', () => {
             try {
                 const compressedBlob = await compressImage(file, 1920, 1080, 0.85);
                 
-                // 압축된 이미지를 서버에 업로드
                 const formData = new FormData();
                 formData.append('image', compressedBlob, file.name);
 
