@@ -1,19 +1,24 @@
+/* Sign In Container */
 .container {
     max-width: 400px;
-    margin: 40px auto;
-    padding: var(--spacing-lg);
+    margin: 2.5rem auto;
+    padding: var(--spacing-xl);
     background-color: var(--background-light);
     border-radius: var(--border-radius-lg);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
+/* Typography */
 h2 {
     text-align: center;
     color: var(--text-primary);
-    margin-bottom: var(--spacing-xl);
     font-size: var(--font-size-xl);
+    font-weight: 600;
+    margin-bottom: var(--spacing-xl);
+    letter-spacing: -0.3px;
 }
 
+/* Form Styles */
 .form-group {
     margin-bottom: var(--spacing-lg);
 }
@@ -23,28 +28,37 @@ h2 {
     margin-bottom: var(--spacing-xs);
     color: var(--text-secondary);
     font-size: var(--font-size-sm);
+    font-weight: 500;
 }
 
 .form-group input {
     width: 100%;
-    padding: var(--spacing-md);
-    border: 2px solid var(--border-color);
-    border-radius: var(--border-radius-sm);
+    padding: 0.875rem 1rem;
     font-size: var(--font-size-md);
-    transition: border-color var(--transition-fast);
+    color: var(--text-primary);
+    background-color: var(--background-light);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    transition: all var(--transition-fast);
 }
 
 .form-group input:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
 }
 
+.form-group input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+/* Button Styles */
 .btn {
     width: 100%;
-    padding: var(--spacing-md);
+    padding: 0.875rem;
     border: none;
-    border-radius: var(--border-radius-sm);
+    border-radius: var(--border-radius-md);
     font-size: var(--font-size-md);
     font-weight: 600;
     cursor: pointer;
@@ -59,7 +73,7 @@ h2 {
 .btn-primary:hover {
     background-color: var(--primary-hover);
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
 }
 
 .btn-primary:active {
@@ -67,6 +81,7 @@ h2 {
     box-shadow: none;
 }
 
+/* Error Message */
 .error-message {
     color: var(--error-color);
     text-align: center;
@@ -74,8 +89,17 @@ h2 {
     margin-bottom: var(--spacing-md);
     font-size: var(--font-size-sm);
     min-height: 20px;
+    border-radius: var(--border-radius-sm);
+    background-color: rgba(220, 53, 69, 0.1);
+    opacity: 0;
+    transition: opacity var(--transition-fast);
 }
 
+.error-message:not(:empty) {
+    opacity: 1;
+}
+
+/* Contact Information */
 .text-center {
     text-align: center;
     margin-top: var(--spacing-xl);
@@ -88,27 +112,30 @@ h2 {
     text-decoration: none;
     font-weight: 500;
     transition: color var(--transition-fast);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--border-radius-sm);
 }
 
 .text-center a:hover {
     color: var(--primary-hover);
-    text-decoration: underline;
+    background-color: rgba(76, 175, 80, 0.1);
 }
 
-/* 입력 자동완성 스타일 조정 */
+/* Autofill Styles */
 input:-webkit-autofill,
 input:-webkit-autofill:hover, 
 input:-webkit-autofill:focus {
-    -webkit-box-shadow: 0 0 0px 1000px white inset;
     -webkit-text-fill-color: var(--text-primary);
+    -webkit-box-shadow: 0 0 0px 1000px var(--background-light) inset;
     transition: background-color 5000s ease-in-out 0s;
 }
 
-/* 반응형 디자인 */
+/* Responsive Design */
 @media (max-width: 480px) {
     .container {
-        margin: 20px;
-        padding: var(--spacing-md);
+        max-width: none;
+        margin: var(--spacing-lg);
+        padding: var(--spacing-lg);
     }
 
     h2 {
@@ -121,10 +148,14 @@ input:-webkit-autofill:focus {
     }
 
     .form-group input {
-        padding: var(--spacing-sm);
+        padding: 0.75rem;
     }
 
     .btn {
-        padding: var(--spacing-sm);
+        padding: 0.75rem;
+    }
+
+    .text-center {
+        margin-top: var(--spacing-lg);
     }
 }
