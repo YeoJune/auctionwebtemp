@@ -296,7 +296,6 @@ class Crawler {
       headless: 'true',
       userDataDir: '../puppeteer-user-data',
       args: [
-        '--incognito',
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-infobars',
