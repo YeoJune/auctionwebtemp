@@ -13,6 +13,30 @@
     <div class="admin-container">
         <h1>관리자 페이지</h1>
 
+        <section class="section-container">
+            <h2>접속량 통계</h2>
+            <div class="metrics-section">
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <h3>실시간 접속자</h3>
+                        <div id="activeUsers" class="metric-value">0</div>
+                    </div>
+                    <div class="metric-card">
+                        <h3>오늘 총 방문자</h3>
+                        <div id="todayVisitors" class="metric-value">0</div>
+                    </div>
+                    <div class="metric-card">
+                        <h3>전체 API 요청 수</h3>
+                        <div id="totalRequests" class="metric-value">0</div>
+                    </div>
+                </div>
+                <div class="metrics-detail">
+                    <h3>엔드포인트별 요청 수</h3>
+                    <div id="endpointMetrics" class="endpoint-list"></div>
+                </div>
+            </div>
+        </section>
+        
         <!-- 크롤링 섹션 -->
         <section class="section-container">
             <h2>크롤링 관리</h2>

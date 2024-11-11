@@ -408,6 +408,36 @@ async function updateFilter(filterType, filterValue, isEnabled) {
     }
 }
 
+// 메트릭스 데이터 갱신 함수
+function updateMetrics() {
+    fetch('/api/admin/metrics')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('activeUsers').textContent = data.activeUsers;
+            document.getElementById('todayVisitors').textContent = data.todayVisitors;
+            document.getElementById('totalRequests').textContent = data.totalRequests;
+            
+            // 엔드포인트별 요청 수 표시
+            const endpointList = document.getElementById('endpointMetrics');
+            endpointList.innerHTML = '';
+            Object.entries(data.requestsPerEndpoint)
+                .sort(([, a], [, b]) => b - a)
+                .forEach(([endpoint, count]) => {
+                    endpointList.innerHTML += `
+                        <div class="endpoint-item">
+                            <span class="endpoint-path">${endpoint}</span>
+                            <span class="endpoint-count">${count}</span>
+                        </div>
+                    `;
+                });
+        })
+        .catch(error => console.error('Error fetching metrics:', error));
+}
+
+// 1분마다 메트릭스 갱신
+setInterval(updateMetrics, 60000);
+updateMetrics(); // 초기 로드
+
 // 페이지 로드 시 필터 설정 불러오기
 fetchFilterSettings();
 fetchNotices();
