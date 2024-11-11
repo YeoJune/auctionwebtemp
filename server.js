@@ -93,7 +93,7 @@ app.use((req, res, next) => {
 
 // metrics 엔드포인트
 app.get('/api/metrics', (req, res) => {
-  if (req.session.user && req.session.user.id === 'admin') {
+  if (!req.session.user || req.session.user.id !== 'admin') {
     return res.status(403).json({ message: 'Unauthorized' });
   }
   
