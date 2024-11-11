@@ -678,6 +678,8 @@ class BrandAucCrawler extends Crawler {
       await this.crawlerPage.click(this.config.crawlSelectors.searchButton);
       await this.waitForLoading(this.crawlerPage);
 
+      await this.sleep(5000);
+
       await this.crawlerPage.$eval(this.config.crawlSelectors.itemsPerPageSelecter, el => el.value = '500');
       await this.crawlerPage.select(this.config.crawlSelectors.itemsPerPageSelect, '500');
       await this.waitForLoading(this.crawlerPage);
