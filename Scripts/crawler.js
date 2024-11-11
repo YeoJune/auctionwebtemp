@@ -295,6 +295,7 @@ class Crawler {
       executablePath: '/usr/bin/chromium-browser',
       headless: 'true',
       args: [
+        '--incognito',
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-infobars',
