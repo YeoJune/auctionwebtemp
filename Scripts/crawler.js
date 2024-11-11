@@ -299,7 +299,7 @@ class Crawler {
     const browser = await puppeteer.launch({
       executablePath: '/usr/bin/chromium-browser',
       headless: 'true',
-//      userDataDir: tmpDir,
+      userDataDir: tmpDir,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -311,8 +311,8 @@ class Crawler {
         '--window-position=0,0',
         '--ignore-certificate-errors',
         '--ignore-certificate-errors-skip-list',
-        '--disable-accelerated-2d-canvas',
         '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
         '--disable-gpu',
         '--hide-scrollbars',
         '--disable-notifications',
