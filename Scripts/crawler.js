@@ -384,6 +384,8 @@ class Crawler {
       const button = await page.$('.common_btn.vivid');
       console.log(button);
       if (button) await button.click();
+      await this.sleep(3000);
+
     });
   }
   async loginCheckCrawler() {

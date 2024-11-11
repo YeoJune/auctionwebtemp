@@ -283,6 +283,6 @@ const scheduleCrawling = async () => {
 };
 
 scheduleCrawling();
-loginAllDetails();
+//loginAllDetails();
 
 module.exports = router;
