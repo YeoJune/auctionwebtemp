@@ -181,7 +181,7 @@ const brandAucValueConfig = {
 class Crawler {
   constructor(config) {
     this.config = config;
-    this.maxRetries = 3;
+    this.maxRetries = 1;
     this.retryDelay = 1000;
     this.pageTimeout = 60000;
     this.detailMulti = 2;
@@ -312,6 +312,7 @@ class Crawler {
         '--ignore-certificate-errors',
         '--ignore-certificate-errors-skip-list',
         '--disable-accelerated-2d-canvas',
+        '--disable-dev-shm-usage',
         '--disable-gpu',
         '--hide-scrollbars',
         '--disable-notifications',
