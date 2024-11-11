@@ -2,10 +2,6 @@
 const dotenv = require('dotenv');
 const puppeteer = require('puppeteer');
 const { processImagesInChunks } = require('../utils/processImage');
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const { v4: uuidv4 } = require('uuid');
 
 let pLimit;
 (async () => {
@@ -72,7 +68,7 @@ const brandAucConfig = {
     languageSelect: '.languageselect select',
     searchButton: '.main_action_button button',
     itemsPerPageSelect: '.view_count_select select',
-    itemsPerPageSelecter: '.view_count_select option:nth-child(3)',
+    itemsPerPageSelecter: '.view_count_select  option:nth-child(3)',
     totalPagesSpan: '.now_page span',
     pageSelect: '.now_page .select_box select',
     resetButton: '#search_times button',
@@ -154,7 +150,7 @@ const brandAucValueConfig = {
     languageSelect: '.languageselect select',
     searchButton: '.main_action_button button',
     itemsPerPageSelect: '.view_count_select select',
-    itemsPerPageSelecter: '.view_count_select option:nth-child(3)',
+    itemsPerPageSelecter: '.view_count_select  option:nth-child(3)',
     totalPagesSpan: '.now_page span',
     pageSelect: '.now_page .select_box select',
     resetButton: '#search_times button',
@@ -181,7 +177,7 @@ const brandAucValueConfig = {
 class Crawler {
   constructor(config) {
     this.config = config;
-    this.maxRetries = 1;
+    this.maxRetries = 3;
     this.retryDelay = 1000;
     this.pageTimeout = 60000;
     this.detailMulti = 2;
@@ -295,11 +291,9 @@ class Crawler {
     console.log('complete to initialize details!');
   }
   async initializeCrawler() {
-    const tmpDir = path.join(os.tmpdir(), `puppeteer-${uuidv4()}`);
     const browser = await puppeteer.launch({
       executablePath: '/usr/bin/chromium-browser',
       headless: 'true',
-      userDataDir: tmpDir,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -330,15 +324,6 @@ class Crawler {
         '--mute-audio',
         '--lang=en-US,en',
         `--user-agent=${USER_AGENT}`,],
-    });
-    browser.on('disconnected', () => {
-      try {
-        if (fs.existsSync(tmpDir)) {
-          fs.rmSync(tmpDir, { recursive: true, force: true });
-        }
-      } catch (err) {
-        console.error('Failed to remove temporary directory:', err);
-      }
     });
     const page = (await browser.pages())[0];
     await this.initPage(page);
@@ -1198,5 +1183,5 @@ const ecoAucCrawler = new EcoAucCrawler(ecoAucConfig);
 const brandAucCrawler = new BrandAucCrawler(brandAucConfig);
 const ecoAucValueCrawler = new EcoAucValueCrawler(ecoAucValueConfig);
 const brandAucValueCrawler = new BrandAucValueCrawler(brandAucValueConfig);
-brandAucCrawler.crawlAllItems(new Set()).then((data) => {console.log(data[0])});
+brandAucCrawler.crawlAllItems(new Set()).then((data) => console.log(data[0]));
 module.exports = { ecoAucCrawler, brandAucCrawler, ecoAucValueCrawler, brandAucValueCrawler };
