@@ -15,6 +15,47 @@ const pool = require('./utils/DB');
 
 const app = express();
 
+const metrics = {
+  activeUsers: new Set(),
+  dailyUsers: new Set(),
+  totalRequests: 0,
+  lastReset: new Date().setHours(0, 0, 0, 0) // 오늘 자정
+};
+
+// 자정에 일일 사용자 초기화
+setInterval(() => {
+  const now = new Date();
+  const midnight = new Date().setHours(0, 0, 0, 0);
+  
+  if (metrics.lastReset < midnight) {
+    metrics.dailyUsers.clear();
+    metrics.lastReset = midnight;
+  }
+}, 60000); // 1분마다 체크
+
+// 메트릭스 트래킹 미들웨어
+app.use((req, res, next) => {
+  metrics.totalRequests++;
+  if (req.session.user) {
+    metrics.activeUsers.add(req.session.user.id);
+    metrics.dailyUsers.add(req.session.user.id);
+  }
+  next();
+});
+
+// metrics 엔드포인트
+app.get('/api/metrics', (req, res) => {
+  if (!req.session.user || req.session.user.id !== 'admin') {
+    return res.status(403).json({ message: 'Unauthorized' });
+  }
+  
+  res.json({
+    activeUsers: metrics.activeUsers.size,
+    dailyUsers: metrics.dailyUsers.size,
+    totalRequests: metrics.totalRequests,
+  });
+});
+
 // 프록시 설정
 app.set('trust proxy', 1);
 
