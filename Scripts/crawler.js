@@ -154,7 +154,7 @@ const brandAucValueConfig = {
     languageSelect: '.languageselect select',
     searchButton: '.main_action_button button',
     itemsPerPageSelect: '.view_count_select select',
-    itemsPerPageSelecter: '.view_count_select  option:nth-child(3)',
+    itemsPerPageSelecter: '.view_count_select option:nth-child(3)',
     totalPagesSpan: '.now_page span',
     pageSelect: '.now_page .select_box select',
     resetButton: '#search_times button',
@@ -677,6 +677,7 @@ class BrandAucCrawler extends Crawler {
       await this.crawlerPage.select(this.config.crawlSelectors.languageSelect, 'en');
       await this.crawlerPage.click(this.config.crawlSelectors.searchButton);
       await this.waitForLoading(this.crawlerPage);
+      console.log(await this.crawlerPage.content());
 
       await this.crawlerPage.$eval(this.config.crawlSelectors.itemsPerPageSelecter, el => el.value = '500');
       await this.crawlerPage.select(this.config.crawlSelectors.itemsPerPageSelect, '500');
@@ -1197,5 +1198,5 @@ const ecoAucCrawler = new EcoAucCrawler(ecoAucConfig);
 const brandAucCrawler = new BrandAucCrawler(brandAucConfig);
 const ecoAucValueCrawler = new EcoAucValueCrawler(ecoAucValueConfig);
 const brandAucValueCrawler = new BrandAucValueCrawler(brandAucValueConfig);
-
+brandAucCrawler.crawlAllItems(new Set()).then((data) => {console.log(data[0])});
 module.exports = { ecoAucCrawler, brandAucCrawler, ecoAucValueCrawler, brandAucValueCrawler };
