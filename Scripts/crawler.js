@@ -383,9 +383,10 @@ class Crawler {
       await this.sleep(3000);
       const button = await page.$('.common_btn.vivid');
       console.log(button);
-      if (button) await button.click();
-      await this.sleep(3000);
-
+      if (button) {
+        await button.click();
+        await this.sleep(3000);
+      }
     });
   }
   async loginCheckCrawler() {
@@ -1204,5 +1205,5 @@ const ecoAucCrawler = new EcoAucCrawler(ecoAucConfig);
 const brandAucCrawler = new BrandAucCrawler(brandAucConfig);
 const ecoAucValueCrawler = new EcoAucValueCrawler(ecoAucValueConfig);
 const brandAucValueCrawler = new BrandAucValueCrawler(brandAucValueConfig);
-brandAucCrawler.crawlAllItems(new Set()).then((data) => {console.log(data[0])});
+
 module.exports = { ecoAucCrawler, brandAucCrawler, ecoAucValueCrawler, brandAucValueCrawler };
