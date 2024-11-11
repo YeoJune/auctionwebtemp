@@ -294,6 +294,7 @@ class Crawler {
     const browser = await puppeteer.launch({
       executablePath: '/usr/bin/chromium-browser',
       headless: 'true',
+      userDataDir: false,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
