@@ -2,6 +2,7 @@
 const dotenv = require('dotenv');
 const puppeteer = require('puppeteer');
 const { processImagesInChunks } = require('../utils/processImage');
+const temp = require('temp');
 
 let pLimit;
 (async () => {
@@ -291,12 +292,12 @@ class Crawler {
     console.log('complete to initialize details!');
   }
   async initializeCrawler() {
+    const tmpDir = path.join(os.tmpdir(), `puppeteer-${Date.now()}`);
     const browser = await puppeteer.launch({
       executablePath: '/usr/bin/chromium-browser',
       headless: 'true',
-      userDataDir: false,
+      userDataDir: tmpDir,
       args: [
-        '--incognito',
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-infobars',
@@ -325,6 +326,15 @@ class Crawler {
         '--mute-audio',
         '--lang=en-US,en',
         `--user-agent=${USER_AGENT}`,],
+    });
+    browser.on('disconnected', () => {
+      try {
+        if (fs.existsSync(tmpDir)) {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+        }
+      } catch (err) {
+        console.error('Failed to remove temporary directory:', err);
+      }
     });
     const page = (await browser.pages())[0];
     await this.initPage(page);
