@@ -5,6 +5,7 @@ const { processImagesInChunks } = require('../utils/processImage');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { v4: uuidv4 } = require('uuid');
 
 let pLimit;
 (async () => {
@@ -294,7 +295,7 @@ class Crawler {
     console.log('complete to initialize details!');
   }
   async initializeCrawler() {
-    const tmpDir = path.join(os.tmpdir(), `puppeteer-${Date.now()}`);
+    const tmpDir = path.join(os.tmpdir(), `puppeteer-${uuidv4()}`);
     const browser = await puppeteer.launch({
       executablePath: '/usr/bin/chromium-browser',
       headless: 'true',
