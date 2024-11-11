@@ -72,7 +72,7 @@ const brandAucConfig = {
     languageSelect: '.languageselect select',
     searchButton: '.main_action_button button',
     itemsPerPageSelect: '.view_count_select select',
-    itemsPerPageSelecter: '.view_count_select  option:nth-child(3)',
+    itemsPerPageSelecter: '.view_count_select option:nth-child(3)',
     totalPagesSpan: '.now_page span',
     pageSelect: '.now_page .select_box select',
     resetButton: '#search_times button',
@@ -678,7 +678,7 @@ class BrandAucCrawler extends Crawler {
       await this.crawlerPage.click(this.config.crawlSelectors.searchButton);
       await this.waitForLoading(this.crawlerPage);
 
-      await this.sleep(5000);
+      await this.sleep(10000);
 
       await this.crawlerPage.$eval(this.config.crawlSelectors.itemsPerPageSelecter, el => el.value = '500');
       await this.crawlerPage.select(this.config.crawlSelectors.itemsPerPageSelect, '500');
