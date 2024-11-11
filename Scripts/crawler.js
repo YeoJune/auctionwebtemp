@@ -181,7 +181,7 @@ const brandAucValueConfig = {
 class Crawler {
   constructor(config) {
     this.config = config;
-    this.maxRetries = 1;
+    this.maxRetries = 3;
     this.retryDelay = 1000;
     this.pageTimeout = 60000;
     this.detailMulti = 2;
