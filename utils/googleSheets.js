@@ -56,6 +56,7 @@ class GoogleSheetsManager {
       } else if (currentModifiedTime > this.lastModifiedTime) {
         console.log('Spreadsheet was modified. Running refresh...');
         await this.refreshAllBidInfo();
+        await this.syncUsersWithDB();
         this.lastModifiedTime = currentModifiedTime;
       }
     } catch (error) {
@@ -309,7 +310,60 @@ class GoogleSheetsManager {
       if (conn) conn.release();
     }
   }
+  
+  async syncUsersWithDB() {
+    let conn;
+    try {
+      conn = await pool.getConnection();
+      await conn.beginTransaction();
+
+      // 1. Get all users from Google Sheets
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: this.spreadsheetId,
+        range: '회원목록!A2:M',
+      });
+      const users = response.data.values || [];
+      
+      // 2. Create users table if not exists
+      await conn.query(`
+        CREATE TABLE IF NOT EXISTS users (
+          id VARCHAR(50) PRIMARY KEY,
+          password VARCHAR(64),
+          email VARCHAR(100),
+          is_active BOOLEAN,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+      `);
+
+      // 3. Sync each user
+      for (const user of users) {
+        const [userId, _1, password, _2, _3, _4, email, _5, _6, _7, _8, isActive] = user;
+        
+        const hashedPassword = hashPassword(password);
+        
+        await conn.query(`
+          INSERT INTO users (id, password, email, is_active) 
+          VALUES (?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE 
+            password = ?,
+            email = ?,
+            is_active = ?
+        `, [userId, hashedPassword, email, isActive === 'TRUE', hashedPassword, email, isActive === 'TRUE']);
+      }
+
+      await conn.commit();
+      console.log('Users synced successfully with DB');
+    } catch (error) {
+      if (conn) await conn.rollback();
+      console.error('Error syncing users with DB:', error);
+      throw error;
+    } finally {
+      if (conn) conn.release();
+    }
+  }
 }
+
 const MyGoogleSheetsManager = new GoogleSheetsManager();
 
 module.exports = MyGoogleSheetsManager;

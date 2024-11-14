@@ -1,33 +1,53 @@
 // routes/auth.js
 const express = require('express');
 const router = express.Router();
-const MyGoogleSheetsManager = require('../utils/googleSheets');
+const pool = require('../utils/DB');
+const crypto = require('crypto');
+
+function hashPassword(password) {
+  return crypto.createHash('sha256').update(password).digest('hex');
+}
 
 router.post('/login', async (req, res) => {
+  let conn;
   try {
     const { id, password } = req.body;
-    const users = await MyGoogleSheetsManager.findUser(id);
     
-    const user = users.find(u => u[3] === password);
+    conn = await pool.getConnection();
+    const hashedPassword = hashPassword(password);
 
-    if (!user) {
-      return res.status(401).json({ message: '접근 권한이 없습니다. 010-2894-8502를 통해 문의주세요.' });
+    // Check user in DB
+    const [users] = await conn.query(
+      'SELECT id, email, is_active FROM users WHERE id = ? AND password = ?',
+      [id, hashedPassword]
+    );
+
+    if (users.length === 0) {
+      return res.status(401).json({ 
+        message: '접근 권한이 없습니다. 010-2894-8502를 통해 문의주세요.' 
+      });
     }
 
-    if (user[12] !== 'TRUE') {
-      return res.status(403).json({ message: '서비스 기간이 만기되었습니다. 010-2894-8502를 통해 문의주세요.' });
+    const user = users[0];
+    
+    if (!user.is_active) {
+      return res.status(403).json({ 
+        message: '서비스 기간이 만기되었습니다. 010-2894-8502를 통해 문의주세요.' 
+      });
     }
 
     // 로그인 성공
     req.session.user = {
-      id: user[2],
-      email: user[7],
+      id: user.id,
+      email: user.email,
     };
 
     res.json({ message: '로그인 성공', user: req.session.user });
   } catch (err) {
-      console.error('로그인 중 오류 발생:', err);
-      res.status(500).json({ message: '로그인 처리 중 오류가 발생했습니다.' });
+    console.error('로그인 중 오류 발생:', err);
+    res.status(500).json({ message: '로그인 처리 중 오류가 발생했습니다.' });
+  } finally {
+    if (conn) conn.release();
   }
 });
 
