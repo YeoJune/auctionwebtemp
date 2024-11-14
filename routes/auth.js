@@ -5,7 +5,8 @@ const pool = require('../utils/DB');
 const crypto = require('crypto');
 
 function hashPassword(password) {
-  return crypto.createHash('sha256').update(password).digest('hex');
+  if (!password) return '';
+  else return crypto.createHash('sha256').update(password).digest('hex');
 }
 
 router.post('/login', async (req, res) => {
@@ -26,7 +27,7 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ 
         message: '접근 권한이 없습니다. 010-2894-8502를 통해 문의주세요.' 
       });
-    } else if (hashPassword(users.password) != hashedPassword) {
+    } else if (users[0].password != hashedPassword) {
       return res.status(401).json({ 
         message: '비밀번호가 다릅니다.' 
       });
