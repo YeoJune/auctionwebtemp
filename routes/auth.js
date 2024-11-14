@@ -18,15 +18,19 @@ router.post('/login', async (req, res) => {
 
     // Check user in DB
     const [users] = await conn.query(
-      'SELECT id, email, is_active FROM users WHERE id = ? AND password = ?',
-      [id, hashedPassword]
+      'SELECT id, email, is_active, password FROM users WHERE id = ?',
+      [id]
     );
 
     if (users.length === 0) {
       return res.status(401).json({ 
         message: '접근 권한이 없습니다. 010-2894-8502를 통해 문의주세요.' 
       });
-    }
+    } else if (users.password != hashPassword) {
+      return res.status(401).json({ 
+        message: '비밀번호가 다릅니다.' 
+      });
+    };
 
     const user = users[0];
     
