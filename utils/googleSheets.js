@@ -156,7 +156,7 @@ class GoogleSheetsManager {
     const results = [];
     for(const row of sheetRows) {
       results.push(await this.getBidInfo(row));
-      await this.sleep(50);
+      await this.sleep(100);
     }
     return results;
   }
@@ -219,18 +219,7 @@ class GoogleSheetsManager {
       await conn.beginTransaction();
 
       // 1. DB에서 모든 입찰 ID 가져오기
-      
-      // Get valid item IDs from crawled_items
-      const [validItems] = await conn.query(`
-        SELECT item_id FROM crawled_items
-      `);
-      const validItemIds = validItems.map(item => item.item_id);
-
-      // Get bids with valid item_ids
-      const [allBids] = await conn.query(`
-        SELECT id FROM bids 
-        WHERE item_id IN (?)
-      `, [validItemIds]);
+      const [allBids] = await conn.query(`SELECT id, item_id FROM bids`);
       const allBidIds = allBids.map(bid => bid.id);
 
       // 2. 구글 시트에서 모든 입찰 ID 가져오기
@@ -249,7 +238,7 @@ class GoogleSheetsManager {
 
       // 3. 구글 시트에 없는 입찰 ID 찾기
       const bidsToDelete = allBidIds.filter(id => !sheetBidIds.includes(id.toString()));
-
+      
       // 4. 구글 시트에 없는 입찰 삭제
       if (bidsToDelete.length > 0) {
         await conn.query(`
@@ -261,13 +250,19 @@ class GoogleSheetsManager {
 
       // 5. 구글 시트에 있는 입찰 정보 업데이트
       const [bidsToUpdate] = await conn.query(`
-        SELECT id 
+        SELECT id, item_id
         FROM bids 
         WHERE second_price IS NULL OR final_price IS NULL
       `);
       
-      const bidIdsToUpdate = bidsToUpdate.map(bid => bid.id);
-      
+      // Get valid item IDs from crawled_items
+      const [validItems] = await conn.query(`
+        SELECT item_id FROM crawled_items
+      `);
+      const validItemIds = new Set(validItems.map(item => item.item_id));
+
+      const bidIdsToUpdate = bidsToUpdate.filter(bid => validItemIds.has(bid.item_id)).map(bid => bid.id);
+
       if (bidIdsToUpdate.length > 0) {
         const bidInfos = await this.getBidInfos(bidIdsToUpdate);
         
@@ -316,5 +311,5 @@ class GoogleSheetsManager {
   }
 }
 const MyGoogleSheetsManager = new GoogleSheetsManager();
-
+MyGoogleSheetsManager.refreshAllBidInfo();
 module.exports = MyGoogleSheetsManager;
