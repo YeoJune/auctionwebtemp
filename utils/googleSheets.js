@@ -156,7 +156,7 @@ class GoogleSheetsManager {
     const results = [];
     for(const row of sheetRows) {
       results.push(await this.getBidInfo(row));
-      await this.sleep(100);
+      await this.sleep(50);
     }
     return results;
   }
@@ -222,9 +222,9 @@ class GoogleSheetsManager {
       
       // Get valid item IDs from crawled_items
       const [validItems] = await conn.query(`
-        SELECT id FROM crawled_items
+        SELECT item_id FROM crawled_items
       `);
-      const validItemIds = validItems.map(item => item.id);
+      const validItemIds = validItems.map(item => item.item_id);
 
       // Get bids with valid item_ids
       const [allBids] = await conn.query(`
