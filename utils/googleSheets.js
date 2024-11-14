@@ -2,6 +2,11 @@
 const { google } = require('googleapis');
 const path = require('path');
 const pool = require('./DB');
+const crypto = require('crypto');
+
+function hashPassword(password) {
+  return crypto.createHash('sha256').update(password).digest('hex');
+}
 
 class GoogleSheetsManager {
   constructor() {
@@ -310,17 +315,16 @@ class GoogleSheetsManager {
       if (conn) conn.release();
     }
   }
-  
   async syncUsersWithDB() {
     let conn;
     try {
       conn = await pool.getConnection();
       await conn.beginTransaction();
-
+  
       // 1. Get all users from Google Sheets
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: '회원목록!A2:M',
+        range: '회원목록!C2:M',
       });
       const users = response.data.values || [];
       
@@ -335,10 +339,26 @@ class GoogleSheetsManager {
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         )
       `);
-
+  
+      // Get all user IDs from Google Sheets
+      const sheetUserIds = users.map(user => user[0]);
+  
+      // Get all user IDs from DB
+      const [dbUsers] = await conn.query('SELECT id FROM users');
+      const dbUserIds = dbUsers.map(user => user.id);
+  
+      // Find users to delete (in DB but not in sheet)
+      const userIdsToDelete = dbUserIds.filter(id => !sheetUserIds.includes(id));
+  
+      // Delete users not in sheet
+      if (userIdsToDelete.length > 0) {
+        await conn.query('DELETE FROM users WHERE id IN (?)', [userIdsToDelete]);
+        console.log(`Deleted users not in Google Sheet: ${userIdsToDelete.join(', ')}`);
+      }
+  
       // 3. Sync each user
       for (const user of users) {
-        const [userId, _1, password, _2, _3, _4, email, _5, _6, _7, _8, isActive] = user;
+        const [userId, password, _2, _3, _4, email, _5, _6, _7, _8, isActive] = user;
         
         const hashedPassword = hashPassword(password);
         
@@ -351,7 +371,7 @@ class GoogleSheetsManager {
             is_active = ?
         `, [userId, hashedPassword, email, isActive === 'TRUE', hashedPassword, email, isActive === 'TRUE']);
       }
-
+  
       await conn.commit();
       console.log('Users synced successfully with DB');
     } catch (error) {
