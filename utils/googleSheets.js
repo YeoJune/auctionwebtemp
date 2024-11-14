@@ -16,6 +16,10 @@ class GoogleSheetsManager {
     this.authorize();
   }
 
+  async sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
   async authorize() {
     try {
       this.auth = new google.auth.GoogleAuth({
@@ -152,6 +156,7 @@ class GoogleSheetsManager {
     const results = [];
     for(const row of sheetRows) {
       results.push(await this.getBidInfo(row));
+      await this.sleep(100);
     }
     return results;
   }
