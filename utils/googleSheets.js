@@ -214,7 +214,18 @@ class GoogleSheetsManager {
       await conn.beginTransaction();
 
       // 1. DB에서 모든 입찰 ID 가져오기
-      const [allBids] = await conn.query(`SELECT id FROM bids`);
+      
+      // Get valid item IDs from crawled_items
+      const [validItems] = await conn.query(`
+        SELECT id FROM crawled_items
+      `);
+      const validItemIds = validItems.map(item => item.id);
+
+      // Get bids with valid item_ids
+      const [allBids] = await conn.query(`
+        SELECT id FROM bids 
+        WHERE item_id IN (?)
+      `, [validItemIds]);
       const allBidIds = allBids.map(bid => bid.id);
 
       // 2. 구글 시트에서 모든 입찰 ID 가져오기
