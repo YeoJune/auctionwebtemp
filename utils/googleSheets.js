@@ -311,5 +311,5 @@ class GoogleSheetsManager {
   }
 }
 const MyGoogleSheetsManager = new GoogleSheetsManager();
-MyGoogleSheetsManager.refreshAllBidInfo();
+
 module.exports = MyGoogleSheetsManager;
