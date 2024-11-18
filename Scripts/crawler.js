@@ -2,7 +2,6 @@
 const dotenv = require('dotenv');
 const puppeteer = require('puppeteer');
 const { processImagesInChunks } = require('../utils/processImage');
-const fs = require('fs');
 
 let pLimit;
 (async () => {
