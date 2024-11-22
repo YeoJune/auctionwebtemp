@@ -17,15 +17,13 @@ const app = express();
 
 const metrics = {
   activeUsers: new Map(),
-  dailyUsers: new Map(),
+  dailyUsers: new Set(),
   totalRequests: 0,
   lastReset: new Date().setHours(0, 0, 0, 0)
 };
 
 // 설정값
 const INACTIVE_TIMEOUT = 30 * 60 * 1000; // 30분
-const CLEANUP_INTERVAL = 5 * 60 * 1000;  // 5분마다 정리
-const DAILY_CHECK_INTERVAL = 60 * 1000;  // 1분마다 자정 체크
 
 // 프록시 설정
 app.set('trust proxy', 1);
