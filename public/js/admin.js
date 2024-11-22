@@ -414,7 +414,6 @@ function updateMetrics() {
         .then(data => {
             document.getElementById('activeUsers').textContent = data.activeUsers;
             document.getElementById('dailyUsers').textContent = data.dailyUsers;
-            document.getElementById('totalRequests').textContent = data.totalRequests;
         })
         .catch(console.error);
 }

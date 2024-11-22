@@ -16,11 +16,16 @@ const pool = require('./utils/DB');
 const app = express();
 
 const metrics = {
-  activeUsers: new Set(),
-  dailyUsers: new Set(),
+  activeUsers: new Map(),
+  dailyUsers: new Map(),
   totalRequests: 0,
-  lastReset: new Date().setHours(0, 0, 0, 0) // 오늘 자정
+  lastReset: new Date().setHours(0, 0, 0, 0)
 };
+
+// 설정값
+const INACTIVE_TIMEOUT = 30 * 60 * 1000; // 30분
+const CLEANUP_INTERVAL = 5 * 60 * 1000;  // 5분마다 정리
+const DAILY_CHECK_INTERVAL = 60 * 1000;  // 1분마다 자정 체크
 
 // 프록시 설정
 app.set('trust proxy', 1);
@@ -52,16 +57,21 @@ const sessionStore = new MySQLStore({
 app.use(session({
   key: 'session_cookie_name',
   secret: process.env.SESSION_SECRET,
-  store: sessionStore,
+  store: new MySQLStore({
+    checkExpirationInterval: 900000,  // 15분마다 만료 세션 체크
+    expiration: 24 * 60 * 60 * 1000,  // 1일
+    createDatabaseTable: true
+  }, pool),
   resave: false,
   saveUninitialized: false,
   cookie: { 
+    maxAge: 24 * 60 * 60 * 1000, // 1일
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: 'lax',
-    maxAge: 24 * 60 * 60 * 1000
+    sameSite: 'lax'
   }
 }));
+
 
 // 세션 디버깅을 위한 미들웨어
 app.use((req, res, next) => {
@@ -70,39 +80,52 @@ app.use((req, res, next) => {
   next();
 });
 
-// 자정에 일일 사용자 초기화
-setInterval(() => {
-  const now = new Date();
-  const midnight = new Date().setHours(0, 0, 0, 0);
-  
-  if (metrics.lastReset < midnight) {
-    metrics.dailyUsers.clear();
-    metrics.lastReset = midnight;
-  }
-}, 60000); // 1분마다 체크
-
 // 메트릭스 트래킹 미들웨어
 app.use((req, res, next) => {
   metrics.totalRequests++;
-  if (req.session.user) {
-    metrics.activeUsers.add(req.session.user.id);
-    metrics.dailyUsers.add(req.session.user.id);
+  
+  if (req.session?.user?.id) {
+    const userId = req.session.user.id;
+    metrics.activeUsers.set(userId, Date.now());
+    metrics.dailyUsers.add(userId);
   }
   next();
 });
 
-// metrics 엔드포인트
 app.get('/api/metrics', (req, res) => {
-  if (!req.session.user || req.session.user.id !== 'admin') {
+  if (!req.session?.user?.id === 'admin') {
     return res.status(403).json({ message: 'Unauthorized' });
   }
+
+  const now = Date.now();
+  const activeCount = Array.from(metrics.activeUsers.values())
+    .filter(lastActivity => now - lastActivity <= INACTIVE_TIMEOUT)
+    .length;
   
   res.json({
-    activeUsers: metrics.activeUsers.size,
+    activeUsers: activeCount,
     dailyUsers: metrics.dailyUsers.size,
-    totalRequests: metrics.totalRequests,
+    totalRequests: metrics.totalRequests
   });
 });
+
+setInterval(() => {
+  const now = Date.now();
+  const midnight = new Date().setHours(0, 0, 0, 0);
+  
+  // 자정 지났으면 일일 사용자 초기화
+  if (metrics.lastReset < midnight) {
+    metrics.dailyUsers.clear();
+    metrics.lastReset = midnight;
+  }
+  
+  // 30분 이상 비활성 사용자 제거
+  for (const [userId, lastActivity] of metrics.activeUsers) {
+    if (now - lastActivity > INACTIVE_TIMEOUT) {
+      metrics.activeUsers.delete(userId);
+    }
+  }
+}, 300000); // 5분
 
 // 라우트
 app.use('/api/auth', authRoutes);
