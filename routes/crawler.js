@@ -48,7 +48,7 @@ async function processItem(itemId, isValue, res) {
 
         try {
           const crawledDetails = await crawler.crawlItemDetails(detailIndex, itemId);
-          const processedDetials = await processImagesInChunks(crawledDetails);
+          const processedDetials = (await processImagesInChunks([crawledDetails]))[0];
     
           if (processedDetials) {
             await DBManager.updateItemDetails(itemId, processedDetials, tableName);
