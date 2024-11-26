@@ -7,6 +7,7 @@ const pool = require('../utils/DB');
 const cron = require('node-cron');
 const { getAdminSettings } = require('../utils/adminDB');
 const { initializeFilterSettings } = require('../utils/filterDB');
+const { processImagesInChunks } = require('../utils/processImage');
 
 let isCrawling = false;
 let isValueCrawling = false;
@@ -47,9 +48,10 @@ async function processItem(itemId, isValue, res) {
 
         try {
           const crawledDetails = await crawler.crawlItemDetails(detailIndex, itemId);
+          const processedDetials = await processImagesInChunks(crawledDetails);
     
-          if (crawledDetails) {
-            await DBManager.updateItemDetails(itemId, crawledDetails, tableName);
+          if (processedDetials) {
+            await DBManager.updateItemDetails(itemId, processedDetials, tableName);
             
             const [updatedItems] = await pool.query(`SELECT * FROM ${tableName} WHERE item_id = ?`, [itemId]);
             res.json(updatedItems[0]);
