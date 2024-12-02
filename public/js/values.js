@@ -11,8 +11,10 @@ window.state = {
     searchTerm: '',
     currentData: [],
     images: [],
-    currentImageIndex: 0
+    currentImageIndex: 0,
+    isAdmin: false
 };
+
 
 // 데이터 표시 함수
 function displayData(data) {
@@ -31,6 +33,15 @@ function displayData(data) {
         const card = createElement('div', 'product-card');
         card.dataset.itemId = item.item_id;
 
+        const priceDisplay = state.isAdmin 
+            ? `<p class="final-price">최종가격: 
+                <span class="price-value" data-item-id="${item.item_id}">
+                    ${formatNumber(parseInt(item.final_price))} ¥
+                    <i class="fas fa-edit edit-price-icon ms-2"></i>
+                </span>
+               </p>`
+            : `<p class="final-price">최종가격: ${formatNumber(parseInt(item.final_price))} ¥</p>`;
+
         card.innerHTML = `
             <div class="product-header">
                 <div>
@@ -46,14 +57,68 @@ function displayData(data) {
             <div class="product-details">
                 <p class="scheduled-date">경매일: ${formatDate(item.scheduled_date)}</p>
                 <p class="scheduled-date">랭크: ${item.rank}</p>
-                ${item.final_price ? 
-                    `<p class="final-price">최종가격: ${formatNumber(parseInt(item.final_price))} ¥</p>` 
-                    : ''}
+                ${item.final_price ? priceDisplay : ''}
             </div>
         `;
 
-        card.addEventListener('click', () => showDetails(item.item_id));
+        // 카드 클릭 이벤트는 가격 수정 아이콘을 클릭할 때는 실행되지 않도록 수정
+        card.addEventListener('click', (e) => {
+            if (!e.target.closest('.edit-price-icon')) {
+                showDetails(item.item_id);
+            }
+        });
         dataBody.appendChild(card);
+    });
+}
+
+function setupPriceEditing() {
+    if (!state.isAdmin) return;
+
+    document.getElementById('dataBody').addEventListener('click', async (e) => {
+        const editIcon = e.target.closest('.edit-price-icon');
+        if (!editIcon) return;
+
+        const priceSpan = editIcon.closest('.price-value');
+        const currentPrice = priceSpan.textContent.trim().replace(/[^0-9]/g, '');
+        const itemId = priceSpan.dataset.itemId;
+
+        // 인라인 수정 UI로 변경
+        const originalContent = priceSpan.innerHTML;
+        priceSpan.innerHTML = `
+            <input type="number" class="price-input form-control form-control-sm d-inline-block w-auto" 
+                   value="${currentPrice}" style="width: 150px !important;" />
+            <button class="btn btn-sm btn-success save-price ms-1">저장</button>
+            <button class="btn btn-sm btn-secondary cancel-price ms-1">취소</button>
+        `;
+
+        const input = priceSpan.querySelector('.price-input');
+        input.focus();
+
+        // 저장 버튼 이벤트
+        priceSpan.querySelector('.save-price').onclick = async () => {
+            const newPrice = input.value;
+            try {
+                const response = await fetch(`/api/admin/values/${itemId}/price`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ final_price: newPrice })
+                });
+
+                if (!response.ok) throw new Error('Failed to update price');
+
+                priceSpan.innerHTML = `${formatNumber(parseInt(newPrice))} ¥ <i class="fas fa-edit edit-price-icon ms-2"></i>`;
+                showToast('success', '가격이 업데이트되었습니다.');
+            } catch (error) {
+                console.error('Error updating price:', error);
+                showToast('error', '가격 업데이트에 실패했습니다.');
+                priceSpan.innerHTML = originalContent;
+            }
+        };
+
+        // 취소 버튼 이벤트
+        priceSpan.querySelector('.cancel-price').onclick = () => {
+            priceSpan.innerHTML = originalContent;
+        };
     });
 }
 
@@ -280,11 +345,16 @@ function hideLoadingInModal() {
         loadingElement.remove();
     }
 }
+
 async function initialize() {
     await API.initialize();
     
     try {
-        // 필터 데이터 가져오기
+        // admin 상태 체크 추가
+        const adminResponse = await fetch('/api/admin/check-status');
+        state.isAdmin = (await adminResponse.json()).isAdmin;
+
+        // 기존 초기화 로직
         const [brandsResponse, categoriesResponse, datesResponse, ranksResponse] = await Promise.all([
             API.fetchAPI('/values/brands-with-count'),
             API.fetchAPI('/values/categories'),
@@ -292,7 +362,6 @@ async function initialize() {
             API.fetchAPI('/values/ranks')
         ]);
 
-        // 각각의 필터 데이터 전달
         displayFilters(
             brandsResponse,
             categoriesResponse,
@@ -300,7 +369,6 @@ async function initialize() {
             ranksResponse
         );
         
-        // 이벤트 리스너 설정
         document.getElementById('searchButton')?.addEventListener('click', handleSearch);
         document.getElementById('searchInput')?.addEventListener('keypress', e => {
             if (e.key === 'Enter') handleSearch();
@@ -311,7 +379,6 @@ async function initialize() {
             fetchData();
         });
 
-        // 이미지 네비게이션 버튼 이벤트
         document.querySelector('.prev')?.addEventListener('click', () => {
             const newIndex = (state.currentImageIndex - 1 + state.images.length) % state.images.length;
             changeMainImage(newIndex);
@@ -322,11 +389,14 @@ async function initialize() {
             changeMainImage(newIndex);
         });
 
+        // 가격 수정 기능 설정
+        setupPriceEditing();
+
         // 초기 데이터 로드
         await fetchData();
     } catch (error) {
-        console.error('Error initializing filters:', error);
-        alert('필터 데이터를 불러오는 데 실패했습니다.');
+        console.error('Error initializing:', error);
+        alert('초기화 중 오류가 발생했습니다.');
     }
 }
 

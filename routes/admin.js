@@ -6,6 +6,7 @@ const { v4: uuidv4 } = require('uuid');
 const sharp = require('sharp');
 const { getAdminSettings, updateAdminSettings, getNotices, getNoticeById, addNotice, updateNotice, deleteNotice } = require('../utils/adminDB');
 const { getFilterSettings, updateFilterSetting, initializeFilterSettings } = require('../utils/filterDB');
+const DBManager = require('../utils/DBManager');
 
 // Multer configuration for image uploads
 const logoStorage = multer.diskStorage({
@@ -46,6 +47,11 @@ const isAdmin = (req, res, next) => {
 
 router.get('/', isAdmin, (req, res) => {
   res.sendFile(path.join(__dirname, '../pages/admin.html'));
+});
+
+router.get('/check-status', async (req, res) => {
+  const isAdmin = req.session.user && req.session.user.id === 'admin';
+  res.json({ isAdmin });
 });
 
 // Route to upload logo (unchanged)
@@ -262,6 +268,38 @@ router.put('/filter-settings/batch', isAdmin, async (req, res) => {
   } catch (error) {
     console.error('Error performing batch update of filter settings:', error);
     res.status(500).json({ message: 'Error updating filter settings' });
+  }
+});
+
+router.put('/values/:itemId/price', isAdmin, async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const { final_price } = req.body;
+
+    // 입력값 검증
+    if (!final_price || isNaN(parseFloat(final_price))) {
+      return res.status(400).json({ 
+        success: false, 
+        message: '유효한 가격을 입력해주세요' 
+      });
+    }
+
+    // 가격 데이터 업데이트
+    await DBManager.updateItemDetails(itemId, { 
+      final_price: parseFloat(final_price).toFixed(2)  // 소수점 2자리까지 저장
+    }, 'values_items');
+
+    res.json({ 
+      success: true, 
+      message: '가격이 성공적으로 업데이트되었습니다'
+    });
+
+  } catch (error) {
+    console.error('Error updating item price:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: '가격 업데이트 중 오류가 발생했습니다'
+    });
   }
 });
 
