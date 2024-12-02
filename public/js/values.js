@@ -63,9 +63,15 @@ function displayData(data) {
 
         // 카드 클릭 이벤트는 가격 수정 아이콘을 클릭할 때는 실행되지 않도록 수정
         card.addEventListener('click', (e) => {
-            if (!e.target.closest('.edit-price-icon')) {
-                showDetails(item.item_id);
+            // 가격 수정 관련 요소를 클릭한 경우 모달 열지 않음
+            if (e.target.closest('.edit-price-icon') || 
+                e.target.closest('.price-input') || 
+                e.target.closest('.save-price') || 
+                e.target.closest('.cancel-price')) {
+                e.stopPropagation();  // 이벤트 전파 중단
+                return;
             }
+            showDetails(item.item_id);
         });
         dataBody.appendChild(card);
     });
