@@ -387,7 +387,7 @@ class Crawler {
         await button.click();
         await this.sleep(3000);
       }
-    });
+    }, 1);
   }
   async loginCheckCrawler() {
     if (!this.crawlerBrowser || !this.crawlerPage) {
