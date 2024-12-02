@@ -286,7 +286,8 @@ class Crawler {
     });
   }
   async initializeDetails() {
-    const detailInitPromises = Array(this.detailMulti).fill().map(() => this.initializeCrawler());
+    let idx = 1;
+    const detailInitPromises = Array(this.detailMulti).fill().map(() => this.initializeCrawler(`detail${idx++}`));
     const detailResults = await Promise.all(detailInitPromises);
 
     this.detailBrowsers = detailResults.map(result => result.browser);
@@ -294,8 +295,8 @@ class Crawler {
 
     console.log('complete to initialize details!');
   }
-  async initializeCrawler() {
-    const userDataDir = path.join(__dirname, '..', 'userData', `${this.config.name}_${uuidv4()}`);
+  async initializeCrawler(name = '') {
+    const userDataDir = path.join(__dirname, '..', 'userData', `${this.config.name}_${name}`);
     const browser = await puppeteer.launch({
       executablePath: '/usr/bin/chromium-browser',
       headless: 'true',
@@ -390,7 +391,7 @@ class Crawler {
   }
   async loginCheckCrawler() {
     if (!this.crawlerBrowser || !this.crawlerPage) {
-      const result = await this.initializeCrawler();
+      const result = await this.initializeCrawler('crawler');
       this.crawlerBrowser = result.browser;
       this.crawlerPage = result.page;
       console.log('complete to crawler init!');
