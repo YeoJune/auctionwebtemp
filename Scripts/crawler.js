@@ -53,7 +53,7 @@ const ecoAucConfig = {
   detailUrl: (itemId) => `https://www.ecoauc.com/client/auction-items/view/${itemId}`,
 };
 const brandAucConfig = {
-  name: 'Brand Auction',
+  name: 'BrandAuc',
   baseUrl: 'https://member.brand-auc.com',
   accountUrl: 'https://u.brand-auc.com/configuration',
   loginPageUrl: 'https://member.brand-auc.com/login',
@@ -96,7 +96,7 @@ const brandAucConfig = {
   },
 };
 const ecoAucValueConfig = {
-  name: 'EcoAuc',
+  name: 'EcoAucValue',
   baseUrl: 'https://www.ecoauc.com',
   accountUrl: 'https://www.ecoauc.com/client/users',
   loginPageUrl: 'https://www.ecoauc.com/client/users/sign-in',
@@ -135,7 +135,7 @@ const ecoAucValueConfig = {
   detailUrl: (itemId) => `https://www.ecoauc.com/client/auction-items/view/${itemId}`,
 };
 const brandAucValueConfig = {
-  name: 'Brand Auction',
+  name: 'BrandAucValue',
   baseUrl: 'https://member.brand-auc.com',
   accountUrl: 'https://u.brand-auc.com/configuration',
   loginPageUrl: 'https://member.brand-auc.com/login',
@@ -295,11 +295,11 @@ class Crawler {
     console.log('complete to initialize details!');
   }
   async initializeCrawler() {
-    const tmpDir = path.join(os.tmpdir(), `puppeteer-${uuidv4()}`);
+    const userDataDir = path.join(__dirname, '..', 'userData', this.config.name);
     const browser = await puppeteer.launch({
       executablePath: '/usr/bin/chromium-browser',
       headless: 'true',
-      userDataDir: tmpDir,
+      userDataDir: userDataDir,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -333,11 +333,11 @@ class Crawler {
     });
     browser.on('disconnected', () => {
       try {
-        if (fs.existsSync(tmpDir)) {
-          fs.rmSync(tmpDir, { recursive: true, force: true });
+        if (fs.existsSync(userDataDir)) {
+          fs.rmSync(userDataDir, { recursive: true, force: true });
         }
       } catch (err) {
-        console.error('Failed to remove temporary directory:', err);
+        console.error('Failed to remove user data directory:', err);
       }
     });
     const page = (await browser.pages())[0];
