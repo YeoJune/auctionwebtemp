@@ -114,10 +114,8 @@ function setupPriceEditing() {
                 if (!response.ok) throw new Error('Failed to update price');
 
                 priceSpan.innerHTML = `${formatNumber(parseInt(newPrice))} ¥ <i class="fas fa-edit edit-price-icon ms-2"></i>`;
-                showToast('success', '가격이 업데이트되었습니다.');
             } catch (error) {
                 console.error('Error updating price:', error);
-                showToast('error', '가격 업데이트에 실패했습니다.');
                 priceSpan.innerHTML = originalContent;
             }
         };
