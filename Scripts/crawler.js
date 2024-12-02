@@ -295,7 +295,7 @@ class Crawler {
     console.log('complete to initialize details!');
   }
   async initializeCrawler() {
-    const userDataDir = path.join(__dirname, '..', 'userData', this.config.name);
+    const userDataDir = path.join(__dirname, '..', 'userData', `${this.config.name}_${uuidv4()}`);
     const browser = await puppeteer.launch({
       executablePath: '/usr/bin/chromium-browser',
       headless: 'true',
