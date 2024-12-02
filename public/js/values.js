@@ -15,7 +15,6 @@ window.state = {
     isAdmin: false
 };
 
-
 // 데이터 표시 함수
 function displayData(data) {
     const dataBody = document.getElementById('dataBody');
@@ -37,7 +36,9 @@ function displayData(data) {
             ? `<p class="final-price">최종가격: 
                 <span class="price-value" data-item-id="${item.item_id}">
                     ${formatNumber(parseInt(item.final_price))} ¥
-                    <i class="fas fa-edit edit-price-icon ms-2"></i>
+                    <button class="edit-price-icon btn btn-link p-0 ms-2">
+                        <i class="fas fa-edit"></i>
+                    </button>
                 </span>
                </p>`
             : `<p class="final-price">최종가격: ${formatNumber(parseInt(item.final_price))} ¥</p>`;
@@ -61,18 +62,18 @@ function displayData(data) {
             </div>
         `;
 
-        // 카드 클릭 이벤트는 가격 수정 아이콘을 클릭할 때는 실행되지 않도록 수정
+        // 카드 전체 클릭 이벤트
         card.addEventListener('click', (e) => {
-            // 가격 수정 관련 요소를 클릭한 경우 모달 열지 않음
+            // 가격 수정 관련 요소들은 제외
             if (e.target.closest('.edit-price-icon') || 
                 e.target.closest('.price-input') || 
                 e.target.closest('.save-price') || 
                 e.target.closest('.cancel-price')) {
-                e.stopPropagation();  // 이벤트 전파 중단
                 return;
             }
             showDetails(item.item_id);
         });
+
         dataBody.appendChild(card);
     });
 }
