@@ -1,5 +1,5 @@
 // crawlers/brandAuc.js
-const { Crawler } = require("./index");
+const Crawler = require("./baseCrawler");
 const { processImagesInChunks } = require("../utils/processImage");
 
 const brandAucConfig = {
