@@ -13,6 +13,9 @@ const cron = require("node-cron");
 const { getAdminSettings } = require("../utils/adminDB");
 const { initializeFilterSettings } = require("../utils/filterDB");
 const { processImagesInChunks } = require("../utils/processImage");
+const dotenv = require("dotenv");
+
+dotenv.config();
 
 let isCrawling = false;
 let isValueCrawling = false;
@@ -351,7 +354,12 @@ const scheduleCrawling = async () => {
   }
 };
 
-scheduleCrawling();
-loginAllDetails();
+if (process.env.ENV === "development") {
+  console.log("development env");
+} else {
+  console.log("product env");
+  scheduleCrawling();
+  loginAllDetails();
+}
 
 module.exports = router;
