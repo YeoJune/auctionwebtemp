@@ -150,8 +150,8 @@ class Crawler {
       "userData",
       `${this.config.name}_${name}`
     );
-    const browser = await puppeteer.launch({
-      executablePath: "/usr/bin/chromium-browser",
+
+    const launchOptions = {
       headless: "true",
       userDataDir: userDataDir,
       args: [
@@ -185,7 +185,14 @@ class Crawler {
         "--lang=en-US,en",
         `--user-agent=${USER_AGENT}`,
       ],
-    });
+    };
+
+    if (process.env.ENV !== "development") {
+      launchOptions.executablePath = "/usr/bin/chromium-browser";
+    }
+
+    const browser = await puppeteer.launch(launchOptions);
+
     browser.on("disconnected", () => {
       try {
         if (fs.existsSync(userDataDir)) {
