@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>까사트레이드 - 해외 명품 경매 플랫폼</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* Reset & Base Styles */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        scroll-behavior: smooth;
+      }
+
+      body {
+        font-family: "Noto Sans KR", -apple-system, BlinkMacSystemFont,
+          sans-serif;
+        line-height: 1.6;
+        color: #1a1a1a;
+        background-color: #fafafa;
+      }
+
+      /* Common Styles */
+      .container {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      .section {
+        padding: 100px 0;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px 32px;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+        border: none;
+        font-size: 16px;
+        letter-spacing: -0.02em;
+      }
+
+      .btn-primary {
+        background-color: #1e3a8a;
+        color: #fff;
+        box-shadow: 0 4px 6px rgba(30, 58, 138, 0.1);
+      }
+
+      .btn-primary:hover {
+        background-color: #1e40af;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 12px rgba(30, 58, 138, 0.2);
+      }
+
+      .btn-secondary {
+        background-color: #fff;
+        color: #1e3a8a;
+        border: 2px solid #1e3a8a;
+      }
+
+      .btn-secondary:hover {
+        background-color: #f3f4f6;
+        transform: translateY(-2px);
+      }
+
+      /* Header Styles */
+      .header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        background-color: rgba(255, 255, 255, 0.98);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        z-index: 1000;
+        backdrop-filter: blur(8px);
+      }
+
+      .header-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        height: 80px;
+      }
+
+      .logo {
+        font-size: 24px;
+        font-weight: 700;
+        color: #1e3a8a;
+        text-decoration: none;
+        letter-spacing: -0.03em;
+      }
+
+      .nav-menu {
+        display: flex;
+        gap: 40px;
+        list-style: none;
+        align-items: center;
+      }
+
+      .nav-link {
+        color: #1a1a1a;
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.3s ease;
+        font-size: 16px;
+        letter-spacing: -0.02em;
+        padding: 8px 0;
+        position: relative;
+      }
+
+      .nav-link::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 0;
+        height: 2px;
+        background-color: #1e3a8a;
+        transition: width 0.3s ease;
+      }
+
+      .nav-link:hover::after,
+      .nav-link.active::after {
+        width: 100%;
+      }
+
+      .auction-link {
+        background-color: #1e3a8a;
+        color: #fff !important;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 6px rgba(30, 58, 138, 0.1);
+      }
+
+      .auction-link:hover {
+        background-color: #1e40af;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 12px rgba(30, 58, 138, 0.2);
+      }
+
+      /* Hero Section */
+      .hero {
+        padding: 180px 0 100px;
+        background: linear-gradient(135deg, #f8faff 0%, #eef2ff 100%);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .hero::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 50%;
+        height: 100%;
+        background: url("/api/placeholder/800/800") no-repeat center/cover;
+        opacity: 0.1;
+        mix-blend-mode: multiply;
+      }
+
+      .hero-content {
+        position: relative;
+        max-width: 800px;
+        margin: 0 auto;
+        text-align: center;
+      }
+
+      .hero-title {
+        font-size: 56px;
+        font-weight: 700;
+        margin-bottom: 32px;
+        line-height: 1.2;
+        letter-spacing: -0.03em;
+        color: #1a1a1a;
+      }
+
+      .hero-description {
+        font-size: 20px;
+        color: #4b5563;
+        margin-bottom: 48px;
+        line-height: 1.7;
+        letter-spacing: -0.02em;
+      }
+
+      /* Services Section */
+      .services {
+        background-color: #fff;
+      }
+
+      .section-title {
+        font-size: 40px;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 24px;
+        letter-spacing: -0.03em;
+        color: #1a1a1a;
+      }
+
+      .section-description {
+        text-align: center;
+        color: #4b5563;
+        margin-bottom: 64px;
+        font-size: 18px;
+        max-width: 700px;
+        margin-left: auto;
+        margin-right: auto;
+        letter-spacing: -0.02em;
+        line-height: 1.7;
+      }
+
+      .services-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 40px;
+        margin-bottom: 64px;
+      }
+
+      .service-card {
+        background-color: #fff;
+        border-radius: 16px;
+        padding: 40px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        border: 1px solid #e5e7eb;
+      }
+
+      .service-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+          0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      }
+
+      .service-icon {
+        font-size: 48px;
+        margin-bottom: 24px;
+      }
+
+      .service-title {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 16px;
+        color: #1a1a1a;
+        letter-spacing: -0.02em;
+      }
+
+      .service-description {
+        color: #4b5563;
+        line-height: 1.7;
+        font-size: 16px;
+        letter-spacing: -0.02em;
+      }
+
+      .demo-info {
+        margin-top: 16px;
+        color: #1a1a1a;
+        font-size: 16px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      /* Pricing Section */
+      .pricing {
+        background-color: #f8faff;
+      }
+
+      .pricing-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 40px;
+        margin-bottom: 64px;
+      }
+
+      .pricing-card {
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        padding: 40px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid #e5e7eb;
+      }
+
+      .pricing-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+          0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      }
+
+      .pricing-title {
+        font-size: 28px;
+        font-weight: 700;
+        color: #1e3a8a;
+        margin-bottom: 24px;
+        text-align: center;
+        letter-spacing: -0.02em;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #e5e7eb;
+      }
+
+      .pricing-content {
+        margin-bottom: 24px;
+      }
+
+      .highlight-box {
+        background-color: #f8faff;
+        border-radius: 12px;
+        padding: 20px;
+        margin: 24px 0;
+        border-left: 4px solid #1e3a8a;
+      }
+
+      .price-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .price-list li {
+        display: flex;
+        justify-content: space-between;
+        padding: 16px 0;
+        border-bottom: 1px solid #e5e7eb;
+        font-size: 16px;
+        color: #4b5563;
+      }
+
+      .price-list li strong {
+        color: #1a1a1a;
+        font-weight: 600;
+      }
+
+      .commission-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 24px;
+      }
+
+      .commission-table th,
+      .commission-table td {
+        padding: 16px;
+        text-align: left;
+        border: 1px solid #e5e7eb;
+        font-size: 15px;
+      }
+
+      .commission-table th {
+        background-color: #f8faff;
+        font-weight: 600;
+        color: #1e3a8a;
+      }
+
+      .commission-table td {
+        color: #4b5563;
+      }
+
+      /* Contact Section */
+      .contact-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 40px;
+        margin-top: 48px;
+      }
+
+      .contact-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 40px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        text-align: center;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid #e5e7eb;
+      }
+
+      .contact-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+          0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      }
+
+      .contact-icon {
+        font-size: 48px;
+        margin-bottom: 24px;
+      }
+
+      .contact-title {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 16px;
+        color: #1e3a8a;
+        letter-spacing: -0.02em;
+      }
+
+      .contact-link {
+        color: #1e3a8a;
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.3s ease;
+        font-size: 16px;
+      }
+
+      .contact-link:hover {
+        color: #1e40af;
+      }
+
+      /* Footer */
+      .footer {
+        background-color: #1a1a1a;
+        color: #fff;
+        padding: 80px 0 40px;
+      }
+
+      .footer-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 64px;
+        margin-bottom: 64px;
+      }
+
+      .footer-title {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 24px;
+        color: #fff;
+        letter-spacing: -0.02em;
+      }
+
+      .footer-links {
+        list-style: none;
+      }
+
+      .footer-links li {
+        margin-bottom: 12px;
+      }
+
+      .footer-links a {
+        color: #9ca3af;
+        text-decoration: none;
+        transition: color 0.3s ease;
+        font-size: 15px;
+        letter-spacing: -0.02em;
+      }
+
+      .footer-links a:hover {
+        color: #fff;
+      }
+
+      .footer-bottom {
+        text-align: center;
+        padding-top: 32px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        color: #9ca3af;
+        font-size: 14px;
+      }
+
+      /* Mobile Styles */
+      @media (max-width: 768px) {
+        .hero-title {
+          font-size: 40px;
+        }
+
+        .section-title {
+          font-size: 32px;
+        }
+
+        .header-container {
+          height: 70px;
+        }
+
+        .menu-toggle {
+          display: block;
+          background: none;
+          border: none;
+          font-size: 24px;
+          color: #1e3a8a;
+          cursor: pointer;
+        }
+
+        .nav-menu {
+          display: none;
+          position: absolute;
+          top: 70px;
+          left: 0;
+          width: 100%;
+          background-color: #fff;
+          padding: 20px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          flex-direction: column;
+          gap: 20px;
+        }
+
+        .nav-menu.active {
+          display: flex;
+        }
+
+        .footer-grid {
+          grid-template-columns: 1fr;
+          gap: 40px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="header">
+      <div class="container header-container">
+        <a href="#" class="logo">CASA TRADE</a>
+        <button class="menu-toggle">☰</button>
+        <nav>
+          <ul class="nav-menu">
+            <li><a href="#" class="nav-link">홈</a></li>
+            <li><a href="#services" class="nav-link">서비스</a></li>
+            <li><a href="#pricing" class="nav-link">요금안내</a></li>
+            <li><a href="#contact" class="nav-link">고객센터</a></li>
+            <li>
+              <a href="https://casastrade.com" class="auction-link"
+                >경매사이트 바로가기</a
+              >
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="container">
+        <div class="hero-content">
+          <h1 class="hero-title">
+            저렴하게 해외 명품을!<br />까사트레이드와 함께 하세요.
+          </h1>
+          <p class="hero-description">
+            까사트레이드는 해외 법인 명품 경매 사이트들을 통합하여 한국에서
+            누구나 손쉽게 해외 경매에 참여할 수 있도록 돕는 플랫폼입니다. 샤넬,
+            에르메스, 롤렉스 등 인기 브랜드부터 시계, 가방, 골동품까지, 다양한
+            명품을 저렴하게 구매할 수 있는 기회를 제공합니다.
+          </p>
+          <div class="hero-buttons">
+            <a href="#services" class="btn btn-primary">서비스 알아보기</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Services Section -->
+    <section id="services" class="section services">
+      <style>
+        .services {
+          background-color: #fff;
+          padding: 100px 0;
+        }
+
+        .services-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          gap: 40px;
+          margin-bottom: 64px;
+        }
+
+        .service-card {
+          background-color: #fff;
+          border-radius: 16px;
+          padding: 40px;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+          border: 1px solid #e5e7eb;
+        }
+
+        .service-card:hover {
+          transform: translateY(-8px);
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+            0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .service-icon {
+          font-size: 48px;
+          margin-bottom: 24px;
+        }
+
+        .service-title {
+          font-size: 24px;
+          font-weight: 700;
+          margin-bottom: 16px;
+          color: #1a1a1a;
+          letter-spacing: -0.02em;
+        }
+
+        .service-description {
+          color: #4b5563;
+          line-height: 1.7;
+          font-size: 16px;
+          letter-spacing: -0.02em;
+        }
+
+        .demo-wrapper {
+          text-align: center;
+          margin-top: 40px;
+        }
+
+        .demo-btn {
+          display: inline-block;
+          padding: 16px 32px;
+          font-size: 18px;
+          font-weight: 600;
+          color: #fff;
+          background-color: #1e3a8a;
+          border-radius: 12px;
+          text-decoration: none;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 6px rgba(30, 58, 138, 0.1);
+          margin-bottom: 12px;
+        }
+
+        .demo-btn:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 12px 20px rgba(30, 58, 138, 0.2);
+        }
+
+        .demo-info {
+          font-size: 14px;
+          color: #666;
+          margin-top: 8px;
+        }
+      </style>
+
+      <div class="container">
+        <h2 class="section-title">까사트레이드의 서비스</h2>
+        <p class="section-description">
+          국내 명품 빈티지 시장의 기회를 제공하며, 까사트레이드는 다양한
+          서비스를 통해 고객을 지원합니다.
+        </p>
+        <div class="services-grid">
+          <div class="service-card">
+            <div class="service-icon">🏆</div>
+            <h3 class="service-title">명품 빈티지 시장의 기회</h3>
+            <p class="service-description">
+              국내 명품 빈티지 시장은 정보 부족과 폐쇄성으로 인해 접근이
+              어려웠습니다. 대부분은 국내 중고 거래 사이트에서 물건을
+              소싱하거나, 소수의 법인 자격을 가진 업체들만이 해외 경매에 참여해
+              고수익을 창출해 왔습니다.
+            </p>
+          </div>
+          <div class="service-card">
+            <div class="service-icon">📈</div>
+            <h3 class="service-title">까사트레이드의 해결책</h3>
+            <p class="service-description">
+              까사트레이드는 해외 현지 법인 명품 경매장과의 연계를 통해
+              새상품부터 빈티지까지 다양한 명품 브랜드를 국내 도매가보다 저렴한
+              가격에 국내 사업자와 일반인이 구매할 수 있도록 지원합니다.
+            </p>
+          </div>
+        </div>
+        <div class="demo-wrapper">
+          <a href="https://casastrade.com" class="demo-btn"
+            >경매사이트 둘러보기</a
+          >
+          <p class="demo-info">* 체험판 아이디/비밀번호 : 1234 *</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Problems & Solutions Section -->
+    <section class="section problems-solutions">
+      <style>
+        .problems-solutions {
+          background-color: #f8faff;
+          padding: 100px 0;
+        }
+
+        .comparison-wrapper {
+          display: flex;
+          gap: 40px;
+          margin-top: 60px;
+        }
+
+        .comparison-box {
+          flex: 1;
+          background: #ffffff;
+          border-radius: 20px;
+          padding: 40px;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .comparison-box.problems {
+          border-top: 5px solid #ef4444;
+        }
+
+        .comparison-box.solutions {
+          border-top: 5px solid #10b981;
+        }
+
+        .comparison-title {
+          font-size: 24px;
+          font-weight: 700;
+          color: #1a1a1a;
+          margin-bottom: 30px;
+          text-align: center;
+          padding-bottom: 20px;
+          border-bottom: 2px solid #e5e7eb;
+        }
+
+        .comparison-list {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+        }
+
+        .comparison-list li {
+          display: flex;
+          align-items: flex-start;
+          padding: 16px;
+          margin-bottom: 12px;
+          background: #f8faff;
+          border-radius: 12px;
+          transition: transform 0.3s ease;
+        }
+
+        .comparison-list li:hover {
+          transform: translateX(10px);
+        }
+
+        .comparison-list .icon {
+          flex-shrink: 0;
+          width: 24px;
+          height: 24px;
+          margin-right: 16px;
+          font-size: 20px;
+        }
+
+        .comparison-list .text {
+          flex: 1;
+          font-size: 16px;
+          line-height: 1.6;
+          color: #4b5563;
+        }
+
+        @media (max-width: 768px) {
+          .comparison-wrapper {
+            flex-direction: column;
+          }
+        }
+      </style>
+
+      <div class="container">
+        <h2 class="section-title">문제점 및 해결방안</h2>
+        <p class="section-description">
+          까사트레이드는 기존 시장의 문제점을 파악하고 혁신적인 솔루션을
+          제공합니다.
+        </p>
+
+        <div class="comparison-wrapper">
+          <div class="comparison-box problems">
+            <h3 class="comparison-title">기존 시장의 문제점</h3>
+            <ul class="comparison-list">
+              <li>
+                <span class="icon">❌</span>
+                <span class="text"
+                  >다수의 플랫폼에서 개별적으로 입찰, 결제, 배송 진행해야 하는
+                  불편함</span
+                >
+              </li>
+              <li>
+                <span class="icon">❌</span>
+                <span class="text">국내사업자의 가입 제한</span>
+              </li>
+              <li>
+                <span class="icon">❌</span>
+                <span class="text"
+                  >기존 업체들의 교육비 및 오프라인 강의 부담</span
+                >
+              </li>
+              <li>
+                <span class="icon">❌</span>
+                <span class="text">경매장의 입회비, 연회비 부담</span>
+              </li>
+              <li>
+                <span class="icon">❌</span>
+                <span class="text"
+                  >대량구매에 부적합한 시스템, 언어 장벽, 해외결제 과정에서의
+                  어려움</span
+                >
+              </li>
+              <li>
+                <span class="icon">❌</span>
+                <span class="text"
+                  >가품이나 품질 문제로 인해 발생하는 고객 컴플레인과 환불/리턴
+                  부담</span
+                >
+              </li>
+              <li>
+                <span class="icon">❌</span>
+                <span class="text"
+                  >복잡한 절차(입찰, 결제, 통관, 서류 작성 등)로 인한 시간, 비용
+                  과도소모</span
+                >
+              </li>
+            </ul>
+          </div>
+
+          <div class="comparison-box solutions">
+            <h3 class="comparison-title">까사트레이드의 해결방안</h3>
+            <ul class="comparison-list">
+              <li>
+                <span class="icon">✅</span>
+                <span class="text"
+                  >모든 경매사이트를 한 플랫폼에 통합하여 시간과 비용 절감</span
+                >
+              </li>
+              <li>
+                <span class="icon">✅</span>
+                <span class="text"
+                  >직관적 UI/UX, 실시간 환율계산을 통해 언어와 환율장벽
+                  해결</span
+                >
+              </li>
+              <li>
+                <span class="icon">✅</span>
+                <span class="text"
+                  >전문 감정사를 통한 감정서 발급으로, 납품 시 정품 인증 및
+                  가품/불량 문제로 인한 컴플레인 발생 시 책임 보장</span
+                >
+              </li>
+              <li>
+                <span class="icon">✅</span>
+                <span class="text"
+                  >전세계 2차 판매자들의 매입가격 파악가능</span
+                >
+              </li>
+              <li>
+                <span class="icon">✅</span>
+                <span class="text"
+                  >경매사님이 최근 여러 경매장에서의 낙찰내역 비교로 최적의
+                  낙찰가 제공</span
+                >
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="pricing" class="section pricing">
+      <div class="container">
+        <h2 class="section-title">요금 안내</h2>
+        <p class="section-description">
+          VAT 별도, VIP 고객은 수수료 및 이용료 별도 협의 가능
+        </p>
+
+        <div class="pricing-grid">
+          <!-- 보증금 카드 -->
+          <div class="pricing-card">
+            <h3 class="pricing-title">보증금</h3>
+            <div class="pricing-content">
+              <p>하루 예상 입찰 금액에 맞춰 보증금을 지급해 주셔야 합니다.</p>
+              <div class="highlight-box">
+                <strong>예시</strong><br />
+                샤넬 가방 하루 5개, 개당 40만원 낙찰 예상 시<br />
+                최소 보증금: 약 200만원
+              </div>
+              <p>
+                추후 더 높은 금액으로 입찰을 원하시면 차액만큼 추가 입금하시면
+                됩니다.
+              </p>
+            </div>
+          </div>
+
+          <!-- 월 이용료 카드 -->
+          <div class="pricing-card">
+            <h3 class="pricing-title">월 이용료</h3>
+            <div class="highlight-box">
+              <strong>신규 고객 특별 혜택!</strong><br />
+              첫 2개월간 이용료 무료
+            </div>
+            <div class="pricing-content">
+              <ul class="price-list">
+                <li><span>1개월</span> <strong>200,000원</strong></li>
+                <li><span>3개월</span> <strong>500,000원</strong></li>
+                <li><span>6개월</span> <strong>1,000,000원</strong></li>
+                <li><span>12개월</span> <strong>2,000,000원</strong></li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- 수수료 카드 -->
+          <div class="pricing-card">
+            <h3 class="pricing-title">입찰대행 수수료</h3>
+            <div class="pricing-content">
+              <table class="commission-table">
+                <thead>
+                  <tr>
+                    <th>입찰 금액</th>
+                    <th>수수료율</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>~5,000,000원</td>
+                    <td>10%</td>
+                  </tr>
+                  <tr>
+                    <td>500만원 ~ 1,000만원</td>
+                    <td>8%</td>
+                  </tr>
+                  <tr>
+                    <td>1,000만원 ~ 5,000만원</td>
+                    <td>5%</td>
+                  </tr>
+                  <tr>
+                    <td>5,000만원 이상</td>
+                    <td>별도 협의</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="section">
+      <div class="container">
+        <h2 class="section-title">고객센터</h2>
+        <p class="section-description">
+          궁금하신 점이 있으시다면 언제든 문의해주세요
+        </p>
+        <div class="contact-grid">
+          <div class="contact-card">
+            <div class="contact-icon">📞</div>
+            <h3 class="contact-title">전화 문의</h3>
+            <p class="contact-info">
+              <a href="tel:010-2894-8502" class="contact-link">010-2894-8502</a>
+            </p>
+          </div>
+
+          <div class="contact-card">
+            <div class="contact-icon">📧</div>
+            <h3 class="contact-title">이메일 문의</h3>
+            <p class="contact-info">
+              <a href="mailto:casatrade.kr@gmail.com" class="contact-link"
+                >casatrade.kr@gmail.com</a
+              >
+            </p>
+          </div>
+
+          <div class="contact-card">
+            <div class="contact-icon">💬</div>
+            <h3 class="contact-title">카카오톡 문의</h3>
+            <p class="contact-info">
+              <a
+                href="http://pf.kakao.com/_xcCxoqn/chat"
+                target="_blank"
+                class="contact-link"
+                >카카오톡 채팅하기</a
+              >
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-grid">
+          <div>
+            <h3 class="footer-title">CASA TRADE</h3>
+            <ul class="footer-links">
+              <li><a href="#services">서비스</a></li>
+              <li><a href="#pricing">요금안내</a></li>
+              <li><a href="#contact">고객센터</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3 class="footer-title">고객지원</h3>
+            <ul class="footer-links">
+              <li><a href="#contact">고객센터</a></li>
+              <li>
+                <a href="http://pf.kakao.com/_xcCxoqn/chat">카카오톡 문의</a>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h3 class="footer-title">바로가기</h3>
+            <ul class="footer-links">
+              <li><a href="https://casastrade.com">경매사이트 바로가기</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <p>&copy; 2024 CASA TRADE. All rights reserved.</p>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      // Mobile menu toggle
+      const menuToggle = document.querySelector(".menu-toggle");
+      const navMenu = document.querySelector(".nav-menu");
+
+      menuToggle.addEventListener("click", () => {
+        navMenu.classList.toggle("active");
+      });
+
+      // Smooth scroll functionality
+      document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+        anchor.addEventListener("click", function (e) {
+          if (this.getAttribute("href") === "#") return;
+
+          e.preventDefault();
+          const target = document.querySelector(this.getAttribute("href"));
+
+          if (target) {
+            const headerOffset = 80;
+            const elementPosition = target.getBoundingClientRect().top;
+            const offsetPosition =
+              elementPosition + window.pageYOffset - headerOffset;
+
+            window.scrollTo({
+              top: offsetPosition,
+              behavior: "smooth",
+            });
+
+            // Close mobile menu if open
+            navMenu.classList.remove("active");
+          }
+        });
+      });
+
+      // Intersection Observer for scroll animations
+      const observerOptions = {
+        root: null,
+        rootMargin: "0px",
+        threshold: 0.1,
+      };
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("fade-in");
+            observer.unobserve(entry.target);
+          }
+        });
+      }, observerOptions);
+
+      // Observe all sections and cards
+      document
+        .querySelectorAll(
+          ".section, .service-card, .pricing-card, .contact-card"
+        )
+        .forEach((element) => {
+          element.style.opacity = "0";
+          element.style.transform = "translateY(20px)";
+          element.style.transition = "all 0.6s ease-out";
+          observer.observe(element);
+        });
+
+      // Add fade-in class for animation
+      const fadeInStyle = document.createElement("style");
+      fadeInStyle.textContent = `
+            .fade-in {
+                opacity: 1 !important;
+                transform: translateY(0) !important;
+            }
+        `;
+      document.head.appendChild(fadeInStyle);
+
+      // Active menu highlighting
+      const sections = document.querySelectorAll("section");
+      const navLinks = document.querySelectorAll(".nav-link");
+
+      window.addEventListener("scroll", () => {
+        let current = "";
+
+        sections.forEach((section) => {
+          const sectionTop = section.offsetTop;
+          const sectionHeight = section.clientHeight;
+
+          if (pageYOffset >= sectionTop - sectionHeight / 3) {
+            current = section.getAttribute("id");
+          }
+        });
+
+        navLinks.forEach((link) => {
+          link.classList.remove("active");
+          if (link.getAttribute("href") === `#${current}`) {
+            link.classList.add("active");
+          }
+        });
+      });
+
+      // Header scroll effect
+      const header = document.querySelector(".header");
+      let lastScrollY = window.scrollY;
+
+      window.addEventListener("scroll", () => {
+        if (window.scrollY > lastScrollY) {
+          header.style.transform = "translateY(-100%)";
+        } else {
+          header.style.transform = "translateY(0)";
+        }
+        lastScrollY = window.scrollY;
+      });
+
+      // Add loading animation to cards
+      document
+        .querySelectorAll(".service-card, .pricing-card, .contact-card")
+        .forEach((card) => {
+          card.addEventListener("mouseenter", () => {
+            card.style.transition = "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)";
+            card.style.transform = "translateY(-8px)";
+            card.style.boxShadow =
+              "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)";
+          });
+
+          card.addEventListener("mouseleave", () => {
+            card.style.transform = "translateY(0)";
+            card.style.boxShadow = "0 4px 6px rgba(0, 0, 0, 0.05)";
+          });
+        });
+    </script>
+  </body>
+</html>
