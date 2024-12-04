@@ -1,32 +1,40 @@
 // routes/crawler.js
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { ecoAucCrawler, brandAucCrawler, ecoAucValueCrawler, brandAucValueCrawler } = require('../Scripts/crawler');
-const DBManager = require('../utils/DBManager');
-const pool = require('../utils/DB');
-const cron = require('node-cron');
-const { getAdminSettings } = require('../utils/adminDB');
-const { initializeFilterSettings } = require('../utils/filterDB');
-const { processImagesInChunks } = require('../utils/processImage');
+const {
+  ecoAucCrawler,
+  brandAucCrawler,
+  ecoAucValueCrawler,
+  brandAucValueCrawler,
+} = require("../crawlers/index");
+const DBManager = require("../utils/DBManager");
+const pool = require("../utils/DB");
+const cron = require("node-cron");
+const { getAdminSettings } = require("../utils/adminDB");
+const { initializeFilterSettings } = require("../utils/filterDB");
+const { processImagesInChunks } = require("../utils/processImage");
 
 let isCrawling = false;
 let isValueCrawling = false;
 
 const isAdmin = (req, res, next) => {
-  if (req.session.user && req.session.user.id === 'admin') {
+  if (req.session.user && req.session.user.id === "admin") {
     next();
   } else {
-    res.status(403).json({ message: 'Access denied. Admin only.' });
+    res.status(403).json({ message: "Access denied. Admin only." });
   }
 };
 
 // 기존 processItem 함수 수정
 async function processItem(itemId, isValue, res) {
   try {
-    const tableName = isValue ? 'values_items' : 'crawled_items';
-    const [items] = await pool.query(`SELECT * FROM ${tableName} WHERE item_id = ?`, [itemId]);
+    const tableName = isValue ? "values_items" : "crawled_items";
+    const [items] = await pool.query(
+      `SELECT * FROM ${tableName} WHERE item_id = ?`,
+      [itemId]
+    );
     if (items.length === 0) {
-      res.status(404).json({ message: 'Item not found' });
+      res.status(404).json({ message: "Item not found" });
     } else {
       if (items[0].description) {
         res.json(items[0]);
@@ -42,22 +50,36 @@ async function processItem(itemId, isValue, res) {
         const detailIndex = findAvailableIndex(items[0].auc_num, isValue);
 
         if (detailIndex === -1) {
-          res.status(503).json({ message: 'All crawlers are busy. Please try again later.' });
+          res.status(503).json({
+            message: "All crawlers are busy. Please try again later.",
+          });
           return;
         }
 
         try {
-          const crawledDetails = await crawler.crawlItemDetails(detailIndex, itemId);
-          const processedDetials = (await processImagesInChunks([crawledDetails]))[0];
-    
+          const crawledDetails = await crawler.crawlItemDetails(
+            detailIndex,
+            itemId
+          );
+          const processedDetials = (
+            await processImagesInChunks([crawledDetails])
+          )[0];
+
           if (processedDetials) {
-            await DBManager.updateItemDetails(itemId, processedDetials, tableName);
-            
-            const [updatedItems] = await pool.query(`SELECT * FROM ${tableName} WHERE item_id = ?`, [itemId]);
+            await DBManager.updateItemDetails(
+              itemId,
+              processedDetials,
+              tableName
+            );
+
+            const [updatedItems] = await pool.query(
+              `SELECT * FROM ${tableName} WHERE item_id = ?`,
+              [itemId]
+            );
             res.json(updatedItems[0]);
           } else {
             crawler.closeDetailBrowsers();
-            res.status(500).json({ message: 'Failed to crawl item details' });
+            res.status(500).json({ message: "Failed to crawl item details" });
           }
         } finally {
           releaseIndex(items[0].auc_num, isValue, detailIndex);
@@ -65,8 +87,8 @@ async function processItem(itemId, isValue, res) {
       }
     }
   } catch (error) {
-    console.error('Error crawling item details:', error);
-    res.status(500).json({ message: 'Error crawling item details' });
+    console.error("Error crawling item details:", error);
+    res.status(500).json({ message: "Error crawling item details" });
   }
 }
 
@@ -84,8 +106,10 @@ const crawlerIndexTracker = {
 
 function findAvailableIndex(crawlerIndex, isValue) {
   let trackerKey;
-  if (isValue) trackerKey = crawlerIndex == 1 ? 'ecoAucValueCrawler' : 'brandAucValueCrawler';
-  else trackerKey = crawlerIndex == 1 ? 'ecoAucCrawler' : 'brandAucCrawler';
+  if (isValue)
+    trackerKey =
+      crawlerIndex == 1 ? "ecoAucValueCrawler" : "brandAucValueCrawler";
+  else trackerKey = crawlerIndex == 1 ? "ecoAucCrawler" : "brandAucCrawler";
   const tracker = crawlerIndexTracker[trackerKey];
   if (!tracker) {
     console.error(`No tracker found for crawler type: ${trackerKey}`);
@@ -102,8 +126,10 @@ function findAvailableIndex(crawlerIndex, isValue) {
 
 function releaseIndex(crawlerIndex, isValue, index) {
   let trackerKey;
-  if (isValue) trackerKey = crawlerIndex == 1 ? 'ecoAucValueCrawler' : 'brandAucValueCrawler';
-  else trackerKey = crawlerIndex == 1 ? 'ecoAucCrawler' : 'brandAucCrawler';
+  if (isValue)
+    trackerKey =
+      crawlerIndex == 1 ? "ecoAucValueCrawler" : "brandAucValueCrawler";
+  else trackerKey = crawlerIndex == 1 ? "ecoAucCrawler" : "brandAucCrawler";
   if (crawlerIndexTracker[trackerKey]) {
     crawlerIndexTracker[trackerKey][index] = false;
   } else {
@@ -130,55 +156,78 @@ async function processQueue() {
   const tasks = queue.splice(0, MAX_CONCURRENT_TASKS);
 
   try {
-    await Promise.all(tasks.map(task => processItem(task.itemId, task.isValue, task.res)));
+    await Promise.all(
+      tasks.map((task) => processItem(task.itemId, task.isValue, task.res))
+    );
   } catch (error) {
-    console.error('Error processing queue:', error);
+    console.error("Error processing queue:", error);
   }
 
   // 다음 작업 처리
   processQueue();
 }
 async function closeAllCrawler() {
-  for(let c of [ecoAucCrawler, brandAucCrawler, ecoAucValueCrawler, brandAucValueCrawler]) {
+  for (let c of [
+    ecoAucCrawler,
+    brandAucCrawler,
+    ecoAucValueCrawler,
+    brandAucValueCrawler,
+  ]) {
     await c.closeCrawlerBrowser();
     await c.closeDetailBrowsers();
   }
 }
 async function loginAllDetails() {
-  for(let c of [ecoAucCrawler, brandAucCrawler, ecoAucValueCrawler, brandAucValueCrawler]) {
+  for (let c of [
+    ecoAucCrawler,
+    brandAucCrawler,
+    ecoAucValueCrawler,
+    brandAucValueCrawler,
+  ]) {
     await c.loginCheckDetails();
   }
 }
 async function crawlAll() {
-
   if (isCrawling) {
     throw new Error("already crawling");
   } else if (isValueCrawling) {
     throw new Error("value crawler is activating");
   } else {
     try {
-      const [existingItems] = await pool.query('SELECT item_id, auc_num FROM crawled_items');
-      const existingEcoAucIds = new Set(existingItems.filter(item => item.auc_num == 1).map(item => item.item_id));
-      const existingBrandAuctionIds = new Set(existingItems.filter(item => item.auc_num == 2).map(item => item.item_id));
-      
+      const [existingItems] = await pool.query(
+        "SELECT item_id, auc_num FROM crawled_items"
+      );
+      const existingEcoAucIds = new Set(
+        existingItems
+          .filter((item) => item.auc_num == 1)
+          .map((item) => item.item_id)
+      );
+      const existingBrandAuctionIds = new Set(
+        existingItems
+          .filter((item) => item.auc_num == 2)
+          .map((item) => item.item_id)
+      );
+
       isCrawling = true;
       await closeAllCrawler();
       let ecoAucItems = await ecoAucCrawler.crawlAllItems(existingEcoAucIds);
       await closeAllCrawler();
-      let brandAucItems = await brandAucCrawler.crawlAllItems(existingBrandAuctionIds);
+      let brandAucItems = await brandAucCrawler.crawlAllItems(
+        existingBrandAuctionIds
+      );
 
       if (!ecoAucItems) ecoAucItems = [];
       if (!brandAucItems) brandAucItems = [];
-      const allItems = [
-        ...ecoAucItems,
-        ...brandAucItems
-      ];
-      await DBManager.saveItems(allItems, 'crawled_items');
-      await DBManager.deleteItemsWithout(allItems.map((item) => item.item_id), 'crawled_items');
+      const allItems = [...ecoAucItems, ...brandAucItems];
+      await DBManager.saveItems(allItems, "crawled_items");
+      await DBManager.deleteItemsWithout(
+        allItems.map((item) => item.item_id),
+        "crawled_items"
+      );
       await DBManager.cleanupUnusedImages();
       await initializeFilterSettings();
     } catch (error) {
-      throw (error);
+      throw error;
     } finally {
       isCrawling = false;
       await loginAllDetails();
@@ -187,35 +236,45 @@ async function crawlAll() {
 }
 
 async function crawlAllValues() {
-  
   if (isValueCrawling) {
     throw new Error("already crawling");
   } else if (isCrawling) {
     throw new Error("crawler is activating");
   } else {
     try {
-      const [existingItems] = await pool.query('SELECT item_id, auc_num FROM values_items');
-      const existingEcoAucIds = new Set(existingItems.filter(item => item.auc_num == 1).map(item => item.item_id));
-      const existingBrandAuctionIds = new Set(existingItems.filter(item => item.auc_num == 2).map(item => item.item_id));
+      const [existingItems] = await pool.query(
+        "SELECT item_id, auc_num FROM values_items"
+      );
+      const existingEcoAucIds = new Set(
+        existingItems
+          .filter((item) => item.auc_num == 1)
+          .map((item) => item.item_id)
+      );
+      const existingBrandAuctionIds = new Set(
+        existingItems
+          .filter((item) => item.auc_num == 2)
+          .map((item) => item.item_id)
+      );
 
       isValueCrawling = true;
-      
+
       await closeAllCrawler();
-      let ecoAucItems = await ecoAucValueCrawler.crawlAllItems(existingEcoAucIds);
+      let ecoAucItems = await ecoAucValueCrawler.crawlAllItems(
+        existingEcoAucIds
+      );
       await closeAllCrawler();
-      let brandAucItems = await brandAucValueCrawler.crawlAllItems(existingBrandAuctionIds);
+      let brandAucItems = await brandAucValueCrawler.crawlAllItems(
+        existingBrandAuctionIds
+      );
 
       if (!ecoAucItems) ecoAucItems = [];
       if (!brandAucItems) brandAucItems = [];
-      const allItems = [
-        ...ecoAucItems,
-        ...brandAucItems
-      ];
-      await DBManager.saveItems(allItems, 'values_items');
+      const allItems = [...ecoAucItems, ...brandAucItems];
+      await DBManager.saveItems(allItems, "values_items");
       await DBManager.cleanupOldValueItems();
       await DBManager.cleanupUnusedImages();
     } catch (error) {
-      throw (error);
+      throw error;
     } finally {
       isValueCrawling = false;
       await loginAllDetails();
@@ -223,43 +282,47 @@ async function crawlAllValues() {
   }
 }
 
-router.get('/crawl', isAdmin, async (req, res) => {
+router.get("/crawl", isAdmin, async (req, res) => {
   try {
     await crawlAll();
 
-    res.json({ message: 'Crawling and image processing completed successfully' });
+    res.json({
+      message: "Crawling and image processing completed successfully",
+    });
   } catch (error) {
-    console.error('Crawling error:', error);
-    res.status(500).json({ message: 'Error during crawling' });
+    console.error("Crawling error:", error);
+    res.status(500).json({ message: "Error during crawling" });
   }
 });
 
-router.get('/crawl-values', isAdmin, async (req, res) => {
+router.get("/crawl-values", isAdmin, async (req, res) => {
   try {
     await crawlAllValues();
 
-    res.json({ message: 'Crawling and image processing completed successfully' });
+    res.json({
+      message: "Crawling and image processing completed successfully",
+    });
   } catch (error) {
-    console.error('Crawling error:', error);
-    res.status(500).json({ message: 'Error during crawling' });
+    console.error("Crawling error:", error);
+    res.status(500).json({ message: "Error during crawling" });
   }
 });
 
-router.get('/crawl-status', isAdmin, (req, res) => {
+router.get("/crawl-status", isAdmin, (req, res) => {
   try {
     res.json({ isCrawling, isValueCrawling });
   } catch (error) {
-    console.error('Crawling error:', error);
-    res.status(500).json({ message: 'Error during crawling' });
+    console.error("Crawling error:", error);
+    res.status(500).json({ message: "Error during crawling" });
   }
-})
+});
 
-router.post('/crawl-item-details/:itemId', (req, res) => {
+router.post("/crawl-item-details/:itemId", (req, res) => {
   const { itemId } = req.params;
   addToQueue(itemId, false, res);
 });
 
-router.post('/crawl-item-value-details/:itemId', (req, res) => {
+router.post("/crawl-item-value-details/:itemId", (req, res) => {
   const { itemId } = req.params;
   addToQueue(itemId, true, res);
 });
@@ -267,20 +330,24 @@ router.post('/crawl-item-value-details/:itemId', (req, res) => {
 const scheduleCrawling = async () => {
   const settings = await getAdminSettings();
   if (settings && settings.crawlSchedule) {
-    const [hours, minutes] = settings.crawlSchedule.split(':');
-    cron.schedule(`${minutes} ${hours} * * *`, async () => {
-      console.log('Running scheduled crawling task');
-      try {
-        await crawlAll();
-        await crawlAllValues();
-        console.log('Scheduled crawling completed successfully');
-      } catch (error) {
-        console.error('Scheduled crawling error:', error);
+    const [hours, minutes] = settings.crawlSchedule.split(":");
+    cron.schedule(
+      `${minutes} ${hours} * * *`,
+      async () => {
+        console.log("Running scheduled crawling task");
+        try {
+          await crawlAll();
+          await crawlAllValues();
+          console.log("Scheduled crawling completed successfully");
+        } catch (error) {
+          console.error("Scheduled crawling error:", error);
+        }
+      },
+      {
+        scheduled: true,
+        timezone: "Asia/Seoul",
       }
-    }, {
-      scheduled: true,
-      timezone: "Asia/Seoul"
-    });
+    );
   }
 };
 
