@@ -196,8 +196,9 @@ class Crawler {
 
     const browser = await puppeteer.launch(launchOptions);
 
-    browser.on("disconnected", () => {
+    browser.on("disconnected", async () => {
       try {
+        await this.sleep(1000);
         if (fs.existsSync(userDataDir)) {
           fs.rmSync(userDataDir, { recursive: true, force: true });
         }
