@@ -152,7 +152,7 @@ class Crawler {
     );
 
     const launchOptions = {
-      headless: true,
+      headless: false,
       userDataDir: userDataDir,
       args: [
         "--no-sandbox",
@@ -251,19 +251,14 @@ class Crawler {
         );
         return;
       }
-
-      // 로그인이 필요한 경우에만 실행
-      await Promise.all([
-        page.type(
-          this.config.signinSelectors.userId,
-          this.config.loginData.userId
-        ),
-        page.type(
-          this.config.signinSelectors.password,
-          this.config.loginData.password
-        ),
-      ]);
-
+      await page.type(
+        this.config.signinSelectors.userId,
+        this.config.loginData.userId
+      );
+      await page.type(
+        this.config.signinSelectors.password,
+        this.config.loginData.password
+      );
       await Promise.all([
         page.click(this.config.signinSelectors.loginButton),
         page.waitForNavigation({
