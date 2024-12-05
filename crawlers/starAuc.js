@@ -280,6 +280,8 @@ class StarAucCrawler extends Crawler {
         timeout: this.pageTimeout,
       });
 
+      await this.sleep(1000);
+
       const item = await page.evaluate((config) => {
         const images = Array.from(
           document.querySelectorAll(config.crawlDetailSelectors.images)
@@ -318,7 +320,7 @@ class StarAucCrawler extends Crawler {
       }, this.config);
 
       if (!item.description) item.description = "-";
-
+      console.log(item);
       return item;
     });
   }
