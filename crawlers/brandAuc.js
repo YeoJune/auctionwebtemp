@@ -563,6 +563,9 @@ class BrandAucValueCrawler extends Crawler {
         timeout: this.pageTimeout,
       });
       console.log("search Url loaded");
+      await page.waitForSelector(this.config.crawlSelectors.languageSelect, {
+        timeout: 3000,
+      });
       await page.select(this.config.crawlSelectors.languageSelect, "en");
       await page.click(this.config.crawlSelectors.resetButton);
       await Promise.all([
