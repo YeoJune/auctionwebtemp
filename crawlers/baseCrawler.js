@@ -268,7 +268,7 @@ class Crawler {
         page.click(this.config.signinSelectors.loginButton),
         page.waitForNavigation({
           waitUntil: "domcontentloaded",
-          timeout: 3000,
+          timeout: this.pageTimeout,
         }),
       ]);
 
