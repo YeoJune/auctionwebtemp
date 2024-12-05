@@ -214,15 +214,15 @@ async function closeAllCrawler() {
   }
 }
 async function loginAllDetails() {
-  for (let c of [
+  const crawlers = [
     ecoAucCrawler,
     brandAucCrawler,
     ecoAucValueCrawler,
     brandAucValueCrawler,
-    starAucCrawler, // 추가
-  ]) {
-    await c.loginCheckDetails();
-  }
+    starAucCrawler,
+  ];
+
+  await Promise.all(crawlers.map((crawler) => crawler.loginCheckDetails()));
 }
 async function crawlAll() {
   if (isCrawling) {
