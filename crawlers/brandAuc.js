@@ -377,7 +377,6 @@ class BrandAucCrawler extends Crawler {
             null;
 
           return {
-            image: images[0],
             additional_images:
               images.length > 0 ? JSON.stringify(images) : null,
             description: description || "",
@@ -617,7 +616,6 @@ class BrandAucValueCrawler extends Crawler {
             null;
 
           return {
-            image: images[0],
             additional_images:
               images.length > 0 ? JSON.stringify(images) : null,
             description: description || "",

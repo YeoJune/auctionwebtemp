@@ -343,7 +343,6 @@ class EcoAucCrawler extends Crawler {
         const accessoryCode = binder?.children[13]?.textContent.trim();
 
         return {
-          image: images[0],
           additional_images: JSON.stringify(images),
           description: description || "-",
           accessory_code: accessoryCode || "",
@@ -556,7 +555,6 @@ class EcoAucValueCrawler extends Crawler {
         const accessoryCode = binder?.children[13]?.textContent.trim();
 
         return {
-          image: images[0],
           additional_images: JSON.stringify(images),
           scheduled_date: scheduledDate || "",
           description: description || "-",

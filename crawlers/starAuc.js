@@ -276,11 +276,9 @@ class StarAucCrawler extends Crawler {
     return this.retryOperation(async () => {
       const page = this.detailPages[idx];
       await page.goto(this.config.detailUrl(itemId), {
-        waitUntil: "domcontentloaded",
+        waitUntil: "networkidle0",
         timeout: this.pageTimeout,
       });
-
-      await this.sleep(1000);
 
       const item = await page.evaluate((config) => {
         const images = Array.from(
@@ -311,7 +309,6 @@ class StarAucCrawler extends Crawler {
         }
 
         return {
-          image: images[0],
           additional_images: JSON.stringify(images),
           brand: brand,
           description: notes,
