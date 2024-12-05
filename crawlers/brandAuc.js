@@ -324,6 +324,9 @@ class BrandAucCrawler extends Crawler {
         timeout: this.pageTimeout,
       });
       //console.log("search Url loaded");
+      await page.waitForSelector(this.config.crawlSelectors.languageSelect, {
+        timeout: 3000,
+      });
       await page.select(this.config.crawlSelectors.languageSelect, "en");
       await page.click(this.config.crawlSelectors.resetButton);
       await Promise.all([
@@ -562,7 +565,7 @@ class BrandAucValueCrawler extends Crawler {
         waitUntil: "networkidle0",
         timeout: this.pageTimeout,
       });
-      console.log("search Url loaded");
+      //console.log("search Url loaded");
       await page.waitForSelector(this.config.crawlSelectors.languageSelect, {
         timeout: 3000,
       });
@@ -635,7 +638,7 @@ class BrandAucValueCrawler extends Crawler {
 
       const endTime = Date.now();
       const executionTime = endTime - startTime;
-      console.log(this.formatExecutionTime(executionTime));
+      //console.log(this.formatExecutionTime(executionTime));
       return item;
     });
   }
