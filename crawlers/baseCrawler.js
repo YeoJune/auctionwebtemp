@@ -234,30 +234,41 @@ class Crawler {
 
     console.log("Detail have been closed.");
   }
-
   async login(page) {
     return this.retryOperation(async () => {
-      await page.goto(this.config.loginPageUrl, {
+      // 페이지 이동 후 최종 URL 확인
+      const response = await page.goto(this.config.loginPageUrl, {
         waitUntil: "networkidle0",
         timeout: this.pageTimeout,
       });
+
+      // 최종 URL이 로그인 페이지와 다르다면 이미 로그인된 상태
+      const finalUrl = page.url();
+      if (finalUrl !== this.config.loginPageUrl) {
+        console.log("Already logged in, skipping login process");
+        return;
+      }
+
+      // 로그인이 필요한 경우에만 실행
       await Promise.all([
-        await page.type(
+        page.type(
           this.config.signinSelectors.userId,
           this.config.loginData.userId
         ),
-        await page.type(
+        page.type(
           this.config.signinSelectors.password,
           this.config.loginData.password
         ),
       ]);
+
       await Promise.all([
-        await page.click(this.config.signinSelectors.loginButton),
-        await page.waitForNavigation({
+        page.click(this.config.signinSelectors.loginButton),
+        page.waitForNavigation({
           waitUntil: "domcontentloaded",
           timeout: 3000,
         }),
       ]);
+
       await this.sleep(3000);
       const button = await page.$(".common_btn.vivid");
       if (button) {
