@@ -6,6 +6,7 @@ const {
   brandAucCrawler,
   ecoAucValueCrawler,
   brandAucValueCrawler,
+  starAucCrawler,
 } = require("../crawlers/index");
 const DBManager = require("../utils/DBManager");
 const pool = require("../utils/DB");
@@ -46,9 +47,11 @@ async function processItem(itemId, isValue, res) {
         if (items[0].auc_num == 1) {
           if (isValue) crawler = ecoAucValueCrawler;
           else crawler = ecoAucCrawler;
-        } else {
+        } else if (items[0].auc_num == 2) {
           if (isValue) crawler = brandAucValueCrawler;
           else crawler = brandAucCrawler;
+        } else if (items[0].auc_num == 3) {
+          crawler = starAucCrawler;
         }
         const detailIndex = findAvailableIndex(items[0].auc_num, isValue);
 
@@ -105,14 +108,28 @@ const crawlerIndexTracker = {
   brandAucCrawler: new Array(brandAucCrawler.detailMulti).fill(false),
   ecoAucValueCrawler: new Array(ecoAucValueCrawler.detailMulti).fill(false),
   brandAucValueCrawler: new Array(brandAucValueCrawler.detailMulti).fill(false),
+  starAucCrawler: new Array(starAucCrawler.detailMulti).fill(false), // 추가
 };
 
 function findAvailableIndex(crawlerIndex, isValue) {
   let trackerKey;
   if (isValue)
     trackerKey =
-      crawlerIndex == 1 ? "ecoAucValueCrawler" : "brandAucValueCrawler";
-  else trackerKey = crawlerIndex == 1 ? "ecoAucCrawler" : "brandAucCrawler";
+      crawlerIndex == 1
+        ? "ecoAucValueCrawler"
+        : crawlerIndex == 2
+        ? "brandAucValueCrawler"
+        : null;
+  else
+    trackerKey =
+      crawlerIndex == 1
+        ? "ecoAucCrawler"
+        : crawlerIndex == 2
+        ? "brandAucCrawler"
+        : crawlerIndex == 3
+        ? "starAucCrawler"
+        : null;
+
   const tracker = crawlerIndexTracker[trackerKey];
   if (!tracker) {
     console.error(`No tracker found for crawler type: ${trackerKey}`);
@@ -124,15 +141,28 @@ function findAvailableIndex(crawlerIndex, isValue) {
       return i;
     }
   }
-  return -1; // All indices are in use
+  return -1;
 }
 
 function releaseIndex(crawlerIndex, isValue, index) {
   let trackerKey;
   if (isValue)
     trackerKey =
-      crawlerIndex == 1 ? "ecoAucValueCrawler" : "brandAucValueCrawler";
-  else trackerKey = crawlerIndex == 1 ? "ecoAucCrawler" : "brandAucCrawler";
+      crawlerIndex == 1
+        ? "ecoAucValueCrawler"
+        : crawlerIndex == 2
+        ? "brandAucValueCrawler"
+        : null;
+  else
+    trackerKey =
+      crawlerIndex == 1
+        ? "ecoAucCrawler"
+        : crawlerIndex == 2
+        ? "brandAucCrawler"
+        : crawlerIndex == 3
+        ? "starAucCrawler"
+        : null;
+
   if (crawlerIndexTracker[trackerKey]) {
     crawlerIndexTracker[trackerKey][index] = false;
   } else {
@@ -175,6 +205,7 @@ async function closeAllCrawler() {
     brandAucCrawler,
     ecoAucValueCrawler,
     brandAucValueCrawler,
+    starAucCrawler, // 추가
   ]) {
     await c.closeCrawlerBrowser();
     await c.closeDetailBrowsers();
@@ -186,6 +217,7 @@ async function loginAllDetails() {
     brandAucCrawler,
     ecoAucValueCrawler,
     brandAucValueCrawler,
+    starAucCrawler, // 추가
   ]) {
     await c.loginCheckDetails();
   }
@@ -210,6 +242,11 @@ async function crawlAll() {
           .filter((item) => item.auc_num == 2)
           .map((item) => item.item_id)
       );
+      const existingStarAucIds = new Set(
+        existingItems
+          .filter((item) => item.auc_num == 3)
+          .map((item) => item.item_id)
+      );
 
       isCrawling = true;
       await closeAllCrawler();
@@ -218,10 +255,14 @@ async function crawlAll() {
       let brandAucItems = await brandAucCrawler.crawlAllItems(
         existingBrandAuctionIds
       );
+      await closeAllCrawler();
+      let starAucItems = await starAucCrawler.crawlAllItems(existingStarAucIds);
 
       if (!ecoAucItems) ecoAucItems = [];
       if (!brandAucItems) brandAucItems = [];
-      const allItems = [...ecoAucItems, ...brandAucItems];
+      if (!starAucItems) starAucItems = [];
+
+      const allItems = [...ecoAucItems, ...brandAucItems, ...starAucItems];
       await DBManager.saveItems(allItems, "crawled_items");
       await DBManager.deleteItemsWithout(
         allItems.map((item) => item.item_id),

@@ -152,7 +152,7 @@ class Crawler {
     );
 
     const launchOptions = {
-      headless: "true",
+      headless: true,
       userDataDir: userDataDir,
       args: [
         "--no-sandbox",
@@ -189,6 +189,9 @@ class Crawler {
 
     if (process.env.ENV !== "development") {
       launchOptions.executablePath = "/usr/bin/chromium-browser";
+    } else {
+      launchOptions.executablePath =
+        "C:\\Users\\joyyo\\.cache\\puppeteer\\chrome\\win64-131.0.6778.85\\chrome-win64\\chrome.exe";
     }
 
     const browser = await puppeteer.launch(launchOptions);
@@ -251,7 +254,7 @@ class Crawler {
         await page.click(this.config.signinSelectors.loginButton),
         await page.waitForNavigation({
           waitUntil: "domcontentloaded",
-          timeout: this.pageTimeout,
+          timeout: 3000,
         }),
       ]);
       await this.sleep(3000);

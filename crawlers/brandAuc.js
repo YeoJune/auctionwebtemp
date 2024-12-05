@@ -2,6 +2,11 @@
 const Crawler = require("./baseCrawler");
 const { processImagesInChunks } = require("../utils/processImage");
 
+let pLimit;
+(async () => {
+  pLimit = (await import("p-limit")).default;
+})();
+
 const brandAucConfig = {
   name: "BrandAuc",
   baseUrl: "https://member.brand-auc.com",
