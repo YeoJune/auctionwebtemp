@@ -245,7 +245,10 @@ class Crawler {
       // 최종 URL이 로그인 페이지와 다르다면 이미 로그인된 상태
       const finalUrl = page.url();
       if (finalUrl !== this.config.loginPageUrl) {
-        console.log("Already logged in, skipping login process");
+        console.log(
+          "Already logged in, skipping login process",
+          this.config.name
+        );
         return;
       }
 
@@ -282,15 +285,15 @@ class Crawler {
       const result = await this.initializeCrawler("crawler");
       this.crawlerBrowser = result.browser;
       this.crawlerPage = result.page;
-      console.log("complete to crawler init!");
+      console.log("complete to crawler init!", this.config.name);
     }
     await this.login(this.crawlerPage);
-    console.log("complete to crawler login!");
+    console.log("complete to crawler login!", this.config.name);
   }
   async loginCheckDetails() {
     if (!this.detailBrowsers.length || !this.detailPages.length) {
       await this.initializeDetails();
-      console.log("complete to details init!");
+      console.log("complete to details init!", this.config.name);
     }
     const loginTasks = [];
 
@@ -302,7 +305,7 @@ class Crawler {
     if (loginTasks.length > 0) {
       await Promise.all(loginTasks);
       this.isDetailLogins = true;
-      console.log("complete to login details!");
+      console.log("complete to login details!", this.config.name);
     }
   }
 }
