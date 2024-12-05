@@ -152,7 +152,7 @@ class Crawler {
     );
 
     const launchOptions = {
-      headless: false,
+      headless: true,
       userDataDir: userDataDir,
       args: [
         "--no-sandbox",
