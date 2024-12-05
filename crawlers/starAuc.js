@@ -317,7 +317,6 @@ class StarAucCrawler extends Crawler {
       }, this.config);
 
       if (!item.description) item.description = "-";
-      console.log(item);
       return item;
     });
   }

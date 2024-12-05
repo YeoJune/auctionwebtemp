@@ -67,11 +67,9 @@ async function processItem(itemId, isValue, res) {
             detailIndex,
             itemId
           );
-          console.log(crawledDetails);
           const processedDetials = (
             await processImagesInChunks([crawledDetails])
           )[0];
-          console.log(processedDetials);
 
           if (processedDetials) {
             await DBManager.updateItemDetails(
