@@ -2,6 +2,11 @@
 const Crawler = require("./baseCrawler");
 const { processImagesInChunks } = require("../utils/processImage");
 
+let pLimit;
+(async () => {
+  pLimit = (await import("p-limit")).default;
+})();
+
 const ecoAucConfig = {
   name: "EcoAuc",
   baseUrl: "https://www.ecoauc.com",
