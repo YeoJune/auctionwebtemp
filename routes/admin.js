@@ -70,20 +70,6 @@ const uploadIntro = multer({
   },
 });
 
-// intro.html 업로드 라우트
-router.post(
-  "/upload-intro",
-  isAdmin,
-  uploadIntro.single("intro"),
-  (req, res) => {
-    if (req.file) {
-      res.json({ message: "intro.html이 성공적으로 업로드되었습니다." });
-    } else {
-      res.status(400).json({ message: "intro.html 업로드에 실패했습니다." });
-    }
-  }
-);
-
 // Middleware to check if user is admin (unchanged)
 const isAdmin = (req, res, next) => {
   if (req.session.user && req.session.user.id === "admin") {
@@ -101,6 +87,20 @@ router.get("/check-status", async (req, res) => {
   const isAdmin = req.session.user && req.session.user.id === "admin";
   res.json({ isAdmin });
 });
+
+// intro.html 업로드 라우트
+router.post(
+  "/upload-intro",
+  isAdmin,
+  uploadIntro.single("intro"),
+  (req, res) => {
+    if (req.file) {
+      res.json({ message: "intro.html이 성공적으로 업로드되었습니다." });
+    } else {
+      res.status(400).json({ message: "intro.html 업로드에 실패했습니다." });
+    }
+  }
+);
 
 // Route to upload logo (unchanged)
 router.post("/upload-logo", isAdmin, uploadLogo.single("logo"), (req, res) => {
