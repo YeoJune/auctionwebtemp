@@ -17,43 +17,87 @@ window.state = {
   isAuthenticated: false,
 };
 
-// 가격 계산 함수들
-function calculateLocalFee(price, auctionNumber) {
+// 현지 수수료 계산
+function calculateLocalFee(price, auctionNumber, category) {
   if (!price) return 0;
+
   if (auctionNumber == 1) {
+    // ecoauc
+    if (price === 0) return 0;
     if (price < 10000) return 1100;
     if (price < 50000) return 1650;
     return 2750;
   } else if (auctionNumber == 2) {
-    return price < 100000 ? price * 0.1 + 1990 : price * 0.07 + 1990;
+    // starbuyers
+    // 기본 수수료 5%
+    const baseFee = price * 0.05;
+    // 기본 수수료의 10% 추가
+    const additionalFee = baseFee * 0.1;
+    // 기본 수수료 + 추가 수수료의 0.5% 추가
+    const extraFee = (baseFee + additionalFee) * 0.005;
+
+    // 카테고리별 고정 수수료
+    let categoryFee = 0;
+    if (category === "가방") categoryFee = 1900;
+    else if (category === "시계") categoryFee = 2700;
+    else if (category === "쥬얼리" || category === "보석") categoryFee = 500;
+    else if (category === "악세서리" || category === "의류") categoryFee = 1000;
+
+    // 부가세 계산 (이전 금액 + 카테고리 수수료의 10%)
+    const vat = (extraFee + categoryFee) * 0.1;
+
+    return baseFee + additionalFee + extraFee + categoryFee + vat;
   } else if (auctionNumber == 3) {
-    // ch here!
-    return 0;
+    // 새로운 옥션사
+    return price < 100000 ? price * 0.1 + 1990 : price * 0.07 + 1990;
   }
+
   return 0;
 }
 
+// 관세 계산
 function calculateCustomsDuty(amountKRW, category) {
-  if (["가방", "악세서리", "소품・액세서리", "소품"].includes(category)) {
+  // 가방, 악세서리, 소품, 귀금속 카테고리 (18%)
+  if (
+    ["가방", "악세서리", "소품・액세서리", "소품", "귀금속"].includes(category)
+  ) {
     return amountKRW * 0.18;
   }
+
+  // 의류, 신발 카테고리 (23%)
   if (["의류", "신발"].includes(category)) {
     return amountKRW * 0.23;
   }
-  if (category == "시계") {
+
+  // 시계 카테고리 (특별 계산)
+  if (category === "시계") {
     const basicDuty = amountKRW * 0.08;
-    const extraDuty = amountKRW > 2000000 ? (amountKRW - 2000000) * 0.2 : 0;
-    const additionalTax1 = extraDuty * 0.3;
-    const additionalTax2 = extraDuty * 0.1;
-    const vat = (amountKRW + basicDuty + extraDuty) * 0.1;
-    return basicDuty + extraDuty + additionalTax1 + additionalTax2 + vat;
+
+    let extraDuty = 0;
+    let additionalTax1 = 0;
+
+    if (amountKRW > 2000000) {
+      // 200만원 초과 금액에 대한 20% 추가 관세
+      const excessAmount = amountKRW + basicDuty - 2000000;
+      extraDuty = excessAmount * 0.2;
+      // 추가 관세의 30% 교육세
+      additionalTax1 = extraDuty * 0.3;
+    }
+
+    // 전체 과세 가격에 대한 10% 부가세
+    const totalBeforeVAT = amountKRW + basicDuty + extraDuty + additionalTax1;
+    const vat = totalBeforeVAT * 0.1;
+
+    return basicDuty + extraDuty + additionalTax1 + vat;
   }
-  return 0;
+
+  return amountKRW * 0; // 기타 카테고리는 관세 없음
 }
 
+// 총 가격 계산 함수도 category 매개변수 추가 필요
 function calculateTotalPrice(price, auctionNumber, category) {
   price = parseFloat(price) || 0;
-  const localFee = calculateLocalFee(price, auctionNumber);
+  const localFee = calculateLocalFee(price, auctionNumber, category);
   const totalAmountKRW = (price + localFee) * API.exchangeRate;
   const customsDuty = calculateCustomsDuty(totalAmountKRW, category);
   const serviceFee = (totalAmountKRW + customsDuty) * 0.05;
