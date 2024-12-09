@@ -491,7 +491,7 @@
     padding: var(--spacing-xs);
   }
 
-  .nav-button {
+  .header-content button {
     flex: 1;
     padding: var(--spacing-xs) var(--spacing-sm);
     font-size: var(--font-size-sm);
@@ -504,17 +504,5 @@
     display: flex;
     align-items: center;
     justify-content: center;
-  }
-
-  .notice-toggle {
-    padding: var(--spacing-xs) var(--spacing-sm);
-    font-size: var(--font-size-sm);
-    background-color: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: var(--border-radius-sm);
-    min-height: 40px;
-    width: 100%;
-    margin-top: var(--spacing-xs);
   }
 }
