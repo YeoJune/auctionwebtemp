@@ -1,122 +1,133 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>시세표 페이지</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="/styles/common.css">
-    <link rel="stylesheet" href="/styles/main.css">
-</head>
-<body>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <link rel="stylesheet" href="/styles/common.css" />
+    <link rel="stylesheet" href="/styles/main.css" />
+  </head>
+  <body>
     <div class="container">
-        <header class="main-header">
-            <div class="header-content">
-                <nav class="nav-container">
-                    <button class="nav-button" onclick="location.href = '/'">상품 페이지</button>
-                </nav>
-            </div>
-        </header>
-
-        <main class="main-content">
-            <button id="mobileFilterBtn" class="mobile-filter-toggle">
-                <i class="fas fa-filter"></i>
+      <header class="main-header">
+        <div class="header-content">
+          <nav class="nav-container">
+            <button class="nav-button" onclick="location.href = '/productPage'">
+              상품 페이지
             </button>
-            <section class="filters-container">
-                <div class="filter-group">
-                    <h2>브랜드</h2>
-                    <div class="filter-search">
-                        <input type="text" id="brandSearch" placeholder="브랜드 검색...">
-                    </div>
-                    <div id="brandFilters" class="filter-options"></div>
-                </div>
+          </nav>
+        </div>
+      </header>
 
-                <div class="filter-group">
-                    <h2>품목</h2>
-                    <div id="categoryFilters" class="filter-options"></div>
-                </div>
-
-                <div class="filter-group">
-                    <h2>경매 날짜</h2>
-                    <div id="scheduledDateFilters" class="filter-options"></div>
-                </div>
-
-                <div class="filter-group">
-                    <h2>랭크</h2>
-                    <div id="rankFilters" class="filter-options"></div>
-                </div>
-                <button id="applyFiltersBtn" class="apply-filters">필터 적용</button>
-            </section>
-            <div class="filter-group">
-                <h2>검색</h2>
-                <div class="search-container">
-                    <input type="text" id="searchInput" placeholder="상품명 검색...">
-                    <button id="searchButton">
-                        <i class="fas fa-search"></i>
-                    </button>
-                </div>
+      <main class="main-content">
+        <button id="mobileFilterBtn" class="mobile-filter-toggle">
+          <i class="fas fa-filter"></i>
+        </button>
+        <section class="filters-container">
+          <div class="filter-group">
+            <h2>브랜드</h2>
+            <div class="filter-search">
+              <input
+                type="text"
+                id="brandSearch"
+                placeholder="브랜드 검색..." />
             </div>
-            <section class="products-section">
-                <div class="loading-msg" id="loadingMsg">로딩 중...</div>
-                <div class="product-grid" id="dataBody"></div>
-                <div class="pagination" id="pagination"></div>
-            </section>
-        </main>
+            <div id="brandFilters" class="filter-options"></div>
+          </div>
+
+          <div class="filter-group">
+            <h2>품목</h2>
+            <div id="categoryFilters" class="filter-options"></div>
+          </div>
+
+          <div class="filter-group">
+            <h2>경매 날짜</h2>
+            <div id="scheduledDateFilters" class="filter-options"></div>
+          </div>
+
+          <div class="filter-group">
+            <h2>랭크</h2>
+            <div id="rankFilters" class="filter-options"></div>
+          </div>
+          <button id="applyFiltersBtn" class="apply-filters">필터 적용</button>
+        </section>
+        <div class="filter-group">
+          <h2>검색</h2>
+          <div class="search-container">
+            <input type="text" id="searchInput" placeholder="상품명 검색..." />
+            <button id="searchButton">
+              <i class="fas fa-search"></i>
+            </button>
+          </div>
+        </div>
+        <section class="products-section">
+          <div class="loading-msg" id="loadingMsg">로딩 중...</div>
+          <div class="product-grid" id="dataBody"></div>
+          <div class="pagination" id="pagination"></div>
+        </section>
+      </main>
     </div>
 
     <!-- 상품 상세 모달 -->
     <div id="detailModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div class="product-info">
-                    <p class="modal-brand"></p>
-                    <h2 class="modal-title"></h2>
-                </div>
-                <button class="close" aria-label="Close modal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="modal-left">
-                    <div class="main-image-container">
-                        <button class="image-nav prev" aria-label="Previous image">&lt;</button>
-                        <img src="" alt="Main product image" class="main-image">
-                        <button class="image-nav next" aria-label="Next image">&gt;</button>
-                    </div>
-                    <div class="thumbnail-container"></div>
-                </div>
-                <div class="modal-right">
-                    <div class="product-details">
-                        <div class="detail-item description">
-                            <span class="detail-label">상세 설명:</span>
-                            <p class="modal-description"></p>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">경매일:</span>
-                            <span class="modal-scheduled-date"></span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">브랜드:</span>
-                            <span class="modal-brand2"></span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">카테고리:</span>
-                            <span class="modal-category"></span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">액세서리 코드:</span>
-                            <span class="modal-accessory-code"></span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">최종 가격:</span>
-                            <span class="modal-final-price"></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="product-info">
+            <p class="modal-brand"></p>
+            <h2 class="modal-title"></h2>
+          </div>
+          <button class="close" aria-label="Close modal">&times;</button>
         </div>
+        <div class="modal-body">
+          <div class="modal-left">
+            <div class="main-image-container">
+              <button class="image-nav prev" aria-label="Previous image">
+                &lt;
+              </button>
+              <img src="" alt="Main product image" class="main-image" />
+              <button class="image-nav next" aria-label="Next image">
+                &gt;
+              </button>
+            </div>
+            <div class="thumbnail-container"></div>
+          </div>
+          <div class="modal-right">
+            <div class="product-details">
+              <div class="detail-item description">
+                <span class="detail-label">상세 설명:</span>
+                <p class="modal-description"></p>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">경매일:</span>
+                <span class="modal-scheduled-date"></span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">브랜드:</span>
+                <span class="modal-brand2"></span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">카테고리:</span>
+                <span class="modal-category"></span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">액세서리 코드:</span>
+                <span class="modal-accessory-code"></span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">최종 가격:</span>
+                <span class="modal-final-price"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script src="/js/common.js"></script>
     <script src="/js/api.js"></script>
     <script src="/js/values.js"></script>
-</body>
+  </body>
 </html>
