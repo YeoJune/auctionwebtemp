@@ -147,6 +147,9 @@ app.use("/api/values", valuesRoutes);
 app.use(express.static("public"));
 
 app.get("/", (req, res) => {
+  res.sendFile(__dirname + "/public/pages/intro.html");
+});
+app.get("/productPage", (req, res) => {
   if (req.session.user) res.sendFile(__dirname + "/pages/index.html");
   else res.redirect("/signinPage");
 });
@@ -154,7 +157,8 @@ app.get("/signinPage", (req, res) => {
   res.sendFile(__dirname + "/public/pages/signin.html");
 });
 app.get("/valuesPage", (req, res) => {
-  res.sendFile(__dirname + "/pages/values.html");
+  if (req.session.user) res.sendFile(__dirname + "/pages/values.html");
+  else res.redirect("/signinPage");
 });
 
 // 에러 핸들링 미들웨어
