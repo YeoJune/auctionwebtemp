@@ -374,11 +374,12 @@ router.post("/crawl-item-value-details/:itemId", (req, res) => {
 const scheduleCrawling = async () => {
   const settings = await getAdminSettings();
   if (settings && settings.crawlSchedule) {
-    const [hours, minutes] = settings.crawlSchedule.split(":");
+    let [hours, minutes] = settings.crawlSchedule.split(":");
+    hours = (hours + 24 - 9) % 9;
     cron.schedule(
       `${minutes} ${hours} * * *`,
       async () => {
-        console.log("Running scheduled crawling task");
+        console.log(`Running scheduled crawling task in ${hours}:${minutes}`);
         try {
           await crawlAll();
           await crawlAllValues();
