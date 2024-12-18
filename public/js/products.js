@@ -18,80 +18,49 @@ window.state = {
 };
 
 // 현지 수수료 계산
-function calculateLocalFee(price, auctionNumber, category) {
+function calculateLocalFee(price, auctionId) {
   if (!price) return 0;
 
-  if (auctionNumber == 1) {
-    // ecoauc
+  if (isNaN(auctionId.charAt(0))) {
     if (price === 0) return 0;
     if (price < 10000) return 1100;
     if (price < 50000) return 1650;
     return 2750;
-  } else if (auctionNumber == 2) {
-    // starbuyers
-    // 기본 수수료 5%
-    const baseFee = price * 0.05;
-    // 기본 수수료의 10% 추가
-    const additionalFee = baseFee * 0.1;
-    // 기본 수수료 + 추가 수수료의 0.5% 추가
-    const extraFee = (baseFee + additionalFee) * 0.005;
-
-    // 카테고리별 고정 수수료
-    let categoryFee = 0;
-    if (category === "가방") categoryFee = 1900;
-    else if (category === "시계") categoryFee = 2700;
-    else if (category === "쥬얼리" || category === "보석") categoryFee = 500;
-    else if (category === "악세서리" || category === "의류") categoryFee = 1000;
-
-    // 부가세 계산 (이전 금액 + 카테고리 수수료의 10%)
-    const vat = (extraFee + categoryFee) * 0.1;
-
-    return baseFee + additionalFee + extraFee + categoryFee + vat;
-  } else if (auctionNumber == 3) {
-    // 새로운 옥션사
+  } else if (!isNaN(auctionId.charAt(0))) {
     return price < 100000 ? price * 0.1 + 1990 : price * 0.07 + 1990;
   }
-
   return 0;
 }
 
 // 관세 계산
 function calculateCustomsDuty(amountKRW, category) {
-  // 가방, 악세서리, 소품, 귀금속 카테고리 (18%)
+  if (!amountKRW || !category) return 0;
+
   if (
     ["가방", "악세서리", "소품・액세서리", "소품", "귀금속"].includes(category)
   ) {
     return amountKRW * 0.18;
   }
 
-  // 의류, 신발 카테고리 (23%)
   if (["의류", "신발"].includes(category)) {
     return amountKRW * 0.23;
   }
 
-  // 시계 카테고리 (특별 계산)
   if (category === "시계") {
-    const basicDuty = amountKRW * 0.08;
-
-    let extraDuty = 0;
-    let additionalTax1 = 0;
-
-    if (amountKRW > 2000000) {
-      // 200만원 초과 금액에 대한 20% 추가 관세
-      const excessAmount = amountKRW + basicDuty - 2000000;
-      extraDuty = excessAmount * 0.2;
-      // 추가 관세의 30% 교육세
-      additionalTax1 = extraDuty * 0.3;
+    if (amountKRW < 2000000) {
+      // (관세 8%) + (전체금액의 10%)
+      return amountKRW * 0.08 + (amountKRW + amountKRW * 0.08) * 0.1;
+    } else {
+      // (관세 8%) + (관세의 10%) + (전체금액의 10%)
+      return (
+        amountKRW * 0.08 +
+        amountKRW * 0.08 * 0.1 +
+        (amountKRW + amountKRW * 0.08 + amountKRW * 0.08 * 0.1) * 0.1
+      );
     }
-
-    // 전체 과세 가격에 대한 10% 부가세
-    const totalBeforeVAT = amountKRW + basicDuty + extraDuty + additionalTax1;
-    const vat = totalBeforeVAT * 0.1;
-
-    return basicDuty + extraDuty + additionalTax1 + vat;
   }
 
-  return amountKRW * 0; // 기타 카테고리는 관세 없음
+  return amountKRW; // 엑셀에서는 카테고리가 없을 때 amountKRW를 그대로 반환
 }
 
 // 총 가격 계산 함수도 category 매개변수 추가 필요
