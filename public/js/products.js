@@ -1,3 +1,5 @@
+// products.js
+
 // 상태 관리
 window.state = {
   selectedBrands: [],
@@ -291,8 +293,12 @@ async function fetchData() {
       ),
       search: state.searchTerm,
       ranks: state.selectedRanks,
-      wishlistOnly: document.getElementById("wishlistFilter")?.checked,
-      bidOnly: document.getElementById("bidFilter")?.checked,
+      wishlistOnly: document
+        .getElementById("wishlistFilter")
+        ?.classList.contains("active"),
+      bidOnly: document
+        .getElementById("bidFilter")
+        ?.classList.contains("active"),
     };
 
     const queryString = API.createURLParams(params);
@@ -753,6 +759,12 @@ async function initialize() {
       .getElementById("showNoticesBtn")
       ?.addEventListener("click", showNoticeSection);
 
+    document.querySelectorAll(".filter-toggle-btn").forEach((btn) => {
+      btn.addEventListener("click", function () {
+        this.classList.toggle("active");
+        fetchData(); // 필터 적용
+      });
+    });
     // 초기 데이터 로드
     await fetchData();
   } catch (error) {

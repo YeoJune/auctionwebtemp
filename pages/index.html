@@ -6,8 +6,7 @@
     <title>상품 페이지</title>
     <link
       rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
-    />
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
     <link rel="stylesheet" href="/styles/common.css" />
     <link rel="stylesheet" href="/styles/main.css" />
   </head>
@@ -18,6 +17,16 @@
           <div class="logo-container">
             <img src="images/logo.png" alt="Logo" />
           </div>
+          <div class="filter-buttons">
+            <button id="wishlistFilter" class="filter-toggle-btn">
+              <i class="fas fa-star"></i>
+              즐겨찾기
+            </button>
+            <button id="bidFilter" class="filter-toggle-btn">
+              <i class="fas fa-gavel"></i>
+              입찰항목
+            </button>
+          </div>
           <div class="auth-container">
             <button id="signinBtn" class="auth-button">로그인</button>
             <button id="signoutBtn" class="auth-button" style="display: none">
@@ -27,12 +36,13 @@
           <nav class="nav-container">
             <button
               class="nav-button"
-              onclick="window.location.href = '/valuesPage'"
-            >
-              시세표 페이지
+              onclick="window.location.href = '/valuesPage'">
+              <i class="fas fa-chart-line fa-lg"></i>
+              최근낙찰시세
             </button>
           </nav>
           <button id="showNoticesBtn" class="notice-toggle">
+            <i class="fas fa-bullhorn fa-lg"></i>
             공지사항 보기
           </button>
         </div>
@@ -54,8 +64,7 @@
               <input
                 type="text"
                 id="brandSearch"
-                placeholder="브랜드 검색..."
-              />
+                placeholder="브랜드 검색..." />
             </div>
             <div id="brandFilters" class="filter-options"></div>
           </div>
@@ -73,18 +82,6 @@
           <div class="filter-group">
             <h2>랭크</h2>
             <div id="rankFilters" class="filter-options"></div>
-          </div>
-
-          <div class="filter-group wishlist-filters">
-            <h2>즐겨찾기</h2>
-            <label class="checkbox-container">
-              <input type="checkbox" id="wishlistFilter" />
-              즐겨찾기 항목만 보기
-            </label>
-            <label class="checkbox-container">
-              <input type="checkbox" id="bidFilter" />
-              입찰 항목만 보기
-            </label>
           </div>
           <button id="applyFiltersBtn" class="apply-filters">필터 적용</button>
         </section>
@@ -170,8 +167,7 @@
             id="noticeImage"
             src=""
             alt="Notice image"
-            class="notice-image"
-          />
+            class="notice-image" />
         </div>
       </div>
     </div>

@@ -11,6 +11,11 @@
     <div class="container">
       <h2>Sign In</h2>
       <div id="error-message" class="error-message"></div>
+      <div class="preview-login">
+        <button id="previewLoginBtn" class="preview-button">
+          <i class="fas fa-eye"></i> 미리보기
+        </button>
+      </div>
       <form id="signin-form">
         <div class="form-group">
           <label for="id">id</label>
@@ -24,7 +29,13 @@
       </form>
 
       <p class="text-center">
-        계정 관련 문의: <a href="tel:010-2894-8502">010-2894-8502</a>
+        계정 관련 문의:
+        <a
+          href="http://pf.kakao.com/_xcCxoqn/chat"
+          target="_blank"
+          class="kakao-link">
+          <i class="fas fa-comments"></i> 카카오톡 상담
+        </a>
       </p>
     </div>
 
@@ -58,6 +69,13 @@
             document.getElementById("error-message").textContent =
               "An error occurred. Please try again.";
           }
+        });
+      document
+        .getElementById("previewLoginBtn")
+        .addEventListener("click", () => {
+          document.getElementById("id").value = "1234";
+          document.getElementById("password").value = "1234";
+          document.getElementById("signin-form").submit();
         });
     </script>
   </body>
