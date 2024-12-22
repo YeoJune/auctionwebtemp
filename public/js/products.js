@@ -341,8 +341,7 @@ async function handleSignout() {
   try {
     await API.fetchAPI("/auth/logout", { method: "POST" });
     state.isAuthenticated = false;
-    updateAuthUI();
-    fetchData();
+    location.reload();
   } catch (error) {
     alert("로그아웃 중 오류가 발생했습니다.");
   }
