@@ -238,16 +238,16 @@ async function checkAuthStatus() {
 function updateAuthUI() {
   const signinBtn = document.getElementById("signinBtn");
   const signoutBtn = document.getElementById("signoutBtn");
-  const wishlistFilterContainer = document.querySelector(".wishlist-filters");
+  const filterButtons = document.querySelector(".filter-buttons");
 
   if (state.isAuthenticated) {
     signinBtn.style.display = "none";
     signoutBtn.style.display = "inline-block";
-    wishlistFilterContainer.style.display = "block";
+    filterButtons?.style.display = "flex";  // null 체크를 위해 옵셔널 체이닝 사용
   } else {
     signinBtn.style.display = "inline-block";
     signoutBtn.style.display = "none";
-    wishlistFilterContainer.style.display = "none";
+    filterButtons?.style.display = "none";  // null 체크를 위해 옵셔널 체이닝 사용
   }
 }
 

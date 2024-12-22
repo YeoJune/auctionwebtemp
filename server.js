@@ -154,7 +154,8 @@ app.get("/productPage", (req, res) => {
   else res.redirect("/signinPage");
 });
 app.get("/signinPage", (req, res) => {
-  res.sendFile(__dirname + "/public/pages/signin.html");
+  if (req.session.user) res.redirect("/productPage");
+  else res.sendFile(__dirname + "/public/pages/signin.html");
 });
 app.get("/valuesPage", (req, res) => {
   if (req.session.user) res.sendFile(__dirname + "/pages/values.html");
