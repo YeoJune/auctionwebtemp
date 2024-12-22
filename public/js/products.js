@@ -240,14 +240,20 @@ function updateAuthUI() {
   const signoutBtn = document.getElementById("signoutBtn");
   const filterButtons = document.querySelector(".filter-buttons");
 
+  if (!signinBtn || !signoutBtn) return;
+
   if (state.isAuthenticated) {
     signinBtn.style.display = "none";
     signoutBtn.style.display = "inline-block";
-    filterButtons?.style.display = "flex";  // null 체크를 위해 옵셔널 체이닝 사용
+    if (filterButtons) {
+      filterButtons.style.display = "flex";
+    }
   } else {
     signinBtn.style.display = "inline-block";
     signoutBtn.style.display = "none";
-    filterButtons?.style.display = "none";  // null 체크를 위해 옵셔널 체이닝 사용
+    if (filterButtons) {
+      filterButtons.style.display = "none";
+    }
   }
 }
 
