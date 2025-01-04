@@ -32,21 +32,38 @@ router.post("/place-reservation", async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    // 기존 입찰 확인
+    const [existingBids] = await connection.query(
+      "SELECT * FROM bids WHERE item_id = ? AND user_id = ?",
+      [itemId, req.session.user.id]
+    );
+
     let bid = null;
     if (isFinalBid) {
-      const [bids] = await connection.query(
-        "SELECT * FROM bids WHERE item_id = ? AND user_id = ?",
-        [itemId, req.session.user.id]
-      );
-      bid = bids[0];
-
+      bid = existingBids[0];
       if (!bid) {
         await connection.rollback();
         return res.status(404).json({ message: "Bid not found" });
       }
+      // 최종 입찰 중복 체크
+      if (bid.final_price !== null) {
+        await connection.rollback();
+        return res.status(400).json({ message: "Final bid already exists" });
+      }
+      // DB 업데이트 추가
+      await connection.query("UPDATE bids SET final_price = ? WHERE id = ?", [
+        bidAmount,
+        bid.id,
+      ]);
       await MyGoogleSheetsManager.updateFinalBidAmount(bid.id, bidAmount);
       bid.final_price = bidAmount;
     } else {
+      // 초기 입찰 중복 체크
+      if (existingBids.length > 0) {
+        await connection.rollback();
+        return res.status(400).json({ message: "Initial bid already exists" });
+      }
+      // 기존 초기 입찰 로직...
       const [items] = await connection.query(
         "SELECT * FROM crawled_items WHERE item_id = ?",
         [itemId]
