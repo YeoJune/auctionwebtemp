@@ -22,11 +22,21 @@
       <form id="signin-form">
         <div class="form-group">
           <label for="id">id</label>
-          <input type="text" id="id" name="id" required />
+          <input
+            type="text"
+            id="id"
+            name="id"
+            autocomplete="username"
+            required />
         </div>
         <div class="form-group">
           <label for="password">Password</label>
-          <input type="password" id="password" name="password" required />
+          <input
+            type="password"
+            id="password"
+            name="password"
+            autocomplete="current-password"
+            required />
         </div>
         <button type="submit" class="btn btn-primary">Sign In</button>
       </form>
@@ -34,7 +44,7 @@
       <p class="text-center">
         계정 관련 문의:
         <a
-          href="http://pf.kakao.com/_xcCxoqn/chat"
+          href="https://pf.kakao.com/_xcCxoqn/chat"
           target="_blank"
           class="kakao-link">
           <i class="fas fa-comments"></i> 카카오톡 상담
