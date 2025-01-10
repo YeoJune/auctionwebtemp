@@ -6,6 +6,7 @@ window.state = {
   selectedCategories: [],
   selectedDates: [],
   selectedRanks: [],
+  selectedAucNums: [],
   currentPage: 1,
   itemsPerPage: 20,
   totalItems: 0,
@@ -305,6 +306,7 @@ async function fetchData() {
       bidOnly: document
         .getElementById("bidFilter")
         ?.classList.contains("active"),
+      aucNums: state.selectedAucNums.join(","),
     };
 
     const queryString = API.createURLParams(params);
@@ -720,20 +722,26 @@ async function initialize() {
 
   try {
     // 필터 데이터 가져오기
-    const [brandsResponse, categoriesResponse, datesResponse, ranksResponse] =
-      await Promise.all([
-        API.fetchAPI("/data/brands-with-count"),
-        API.fetchAPI("/data/categories"),
-        API.fetchAPI("/data/scheduled-dates-with-count"),
-        API.fetchAPI("/data/ranks"),
-      ]);
-
+    const [
+      brandsResponse,
+      categoriesResponse,
+      datesResponse,
+      ranksResponse,
+      aucNumsResponse,
+    ] = await Promise.all([
+      API.fetchAPI("/data/brands-with-count"),
+      API.fetchAPI("/data/categories"),
+      API.fetchAPI("/data/scheduled-dates-with-count"),
+      API.fetchAPI("/data/ranks"),
+      API.fetchAPI("/data/auc-nums"), // 추가
+    ]);
     // 각각의 필터 데이터 전달
     displayFilters(
       brandsResponse,
       categoriesResponse,
       datesResponse,
-      ranksResponse
+      ranksResponse,
+      aucNumsResponse
     );
 
     // 이벤트 리스너 설정

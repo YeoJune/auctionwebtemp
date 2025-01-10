@@ -1,73 +1,86 @@
 // routes/values
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const pool = require('../utils/DB');
+const pool = require("../utils/DB");
 
-router.get('/', async (req, res) => {
-  const { page = 1, limit = 20, brands, categories, scheduledDates, aucNums, search, ranks } = req.query;
+router.get("/", async (req, res) => {
+  const {
+    page = 1,
+    limit = 20,
+    brands,
+    categories,
+    scheduledDates,
+    aucNums,
+    search,
+    ranks,
+  } = req.query;
   const offset = (page - 1) * limit;
 
   try {
-    let query = 'SELECT * FROM values_items';
+    let query = "SELECT * FROM values_items";
     const queryParams = [];
     let conditions = [];
 
     // Add search condition
     if (search && search.trim()) {
       const searchTerms = search.trim().split(/\s+/);
-      const searchConditions = searchTerms.map(() => 'japanese_title LIKE ?');
-      conditions.push(`(${searchConditions.join(' AND ')})`);
-      searchTerms.forEach(term => {
+      const searchConditions = searchTerms.map(() => "japanese_title LIKE ?");
+      conditions.push(`(${searchConditions.join(" AND ")})`);
+      searchTerms.forEach((term) => {
         queryParams.push(`%${term}%`);
       });
     }
 
     if (ranks) {
-      const rankList = ranks.split(',');
+      const rankList = ranks.split(",");
       if (rankList.length > 0) {
-        const rankConditions = rankList.map(rank => {
-          switch(rank) {
-            case 'AB':
+        const rankConditions = rankList.map((rank) => {
+          switch (rank) {
+            case "AB":
               return "rank LIKE 'AB%'";
-            case 'A':
+            case "A":
               return "rank LIKE 'A%' AND rank NOT LIKE 'AB%'";
-            case 'BC':
+            case "BC":
               return "rank LIKE 'BC%'";
-            case 'B':
+            case "B":
               return "rank LIKE 'B%' AND rank NOT LIKE 'BC%'";
             default:
               return `rank LIKE '${rank}%'`;
           }
         });
-        conditions.push(`(${rankConditions.join(' OR ')})`);
+        conditions.push(`(${rankConditions.join(" OR ")})`);
       }
     }
 
     // Apply filters
     if (brands) {
-      const brandList = brands.split(',');
+      const brandList = brands.split(",");
       if (brandList.length > 0) {
-        conditions.push('brand IN (' + brandList.map(() => '?').join(',') + ')');
+        conditions.push(
+          "brand IN (" + brandList.map(() => "?").join(",") + ")"
+        );
         queryParams.push(...brandList);
       }
     }
 
     if (categories) {
-      const categoryList = categories.split(',');
+      const categoryList = categories.split(",");
       if (categoryList.length > 0) {
-        conditions.push('category IN (' + categoryList.map(() => '?').join(',') + ')');
+        conditions.push(
+          "category IN (" + categoryList.map(() => "?").join(",") + ")"
+        );
         queryParams.push(...categoryList);
       }
     }
 
     if (scheduledDates) {
-      const dateList = scheduledDates.split(',');
+      const dateList = scheduledDates.split(",");
       if (dateList.length > 0) {
         const dateConds = [];
-        dateList.forEach(date => {
+        dateList.forEach((date) => {
           const match = date.match(/(\d{4}-\d{2}-\d{2})/);
           if (match) {
-            dateConds.push('(scheduled_date >= ? AND scheduled_date < ?)');
+            dateConds.push("(scheduled_date >= ? AND scheduled_date < ?)");
             const startDate = new Date(match[0]);
             const endDate = new Date(startDate);
             endDate.setDate(endDate.getDate() + 1);
@@ -75,28 +88,31 @@ router.get('/', async (req, res) => {
           }
         });
         if (dateConds.length > 0) {
-          conditions.push(`(${dateConds.join(' OR ')})`);
+          conditions.push(`(${dateConds.join(" OR ")})`);
         }
       }
     }
 
     if (aucNums) {
-      conditions.push('auc_num = ?');
+      conditions.push("auc_num = ?");
       queryParams.push(aucNums);
     }
 
     // Add WHERE clause if there are any conditions
     if (conditions.length > 0) {
-      query += ' WHERE ' + conditions.join(' AND ');
+      query += " WHERE " + conditions.join(" AND ");
     }
 
     // Add pagination
     const countQuery = `SELECT COUNT(*) as total FROM (${query}) as subquery`;
-    query += ' ORDER BY scheduled_date DESC, item_id DESC LIMIT ? OFFSET ?';
+    query += " ORDER BY scheduled_date DESC, item_id DESC LIMIT ? OFFSET ?";
     queryParams.push(parseInt(limit), offset);
 
     const [items] = await pool.query(query, queryParams);
-    const [countResult] = await pool.query(countQuery, queryParams.slice(0, -2));
+    const [countResult] = await pool.query(
+      countQuery,
+      queryParams.slice(0, -2)
+    );
     const totalItems = countResult[0].total;
     const totalPages = Math.ceil(totalItems / limit);
 
@@ -105,15 +121,15 @@ router.get('/', async (req, res) => {
       page: parseInt(page),
       limit: parseInt(limit),
       totalItems,
-      totalPages
+      totalPages,
     });
   } catch (error) {
-    console.error('Error fetching data from database:', error);
-    res.status(500).json({ message: 'Error fetching data' });
+    console.error("Error fetching data from database:", error);
+    res.status(500).json({ message: "Error fetching data" });
   }
 });
 
-router.get('/brands-with-count', async (req, res) => {
+router.get("/brands-with-count", async (req, res) => {
   try {
     const [results] = await pool.query(`
       SELECT brand, COUNT(*) as count
@@ -121,15 +137,15 @@ router.get('/brands-with-count', async (req, res) => {
       GROUP BY brand
       ORDER BY count DESC, brand ASC
     `);
-    
+
     res.json(results);
   } catch (error) {
-    console.error('Error fetching brands with count:', error);
-    res.status(500).json({ message: 'Error fetching brands with count' });
+    console.error("Error fetching brands with count:", error);
+    res.status(500).json({ message: "Error fetching brands with count" });
   }
 });
 
-router.get('/scheduled-dates-with-count', async (req, res) => {
+router.get("/scheduled-dates-with-count", async (req, res) => {
   try {
     const [results] = await pool.query(`
       SELECT DATE(scheduled_date) as Date, COUNT(*) as count
@@ -137,42 +153,45 @@ router.get('/scheduled-dates-with-count', async (req, res) => {
       GROUP BY DATE(scheduled_date)
       ORDER BY Date ASC
     `);
-    
+
     res.json(results);
   } catch (error) {
-    console.error('Error fetching scheduled dates with count:', error);
-    res.status(500).json({ message: 'Error fetching scheduled dates with count' });
+    console.error("Error fetching scheduled dates with count:", error);
+    res
+      .status(500)
+      .json({ message: "Error fetching scheduled dates with count" });
   }
 });
 
-router.get('/brands', async (req, res) => {
+router.get("/brands", async (req, res) => {
   try {
     const [results] = await pool.query(`
       SELECT DISTINCT brand 
       FROM values_items 
       ORDER BY brand ASC
     `);
-    res.json(results.map(row => row.brand));
+    res.json(results.map((row) => row.brand));
   } catch (error) {
-    console.error('Error fetching brands:', error);
-    res.status(500).json({ message: 'Error fetching brands' });
+    console.error("Error fetching brands:", error);
+    res.status(500).json({ message: "Error fetching brands" });
   }
 });
 
-router.get('/categories', async (req, res) => {
+router.get("/categories", async (req, res) => {
   try {
     const [results] = await pool.query(`
       SELECT DISTINCT category 
       FROM values_items 
       ORDER BY category ASC
     `);
-    res.json(results.map(row => row.category));
+    res.json(results.map((row) => row.category));
   } catch (error) {
-    console.error('Error fetching categories:', error);
-    res.status(500).json({ message: 'Error fetching categories' });
+    console.error("Error fetching categories:", error);
+    res.status(500).json({ message: "Error fetching categories" });
   }
 });
-router.get('/ranks', async (req, res) => {
+
+router.get("/ranks", async (req, res) => {
   try {
     const [results] = await pool.query(`
       SELECT DISTINCT 
@@ -210,8 +229,25 @@ router.get('/ranks', async (req, res) => {
     `);
     res.json(results);
   } catch (error) {
-    console.error('Error fetching ranks:', error);
-    res.status(500).json({ message: 'Error fetching ranks' });
+    console.error("Error fetching ranks:", error);
+    res.status(500).json({ message: "Error fetching ranks" });
+  }
+});
+
+router.get("/auc-nums", async (req, res) => {
+  try {
+    const [results] = await pool.query(`
+      SELECT auc_num, COUNT(*) as count
+      FROM crawled_items
+      WHERE auc_num IS NOT NULL
+      GROUP BY auc_num
+      ORDER BY auc_num DESC
+    `);
+
+    res.json(results);
+  } catch (error) {
+    console.error("Error fetching auction numbers:", error);
+    res.status(500).json({ message: "Error fetching auction numbers" });
   }
 });
 
