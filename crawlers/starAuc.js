@@ -290,10 +290,10 @@ class StarAucCrawler extends Crawler {
         let notes = ""; // 기본값 설정
         let accs = "";
 
-        const terms = querySelectorAll(
+        const terms = document.querySelectorAll(
           config.crawlDetailSelectors.description + " dt"
         );
-        const descs = querySelectorAll(
+        const descs = document.querySelectorAll(
           config.crawlDetailSelectors.description + " dd"
         );
 
