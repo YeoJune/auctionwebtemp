@@ -285,16 +285,17 @@ class StarAucCrawler extends Crawler {
           document.querySelectorAll(config.crawlDetailSelectors.images)
         ).map((img) => img.src);
 
-        const description = document.querySelector(
-          config.crawlDetailSelectors.description
-        );
         let brand = "";
         let lotNo = "";
-        let notes = "-"; // 기본값 설정
+        let notes = ""; // 기본값 설정
         let accs = "";
 
-        const terms = description.querySelectorAll("dt");
-        const descs = description.querySelectorAll("dd");
+        const terms = querySelectorAll(
+          config.crawlDetailSelectors.description + " dt"
+        );
+        const descs = querySelectorAll(
+          config.crawlDetailSelectors.description + " dd"
+        );
 
         for (let i = 0; i < terms.length; i++) {
           const termText = terms[i].textContent.trim();
