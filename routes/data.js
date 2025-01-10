@@ -318,7 +318,7 @@ router.get("/auc-nums", async (req, res) => {
       FROM crawled_items
       WHERE auc_num IS NOT NULL
       GROUP BY auc_num
-      ORDER BY auc_num DESC
+      ORDER BY auc_num ASC
     `);
 
     res.json(results);

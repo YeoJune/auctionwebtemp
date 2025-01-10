@@ -238,10 +238,10 @@ router.get("/auc-nums", async (req, res) => {
   try {
     const [results] = await pool.query(`
       SELECT auc_num, COUNT(*) as count
-      FROM crawled_items
+      FROM values_items
       WHERE auc_num IS NOT NULL
       GROUP BY auc_num
-      ORDER BY auc_num DESC
+      ORDER BY auc_num ASC
     `);
 
     res.json(results);

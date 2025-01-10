@@ -303,7 +303,6 @@ function displayAucNumFilters(aucNums) {
   if (!aucNumFilters) return;
 
   aucNumFilters.innerHTML = "";
-  aucNums.sort((a, b) => b.auc_num - a.auc_num); // 최신 순으로 정렬
   aucNums.forEach((item) => {
     const aucNumItem = createFilterItem(
       item.auc_num,
