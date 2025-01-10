@@ -291,6 +291,7 @@ class StarAucCrawler extends Crawler {
         let brand = "";
         let lotNo = "";
         let notes = "-"; // 기본값 설정
+        let accs = "";
 
         const terms = description.querySelectorAll("dt");
         const descs = description.querySelectorAll("dd");
@@ -303,16 +304,25 @@ class StarAucCrawler extends Crawler {
           if (termText === "Lot Number") {
             lotNo = descs[i].textContent.trim();
           }
-          if (termText === "Notes") {
-            notes = descs[i].textContent.trim() || "-";
+          if (termText === "Windshield") {
+            notes += descs[i].textContent.trim();
+          }
+          if (termText === "Other Condition1") {
+            notes += descs[i].textContent.trim();
+          }
+          if (termText === "Other Condition2") {
+            notes += descs[i].textContent.trim();
+          }
+          if (termText === "Accessories") {
+            accs = descs[i].textContent.trim();
           }
         }
 
         return {
           additional_images: JSON.stringify(images),
           brand: brand,
-          description: notes,
-          accessory_code: lotNo || "",
+          description: notes || "-",
+          accessory_code: accs || "",
         };
       }, this.config);
 
