@@ -320,6 +320,6 @@ input[type="search"]:focus {
     --border-color: #333;
   }
   .product-header {
-    --background-color: #000;
+    background-color: #000;
   }
 }
