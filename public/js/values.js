@@ -404,8 +404,6 @@ async function initialize() {
       aucNumsResponse
     );
 
-    initializeFilters();
-
     document
       .getElementById("searchButton")
       ?.addEventListener("click", handleSearch);

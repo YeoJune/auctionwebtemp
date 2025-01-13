@@ -301,47 +301,28 @@
 }
 
 /* Filter Buttons */
-.filter-group {
-  margin-bottom: var(--spacing-lg);
-  border-bottom: 1px solid var(--border-color);
-  padding-bottom: var(--spacing-md);
-}
-
-.filter-header {
+.filter-buttons {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-  padding: var(--spacing-sm) 0;
+  gap: var(--spacing-sm);
 }
 
-.filter-header h2 {
-  margin: 0;
-  font-size: var(--font-size-lg);
-  color: var(--text-primary);
-}
-
-.filter-toggle {
+.filter-toggle-btn {
   background: none;
-  border: none;
-  padding: var(--spacing-xs);
+  border: 1px solid var(--border-color);
   color: var(--text-secondary);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius-sm);
   cursor: pointer;
-  transition: transform var(--transition-normal);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  min-height: 44px;
 }
 
-.filter-content {
-  max-height: 500px;
-  overflow: hidden;
-  transition: max-height var(--transition-normal);
-}
-
-.filter-content.collapsed {
-  max-height: 0;
-}
-
-.filter-toggle i {
-  transition: transform var(--transition-normal);
+.filter-toggle-btn.active {
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
 }
 
 /* Mobile Filter Toggle */
