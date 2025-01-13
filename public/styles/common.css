@@ -1,10 +1,8 @@
 /* common.css */
-
 @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css");
 
 /* CSS Variables */
 :root {
-  /* Colors */
   --primary-color: #4caf50;
   --primary-hover: #45a049;
   --secondary-color: #f8f9fa;
@@ -17,28 +15,28 @@
   --error-color: #dc3545;
   --success-color: #28a745;
 
-  /* Spacing */
   --spacing-xs: 0.25rem;
   --spacing-sm: 0.5rem;
   --spacing-md: 1rem;
   --spacing-lg: 1.5rem;
   --spacing-xl: 2rem;
 
-  /* Border Radius */
   --border-radius-sm: 0.25rem;
   --border-radius-md: 0.5rem;
   --border-radius-lg: 1rem;
 
-  /* Font Sizes */
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
   --font-size-md: 1rem;
   --font-size-lg: 1.25rem;
   --font-size-xl: 1.5rem;
 
-  /* Transitions */
   --transition-fast: 0.2s;
   --transition-normal: 0.3s;
+
+  --header-height: 60px;
+  --modal-width: 90%;
+  --modal-max-width: 1200px;
 
   --font-primary: "Pretendard", -apple-system, BlinkMacSystemFont, system-ui,
     Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR",
@@ -57,6 +55,8 @@ body {
   line-height: 1.6;
   color: var(--text-primary);
   background-color: var(--background-dark);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Layout */
@@ -64,6 +64,7 @@ body {
   max-width: 1200px;
   margin: 0 auto;
   padding: var(--spacing-md);
+  width: 100%;
 }
 
 /* Common Header */
@@ -72,12 +73,17 @@ body {
   padding: var(--spacing-md);
   margin-bottom: var(--spacing-lg);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: var(--header-height);
 }
 
 .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  height: 100%;
 }
 
 .logo-container img {
@@ -94,8 +100,12 @@ button {
   padding: var(--spacing-sm) var(--spacing-md);
   border-radius: var(--border-radius-sm);
   cursor: pointer;
-  transition: background-color var(--transition-fast);
+  transition: all var(--transition-fast);
   font-size: var(--font-size-sm);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 button:hover:not(:disabled) {
@@ -105,6 +115,7 @@ button:hover:not(:disabled) {
 button:disabled {
   background-color: var(--border-color);
   cursor: not-allowed;
+  opacity: 0.7;
 }
 
 /* Common Modal Base Styles */
@@ -123,14 +134,15 @@ button:disabled {
 .modal-content {
   background-color: var(--background-light);
   margin: 2% auto;
-  width: 90%;
-  max-width: 1200px;
+  width: var(--modal-width);
+  max-width: var(--modal-max-width);
   height: 90vh;
   border-radius: var(--border-radius-md);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
 }
 
 .modal-header {
@@ -146,6 +158,7 @@ button:disabled {
   flex: 1;
   padding: var(--spacing-md);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .close {
@@ -164,10 +177,8 @@ button:disabled {
   justify-content: center;
   transition: color var(--transition-fast);
   z-index: 1;
-}
-
-.close:hover {
-  color: var(--text-primary);
+  min-height: 44px;
+  min-width: 44px;
 }
 
 /* Common Form Elements */
@@ -179,6 +190,8 @@ input[type="search"] {
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-sm);
   font-size: var(--font-size-sm);
+  min-height: 44px;
+  width: 100%;
 }
 
 input[type="text"]:focus,
@@ -187,9 +200,10 @@ input[type="time"]:focus,
 input[type="search"]:focus {
   outline: none;
   border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
 }
 
-/* Common Scrollbar Styles */
+/* Scrollbar Styles */
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -207,7 +221,7 @@ input[type="search"]:focus {
 
 /* Utility Classes */
 .hidden {
-  display: none;
+  display: none !important;
 }
 
 .loading-msg {
@@ -217,10 +231,34 @@ input[type="search"]:focus {
   color: var(--text-secondary);
 }
 
-/* Common Responsive Design */
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .container {
+    max-width: 100%;
+  }
+
+  .modal-content {
+    width: 95%;
+  }
+}
+
 @media (max-width: 768px) {
+  :root {
+    --spacing-md: 0.875rem;
+    --spacing-lg: 1.25rem;
+  }
+
   .container {
     padding: var(--spacing-sm);
+  }
+
+  .main-header {
+    padding: var(--spacing-sm);
+  }
+
+  .header-content {
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
   }
 
   .modal-content {
@@ -230,17 +268,54 @@ input[type="search"]:focus {
     border-radius: 0;
   }
 
-  .close {
-    font-size: 1.5rem;
-    right: var(--spacing-sm);
-    top: var(--spacing-sm);
+  .modal-header {
+    padding: var(--spacing-sm);
   }
 
   .modal-body {
     padding: var(--spacing-sm);
   }
 
+  .close {
+    right: var(--spacing-sm);
+    top: var(--spacing-sm);
+    font-size: 1.5rem;
+  }
+
+  input[type="text"],
+  input[type="password"],
+  input[type="time"],
+  input[type="search"] {
+    font-size: 16px; /* iOS에서 자동 확대 방지 */
+  }
+
   ::-webkit-scrollbar {
-    width: 6px;
+    width: 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --spacing-sm: 0.375rem;
+    --spacing-md: 0.75rem;
+  }
+
+  .container {
+    padding: var(--spacing-xs);
+  }
+
+  .header-content {
+    gap: var(--spacing-xs);
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background-light: #1a1a1a;
+    --background-dark: #000;
+    --text-primary: #fff;
+    --text-secondary: #a0a0a0;
+    --border-color: #333;
   }
 }
