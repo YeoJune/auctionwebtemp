@@ -350,116 +350,62 @@
 }
 
 @media (max-width: 768px) {
-  /* Filter Section Mobile */
-  .filters-container {
-    position: fixed;
-    top: var(--header-height);
-    left: 0;
-    width: 85%;
-    height: calc(100vh - var(--header-height));
-    z-index: 900;
-    transform: translateX(-100%);
-    overflow-y: auto;
-    transition: transform var(--transition-normal);
-    border-radius: 0;
-    margin: 0;
-  }
-
-  .filters-container.active {
-    transform: translateX(0);
-  }
-
-  .filter-options {
-    max-height: none;
-    padding: var(--spacing-xs);
-  }
-
-  .filter-item {
-    min-width: 100%;
-    padding: var(--spacing-sm);
-  }
-
-  .mobile-filter-toggle {
-    display: flex;
-  }
-
-  /* Product Grid Mobile */
-  .product-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: var(--spacing-sm);
-  }
-
-  .product-image {
-    height: 150px;
-  }
-
-  /* Modal Mobile */
-  .modal-body {
-    flex-direction: column;
-    gap: var(--spacing-md);
-  }
-
-  .modal-left {
-    padding-right: 0;
-    border-right: none;
-  }
-
-  .modal-right {
-    padding-left: 0;
-  }
-
-  .main-image-container {
-    padding-top: 75%;
-  }
-
-  .thumbnail-container {
-    grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
-    max-height: 80px;
-  }
-
-  /* Header Content Mobile */
   .header-content {
-    flex-wrap: wrap;
+    flex-wrap: nowrap; /* wrap에서 nowrap으로 변경 */
+    overflow-x: auto; /* 가로 스크롤 허용 */
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: var(--spacing-xs); /* 스크롤바 공간 확보 */
+  }
+
+  .header-content::-webkit-scrollbar {
+    display: none; /* 스크롤바 숨김 */
+  }
+
+  .header-content > * {
+    flex-shrink: 0; /* 버튼 크기 유지 */
+  }
+
+  /* 헤더 내부 버튼 스타일 최적화 */
+  .header-content button {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    height: 36px; /* 고정 높이 설정 */
+    min-height: 36px; /* 최소 높이 조정 */
+    font-size: var(--font-size-sm);
+    white-space: nowrap;
+  }
+
+  /* 로고 컨테이너 최적화 */
+  .logo-container {
+    flex-shrink: 0;
+    margin-right: var(--spacing-sm);
+  }
+
+  .logo-container img {
+    max-height: 32px; /* 로고 크기 조정 */
+  }
+
+  /* 필터 버튼 그룹 최적화 */
+  .filter-buttons {
+    flex-shrink: 0;
     gap: var(--spacing-xs);
   }
 
+  /* 네비게이션 컨테이너 최적화 */
   .nav-container {
-    width: 100%;
-    order: 2;
+    flex-shrink: 0;
   }
 
-  .filter-buttons {
-    flex-wrap: wrap;
+  /* 공지사항 토글 버튼 최적화 */
+  .notice-toggle {
+    flex-shrink: 0;
   }
 }
 
 @media (max-width: 480px) {
-  .product-grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: var(--spacing-xs);
-  }
-
-  .product-image {
-    height: 120px;
-  }
-
-  .filter-buttons {
-    width: 100%;
-    justify-content: stretch;
-  }
-
-  .filter-toggle-btn {
-    flex: 1;
-  }
-
-  .pagination button {
+  .header-content button {
     padding: var(--spacing-xs);
-    min-width: 36px;
-  }
-
-  .mobile-filter-toggle {
-    bottom: var(--spacing-md);
-    right: var(--spacing-md);
+    height: 32px;
+    min-height: 32px;
   }
 }
 
