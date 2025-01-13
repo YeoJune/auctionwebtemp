@@ -316,7 +316,7 @@ function displayAucNumFilters(aucNums) {
 
 // 초기화 함수
 function initializeCommonFeatures() {
-  setupMobileFilters();
+  //setupMobileFilters();
 }
 
 // DOMContentLoaded 이벤트
