@@ -744,6 +744,8 @@ async function initialize() {
       aucNumsResponse
     );
 
+    initializeFilters();
+
     // 이벤트 리스너 설정
     document
       .getElementById("searchButton")

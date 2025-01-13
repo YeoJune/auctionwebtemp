@@ -301,28 +301,47 @@
 }
 
 /* Filter Buttons */
-.filter-buttons {
-  display: flex;
-  gap: var(--spacing-sm);
+.filter-group {
+  margin-bottom: var(--spacing-lg);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: var(--spacing-md);
 }
 
-.filter-toggle-btn {
-  background: none;
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-radius: var(--border-radius-sm);
-  cursor: pointer;
+.filter-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: var(--spacing-xs);
-  min-height: 44px;
+  cursor: pointer;
+  padding: var(--spacing-sm) 0;
 }
 
-.filter-toggle-btn.active {
-  background-color: var(--primary-color);
-  color: white;
-  border-color: var(--primary-color);
+.filter-header h2 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  color: var(--text-primary);
+}
+
+.filter-toggle {
+  background: none;
+  border: none;
+  padding: var(--spacing-xs);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: transform var(--transition-normal);
+}
+
+.filter-content {
+  max-height: 500px;
+  overflow: hidden;
+  transition: max-height var(--transition-normal);
+}
+
+.filter-content.collapsed {
+  max-height: 0;
+}
+
+.filter-toggle i {
+  transition: transform var(--transition-normal);
 }
 
 /* Mobile Filter Toggle */

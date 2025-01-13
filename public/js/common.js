@@ -207,11 +207,71 @@ function setupMobileFilters() {
 }
 
 function displayFilters(brands, categories, dates, ranks, aucNums) {
+  const brandFilterContent = `
+    <div class="filter-search">
+      <input type="text" id="brandSearch" placeholder="브랜드 검색..." />
+    </div>
+    <div id="brandFilters" class="filter-options"></div>
+  `;
+
+  const filterContents = {
+    brands: { title: "브랜드", content: brandFilterContent },
+    categories: {
+      title: "품목",
+      content: '<div id="categoryFilters" class="filter-options"></div>',
+    },
+    dates: {
+      title: "경매 날짜",
+      content: '<div id="scheduledDateFilters" class="filter-options"></div>',
+    },
+    ranks: {
+      title: "랭크",
+      content: '<div id="rankFilters" class="filter-options"></div>',
+    },
+    aucNums: {
+      title: "라인",
+      content: '<div id="aucNumFilters" class="filter-options"></div>',
+    },
+  };
+
+  const filtersContainer = document.querySelector(".filters-container");
+  if (!filtersContainer) return;
+
+  // 필터 그룹 생성
+  Object.entries(filterContents).forEach(([key, { title, content }]) => {
+    filtersContainer.insertAdjacentHTML(
+      "beforeend",
+      createFilterGroup(title, key, content)
+    );
+  });
+
+  // 기존 필터 표시 로직 실행
   displayBrandFilters(brands);
   displayCategoryFilters(categories);
   displayDateFilters(dates);
   displayRankFilters(ranks);
   displayAucNumFilters(aucNums);
+
+  // 필터 토글 이벤트 설정
+  setupFilterToggles();
+}
+
+function setupFilterToggles() {
+  document.querySelectorAll(".filter-header").forEach((header) => {
+    header.addEventListener("click", () => {
+      const content = header.nextElementSibling;
+      const icon = header.querySelector(".fa-chevron-down");
+      content.classList.toggle("collapsed");
+      icon.style.transform = content.classList.contains("collapsed")
+        ? "rotate(0deg)"
+        : "rotate(180deg)";
+    });
+  });
+
+  // 페이지 로드시 모든 필터를 접힌 상태로 시작
+  document.querySelectorAll(".filter-content").forEach((content) => {
+    content.classList.add("collapsed");
+  });
 }
 
 function displayBrandFilters(brands) {
@@ -314,10 +374,23 @@ function displayAucNumFilters(aucNums) {
   });
 }
 
-// 초기화 함수
-function initializeCommonFeatures() {
-  setupMobileFilters();
+function createFilterGroup(title, id, content) {
+  return `
+    <div class="filter-group" data-filter-id="${id}">
+      <div class="filter-header">
+        <h2>${title}</h2>
+        <button class="filter-toggle" aria-label="Toggle filter">
+          <i class="fas fa-chevron-down"></i>
+        </button>
+      </div>
+      <div class="filter-content collapsed">
+        ${content}
+      </div>
+    </div>
+  `;
 }
 
-// DOMContentLoaded 이벤트
-document.addEventListener("DOMContentLoaded", initializeCommonFeatures);
+function initializeFilters() {
+  setupFilterToggles();
+  setupMobileFilters(); // 기존 모바일 필터 토글 기능 유지
+}
