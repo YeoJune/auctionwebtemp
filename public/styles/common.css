@@ -319,4 +319,7 @@ input[type="search"]:focus {
     --text-secondary: #a0a0a0;
     --border-color: #333;
   }
+  .product-header {
+    --background-color: #000;
+  }
 }
