@@ -287,7 +287,6 @@ class StarAucCrawler extends Crawler {
 
         let brand = "";
         let lotNo = "";
-        let notes = ""; // 기본값 설정
         let accs = "";
 
         const terms = document.querySelectorAll(
@@ -305,17 +304,22 @@ class StarAucCrawler extends Crawler {
           if (termText === "Lot Number") {
             lotNo = descs[i].textContent.trim();
           }
-          if (termText === "Windshield") {
-            notes += descs[i].textContent.trim();
-          }
-          if (termText === "Other Condition1") {
-            notes += descs[i].textContent.trim();
-          }
-          if (termText === "Other Condition2") {
-            notes += descs[i].textContent.trim();
-          }
           if (termText === "Accessories") {
             accs = descs[i].textContent.trim();
+          }
+        }
+
+        const dl = document.querySelectorAll(".p-def-list")[1];
+        let notes = "";
+
+        for (const term of dl.children) {
+          if (term.tagName === "DT") {
+            const termText = term.textContent.trim();
+            if (!termText.startsWith("Other Condition")) {
+              const desc = term.nextElementSibling;
+              const descText = desc ? desc.textContent.trim() : "";
+              notes += `${termText} :${descText ? ` ${descText}` : ""}\n`;
+            }
           }
         }
 
