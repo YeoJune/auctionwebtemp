@@ -130,7 +130,7 @@
 
 .product-header {
   padding: var(--spacing-sm);
-  /*background-color: var(--secondary-color);*/
+  background-color: var(--secondary-color);
 }
 
 .product-brand {
@@ -345,7 +345,7 @@
 /* Responsive Design */
 @media (max-width: 1024px) {
   .product-grid {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   }
 }
 
@@ -406,20 +406,5 @@
     padding: var(--spacing-xs);
     height: 32px;
     min-height: 32px;
-  }
-}
-
-/* Dark Mode Support */
-@media (prefers-color-scheme: dark) {
-  .product-card {
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  }
-
-  .product-card:hover {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
-  }
-
-  .image-nav {
-    background-color: rgba(255, 255, 255, 0.1);
   }
 }
