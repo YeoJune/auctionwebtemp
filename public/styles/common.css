@@ -309,17 +309,3 @@ input[type="search"]:focus {
     gap: var(--spacing-xs);
   }
 }
-
-/* Dark Mode Support */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background-light: #1a1a1a;
-    --background-dark: #000;
-    --text-primary: #fff;
-    --text-secondary: #a0a0a0;
-    --border-color: #333;
-  }
-  .product-header {
-    background-color: #000;
-  }
-}
