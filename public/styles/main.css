@@ -327,6 +327,7 @@
 
 .price-details-container {
   background-color: var(--background-light);
+  color: red;
 }
 
 /* Mobile Filter Toggle */
