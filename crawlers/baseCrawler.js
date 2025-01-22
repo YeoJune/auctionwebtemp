@@ -1,3 +1,19 @@
+// crawlers/baseCrawler.js
+const dotenv = require("dotenv");
+const puppeteer = require("puppeteer");
+const fs = require("fs");
+const path = require("path");
+
+let pLimit;
+(async () => {
+  pLimit = (await import("p-limit")).default;
+})();
+
+dotenv.config();
+
+const USER_AGENT =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36";
+
 class Crawler {
   constructor(config) {
     this.config = config;
@@ -98,3 +114,5 @@ class Crawler {
     }
   }
 }
+
+module.exports = Crawler;
