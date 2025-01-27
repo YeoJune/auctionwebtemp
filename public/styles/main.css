@@ -347,6 +347,25 @@
   justify-content: center;
 }
 
+.wishlist-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  padding: var(--spacing-xs);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.wishlist-btn.active,
+.wishlist-btn.active i {
+  color: var(--accent-color); /* CSS 변수에 이미 정의된 노란색(#ffd700) 사용 */
+}
+
+.wishlist-btn:hover {
+  color: var(--accent-color);
+  background: none;
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
   .product-grid {
