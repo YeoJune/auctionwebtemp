@@ -20,6 +20,11 @@ window.state = {
   isAuthenticated: false,
 };
 
+// 대괄호 제거 함수
+function removeLeadingBrackets(title) {
+  return title.replace(/^\[[^\]]*\]\s*/, "");
+}
+
 // 현지 수수료 계산
 function calculateLocalFee(price, auctionId) {
   if (!price) return 0;
@@ -54,11 +59,10 @@ function calculateCustomsDuty(amountKRW, category) {
       // (관세 8%) + (전체금액의 10%)
       return amountKRW * 0.08 + (amountKRW + amountKRW * 0.08) * 0.1;
     } else {
-      // (관세 8%) + (관세의 10%) + (전체금액의 10%)
+      // (관세 8%) + (관세의 10%) + //(전체금액의 10%)
       return (
-        amountKRW * 0.08 +
-        amountKRW * 0.08 * 0.1 +
-        (amountKRW + amountKRW * 0.08 + amountKRW * 0.08 * 0.1) * 0.1
+        amountKRW * 0.08 + amountKRW * 0.08 * 0.1
+        //+ (amountKRW + amountKRW * 0.08 + amountKRW * 0.08 * 0.1) * 0.1
       );
     }
   }
@@ -83,7 +87,7 @@ function getBidSectionHTML(bidInfo, itemId, aucNum, category) {
             <div>
                 <p>최종 입찰금액: ${formatNumber(bidInfo.final_price)} ¥</p>
                 <div class="price-details-container">
-                    (수수료, 세금 포함 ${formatNumber(
+                    (관세, 수수로 5% 기준 ${formatNumber(
                       calculateTotalPrice(bidInfo.final_price, aucNum, category)
                     )}원)
                 </div>
@@ -101,7 +105,7 @@ function getBidSectionHTML(bidInfo, itemId, aucNum, category) {
                     ${
                       bidInfo.first_price
                         ? `<div class="price-details-container first-price">
-                            (수수료, 세금 포함 ${formatNumber(
+                            (관세, 수수로 5% 기준 ${formatNumber(
                               calculateTotalPrice(
                                 bidInfo.first_price,
                                 aucNum,
@@ -119,7 +123,7 @@ function getBidSectionHTML(bidInfo, itemId, aucNum, category) {
                     ${
                       bidInfo.second_price
                         ? `<div class="price-details-container second-price">
-                            (수수료, 세금 포함 ${formatNumber(
+                            (관세, 수수로 5% 기준 ${formatNumber(
                               calculateTotalPrice(
                                 bidInfo.second_price,
                                 aucNum,
@@ -182,11 +186,15 @@ function createProductCard(item) {
                 <div class="product-brand">${item.brand}</div>
                 <div class="auctioneer-number">${item.auc_num}번</div>
             </div>
-            <h3 class="product-title">${item.korean_title}</h3>
+            <h3 class="product-title">${removeLeadingBrackets(
+              item.korean_title
+            )}</h3>
         </div>
-        <img src="${API.validateImageUrl(item.image)}" alt="${
+        <img src="${API.validateImageUrl(
+          item.image
+        )}" alt="${removeLeadingBrackets(
     item.korean_title
-  }" class="product-image">
+  )}" class="product-image">
         <div class="product-details">
             <p class="scheduled-date">예정일: ${formatDate(
               item.scheduled_date
@@ -382,7 +390,7 @@ function initializePriceCalculators() {
           item.category
         );
         container.innerHTML = price
-          ? `(수수료, 세금 포함 ${formatNumber(totalPrice)}원)`
+          ? `(관세, 수수로 5% 기준 ${formatNumber(totalPrice)}원)`
           : "";
       });
     }
@@ -536,7 +544,9 @@ async function showDetails(itemId) {
 
 function initializeModal(item) {
   document.querySelector(".modal-brand").textContent = item.brand;
-  document.querySelector(".modal-title").textContent = item.korean_title;
+  document.querySelector(".modal-title").textContent = removeLeadingBrackets(
+    item.korean_title
+  );
   document.querySelector(".main-image").src = API.validateImageUrl(item.image);
   document.querySelector(".modal-description").textContent = "로딩 중...";
   document.querySelector(".modal-category").textContent =
@@ -566,7 +576,7 @@ function updateModalWithDetails(item) {
   document.querySelector(".modal-brand").textContent = item.brand;
   document.querySelector(".modal-brand2").textContent = item.brand;
   document.querySelector(".modal-title").textContent =
-    item.korean_title || "제목 없음";
+    removeLeadingBrackets(item.korean_title) || "제목 없음";
 }
 function initializeBidInfo(itemId) {
   const bidInfo = state.bidData.find((b) => b.item_id == itemId);
@@ -601,7 +611,7 @@ function initializeBidInfo(itemId) {
         item.category
       );
       priceContainer.innerHTML = price
-        ? `(수수료, 세금 포함 ${formatNumber(totalPrice)}원)`
+        ? `(관세, 수수로 5% 기준 ${formatNumber(totalPrice)}원)`
         : "";
     });
   }
