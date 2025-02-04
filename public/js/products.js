@@ -88,7 +88,7 @@ function getBidSectionHTML(bidInfo, itemId, aucNum, category) {
             <div>
                 <p>최종 입찰금액: ${formatNumber(bidInfo.final_price)} ¥</p>
                 <div class="price-details-container">
-                    (관세, 수수로 5% 기준 ${formatNumber(
+                    (관세8%+수수료5% 기준 ${formatNumber(
                       calculateTotalPrice(bidInfo.final_price, aucNum, category)
                     )}원)
                 </div>
@@ -106,7 +106,7 @@ function getBidSectionHTML(bidInfo, itemId, aucNum, category) {
                     ${
                       bidInfo.first_price
                         ? `<div class="price-details-container first-price">
-                            (관세, 수수로 5% 기준 ${formatNumber(
+                            (관세8%+수수료5% 기준 ${formatNumber(
                               calculateTotalPrice(
                                 bidInfo.first_price,
                                 aucNum,
@@ -124,7 +124,7 @@ function getBidSectionHTML(bidInfo, itemId, aucNum, category) {
                     ${
                       bidInfo.second_price
                         ? `<div class="price-details-container second-price">
-                            (관세, 수수로 5% 기준 ${formatNumber(
+                            (관세8%+수수료5% 기준 ${formatNumber(
                               calculateTotalPrice(
                                 bidInfo.second_price,
                                 aucNum,
@@ -391,7 +391,7 @@ function initializePriceCalculators() {
           item.category
         );
         container.innerHTML = price
-          ? `(관세, 수수로 5% 기준 ${formatNumber(totalPrice)}원)`
+          ? `(관세8%+수수료5% 기준 ${formatNumber(totalPrice)}원)`
           : "";
       });
     }
@@ -612,7 +612,7 @@ function initializeBidInfo(itemId) {
         item.category
       );
       priceContainer.innerHTML = price
-        ? `(관세, 수수로 5% 기준 ${formatNumber(totalPrice)}원)`
+        ? `(관세8%+수수료5% 기준 ${formatNumber(totalPrice)}원)`
         : "";
     });
   }
