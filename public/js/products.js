@@ -22,7 +22,8 @@ window.state = {
 
 // 대괄호 제거 함수
 function removeLeadingBrackets(title) {
-  return title.replace(/^\[[^\]]*\]\s*/, "");
+  // 앞쪽의 대괄호와 소괄호 제거
+  return title.replace(/^[\[\(][^\]\)]*[\]\)]\s*/, "");
 }
 
 // 현지 수수료 계산
