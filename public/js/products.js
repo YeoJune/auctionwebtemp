@@ -71,19 +71,14 @@ function calculateCustomsDuty(amountKRW, category) {
 }
 
 // 총 가격 계산
-function calculateTotalPrice(
-  price,
-  auctionNumber,
-  category,
-  exchangeRate = 1300
-) {
+function calculateTotalPrice(price, auctionNumber, category) {
   price = parseFloat(price) || 0;
 
   // 1. 현지 수수료 계산
   const localFee = calculateLocalFee(price, auctionNumber);
 
   // 2. 원화 환산 (현지가격 + 현지수수료)
-  const totalAmountKRW = (price + localFee) * exchangeRate;
+  const totalAmountKRW = (price + localFee) * API.exchangeRate;
 
   // 3. 관세 계산 (부가세 제외)
   const customsDuty = calculateCustomsDuty(totalAmountKRW, category);
