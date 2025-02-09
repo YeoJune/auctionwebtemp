@@ -50,11 +50,11 @@ function calculateCustomsDuty(amountKRW, category) {
   if (
     ["가방", "악세서리", "소품・액세서리", "소품", "귀금속"].includes(category)
   ) {
-    return amountKRW * 0.18;
+    return amountKRW * 0.08;
   }
 
   if (["의류", "신발"].includes(category)) {
-    return amountKRW * 0.23;
+    return amountKRW * 0.13;
   }
 
   if (category === "시계") {
