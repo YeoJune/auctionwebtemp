@@ -26,22 +26,24 @@ function removeLeadingBrackets(title) {
   return title.replace(/^[\[\(][^\]\)]*[\]\)]\s*/, "");
 }
 
-// 현지 수수료 계산
 function calculateLocalFee(price, auctionId) {
   if (!price) return 0;
 
+  // ecoauc 경우 (문자로 시작하는 경우)
   if (isNaN(auctionId.charAt(0))) {
     if (price === 0) return 0;
-    if (price < 10000) return 1100;
-    if (price < 50000) return 1650;
-    return 2750;
-  } else if (!isNaN(auctionId.charAt(0))) {
+    if (price < 10000) return 1900;
+    if (price < 50000) return 2450;
+    return 3550;
+  }
+  // starbuyers 경우 (숫자로 시작하는 경우)
+  else if (!isNaN(auctionId.charAt(0))) {
     return price < 100000 ? price * 0.1 + 1990 : price * 0.07 + 1990;
   }
   return 0;
 }
 
-// 관세 계산
+// 관세 계산 (부가세 제외)
 function calculateCustomsDuty(amountKRW, category) {
   if (!amountKRW || !category) return 0;
 
@@ -57,27 +59,39 @@ function calculateCustomsDuty(amountKRW, category) {
 
   if (category === "시계") {
     if (amountKRW < 2000000) {
-      // (관세 8%) + (전체금액의 10%)
-      return amountKRW * 0.08 + (amountKRW + amountKRW * 0.08) * 0.1;
+      // 관세만 8% 적용
+      return amountKRW * 0.08;
     } else {
-      // (관세 8%) + (관세의 10%) + //(전체금액의 10%)
-      return (
-        amountKRW * 0.08 + amountKRW * 0.08 * 0.1
-        //+ (amountKRW + amountKRW * 0.08 + amountKRW * 0.08 * 0.1) * 0.1
-      );
+      // 관세 8% + 개소세(관세의 10%)
+      return amountKRW * 0.08 + amountKRW * 0.08 * 0.1;
     }
   }
 
-  return amountKRW; // 엑셀에서는 카테고리가 없을 때 amountKRW를 그대로 반환
+  return 0;
 }
 
-// 총 가격 계산 함수도 category 매개변수 추가 필요
-function calculateTotalPrice(price, auctionNumber, category) {
+// 총 가격 계산
+function calculateTotalPrice(
+  price,
+  auctionNumber,
+  category,
+  exchangeRate = 1300
+) {
   price = parseFloat(price) || 0;
-  const localFee = calculateLocalFee(price, auctionNumber, category);
-  const totalAmountKRW = (price + localFee) * API.exchangeRate;
+
+  // 1. 현지 수수료 계산
+  const localFee = calculateLocalFee(price, auctionNumber);
+
+  // 2. 원화 환산 (현지가격 + 현지수수료)
+  const totalAmountKRW = (price + localFee) * exchangeRate;
+
+  // 3. 관세 계산 (부가세 제외)
   const customsDuty = calculateCustomsDuty(totalAmountKRW, category);
+
+  // 4. 서비스 수수료 5%
   const serviceFee = (totalAmountKRW + customsDuty) * 0.05;
+
+  // 5. 최종 금액 반환 (반올림)
   return Math.round(totalAmountKRW + customsDuty + serviceFee);
 }
 
@@ -88,7 +102,7 @@ function getBidSectionHTML(bidInfo, itemId, aucNum, category) {
             <div>
                 <p>최종 입찰금액: ${formatNumber(bidInfo.final_price)} ¥</p>
                 <div class="price-details-container">
-                    (관세8%+수수료5% 기준 ${formatNumber(
+                    (현지수수료+관세+수수료5% 기준 ${formatNumber(
                       calculateTotalPrice(bidInfo.final_price, aucNum, category)
                     )}원)
                 </div>
@@ -106,7 +120,7 @@ function getBidSectionHTML(bidInfo, itemId, aucNum, category) {
                     ${
                       bidInfo.first_price
                         ? `<div class="price-details-container first-price">
-                            (관세8%+수수료5% 기준 ${formatNumber(
+                            (현지수수료+관세+수수료5% 기준 ${formatNumber(
                               calculateTotalPrice(
                                 bidInfo.first_price,
                                 aucNum,
@@ -124,7 +138,7 @@ function getBidSectionHTML(bidInfo, itemId, aucNum, category) {
                     ${
                       bidInfo.second_price
                         ? `<div class="price-details-container second-price">
-                            (관세8%+수수료5% 기준 ${formatNumber(
+                            (현지수수료+관세+수수료5% 기준 ${formatNumber(
                               calculateTotalPrice(
                                 bidInfo.second_price,
                                 aucNum,
@@ -391,7 +405,7 @@ function initializePriceCalculators() {
           item.category
         );
         container.innerHTML = price
-          ? `(관세8%+수수료5% 기준 ${formatNumber(totalPrice)}원)`
+          ? `(현지수수료+관세+수수료5% 기준 ${formatNumber(totalPrice)}원)`
           : "";
       });
     }
@@ -612,7 +626,7 @@ function initializeBidInfo(itemId) {
         item.category
       );
       priceContainer.innerHTML = price
-        ? `(관세8%+수수료5% 기준 ${formatNumber(totalPrice)}원)`
+        ? `(현지수수료+관세+수수료5% 기준 ${formatNumber(totalPrice)}원)`
         : "";
     });
   }
