@@ -38,7 +38,7 @@ function calculateLocalFee(price, auctionId, category) {
   price = Number(price);
 
   // ecoauc (auctionId: 1)
-  if (auctionId === 1) {
+  if (auctionId == 1) {
     if (price < 10000) return 1800;
     if (price < 50000) return 2800;
     if (price < 100000) return 4800;
@@ -47,7 +47,7 @@ function calculateLocalFee(price, auctionId, category) {
   }
 
   // brand auction (auctionId: 2)
-  if (auctionId === 2) {
+  if (auctionId == 2) {
     if (price < 100000) {
       return Math.round(price * 0.11 + 1990);
     }
@@ -55,7 +55,7 @@ function calculateLocalFee(price, auctionId, category) {
   }
 
   // starbuyers (auctionId: 3)
-  if (auctionId === 3) {
+  if (auctionId == 3) {
     // 1. 기본 수수료 계산
     const baseFee = price * 0.05;
     const vat = baseFee * 0.1;
