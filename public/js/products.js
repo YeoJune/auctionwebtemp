@@ -98,7 +98,7 @@ function calculateCustomsDuty(amountKRW, category) {
 
   // 의류/신발: 13% 관세
   if (["의류", "신발"].includes(category)) {
-    return Math.round(amountKRW * 0.13);
+    return Math.round(amountKRW * 0.23);
   }
 
   // 그 외 카테고리 (가방/악세서리/소품/귀금속/시계 등)
