@@ -1,4 +1,5 @@
 // crawlers/ecoAuc.js
+const cheerio = require("cheerio");
 const { AxiosCrawler, Crawler } = require("./baseCrawler");
 const { processImagesInChunks } = require("../utils/processImage");
 
