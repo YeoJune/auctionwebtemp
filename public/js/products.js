@@ -578,12 +578,9 @@ async function showDetails(itemId) {
 
   try {
     // 상세 정보 가져오기
-    const updatedItem = await API.fetchAPI(
-      `/crawler/crawl-item-details/${itemId}`,
-      {
-        method: "POST",
-      }
-    );
+    const updatedItem = await API.fetchAPI(`/detail/item-details/${itemId}`, {
+      method: "POST",
+    });
 
     // 상세 정보 업데이트
     updateModalWithDetails(updatedItem);

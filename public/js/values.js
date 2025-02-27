@@ -281,12 +281,9 @@ async function showDetails(itemId) {
     // 상세 정보 가져오기 전에 로딩 표시
     showLoadingInModal();
 
-    const updatedItem = await API.fetchAPI(
-      `/crawler/crawl-item-value-details/${itemId}`,
-      {
-        method: "POST",
-      }
-    ).catch((error) => {
+    const updatedItem = await API.fetchAPI(`/detail/value-details/${itemId}`, {
+      method: "POST",
+    }).catch((error) => {
       console.log("Unable to fetch details, using basic item info:", error);
       return item; // 오류 시 기본 정보 사용
     });
