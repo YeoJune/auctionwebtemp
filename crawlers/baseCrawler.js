@@ -380,11 +380,6 @@ class AxiosCrawler {
         }
         console.log(`Attempt ${attempt} failed, retrying in ${delay}ms...`);
         await this.sleep(delay);
-
-        // 세션이 만료되었을 수 있으므로 로그인 상태 확인
-        if (!this.isSessionValid()) {
-          await this.login();
-        }
       }
     }
   }

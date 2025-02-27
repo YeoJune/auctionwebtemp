@@ -82,6 +82,7 @@ class StarAucCrawler extends AxiosCrawler {
     }
 
     return this.retryOperation(async () => {
+      console.log("Logging in star...");
       // 로그인 페이지 가져오기
       const response = await this.client.get(this.config.loginPageUrl);
 
