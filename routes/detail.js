@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 const { processImagesInChunks } = require("../utils/processImage");
 const { ecoAucCrawler, starAucCrawler } = require("../crawlers/index");
+const DBManager = require("../utils/DBManager");
+const pool = require("../utils/DB");
 
 async function processItem(itemId, isValue, res) {
   try {
