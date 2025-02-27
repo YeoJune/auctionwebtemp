@@ -68,3 +68,5 @@ router.post("/value-details/:itemId", (req, res) => {
   const { itemId } = req.params;
   processItem(itemId, true, res);
 });
+
+module.exports = router;
