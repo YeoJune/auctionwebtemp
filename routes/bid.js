@@ -88,7 +88,7 @@ router.post("/place-reservation", async (req, res) => {
         linkFunc[item.auc_num](item.item_id),
         item.category,
         item.brand,
-        item.korean_title,
+        item.original_title,
         item.rank,
         item.starting_price,
         `=IMAGE("${

@@ -1,5 +1,9 @@
 const dotenv = require("dotenv");
 const puppeteer = require("puppeteer");
+const axios = require("axios");
+const cheerio = require("cheerio");
+const tough = require("tough-cookie");
+const { wrapper } = require("axios-cookiejar-support");
 const fs = require("fs");
 const path = require("path");
 
@@ -326,4 +330,125 @@ class Crawler {
   }
 }
 
-module.exports = Crawler;
+class AxiosCrawler {
+  constructor(config) {
+    this.config = config;
+    this.cookieJar = new tough.CookieJar();
+
+    // axios 인스턴스 설정
+    this.client = wrapper(
+      axios.create({
+        jar: this.cookieJar,
+        withCredentials: true,
+        headers: {
+          "User-Agent": USER_AGENT,
+          "Accept-Language": "en-US,en;q=0.9",
+          Accept:
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+        },
+        maxRedirects: 5,
+      })
+    );
+
+    this.isLoggedIn = false;
+    this.loginTime = null;
+    this.sessionTimeout = 1000 * 60 * 60 * 3; // 3시간
+    this.maxRetries = 3;
+    this.retryDelay = 1000;
+  }
+
+  isSessionValid() {
+    if (!this.loginTime) return false;
+    return Date.now() - this.loginTime < this.sessionTimeout;
+  }
+
+  async retryOperation(
+    operation,
+    maxRetries = this.maxRetries,
+    delay = this.retryDelay
+  ) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        if (attempt === maxRetries) {
+          console.error(
+            `Operation failed after ${maxRetries} attempts:`,
+            error.message
+          );
+          throw error;
+        }
+        console.log(`Attempt ${attempt} failed, retrying in ${delay}ms...`);
+        await this.sleep(delay);
+
+        // 세션이 만료되었을 수 있으므로 로그인 상태 확인
+        if (!this.isSessionValid()) {
+          await this.login();
+        }
+      }
+    }
+  }
+
+  async sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  removeLeadingBrackets(title) {
+    // 앞쪽의 대괄호와 소괄호 제거
+    return title.replace(/^[\[\(][^\]\)]*[\]\)]\s*/, "");
+  }
+
+  currencyToInt(currencyString) {
+    if (currencyString) {
+      const cleanString = currencyString.replace(/\D/g, "");
+      const number = parseInt(cleanString);
+      if (isNaN(number)) {
+        throw new Error("Invalid currency string");
+      }
+      return number;
+    }
+    return null;
+  }
+
+  extractDate(text) {
+    const regex1 = /(\d{4}).?(\d{2}).?(\d{2})/;
+    const match1 = text?.match(regex1);
+    const regex2 = /(\d{4}).?(\d{2}).?(\d{2}).*?(\d{2})\s*?：\s*(\d{2})/;
+    const match2 = text?.match(regex2);
+    if (match2)
+      return (
+        `${match2[1]}-${match2[2]}-${match2[3]}` +
+        (match2[4] && match2[5] ? ` ${match2[4]}:${match2[5]}` : "00:00")
+      );
+    else if (match1) return `${match1[1]}-${match1[2]}-${match1[3]} 00:00`;
+    else return null;
+  }
+
+  isCollectionDay(date) {
+    if (!date) return true;
+    const day = new Date(date).getDay();
+    return ![2, 4].includes(day); // 화요일, 목요일 제외
+  }
+
+  formatExecutionTime(milliseconds) {
+    const seconds = Math.floor(milliseconds / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+
+    const remainingMinutes = minutes % 60;
+    const remainingSeconds = seconds % 60;
+
+    let timeString = "";
+    if (hours > 0) {
+      timeString += `${hours}h `;
+    }
+    if (remainingMinutes > 0 || hours > 0) {
+      timeString += `${remainingMinutes}m `;
+    }
+    timeString += `${remainingSeconds}s`;
+
+    return timeString;
+  }
+}
+
+module.exports = { Crawler, AxiosCrawler };

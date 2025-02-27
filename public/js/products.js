@@ -20,12 +20,6 @@ window.state = {
   isAuthenticated: false,
 };
 
-// 대괄호 제거 함수
-function removeLeadingBrackets(title) {
-  // 앞쪽의 대괄호와 소괄호 제거
-  return title.replace(/^[\[\(][^\]\)]*[\]\)]\s*/, "");
-}
-
 /**
  * 현지 수수료 계산 함수
  * @param {number} price - 상품 가격 (P291)
@@ -253,15 +247,11 @@ function createProductCard(item) {
                 <div class="product-brand">${item.brand}</div>
                 <div class="auctioneer-number">${item.auc_num}번</div>
             </div>
-            <h3 class="product-title">${removeLeadingBrackets(
-              item.korean_title
-            )}</h3>
+            <h3 class="product-rean">${item.title}</h3>
         </div>
-        <img src="${API.validateImageUrl(
-          item.image
-        )}" alt="${removeLeadingBrackets(
-    item.korean_title
-  )}" class="product-image">
+        <img src="${API.validateImageUrl(item.image)}" alt="${
+    item.title
+  }" class="product-image">
         <div class="product-details">
             <p class="scheduled-date">예정일: ${formatDate(
               item.scheduled_date
@@ -611,9 +601,7 @@ async function showDetails(itemId) {
 
 function initializeModal(item) {
   document.querySelector(".modal-brand").textContent = item.brand;
-  document.querySelector(".modal-title").textContent = removeLeadingBrackets(
-    item.korean_title
-  );
+  document.querySelector(".modal-title").textContent = item.title;
   document.querySelector(".main-image").src = API.validateImageUrl(item.image);
   document.querySelector(".modal-description").textContent = "로딩 중...";
   document.querySelector(".modal-category").textContent =
@@ -643,7 +631,7 @@ function updateModalWithDetails(item) {
   document.querySelector(".modal-brand").textContent = item.brand;
   document.querySelector(".modal-brand2").textContent = item.brand;
   document.querySelector(".modal-title").textContent =
-    removeLeadingBrackets(item.korean_title) || "제목 없음";
+    item.title || "제목 없음";
 }
 function initializeBidInfo(itemId) {
   const bidInfo = state.bidData.find((b) => b.item_id == itemId);

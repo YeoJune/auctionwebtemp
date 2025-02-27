@@ -73,7 +73,7 @@ router.get("/", async (req, res) => {
     if (search && search.trim()) {
       const searchTerms = search.trim().split(/\s+/);
       const searchConditions = searchTerms
-        .map(() => "ci.korean_title LIKE ?")
+        .map(() => "ci.title LIKE ?")
         .join(" AND ");
       conditions.push(`(${searchConditions})`);
       searchTerms.forEach((term) => {
@@ -202,7 +202,7 @@ router.get("/", async (req, res) => {
       query += " AND " + conditions.join(" AND ");
     }
 
-    query += " ORDER BY ci.korean_title ASC";
+    query += " ORDER BY ci.title ASC";
     query += " LIMIT ? OFFSET ?";
     queryParams.push(parseInt(limit), offset);
 
