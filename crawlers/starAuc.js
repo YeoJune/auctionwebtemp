@@ -155,7 +155,6 @@ class StarAucCrawler extends AxiosCrawler {
             return JSON.parse(jsonString);
           } catch (error) {
             console.error("JSON 파싱 실패:", error);
-            //fs.writeFileSync("failed-json.txt", jsonString);
             return null;
           }
         }
@@ -217,7 +216,6 @@ class StarAucCrawler extends AxiosCrawler {
             return dataObj;
           } catch (error) {
             console.error("객체 리터럴 파싱 실패:", error);
-            //fs.writeFileSync("failed-object.txt", objectLiteral);
           }
         }
       } catch (error) {
@@ -320,9 +318,6 @@ class StarAucCrawler extends AxiosCrawler {
       const response = await this.client.get(url);
       const $ = cheerio.load(response.data);
 
-      // HTML 저장 (디버깅용)
-      fs.writeFileSync(`star-page-${categoryId}-${page}.html`, response.data);
-
       // 스크립트 데이터에서 아이템 정보 추출
       const scriptData = await this.parseScriptData(
         response.data,
@@ -405,9 +400,6 @@ class StarAucCrawler extends AxiosCrawler {
 
       const response = await this.client.get(url);
       const $ = cheerio.load(response.data);
-
-      // HTML 저장 (디버깅용)
-      fs.writeFileSync(`star-detail-${itemId}.html`, response.data);
 
       // 스크립트 데이터 추출
       const scriptData = await this.parseScriptData(
