@@ -292,8 +292,8 @@ class DatabaseManager {
         conn = await this.pool.getConnection();
         await conn.beginTransaction();
 
-        // Filter out items without japanese_title for insertion/update
-        const validItems = items.filter((item) => item.japanese_title);
+        // Filter out items without title for insertion/update
+        const validItems = items.filter((item) => item.title);
         if (validItems.length) {
           const columns = this.crawledItemColumns.filter((col) =>
             validItems[0].hasOwnProperty(col)

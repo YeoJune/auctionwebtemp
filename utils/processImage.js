@@ -1,10 +1,13 @@
-// utils/processImages.js
-const axios = require('axios');
-const { v4: uuidv4 } = require('uuid');
-const sharp = require('sharp');
-const path = require('path');
+const axios = require("axios");
+const { v4: uuidv4 } = require("uuid");
+const sharp = require("sharp");
+const path = require("path");
 
-const IMAGE_DIR = path.join(__dirname, '..', 'public', 'images', 'products');
+const IMAGE_DIR = path.join(__dirname, "..", "public", "images", "products");
+
+// Image size constraints
+const MAX_WIDTH = 600; // Maximum width in pixels
+const MAX_HEIGHT = 600; // Maximum height in pixels
 
 const chunk = (arr, size) =>
   Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
@@ -12,30 +15,59 @@ const chunk = (arr, size) =>
   );
 
 async function downloadAndSaveImage(url, retries = 5, delay = 1000) {
-  const dateString = new Date().toISOString().replaceAll(':', '-').split('.')[0];
+  const dateString = new Date()
+    .toISOString()
+    .replaceAll(":", "-")
+    .split(".")[0];
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
       const response = await axios({
-        method: 'get',
+        method: "get",
         url: url,
-        responseType: 'arraybuffer'
+        responseType: "arraybuffer",
       });
 
       const fileName = `${dateString}_${uuidv4()}.webp`;
       const filePath = path.join(IMAGE_DIR, fileName);
 
-      await sharp(response.data)
-        .webp({ quality: 70 })
-        .toFile(filePath);
+      // Create a sharp instance from the downloaded image
+      const image = sharp(response.data);
+
+      // Get image metadata to check dimensions
+      const metadata = await image.metadata();
+
+      // Determine if resizing is needed
+      const needsResize =
+        metadata.width > MAX_WIDTH || metadata.height > MAX_HEIGHT;
+
+      // Prepare the processing pipeline
+      let processedImage = image;
+
+      if (needsResize) {
+        // Resize the image while maintaining aspect ratio
+        processedImage = processedImage.resize({
+          width: Math.min(metadata.width, MAX_WIDTH),
+          height: Math.min(metadata.height, MAX_HEIGHT),
+          fit: "inside", // Maintains aspect ratio
+          withoutEnlargement: true, // Don't enlarge small images
+        });
+      }
+
+      // Convert to webp with quality setting
+      await processedImage.webp({ quality: 70 }).toFile(filePath);
 
       return `/images/products/${fileName}`;
     } catch (error) {
-      console.error(`Error processing image (Attempt ${attempt + 1}/${retries}): ${url}`, error.message);
+      console.error(
+        `Error processing image (Attempt ${attempt + 1}/${retries}): ${url}`,
+        error.message
+      );
 
       if (attempt < retries - 1) {
         console.log(`Retrying in ${delay}ms...`);
-        if (error.response && error.response.status == 403) await new Promise(resolve => setTimeout(resolve, 2 * 60 * 1000));
-        else await new Promise(resolve => setTimeout(resolve, delay));
+        if (error.response && error.response.status == 403)
+          await new Promise((resolve) => setTimeout(resolve, 2 * 60 * 1000));
+        else await new Promise((resolve) => setTimeout(resolve, delay));
       } else {
         return null;
       }
@@ -48,8 +80,11 @@ async function processImagesInChunks(items, chunkSize = 100) {
   const itemsWithImages = [];
   const itemsWithoutImages = [];
 
-  items.forEach(item => {
-    if (item.image || (item.additional_images && JSON.parse(item.additional_images).length > 0)) {
+  items.forEach((item) => {
+    if (
+      item.image ||
+      (item.additional_images && JSON.parse(item.additional_images).length > 0)
+    ) {
       itemsWithImages.push(item);
     } else {
       itemsWithoutImages.push(item);
@@ -57,39 +92,39 @@ async function processImagesInChunks(items, chunkSize = 100) {
   });
 
   const processChunk = async (chunk) => {
-    return Promise.all(chunk.map(async (item) => {
-      const downloadTasks = [];
+    return Promise.all(
+      chunk.map(async (item) => {
+        const downloadTasks = [];
 
-      if (item.image) {
-        downloadTasks.push(
-          downloadAndSaveImage(item.image)
-            .then(savedPath => {
+        if (item.image) {
+          downloadTasks.push(
+            downloadAndSaveImage(item.image).then((savedPath) => {
               if (savedPath) item.image = savedPath;
             })
-        );
-      }
+          );
+        }
 
-      if (item.additional_images) {
-        const additionalImages = JSON.parse(item.additional_images);
-        const savedImages = [];
-        
-        additionalImages.forEach(imgUrl => {
-          downloadTasks.push(
-            downloadAndSaveImage(imgUrl)
-              .then(savedPath => {
+        if (item.additional_images) {
+          const additionalImages = JSON.parse(item.additional_images);
+          const savedImages = [];
+
+          additionalImages.forEach((imgUrl) => {
+            downloadTasks.push(
+              downloadAndSaveImage(imgUrl).then((savedPath) => {
                 if (savedPath) savedImages.push(savedPath);
               })
-          );
-        });
+            );
+          });
 
-        await Promise.all(downloadTasks);
-        item.additional_images = JSON.stringify(savedImages);
-      } else {
-        await Promise.all(downloadTasks);
-      }
+          await Promise.all(downloadTasks);
+          item.additional_images = JSON.stringify(savedImages);
+        } else {
+          await Promise.all(downloadTasks);
+        }
 
-      return item;
-    }));
+        return item;
+      })
+    );
   };
 
   const chunks = chunk(itemsWithImages, chunkSize);
@@ -98,9 +133,10 @@ async function processImagesInChunks(items, chunkSize = 100) {
   for (const chunkItems of chunks) {
     const processedChunk = await processChunk(chunkItems);
     processedItems.push(...processedChunk);
-    
-    await new Promise(resolve => setTimeout(resolve, 100));
-    if (i % 10 == 0) console.log(`Downloading progress: ${i} / ${chunks.length}`);
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    if (i % 10 == 0)
+      console.log(`Downloading progress: ${i} / ${chunks.length}`);
     i += 1;
   }
 
