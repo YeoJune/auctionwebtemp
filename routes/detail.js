@@ -1,7 +1,13 @@
 const express = require("express");
 const router = express.Router();
 const { processImagesInChunks } = require("../utils/processImage");
-const { ecoAucCrawler, starAucCrawler } = require("../crawlers/index");
+const {
+  ecoAucCrawler,
+  ecoAucValueCrawler,
+  brandAucCrawler,
+  brandAucValueCrawler,
+  starAucCrawler,
+} = require("../crawlers/index");
 const DBManager = require("../utils/DBManager");
 const pool = require("../utils/DB");
 
@@ -20,13 +26,14 @@ async function processItem(itemId, isValue, res) {
       } else {
         let crawler;
         if (items[0].auc_num == 1) {
-          if (isValue) crawler = null;
+          if (isValue) crawler = ecoAucValueCrawler;
           else crawler = ecoAucCrawler;
         } else if (items[0].auc_num == 2) {
           if (isValue) crawler = null;
-          else crawler = null;
+          else crawler = brandAucCrawler;
         } else if (items[0].auc_num == 3) {
-          crawler = starAucCrawler;
+          if (isValue) crawler = null;
+          else crawler = starAucCrawler;
         }
 
         try {

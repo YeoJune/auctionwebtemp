@@ -2,11 +2,6 @@ const cheerio = require("cheerio");
 const { AxiosCrawler } = require("./baseCrawler");
 const { processImagesInChunks } = require("../utils/processImage");
 
-let pLimit;
-(async () => {
-  pLimit = (await import("p-limit")).default;
-})();
-
 const starAucConfig = {
   name: "StarAuc",
   baseUrl: "https://www.starbuyers-global-auction.com",
@@ -230,7 +225,6 @@ class StarAucCrawler extends AxiosCrawler {
 
   async getTotalPages(categoryId) {
     return this.retryOperation(async () => {
-      console.log(`Getting total pages for category ${categoryId}...`);
       const url =
         this.config.searchUrl + this.config.searchParams(categoryId, 1);
 
@@ -260,9 +254,6 @@ class StarAucCrawler extends AxiosCrawler {
         );
 
         if (scriptData && scriptData.last_page) {
-          console.log(
-            `스크립트 데이터에서 총 페이지 수 찾음: ${scriptData.last_page}`
-          );
           return scriptData.last_page;
         }
       } catch (error) {
@@ -275,7 +266,7 @@ class StarAucCrawler extends AxiosCrawler {
     });
   }
 
-  async filterHandles($, scriptItems, existingIds) {
+  filterHandles($, scriptItems, existingIds) {
     // 스크립트 데이터에서 아이템 ID와 날짜 추출
     const filteredScriptItems = [];
     const remainItems = [];
@@ -302,10 +293,6 @@ class StarAucCrawler extends AxiosCrawler {
         });
       }
     }
-
-    console.log(
-      `필터링 결과: ${filteredScriptItems.length}개 아이템 추출, ${remainItems.length}개 이미 존재`
-    );
     return [filteredScriptItems, remainItems];
   }
 
@@ -330,7 +317,7 @@ class StarAucCrawler extends AxiosCrawler {
       }
 
       // 필터링 - 이미 존재하는 아이템 제외
-      const [filteredItems, remainItems] = await this.filterHandles(
+      const [filteredItems, remainItems] = this.filterHandles(
         $,
         scriptData,
         existingIds
@@ -341,39 +328,29 @@ class StarAucCrawler extends AxiosCrawler {
         return remainItems;
       }
 
-      // 병렬 처리 설정
-      const limit = pLimit(5);
-      const pageItemsPromises = [];
-
-      // HTML 요소와 스크립트 데이터를 결합해서 처리
-      for (const item of filteredItems) {
-        pageItemsPromises.push(
-          limit(async () => await this.extractItemInfo($, item))
-        );
-      }
-
-      // 모든 아이템 정보 추출 완료 대기
-      const pageItems = await Promise.all(pageItemsPromises);
+      const pageItems = filteredItems.map((item) =>
+        this.extractItemInfo($, item)
+      );
 
       console.log(`${pageItems.length}개 아이템 추출 완료, 페이지 ${page}`);
 
-      // 원본과 동일하게 이미지 처리 (실제 구현 필요)
       const processedItems = await processImagesInChunks(pageItems);
 
       return [...processedItems, ...remainItems];
     });
   }
 
-  async extractItemInfo($, item) {
+  extractItemInfo($, item) {
     const scriptData = item.scriptData;
+    const title = this.removeLeadingBrackets(scriptData.name);
 
     // 기본 정보 추출
     const result = {
       item_id: item.item_id,
       scheduled_date: item.scheduled_date,
-      japanese_title: scriptData.name,
-      korean_title: scriptData.name, // 동일하게 처리
-      brand: scriptData.name.split(" ")[0], // 첫 단어를 브랜드로 가정
+      original_title: scriptData.name,
+      title: title, // 동일하게 처리
+      brand: title.split(" ")[0], // 첫 단어를 브랜드로 가정
       rank: scriptData.fixRank?.replace(/\\uff/g, ""), // 등급 정보 추출 (이스케이프 문자 처리)
       starting_price: parseInt(scriptData.startingPrice, 10),
       image: scriptData.thumbnailUrl,
@@ -387,9 +364,6 @@ class StarAucCrawler extends AxiosCrawler {
       result.current_price = parseInt(scriptData.currentBiddingPrice, 10);
     }
 
-    console.log(
-      `아이템 추출 완료: ${result.item_id} - ${result.japanese_title}`
-    );
     return result;
   }
 
@@ -475,7 +449,6 @@ class StarAucCrawler extends AxiosCrawler {
         lot_no: scriptData.lot_no || "",
       };
 
-      console.log(`상세 정보 추출 완료: ${itemId}, 이미지 ${images.length}개`);
       return result;
     });
   }
@@ -504,12 +477,6 @@ class StarAucCrawler extends AxiosCrawler {
         for (let page = 1; page <= totalPages; page++) {
           const pageItems = await this.crawlPage(categoryId, page, existingIds);
           categoryItems.push(...pageItems);
-
-          // 테스트에서는 첫 페이지만 크롤링 (실제 구현에서는 제거)
-          if (process.env.ENV === "development") {
-            console.log("개발 환경에서는 첫 페이지만 크롤링");
-            break;
-          }
         }
 
         if (categoryItems && categoryItems.length > 0) {

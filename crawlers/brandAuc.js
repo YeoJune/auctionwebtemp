@@ -1,18 +1,18 @@
 // crawlers/brandAuc.js
-const { Crawler } = require("./baseCrawler");
+const cheerio = require("cheerio");
+const { AxiosCrawler } = require("./baseCrawler");
 const { processImagesInChunks } = require("../utils/processImage");
-
-let pLimit;
-(async () => {
-  pLimit = (await import("p-limit")).default;
-})();
 
 const brandAucConfig = {
   name: "BrandAuc",
   baseUrl: "https://member.brand-auc.com",
-  accountUrl: "https://u.brand-auc.com/configuration",
+  loginCheckUrl: "https://u.brand-auc.com/configuration",
   loginPageUrl: "https://member.brand-auc.com/login",
-  searchUrl: "https://u.brand-auc.com/previewSearch",
+  loginPostUrl: "https://member.brand-auc.com/login.php",
+  previewItemsApiUrl:
+    "https://u.brand-auc.com/api/v1/auction/previewItems/list",
+  detailItemApiUrl:
+    "https://u.brand-auc.com/api/v1/auction/auctionItems/bag/1/",
   loginData: {
     userId: process.env.CRAWLER_EMAIL2,
     password: process.env.CRAWLER_PASSWORD2,
@@ -27,46 +27,19 @@ const brandAucConfig = {
     Variety: "기타",
     "Painting･Art": "회화·미술품",
     Coin: "코인",
-  },
-  signinSelectors: {
-    userId: 'input[name="username"]',
-    password: 'input[name="password"]',
-    loginButton: "#pcLoginButton",
-  },
-  crawlSelectors: {
-    languageSelect: ".languageselect select",
-    searchButton: ".main_action_button button",
-    itemsPerPageSelect: ".view_count_select select",
-    itemsPerPageSelecter: ".view_count_select option:nth-child(3)",
-    totalPagesSpan: ".now_page span",
-    pageSelect: ".now_page .select_box select",
-    resetButton: "#search_times button",
-    search1: "input[name=uketsukeNoFrom]",
-    search2: "input[name=uketsukeNoTo]",
-    itemContainer: "#item_list_area > li",
-    id: ".receipt_number_header",
-    title: ".item_date .item_name_header",
-    brand: ".item_date .maker_header",
-    rank: ".appraisal",
-    startingPrice: ".price",
-    image: ".thumbnail img",
-    scheduledDate: ".held_date div:last-child span",
-    category: ".genre_type_date .genre_header",
-    status: ".state_content",
-  },
-  crawlDetailSelectors: {
-    images: ".other_images img",
-    description: ".tokki",
-    codeParent: "#detail_date",
   },
 };
 
 const brandAucValueConfig = {
   name: "BrandAucValue",
-  baseUrl: "https://member.brand-auc.com",
-  accountUrl: "https://u.brand-auc.com/configuration",
-  loginPageUrl: "https://member.brand-auc.com/login",
-  searchUrl: "https://e-auc.brand-auc.com/marketPriceItems",
+  baseUrl: "https://e-auc.brand-auc.com",
+  loginCheckUrl: "https://e-auc.brand-auc.com/auth/success",
+  loginPageUrl: "https://member.brand-auc.com/loginEauc",
+  loginPostUrl: "https://e-auc.brand-auc.com/login",
+  marketPriceApiUrl:
+    "https://e-auc.brand-auc.com/api/v1/marketprice/marketpriceItems/list",
+  detailItemApiUrl:
+    "https://e-auc.brand-auc.com/api/v1/marketprice/marketpriceItems/detail",
   loginData: {
     userId: process.env.CRAWLER_EMAIL2,
     password: process.env.CRAWLER_PASSWORD2,
@@ -82,565 +55,687 @@ const brandAucValueConfig = {
     "Painting･Art": "회화·미술품",
     Coin: "코인",
   },
-  signinSelectors: {
-    userId: 'input[name="username"]',
-    password: 'input[name="password"]',
-    loginButton: "#pcLoginButton",
-  },
-  crawlSelectors: {
-    languageSelect: ".languageselect select",
-    searchButton: ".main_action_button button",
-    itemsPerPageSelect: ".view_count_select select",
-    itemsPerPageSelecter: ".view_count_select option:nth-child(3)",
-    totalPagesSpan: ".now_page span",
-    pageSelect: ".now_page .select_box select",
-    resetButton: "#search_times button",
-    search1: "input[name=uketsukeNoFrom]",
-    search2: "input[name=uketsukeNoTo]",
-    itemContainer: "#item_list_area > li",
-    id: ".receipt_number_header",
-    title: ".item_date .item_name_header",
-    brand: ".item_date .maker_header",
-    rank: ".appraisal",
-    finalPrice: ".price",
-    image: ".thumbnail img",
-    scheduledDate: ".held_date div:last-child span",
-    category: ".genre_type_date .genre_header",
-    status: ".state_content",
-  },
-  crawlDetailSelectors: {
-    images: ".other_images img",
-    description: ".tokki",
-    codeParent: "#detail_date",
-  },
 };
 
-class BrandAucCrawler extends Crawler {
-  async waitForLoading(page, timeout = 30 * 1000) {
-    const loadingElements = await page.$$("app-loading");
-    for (const e of loadingElements) {
-      if (e) {
-        await page.waitForFunction(
-          (e) => {
-            return e && e.children.length == 0;
-          },
-          { timeout: timeout },
-          e
-        );
-      }
-      e.dispose();
-    }
+class BrandAucCrawler extends AxiosCrawler {
+  constructor(config) {
+    super(config);
+    this.currentLocale = "en"; // 언어 설정(영어)
   }
 
-  async filterHandles(handles, existingIds) {
-    const limit = pLimit(20);
-    const filterPromises = handles.map((handle) =>
-      limit(async () => await this.filterHandle(handle, existingIds))
-    );
-    const items = await Promise.all(filterPromises);
-
-    let filteredHandles = [],
-      filteredItems = [],
-      remainItems = [];
-    for (let i = 0; i < items.length; i++) {
-      if (items[i]) {
-        if (items[i].status) {
-          delete items[i].status;
-          filteredHandles.push(handles[i]);
-          filteredItems.push(items[i]);
-        } else {
-          handles[i].dispose();
-          remainItems.push(items[i]);
-        }
+  async loginCheck() {
+    // loginCheckUrl에서 200을 받으면 성공
+    return this.retryOperation(async () => {
+      const response = await this.client.get(
+        this.config.loginCheckUrl || this.config.accountUrl
+      );
+      if (response.status === 200) {
+        return true;
       } else {
-        handles[i].dispose();
+        return false;
       }
+    });
+  }
+
+  async login() {
+    // 이미 로그인되어 있고, 세션이 유효하면 재로그인 안함
+    if ((await this.loginCheck()) && this.isSessionValid()) {
+      console.log("Already logged in, session is valid");
+      this.isLoggedIn = true;
+      return;
     }
-    return [filteredHandles, filteredItems, remainItems];
-  }
-
-  async filterHandle(itemHandle, existingIds) {
-    const item = await itemHandle.evaluate((el, config) => {
-      const id = el.querySelector(config.crawlSelectors.id);
-      const status = el.querySelector(config.crawlSelectors.status);
-      return {
-        item_id: id ? id.textContent.trim() : null,
-        status: status ? status.textContent.trim() : null,
-      };
-    }, this.config);
-    if (item.status == "SOLD BY HOLD" || item.status == "SOLD") return null;
-    if (existingIds.has(item.item_id)) return { item_id: item.item_id };
-    else return item;
-  }
-
-  async crawlAllItems(existingIds) {
-    await this.closeDetailBrowsers();
-    await this.loginCheckCrawler();
-    const startTime = Date.now();
 
     return this.retryOperation(async () => {
-      await this.crawlerPage.goto(this.config.searchUrl, {
-        waitUntil: "networkidle0",
-        timeout: this.pageTimeout,
-      });
-      await this.crawlerPage.select(
-        this.config.crawlSelectors.languageSelect,
-        "en"
-      );
-      await this.crawlerPage.click(this.config.crawlSelectors.searchButton);
-      await this.waitForLoading(this.crawlerPage);
+      console.log("Logging in to Brand Auction...");
 
-      await this.crawlerPage.$eval(
-        this.config.crawlSelectors.itemsPerPageSelecter,
-        (el) => (el.value = "500")
-      );
-      await this.crawlerPage.select(
-        this.config.crawlSelectors.itemsPerPageSelect,
-        "500"
-      );
-      await this.waitForLoading(this.crawlerPage);
-      await this.crawlerPage.waitForSelector(
-        this.config.crawlSelectors.itemContainer
-      );
+      // 로그인 페이지 가져오기
+      const response = await this.client.get(this.config.loginPageUrl);
 
-      const totalPageText = await this.crawlerPage.$eval(
-        this.config.crawlSelectors.totalPagesSpan,
-        (el) => el.textContent
-      );
-      const totalPages = parseInt(totalPageText.match(/\d+/g).join(""));
+      // CSRF 토큰 추출
+      const $ = cheerio.load(response.data);
+      const csrfToken = $('input[name="_csrf"]').val();
 
-      const allItems = [];
-      console.log(`Crawling for total page ${totalPages}`);
-      let itemHandles,
-        filteredHandles,
-        filteredItems,
-        remainItems,
-        pageItemsPromises,
-        pageItems,
-        processedItems;
-      const limit = pLimit(5);
-
-      for (let page = 1; page <= totalPages; page++) {
-        console.log(`Crawling page ${page} of ${totalPages}`);
-
-        await this.crawlerPage.select(
-          this.config.crawlSelectors.pageSelect,
-          page.toString()
-        );
-        await this.waitForLoading(this.crawlerPage);
-        await this.crawlerPage.waitForSelector(
-          this.config.crawlSelectors.itemContainer
-        );
-        this.sleep(3000);
-
-        itemHandles = await this.crawlerPage.$$(
-          this.config.crawlSelectors.itemContainer
-        );
-
-        [filteredHandles, filteredItems, remainItems] =
-          await this.filterHandles(itemHandles, existingIds);
-        pageItemsPromises = [];
-        for (let i = 0; i < filteredItems.length; i++) {
-          pageItemsPromises.push(
-            limit(async () => {
-              const item = await this.extractItemInfo(
-                filteredHandles[i],
-                filteredItems[i]
-              );
-              filteredHandles[i].dispose();
-              return item;
-            })
-          );
-        }
-
-        pageItems = await Promise.all(pageItemsPromises);
-
-        processedItems = await processImagesInChunks(pageItems);
-
-        console.log(`Crawled ${processedItems.length} items from page ${page}`);
-
-        allItems.push(...processedItems, ...remainItems);
+      if (!csrfToken) {
+        throw new Error("CSRF token not found");
       }
 
-      this.closeCrawlerBrowser();
+      // Form 데이터 준비
+      const formData = new URLSearchParams();
+      formData.append("username", this.config.loginData.userId);
+      formData.append("password", this.config.loginData.password);
+      formData.append("_csrf", csrfToken);
+      formData.append("client_id", "brandMember");
+      formData.append("loginType", "login");
 
-      console.log(`Total items crawled: ${allItems.length}`);
+      // 추가 옵션 (로그인 상태 유지)
+      formData.append("asbLogin", "on");
+
+      // 로그인 요청
+      const loginResponse = await this.client.post(
+        this.config.loginPageUrl, // '/login'이 상대 경로니까 원래 URL 그대로 사용
+        formData,
+        {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Referer: this.config.loginPageUrl,
+          },
+          maxRedirects: 5,
+          validateStatus: function (status) {
+            return status >= 200 && status < 400; // 300-399 리다이렉트 허용
+          },
+        }
+      );
+
+      // 로그인 후 검증
+      if (await this.loginCheck()) {
+        console.log("Login successful");
+        this.isLoggedIn = true;
+        this.loginTime = Date.now();
+
+        return true;
+      } else {
+        throw new Error("Login failed");
+      }
+    });
+  }
+
+  async crawlAllItems(existingIds = new Set()) {
+    try {
+      const startTime = Date.now();
+      console.log(`Starting crawl at ${new Date().toISOString()}`);
+
+      // 로그인
+      await this.login();
+
+      const allCrawledItems = [];
+      const size = 1000; // 한 페이지당 항목 수 (API 제한에 따라 조정)
+
+      // 첫 페이지 요청으로 총 페이지 수 확인
+      const firstPageResponse = await this.client.get(
+        this.config.previewItemsApiUrl,
+        {
+          params: {
+            page: 0,
+            size: size,
+            gamenId: "B02-01",
+          },
+          headers: {
+            Accept: "application/json",
+          },
+        }
+      );
+
+      const totalPages = firstPageResponse.data.totalPages;
+      const totalItems = firstPageResponse.data.totalElements;
+
+      console.log(`Found ${totalItems} items across ${totalPages} pages`);
+
+      // 첫 페이지 아이템 처리
+      const firstPageItems = await this.processItemsPage(
+        firstPageResponse.data.content,
+        existingIds
+      );
+      allCrawledItems.push(...firstPageItems);
+
+      // 나머지 페이지 순차적으로 처리
+      for (let page = 1; page < totalPages; page++) {
+        console.log(`Crawling page ${page + 1} of ${totalPages}`);
+
+        const response = await this.client.get(this.config.previewItemsApiUrl, {
+          params: {
+            page: page,
+            size: size,
+            gamenId: "B02-01",
+          },
+          headers: {
+            Accept: "application/json",
+          },
+        });
+
+        if (response.data && response.data.content) {
+          const pageItems = await this.processItemsPage(
+            response.data.content,
+            existingIds
+          );
+          allCrawledItems.push(...pageItems);
+
+          console.log(
+            `Processed ${pageItems.length} items from page ${page + 1}`
+          );
+        }
+      }
+
+      console.log(`Total items processed: ${allCrawledItems.length}`);
 
       const endTime = Date.now();
       const executionTime = endTime - startTime;
       console.log(
-        `Refresh operation completed in ${this.formatExecutionTime(
+        `Crawl operation completed in ${this.formatExecutionTime(
           executionTime
         )}`
       );
 
-      return allItems;
-    });
+      return allCrawledItems;
+    } catch (error) {
+      console.error("Crawl failed:", error);
+      return [];
+    }
   }
 
-  async extractItemInfo(itemHandle, item0) {
-    const item = await itemHandle.evaluate((el, config) => {
-      const title = el.querySelector(config.crawlSelectors.title);
-      const brand = el.querySelector(config.crawlSelectors.brand);
-      const rank = el.querySelector(config.crawlSelectors.rank);
-      const startingPrice = el.querySelector(
-        config.crawlSelectors.startingPrice
+  async processItemsPage(items, existingIds) {
+    // 아이템 필터링
+    const filteredItems = [];
+
+    for (const item of items) {
+      // 상태가 "SOLD BY HOLD" 또는 "SOLD"인 경우 제외
+      if (item.jotai === "SOLD BY HOLD" || item.jotai === "SOLD") {
+        continue;
+      }
+
+      // 이미 처리된 아이템 제외
+      if (existingIds.has(item.uketsukeBng)) {
+        filteredItems.push({ item_id: item.uketsukeBng });
+        continue;
+      }
+
+      // 필터 통과한 아이템 기본 정보 추출
+      const processedItem = this.extractBasicItemInfo(item);
+      filteredItems.push(processedItem);
+    }
+
+    // 필터링된 아이템에 대해 추가 처리 (이미지 처리 등)
+    const processedItems = await processImagesInChunks(filteredItems);
+
+    return processedItems;
+  }
+
+  extractBasicItemInfo(item) {
+    // API 응답에서 필요한 정보 추출
+    const category = this.config.categoryTable[item.genreEn] || item.genreEn;
+    const scheduledDate = this.extractDate(item.kaisaiYmd) || null;
+
+    return {
+      item_id: item.uketsukeBng,
+      original_title: item.shohinEn || "",
+      title: this.convertFullWidthToAscii(item.shohinEn || ""),
+      brand: this.convertFullWidthToAscii(item.maker || ""),
+      rank: item.hyoka || "",
+      starting_price: item.startKng || 0,
+      image: item.photoUrl
+        ? item.photoUrl.replace(/(brand_img\/)(\d+)/, "$16")
+        : null,
+      category: category,
+      scheduled_date: scheduledDate,
+      auc_num: "2", // 고정값으로 보임
+
+      // 상세 정보 요청 시 필요한 데이터
+      kaijoCd: item.kaijoCd,
+      kaisaiKaisu: item.kaisaiKaisu,
+    };
+  }
+
+  async crawlItemDetails(itemId) {
+    try {
+      // 먼저 아이템 정보를 검색 API를 통해 가져옴
+      const searchUrl = `https://u.brand-auc.com/api/v1/auction/previewItems/list`;
+
+      // 검색 파라미터 설정
+      const params = {
+        uketsukeNoFrom: itemId,
+        uketsukeNoTo: itemId,
+        page: 0,
+        size: 20,
+        gamenId: "B02-01",
+      };
+
+      // 검색 API 호출
+      const searchResponse = await this.client.get(searchUrl, {
+        params: params,
+        headers: {
+          Accept: "application/json, text/plain, */*",
+          "Accept-Language": "en-US,en;q=0.9",
+          Referer: "https://u.brand-auc.com/",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+      });
+
+      // 검색 결과에서 kaisaiKaisu 추출
+      if (
+        !searchResponse.data ||
+        !searchResponse.data.content ||
+        searchResponse.data.content.length === 0
+      ) {
+        throw new Error(`No search results found for item ${itemId}`);
+      }
+
+      const itemInfo = searchResponse.data.content[0];
+      const kaisaiKaisu = itemInfo.kaisaiKaisu;
+      const kaijoCd = itemInfo.kaijoCd || 1;
+
+      console.log(`Found item ${itemId} in auction round: ${kaisaiKaisu}`);
+
+      // 상세 정보 URL 구성 (올바른 kaisaiKaisu 사용)
+      const detailUrl = `https://u.brand-auc.com/api/v1/auction/auctionItems/bag/${kaijoCd}/${kaisaiKaisu}/${itemId}/B02-01`;
+
+      // 상세 정보 요청
+      const response = await this.client.get(detailUrl, {
+        headers: {
+          Accept: "application/json, text/plain, */*",
+          "Accept-Language": "en-US,en;q=0.9",
+          Referer: "https://u.brand-auc.com/",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+      });
+
+      if (!response.data) {
+        throw new Error(`Failed to get details for item ${itemId}`);
+      }
+
+      const detail = response.data;
+
+      // 이미지 URL 목록 처리
+      const images = detail.fileList || [];
+      const formattedImages = images.map((url) =>
+        url.replace(/(brand_img\/)(\d+)/, "$16")
       );
-      const image = el.querySelector(config.crawlSelectors.image);
-      const category = el.querySelector(config.crawlSelectors.category);
-      const scheduledDate = el.querySelector(
-        config.crawlSelectors.scheduledDate
-      );
+
+      // 상품 상태 메모 처리
+      const bikoList = detail.bikoList || [];
+      let description = bikoList.join("\n") || "-";
+
+      // 부속품 정보 처리
+      const accessoryParts = [];
+      if (detail.hosho && detail.hosho !== "なし")
+        accessoryParts.push(`보증서: ${detail.hosho}`);
+      if (detail.hako && detail.hako !== "なし")
+        accessoryParts.push(`상자: ${detail.hako}`);
+      if (detail.hozon && detail.hozon !== "なし")
+        accessoryParts.push(`보존 케이스: ${detail.hozon}`);
+      if (detail.strap && detail.strap !== "なし")
+        accessoryParts.push(`스트랩: ${detail.strap}`);
+      if (detail.kanadeKey && detail.kanadeKey !== "なし")
+        accessoryParts.push(`열쇠: ${detail.kanadeKey}`);
+      if (detail.seal && detail.seal !== "なし")
+        accessoryParts.push(`태그: ${detail.seal}`);
+
+      const accessoryCode = accessoryParts.join(", ") || "";
 
       return {
-        japanese_title: title ? title.textContent.trim() : null,
-        brand: brand ? brand.textContent.trim() : null,
-        rank: rank ? rank.textContent.trim() : null,
-        starting_price: startingPrice ? startingPrice.textContent.trim() : null,
-        image: image ? image.src.replace(/(brand_img\/)(\d+)/, "$16") : null,
-        category: category.textContent.trim(),
-        scheduled_date: scheduledDate ? scheduledDate.textContent.trim() : null,
+        additional_images:
+          formattedImages.length > 0 ? JSON.stringify(formattedImages) : null,
+        description: description,
+        accessory_code: accessoryCode,
       };
-    }, this.config);
-    item.japanese_title = this.convertFullWidthToAscii(item.japanese_title);
-    item.brand = this.convertFullWidthToAscii(item.brand);
-    item.category = this.config.categoryTable[item.category];
-    item.korean_title = item.japanese_title;
-    item.scheduled_date = this.extractDate(item.scheduled_date);
-    item.starting_price = this.currencyToInt(item.starting_price);
-    item.auc_num = "2";
-
-    return Object.assign(item0, item);
-  }
-  async crawlItemDetails(idx, itemId) {
-    await this.loginCheckDetails();
-
-    const startTime = Date.now();
-    return this.retryOperation(async () => {
-      const browser = this.detailBrowsers[idx];
-      const page = this.detailPages[idx];
-      await page.goto(this.config.searchUrl, {
-        waitUntil: "networkidle0",
-        timeout: this.pageTimeout,
-      });
-      //console.log("search Url loaded");
-      await page.waitForSelector(this.config.crawlSelectors.languageSelect, {
-        timeout: 3000,
-      });
-      await page.select(this.config.crawlSelectors.languageSelect, "en");
-      await page.click(this.config.crawlSelectors.resetButton);
-      await Promise.all([
-        await page.type(this.config.crawlSelectors.search1, itemId),
-        await page.type(this.config.crawlSelectors.search2, itemId),
-      ]);
-      await page.click(this.config.crawlSelectors.searchButton);
-      const newPagePromise = new Promise((resolve, reject) => {
-        const timeoutId = setTimeout(() => {
-          reject(new Error("Timeout waiting for new page"));
-        }, 5000);
-
-        browser.once("targetcreated", (target) => {
-          clearTimeout(timeoutId);
-          resolve(target.page());
-        });
-      });
-      await this.waitForLoading(page);
-
-      await page.click(this.config.crawlSelectors.itemContainer);
-      const newPage = await newPagePromise;
-      await this.initPage(newPage);
-      await this.sleep(1000);
-      await this.waitForLoading(newPage, 5000);
-
-      let item;
-      try {
-        item = await newPage.evaluate((config) => {
-          const images = Array.from(
-            document.querySelectorAll(config.crawlDetailSelectors.images)
-          )
-            .map((img) => {
-              const src = img.getAttribute("src");
-              if (src && src.startsWith("http")) {
-                return src.replace(/(brand_img\/)(\d+)/, "$16");
-              }
-              return null;
-            })
-            .filter(Boolean);
-
-          const description =
-            document
-              .querySelector(config.crawlDetailSelectors.description)
-              ?.textContent.trim()
-              .replace(/\s{2,}/g, "\t") || null;
-          const codeParent = document.querySelector(
-            config.crawlDetailSelectors.codeParent
-          );
-          const accessoryCode =
-            codeParent?.children[6]?.children[2]?.children[1]?.textContent.trim() ||
-            null;
-
-          return {
-            additional_images:
-              images.length > 0 ? JSON.stringify(images) : null,
-            description: description || "",
-            accessory_code: accessoryCode || "",
-          };
-        }, this.config);
-      } catch (error) {
-        throw error;
-      } finally {
-        await newPage.close();
-        await page.click(this.config.crawlSelectors.resetButton);
-      }
-      if (!item.description) item.description = "-";
-
-      const endTime = Date.now();
-      const executionTime = endTime - startTime;
-      //console.log(this.formatExecutionTime(executionTime));
-      return item;
-    });
+    } catch (error) {
+      console.error(
+        `Error fetching details for item ${itemId}:`,
+        error.message
+      );
+      return {
+        additional_images: null,
+        description: "-",
+        accessory_code: "",
+      };
+    }
   }
 }
 
-class BrandAucValueCrawler extends Crawler {
-  async waitForLoading(page, timeout = 30 * 1000) {
-    const loadingElements = await page.$$("app-loading");
-    for (const e of loadingElements) {
-      if (e) {
-        await page.waitForFunction(
-          (e) => {
-            return e && e.children.length == 0;
-          },
-          { timeout: timeout },
-          e
-        );
-      }
-      e.dispose();
-    }
+class BrandAucValueCrawler extends AxiosCrawler {
+  constructor(config) {
+    super(config);
+    this.currentLocale = "en"; // 언어 설정(영어)
   }
 
-  async crawlAllItems(existingIds) {
-    await this.closeDetailBrowsers();
-    await this.loginCheckCrawler();
-    const startTime = Date.now();
+  async loginCheck() {
+    // loginCheckUrl에서 200을 받으면 성공
+    return this.retryOperation(async () => {
+      const response = await this.client.get(
+        this.config.loginCheckUrl || this.config.accountUrl
+      );
+      if (response.status === 200) {
+        return true;
+      } else {
+        return false;
+      }
+    });
+  }
+
+  async login() {
+    // 이미 로그인되어 있고, 세션이 유효하면 재로그인 안함
+    if ((await this.loginCheck()) && this.isSessionValid()) {
+      console.log("Already logged in, session is valid");
+      this.isLoggedIn = true;
+      return;
+    }
 
     return this.retryOperation(async () => {
-      await this.crawlerPage.goto(this.config.searchUrl, {
-        waitUntil: "networkidle0",
-        timeout: this.pageTimeout,
-      });
-      await this.crawlerPage.select(
-        this.config.crawlSelectors.languageSelect,
-        "en"
-      );
-      await this.crawlerPage.click(this.config.crawlSelectors.searchButton);
-      await this.waitForLoading(this.crawlerPage);
+      console.log("Logging in to Brand Auction...");
 
-      await this.crawlerPage.$eval(
-        this.config.crawlSelectors.itemsPerPageSelecter,
-        (el) => (el.value = "500")
-      );
-      await this.crawlerPage.select(
-        this.config.crawlSelectors.itemsPerPageSelect,
-        "500"
-      );
-      await this.waitForLoading(this.crawlerPage);
-      await this.crawlerPage.waitForSelector(
-        this.config.crawlSelectors.itemContainer
-      );
+      // 로그인 페이지 가져오기
+      const response = await this.client.get(this.config.loginPageUrl);
 
-      const totalPageText = await this.crawlerPage.$eval(
-        this.config.crawlSelectors.totalPagesSpan,
-        (el) => el.textContent
-      );
-      const totalPages = parseInt(totalPageText.match(/\d+/g).join(""));
+      // CSRF 토큰 추출
+      const $ = cheerio.load(response.data);
+      const csrfToken = $('input[name="_csrf"]').val();
 
-      const allItems = [];
-      console.log(`Crawling for total page ${totalPages}`);
-      let itemHandles, pageItemsPromises, pageItems, processedItems;
-      const limit = pLimit(5);
-      let isEnd = false;
-
-      for (let page = 1; page <= totalPages; page++) {
-        console.log(`Crawling page ${page} of ${totalPages}`);
-
-        await this.crawlerPage.select(
-          this.config.crawlSelectors.pageSelect,
-          page.toString()
-        );
-        await this.waitForLoading(this.crawlerPage);
-        await this.crawlerPage.waitForSelector(
-          this.config.crawlSelectors.itemContainer
-        );
-        this.sleep(3000);
-
-        itemHandles = await this.crawlerPage.$$(
-          this.config.crawlSelectors.itemContainer
-        );
-        pageItemsPromises = [];
-        for (let i = 0; i < itemHandles.length; i++) {
-          pageItemsPromises.push(
-            limit(async () => {
-              const item = await this.extractItemInfo(
-                itemHandles[i],
-                existingIds
-              );
-              itemHandles[i].dispose();
-              return item;
-            })
-          );
-        }
-
-        pageItems = await Promise.all(pageItemsPromises);
-
-        for (let item of pageItems)
-          if (item.item_id && !item.japanese_title) isEnd = true;
-        processedItems = await processImagesInChunks(pageItems);
-        if (isEnd) break;
-
-        console.log(`Crawled ${processedItems.length} items from page ${page}`);
-
-        allItems.push(...processedItems);
+      if (!csrfToken) {
+        throw new Error("CSRF token not found");
       }
 
-      this.closeCrawlerBrowser();
+      // Form 데이터 준비
+      const formData = new URLSearchParams();
+      formData.append("username", this.config.loginData.userId);
+      formData.append("password", this.config.loginData.password);
+      formData.append("_csrf", csrfToken);
+      formData.append("client_id", "brandEaucMember");
+      formData.append("loginType", "eaucLogin");
 
-      console.log(`Total items crawled: ${allItems.length}`);
+      // 로그인 요청
+      const loginResponse = await this.client.post(
+        this.config.loginPostUrl, // '/login'이 상대 경로니까 원래 URL 그대로 사용
+        formData,
+        {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Referer: this.config.loginPostUrl,
+          },
+          maxRedirects: 5,
+          validateStatus: function (status) {
+            return status >= 200 && status < 400; // 300-399 리다이렉트 허용
+          },
+        }
+      );
+
+      // 로그인 후 검증
+      if (await this.loginCheck()) {
+        console.log("Login successful");
+        this.isLoggedIn = true;
+        this.loginTime = Date.now();
+
+        return true;
+      } else {
+        throw new Error("Login failed");
+      }
+    });
+  }
+
+  async crawlAllItems(existingIds = new Set()) {
+    try {
+      const startTime = Date.now();
+      console.log(`Starting value crawl at ${new Date().toISOString()}`);
+
+      // 로그인
+      await this.login();
+
+      const allCrawledItems = [];
+      const size = 100; // 한 페이지당 항목 수 (API 제한에 따라 조정)
+
+      // 최근 경매 회차 설정
+      const kaisaiKaisuFrom = 796; // 지난 10회 경매 데이터
+      const kaisaiKaisuTo = 807; // 현재 경매 회차
+
+      // 첫 페이지 요청으로 총 페이지 수 확인
+      const firstPageResponse = await this.client.get(
+        this.config.marketPriceApiUrl,
+        {
+          params: {
+            kaisaiKaisuFrom: kaisaiKaisuFrom,
+            kaisaiKaisuTo: kaisaiKaisuTo,
+            page: 0,
+            size: size,
+            getKbn: 3, // 완료된 경매 결과
+            kaijoKbn: 0, // 모든 경매장
+          },
+          headers: {
+            Accept: "application/json, text/plain, */*",
+            "Accept-Language": "en-US,en;q=0.9",
+            Referer: "https://e-auc.brand-auc.com/",
+            "X-Requested-With": "XMLHttpRequest",
+          },
+        }
+      );
+
+      const totalPages = firstPageResponse.data.totalPages;
+      const totalItems = firstPageResponse.data.totalElements;
+
+      console.log(
+        `Found ${totalItems} market price items across ${totalPages} pages`
+      );
+
+      // 첫 페이지 아이템 처리
+      const firstPageItems = await this.processItemsPage(
+        firstPageResponse.data.content,
+        existingIds
+      );
+      allCrawledItems.push(...firstPageItems);
+
+      let isEnd = false;
+
+      console.log(allCrawledItems[0]);
+
+      // 나머지 페이지 순차적으로 처리
+      for (let page = 1; page < totalPages; page++) {
+        console.log(`Crawling value page ${page + 1} of ${totalPages}`);
+
+        const response = await this.client.get(this.config.marketPriceApiUrl, {
+          params: {
+            kaisaiKaisuFrom: kaisaiKaisuFrom,
+            kaisaiKaisuTo: kaisaiKaisuTo,
+            page: page,
+            size: size,
+            getKbn: 3,
+            kaijoKbn: 0,
+          },
+          headers: {
+            Accept: "application/json, text/plain, */*",
+            "Accept-Language": "en-US,en;q=0.9",
+            Referer: "https://e-auc.brand-auc.com/",
+            "X-Requested-With": "XMLHttpRequest",
+          },
+        });
+
+        if (response.data && response.data.content) {
+          const pageItems = await this.processItemsPage(
+            response.data.content,
+            existingIds
+          );
+
+          // 영어 제목이 없는 아이템이 있으면 더 이상 크롤링 안함
+          for (const item of pageItems) {
+            if (item.item_id && !item.title) {
+              isEnd = true;
+              break;
+            }
+          }
+
+          allCrawledItems.push(...pageItems);
+
+          console.log(
+            `Processed ${pageItems.length} value items from page ${page + 1}`
+          );
+
+          if (isEnd) {
+            console.log("Found items without English titles, stopping crawl");
+            break;
+          }
+        }
+      }
+
+      console.log(`Total value items processed: ${allCrawledItems.length}`);
 
       const endTime = Date.now();
       const executionTime = endTime - startTime;
       console.log(
-        `Refresh operation completed in ${this.formatExecutionTime(
+        `Value crawl operation completed in ${this.formatExecutionTime(
           executionTime
         )}`
       );
 
-      return allItems;
-    });
+      return allCrawledItems;
+    } catch (error) {
+      console.error("Value crawl failed:", error);
+      return [];
+    }
   }
 
-  async extractItemInfo(itemHandle, existingIds) {
-    const item = await itemHandle.evaluate((el, config) => {
-      const id = el.querySelector(config.crawlSelectors.id);
-      const scheduledDate = el.querySelector(
-        config.crawlSelectors.scheduledDate
+  async processItemsPage(items, existingIds) {
+    const filteredItems = [];
+
+    for (const item of items) {
+      // 이미 처리된 아이템 제외
+      if (existingIds.has(item.uketsukeBng)) {
+        filteredItems.push({ item_id: item.uketsukeBng });
+        continue;
+      }
+
+      // 기본 정보 추출하여 아이템 생성
+      const processedItem = this.extractBasicItemInfo(item);
+      filteredItems.push(processedItem);
+    }
+
+    // 이미지 처리 등 추가 로직
+    const processedItems = await processImagesInChunks(filteredItems);
+
+    return processedItems;
+  }
+
+  extractBasicItemInfo(item) {
+    // 카테고리 영문명에서 한글명 매핑
+    const category =
+      this.config.categoryTable[item.genre] || item.genreEn || item.genre;
+
+    // 낙찰 가격 또는 결과 가격
+    const finalPrice = item.kekkaKng || 0;
+
+    // 경매 날짜를 ISO 형식으로 변환
+    const scheduledDate = this.extractDate(item.kaisaiYmd) || null;
+
+    return {
+      item_id: item.uketsukeBng,
+      title: item.shohinEn || this.convertFullWidthToAscii(item.shohin || ""), // 영문명 우선, 없으면 변환
+      brand: this.convertFullWidthToAscii(item.maker || ""),
+      rank: item.hyoka || "",
+      final_price: finalPrice,
+      image: item.photoUrl
+        ? item.photoUrl.replace(/(brand_img\/)(\d+)/, "$16")
+        : null,
+      category: category,
+      scheduled_date: scheduledDate,
+      auc_num: "2", // 고정값으로 보임
+
+      // 상세 정보 요청 시 필요한 데이터
+      kaijoCd: item.kaijoCd,
+      kaisaiKaisu: item.kaisaiKaisu,
+    };
+  }
+
+  async crawlItemDetails(itemId) {
+    try {
+      // 검색 API 엔드포인트
+      const searchUrl =
+        "https://e-auc.brand-auc.com/api/v1/marketprice/marketpriceItems/list";
+
+      // 검색 파라미터 설정
+      const params = {
+        uketsukeNoFrom: itemId,
+        uketsukeNoTo: itemId,
+        page: 0,
+        size: 20,
+        getKbn: 3,
+        kaijoKbn: 0,
+      };
+
+      // 검색 API 호출
+      const searchResponse = await this.client.get(searchUrl, {
+        params: params,
+        headers: {
+          Accept: "application/json, text/plain, */*",
+          "Accept-Language": "en-US,en;q=0.9",
+          Referer: "https://e-auc.brand-auc.com/",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+      });
+
+      // 검색 결과에서 kaisaiKaisu 추출
+      if (
+        !searchResponse.data ||
+        !searchResponse.data.content ||
+        searchResponse.data.content.length === 0
+      ) {
+        throw new Error(`No search results found for item ${itemId}`);
+      }
+
+      const itemInfo = searchResponse.data.content[0];
+      const kaisaiKaisu = itemInfo.kaisaiKaisu;
+      const kaijoCd = itemInfo.kaijoCd || 1;
+
+      console.log(
+        `Found value item ${itemId} in auction round: ${kaisaiKaisu}`
       );
-      const title = el.querySelector(config.crawlSelectors.title);
-      const brand = el.querySelector(config.crawlSelectors.brand);
-      const rank = el.querySelector(config.crawlSelectors.rank);
-      const finalPrice = el.querySelectorAll(config.crawlSelectors.finalPrice);
-      const image = el.querySelector(config.crawlSelectors.image);
-      const category = el.querySelector(config.crawlSelectors.category);
+
+      // 상세 정보 URL 구성 (올바른 kaisaiKaisu 사용)
+      const detailUrl = `https://e-auc.brand-auc.com/api/v1/marketprice/marketpriceItems/detail/${kaijoCd}/${kaisaiKaisu}/${itemId}`;
+
+      // 상세 정보 요청
+      const response = await this.client.get(detailUrl, {
+        headers: {
+          Accept: "application/json, text/plain, */*",
+          "Accept-Language": "en-US,en;q=0.9",
+          Referer: "https://e-auc.brand-auc.com/",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+      });
+
+      if (!response.data) {
+        throw new Error(`Failed to get value details for item ${itemId}`);
+      }
+
+      const detail = response.data;
+
+      // 이미지 URL 목록 처리
+      const images = detail.fileList || [];
+      const formattedImages = images.map((url) =>
+        url.replace(/(brand_img\/)(\d+)/, "$16")
+      );
+
+      // 상품 상태 메모 처리
+      const bikoList = detail.bikoList || [];
+      let description = bikoList.join("\n") || "-";
+
+      // 부속품 정보 처리
+      const accessoryParts = [];
+      if (detail.hosho && detail.hosho !== "なし")
+        accessoryParts.push(`보증서: ${detail.hosho}`);
+      if (detail.hako && detail.hako !== "なし")
+        accessoryParts.push(`상자: ${detail.hako}`);
+      if (detail.hozon && detail.hozon !== "なし")
+        accessoryParts.push(`보존 케이스: ${detail.hozon}`);
+      if (detail.strap && detail.strap !== "なし")
+        accessoryParts.push(`스트랩: ${detail.strap}`);
+      if (detail.kanadeKey && detail.kanadeKey !== "なし")
+        accessoryParts.push(`열쇠: ${detail.kanadeKey}`);
+      if (detail.seal && detail.seal !== "なし")
+        accessoryParts.push(`태그: ${detail.seal}`);
+
+      const accessoryCode = accessoryParts.join(", ") || "";
 
       return {
-        item_id: id ? id.textContent.trim() : null,
-        scheduled_date: scheduledDate ? scheduledDate.textContent.trim() : null,
-        japanese_title: title ? title.textContent.trim() : null,
-        brand: brand ? brand.textContent.trim() : null,
-        rank: rank ? rank.textContent.trim() : null,
-        final_price: finalPrice ? finalPrice[0].textContent.trim() : null,
-        image: image ? image.src.replace(/(brand_img\/)(\d+)/, "$16") : null,
-        category: category.textContent.trim(),
+        additional_images:
+          formattedImages.length > 0 ? JSON.stringify(formattedImages) : null,
+        description: description,
+        accessory_code: accessoryCode,
       };
-    }, this.config);
-
-    if (existingIds.has(item.item_id)) return { item_id: item.item_id };
-    item.japanese_title = this.convertFullWidthToAscii(item.japanese_title);
-    item.category = this.config.categoryTable[item.category];
-    item.brand = this.convertFullWidthToAscii(item.brand);
-    item.scheduled_date = this.extractDate(item.scheduled_date);
-    item.final_price = this.currencyToInt(item.final_price);
-    item.auc_num = "2";
-
-    return item;
-  }
-  async crawlItemDetails(idx, itemId) {
-    await this.loginCheckDetails();
-
-    const startTime = Date.now();
-    return this.retryOperation(async () => {
-      const browser = this.detailBrowsers[idx];
-      const page = this.detailPages[idx];
-      await page.goto(this.config.searchUrl, {
-        waitUntil: "networkidle0",
-        timeout: this.pageTimeout,
-      });
-      //console.log("search Url loaded");
-      await page.waitForSelector(this.config.crawlSelectors.languageSelect, {
-        timeout: 3000,
-      });
-      await page.select(this.config.crawlSelectors.languageSelect, "en");
-      await page.click(this.config.crawlSelectors.resetButton);
-      await Promise.all([
-        await page.type(this.config.crawlSelectors.search1, itemId),
-        await page.type(this.config.crawlSelectors.search2, itemId),
-      ]);
-      await page.click(this.config.crawlSelectors.searchButton);
-      const newPagePromise = new Promise((resolve, reject) => {
-        const timeoutId = setTimeout(() => {
-          reject(new Error("Timeout waiting for new page"));
-        }, 5000);
-
-        browser.once("targetcreated", (target) => {
-          clearTimeout(timeoutId);
-          resolve(target.page());
-        });
-      });
-      await this.waitForLoading(page);
-
-      await page.click(this.config.crawlSelectors.itemContainer);
-      const newPage = await newPagePromise;
-      await this.initPage(newPage);
-      await this.sleep(1000);
-      await this.waitForLoading(newPage, 5000);
-
-      let item;
-      try {
-        item = await newPage.evaluate((config) => {
-          const images = Array.from(
-            document.querySelectorAll(config.crawlDetailSelectors.images)
-          )
-            .map((img) => {
-              const src = img.getAttribute("src");
-              if (src && src.startsWith("http")) {
-                return src.replace(/(brand_img\/)(\d+)/, "$16");
-              }
-              return null;
-            })
-            .filter(Boolean);
-
-          const description =
-            document
-              .querySelector(config.crawlDetailSelectors.description)
-              ?.textContent.trim()
-              .replace(/\s{2,}/g, "\t") || null;
-          const codeParent = document.querySelector(
-            config.crawlDetailSelectors.codeParent
-          );
-          const accessoryCode =
-            codeParent?.children[6]?.children[2]?.children[1]?.textContent.trim() ||
-            null;
-
-          return {
-            additional_images:
-              images.length > 0 ? JSON.stringify(images) : null,
-            description: description || "",
-            accessory_code: accessoryCode || "",
-          };
-        }, this.config);
-      } catch (error) {
-        throw error;
-      } finally {
-        await newPage.close();
-        await page.click(this.config.crawlSelectors.resetButton);
-      }
-      if (!item.description) item.description = "-";
-
-      const endTime = Date.now();
-      const executionTime = endTime - startTime;
-      //console.log(this.formatExecutionTime(executionTime));
-      return item;
-    });
+    } catch (error) {
+      console.error(
+        `Error fetching value details for item ${itemId}:`,
+        error.message
+      );
+      return {
+        additional_images: null,
+        description: "-",
+        accessory_code: "",
+      };
+    }
   }
 }
 

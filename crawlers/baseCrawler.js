@@ -406,23 +406,86 @@ class AxiosCrawler {
   }
 
   extractDate(text) {
+    if (!text) return null;
+
+    // 기존 YYYY-MM-DD 또는 YYYY/MM/DD 형식 (시간 포함 가능)
     const regex1 = /(\d{4}).?(\d{2}).?(\d{2})/;
-    const match1 = text?.match(regex1);
-    const regex2 = /(\d{4}).?(\d{2}).?(\d{2}).*?(\d{2})\s*?：\s*(\d{2})/;
-    const match2 = text?.match(regex2);
-    if (match2)
-      return (
-        `${match2[1]}-${match2[2]}-${match2[3]}` +
-        (match2[4] && match2[5] ? ` ${match2[4]}:${match2[5]}` : "00:00")
-      );
-    else if (match1) return `${match1[1]}-${match1[2]}-${match1[3]} 00:00`;
-    else return null;
+    const match1 = text.match(regex1);
+    const regex2 = /(\d{4}).?(\d{2}).?(\d{2}).*?(\d{2})\s*?[：:]\s*(\d{2})/;
+    const match2 = text.match(regex2);
+
+    // 영문 월 형식 (ex: Feb,25,2025 또는 February 25, 2025)
+    const monthNames = {
+      Jan: "01",
+      Feb: "02",
+      Mar: "03",
+      Apr: "04",
+      May: "05",
+      Jun: "06",
+      Jul: "07",
+      Aug: "08",
+      Sep: "09",
+      Oct: "10",
+      Nov: "11",
+      Dec: "12",
+      January: "01",
+      February: "02",
+      March: "03",
+      April: "04",
+      May: "05",
+      June: "06",
+      July: "07",
+      August: "08",
+      September: "09",
+      October: "10",
+      November: "11",
+      December: "12",
+    };
+
+    const regex3 =
+      /(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)[,\s.-]*(\d{1,2})[,\s.-]*(\d{4})/i;
+    const match3 = text.match(regex3);
+
+    // 날짜 형식 MM/DD/YYYY 또는 DD/MM/YYYY (미국식 또는 유럽식)
+    const regex4 = /(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/;
+    const match4 = text.match(regex4);
+
+    if (match2) {
+      return `${match2[1]}-${match2[2]}-${match2[3]} ${match2[4]}:${match2[5]}`;
+    } else if (match1) {
+      return `${match1[1]}-${match1[2]}-${match1[3]} 00:00`;
+    } else if (match3) {
+      const month =
+        monthNames[
+          match3[1].charAt(0).toUpperCase() + match3[1].slice(1).toLowerCase()
+        ];
+      const day = match3[2].padStart(2, "0");
+      const year = match3[3];
+      return `${year}-${month}-${day} 00:00`;
+    } else if (match4) {
+      // 여기서는 미국식(MM/DD/YYYY)으로 가정합니다
+      // 만약 유럽식(DD/MM/YYYY)을 원하면 아래 코드를 수정해야 합니다
+      const month = match4[1].padStart(2, "0");
+      const day = match4[2].padStart(2, "0");
+      const year = match4[3];
+      return `${year}-${month}-${day} 00:00`;
+    } else {
+      return null;
+    }
   }
 
   isCollectionDay(date) {
     if (!date) return true;
     const day = new Date(date).getDay();
     return ![2, 4].includes(day); // 화요일, 목요일 제외
+  }
+
+  convertFullWidthToAscii(str) {
+    return str
+      .replace(/[Ａ-Ｚａ-ｚ０-９]/g, function (s) {
+        return String.fromCharCode(s.charCodeAt(0) - 0xfee0);
+      })
+      .replace(/　/g, " ");
   }
 
   formatExecutionTime(milliseconds) {

@@ -1,7 +1,13 @@
 // routes/crawler.js
 const express = require("express");
 const router = express.Router();
-const { ecoAucCrawler, starAucCrawler } = require("../crawlers/index");
+const {
+  ecoAucCrawler,
+  ecoAucValueCrawler,
+  brandAucCrawler,
+  brandAucValueCrawler,
+  starAucCrawler,
+} = require("../crawlers/index");
 const DBManager = require("../utils/DBManager");
 const pool = require("../utils/DB");
 const cron = require("node-cron");
@@ -23,7 +29,13 @@ const isAdmin = (req, res, next) => {
 };
 
 async function loginAll() {
-  const crawlers = [ecoAucCrawler, starAucCrawler];
+  const crawlers = [
+    ecoAucCrawler,
+    ecoAucValueCrawler,
+    brandAucCrawler,
+    brandAucValueCrawler,
+    starAucCrawler,
+  ];
 
   await Promise.all(crawlers.map((crawler) => crawler.login()));
 }
@@ -81,7 +93,7 @@ async function crawlAll() {
     }
   }
 }
-/*
+
 async function crawlAllValues() {
   if (isValueCrawling) {
     throw new Error("already crawling");
@@ -105,14 +117,12 @@ async function crawlAllValues() {
 
       isValueCrawling = true;
 
-      await closeAllCrawler();
       let ecoAucItems = await ecoAucValueCrawler.crawlAllItems(
         existingEcoAucIds
       );
-      await closeAllCrawler();
-      let brandAucItems = await brandAucValueCrawler.crawlAllItems(
+      let brandAucItems = null; /* await brandAucValueCrawler.crawlAllItems(
         existingBrandAuctionIds
-      );
+      );*/
 
       if (!ecoAucItems) ecoAucItems = [];
       if (!brandAucItems) brandAucItems = [];
@@ -128,7 +138,6 @@ async function crawlAllValues() {
     }
   }
 }
-  */
 
 router.get("/crawl", isAdmin, async (req, res) => {
   try {
@@ -143,7 +152,6 @@ router.get("/crawl", isAdmin, async (req, res) => {
   }
 });
 
-/*
 router.get("/crawl-values", isAdmin, async (req, res) => {
   try {
     await crawlAllValues();
@@ -156,7 +164,6 @@ router.get("/crawl-values", isAdmin, async (req, res) => {
     res.status(500).json({ message: "Error during crawling" });
   }
 });
-*/
 
 router.get("/crawl-status", isAdmin, (req, res) => {
   try {
@@ -177,7 +184,7 @@ const scheduleCrawling = async () => {
         console.log("Running scheduled crawling task");
         try {
           await crawlAll();
-          //await crawlAllValues();
+          await crawlAllValues();
           console.log("Scheduled crawling completed successfully");
         } catch (error) {
           console.error("Scheduled crawling error:", error);
