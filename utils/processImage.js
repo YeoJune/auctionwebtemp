@@ -2,7 +2,11 @@ const axios = require("axios");
 const { v4: uuidv4 } = require("uuid");
 const sharp = require("sharp");
 const path = require("path");
-const pLimit = require("p-limit"); // 병렬 제한을 위한 라이브러리 추가
+
+let pLimit;
+(async () => {
+  pLimit = (await import("p-limit")).default;
+})();
 
 const IMAGE_DIR = path.join(__dirname, "..", "public", "images", "products");
 
