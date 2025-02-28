@@ -276,6 +276,7 @@ class BrandAucCrawler extends AxiosCrawler {
 
   async crawlItemDetails(itemId) {
     try {
+      await this.login();
       // 먼저 아이템 정보를 검색 API를 통해 가져옴
       const searchUrl = `https://u.brand-auc.com/api/v1/auction/previewItems/list`;
 
@@ -631,6 +632,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
 
   async crawlItemDetails(itemId) {
     try {
+      await this.login();
       // 검색 API 엔드포인트
       const searchUrl =
         "https://e-auc.brand-auc.com/api/v1/marketprice/marketpriceItems/list";

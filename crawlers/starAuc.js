@@ -370,6 +370,7 @@ class StarAucCrawler extends AxiosCrawler {
   async crawlItemDetails(itemId) {
     return this.retryOperation(async () => {
       console.log(`Crawling details for item ${itemId}...`);
+      await this.login();
       const url = this.config.detailUrl(itemId);
 
       const response = await this.client.get(url);
