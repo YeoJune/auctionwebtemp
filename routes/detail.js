@@ -29,7 +29,7 @@ async function processItem(itemId, isValue, res) {
           if (isValue) crawler = ecoAucValueCrawler;
           else crawler = ecoAucCrawler;
         } else if (items[0].auc_num == 2) {
-          if (isValue) crawler = null;
+          if (isValue) crawler = brandAucValueCrawler;
           else crawler = brandAucCrawler;
         } else if (items[0].auc_num == 3) {
           if (isValue) crawler = null;

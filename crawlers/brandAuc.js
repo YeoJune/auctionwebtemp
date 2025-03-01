@@ -472,7 +472,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
       await this.login();
 
       const allCrawledItems = [];
-      const size = 100; // 한 페이지당 항목 수 (API 제한에 따라 조정)
+      const size = 1000; // 한 페이지당 항목 수 (API 제한에 따라 조정)
 
       // 최근 경매 회차 설정
       const kaisaiKaisuFrom = 796; // 지난 10회 경매 데이터
@@ -612,7 +612,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
       title: this.removeLeadingBrackets(original_title),
       brand: this.convertFullWidthToAscii(item.maker || ""),
       rank: item.hyoka || "",
-      starting_price: item.startKng || 0,
+      final_price: item.kekkaKng || 0,
       image: item.photoUrl
         ? item.photoUrl.replace(/(brand_img\/)(\d+)/, "$16")
         : null,
