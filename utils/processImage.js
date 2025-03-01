@@ -14,7 +14,7 @@ const IMAGE_DIR = path.join(__dirname, "..", "public", "images", "products");
 const MAX_WIDTH = 600;
 const MAX_HEIGHT = 600;
 // 동시 다운로드 최대 수
-const CONCURRENT_DOWNLOADS = 10; // 서버 및 네트워크 환경에 맞게 조정
+const CONCURRENT_DOWNLOADS = 200; // 서버 및 네트워크 환경에 맞게 조정
 
 // 청크 분할 함수
 const chunk = (arr, size) =>
