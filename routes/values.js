@@ -96,9 +96,7 @@ router.get("/", async (req, res) => {
     if (aucNums) {
       const aucNumList = aucNums.split(",");
       if (aucNumList.length > 0) {
-        conditions.push(
-          `ci.auc_num IN (${aucNumList.map(() => "?").join(",")})`
-        );
+        conditions.push(`auc_num IN (${aucNumList.map(() => "?").join(",")})`);
         queryParams.push(...aucNumList);
       }
     }
