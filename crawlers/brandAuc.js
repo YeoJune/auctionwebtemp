@@ -35,7 +35,7 @@ const brandAucValueConfig = {
   baseUrl: "https://e-auc.brand-auc.com",
   loginCheckUrl: "https://e-auc.brand-auc.com/auth/success",
   loginPageUrl: "https://member.brand-auc.com/loginEauc",
-  loginPostUrl: "https://e-auc.brand-auc.com/login",
+  loginPostUrl: "https://member.brand-auc.com/login",
   marketPriceApiUrl:
     "https://e-auc.brand-auc.com/api/v1/marketprice/marketpriceItems/list",
   detailItemApiUrl:
@@ -255,10 +255,12 @@ class BrandAucCrawler extends AxiosCrawler {
     const scheduledDate =
       this.extractDate(this.convertToKST(item.kaisaiYmd)) || null;
 
+    const original_title = this.convertFullWidthToAscii(item.shohinEn || "");
+
     return {
       item_id: item.uketsukeBng,
-      original_title: item.shohinEn || "",
-      title: this.convertFullWidthToAscii(item.shohinEn || ""),
+      original_title: original_title,
+      title: this.removeLeadingBrackets(original_title),
       brand: this.convertFullWidthToAscii(item.maker || ""),
       rank: item.hyoka || "",
       starting_price: item.startKng || 0,
@@ -483,16 +485,11 @@ class BrandAucValueCrawler extends AxiosCrawler {
           params: {
             kaisaiKaisuFrom: kaisaiKaisuFrom,
             kaisaiKaisuTo: kaisaiKaisuTo,
+            pageNumber: 0,
             page: 0,
             size: size,
             getKbn: 3, // 완료된 경매 결과
             kaijoKbn: 0, // 모든 경매장
-          },
-          headers: {
-            Accept: "application/json, text/plain, */*",
-            "Accept-Language": "en-US,en;q=0.9",
-            Referer: "https://e-auc.brand-auc.com/",
-            "X-Requested-With": "XMLHttpRequest",
           },
         }
       );
@@ -602,22 +599,20 @@ class BrandAucValueCrawler extends AxiosCrawler {
   }
 
   extractBasicItemInfo(item) {
-    // 카테고리 영문명에서 한글명 매핑
-    const category =
-      this.config.categoryTable[item.genre] || item.genreEn || item.genre;
+    // API 응답에서 필요한 정보 추출
+    const category = this.config.categoryTable[item.genreEn] || item.genreEn;
+    const scheduledDate =
+      this.extractDate(this.convertToKST(item.kaisaiYmd)) || null;
 
-    // 낙찰 가격 또는 결과 가격
-    const finalPrice = item.kekkaKng || 0;
-
-    // 경매 날짜를 ISO 형식으로 변환
-    const scheduledDate = this.extractDate(item.kaisaiYmd) || null;
+    const original_title = this.convertFullWidthToAscii(item.shohinEn || "");
 
     return {
       item_id: item.uketsukeBng,
-      title: item.shohinEn || this.convertFullWidthToAscii(item.shohin || ""), // 영문명 우선, 없으면 변환
+      original_title: original_title,
+      title: this.removeLeadingBrackets(original_title),
       brand: this.convertFullWidthToAscii(item.maker || ""),
       rank: item.hyoka || "",
-      final_price: finalPrice,
+      starting_price: item.startKng || 0,
       image: item.photoUrl
         ? item.photoUrl.replace(/(brand_img\/)(\d+)/, "$16")
         : null,

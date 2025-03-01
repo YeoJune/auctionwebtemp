@@ -413,6 +413,14 @@ class AxiosCrawler {
     return null;
   }
 
+  convertToKST(utcString) {
+    const date = new Date(utcString);
+    // 한국 표준시는 UTC+9
+    const offset = 9 * 60; // 분 단위
+    const kstDate = new Date(date.getTime() + offset * 60 * 1000);
+    return kstDate.toISOString().replace("Z", "+09:00");
+  }
+
   extractDate(text) {
     if (!text) return null;
 
@@ -459,9 +467,9 @@ class AxiosCrawler {
     const match4 = text.match(regex4);
 
     if (match2) {
-      return `${match2[1]}-${match2[2]}-${match2[3]} ${match2[4]}:${match2[5]}`;
+      return `${match2[1]}-${match2[2]}-${match2[3]} ${match2[4]}:${match2[5]}:00`;
     } else if (match1) {
-      return `${match1[1]}-${match1[2]}-${match1[3]} 00:00`;
+      return `${match1[1]}-${match1[2]}-${match1[3]} 00:00:00`;
     } else if (match3) {
       const month =
         monthNames[
@@ -469,14 +477,14 @@ class AxiosCrawler {
         ];
       const day = match3[2].padStart(2, "0");
       const year = match3[3];
-      return `${year}-${month}-${day} 00:00`;
+      return `${year}-${month}-${day} 00:00:00`;
     } else if (match4) {
       // 여기서는 미국식(MM/DD/YYYY)으로 가정합니다
       // 만약 유럽식(DD/MM/YYYY)을 원하면 아래 코드를 수정해야 합니다
       const month = match4[1].padStart(2, "0");
       const day = match4[2].padStart(2, "0");
       const year = match4[3];
-      return `${year}-${month}-${day} 00:00`;
+      return `${year}-${month}-${day} 00:00:00`;
     } else {
       return null;
     }
