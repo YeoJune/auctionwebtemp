@@ -94,6 +94,14 @@ class Crawler {
     }
   }
 
+  convertToKST(utcString) {
+    const date = new Date(utcString);
+    // 한국 표준시는 UTC+9
+    const offset = 9 * 60; // 분 단위
+    const kstDate = new Date(date.getTime() + offset * 60 * 1000);
+    return kstDate.toISOString().replace("Z", "+09:00");
+  }
+
   extractDate(text) {
     const regex1 = /(\d{4}).?(\d{2}).?(\d{2})/;
     const match1 = text?.match(regex1);

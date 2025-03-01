@@ -252,7 +252,8 @@ class BrandAucCrawler extends AxiosCrawler {
   extractBasicItemInfo(item) {
     // API 응답에서 필요한 정보 추출
     const category = this.config.categoryTable[item.genreEn] || item.genreEn;
-    const scheduledDate = this.extractDate(item.kaisaiYmd) || null;
+    const scheduledDate =
+      this.extractDate(this.convertToKST(item.kaisaiYmd)) || null;
 
     return {
       item_id: item.uketsukeBng,
