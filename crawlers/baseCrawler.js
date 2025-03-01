@@ -110,9 +110,9 @@ class Crawler {
     if (match2)
       return (
         `${match2[1]}-${match2[2]}-${match2[3]}` +
-        (match2[4] && match2[5] ? ` ${match2[4]}:${match2[5]}` : "00:00")
+        (match2[4] && match2[5] ? ` ${match2[4]}:${match2[5]}:00` : "00:00:00")
       );
-    else if (match1) return `${match1[1]}-${match1[2]}-${match1[3]} 00:00`;
+    else if (match1) return `${match1[1]}-${match1[2]}-${match1[3]} 00:00:00`;
     else return null;
   }
 
