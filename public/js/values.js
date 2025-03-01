@@ -52,10 +52,10 @@ function displayData(data) {
                     <div class="product-brand">${item.brand}</div>
                     <div class="auctioneer-number">${item.auc_num}번</div>
                 </div>
-                <h3 class="product-title">${item.original_title}</h3>
+                <h3 class="product-title">${item.title}</h3>
             </div>
             <img src="${API.validateImageUrl(item.image)}" 
-                 alt="${item.original_title}" 
+                 alt="${item.title}" 
                  class="product-image"
                  loading="lazy">
             <div class="product-details">
@@ -139,8 +139,7 @@ function setupPriceEditing() {
 // 상세 정보 모달 초기화
 function initializeModal(item) {
   document.querySelector(".modal-brand").textContent = item.brand || "";
-  document.querySelector(".modal-title").textContent =
-    item.original_title || "";
+  document.querySelector(".modal-title").textContent = item.title || "";
   document.querySelector(".main-image").src = API.validateImageUrl(item.image);
   document.querySelector(".modal-description").textContent = "로딩 중...";
   document.querySelector(".modal-category").textContent =
@@ -325,7 +324,7 @@ function updateModalWithDetails(item) {
   updateField(".modal-scheduled-date", formatDate(item.scheduled_date));
   updateField(".modal-brand", item.brand);
   updateField(".modal-brand2", item.brand);
-  updateField(".modal-title", item.original_title);
+  updateField(".modal-title", item.title);
   updateField(
     ".modal-final-price",
     item.final_price ? `${formatNumber(parseInt(item.final_price))} ¥` : null
