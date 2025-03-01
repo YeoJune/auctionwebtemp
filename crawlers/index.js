@@ -1,7 +1,7 @@
 // crawlers/index.js
 const { ecoAucCrawler, ecoAucValueCrawler } = require("./ecoAuc");
 const { brandAucCrawler, brandAucValueCrawler } = require("./brandAuc");
-const { starAucCrawler } = require("./starAuc");
+const { starAucCrawler, starAucValueCrawler } = require("./starAuc");
 
 module.exports = {
   ecoAucCrawler,
@@ -9,4 +9,5 @@ module.exports = {
   brandAucCrawler,
   brandAucValueCrawler,
   starAucCrawler,
+  starAucValueCrawler,
 };

@@ -120,9 +120,9 @@ async function crawlAllValues() {
       let ecoAucItems = await ecoAucValueCrawler.crawlAllItems(
         existingEcoAucIds
       );
-      let brandAucItems = null; /* await brandAucValueCrawler.crawlAllItems(
+      let brandAucItems = await brandAucValueCrawler.crawlAllItems(
         existingBrandAuctionIds
-      );*/
+      );
 
       if (!ecoAucItems) ecoAucItems = [];
       if (!brandAucItems) brandAucItems = [];
