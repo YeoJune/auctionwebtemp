@@ -33,7 +33,7 @@ const brandAucConfig = {
 const brandAucValueConfig = {
   name: "BrandAucValue",
   baseUrl: "https://e-auc.brand-auc.com",
-  loginCheckUrl: "https://e-auc.brand-auc.com/auth/success",
+  loginCheckUrl: "https://e-auc.brand-auc.com/main",
   loginPageUrl: "https://member.brand-auc.com/loginEauc",
   loginPostUrl: "https://member.brand-auc.com/login",
   marketPriceApiUrl:
