@@ -167,7 +167,7 @@ class BrandAucCrawler extends AxiosCrawler {
         }
       );
 
-      const totalPages = 5; //firstPageResponse.data.totalPages;
+      const totalPages = firstPageResponse.data.totalPages;
       const totalItems = firstPageResponse.data.totalElements;
 
       console.log(`Found ${totalItems} items across ${totalPages} pages`);
