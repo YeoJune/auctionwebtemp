@@ -167,7 +167,7 @@ class BrandAucCrawler extends AxiosCrawler {
         }
       );
 
-      const totalPages = firstPageResponse.data.totalPages;
+      const totalPages = 5; //firstPageResponse.data.totalPages;
       const totalItems = firstPageResponse.data.totalElements;
 
       console.log(`Found ${totalItems} items across ${totalPages} pages`);
@@ -669,5 +669,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
 
 const brandAucCrawler = new BrandAucCrawler(brandAucConfig);
 const brandAucValueCrawler = new BrandAucValueCrawler(brandAucValueConfig);
+
+brandAucCrawler.crawlAllItems();
 
 module.exports = { brandAucCrawler, brandAucValueCrawler };
