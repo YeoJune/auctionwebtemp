@@ -108,7 +108,7 @@ class BrandAucCrawler extends AxiosCrawler {
 
         // 로그인 요청
         const loginResponse = await this.client.post(
-          this.config.loginPageUrl,
+          this.config.loginPageUrl, // '/login'이 상대 경로니까 원래 URL 그대로 사용
           formData,
           {
             headers: {
@@ -127,6 +127,7 @@ class BrandAucCrawler extends AxiosCrawler {
           console.log("Login successful");
           this.isLoggedIn = true;
           this.loginTime = Date.now();
+
           return true;
         } else {
           throw new Error("Login failed");
@@ -393,20 +394,17 @@ class BrandAucValueCrawler extends AxiosCrawler {
         formData.append("username", this.config.loginData.userId);
         formData.append("password", this.config.loginData.password);
         formData.append("_csrf", csrfToken);
-        formData.append("client_id", "brandMember");
-        formData.append("loginType", "login");
-
-        // 추가 옵션 (로그인 상태 유지)
-        formData.append("asbLogin", "on");
+        formData.append("client_id", "brandEaucMember");
+        formData.append("loginType", "eaucLogin");
 
         // 로그인 요청
         const loginResponse = await this.client.post(
-          this.config.loginPageUrl,
+          this.config.loginPostUrl, // '/login'이 상대 경로니까 원래 URL 그대로 사용
           formData,
           {
             headers: {
               "Content-Type": "application/x-www-form-urlencoded",
-              Referer: this.config.loginPageUrl,
+              Referer: this.config.loginPostUrl,
             },
             maxRedirects: 5,
             validateStatus: function (status) {
@@ -420,6 +418,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
           console.log("Login successful");
           this.isLoggedIn = true;
           this.loginTime = Date.now();
+
           return true;
         } else {
           throw new Error("Login failed");
