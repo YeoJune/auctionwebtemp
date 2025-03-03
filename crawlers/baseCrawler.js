@@ -390,7 +390,6 @@ class AxiosCrawler {
     });
   }
 
-  // 공통 로그인 메서드 - 모든 크롤러가 이 메서드를 상속받아 사용
   async login() {
     // 이미 로그인되어 있고, 세션이 유효하면 재로그인 안함
     if ((await this.loginCheck()) && this.isSessionValid()) {
@@ -405,25 +404,9 @@ class AxiosCrawler {
       return this.loginPromise;
     }
 
-    // 로그인 Lock 설정
-    this.loginInProgress = true;
-
-    // 새 로그인 Promise 생성 및 저장
-    this.loginPromise = this.retryOperation(async () => {
-      try {
-        console.log(`Logging in to ${this.config.name}...`);
-
-        // 여기에 각 크롤러 별 로그인 로직이 들어감
-        // 이 메서드는 자식 클래스에서 오버라이드 되어야 함
-        // 기본 구현은 에러 발생
-        throw new Error("Login method not implemented");
-      } finally {
-        // 성공 또는 실패 상관없이 로그인 Lock 해제
-        this.loginInProgress = false;
-      }
-    });
-
-    return this.loginPromise;
+    // 에러를 발생시키지 않고 false 반환
+    // 자식 클래스에서 이 반환값을 확인하고 로그인 로직 실행
+    return false;
   }
 
   async retryOperation(
