@@ -1,4 +1,5 @@
 // routes/data.js
+const dotenv = require("dotenv");
 const express = require("express");
 const router = express.Router();
 const axios = require("axios");
@@ -6,6 +7,8 @@ const pool = require("../utils/DB");
 const { processItem } = require("../utils/processItem");
 
 const apiUrl = `https://api.currencyfreaks.com/v2.0/rates/latest?apikey=${process.env.CURRENCY_API_KEY}`;
+
+dotenv.config();
 
 let cachedRate = null;
 let lastFetchedTime = null;
