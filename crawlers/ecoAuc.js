@@ -114,66 +114,75 @@ class EcoAucCrawler extends AxiosCrawler {
     this.config.currentCategoryId = null; // 현재 크롤링 중인 카테고리 ID
   }
 
-  async loginCheck() {
-    // this.config.loginCheckUrl에서 200을 받으면 성공
-    return this.retryOperation(async () => {
-      const response = await this.client.get(this.config.loginCheckUrl);
-      if (response.status === 200) {
-        return true;
-      } else {
-        return false;
-      }
-    });
-  }
-
   async login() {
-    // 이미 로그인되어 있고 세션이 유효하면 재로그인 안함
-    if ((await this.loginCheck()) && this.isSessionValid()) {
-      console.log("Already logged in, session is valid");
-      return;
+    // 부모 클래스(AxiosCrawler)의 login 메서드 호출
+    // 이미 로그인 되어있는지, 다른 로그인 진행중인지 등을 체크
+    const shouldContinue = await super.login();
+
+    // 부모 메서드에서 이미 로그인 되어있다고 판단되면 종료
+    if (shouldContinue === true) {
+      return true;
     }
 
-    return this.retryOperation(async () => {
-      console.log("Logging in eco...");
-      // 로그인 페이지 가져오기
-      const response = await this.client.get(this.config.loginPageUrl);
+    // 다른 로그인 진행중이면 해당 Promise를 반환
+    if (shouldContinue instanceof Promise) {
+      return shouldContinue;
+    }
 
-      // CSRF 토큰 추출
-      const $ = cheerio.load(response.data);
-      const csrfToken = $(this.config.signinSelectors.csrfToken).val();
+    // 실제 로그인 로직 구현
+    this.loginPromise = this.retryOperation(async () => {
+      try {
+        console.log("Logging in to Eco Auction...");
 
-      if (!csrfToken) {
-        throw new Error("CSRF token not found");
-      }
+        // 로그인 페이지 가져오기
+        const response = await this.client.get(this.config.loginPageUrl);
 
-      // 폼 데이터 준비
-      const formData = new URLSearchParams();
-      formData.append("email_address", this.config.loginData.userId);
-      formData.append("password", this.config.loginData.password);
-      formData.append("_csrfToken", csrfToken);
+        // CSRF 토큰 추출
+        const $ = cheerio.load(response.data);
+        const csrfToken = $(this.config.signinSelectors.csrfToken).val();
 
-      // 로그인 요청
-      const loginResponse = await this.client.post(
-        this.config.loginPostUrl,
-        formData,
-        {
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            Referer: this.config.loginPostUrl,
-          },
-          maxRedirects: 5,
-          validateStatus: function (status) {
-            return status >= 200 && status < 400; // 300-399 리다이렉트 허용
-          },
+        if (!csrfToken) {
+          throw new Error("CSRF token not found");
         }
-      );
 
-      if (loginResponse.status === 200 && (await this.loginCheck())) {
-        console.log("Login successful");
-      } else {
-        throw new Error("Login failed");
+        // 폼 데이터 준비
+        const formData = new URLSearchParams();
+        formData.append("email_address", this.config.loginData.userId);
+        formData.append("password", this.config.loginData.password);
+        formData.append("_csrfToken", csrfToken);
+
+        // 로그인 요청
+        const loginResponse = await this.client.post(
+          this.config.loginPostUrl,
+          formData,
+          {
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+              Referer: this.config.loginPostUrl,
+            },
+            maxRedirects: 5,
+            validateStatus: function (status) {
+              return status >= 200 && status < 400; // 300-399 리다이렉트 허용
+            },
+          }
+        );
+
+        // 로그인 후 검증
+        if (loginResponse.status === 200 && (await this.loginCheck())) {
+          console.log("Login successful");
+          this.isLoggedIn = true;
+          this.loginTime = Date.now();
+          return true;
+        } else {
+          throw new Error("Login failed");
+        }
+      } finally {
+        // 성공 또는 실패 상관없이 로그인 Lock 해제
+        this.loginInProgress = false;
       }
     });
+
+    return this.loginPromise;
   }
 
   async crawlAllItems(existingIds = new Set()) {
@@ -493,71 +502,75 @@ class EcoAucValueCrawler extends AxiosCrawler {
     this.config.currentCategoryId = null; // 현재 크롤링 중인 카테고리 ID
   }
 
-  async loginCheck() {
-    // loginCheckUrl에서 200을 받으면 성공
-    return this.retryOperation(async () => {
-      const response = await this.client.get(
-        this.config.loginCheckUrl || this.config.accountUrl
-      );
-      if (response.status === 200) {
-        return true;
-      } else {
-        return false;
-      }
-    });
-  }
-
   async login() {
-    // 이미 로그인되어 있고 세션이 유효하면 재로그인 안함
-    if ((await this.loginCheck()) && this.isSessionValid()) {
-      console.log("Already logged in, session is valid");
-      return;
+    // 부모 클래스(AxiosCrawler)의 login 메서드 호출
+    // 이미 로그인 되어있는지, 다른 로그인 진행중인지 등을 체크
+    const shouldContinue = await super.login();
+
+    // 부모 메서드에서 이미 로그인 되어있다고 판단되면 종료
+    if (shouldContinue === true) {
+      return true;
     }
 
-    return this.retryOperation(async () => {
-      console.log("Logging in eco value...");
-      // 로그인 페이지 가져오기
-      const response = await this.client.get(this.config.loginPageUrl);
+    // 다른 로그인 진행중이면 해당 Promise를 반환
+    if (shouldContinue instanceof Promise) {
+      return shouldContinue;
+    }
 
-      // CSRF 토큰 추출
-      const $ = cheerio.load(response.data);
-      const csrfToken = $(this.config.signinSelectors.csrfToken).val();
+    // 실제 로그인 로직 구현
+    this.loginPromise = this.retryOperation(async () => {
+      try {
+        console.log("Logging in to Eco Auction...");
 
-      if (!csrfToken) {
-        throw new Error("CSRF token not found");
-      }
+        // 로그인 페이지 가져오기
+        const response = await this.client.get(this.config.loginPageUrl);
 
-      // 폼 데이터 준비
-      const formData = new URLSearchParams();
-      formData.append("email_address", this.config.loginData.userId);
-      formData.append("password", this.config.loginData.password);
-      formData.append("_csrfToken", csrfToken);
+        // CSRF 토큰 추출
+        const $ = cheerio.load(response.data);
+        const csrfToken = $(this.config.signinSelectors.csrfToken).val();
 
-      // 로그인 요청
-      const loginResponse = await this.client.post(
-        this.config.loginPostUrl ||
-          this.config.loginPageUrl.replace("sign-in", "post-sign-in"),
-        formData,
-        {
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            Referer: this.config.loginPageUrl,
-          },
-          maxRedirects: 5,
-          validateStatus: function (status) {
-            return status >= 200 && status < 400; // 300-399 리다이렉트 허용
-          },
+        if (!csrfToken) {
+          throw new Error("CSRF token not found");
         }
-      );
 
-      if (loginResponse.status === 200 && (await this.loginCheck())) {
-        console.log("Login successful");
-        this.isLoggedIn = true;
-        this.loginTime = Date.now();
-      } else {
-        throw new Error("Login failed");
+        // 폼 데이터 준비
+        const formData = new URLSearchParams();
+        formData.append("email_address", this.config.loginData.userId);
+        formData.append("password", this.config.loginData.password);
+        formData.append("_csrfToken", csrfToken);
+
+        // 로그인 요청
+        const loginResponse = await this.client.post(
+          this.config.loginPostUrl,
+          formData,
+          {
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+              Referer: this.config.loginPostUrl,
+            },
+            maxRedirects: 5,
+            validateStatus: function (status) {
+              return status >= 200 && status < 400; // 300-399 리다이렉트 허용
+            },
+          }
+        );
+
+        // 로그인 후 검증
+        if (loginResponse.status === 200 && (await this.loginCheck())) {
+          console.log("Login successful");
+          this.isLoggedIn = true;
+          this.loginTime = Date.now();
+          return true;
+        } else {
+          throw new Error("Login failed");
+        }
+      } finally {
+        // 성공 또는 실패 상관없이 로그인 Lock 해제
+        this.loginInProgress = false;
       }
     });
+
+    return this.loginPromise;
   }
 
   async getTotalPages(categoryId) {

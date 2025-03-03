@@ -1,3 +1,4 @@
+// baseCrawler.js
 const dotenv = require("dotenv");
 const puppeteer = require("puppeteer");
 const axios = require("axios");
@@ -363,11 +364,66 @@ class AxiosCrawler {
     this.sessionTimeout = 1000 * 60 * 60 * 3; // 3시간
     this.maxRetries = 3;
     this.retryDelay = 1000;
+
+    // 로그인 중복 방지를 위한 변수들 추가
+    this.loginInProgress = false;
+    this.loginPromise = null;
   }
 
   isSessionValid() {
     if (!this.loginTime) return false;
     return Date.now() - this.loginTime < this.sessionTimeout;
+  }
+
+  // 로그인 체크 기본 메서드 (각 크롤러에서 오버라이드)
+  async loginCheck() {
+    // loginCheckUrl에서 200을 받으면 성공
+    return this.retryOperation(async () => {
+      const response = await this.client.get(
+        this.config.loginCheckUrl || this.config.accountUrl
+      );
+      if (response.status === 200) {
+        return true;
+      } else {
+        return false;
+      }
+    });
+  }
+
+  // 공통 로그인 메서드 - 모든 크롤러가 이 메서드를 상속받아 사용
+  async login() {
+    // 이미 로그인되어 있고, 세션이 유효하면 재로그인 안함
+    if ((await this.loginCheck()) && this.isSessionValid()) {
+      console.log("Already logged in, session is valid");
+      this.isLoggedIn = true;
+      return true;
+    }
+
+    // 이미 로그인 중이면 진행 중인 로그인 Promise 반환
+    if (this.loginInProgress && this.loginPromise) {
+      console.log("Login already in progress, waiting for completion");
+      return this.loginPromise;
+    }
+
+    // 로그인 Lock 설정
+    this.loginInProgress = true;
+
+    // 새 로그인 Promise 생성 및 저장
+    this.loginPromise = this.retryOperation(async () => {
+      try {
+        console.log(`Logging in to ${this.config.name}...`);
+
+        // 여기에 각 크롤러 별 로그인 로직이 들어감
+        // 이 메서드는 자식 클래스에서 오버라이드 되어야 함
+        // 기본 구현은 에러 발생
+        throw new Error("Login method not implemented");
+      } finally {
+        // 성공 또는 실패 상관없이 로그인 Lock 해제
+        this.loginInProgress = false;
+      }
+    });
+
+    return this.loginPromise;
   }
 
   async retryOperation(
