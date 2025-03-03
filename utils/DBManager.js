@@ -23,6 +23,8 @@ class DatabaseManager {
       "additional_images",
       "accessory_code",
       "final_price",
+      "kaijoCd",
+      "kaisaiKaisu",
     ];
     this.IMAGE_DIR = path.join(__dirname, "..", "public", "images", "products");
   }
