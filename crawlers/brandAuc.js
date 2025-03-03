@@ -278,46 +278,11 @@ class BrandAucCrawler extends AxiosCrawler {
     };
   }
 
-  async crawlItemDetails(itemId) {
+  async crawlItemDetails(item, itemId) {
     try {
       await this.login();
-      // 먼저 아이템 정보를 검색 API를 통해 가져옴
-      const searchUrl = `https://u.brand-auc.com/api/v1/auction/previewItems/list`;
-
-      // 검색 파라미터 설정
-      const params = {
-        uketsukeNoFrom: itemId,
-        uketsukeNoTo: itemId,
-        page: 0,
-        size: 20,
-        gamenId: "B02-01",
-      };
-
-      // 검색 API 호출
-      const searchResponse = await this.client.get(searchUrl, {
-        params: params,
-        headers: {
-          Accept: "application/json, text/plain, */*",
-          "Accept-Language": "en-US,en;q=0.9",
-          Referer: "https://u.brand-auc.com/",
-          "X-Requested-With": "XMLHttpRequest",
-        },
-      });
-
-      // 검색 결과에서 kaisaiKaisu 추출
-      if (
-        !searchResponse.data ||
-        !searchResponse.data.content ||
-        searchResponse.data.content.length === 0
-      ) {
-        throw new Error(`No search results found for item ${itemId}`);
-      }
-
-      const itemInfo = searchResponse.data.content[0];
-      const kaisaiKaisu = itemInfo.kaisaiKaisu;
-      const kaijoCd = itemInfo.kaijoCd || 1;
-
-      console.log(`Found item ${itemId} in auction round: ${kaisaiKaisu}`);
+      const kaisaiKaisu = item.kaisaiKaisu;
+      const kaijoCd = item.kaijoCd || 1;
 
       // 상세 정보 URL 구성 (올바른 kaisaiKaisu 사용)
       const detailUrl = `https://u.brand-auc.com/api/v1/auction/auctionItems/bag/${kaijoCd}/${kaisaiKaisu}/${itemId}/B02-01`;
@@ -631,50 +596,11 @@ class BrandAucValueCrawler extends AxiosCrawler {
     };
   }
 
-  async crawlItemDetails(itemId) {
+  async crawlItemDetails(itemId, item) {
     try {
       await this.login();
-      // 검색 API 엔드포인트
-      const searchUrl =
-        "https://e-auc.brand-auc.com/api/v1/marketprice/marketpriceItems/list";
-
-      // 검색 파라미터 설정
-      const params = {
-        uketsukeNoFrom: itemId,
-        uketsukeNoTo: itemId,
-        page: 0,
-        size: 20,
-        getKbn: 3,
-        kaijoKbn: 0,
-      };
-
-      // 검색 API 호출
-      const searchResponse = await this.client.get(searchUrl, {
-        params: params,
-        headers: {
-          Accept: "application/json, text/plain, */*",
-          "Accept-Language": "en-US,en;q=0.9",
-          Referer: "https://e-auc.brand-auc.com/",
-          "X-Requested-With": "XMLHttpRequest",
-        },
-      });
-
-      // 검색 결과에서 kaisaiKaisu 추출
-      if (
-        !searchResponse.data ||
-        !searchResponse.data.content ||
-        searchResponse.data.content.length === 0
-      ) {
-        throw new Error(`No search results found for item ${itemId}`);
-      }
-
-      const itemInfo = searchResponse.data.content[0];
-      const kaisaiKaisu = itemInfo.kaisaiKaisu;
-      const kaijoCd = itemInfo.kaijoCd || 1;
-
-      console.log(
-        `Found value item ${itemId} in auction round: ${kaisaiKaisu}`
-      );
+      const kaisaiKaisu = item.kaisaiKaisu;
+      const kaijoCd = item.kaijoCd || 1;
 
       // 상세 정보 URL 구성 (올바른 kaisaiKaisu 사용)
       const detailUrl = `https://e-auc.brand-auc.com/api/v1/marketprice/marketpriceItems/detail/${kaijoCd}/${kaisaiKaisu}/${itemId}`;

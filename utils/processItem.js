@@ -48,7 +48,7 @@ async function processItem(itemId, isValue, res, returnData = false) {
     }
 
     try {
-      const crawledDetails = await crawler.crawlItemDetails(itemId);
+      const crawledDetails = await crawler.crawlItemDetails(itemId, item);
       const processedDetails = (
         await processImagesInChunks([crawledDetails])
       )[0];
