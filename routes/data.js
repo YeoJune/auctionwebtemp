@@ -3,9 +3,9 @@ const express = require("express");
 const router = express.Router();
 const axios = require("axios");
 const pool = require("../utils/DB");
+const { processItem } = require("../utils/processItem");
 
-const apiKey = "aeec85277b774a4abaa58ac8ef93e1bc";
-const apiUrl = `https://api.currencyfreaks.com/v2.0/rates/latest?apikey=${apiKey}`;
+const apiUrl = `https://api.currencyfreaks.com/v2.0/rates/latest?apikey=${process.env.CURRENCY_API_KEY}`;
 
 let cachedRate = null;
 let lastFetchedTime = null;
@@ -42,6 +42,7 @@ router.get("/", async (req, res) => {
     bidOnly,
     search,
     ranks,
+    withDetails = "false",
   } = req.query;
   const offset = (page - 1) * limit;
   const userId = req.session.user?.id;
@@ -237,15 +238,33 @@ router.get("/", async (req, res) => {
         [userId]
       );
     }
-    res.json({
-      data: items,
-      wishlist,
-      bidData,
-      page: parseInt(page),
-      limit: parseInt(limit),
-      totalItems,
-      totalPages,
-    });
+
+    if (withDetails === "true") {
+      const processPromises = items.map((item) =>
+        processItem(item.item_id, false, null, true)
+      );
+      const detailedItems = await Promise.all(processPromises);
+
+      res.json({
+        data: detailedItems.filter((item) => item !== null),
+        wishlist,
+        bidData,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalItems,
+        totalPages,
+      });
+    } else {
+      res.json({
+        data: items,
+        wishlist,
+        bidData,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalItems,
+        totalPages,
+      });
+    }
   } catch (error) {
     console.error("Error fetching data from database:", error);
     res.status(500).json({ message: "Error fetching data" });

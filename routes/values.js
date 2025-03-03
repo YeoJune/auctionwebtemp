@@ -1,7 +1,7 @@
-// routes/values
 const express = require("express");
 const router = express.Router();
 const pool = require("../utils/DB");
+const { processItem } = require("../utils/processItem");
 
 router.get("/", async (req, res) => {
   const {
@@ -13,6 +13,7 @@ router.get("/", async (req, res) => {
     aucNums,
     search,
     ranks,
+    withDetails = "false",
   } = req.query;
   const offset = (page - 1) * limit;
 
@@ -21,7 +22,6 @@ router.get("/", async (req, res) => {
     const queryParams = [];
     let conditions = [];
 
-    // Add search condition
     if (search && search.trim()) {
       const searchTerms = search.trim().split(/\s+/);
       const searchConditions = searchTerms.map(() => "title LIKE ?");
@@ -52,7 +52,6 @@ router.get("/", async (req, res) => {
       }
     }
 
-    // Apply filters
     if (brands) {
       const brandList = brands.split(",");
       if (brandList.length > 0) {
@@ -101,12 +100,10 @@ router.get("/", async (req, res) => {
       }
     }
 
-    // Add WHERE clause if there are any conditions
     if (conditions.length > 0) {
       query += " WHERE " + conditions.join(" AND ");
     }
 
-    // Add pagination
     const countQuery = `SELECT COUNT(*) as total FROM (${query}) as subquery`;
     query += " ORDER BY scheduled_date DESC, item_id DESC LIMIT ? OFFSET ?";
     queryParams.push(parseInt(limit), offset);
@@ -119,13 +116,28 @@ router.get("/", async (req, res) => {
     const totalItems = countResult[0].total;
     const totalPages = Math.ceil(totalItems / limit);
 
-    res.json({
-      data: items,
-      page: parseInt(page),
-      limit: parseInt(limit),
-      totalItems,
-      totalPages,
-    });
+    if (withDetails === "true") {
+      const processPromises = items.map((item) =>
+        processItem(item.item_id, true, null, true)
+      );
+      const detailedItems = await Promise.all(processPromises);
+
+      res.json({
+        data: detailedItems.filter((item) => item !== null),
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalItems,
+        totalPages,
+      });
+    } else {
+      res.json({
+        data: items,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalItems,
+        totalPages,
+      });
+    }
   } catch (error) {
     console.error("Error fetching data from database:", error);
     res.status(500).json({ message: "Error fetching data" });
