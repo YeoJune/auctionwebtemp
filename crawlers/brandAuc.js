@@ -278,7 +278,7 @@ class BrandAucCrawler extends AxiosCrawler {
     };
   }
 
-  async crawlItemDetails(item, itemId) {
+  async crawlItemDetails(itemId, item) {
     try {
       await this.login();
       const kaisaiKaisu = item.kaisaiKaisu;
