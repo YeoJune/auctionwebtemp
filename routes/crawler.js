@@ -134,7 +134,6 @@ async function crawlAllValues() {
       throw error;
     } finally {
       isValueCrawling = false;
-      await loginAllDetails();
     }
   }
 }

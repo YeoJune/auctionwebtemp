@@ -509,12 +509,12 @@ class BrandAucValueCrawler extends AxiosCrawler {
           );
 
           // 영어 제목이 없는 아이템이 있으면 더 이상 크롤링 안함
-          for (const item of pageItems) {
-            if (item.item_id && !item.title) {
-              isEnd = true;
-              break;
-            }
-          }
+          // for (const item of pageItems) {
+          //   if (item.item_id && !item.title) {
+          //     isEnd = true;
+          //     break;
+          //   }
+          // }
 
           allCrawledItems.push(...pageItems);
 
