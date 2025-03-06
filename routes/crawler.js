@@ -184,7 +184,7 @@ const scheduleCrawling = async () => {
         console.log("Running scheduled crawling task");
         try {
           await crawlAll();
-          await crawlAllValues();
+          //await crawlAllValues();
           console.log("Scheduled crawling completed successfully");
         } catch (error) {
           console.error("Scheduled crawling error:", error);

@@ -444,16 +444,16 @@ class BrandAucValueCrawler extends AxiosCrawler {
       const size = 1000; // 한 페이지당 항목 수 (API 제한에 따라 조정)
 
       // 최근 경매 회차 설정
-      const kaisaiKaisuFrom = 796; // 지난 10회 경매 데이터
-      const kaisaiKaisuTo = 807; // 현재 경매 회차
+      const kaisaiKaisuFrom = 0; // 지난 10회 경매 데이터
+      const kaisaiKaisuTo = 808; // 현재 경매 회차
 
       // 첫 페이지 요청으로 총 페이지 수 확인
       const firstPageResponse = await this.client.get(
         this.config.marketPriceApiUrl,
         {
           params: {
-            kaisaiKaisuFrom: kaisaiKaisuFrom,
-            kaisaiKaisuTo: kaisaiKaisuTo,
+            // kaisaiKaisuFrom: kaisaiKaisuFrom,
+            // kaisaiKaisuTo: kaisaiKaisuTo,
             pageNumber: 0,
             page: 0,
             size: size,
@@ -487,8 +487,8 @@ class BrandAucValueCrawler extends AxiosCrawler {
 
         const response = await this.client.get(this.config.marketPriceApiUrl, {
           params: {
-            kaisaiKaisuFrom: kaisaiKaisuFrom,
-            kaisaiKaisuTo: kaisaiKaisuTo,
+            // kaisaiKaisuFrom: kaisaiKaisuFrom,
+            // kaisaiKaisuTo: kaisaiKaisuTo,
             page: page,
             size: size,
             getKbn: 3,

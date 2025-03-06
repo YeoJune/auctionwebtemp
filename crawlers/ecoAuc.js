@@ -100,7 +100,7 @@ const ecoAucValueConfig = {
   },
   searchParams: (categoryId, page) => {
     const date = new Date();
-    return `?limit=200&sortKey=1&tableType=grid&master_item_categories[0]=${categoryId}&page=${page}&target_start_year=${date.getFullYear()}&target_start_month=${date.getMonth()}&target_end_year=${date.getFullYear()}&target_end_month=${
+    return `?limit=200&sortKey=1&tableType=grid&master_item_categories[0]=${categoryId}&page=${page}&target_start_year=2024&target_start_month=1&target_end_year=${date.getFullYear()}&target_end_month=${
       date.getMonth() + 1
     }&`;
   },
