@@ -45,6 +45,7 @@ router.get("/", async (req, res) => {
     bidOnly,
     search,
     ranks,
+    auctionTypes,
     withDetails = "false",
   } = req.query;
   const offset = (page - 1) * limit;
@@ -104,6 +105,17 @@ router.get("/", async (req, res) => {
           }
         });
         conditions.push(`(${rankConditions.join(" OR ")})`);
+      }
+    }
+
+    // 경매 타입 필터 처리
+    if (auctionTypes) {
+      const auctionTypeList = auctionTypes.split(",");
+      if (auctionTypeList.length > 0) {
+        conditions.push(
+          `ci.bid_type IN (${auctionTypeList.map(() => "?").join(",")})`
+        );
+        queryParams.push(...auctionTypeList);
       }
     }
 
@@ -297,6 +309,23 @@ router.get("/brands-with-count", async (req, res) => {
   } catch (error) {
     console.error("Error fetching brands with count:", error);
     res.status(500).json({ message: "Error fetching brands with count" });
+  }
+});
+
+router.get("/auction-types", async (req, res) => {
+  try {
+    const [results] = await pool.query(`
+      SELECT bid_type, COUNT(*) as count
+      FROM crawled_items
+      WHERE bid_type IS NOT NULL
+      GROUP BY bid_type
+      ORDER BY count DESC
+    `);
+
+    res.json(results);
+  } catch (error) {
+    console.error("Error fetching auction types:", error);
+    res.status(500).json({ message: "Error fetching auction types" });
   }
 });
 

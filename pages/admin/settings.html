@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>관리자 설정</title>
+    <link rel="stylesheet" href="/styles/admin/common.css" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css"
+      rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+  </head>
+  <body>
+    <div class="admin-layout">
+      <!-- 사이드바 -->
+      <div class="sidebar">
+        <div class="sidebar-logo">
+          <h2>경매 관리자</h2>
+        </div>
+        <div class="sidebar-menu">
+          <a href="/admin">대시보드</a>
+          <a href="/admin/live-bids">현장 경매 관리</a>
+          <a href="/admin/direct-bids">직접 경매 관리</a>
+          <a href="/admin/invoices">인보이스 관리</a>
+          <a href="/admin/users">회원 관리</a>
+          <a href="/admin/settings" class="active">관리자 설정</a>
+        </div>
+      </div>
+
+      <!-- 메인 콘텐츠 -->
+      <div class="main-content">
+        <div class="main-header">
+          <h1>관리자 설정</h1>
+          <div class="user-info">
+            관리자
+            <button id="logoutBtn" class="btn btn-secondary">로그아웃</button>
+          </div>
+        </div>
+
+        <!-- 접속량 통계 섹션 -->
+        <div class="card">
+          <div class="card-title">접속량 통계</div>
+          <div class="metrics-section">
+            <div class="metrics-grid">
+              <div class="metric-card">
+                <h3>실시간 접속자</h3>
+                <div id="activeUsers" class="metric-value">0</div>
+              </div>
+              <div class="metric-card">
+                <h3>오늘 방문자</h3>
+                <div id="dailyUsers" class="metric-value">0</div>
+              </div>
+              <div class="metric-card">
+                <h3>총 요청 수</h3>
+                <div id="totalRequests" class="metric-value">0</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 크롤링 관리 섹션 -->
+        <div class="card">
+          <div class="card-title">크롤링 관리</div>
+          <div class="crawl-section">
+            <div class="crawl-buttons">
+              <button id="productCrawlBtn" class="btn">상품 크롤링</button>
+              <button id="valueCrawlBtn" class="btn">시세표 크롤링</button>
+            </div>
+            <div class="status-text" id="crawlStatus"></div>
+          </div>
+        </div>
+
+        <!-- 로고 변경 섹션 -->
+        <div class="card">
+          <div class="card-title">로고 변경</div>
+          <div class="logo-section">
+            <div class="form-group">
+              <input
+                type="file"
+                id="logoFile"
+                accept="image/*"
+                class="form-control" />
+              <button id="uploadLogoBtn" class="btn mt-3">로고 업로드</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- intro.html 업로드 섹션 -->
+        <div class="card">
+          <div class="card-title">인트로 페이지 변경</div>
+          <div class="intro-section">
+            <div class="form-group">
+              <input
+                type="file"
+                id="introFile"
+                accept=".html"
+                class="form-control" />
+              <button id="uploadIntroBtn" class="btn mt-3">
+                인트로 페이지 업로드
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 크롤링 스케줄 섹션 -->
+        <div class="card">
+          <div class="card-title">크롤링 스케줄 설정</div>
+          <div class="schedule-section">
+            <div class="form-group">
+              <label class="form-label" for="crawlTime">자동 크롤링 시간</label>
+              <input type="time" id="crawlTime" class="form-control" />
+              <button id="updateScheduleBtn" class="btn mt-3">
+                스케줄 설정
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 공지 관리 섹션 -->
+        <div class="card">
+          <div class="card-title">공지 관리</div>
+          <div class="notice-section">
+            <div class="notice-form">
+              <input type="hidden" id="noticeId" />
+              <div class="form-group">
+                <label class="form-label" for="noticeTitle">제목</label>
+                <input
+                  type="text"
+                  id="noticeTitle"
+                  class="form-control"
+                  placeholder="제목을 입력하세요" />
+              </div>
+              <div class="editor-container">
+                <div id="editor">
+                  <p><br /></p>
+                </div>
+              </div>
+              <div class="button-group mt-3">
+                <button id="saveNoticeBtn" class="btn">공지 저장</button>
+                <button id="newNoticeBtn" class="btn btn-secondary">
+                  새 공지
+                </button>
+              </div>
+            </div>
+            <div id="noticeList" class="notice-list-container mt-3"></div>
+          </div>
+        </div>
+
+        <!-- 필터 설정 섹션 -->
+        <div class="card">
+          <div class="card-title">필터 설정</div>
+          <div class="filter-section">
+            <div class="filter-group">
+              <div class="filter-title">날짜 필터</div>
+              <div id="dateFilters" class="filter-grid"></div>
+            </div>
+
+            <div class="filter-group mt-3">
+              <div class="filter-title">브랜드 필터</div>
+              <div id="brandFilters" class="filter-grid"></div>
+            </div>
+
+            <div class="filter-group mt-3">
+              <div class="filter-title">카테고리 필터</div>
+              <div id="categoryFilters" class="filter-grid"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/js/admin/common.js"></script>
+    <script src="/js/admin/api.js"></script>
+    <script src="/js/admin/settings.js"></script>
+  </body>
+</html>

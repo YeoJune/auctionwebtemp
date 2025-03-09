@@ -1,3 +1,5 @@
+// public/js/admin.js
+
 const API_URL = "/api";
 
 let isCrawlingProduct = false;

@@ -79,9 +79,9 @@ const isAdmin = (req, res, next) => {
   }
 };
 
-router.get("/", isAdmin, (req, res) => {
-  res.sendFile(path.join(__dirname, "../pages/admin.html"));
-});
+// router.get("/", isAdmin, (req, res) => {
+//   res.sendFile(path.join(__dirname, "../pages/admin.html"));
+// });
 
 router.get("/check-status", async (req, res) => {
   const isAdmin = req.session.user && req.session.user.id === "admin";

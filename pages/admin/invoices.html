@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>인보이스 관리</title>
+    <link rel="stylesheet" href="/styles/admin/common.css" />
+  </head>
+  <body>
+    <div class="admin-layout">
+      <!-- 사이드바 -->
+      <div class="sidebar">
+        <div class="sidebar-logo">
+          <h2>경매 관리자</h2>
+        </div>
+        <div class="sidebar-menu">
+          <a href="/admin">대시보드</a>
+          <a href="/admin/live-bids">현장 경매 관리</a>
+          <a href="/admin/direct-bids">직접 경매 관리</a>
+          <a href="/admin/invoices" class="active">인보이스 관리</a>
+          <a href="/admin/users">회원 관리</a>
+          <a href="/admin/settings">관리자 설정</a>
+        </div>
+      </div>
+
+      <!-- 메인 콘텐츠 -->
+      <div class="main-content">
+        <div class="main-header">
+          <h1>인보이스 관리</h1>
+          <div class="user-info">
+            관리자
+            <button id="logoutBtn" class="btn btn-secondary">로그아웃</button>
+          </div>
+        </div>
+
+        <!-- 필터 탭 -->
+        <div class="filter-tabs">
+          <div class="filter-tab active" data-status="">전체</div>
+          <div class="filter-tab" data-status="pending">대기 중</div>
+          <div class="filter-tab" data-status="processing">처리 중</div>
+          <div class="filter-tab" data-status="confirmed">확인</div>
+          <div class="filter-tab" data-status="completed">완료</div>
+          <div class="filter-tab" data-status="cancelled">취소</div>
+        </div>
+
+        <!-- 인보이스 목록 테이블 -->
+        <div class="card">
+          <table class="data-table" id="invoicesTable">
+            <thead>
+              <tr>
+                <th>인보이스 ID</th>
+                <th>고객 정보</th>
+                <th>총액</th>
+                <th>항목 수</th>
+                <th>상태</th>
+                <th>생성일</th>
+                <th>작업</th>
+              </tr>
+            </thead>
+            <tbody id="invoicesTableBody">
+              <tr>
+                <td colspan="7" class="text-center">
+                  데이터를 불러오는 중입니다...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 인보이스 상세 모달 -->
+    <div class="modal-overlay" id="invoiceDetailModal">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3 class="modal-title">인보이스 상세 정보</h3>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div id="invoiceDetail">
+            <div class="invoice-header mb-3">
+              <div>
+                <strong>인보이스 번호:</strong> <span id="invoiceId"></span>
+              </div>
+              <div>
+                <strong>고객:</strong> <span id="invoiceCustomer"></span>
+              </div>
+              <div><strong>날짜:</strong> <span id="invoiceDate"></span></div>
+              <div><strong>상태:</strong> <span id="invoiceStatus"></span></div>
+            </div>
+
+            <h4>인보이스 항목</h4>
+            <table class="data-table" id="invoiceItemsTable">
+              <thead>
+                <tr>
+                  <th>상품</th>
+                  <th>구매가</th>
+                  <th>수수료</th>
+                  <th>합계</th>
+                </tr>
+              </thead>
+              <tbody id="invoiceItemsTableBody"></tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="2"></td>
+                  <td><strong>총계:</strong></td>
+                  <td id="invoiceTotal"></td>
+                </tr>
+              </tfoot>
+            </table>
+
+            <div class="form-group mt-3">
+              <label class="form-label" for="invoiceNotes">메모</label>
+              <textarea
+                id="invoiceNotes"
+                class="form-control"
+                rows="3"></textarea>
+            </div>
+
+            <div class="status-change-section mt-3">
+              <div class="form-group">
+                <label class="form-label" for="invoiceStatusChange"
+                  >상태 변경</label
+                >
+                <select id="invoiceStatusChange" class="form-control">
+                  <option value="pending">대기 중</option>
+                  <option value="processing">처리 중</option>
+                  <option value="confirmed">확인</option>
+                  <option value="completed">완료</option>
+                  <option value="cancelled">취소</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary close-modal">닫기</button>
+          <button class="btn" id="submitStatusChange">상태 변경</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="/js/admin/common.js"></script>
+    <script src="/js/admin/api.js"></script>
+    <script src="/js/admin/invoices.js"></script>
+  </body>
+</html>

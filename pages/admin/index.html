@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>관리자 대시보드</title>
+    <link rel="stylesheet" href="/styles/admin/common.css" />
+  </head>
+  <body>
+    <div class="admin-layout">
+      <!-- 사이드바 -->
+      <div class="sidebar">
+        <div class="sidebar-logo">
+          <h2>경매 관리자</h2>
+        </div>
+        <div class="sidebar-menu">
+          <a href="/admin" class="active">대시보드</a>
+          <a href="/admin/live-bids">현장 경매 관리</a>
+          <a href="/admin/direct-bids">직접 경매 관리</a>
+          <a href="/admin/invoices">인보이스 관리</a>
+          <a href="/admin/users">회원 관리</a>
+          <a href="/admin/settings">관리자 설정</a>
+        </div>
+      </div>
+
+      <!-- 메인 콘텐츠 -->
+      <div class="main-content">
+        <div class="main-header">
+          <h1>대시보드</h1>
+          <div class="user-info">
+            관리자
+            <button id="logoutBtn" class="btn btn-secondary">로그아웃</button>
+          </div>
+        </div>
+
+        <!-- 요약 정보 카드 -->
+        <div class="summary-cards">
+          <div class="card summary-card">
+            <h3>현장 경매</h3>
+            <div class="summary-data">
+              <div class="summary-item">
+                <span class="label">1차 입찰</span>
+                <span id="liveBidsFirst" class="value">0</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">2차 입찰</span>
+                <span id="liveBidsSecond" class="value">0</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">최종 입찰</span>
+                <span id="liveBidsFinal" class="value">0</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card summary-card">
+            <h3>직접 경매</h3>
+            <div class="summary-data">
+              <div class="summary-item">
+                <span class="label">예약됨</span>
+                <span id="directAuctionsScheduled" class="value">0</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">활성</span>
+                <span id="directAuctionsActive" class="value">0</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">완료</span>
+                <span id="directAuctionsEnded" class="value">0</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card summary-card">
+            <h3>인보이스</h3>
+            <div class="summary-data">
+              <div class="summary-item">
+                <span class="label">대기 중</span>
+                <span id="invoicesPending" class="value">0</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">처리 중</span>
+                <span id="invoicesProcessing" class="value">0</span>
+              </div>
+              <div class="summary-item">
+                <span class="label">완료</span>
+                <span id="invoicesCompleted" class="value">0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 최근 활동 -->
+        <div class="card">
+          <div class="card-title">최근 활동</div>
+          <div id="recentActivities" class="activity-list">
+            <div class="activity-item">
+              <div class="activity-time">로딩 중...</div>
+              <div class="activity-content">데이터를 불러오는 중입니다...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 통계 정보 -->
+        <div class="card">
+          <div class="card-title">시스템 통계</div>
+          <div class="stats-container">
+            <div class="stats-item">
+              <div class="stats-label">실시간 접속자</div>
+              <div id="activeUsers" class="stats-value">0</div>
+            </div>
+            <div class="stats-item">
+              <div class="stats-label">오늘 방문자</div>
+              <div id="dailyUsers" class="stats-value">0</div>
+            </div>
+            <div class="stats-item">
+              <div class="stats-label">총 요청 수</div>
+              <div id="totalRequests" class="stats-value">0</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/js/admin/common.js"></script>
+    <script src="/js/admin/api.js"></script>
+    <script src="/js/admin/dashboard.js"></script>
+  </body>
+</html>

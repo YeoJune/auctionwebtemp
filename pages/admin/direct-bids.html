@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>직접 경매 관리</title>
+    <link rel="stylesheet" href="/styles/admin/common.css" />
+  </head>
+  <body>
+    <div class="admin-layout">
+      <!-- 사이드바 -->
+      <div class="sidebar">
+        <div class="sidebar-logo">
+          <h2>경매 관리자</h2>
+        </div>
+        <div class="sidebar-menu">
+          <a href="/admin">대시보드</a>
+          <a href="/admin/live-bids">현장 경매 관리</a>
+          <a href="/admin/direct-bids" class="active">직접 경매 관리</a>
+          <a href="/admin/invoices">인보이스 관리</a>
+          <a href="/admin/users">회원 관리</a>
+          <a href="/admin/settings">관리자 설정</a>
+        </div>
+      </div>
+
+      <!-- 메인 콘텐츠 -->
+      <div class="main-content">
+        <div class="main-header">
+          <h1>직접 경매 관리</h1>
+          <div class="user-info">
+            관리자
+            <button id="logoutBtn" class="btn btn-secondary">로그아웃</button>
+          </div>
+        </div>
+
+        <!-- 필터 탭 -->
+        <div class="filter-tabs">
+          <div class="filter-tab active" data-status="">전체</div>
+          <div class="filter-tab" data-status="active">활성</div>
+          <div class="filter-tab" data-status="completed">완료</div>
+          <div class="filter-tab" data-status="cancelled">취소</div>
+        </div>
+
+        <!-- 필터 옵션 -->
+        <div class="filter-options">
+          <label class="toggle-switch">
+            <input type="checkbox" id="toggleHighestOnly" checked />
+            <span class="toggle-slider"></span>
+            <span class="toggle-label">아이템별 최고가만 보기</span>
+          </label>
+        </div>
+
+        <!-- 입찰 목록 테이블 -->
+        <div class="card">
+          <table class="data-table" id="directBidsTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>상품 정보</th>
+                <th>고객 정보</th>
+                <th>입찰가</th>
+                <th>생성일</th>
+                <th>수정일</th>
+                <th>상태</th>
+                <th>작업</th>
+              </tr>
+            </thead>
+            <tbody id="directBidsTableBody">
+              <tr>
+                <td colspan="8" class="text-center">
+                  데이터를 불러오는 중입니다...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 입찰 완료 모달 -->
+    <div class="modal-overlay" id="completeModal">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3 class="modal-title">입찰 완료 처리</h3>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="completeBidId" />
+          <p>선택한 입찰을 낙찰 완료 처리하시겠습니까?</p>
+          <p>완료 후에는 취소할 수 없습니다.</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary close-modal">취소</button>
+          <button class="btn" id="submitComplete">완료 처리</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 입찰 취소 모달 -->
+    <div class="modal-overlay" id="cancelModal">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3 class="modal-title">입찰 취소 처리</h3>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="cancelBidId" />
+          <p>선택한 입찰을 취소 처리하시겠습니까?</p>
+          <p>취소 후에는 되돌릴 수 없습니다.</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary close-modal">취소</button>
+          <button class="btn btn-danger" id="submitCancel">입찰 취소</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="/js/admin/common.js"></script>
+    <script src="/js/admin/api.js"></script>
+    <script src="/js/admin/direct-bids.js"></script>
+  </body>
+</html>

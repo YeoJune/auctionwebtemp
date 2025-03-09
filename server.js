@@ -1,5 +1,7 @@
+// server.js
 require("dotenv").config();
 const express = require("express");
+const http = require("http");
 const cors = require("cors");
 const session = require("express-session");
 const MySQLStore = require("express-mysql-session")(session);
@@ -12,9 +14,13 @@ const bidRoutes = require("./routes/bid");
 const adminRoutes = require("./routes/admin");
 const valuesRoutes = require("./routes/values");
 const detailRoutes = require("./routes/detail");
+const liveBidsRoutes = require("./routes/live-bids");
+const directBidsRoutes = require("./routes/direct-bids");
+const userRoutes = require("./routes/users");
 const pool = require("./utils/DB");
 
 const app = express();
+const server = http.createServer(app);
 
 const metrics = {
   activeUsers: new Map(),
@@ -58,28 +64,21 @@ const sessionStore = new MySQLStore(
 );
 
 // 세션 미들웨어 설정
-app.use(
-  session({
-    key: "session_cookie_name",
-    secret: process.env.SESSION_SECRET,
-    store: new MySQLStore(
-      {
-        checkExpirationInterval: 900000, // 15분마다 만료 세션 체크
-        expiration: 24 * 60 * 60 * 1000, // 1일
-        createDatabaseTable: true,
-      },
-      pool
-    ),
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      maxAge: 24 * 60 * 60 * 1000, // 1일
-      secure: process.env.NODE_ENV === "production",
-      httpOnly: true,
-      sameSite: "lax",
-    },
-  })
-);
+const sessionMiddleware = session({
+  key: "session_cookie_name",
+  secret: process.env.SESSION_SECRET,
+  store: sessionStore,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    maxAge: 24 * 60 * 60 * 1000, // 1일
+    secure: process.env.NODE_ENV === "production",
+    httpOnly: true,
+    sameSite: "lax",
+  },
+});
+
+app.use(sessionMiddleware);
 
 // 세션 디버깅을 위한 미들웨어
 app.use((req, res, next) => {
@@ -117,6 +116,7 @@ app.get("/api/metrics", (req, res) => {
   });
 });
 
+// 정기적인 작업 수행
 setInterval(() => {
   const now = Date.now();
   const midnight = new Date().setHours(0, 0, 0, 0);
@@ -144,6 +144,9 @@ app.use("/api/bid", bidRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/values", valuesRoutes);
 app.use("/api/detail", detailRoutes);
+app.use("/api/live-bids", liveBidsRoutes);
+app.use("/api/direct-bids", directBidsRoutes);
+app.use("/api/users", userRoutes);
 
 // 정적 파일 서빙
 app.use(express.static("public"));
@@ -152,7 +155,7 @@ app.get("/", (req, res) => {
   res.sendFile(__dirname + "/public/pages/intro.html");
 });
 app.get("/productPage", (req, res) => {
-  if (req.session.user) res.sendFile(__dirname + "/pages/index.html");
+  if (req.session.user) res.sendFile(__dirname + "/pages/product.html");
   else res.redirect("/signinPage");
 });
 app.get("/signinPage", (req, res) => {
@@ -164,13 +167,63 @@ app.get("/valuesPage", (req, res) => {
   else res.redirect("/signinPage");
 });
 
+// 관리자 페이지 라우트
+app.get("/admin", (req, res) => {
+  if (req.session.user && req.session.user.id === "admin") {
+    res.sendFile(__dirname + "/pages/admin/index.html");
+  } else {
+    res.redirect("/signinPage");
+  }
+});
+
+app.get("/admin/live-bids", (req, res) => {
+  if (req.session.user && req.session.user.id === "admin") {
+    res.sendFile(__dirname + "/pages/admin/live-bids.html");
+  } else {
+    res.redirect("/signinPage");
+  }
+});
+
+app.get("/admin/direct-bids", (req, res) => {
+  if (req.session.user && req.session.user.id === "admin") {
+    res.sendFile(__dirname + "/pages/admin/direct-bids.html");
+  } else {
+    res.redirect("/signinPage");
+  }
+});
+
+app.get("/admin/invoices", (req, res) => {
+  if (req.session.user && req.session.user.id === "admin") {
+    res.sendFile(__dirname + "/pages/admin/invoices.html");
+  } else {
+    res.redirect("/signinPage");
+  }
+});
+
+app.get("/admin/settings", (req, res) => {
+  if (req.session.user && req.session.user.id === "admin") {
+    res.sendFile(__dirname + "/pages/admin/settings.html");
+  } else {
+    res.redirect("/signinPage");
+  }
+});
+
+app.get("/admin/users", (req, res) => {
+  if (req.session.user && req.session.user.id === "admin") {
+    res.sendFile(__dirname + "/pages/admin/users.html");
+  } else {
+    res.redirect("/signinPage");
+  }
+});
+
 // 에러 핸들링 미들웨어
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ message: "Something went wrong!" });
 });
 
+// 서버 시작
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, "0.0.0.0", () => {
+server.listen(PORT, "0.0.0.0", () => {
   console.log(`Server is running on ${PORT}`);
 });
