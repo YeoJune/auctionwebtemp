@@ -54,10 +54,12 @@ function displayData(data) {
                 </div>
                 <h3 class="product-title">${item.title}</h3>
             </div>
+    <div class="product-image-container">
             <img src="${API.validateImageUrl(item.image)}" 
                  alt="${item.title}" 
-                 class="product-image-container"
+                 class="product-image"
                  loading="lazy">
+                 </div>
             <div class="product-details">
                 <p class="scheduled-date">경매일: ${formatDate(
                   item.scheduled_date
