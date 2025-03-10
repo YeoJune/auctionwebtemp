@@ -56,7 +56,7 @@ function displayData(data) {
             </div>
             <img src="${API.validateImageUrl(item.image)}" 
                  alt="${item.title}" 
-                 class="product-image"
+                 class="product-image-container"
                  loading="lazy">
             <div class="product-details">
                 <p class="scheduled-date">경매일: ${formatDate(
