@@ -150,60 +150,84 @@ class BrandAucCrawler extends AxiosCrawler {
       await this.login();
 
       const allCrawledItems = [];
-      const size = 1000; // 한 페이지당 항목 수 (API 제한에 따라 조정)
+      const size = 1000; // 한 페이지당 항목 수
 
-      // 첫 페이지 요청으로 총 페이지 수 확인
-      const firstPageResponse = await this.client.get(
-        this.config.previewItemsApiUrl,
-        {
-          params: {
-            page: 0,
-            size: size,
-            gamenId: "B02-01",
-          },
-          headers: {
-            Accept: "application/json",
-          },
-        }
-      );
+      // Live 경매와 Direct 경매 모두 수집
+      const bidTypes = [
+        { type: "live", otherCds: "2" },
+        { type: "direct", otherCds: "1" },
+      ];
 
-      const totalPages = firstPageResponse.data.totalPages;
-      const totalItems = firstPageResponse.data.totalElements;
+      for (const bidConfig of bidTypes) {
+        console.log(`Starting crawl for bid type: ${bidConfig.type}`);
 
-      console.log(`Found ${totalItems} items across ${totalPages} pages`);
+        // 첫 페이지 요청으로 총 페이지 수 확인
+        const firstPageResponse = await this.client.get(
+          this.config.previewItemsApiUrl,
+          {
+            params: {
+              page: 0,
+              size: size,
+              gamenId: "B02-01",
+              otherCds: bidConfig.otherCds, // 여기에 otherCds 파라미터 추가
+            },
+            headers: {
+              Accept: "application/json",
+            },
+          }
+        );
 
-      // 첫 페이지 아이템 처리
-      const firstPageItems = await this.processItemsPage(
-        firstPageResponse.data.content,
-        existingIds
-      );
-      allCrawledItems.push(...firstPageItems);
+        const totalPages = firstPageResponse.data.totalPages;
+        const totalItems = firstPageResponse.data.totalElements;
 
-      // 나머지 페이지 순차적으로 처리
-      for (let page = 1; page < totalPages; page++) {
-        console.log(`Crawling page ${page + 1} of ${totalPages}`);
+        console.log(
+          `Found ${totalItems} items across ${totalPages} pages for bid type: ${bidConfig.type}`
+        );
 
-        const response = await this.client.get(this.config.previewItemsApiUrl, {
-          params: {
-            page: page,
-            size: size,
-            gamenId: "B02-01",
-          },
-          headers: {
-            Accept: "application/json",
-          },
-        });
+        // 현재 bid_type 설정
+        this.currentBidType = bidConfig.type;
 
-        if (response.data && response.data.content) {
-          const pageItems = await this.processItemsPage(
-            response.data.content,
-            existingIds
-          );
-          allCrawledItems.push(...pageItems);
+        // 첫 페이지 아이템 처리
+        const firstPageItems = await this.processItemsPage(
+          firstPageResponse.data.content,
+          existingIds
+        );
+        allCrawledItems.push(...firstPageItems);
 
+        // 나머지 페이지 순차적으로 처리
+        for (let page = 1; page < totalPages; page++) {
           console.log(
-            `Processed ${pageItems.length} items from page ${page + 1}`
+            `Crawling page ${page + 1} of ${totalPages} for bid type: ${
+              bidConfig.type
+            }`
           );
+
+          const response = await this.client.get(
+            this.config.previewItemsApiUrl,
+            {
+              params: {
+                page: page,
+                size: size,
+                gamenId: "B02-01",
+                otherCds: bidConfig.otherCds, // 여기에 otherCds 파라미터 추가
+              },
+              headers: {
+                Accept: "application/json",
+              },
+            }
+          );
+
+          if (response.data && response.data.content) {
+            const pageItems = await this.processItemsPage(
+              response.data.content,
+              existingIds
+            );
+            allCrawledItems.push(...pageItems);
+
+            console.log(
+              `Processed ${pageItems.length} items from page ${page + 1}`
+            );
+          }
         }
       }
 
@@ -254,8 +278,22 @@ class BrandAucCrawler extends AxiosCrawler {
   extractBasicItemInfo(item) {
     // API 응답에서 필요한 정보 추출
     const category = this.config.categoryTable[item.genreEn] || item.genreEn;
-    const scheduledDate =
+    const original_scheduled_date =
       this.extractDate(this.convertToKST(item.kaisaiYmd)) || null;
+
+    // bid_type은 현재 설정된 값 사용
+    const bid_type = this.currentBidType;
+
+    // 날짜 처리 로직
+    let scheduled_date = original_scheduled_date;
+    if (bid_type === "live") {
+      scheduled_date = this.getPreviousDayAt18();
+
+      // 이미 지난 경매는 필터링
+      if (!this.isAuctionTimeValid(scheduled_date)) {
+        return null;
+      }
+    }
 
     const original_title = this.convertFullWidthToAscii(item.shohinEn || "");
 
@@ -270,8 +308,10 @@ class BrandAucCrawler extends AxiosCrawler {
         ? item.photoUrl.replace(/(brand_img\/)(\d+)/, "$16")
         : null,
       category: category,
-      scheduled_date: scheduledDate,
-      auc_num: "2", // 고정값으로 보임
+      original_scheduled_date: original_scheduled_date,
+      scheduled_date: scheduled_date,
+      bid_type: bid_type,
+      auc_num: "2",
 
       // 상세 정보 요청 시 필요한 데이터
       kaijoCd: item.kaijoCd,

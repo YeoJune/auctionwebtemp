@@ -562,6 +562,22 @@ class AxiosCrawler {
 
     return timeString;
   }
+
+  getPreviousDayAt18() {
+    const now = new Date();
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(18, 0, 0, 0);
+    return yesterday.toISOString().replace("Z", "+09:00");
+  }
+
+  // 경매 시간이 이미 지났는지 확인
+  isAuctionTimeValid(scheduledDate) {
+    if (!scheduledDate) return false;
+    const auctionDate = new Date(scheduledDate);
+    const now = new Date();
+    return auctionDate > now;
+  }
 }
 
 module.exports = { Crawler, AxiosCrawler };

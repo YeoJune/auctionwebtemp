@@ -49,8 +49,13 @@ const ecoAucConfig = {
   },
   searchParams: (categoryId, page) =>
     `?limit=200&sortKey=1&tableType=grid&master_item_categories[0]=${categoryId}&page=${page}`,
-  detailUrl: (itemId) =>
-    `https://www.ecoauc.com/client/auction-items/view/${itemId}`,
+  detailUrl: (itemId, bidType) => {
+    if (bidType === "direct") {
+      return `https://www.ecoauc.com/client/auction-items/view/${itemId}/TimelimitAuctions`;
+    } else {
+      return `https://www.ecoauc.com/client/auction-items/view/${itemId}/Auctions/inspect`;
+    }
+  },
 };
 
 const ecoAucValueConfig = {
@@ -195,29 +200,55 @@ class EcoAucCrawler extends AxiosCrawler {
 
       const allCrawledItems = [];
 
-      // 모든 카테고리 순회
-      for (const categoryId of this.config.categoryIds) {
-        const categoryItems = [];
+      // Live와 Direct 경매 URL 구성
+      const urlConfigs = [
+        { url: "https://www.ecoauc.com/client/auctions/inspect", type: "live" },
+        {
+          url: "https://www.ecoauc.com/client/timelimit-auctions",
+          type: "direct",
+        },
+      ];
 
-        console.log(`Starting crawl for category ${categoryId}`);
-        this.config.currentCategoryId = categoryId;
+      // 각 URL에 대해 크롤링 수행
+      for (const urlConfig of urlConfigs) {
+        console.log(`Starting crawl for bid type: ${urlConfig.type}`);
 
-        const totalPages = await this.getTotalPages(categoryId);
-        console.log(`Total pages in category ${categoryId}: ${totalPages}`);
+        // 현재 URL과 bid_type 설정
+        this.config.searchUrl = urlConfig.url;
+        this.currentBidType = urlConfig.type;
 
-        // 모든 페이지 크롤링
-        for (let page = 1; page <= totalPages; page++) {
-          const pageItems = await this.crawlPage(categoryId, page, existingIds);
-          categoryItems.push(...pageItems);
-        }
+        // 모든 카테고리 순회
+        for (const categoryId of this.config.categoryIds) {
+          const categoryItems = [];
 
-        if (categoryItems && categoryItems.length > 0) {
-          allCrawledItems.push(...categoryItems);
           console.log(
-            `Completed crawl for category ${categoryId}. Items found: ${categoryItems.length}`
+            `Starting crawl for category ${categoryId} with bid type ${urlConfig.type}`
           );
-        } else {
-          console.log(`No items found for category ${categoryId}`);
+          this.config.currentCategoryId = categoryId;
+
+          const totalPages = await this.getTotalPages(categoryId);
+          console.log(`Total pages in category ${categoryId}: ${totalPages}`);
+
+          // 모든 페이지 크롤링
+          for (let page = 1; page <= totalPages; page++) {
+            const pageItems = await this.crawlPage(
+              categoryId,
+              page,
+              existingIds
+            );
+            categoryItems.push(...pageItems);
+          }
+
+          if (categoryItems && categoryItems.length > 0) {
+            allCrawledItems.push(...categoryItems);
+            console.log(
+              `Completed crawl for category ${categoryId}, bid type ${urlConfig.type}. Items found: ${categoryItems.length}`
+            );
+          } else {
+            console.log(
+              `No items found for category ${categoryId}, bid type ${urlConfig.type}`
+            );
+          }
         }
       }
 
@@ -289,11 +320,13 @@ class EcoAucCrawler extends AxiosCrawler {
     });
   }
 
-  async crawlItemDetails(itemId) {
+  async crawlItemDetails(itemId, item) {
     return this.retryOperation(async () => {
       console.log(`Crawling details for item ${itemId}...`);
       await this.login();
-      const url = this.config.detailUrl(itemId);
+
+      const bidType = item?.bid_type || this.currentBidType;
+      const url = this.config.detailUrl(itemId, bidType);
 
       const response = await this.client.get(url);
       const $ = cheerio.load(response.data);
@@ -480,6 +513,19 @@ class EcoAucCrawler extends AxiosCrawler {
       ? imageSrc.replace(/\?.*$/, "") + "?w=520&h=390"
       : null;
 
+    const original_scheduled_date = item0.scheduled_date;
+    let scheduled_date = original_scheduled_date;
+
+    // live 경매의 경우 전날 18:00로 설정하고 지난 경매 필터링
+    if (this.currentBidType === "live") {
+      scheduled_date = this.getPreviousDayAt18();
+
+      // 이미 지난 경매 필터링
+      if (!this.isAuctionTimeValid(scheduled_date)) {
+        return null;
+      }
+    }
+
     const item = {
       original_title: title,
       title: this.removeLeadingBrackets(title),
@@ -488,6 +534,9 @@ class EcoAucCrawler extends AxiosCrawler {
       starting_price: this.currencyToInt(startingPriceText),
       image: image,
       category: this.config.categoryTable[this.config.currentCategoryId],
+      bid_type: this.currentBidType,
+      original_scheduled_date: original_scheduled_date,
+      scheduled_date: scheduled_date,
       auc_num: "1",
     };
 

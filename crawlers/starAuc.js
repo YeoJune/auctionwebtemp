@@ -106,6 +106,7 @@ class StarAucCrawler extends AxiosCrawler {
   constructor(config) {
     super(config);
     this.config.currentCategoryId = null; // 현재 크롤링 중인 카테고리 ID
+    this.currentBidType = "live"; // StarAuc는 전체가 'live'
   }
 
   async login() {
@@ -403,18 +404,31 @@ class StarAucCrawler extends AxiosCrawler {
     const scriptData = item.scriptData;
     const title = this.removeLeadingBrackets(scriptData.name);
 
+    // 원래 날짜 정보 보존
+    const original_scheduled_date = item.scheduled_date;
+
+    // live 경매에 맞게 전날 18:00로 설정
+    const scheduled_date = this.getPreviousDayAt18();
+
+    // 이미 지난 경매는 필터링
+    if (!this.isAuctionTimeValid(scheduled_date)) {
+      return null;
+    }
+
     // 기본 정보 추출
     const result = {
       item_id: item.item_id,
-      scheduled_date: item.scheduled_date,
+      original_scheduled_date: original_scheduled_date,
+      scheduled_date: scheduled_date,
       original_title: scriptData.name,
-      title: title, // 동일하게 처리
-      brand: title.split(" ")[0], // 첫 단어를 브랜드로 가정
-      rank: scriptData.fixRank?.replace(/\\uff/g, ""), // 등급 정보 추출 (이스케이프 문자 처리)
+      title: title,
+      brand: title.split(" ")[0],
+      rank: scriptData.fixRank?.replace(/\\uff/g, ""),
       starting_price: parseInt(scriptData.startingPrice, 10),
       image: scriptData.thumbnailUrl,
       category: this.config.categoryTable[this.config.currentCategoryId],
-      auc_num: "3", // StarAuc 식별자
+      bid_type: this.currentBidType, // 'live'로 고정
+      auc_num: "3",
       lotNo: scriptData.lotNo,
     };
 
