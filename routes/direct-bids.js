@@ -12,10 +12,10 @@ const isAdmin = (req, res, next) => {
 };
 
 // STATUS -> 'active', 'completed', 'cancelled'
-
 // GET endpoint to retrieve all bids, with optional filtering
 router.get("/", async (req, res) => {
-  const { status, highestOnly } = req.query;
+  const { status, highestOnly, page = 1, limit = 10 } = req.query;
+  const offset = (page - 1) * limit;
 
   if (!req.session.user) {
     return res.status(401).json({ message: "Unauthorized" });
@@ -24,14 +24,14 @@ router.get("/", async (req, res) => {
   const connection = await pool.getConnection();
 
   try {
-    let query,
-      queryParams = [];
+    let mainQuery, countQuery;
+    let queryParams = [];
 
     // 기본 쿼리 준비
     if (highestOnly === "true") {
       // 각 아이템별로 가장 높은 입찰가만 가져오기
-      query = `
-        SELECT d.* 
+      countQuery = `
+        SELECT COUNT(*) as total
         FROM direct_bids d
         INNER JOIN (
           SELECT item_id, MAX(current_price) as max_price
@@ -41,46 +41,109 @@ router.get("/", async (req, res) => {
         ) m ON d.item_id = m.item_id AND d.current_price = m.max_price
         WHERE 1=1
       `;
+
+      mainQuery = `
+        SELECT 
+          d.id, d.item_id, d.user_id, d.current_price, d.status, d.created_at, d.updated_at,
+          i.id as item_id, i.original_title, i.auc_num, i.category, i.brand, i.rank,
+          i.starting_price, i.scheduled_date, i.image
+        FROM direct_bids d
+        INNER JOIN (
+          SELECT item_id, MAX(current_price) as max_price
+          FROM direct_bids
+          WHERE status = 'active'
+          GROUP BY item_id
+        ) m ON d.item_id = m.item_id AND d.current_price = m.max_price
+        LEFT JOIN crawled_items i ON d.item_id = i.item_id
+        WHERE 1=1
+      `;
     } else {
       // 모든 입찰 가져오기
-      query = "SELECT * FROM direct_bids WHERE 1=1";
+      countQuery = `
+        SELECT COUNT(*) as total 
+        FROM direct_bids d
+        WHERE 1=1
+      `;
+
+      mainQuery = `
+        SELECT 
+          d.id, d.item_id, d.user_id, d.current_price, d.status, d.created_at, d.updated_at,
+          i.id as item_id, i.original_title, i.auc_num, i.category, i.brand, i.rank,
+          i.starting_price, i.scheduled_date, i.image
+        FROM direct_bids d
+        LEFT JOIN crawled_items i ON d.item_id = i.item_id
+        WHERE 1=1
+      `;
     }
 
     // 상태 필터 추가
     if (status) {
-      query += " AND status = ?";
+      countQuery += " AND d.status = ?";
+      mainQuery += " AND d.status = ?";
       queryParams.push(status);
     }
 
     // 일반 사용자는 자신의 입찰만 볼 수 있고, 관리자는 모든 입찰을 볼 수 있음
     if (req.session.user.id !== "admin") {
-      query += " AND user_id = ?";
+      countQuery += " AND d.user_id = ?";
+      mainQuery += " AND d.user_id = ?";
       queryParams.push(req.session.user.id);
     }
 
     // 최신순으로 정렬
-    query += " ORDER BY updated_at DESC";
+    mainQuery += " ORDER BY d.updated_at DESC";
 
-    // 쿼리 실행
-    const [bids] = await connection.query(query, queryParams);
+    // 페이지네이션 추가
+    mainQuery += " LIMIT ? OFFSET ?";
+    const mainQueryParams = [...queryParams, parseInt(limit), parseInt(offset)];
 
-    // 각 입찰에 대한 아이템 정보 가져오기
-    const bidsWithItems = await Promise.all(
-      bids.map(async (bid) => {
-        const [items] = await connection.query(
-          "SELECT * FROM crawled_items WHERE item_id = ?",
-          [bid.item_id]
-        );
+    // 총 개수 가져오기
+    const [countResult] = await connection.query(countQuery, queryParams);
+    const total = countResult[0].total;
+    const totalPages = Math.ceil(total / limit);
 
-        return {
-          ...bid,
-          item: items.length > 0 ? items[0] : null,
+    // 데이터 쿼리 실행
+    const [rows] = await connection.query(mainQuery, mainQueryParams);
+
+    // Format result to match expected structure
+    const bidsWithItems = rows.map((row) => {
+      const bid = {
+        id: row.id,
+        item_id: row.item_id,
+        user_id: row.user_id,
+        current_price: row.current_price,
+        status: row.status,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      };
+
+      // Only include item if it exists
+      let item = null;
+      if (row.item_id) {
+        item = {
+          item_id: row.item_id,
+          original_title: row.original_title,
+          auc_num: row.auc_num,
+          category: row.category,
+          brand: row.brand,
+          rank: row.rank,
+          starting_price: row.starting_price,
+          scheduled_date: row.scheduled_date,
+          image: row.image,
         };
-      })
-    );
+      }
+
+      return {
+        ...bid,
+        item: item,
+      };
+    });
 
     res.status(200).json({
       count: bidsWithItems.length,
+      total: total,
+      totalPages: totalPages,
+      currentPage: parseInt(page),
       bids: bidsWithItems,
     });
   } catch (err) {

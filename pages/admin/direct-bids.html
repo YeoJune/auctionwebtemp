@@ -48,6 +48,16 @@
             <span class="toggle-slider"></span>
             <span class="toggle-label">아이템별 최고가만 보기</span>
           </label>
+
+          <div class="page-size-selector">
+            <label for="pageSize">페이지당 항목:</label>
+            <select id="pageSize" class="form-control form-control-sm">
+              <option value="10">10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
         </div>
 
         <!-- 입찰 목록 테이블 -->
@@ -74,6 +84,9 @@
             </tbody>
           </table>
         </div>
+
+        <!-- 페이지네이션 추가 -->
+        <div id="pagination" class="pagination"></div>
       </div>
     </div>
 

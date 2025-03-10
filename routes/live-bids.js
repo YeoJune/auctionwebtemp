@@ -14,8 +14,10 @@ const isAdmin = (req, res, next) => {
 // STATUS -> 'first', 'second', 'final', 'completed', 'cancelled'
 
 // GET endpoint to retrieve live bids, filtered by status
+// GET endpoint to retrieve live bids, filtered by status
 router.get("/", async (req, res) => {
-  const { status } = req.query;
+  const { status, page = 1, limit = 10 } = req.query;
+  const offset = (page - 1) * limit;
 
   if (!req.session.user) {
     return res.status(401).json({ message: "Unauthorized" });
@@ -24,47 +26,102 @@ router.get("/", async (req, res) => {
   const userId = req.session.user.id;
 
   // Prepare base query
-  let query = "SELECT * FROM live_bids WHERE 1=1";
-  const queryParams = [];
+  let queryConditions = ["1=1"];
+  let queryParams = [];
 
   // Add status filter if provided
   if (status) {
-    query += " AND status = ?";
+    queryConditions.push("b.status = ?");
     queryParams.push(status);
   }
 
   // Regular users can only see their own bids, admins can see all
   if (req.session.user.id !== "admin") {
-    query += " AND user_id = ?";
+    queryConditions.push("b.user_id = ?");
     queryParams.push(userId);
   }
 
-  // Add order by to show most recent first
-  query += " ORDER BY updated_at DESC";
+  const whereClause = queryConditions.join(" AND ");
+
+  // Count query for pagination
+  const countQuery = `
+    SELECT COUNT(*) as total 
+    FROM live_bids b
+    WHERE ${whereClause}
+  `;
+
+  // Main query with JOIN
+  const mainQuery = `
+    SELECT 
+      b.id, b.item_id, b.user_id, b.first_price, b.second_price, b.final_price, 
+      b.status, b.created_at, b.updated_at,
+      i.id as item_id, i.original_title, i.auc_num, i.category, i.brand, i.rank,
+      i.starting_price, i.scheduled_date, i.image
+    FROM live_bids b
+    LEFT JOIN crawled_items i ON b.item_id = i.item_id
+    WHERE ${whereClause}
+    ORDER BY b.updated_at DESC
+    LIMIT ? OFFSET ?
+  `;
+
+  // Add pagination parameters
+  queryParams.push(parseInt(limit), parseInt(offset));
 
   const connection = await pool.getConnection();
 
   try {
-    // Execute query
-    const [bids] = await connection.query(query, queryParams);
-
-    // Get item details for each bid
-    const bidsWithItems = await Promise.all(
-      bids.map(async (bid) => {
-        const [items] = await connection.query(
-          "SELECT * FROM crawled_items WHERE item_id = ?",
-          [bid.item_id]
-        );
-
-        return {
-          ...bid,
-          item: items.length > 0 ? items[0] : null,
-        };
-      })
+    // Get total count
+    const [countResult] = await connection.query(
+      countQuery,
+      queryParams.slice(0, -2)
     );
+    const total = countResult[0].total;
+    const totalPages = Math.ceil(total / limit);
+
+    // Get bids with item details in a single query
+    const [rows] = await connection.query(mainQuery, queryParams);
+
+    // Format result to match expected structure
+    const bidsWithItems = rows.map((row) => {
+      const bid = {
+        id: row.id,
+        item_id: row.item_id,
+        user_id: row.user_id,
+        first_price: row.first_price,
+        second_price: row.second_price,
+        final_price: row.final_price,
+        status: row.status,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      };
+
+      // Only include item if it exists
+      let item = null;
+      if (row.item_id) {
+        item = {
+          item_id: row.item_id,
+          original_title: row.original_title,
+          auc_num: row.auc_num,
+          category: row.category,
+          brand: row.brand,
+          rank: row.rank,
+          starting_price: row.starting_price,
+          scheduled_date: row.scheduled_date,
+          image: row.image,
+        };
+      }
+
+      return {
+        ...bid,
+        item: item,
+      };
+    });
 
     res.status(200).json({
       count: bidsWithItems.length,
+      total: total,
+      totalPages: totalPages,
+      currentPage: parseInt(page),
       bids: bidsWithItems,
     });
   } catch (err) {

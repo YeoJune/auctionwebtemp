@@ -7,7 +7,7 @@ let isCrawlingValue = false;
 // 페이지 로드 시 실행
 document.addEventListener("DOMContentLoaded", function () {
   // 크롤링 상태 체크
-  checkCrawlingStatus();
+  checkCrawlStatus();
 
   // 메트릭스 초기 로드 및 주기적 업데이트
   updateMetrics();
@@ -33,10 +33,10 @@ document.addEventListener("DOMContentLoaded", function () {
   // 버튼 이벤트 리스너 등록
   document
     .getElementById("productCrawlBtn")
-    .addEventListener("click", startProductCrawling);
+    .addEventListener("click", startProductCrawl);
   document
     .getElementById("valueCrawlBtn")
-    .addEventListener("click", startValueCrawling);
+    .addEventListener("click", startValueCrawl);
   document
     .getElementById("uploadLogoBtn")
     .addEventListener("click", uploadLogo);
@@ -45,10 +45,10 @@ document.addEventListener("DOMContentLoaded", function () {
     .addEventListener("click", uploadIntro);
   document
     .getElementById("updateScheduleBtn")
-    .addEventListener("click", updateCrawlSchedule);
+    .addEventListener("click", submitCrawlSchedule);
   document
     .getElementById("saveNoticeBtn")
-    .addEventListener("click", saveNotice);
+    .addEventListener("click", submitNotice);
   document
     .getElementById("newNoticeBtn")
     .addEventListener("click", clearNoticeForm);
@@ -79,9 +79,9 @@ async function updateMetrics() {
 // ----- 크롤링 관리 -----
 
 // 크롤링 상태 체크 함수
-async function checkCrawlingStatus() {
+async function checkCrawlStatus() {
   try {
-    const status = await checkCrawlingStatus();
+    const status = await checkCrawlingStatus(); // API 함수 호출
 
     isCrawlingProduct = status.isCrawling;
     isCrawlingValue = status.isValueCrawling;
@@ -127,7 +127,7 @@ function startStatusCheck() {
 
   // 5초마다 상태 체크
   statusCheckInterval = setInterval(async () => {
-    await checkCrawlingStatus();
+    await checkCrawlStatus();
 
     // 크롤링이 모두 끝났으면 인터벌 종료
     if (!isCrawlingProduct && !isCrawlingValue) {
@@ -137,14 +137,14 @@ function startStatusCheck() {
 }
 
 // 상품 크롤링 시작
-async function startProductCrawling() {
+async function startProductCrawl() {
   if (isCrawlingProduct || isCrawlingValue) return;
 
   try {
     isCrawlingProduct = true;
     updateCrawlingUI();
 
-    await startProductCrawling();
+    await startProductCrawling(); // API 함수 호출
 
     // 크롤링이 시작되면 주기적으로 상태 체크
     startStatusCheck();
@@ -157,14 +157,14 @@ async function startProductCrawling() {
 }
 
 // 시세표 크롤링 시작
-async function startValueCrawling() {
+async function startValueCrawl() {
   if (isCrawlingProduct || isCrawlingValue) return;
 
   try {
     isCrawlingValue = true;
     updateCrawlingUI();
 
-    await startValueCrawling();
+    await startValueCrawling(); // API 함수 호출
 
     // 크롤링이 시작되면 주기적으로 상태 체크
     startStatusCheck();
@@ -243,7 +243,7 @@ async function uploadIntro() {
 }
 
 // 크롤링 스케줄 설정
-async function updateCrawlSchedule() {
+async function submitCrawlSchedule() {
   const crawlTime = document.getElementById("crawlTime").value;
   if (!crawlTime) {
     showAlert("크롤링 시간을 선택해주세요.");
@@ -251,7 +251,7 @@ async function updateCrawlSchedule() {
   }
 
   try {
-    await updateCrawlSchedule(crawlTime);
+    await updateCrawlSchedule(crawlTime); // API 함수 호출
     showAlert("크롤링 스케줄이 성공적으로 설정되었습니다.", "success");
   } catch (error) {
     handleError(error, "크롤링 스케줄 설정 중 오류가 발생했습니다.");
@@ -282,7 +282,7 @@ function initializeEditor() {
 }
 
 // 공지 저장
-async function saveNotice() {
+async function submitNotice() {
   const noticeId = document.getElementById("noticeId").value;
   const title = document.getElementById("noticeTitle").value;
   const content = quill.root.innerHTML;
@@ -299,7 +299,7 @@ async function saveNotice() {
       content,
     };
 
-    await saveNotice(noticeData);
+    await saveNotice(noticeData); // API 함수 호출
     showAlert("공지가 성공적으로 저장되었습니다.", "success");
     clearNoticeForm();
 
@@ -309,7 +309,9 @@ async function saveNotice() {
   } catch (error) {
     handleError(error, "공지 저장 중 오류가 발생했습니다.");
   }
-} // 공지 폼 초기화
+}
+
+// 공지 폼 초기화
 function clearNoticeForm() {
   document.getElementById("noticeId").value = "";
   document.getElementById("noticeTitle").value = "";
@@ -341,7 +343,7 @@ function displayNotices(notices) {
           <p>${contentPreview}</p>
           <div class="notice-actions">
             <button class="btn" onclick="editNotice('${notice.id}')">수정</button>
-            <button class="btn btn-danger" onclick="deleteNotice('${notice.id}')">삭제</button>
+            <button class="btn btn-danger" onclick="deleteSelectedNotice('${notice.id}')">삭제</button>
           </div>
         </div>
       `;
@@ -366,14 +368,14 @@ async function editNotice(id) {
   }
 }
 
-// 공지 삭제
-async function deleteNotice(id) {
+// 공지 삭제 (함수명 변경)
+async function deleteSelectedNotice(id) {
   if (!confirmAction("정말로 이 공지를 삭제하시겠습니까?")) {
     return;
   }
 
   try {
-    await deleteNotice(id);
+    await deleteNotice(id); // API 함수 호출
     showAlert("공지가 성공적으로 삭제되었습니다.", "success");
 
     // 공지 목록 새로고침
@@ -420,7 +422,7 @@ function createFilterToggle(filter) {
         <label class="toggle-switch">
           <input type="checkbox" 
             ${filter.is_enabled ? "checked" : ""} 
-            onchange="updateFilterSetting('${filter.filter_type}', '${
+            onchange="toggleFilterSetting('${filter.filter_type}', '${
     filter.filter_value
   }', this.checked)">
           <span class="toggle-slider"></span>
@@ -436,10 +438,10 @@ function createFilterToggle(filter) {
     `;
 }
 
-// 필터 설정 업데이트
-async function updateFilterSetting(filterType, filterValue, isEnabled) {
+// 필터 설정 업데이트 (함수명 변경)
+async function toggleFilterSetting(filterType, filterValue, isEnabled) {
   try {
-    await updateFilterSetting(filterType, filterValue, isEnabled);
+    await updateFilterSetting(filterType, filterValue, isEnabled); // API 함수 호출
 
     // 성공 메시지 표시
     const action = isEnabled ? "활성화" : "비활성화";
