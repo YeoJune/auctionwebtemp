@@ -408,7 +408,7 @@ class StarAucCrawler extends AxiosCrawler {
     const original_scheduled_date = item.scheduled_date;
 
     // live 경매에 맞게 전날 18:00로 설정
-    const scheduled_date = this.getPreviousDayAt18();
+    const scheduled_date = this.getPreviousDayAt18(original_scheduled_date);
 
     // 이미 지난 경매는 필터링
     if (!this.isAuctionTimeValid(scheduled_date)) {

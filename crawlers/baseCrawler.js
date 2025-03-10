@@ -563,12 +563,13 @@ class AxiosCrawler {
     return timeString;
   }
 
-  getPreviousDayAt18() {
-    const now = new Date();
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    yesterday.setHours(18, 0, 0, 0);
-    return yesterday.toISOString().replace("Z", "+09:00");
+  getPreviousDayAt18(scheduledDate) {
+    // scheduledDate를 기준으로 전날 18시를 계산
+    const scheduleDate = new Date(scheduledDate);
+    const previousDay = new Date(scheduleDate);
+    previousDay.setDate(previousDay.getDate() - 1);
+    previousDay.setHours(18, 0, 0, 0);
+    return this.convertToKST(previousDay.toISOString());
   }
 
   // 경매 시간이 이미 지났는지 확인

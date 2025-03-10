@@ -287,7 +287,7 @@ class BrandAucCrawler extends AxiosCrawler {
     // 날짜 처리 로직
     let scheduled_date = original_scheduled_date;
     if (bid_type === "live") {
-      scheduled_date = this.getPreviousDayAt18();
+      scheduled_date = this.getPreviousDayAt18(original_scheduled_date);
 
       // 이미 지난 경매는 필터링
       if (!this.isAuctionTimeValid(scheduled_date)) {

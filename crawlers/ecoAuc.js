@@ -518,7 +518,7 @@ class EcoAucCrawler extends AxiosCrawler {
 
     // live 경매의 경우 전날 18:00로 설정하고 지난 경매 필터링
     if (this.currentBidType === "live") {
-      scheduled_date = this.getPreviousDayAt18();
+      scheduled_date = this.getPreviousDayAt18(original_scheduled_date);
 
       // 이미 지난 경매 필터링
       if (!this.isAuctionTimeValid(scheduled_date)) {
