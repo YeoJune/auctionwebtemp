@@ -1,4 +1,4 @@
-// products.js
+// public/js/products.js
 
 // 상태 관리
 window.state = {
@@ -7,17 +7,21 @@ window.state = {
   selectedDates: [],
   selectedRanks: [],
   selectedAucNums: [],
+  selectedAuctionTypes: [], // 경매 유형 필터
   currentPage: 1,
   itemsPerPage: 20,
   totalItems: 0,
   totalPages: 0,
   searchTerm: "",
-  wishlist: [],
-  bidData: [],
+  wishlist: [], // [{ item_id: "123", favorite_number: 1 }, ...]
+  liveBidData: [], // 현장 경매 입찰 데이터
+  directBidData: [], // 직접 경매 입찰 데이터
   currentData: [],
   images: [],
   currentImageIndex: 0,
   isAuthenticated: false,
+  selectedFavoriteNumbers: [], // 선택된 즐겨찾기 번호 [1, 2, 3]
+  showBidItemsOnly: false, // 입찰 항목만 표시 여부
 };
 
 /**
@@ -141,75 +145,281 @@ function calculateTotalPrice(price, auctionId, category) {
   return Math.round(totalAmountKRW + customsDuty + serviceFee);
 }
 
-// 입찰 섹션 HTML 생성
-function getBidSectionHTML(bidInfo, itemId, aucNum, category) {
+// 남은 시간 계산 함수
+function getRemainingTime(scheduledDate) {
+  if (!scheduledDate) return null;
+
+  const now = new Date();
+  const endDate = new Date(scheduledDate);
+
+  // 이미 지난 날짜면 null 반환
+  if (endDate <= now) return null;
+
+  const diff = endDate - now;
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+  return {
+    hours,
+    minutes,
+    seconds,
+    total: diff,
+    text: `${hours.toString().padStart(2, "0")}:${minutes
+      .toString()
+      .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`,
+    isNearEnd: diff <= 10 * 60 * 1000, // 10분 이하 남았는지
+  };
+}
+
+// 입찰 섹션 HTML 생성 - 현장 경매용
+function getLiveBidSectionHTML(bidInfo, itemId, aucNum, category) {
+  const item = state.currentData.find((item) => item.item_id === itemId);
+  if (!item) return "";
+
+  // 시작가
+  const startingPrice = parseFloat(item.starting_price) || 0;
+
+  // 타이머 HTML
+  const timer = getRemainingTime(item.scheduled_date);
+  const timerHTML = timer
+    ? `
+    <div class="bid-timer ${timer.isNearEnd ? "near-end" : ""}">
+      입찰마감 남은시간 [${timer.text}]
+    </div>
+  `
+    : "";
+
+  // 최종 입찰가가 있는 경우
   if (bidInfo?.final_price) {
     return `
-            <div>
-                <p>최종 입찰금액: ${formatNumber(bidInfo.final_price)} ¥</p>
-                <div class="price-details-container">
-                    (현지수수료+관세+수수료5% 기준 ${formatNumber(
-                      calculateTotalPrice(bidInfo.final_price, aucNum, category)
-                    )}원)
-                </div>
-            </div>`;
-  }
-
-  let html = `<div class="bid-info">`;
-  if (bidInfo?.first_price || bidInfo?.second_price) {
-    html += `
-            <div>
-                <div class="bid-price-info">
-                    <p>1차 입찰금액: ${
-                      formatNumber(bidInfo.first_price) || "-"
-                    } ¥</p>
-                    ${
-                      bidInfo.first_price
-                        ? `<div class="price-details-container first-price">
-                            (현지수수료+관세+수수료5% 기준 ${formatNumber(
-                              calculateTotalPrice(
-                                bidInfo.first_price,
-                                aucNum,
-                                category
-                              )
-                            )}원)
-                        </div>`
-                        : ""
-                    }
-                </div>
-                <div class="bid-price-info">
-                    <p>2차 제안금액: ${
-                      formatNumber(bidInfo.second_price) || "-"
-                    } ¥</p>
-                    ${
-                      bidInfo.second_price
-                        ? `<div class="price-details-container second-price">
-                            (현지수수료+관세+수수료5% 기준 ${formatNumber(
-                              calculateTotalPrice(
-                                bidInfo.second_price,
-                                aucNum,
-                                category
-                              )
-                            )}원)
-                        </div>`
-                        : ""
-                    }
-                </div>
-            </div>`;
-  }
-
-  html += `
-        <div>
-            <div class="bid-input-group">
-                <input type="number" placeholder="입찰 예정액" class="bid-input" data-item-id="${itemId}">
-                <span class="bid-currency">¥</span>
-                <button class="bid-button" onclick="handleBidSubmit(this.parentElement.children[0].value, '${itemId}')">입찰</button>
-            </div>
-            <div class="price-details-container"></div>
+      <div class="bid-info live">
+        ${timerHTML}
+        <div class="final-price">
+          <p>최종 입찰금액: ${cleanNumberFormat(bidInfo.final_price)} ¥</p>
+          <div class="price-details-container">
+            세금, 수수료포함 ${cleanNumberFormat(
+              calculateTotalPrice(bidInfo.final_price, aucNum, category)
+            )}원
+          </div>
         </div>
+      </div>`;
+  }
+
+  // 1차/2차 입찰 진행 중인 경우
+  let html = `<div class="bid-info live">
+    ${timerHTML}
+    <div class="real-time-price">
+      <p>실시간 금액: ${cleanNumberFormat(startingPrice)} ¥</p>
+      <div class="price-details-container">
+        세금, 수수료포함 ${cleanNumberFormat(
+          calculateTotalPrice(startingPrice, aucNum, category)
+        )}원
+      </div>
     </div>`;
 
+  if (bidInfo?.first_price || bidInfo?.second_price) {
+    // 1차 입찰이 있는 경우
+    if (bidInfo.first_price) {
+      html += `
+        <div class="bid-price-info">
+          <p>1차 입찰금액: ${cleanNumberFormat(bidInfo.first_price)} ¥</p>
+          <div class="price-details-container first-price">
+            세금, 수수료포함 ${cleanNumberFormat(
+              calculateTotalPrice(bidInfo.first_price, aucNum, category)
+            )}원
+          </div>
+        </div>`;
+    }
+
+    // 2차 제안이 있는 경우
+    if (bidInfo.second_price) {
+      html += `
+        <div class="bid-price-info">
+          <p>2차 제안금액: ${cleanNumberFormat(bidInfo.second_price)} ¥</p>
+          <div class="price-details-container second-price">
+            세금, 수수료포함 ${cleanNumberFormat(
+              calculateTotalPrice(bidInfo.second_price, aucNum, category)
+            )}원
+          </div>
+        </div>`;
+    }
+  }
+
+  // 입찰 입력 UI
+  html += `
+    <div class="bid-input-container">
+      <div class="bid-input-group">
+        <span class="bid-input-label">${
+          bidInfo?.first_price ? "최종입찰 금액" : "1차금액 입력"
+        }</span>
+        <input type="number" placeholder="" class="bid-input" data-item-id="${itemId}" data-bid-type="live">
+        <span class="bid-currency">¥</span>
+        <button class="bid-button" onclick="event.stopPropagation(); handleLiveBidSubmit(this.parentElement.querySelector('.bid-input').value, '${itemId}')">입찰</button>
+      </div>
+      <div class="price-details-container"></div>
+      <div class="quick-bid-buttons">
+        <button class="quick-bid-btn" onclick="event.stopPropagation(); quickAddBid('${itemId}', 1, 'live')">+1,000¥</button>
+        <button class="quick-bid-btn" onclick="event.stopPropagation(); quickAddBid('${itemId}', 5, 'live')">+5,000¥</button>
+        <button class="quick-bid-btn" onclick="event.stopPropagation(); quickAddBid('${itemId}', 10, 'live')">+10,000¥</button>
+      </div>
+    </div>
+  </div>`;
+
   return html;
+}
+
+// 입찰 섹션 HTML 생성 - 직접 경매용
+function getDirectBidSectionHTML(bidInfo, itemId, aucNum, category) {
+  const item = state.currentData.find((item) => item.item_id === itemId);
+  if (!item) return "";
+
+  // 시작가
+  const startingPrice = parseFloat(item.starting_price) || 0;
+
+  // 현재 내 입찰가
+  const currentPrice = bidInfo?.current_price || 0;
+
+  // 타이머 HTML
+  const timer = getRemainingTime(item.scheduled_date);
+  const timerHTML = timer
+    ? `
+    <div class="bid-timer ${timer.isNearEnd ? "near-end" : ""}">
+      입찰마감 남은시간 [${timer.text}]
+    </div>
+  `
+    : "";
+
+  let html = `<div class="bid-info direct">
+    ${timerHTML}
+    <div class="real-time-price">
+      <p>실시간 금액: ${cleanNumberFormat(startingPrice)} ¥</p>
+      <div class="price-details-container">
+        세금, 수수료 포함 ${cleanNumberFormat(
+          calculateTotalPrice(startingPrice, aucNum, category)
+        )}원
+      </div>
+    </div>`;
+
+  if (currentPrice > 0) {
+    html += `
+      <div class="bid-price-info">
+        <p>나의 입찰 금액: ${cleanNumberFormat(currentPrice)} ¥</p>
+        <div class="price-details-container my-price">
+          세금, 수수료 포함 ${cleanNumberFormat(
+            calculateTotalPrice(currentPrice, aucNum, category)
+          )}원
+        </div>
+      </div>`;
+  }
+
+  // 입찰 입력 UI
+  html += `
+    <div class="bid-input-container">
+      <div class="bid-input-group">
+        <input type="number" placeholder="나의 입찰 금액" class="bid-input" data-item-id="${itemId}" data-bid-type="direct">
+        <span class="bid-currency">¥</span>
+        <button class="bid-button" onclick="event.stopPropagation(); handleDirectBidSubmit(this.parentElement.querySelector('.bid-input').value, '${itemId}')">입찰</button>
+      </div>
+      <div class="price-details-container"></div>
+      <div class="quick-bid-buttons">
+        <button class="quick-bid-btn" onclick="event.stopPropagation(); quickAddBid('${itemId}', 1, 'direct')">+1,000¥</button>
+        <button class="quick-bid-btn" onclick="event.stopPropagation(); quickAddBid('${itemId}', 5, 'direct')">+5,000¥</button>
+        <button class="quick-bid-btn" onclick="event.stopPropagation(); quickAddBid('${itemId}', 10, 'direct')">+10,000¥</button>
+      </div>
+    </div>
+  </div>`;
+
+  return html;
+}
+
+function updateBidValueDisplay(inputElement) {
+  const valueDisplay =
+    inputElement.parentElement.querySelector(".bid-value-display");
+  if (valueDisplay) {
+    valueDisplay.textContent = "000";
+  }
+}
+
+// 현장 경매 입찰 제출 처리
+async function handleLiveBidSubmit(value, itemId) {
+  if (!state.isAuthenticated) {
+    alert("입찰하려면 로그인이 필요합니다.");
+    return;
+  }
+
+  if (!value) {
+    alert("입찰 금액을 입력해주세요.");
+    return;
+  }
+
+  const numericValue = parseFloat(value) * 1000; // 1000 곱하기
+  const item = state.currentData.find((item) => item.item_id === itemId);
+  const bidInfo = state.liveBidData.find((bid) => bid.item_id === itemId);
+
+  try {
+    // 이미 입찰한 내역이 있는지 확인
+    if (bidInfo) {
+      // 2차 입찰 이후면 최종 입찰 처리
+      if (bidInfo.status === "second") {
+        await API.fetchAPI(`/live-bids/${bidInfo.id}/final`, {
+          method: "PUT",
+          body: JSON.stringify({
+            finalPrice: numericValue,
+          }),
+        });
+        alert("최종 입찰금액이 등록되었습니다.");
+      } else {
+        alert("이미 입찰한 상품입니다. 관리자의 2차 제안을 기다려주세요.");
+        return;
+      }
+    } else {
+      // 첫 입찰
+      await API.fetchAPI("/live-bids", {
+        method: "POST",
+        body: JSON.stringify({
+          itemId,
+          firstPrice: numericValue,
+        }),
+      });
+      alert("1차 입찰금액이 등록되었습니다.");
+    }
+
+    await fetchData(); // 데이터 새로고침
+  } catch (error) {
+    alert(`입찰 신청 중 오류가 발생했습니다: ${error.message}`);
+  }
+}
+
+// 직접 경매 입찰 제출 처리
+async function handleDirectBidSubmit(value, itemId) {
+  if (!state.isAuthenticated) {
+    alert("입찰하려면 로그인이 필요합니다.");
+    return;
+  }
+
+  if (!value) {
+    alert("입찰 금액을 입력해주세요.");
+    return;
+  }
+
+  const numericValue = parseFloat(value) * 1000; // 1000 곱하기
+  const item = state.currentData.find((item) => item.item_id === itemId);
+
+  try {
+    await API.fetchAPI("/direct-bids", {
+      method: "POST",
+      body: JSON.stringify({
+        itemId,
+        currentPrice: numericValue,
+      }),
+    });
+
+    alert("입찰 금액이 등록되었습니다.");
+    await fetchData(); // 데이터 새로고침
+  } catch (error) {
+    alert(`입찰 신청 중 오류가 발생했습니다: ${error.message}`);
+  }
 }
 
 // 데이터 표시 함수
@@ -231,62 +441,473 @@ function displayData(data) {
   });
 
   initializePriceCalculators();
+  startTimerUpdates();
+}
+
+// 타이머 업데이트 시작
+function startTimerUpdates() {
+  // 기존 타이머가 있으면 제거
+  if (window.timerInterval) {
+    clearInterval(window.timerInterval);
+  }
+
+  // 1초마다 타이머 업데이트
+  window.timerInterval = setInterval(() => {
+    document.querySelectorAll(".bid-timer").forEach((timerElement) => {
+      const itemId = timerElement.closest(".product-card")?.dataset.itemId;
+      if (!itemId) return;
+
+      const item = state.currentData.find((item) => item.item_id === itemId);
+      if (!item || !item.scheduled_date) return;
+
+      const timer = getRemainingTime(item.scheduled_date);
+      if (!timer) {
+        timerElement.querySelector(".remaining-time").textContent = "[마감됨]";
+        timerElement.classList.remove("near-end");
+        return;
+      }
+
+      timerElement.querySelector(
+        ".remaining-time"
+      ).textContent = `[${timer.text}]`;
+
+      if (timer.isNearEnd) {
+        timerElement.classList.add("near-end");
+      } else {
+        timerElement.classList.remove("near-end");
+      }
+    });
+  }, 1000);
 }
 
 // 제품 카드 생성
 function createProductCard(item) {
   const card = createElement("div", "product-card");
   card.dataset.itemId = item.item_id;
+  card.dataset.bidType = item.bid_type || "live"; // 기본값은 live
 
-  const isWishlisted = state.wishlist.includes(item.item_id);
-  const bidInfo = state.bidData.find((b) => b.item_id == item.item_id);
+  // 위시리스트 확인 (번호별)
+  const wishlistItem = state.wishlist.find((w) => w.item_id == item.item_id);
+  const favoriteNumber = wishlistItem ? wishlistItem.favorite_number : null;
 
-  card.innerHTML = `
-        <div class="product-header">
-            <div>
-                <div class="product-brand">${item.brand}</div>
-                <div class="auctioneer-number">${item.auc_num}번</div>
-            </div>
-            <h3 class="product-rean">${item.title}</h3>
-        </div>
-        <img src="${API.validateImageUrl(item.image)}" alt="${
-    item.title
-  }" class="product-image">
-        <div class="product-details">
-            <p class="scheduled-date">예정일: ${formatDate(
-              item.scheduled_date
-            )}</p>
-            <p class="scheduled-date">랭크: ${item.rank}</p>
-            <div class="bid-section">
-                ${
-                  bidInfo
-                    ? getBidSectionHTML(
-                        bidInfo,
-                        item.item_id,
-                        item.auc_num,
-                        item.category
-                      )
-                    : getDefaultBidSectionHTML(item.item_id)
-                }
-            </div>
-            <div class="action-buttons">
-                <button class="wishlist-btn ${isWishlisted ? "active" : ""}" 
-                        onclick="event.stopPropagation(); toggleWishlist('${
-                          item.item_id
-                        }')">
-                    <i class="fas fa-star"></i>
-                </button>
-            </div>
-        </div>
-    `;
+  // 입찰 데이터 찾기
+  const liveBidInfo = state.liveBidData.find((b) => b.item_id == item.item_id);
+  const directBidInfo = state.directBidData.find(
+    (b) => b.item_id == item.item_id
+  );
+
+  // 경매 타입에 따라 다른 템플릿 사용
+  if (item.bid_type === "direct") {
+    card.innerHTML = getDirectCardHTML(item, directBidInfo, favoriteNumber);
+  } else {
+    card.innerHTML = getLiveCardHTML(item, liveBidInfo, favoriteNumber);
+  }
 
   card.addEventListener("click", (event) => {
-    if (!event.target.closest(".product-details")) {
+    if (
+      !event.target.closest(".bid-input-group") &&
+      !event.target.closest(".quick-bid-buttons") &&
+      !event.target.closest(".wishlist-btn") &&
+      !event.target.classList.contains("bid-button") &&
+      !event.target.classList.contains("quick-bid-btn")
+    ) {
       showDetails(item.item_id);
     }
   });
 
   return card;
+}
+
+// 현장 경매 카드 HTML
+function getLiveCardHTML(item, bidInfo, favoriteNumber) {
+  // 타이머 정보
+  const timer = getRemainingTime(item.scheduled_date);
+  const isNearEnd = timer?.isNearEnd;
+  const timerText = timer ? timer.text : "--:--:--";
+
+  // 날짜 및 시간 표시
+  const formattedDateTime = formatDateTime(item.scheduled_date);
+
+  return `
+    <div class="product-header">
+      <div class="product-brand">${item.brand}</div>
+      <div class="product-title">${item.title}</div>
+      <div class="auction-info">
+      <div class="auction-number">
+    ${item.auc_num}<span>번</span>
+    <div class="auction-type-indicator">${
+      item.bid_type === "direct" ? "직접" : "현장"
+    }</div>
+  </div>
+      </div>
+    </div>
+    <div class="bid-timer ${isNearEnd ? "near-end" : ""}">
+      <span class="scheduled-date">${formattedDateTime} 마감</span>
+      <span class="remaining-time">[${timerText}]</span>
+    </div>
+    <div class="product-image-container">
+      <img src="${API.validateImageUrl(item.image)}" alt="${
+    item.title
+  }" class="product-image">
+      <div class="product-rank">${item.rank || "N"}</div>
+    </div>
+    
+    <div class="wishlist-buttons">
+  <button class="wishlist-btn ${
+    favoriteNumber === 1 ? "active" : ""
+  }" data-favorite="1" 
+          onclick="event.stopPropagation(); toggleWishlist('${
+            item.item_id
+          }', 1)">
+    즐겨찾기①
+  </button>
+  <button class="wishlist-btn ${
+    favoriteNumber === 2 ? "active" : ""
+  }" data-favorite="2" 
+          onclick="event.stopPropagation(); toggleWishlist('${
+            item.item_id
+          }', 2)">
+    즐겨찾기②
+  </button>
+  <button class="wishlist-btn ${
+    favoriteNumber === 3 ? "active" : ""
+  }" data-favorite="3" 
+          onclick="event.stopPropagation(); toggleWishlist('${
+            item.item_id
+          }', 3)">
+    즐겨찾기③
+  </button>
+</div>
+    
+    <!-- 3칸 정보 -->
+    <div class="product-info-grid">
+  <div class="info-cell">
+    <div class="info-label">랭크</div>
+    <div class="info-value">${item.rank || "N"}</div>
+  </div>
+  <div class="info-cell">
+    <div class="info-label">실시간</div>
+    <div class="info-value">${cleanNumberFormat(
+      item.starting_price || 0
+    )}￥</div>
+    <div class="info-price-detail">
+      ${cleanNumberFormat(
+        calculateTotalPrice(item.starting_price, item.auc_num, item.category)
+      )}원
+    </div>
+  </div>
+  <div class="info-cell">
+    <div class="info-label">${
+      item.bid_type === "direct" ? "나의 입찰" : "2차 제안"
+    }</div>
+    <div class="info-value">${
+      item.bid_type === "direct" && bidInfo?.current_price
+        ? cleanNumberFormat(bidInfo.current_price) + "￥"
+        : item.bid_type === "live" && bidInfo?.second_price
+        ? cleanNumberFormat(bidInfo.second_price) + "￥"
+        : "-"
+    }</div>
+    <div class="info-price-detail">
+      ${
+        item.bid_type === "direct" && bidInfo?.current_price
+          ? cleanNumberFormat(
+              calculateTotalPrice(
+                bidInfo.current_price,
+                item.auc_num,
+                item.category
+              )
+            ) + "원"
+          : item.bid_type === "live" && bidInfo?.second_price
+          ? cleanNumberFormat(
+              calculateTotalPrice(
+                bidInfo.second_price,
+                item.auc_num,
+                item.category
+              )
+            ) + "원"
+          : ""
+      }
+    </div>
+  </div>
+</div>
+</div>
+    <div class="bid-section">
+      <div class="price-info">
+        ${getBidInfoHTML(bidInfo, item)}
+      </div>
+      ${getBidInputHTML(bidInfo, item, "live")}
+    </div>
+  `;
+}
+
+// getBidInfoHTML 함수 수정
+function getBidInfoHTML(bidInfo, item) {
+  if (!bidInfo) return "";
+
+  let html = "";
+
+  // 1차 입찰 정보
+  if (bidInfo.first_price) {
+    html += `
+      <div class="bid-price-info">
+        <span class="price-label">1차 입찰금액</span>
+        <span class="price-value">${cleanNumberFormat(
+          bidInfo.first_price
+        )}￥</span>
+        <span class="price-detail">세금, 수수료포함 ${cleanNumberFormat(
+          calculateTotalPrice(bidInfo.first_price, item.auc_num, item.category)
+        )}\\</span>
+      </div>`;
+  }
+
+  // 최종 입찰가 정보만 표시 (2차 제안 제외)
+  if (bidInfo.final_price) {
+    html += `
+      <div class="final-price">
+        <span class="price-label">최종 입찰금액</span>
+        <span class="price-value">${cleanNumberFormat(
+          bidInfo.final_price
+        )}￥</span>
+        <span class="price-detail">세금, 수수료포함 ${cleanNumberFormat(
+          calculateTotalPrice(bidInfo.final_price, item.auc_num, item.category)
+        )}\\</span>
+      </div>`;
+  }
+
+  return html;
+}
+
+function getDirectBidInfoHTML(bidInfo, item) {
+  if (!bidInfo || !bidInfo.current_price) return "";
+
+  return `
+    <div class="my-bid-price">
+      <span class="price-label">나의 입찰 금액</span>
+      <span class="price-value">${cleanNumberFormat(
+        bidInfo.current_price
+      )}￥</span>
+      <span class="price-detail">세금, 수수료포함 ${cleanNumberFormat(
+        calculateTotalPrice(bidInfo.current_price, item.auc_num, item.category)
+      )}\\</span>
+    </div>
+  `;
+}
+
+function quickAddBid(itemId, amount, bidType) {
+  // 이벤트 버블링과 기본 동작 방지
+  if (event) {
+    event.stopPropagation();
+    event.preventDefault();
+  }
+
+  const item = state.currentData.find((item) => item.item_id === itemId);
+  if (!item) return;
+
+  const inputElement = document.querySelector(
+    `.bid-input[data-item-id="${itemId}"][data-bid-type="${bidType}"]`
+  );
+  if (!inputElement) return;
+
+  // 현재 input 값을 가져오기
+  let currentValue = parseFloat(inputElement.value) || 0;
+
+  // 값이 없으면 시작가를 기준으로 설정
+  if (currentValue === 0) {
+    currentValue = parseFloat(item.starting_price) / 1000 || 0;
+  }
+
+  // 새 값 설정 (1000으로 나눈 값을 표시)
+  const newValue = currentValue + amount;
+  inputElement.value = newValue;
+
+  // 가격 표시 업데이트
+  updateBidValueDisplay(inputElement);
+
+  // 가격 상세 정보 업데이트 이벤트 발생
+  inputElement.dispatchEvent(new Event("input"));
+}
+
+// 직접 경매 카드 HTML
+function getDirectCardHTML(item, bidInfo, favoriteNumber) {
+  // 타이머 정보
+  const timer = getRemainingTime(item.scheduled_date);
+  const isNearEnd = timer?.isNearEnd;
+  const timerText = timer ? timer.text : "--:--:--";
+
+  // 날짜 및 시간 표시
+  const formattedDateTime = formatDateTime(item.scheduled_date);
+
+  return `
+    <div class="product-header">
+      <div class="product-brand">${item.brand}</div>
+      <div class="product-title">${item.title}</div>
+      <div class="auction-info">
+        <div class="auction-number">
+    ${item.auc_num}<span>번</span>
+    <div class="auction-type-indicator">${
+      item.bid_type === "direct" ? "직접" : "현장"
+    }</div>
+  </div>
+      </div>
+    </div>
+    <div class="bid-timer ${isNearEnd ? "near-end" : ""}">
+      <span class="scheduled-date">${formattedDateTime} 마감</span>
+      <span class="remaining-time">[${timerText}]</span>
+    </div>
+    <div class="product-image-container">
+      <img src="${API.validateImageUrl(item.image)}" alt="${
+    item.title
+  }" class="product-image">
+      <div class="product-rank">${item.rank || "N"}</div>
+    </div>
+    <div class="wishlist-buttons">
+  <button class="wishlist-btn ${
+    favoriteNumber === 1 ? "active" : ""
+  }" data-favorite="1" 
+          onclick="event.stopPropagation(); toggleWishlist('${
+            item.item_id
+          }', 1)">
+    즐겨찾기①
+  </button>
+  <button class="wishlist-btn ${
+    favoriteNumber === 2 ? "active" : ""
+  }" data-favorite="2" 
+          onclick="event.stopPropagation(); toggleWishlist('${
+            item.item_id
+          }', 2)">
+    즐겨찾기②
+  </button>
+  <button class="wishlist-btn ${
+    favoriteNumber === 3 ? "active" : ""
+  }" data-favorite="3" 
+          onclick="event.stopPropagation(); toggleWishlist('${
+            item.item_id
+          }', 3)">
+    즐겨찾기③
+  </button>
+</div>
+    
+    <!-- 3칸 정보 -->
+    <div class="product-info-grid">
+  <div class="info-cell">
+    <div class="info-label">랭크</div>
+    <div class="info-value">${item.rank || "N"}</div>
+  </div>
+  <div class="info-cell">
+    <div class="info-label">실시간</div>
+    <div class="info-value">${cleanNumberFormat(
+      item.starting_price || 0
+    )}￥</div>
+    <div class="info-price-detail">
+      ${cleanNumberFormat(
+        calculateTotalPrice(item.starting_price, item.auc_num, item.category)
+      )}원
+    </div>
+  </div>
+  <div class="info-cell">
+    <div class="info-label">${
+      item.bid_type === "direct" ? "나의 입찰" : "2차 제안"
+    }</div>
+    <div class="info-value">${
+      item.bid_type === "direct" && bidInfo?.current_price
+        ? cleanNumberFormat(bidInfo.current_price) + "￥"
+        : item.bid_type === "live" && bidInfo?.second_price
+        ? cleanNumberFormat(bidInfo.second_price) + "￥"
+        : "-"
+    }</div>
+    <div class="info-price-detail">
+      ${
+        item.bid_type === "direct" && bidInfo?.current_price
+          ? cleanNumberFormat(
+              calculateTotalPrice(
+                bidInfo.current_price,
+                item.auc_num,
+                item.category
+              )
+            ) + "원"
+          : item.bid_type === "live" && bidInfo?.second_price
+          ? cleanNumberFormat(
+              calculateTotalPrice(
+                bidInfo.second_price,
+                item.auc_num,
+                item.category
+              )
+            ) + "원"
+          : ""
+      }
+    </div>
+  </div>
+</div>
+    
+    <div class="bid-section">
+      <div class="price-info">
+        <div class="real-time-price">
+          <span class="price-label">실시간 금액</span>
+          <span class="price-value">${cleanNumberFormat(
+            item.starting_price || 0
+          )}￥</span>
+          <span class="price-detail">세금, 수수료 포함 ${cleanNumberFormat(
+            calculateTotalPrice(
+              item.starting_price,
+              item.auc_num,
+              item.category
+            )
+          )}\\</span>
+        </div>
+        ${getDirectBidInfoHTML(bidInfo, item)}
+      </div>
+      ${getBidInputHTML(bidInfo, item, "direct")}
+    </div>
+  `;
+}
+
+function getBidInputHTML(bidInfo, item, bidType) {
+  // 최종 입찰가가 있으면 입력 UI를 표시하지 않음
+  if (bidType === "live" && bidInfo?.final_price) {
+    return "";
+  }
+
+  let bidInputLabel = "";
+  if (bidType === "live") {
+    bidInputLabel = bidInfo?.first_price
+      ? "최종입찰 금액 입력"
+      : "1차금액 입력";
+  }
+
+  return `
+    <div class="bid-input-container">
+      ${
+        bidInputLabel
+          ? `<div class="bid-input-label">${bidInputLabel}</div>`
+          : ""
+      }
+      <div class="bid-input-group">
+        <input type="number" class="bid-input" data-item-id="${
+          item.item_id
+        }" data-bid-type="${bidType}">
+        <span class="bid-value-display">000</span>
+        <span class="bid-currency">￥</span>
+        <button class="bid-button" onclick="event.stopPropagation(); handle${
+          bidType === "live" ? "Live" : "Direct"
+        }BidSubmit(this.parentElement.querySelector('.bid-input').value, '${
+    item.item_id
+  }')">입찰</button>
+      </div>
+      <div class="price-details-container"></div>
+      </div>
+      <div class="quick-bid-buttons">
+        <button class="quick-bid-btn" onclick="event.stopPropagation(); quickAddBid('${
+          item.item_id
+        }', 1, '${bidType}')">+1,000￥</button>
+        <button class="quick-bid-btn" onclick="event.stopPropagation(); quickAddBid('${
+          item.item_id
+        }', 5, '${bidType}')">+5,000￥</button>
+        <button class="quick-bid-btn" onclick="event.stopPropagation(); quickAddBid('${
+          item.item_id
+        }', 10, '${bidType}')">+10,000￥</button>
+      </div>
+    </div>
+  `;
 }
 
 // 인증 관련 함수들
@@ -304,45 +925,64 @@ async function checkAuthStatus() {
 function updateAuthUI() {
   const signinBtn = document.getElementById("signinBtn");
   const signoutBtn = document.getElementById("signoutBtn");
-  const filterButtons = document.querySelector(".filter-buttons");
 
   if (!signinBtn || !signoutBtn) return;
 
   if (state.isAuthenticated) {
     signinBtn.style.display = "none";
     signoutBtn.style.display = "inline-block";
-    if (filterButtons) {
-      filterButtons.style.display = "flex";
-    }
   } else {
     signinBtn.style.display = "inline-block";
     signoutBtn.style.display = "none";
-    if (filterButtons) {
-      filterButtons.style.display = "none";
-    }
   }
 }
 
-// 위시리스트 관련 함수들
-async function toggleWishlist(itemId) {
+// 위시리스트 관련 함수
+async function toggleWishlist(itemId, favoriteNumber) {
   if (!state.isAuthenticated) {
     alert("위시리스트 기능을 사용하려면 로그인이 필요합니다.");
     return;
   }
 
   try {
-    const isWishlisted = state.wishlist.includes(itemId);
-    const method = isWishlisted ? "DELETE" : "POST";
+    const existingItem = state.wishlist.find(
+      (w) => w.item_id === itemId && w.favorite_number === favoriteNumber
+    );
 
-    await API.fetchAPI("/wishlist", {
-      method,
-      body: JSON.stringify({ itemId: itemId.toString() }),
-    });
+    if (existingItem) {
+      // 삭제
+      await API.fetchAPI("/wishlist", {
+        method: "DELETE",
+        body: JSON.stringify({
+          itemId: itemId.toString(),
+          favoriteNumber,
+        }),
+      });
 
-    if (isWishlisted) {
-      state.wishlist = state.wishlist.filter((id) => id !== itemId);
+      // 상태 업데이트
+      state.wishlist = state.wishlist.filter(
+        (w) => w.item_id !== itemId || w.favorite_number !== favoriteNumber
+      );
     } else {
-      state.wishlist.push(itemId);
+      // 추가
+      await API.fetchAPI("/wishlist", {
+        method: "POST",
+        body: JSON.stringify({
+          itemId: itemId.toString(),
+          favoriteNumber,
+        }),
+      });
+
+      // 같은 아이템의 같은 번호가 있으면 제거 (중복 방지)
+      state.wishlist = state.wishlist.filter(
+        (w) => w.item_id !== itemId || w.favorite_number !== favoriteNumber
+      );
+
+      // 새 항목 추가
+      state.wishlist.push({
+        item_id: itemId,
+        favorite_number: favoriteNumber,
+      });
     }
 
     updateWishlistUI(itemId);
@@ -365,26 +1005,51 @@ async function fetchData() {
       ),
       search: state.searchTerm,
       ranks: state.selectedRanks,
-      wishlistOnly: document
-        .getElementById("wishlistFilter")
-        ?.classList.contains("active"),
-      bidOnly: document
-        .getElementById("bidFilter")
-        ?.classList.contains("active"),
+      favoriteNumbers:
+        state.selectedFavoriteNumbers.length > 0
+          ? state.selectedFavoriteNumbers.join(",")
+          : undefined,
+      auctionTypes:
+        state.selectedAuctionTypes.length > 0
+          ? state.selectedAuctionTypes.join(",")
+          : undefined,
       aucNums: state.selectedAucNums.join(","),
+      withDetails: "false",
+      bidsOnly: state.showBidItemsOnly, // 파라미터 수정
     };
 
     const queryString = API.createURLParams(params);
     const data = await API.fetchAPI(`/data?${queryString}`);
 
-    state.bidData = data.bidData || [];
-    state.wishlist = data.wishlist || [];
+    // 위시리스트 정보 추출
+    state.wishlist = data.wishlist.map((w) => ({
+      item_id: w.item_id,
+      favorite_number: w.favorite_number,
+    }));
+
     state.totalItems = data.totalItems;
     state.totalPages = data.totalPages;
+
+    // 입찰 데이터 분리
+    state.liveBidData = [];
+    state.directBidData = [];
+
+    // 각 아이템에 입찰 정보 추가
+    data.data.forEach((item) => {
+      if (item.bids) {
+        if (item.bids.live) {
+          state.liveBidData.push(item.bids.live);
+        }
+        if (item.bids.direct) {
+          state.directBidData.push(item.bids.direct);
+        }
+      }
+    });
 
     displayData(data.data);
     createPagination(state.currentPage, state.totalPages, handlePageChange);
   } catch (error) {
+    console.error("데이터를 불러오는 데 실패했습니다:", error);
     alert("데이터를 불러오는 데 실패했습니다.");
   } finally {
     toggleLoading(false);
@@ -414,154 +1079,38 @@ async function handleSignout() {
   }
 }
 
-// products.js에 추가
-function getDefaultBidSectionHTML(itemId) {
-  return `
-        <div class="bid-info">
-            <div>
-                <div class="bid-input-group">
-                    <input type="number" placeholder="입찰 예정액" class="bid-input" data-item-id="${itemId}">
-                    <span class="bid-currency">¥</span>
-                    <button class="bid-button" onclick="handleBidSubmit(this.parentElement.children[0].value, '${itemId}')">입찰</button>
-                </div>
-                <div class="price-details-container"></div>
-            </div>
-        </div>
-    `;
-}
-
 function initializePriceCalculators() {
   document.querySelectorAll(".bid-input").forEach((input) => {
-    const container = input.parentElement.parentElement.querySelector(
-      ".price-details-container"
-    );
+    const container = input.closest(".bid-input-group").nextElementSibling;
     const itemId = input.getAttribute("data-item-id");
+    const bidType = input.getAttribute("data-bid-type");
     const item = state.currentData.find((item) => item.item_id == itemId);
 
     if (container && item) {
       input.addEventListener("input", function () {
-        const price = parseFloat(this.value) || 0;
+        const price = parseFloat(this.value) * 1000 || 0; // 입력값에 1000 곱하기
         const totalPrice = calculateTotalPrice(
           price,
           item.auc_num,
           item.category
         );
-        container.innerHTML = price
-          ? `(현지수수료+관세+수수료5% 기준 ${formatNumber(totalPrice)}원)`
-          : "";
+
+        // 입찰 타입에 따라 다른 메시지 표시
+        if (bidType === "direct") {
+          container.innerHTML = price
+            ? `(모든부대비용 포함 ${cleanNumberFormat(totalPrice)}원)`
+            : "";
+        } else {
+          container.innerHTML = price
+            ? `(세금, 수수료포함 ${cleanNumberFormat(totalPrice)}원)`
+            : "";
+        }
       });
     }
   });
 }
 
-async function handleBidSubmit(value, itemId) {
-  if (!state.isAuthenticated) {
-    alert("입찰하려면 로그인이 필요합니다.");
-    return;
-  }
-
-  const bidInfo = state.bidData.find((b) => b.item_id == itemId);
-  const isFinalBid =
-    !!bidInfo && (!!bidInfo.first_price || !!bidInfo.second_price);
-
-  try {
-    await API.fetchAPI("/bid/place-reservation", {
-      method: "POST",
-      body: JSON.stringify({
-        itemId,
-        bidAmount: value,
-        isFinalBid,
-      }),
-    });
-
-    alert(
-      isFinalBid
-        ? "최종 입찰금액이 등록되었습니다."
-        : "입찰 예정액이 신청되었습니다."
-    );
-    await fetchData(); // 데이터 새로고침
-  } catch (error) {
-    alert(`입찰 신청 중 오류가 발생했습니다: ${error.message}`);
-  }
-}
-// products.js에 추가
-async function showNoticeSection() {
-  const noticeSection = document.querySelector(".notice-section");
-  const showNoticesBtn = document.getElementById("showNoticesBtn");
-
-  if (!noticeSection || !showNoticesBtn) return;
-
-  if (noticeSection.style.display === "none") {
-    noticeSection.style.display = "block";
-    showNoticesBtn.textContent = "공지사항 닫기";
-    await fetchNotices();
-  } else {
-    noticeSection.style.display = "none";
-    showNoticesBtn.textContent = "공지사항 보기";
-  }
-}
-
-async function fetchNotices() {
-  try {
-    const notices = await API.fetchAPI("/admin/notices");
-    displayNotices(notices);
-  } catch (error) {
-    console.error("Error fetching notices:", error);
-  }
-}
-
-function displayNotices(notices) {
-  const noticeList = document.getElementById("noticeList");
-  if (!noticeList) return;
-
-  noticeList.innerHTML = "";
-  notices.forEach((notice) => {
-    const li = createElement("li", "", notice.title);
-    li.addEventListener("click", () => showNoticeDetail(notice));
-    noticeList.appendChild(li);
-  });
-}
-// products.js의 showNoticeDetail 함수 수정
-function showNoticeDetail(notice) {
-  const modal = document.getElementById("noticeDetailModal");
-  const title = document.getElementById("noticeTitle");
-  const content = document.getElementById("noticeContent");
-  const image = document.getElementById("noticeImage");
-
-  if (!modal || !title || !content || !image) return;
-
-  // 내용 설정
-  title.textContent = notice.title;
-  content.innerHTML = notice.content.replace(/\n/g, "<br>");
-
-  // 이미지 처리
-  if (notice.image_url) {
-    image.src = notice.image_url;
-    image.style.display = "block";
-  } else {
-    image.style.display = "none";
-  }
-
-  // 모달 표시 및 닫기 버튼 이벤트 설정
-  modal.style.display = "block";
-
-  const closeBtn = modal.querySelector(".close");
-  const closeModal = () => {
-    modal.style.display = "none";
-  };
-
-  // 기존 이벤트 리스너 제거 후 새로 추가
-  closeBtn?.removeEventListener("click", closeModal);
-  closeBtn?.addEventListener("click", closeModal);
-
-  // 모달 외부 클릭시 닫기
-  modal.addEventListener("click", (e) => {
-    if (e.target === modal) {
-      closeModal();
-    }
-  });
-}
-// products.js에 추가
+// 상세 정보 표시
 async function showDetails(itemId) {
   const modalManager = setupModal("detailModal");
   if (!modalManager) return;
@@ -607,7 +1156,8 @@ function initializeModal(item) {
   document.querySelector(".modal-accessory-code").textContent =
     item.accessory_code || "로딩 중...";
   document.querySelector(".modal-scheduled-date").textContent =
-    formatDate(item.scheduled_date) || "로딩 중...";
+    formatDateTime(item.scheduled_date) || "로딩 중...";
+  document.querySelector(".modal-rank").textContent = item.rank || "N";
 
   // 입찰 정보 초기화
   initializeBidInfo(item.item_id);
@@ -624,50 +1174,45 @@ function updateModalWithDetails(item) {
   document.querySelector(".modal-accessory-code").textContent =
     item.accessory_code || "액세서리 코드 없음";
   document.querySelector(".modal-scheduled-date").textContent =
-    item.scheduled_date ? formatDate(item.scheduled_date) : "날짜 정보 없음";
+    item.scheduled_date
+      ? formatDateTime(item.scheduled_date)
+      : "날짜 정보 없음";
   document.querySelector(".modal-brand").textContent = item.brand;
   document.querySelector(".modal-brand2").textContent = item.brand;
   document.querySelector(".modal-title").textContent =
     item.title || "제목 없음";
+  document.querySelector(".modal-rank").textContent = item.rank || "N";
 }
+
 function initializeBidInfo(itemId) {
-  const bidInfo = state.bidData.find((b) => b.item_id == itemId);
   const item = state.currentData.find((i) => i.item_id == itemId);
   const bidSection = document.querySelector(".modal-content .bid-info-holder");
 
-  if (!bidSection) return;
+  if (!bidSection || !item) return;
 
-  if (bidInfo) {
-    bidSection.innerHTML = getBidSectionHTML(
-      bidInfo,
+  // 경매 타입에 따라 다른 입찰 섹션 표시
+  if (item.bid_type === "direct") {
+    const directBidInfo = state.directBidData.find((b) => b.item_id == itemId);
+    bidSection.innerHTML = getDirectBidSectionHTML(
+      directBidInfo,
       itemId,
       item.auc_num,
       item.category
     );
   } else {
-    bidSection.innerHTML = getDefaultBidSectionHTML(itemId);
+    const liveBidInfo = state.liveBidData.find((b) => b.item_id == itemId);
+    bidSection.innerHTML = getLiveBidSectionHTML(
+      liveBidInfo,
+      itemId,
+      item.auc_num,
+      item.category
+    );
   }
 
-  // 입찰 금액 입력 시 가격 계산기 초기화
-  const input = bidSection.querySelector(".bid-input");
-  const priceContainer = bidSection.querySelector(".price-details-container");
-
-  if (input && priceContainer && item) {
-    input.addEventListener("input", function () {
-      const priceContainer =
-        this.closest(".bid-input-group").nextElementSibling;
-      const price = parseFloat(this.value) || 0;
-      const totalPrice = calculateTotalPrice(
-        price,
-        item.auc_num,
-        item.category
-      );
-      priceContainer.innerHTML = price
-        ? `(현지수수료+관세+수수료5% 기준 ${formatNumber(totalPrice)}원)`
-        : "";
-    });
-  }
+  // 가격 계산기 초기화
+  initializePriceCalculators();
 }
+
 function initializeImages(imageUrls) {
   state.images = imageUrls.filter((url) => url); // 유효한 URL만 필터링
   state.currentImageIndex = 0;
@@ -750,20 +1295,17 @@ function updateWishlistUI(itemId) {
   const card = document.querySelector(
     `.product-card[data-item-id="${itemId}"]`
   );
-  const wishlistBtn = card?.querySelector(".wishlist-btn");
-  if (wishlistBtn) {
-    wishlistBtn.classList.toggle("active", state.wishlist.includes(itemId));
-  }
+  if (card) {
+    const wishlistBtns = card.querySelectorAll(".wishlist-btn");
 
-  // 모달의 위시리스트 버튼 업데이트 (있는 경우)
-  const modalWishlistBtn = document.querySelector(
-    ".modal-content .wishlist-btn"
-  );
-  if (modalWishlistBtn) {
-    modalWishlistBtn.classList.toggle(
-      "active",
-      state.wishlist.includes(itemId)
-    );
+    wishlistBtns.forEach((btn) => {
+      const favoriteNumber = parseInt(btn.dataset.favorite);
+      const isActive = state.wishlist.some(
+        (w) => w.item_id === itemId && w.favorite_number === favoriteNumber
+      );
+
+      btn.classList.toggle("active", isActive);
+    });
   }
 }
 
@@ -778,75 +1320,401 @@ function setupImageNavigation() {
   });
 }
 
-async function initialize() {
-  await API.initialize();
-  await checkAuthStatus();
+// 필터 설정 함수
+function setupFilters() {
+  // 브랜드 콤보박스 설정
+  const brandSelect = document.getElementById("brandSelect");
+  if (brandSelect) {
+    brandSelect.addEventListener("change", function () {
+      state.selectedBrands = this.value ? [this.value] : [];
+    });
+  }
 
-  try {
-    // 필터 데이터 가져오기
-    const [
-      brandsResponse,
-      categoriesResponse,
-      datesResponse,
-      ranksResponse,
-      aucNumsResponse,
-    ] = await Promise.all([
-      API.fetchAPI("/data/brands-with-count"),
-      API.fetchAPI("/data/categories"),
-      API.fetchAPI("/data/scheduled-dates-with-count"),
-      API.fetchAPI("/data/ranks"),
-      API.fetchAPI("/data/auc-nums"), // 추가
-    ]);
-    // 각각의 필터 데이터 전달
-    displayFilters(
-      brandsResponse,
-      categoriesResponse,
-      datesResponse,
-      ranksResponse,
-      aucNumsResponse
-    );
+  // 카테고리 콤보박스 설정
+  const categorySelect = document.getElementById("categorySelect");
+  if (categorySelect) {
+    categorySelect.addEventListener("change", function () {
+      state.selectedCategories = this.value ? [this.value] : [];
+    });
+  }
 
-    // 이벤트 리스너 설정
-    document
-      .getElementById("searchButton")
-      ?.addEventListener("click", handleSearch);
-    document
-      .getElementById("searchInput")
-      ?.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") handleSearch();
-      });
-
-    document
-      .getElementById("applyFiltersBtn")
-      ?.addEventListener("click", () => {
-        state.currentPage = 1;
-        fetchData();
-      });
-
-    document.getElementById("signinBtn")?.addEventListener("click", () => {
-      window.location.href = "./pages/signin.html";
+  // 출품사 필터 설정
+  document
+    .getElementById("aucNumFilters")
+    ?.addEventListener("change", function (e) {
+      if (e.target.type === "checkbox") {
+        if (e.target.checked) {
+          state.selectedAucNums.push(e.target.value);
+        } else {
+          const index = state.selectedAucNums.indexOf(e.target.value);
+          if (index > -1) state.selectedAucNums.splice(index, 1);
+        }
+      }
     });
 
-    document
-      .getElementById("signoutBtn")
-      ?.addEventListener("click", handleSignout);
-    document
-      .getElementById("showNoticesBtn")
-      ?.addEventListener("click", showNoticeSection);
-
-    document.querySelectorAll(".filter-toggle-btn").forEach((btn) => {
-      btn.addEventListener("click", function () {
-        this.classList.toggle("active");
-        fetchData(); // 필터 적용
-      });
+  // 경매 유형 필터 설정
+  document
+    .getElementById("auctionTypeFilters")
+    ?.addEventListener("change", function (e) {
+      if (e.target.type === "checkbox") {
+        if (e.target.checked) {
+          state.selectedAuctionTypes.push(e.target.value);
+        } else {
+          const index = state.selectedAuctionTypes.indexOf(e.target.value);
+          if (index > -1) state.selectedAuctionTypes.splice(index, 1);
+        }
+      }
     });
-    // 초기 데이터 로드
-    await fetchData();
-  } catch (error) {
-    console.error("Error initializing filters:", error);
-    alert("필터 데이터를 불러오는 데 실패했습니다.");
+
+  // 즐겨찾기 필터 설정
+  document
+    .getElementById("favoriteFilters")
+    ?.addEventListener("change", function (e) {
+      if (e.target.type === "checkbox") {
+        const favoriteNum = parseInt(e.target.value);
+        if (e.target.checked) {
+          if (!state.selectedFavoriteNumbers.includes(favoriteNum)) {
+            state.selectedFavoriteNumbers.push(favoriteNum);
+          }
+        } else {
+          state.selectedFavoriteNumbers = state.selectedFavoriteNumbers.filter(
+            (num) => num !== favoriteNum
+          );
+        }
+      }
+    });
+
+  // 입찰항목만 표기 체크박스
+  document
+    .getElementById("bid-items-only")
+    ?.addEventListener("change", function () {
+      state.showBidItemsOnly = this.checked;
+    });
+
+  // 필터 적용 버튼
+  document
+    .getElementById("applyFiltersBtn")
+    ?.addEventListener("click", function () {
+      state.currentPage = 1;
+      fetchData();
+    });
+
+  // 필터 리셋 버튼
+  document
+    .getElementById("resetFiltersBtn")
+    ?.addEventListener("click", function () {
+      state.selectedBrands = [];
+      state.selectedCategories = [];
+      state.selectedDates = [];
+      state.selectedRanks = [];
+      state.selectedAucNums = [];
+      state.selectedAuctionTypes = [];
+      state.selectedFavoriteNumbers = [];
+      state.showBidItemsOnly = false;
+
+      // 콤보박스 초기화
+      document.getElementById("brandSelect").value = "";
+      document.getElementById("categorySelect").value = "";
+
+      // 체크박스 초기화
+      document
+        .querySelectorAll('.filter-options input[type="checkbox"]')
+        .forEach((checkbox) => (checkbox.checked = false));
+
+      // 입찰항목만 표기 체크박스 초기화
+      document.getElementById("bid-items-only").checked = false;
+
+      // 데이터 다시 가져오기
+      state.currentPage = 1;
+      fetchData();
+    });
+
+  // 표시 개수 변경
+  document
+    .getElementById("itemsPerPage")
+    ?.addEventListener("change", function () {
+      state.itemsPerPage = parseInt(this.value);
+      state.currentPage = 1;
+      fetchData();
+    });
+
+  // 뷰 타입 변경
+  document
+    .getElementById("cardViewBtn")
+    ?.addEventListener("click", function () {
+      document.getElementById("listViewBtn").classList.remove("active");
+      this.classList.add("active");
+      document.getElementById("dataBody").classList.remove("list-view");
+    });
+
+  document
+    .getElementById("listViewBtn")
+    ?.addEventListener("click", function () {
+      document.getElementById("cardViewBtn").classList.remove("active");
+      this.classList.add("active");
+      document.getElementById("dataBody").classList.add("list-view");
+    });
+
+  // 상단 메뉴 버튼들
+  document
+    .getElementById("allProductsBtn")
+    ?.addEventListener("click", function () {
+      state.selectedAuctionTypes = [];
+      updateFilterUI();
+      fetchData();
+    });
+
+  document
+    .getElementById("liveAuctionBtn")
+    ?.addEventListener("click", function () {
+      state.selectedAuctionTypes = ["live"];
+      updateFilterUI();
+      fetchData();
+    });
+
+  document
+    .getElementById("directAuctionBtn")
+    ?.addEventListener("click", function () {
+      state.selectedAuctionTypes = ["direct"];
+      updateFilterUI();
+      fetchData();
+    });
+}
+
+function updateFilterUI() {
+  // 경매 타입 체크박스 업데이트
+  const liveCheckbox = document.getElementById("auction-type-live");
+  const directCheckbox = document.getElementById("auction-type-direct");
+
+  if (liveCheckbox) {
+    liveCheckbox.checked = state.selectedAuctionTypes.includes("live");
+  }
+
+  if (directCheckbox) {
+    directCheckbox.checked = state.selectedAuctionTypes.includes("direct");
   }
 }
 
-// 페이지 로드 시 초기화
-document.addEventListener("DOMContentLoaded", initialize);
+function setupItemsPerPage() {
+  const itemsPerPage = document.getElementById("itemsPerPage");
+  if (itemsPerPage) {
+    // 기존 옵션 제거
+    itemsPerPage.innerHTML = "";
+
+    // 새 옵션 추가
+    const options = [
+      { value: 20, text: "20개씩 보기" },
+      { value: 50, text: "50개씩 보기" },
+      { value: 100, text: "100개씩 보기" },
+    ];
+
+    options.forEach((option) => {
+      const optionElement = document.createElement("option");
+      optionElement.value = option.value;
+      optionElement.textContent = option.text;
+      itemsPerPage.appendChild(optionElement);
+    });
+
+    // 기본값 설정
+    itemsPerPage.value = state.itemsPerPage;
+  }
+}
+
+function updateBidsOnlyFilter() {
+  const bidsOnlyCheckbox = document.getElementById("bid-items-only");
+  if (bidsOnlyCheckbox) {
+    bidsOnlyCheckbox.addEventListener("change", function () {
+      state.showBidItemsOnly = this.checked;
+    });
+  }
+}
+
+// 드롭다운 메뉴 설정
+function setupDropdownMenus() {
+  // 상품 리스트 드롭다운
+  const productListBtn = document.getElementById("productListBtn");
+  if (productListBtn) {
+    const productListDropdown = document.createElement("div");
+    productListDropdown.className = "dropdown-content";
+    productListDropdown.innerHTML = `
+      <a href="#" data-type="all">전체 상품</a>
+      <a href="#" data-type="live">현장 경매</a>
+      <a href="#" data-type="direct">직접 경매</a>
+    `;
+
+    productListBtn.parentNode.style.position = "relative";
+    productListBtn.parentNode.appendChild(productListDropdown);
+
+    productListBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation(); // 이벤트 전파 중지
+      productListDropdown.classList.toggle("active");
+    });
+
+    // 드롭다운 아이템 클릭 이벤트
+    productListDropdown.addEventListener("click", function (e) {
+      if (e.target.tagName === "A") {
+        e.preventDefault();
+        e.stopPropagation(); // 이벤트 전파 중지
+        const type = e.target.dataset.type;
+
+        if (type === "all") {
+          state.selectedAuctionTypes = [];
+        } else {
+          state.selectedAuctionTypes = [type];
+        }
+
+        updateFilterUI();
+        fetchData();
+        productListDropdown.classList.remove("active");
+      }
+    });
+
+    // 다른 곳 클릭 시 드롭다운 닫기
+    document.addEventListener("click", function (e) {
+      if (!productListBtn.contains(e.target)) {
+        productListDropdown.classList.remove("active");
+      }
+    });
+  }
+
+  // 즐겨찾기 드롭다운
+  const favoritesBtn = document.getElementById("favoritesBtn");
+  if (favoritesBtn) {
+    const favoritesDropdown = document.createElement("div");
+    favoritesDropdown.className = "dropdown-content";
+    favoritesDropdown.innerHTML = `
+      <a href="#" data-favorite="1">즐겨찾기 ①</a>
+      <a href="#" data-favorite="2">즐겨찾기 ②</a>
+      <a href="#" data-favorite="3">즐겨찾기 ③</a>
+    `;
+
+    favoritesBtn.parentNode.style.position = "relative";
+    favoritesBtn.parentNode.appendChild(favoritesDropdown);
+
+    favoritesBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation(); // 이벤트 전파 중지
+      favoritesDropdown.classList.toggle("active");
+    });
+
+    // 드롭다운 아이템 클릭 이벤트
+    favoritesDropdown.addEventListener("click", function (e) {
+      if (e.target.tagName === "A") {
+        e.preventDefault();
+        e.stopPropagation(); // 이벤트 전파 중지
+        const favoriteNum = parseInt(e.target.dataset.favorite);
+
+        state.selectedFavoriteNumbers = [favoriteNum];
+        updateFilterUI();
+        fetchData();
+        favoritesDropdown.classList.remove("active");
+      }
+    });
+
+    // 다른 곳 클릭 시 드롭다운 닫기
+    document.addEventListener("click", function (e) {
+      if (!favoritesBtn.contains(e.target)) {
+        favoritesDropdown.classList.remove("active");
+      }
+    });
+  }
+}
+
+// 초기화 함수
+function initialize() {
+  state.itemsPerPage = 20; // 기본 20개씩 표시
+
+  // DOM 완전히 로드된 후 실행
+  document.addEventListener("DOMContentLoaded", function () {
+    // 드롭다운 메뉴 설정
+    setupDropdownMenus();
+  });
+
+  window.addEventListener("load", function () {
+    // 기존 초기화 함수 호출
+    API.initialize()
+      .then(() => checkAuthStatus())
+      .then(() => {
+        // 필터 데이터 가져오기
+        return Promise.all([
+          API.fetchAPI("/data/brands-with-count"),
+          API.fetchAPI("/data/categories"),
+          API.fetchAPI("/data/scheduled-dates-with-count"),
+          API.fetchAPI("/data/ranks"),
+          API.fetchAPI("/data/auc-nums"),
+          API.fetchAPI("/data/auction-types"),
+        ]);
+      })
+      .then(
+        ([
+          brandsResponse,
+          categoriesResponse,
+          datesResponse,
+          ranksResponse,
+          aucNumsResponse,
+          auctionTypesResponse,
+        ]) => {
+          // 필터 표시
+          displayFilters(
+            brandsResponse,
+            categoriesResponse,
+            datesResponse,
+            ranksResponse,
+            aucNumsResponse
+          );
+          displayFavoriteFilters(); // 즐겨찾기 필터 초기화
+          setupItemsPerPage(); // 표시 개수 설정
+          updateBidsOnlyFilter(); // 입찰항목만 표시 파라미터 수정
+
+          // 필터 설정
+          setupFilters();
+
+          // 이벤트 리스너 설정
+          document
+            .getElementById("searchButton")
+            ?.addEventListener("click", handleSearch);
+          document
+            .getElementById("searchInput")
+            ?.addEventListener("keypress", (e) => {
+              if (e.key === "Enter") handleSearch();
+            });
+
+          document
+            .getElementById("applyFiltersBtn")
+            ?.addEventListener("click", () => {
+              state.currentPage = 1;
+              fetchData();
+            });
+
+          document
+            .getElementById("signinBtn")
+            ?.addEventListener("click", () => {
+              window.location.href = "./pages/signin.html";
+            });
+
+          document
+            .getElementById("signoutBtn")
+            ?.addEventListener("click", handleSignout);
+
+          // 이미지 네비게이션 설정
+          setupImageNavigation();
+
+          // 공지사항 버튼 이벤트
+          document
+            .getElementById("showNoticesBtn")
+            ?.addEventListener("click", showNoticeSection);
+
+          // 초기 데이터 로드
+          fetchData();
+        }
+      )
+      .catch((error) => {
+        console.error("Error initializing:", error);
+        alert("초기화 중 오류가 발생했습니다.");
+      });
+  });
+}
+
+// 페이지 로드 시 초기화 실행
+initialize();

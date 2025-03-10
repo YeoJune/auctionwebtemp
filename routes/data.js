@@ -33,6 +33,7 @@ async function getEnabledFilters(filterType) {
   );
   return enabled.map((item) => item.filter_value);
 }
+
 router.get("/", async (req, res) => {
   const {
     page = 1,
@@ -40,13 +41,13 @@ router.get("/", async (req, res) => {
     brands,
     categories,
     scheduledDates,
-    wishlistOnly,
+    favoriteNumbers, // 위시리스트 번호 파라미터
     aucNums,
-    bidOnly,
     search,
     ranks,
     auctionTypes,
     withDetails = "false",
+    bidsOnly = "false", // 입찰한 상품만 표시하는 플래그 추가
   } = req.query;
   const offset = (page - 1) * limit;
   const userId = req.session.user?.id;
@@ -59,19 +60,85 @@ router.get("/", async (req, res) => {
       getEnabledFilters("date"),
     ]);
 
+    // 사용자의 입찰 데이터 가져오기 (bidsOnly를 위해 쿼리 앞부분으로 이동)
+    let bidData = [];
+    let userBidItemIds = [];
+
+    if (userId) {
+      // live_bids 테이블에서 데이터 가져오기
+      const [liveBids] = await pool.query(
+        `
+        SELECT 
+          'live' as bid_type,
+          lb.id, 
+          lb.item_id, 
+          lb.first_price, 
+          lb.second_price, 
+          lb.final_price,
+          lb.status
+        FROM live_bids lb
+        WHERE lb.user_id = ?
+        `,
+        [userId]
+      );
+
+      // direct_bids 테이블에서 데이터 가져오기
+      const [directBids] = await pool.query(
+        `
+        SELECT 
+          'direct' as bid_type,
+          db.id, 
+          db.item_id, 
+          db.current_price as first_price,
+          NULL as second_price,
+          NULL as final_price,
+          db.status
+        FROM direct_bids db
+        WHERE db.user_id = ?
+        `,
+        [userId]
+      );
+
+      // 두 결과 병합
+      bidData = [...liveBids, ...directBids];
+
+      // bidsOnly 플래그가 true일 경우 사용할 item_id 목록 생성
+      if (bidsOnly === "true") {
+        userBidItemIds = bidData.map((bid) => bid.item_id);
+      }
+    }
+
     let query = "SELECT ci.* FROM crawled_items ci";
     const queryParams = [];
     let conditions = []; // conditions 배열 추가
 
-    if (wishlistOnly === "true" && userId) {
-      query +=
-        " INNER JOIN wishlists w ON ci.item_id = w.item_id AND w.user_id = ?";
-      queryParams.push(userId);
-    } else if (bidOnly === "true" && userId) {
-      query += " INNER JOIN bids b ON ci.item_id = b.item_id AND b.user_id = ?";
-      queryParams.push(userId);
+    // 위시리스트 필터링
+    if (favoriteNumbers && userId) {
+      const favoriteNumbersList = favoriteNumbers.split(",").map(Number);
+      if (favoriteNumbersList.length > 0) {
+        query +=
+          " INNER JOIN wishlists w ON ci.item_id = w.item_id AND w.user_id = ?";
+        queryParams.push(userId);
+        query += ` AND w.favorite_number IN (${favoriteNumbersList
+          .map(() => "?")
+          .join(",")})`;
+        queryParams.push(...favoriteNumbersList);
+      }
     } else {
       query += " WHERE 1=1";
+    }
+
+    // bidsOnly 필터링 추가
+    if (bidsOnly === "true" && userId) {
+      if (userBidItemIds.length > 0) {
+        conditions.push(
+          `ci.item_id IN (${userBidItemIds.map(() => "?").join(",")})`
+        );
+        queryParams.push(...userBidItemIds);
+      } else {
+        // 사용자의 입찰이 없는 경우 빈 결과 반환을 위한 조건
+        conditions.push("1=0");
+      }
     }
 
     // 검색어 처리
@@ -236,22 +303,23 @@ router.get("/", async (req, res) => {
 
     let wishlist = [];
     if (userId) {
+      // 위시리스트 쿼리 수정: 아이템 ID와 즐겨찾기 번호 함께 반환
       [wishlist] = await pool.query(
-        "SELECT item_id FROM wishlists WHERE user_id = ?",
+        "SELECT item_id, favorite_number FROM wishlists WHERE user_id = ?",
         [userId]
       );
-      wishlist = wishlist.map((w) => w.item_id);
     }
-    let bidData;
-    if (userId) {
-      [bidData] = await pool.query(
-        `
-        SELECT b.id, b.item_id, b.first_price, b.second_price, b.final_price
-        FROM bids b
-        WHERE b.user_id = ?
-      `,
-        [userId]
-      );
+
+    // 아이템별 입찰 데이터 매핑
+    const itemBidMap = {};
+    if (bidData.length > 0) {
+      for (const bid of bidData) {
+        // 각 아이템 ID에 대한 해당 타입의 입찰 데이터 저장
+        if (!itemBidMap[bid.item_id]) {
+          itemBidMap[bid.item_id] = {};
+        }
+        itemBidMap[bid.item_id][bid.bid_type] = bid;
+      }
     }
 
     if (withDetails === "true") {
@@ -259,21 +327,44 @@ router.get("/", async (req, res) => {
         processItem(item.item_id, false, null, true)
       );
       const detailedItems = await Promise.all(processPromises);
+      const filteredItems = detailedItems.filter((item) => item !== null);
+
+      // 각 아이템에 bid 정보 추가
+      const itemsWithBids = filteredItems.map((item) => {
+        const itemBids = itemBidMap[item.item_id] || {};
+        return {
+          ...item,
+          bids: {
+            live: itemBids.live || null,
+            direct: itemBids.direct || null,
+          },
+        };
+      });
 
       res.json({
-        data: detailedItems.filter((item) => item !== null),
+        data: itemsWithBids,
         wishlist,
-        bidData,
         page: parseInt(page),
         limit: parseInt(limit),
         totalItems,
         totalPages,
       });
     } else {
+      // 각 아이템에 bid 정보 추가
+      const itemsWithBids = items.map((item) => {
+        const itemBids = itemBidMap[item.item_id] || {};
+        return {
+          ...item,
+          bids: {
+            live: itemBids.live || null,
+            direct: itemBids.direct || null,
+          },
+        };
+      });
+
       res.json({
-        data: items,
+        data: itemsWithBids,
         wishlist,
-        bidData,
         page: parseInt(page),
         limit: parseInt(limit),
         totalItems,

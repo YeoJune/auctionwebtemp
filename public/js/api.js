@@ -1,4 +1,4 @@
-// api.js
+// public/js/api.js
 
 // API 기본 설정
 const API_BASE_URL = "/api";

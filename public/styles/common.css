@@ -3,17 +3,20 @@
 
 /* CSS Variables */
 :root {
-  --primary-color: #4caf50;
-  --primary-hover: #45a049;
+  --primary-color: #003087; /* 파란색 - 메인 컬러 */
+  --primary-hover: #001f5c;
   --secondary-color: #f8f9fa;
-  --accent-color: #ffd700;
+  --accent-color: #ffd700; /* 노란색 - 즐겨찾기 */
+  --success-color: #28a745; /* 녹색 - 직접경매 */
+  --error-color: #dc3545; /* 빨간색 - 시간 임박 */
   --text-primary: #333;
   --text-secondary: #666;
   --border-color: #ddd;
   --background-light: #fff;
-  --background-dark: #f0f0f0;
-  --error-color: #dc3545;
-  --success-color: #28a745;
+  --background-dark: #f5f5f5;
+
+  --blue-dark: #003087; /* 짙은 파란색 - 현장경매 배경 */
+  --green-dark: #006633; /* 짙은 녹색 - 직접경매 배경 */
 
   --spacing-xs: 0.25rem;
   --spacing-sm: 0.5rem;
@@ -24,12 +27,13 @@
   --border-radius-sm: 0.25rem;
   --border-radius-md: 0.5rem;
   --border-radius-lg: 1rem;
+  --border-radius-circle: 50%;
 
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
   --font-size-md: 1rem;
-  --font-size-lg: 1.25rem;
-  --font-size-xl: 1.5rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
 
   --transition-fast: 0.2s;
   --transition-normal: 0.3s;
@@ -52,7 +56,7 @@
 
 body {
   font-family: var(--font-primary);
-  line-height: 1.6;
+  line-height: 1.5;
   color: var(--text-primary);
   background-color: var(--background-dark);
   -webkit-font-smoothing: antialiased;
@@ -69,7 +73,7 @@ body {
 
 /* Common Header */
 .main-header {
-  background-color: var(--background-light);
+  background-color: var(--blue-dark);
   padding: var(--spacing-md);
   margin-bottom: var(--spacing-lg);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -77,6 +81,7 @@ body {
   top: 0;
   z-index: 100;
   height: var(--header-height);
+  color: white;
 }
 
 .header-content {
@@ -84,13 +89,25 @@ body {
   justify-content: space-between;
   align-items: center;
   height: 100%;
-  gap: var(--spacing-xs);
+  gap: var(--spacing-md);
 }
 
 .logo-container img {
   max-height: 2.5rem;
   width: auto;
-  margin-right: var(--spacing-sm);
+  cursor: pointer;
+}
+
+.nav-container {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex: 1;
+  justify-content: center;
+}
+
+.auth-container {
+  display: flex;
+  gap: var(--spacing-sm);
 }
 
 /* Common Button Styles */
@@ -103,7 +120,8 @@ button {
   cursor: pointer;
   transition: all var(--transition-fast);
   font-size: var(--font-size-sm);
-  min-height: 44px;
+  font-weight: 500;
+  min-height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -119,6 +137,15 @@ button:disabled {
   opacity: 0.7;
 }
 
+button.auth-button {
+  background-color: transparent;
+  border: 1px solid white;
+}
+
+button.auth-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
 /* Common Modal Base Styles */
 .modal {
   display: none;
@@ -130,6 +157,8 @@ button:disabled {
   background-color: rgba(0, 0, 0, 0.5);
   z-index: 1000;
   overflow: hidden;
+  justify-content: center;
+  align-items: center;
 }
 
 .modal-content {
@@ -137,7 +166,7 @@ button:disabled {
   margin: 2% auto;
   width: var(--modal-width);
   max-width: var(--modal-max-width);
-  height: 90vh;
+  height: 90%;
   border-radius: var(--border-radius-md);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   display: flex;
@@ -166,7 +195,8 @@ button:disabled {
   position: absolute;
   right: var(--spacing-md);
   top: var(--spacing-md);
-  font-size: 1.8rem;
+  font-size: 1.5rem;
+  font-weight: 700;
   line-height: 1;
   padding: var(--spacing-xs);
   cursor: pointer;
@@ -177,36 +207,78 @@ button:disabled {
   align-items: center;
   justify-content: center;
   transition: color var(--transition-fast);
-  z-index: 1;
-  min-height: 44px;
-  min-width: 44px;
+  min-height: unset;
+}
+
+.close:hover {
+  color: var(--text-primary);
+  background: none;
 }
 
 /* Common Form Elements */
 input[type="text"],
 input[type="password"],
-input[type="time"],
-input[type="search"] {
+input[type="search"],
+input[type="number"],
+input[type="time"] {
   padding: var(--spacing-sm);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-sm);
-  font-size: var(--font-size-sm);
-  min-height: 44px;
+  font-size: var(--font-size-md);
+  min-height: 40px;
   width: 100%;
 }
 
 input[type="text"]:focus,
 input[type="password"]:focus,
-input[type="time"]:focus,
-input[type="search"]:focus {
+input[type="search"]:focus,
+input[type="number"]:focus,
+input[type="time"]:focus {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+  box-shadow: 0 0 0 2px rgba(0, 48, 135, 0.1);
+}
+
+/* Dropdown Styles */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background-color: var(--background-light);
+  min-width: 180px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  z-index: 101;
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+}
+
+.dropdown-content.active {
+  display: block;
+}
+
+.dropdown-content a {
+  color: var(--text-primary);
+  padding: var(--spacing-md);
+  text-decoration: none;
+  display: block;
+  transition: background-color var(--transition-fast);
+  font-size: var(--font-size-sm);
+}
+
+.dropdown-content a:hover {
+  background-color: var(--background-dark);
 }
 
 /* Scrollbar Styles */
 ::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -258,13 +330,14 @@ input[type="search"]:focus {
   }
 
   .header-content {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
     gap: var(--spacing-xs);
   }
 
   .modal-content {
     width: 100%;
-    height: 100vh;
+    height: 100%;
     margin: 0;
     border-radius: 0;
   }
@@ -275,23 +348,6 @@ input[type="search"]:focus {
 
   .modal-body {
     padding: var(--spacing-sm);
-  }
-
-  .close {
-    right: var(--spacing-sm);
-    top: var(--spacing-sm);
-    font-size: 1.5rem;
-  }
-
-  input[type="text"],
-  input[type="password"],
-  input[type="time"],
-  input[type="search"] {
-    font-size: 16px; /* iOS에서 자동 확대 방지 */
-  }
-
-  ::-webkit-scrollbar {
-    width: 4px;
   }
 }
 

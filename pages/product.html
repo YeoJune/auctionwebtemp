@@ -20,14 +20,34 @@
               alt="Logo"
               onclick="location.href = '/productPage'" />
           </div>
-          <div class="filter-buttons">
-            <button id="wishlistFilter" class="filter-toggle-btn">
-              <i class="fas fa-star"></i>
-              즐겨찾기
+          <div class="nav-container">
+            <button class="nav-button" id="productListBtn">
+              <i class="fas fa-list"></i>
+              <span>상품 리스트</span>
             </button>
-            <button id="bidFilter" class="filter-toggle-btn">
+            <button class="nav-button" id="favoritesBtn">
+              <i class="fas fa-star"></i>
+              <span>즐겨찾기</span>
+            </button>
+            <button class="nav-button" id="bidItemsBtn">
               <i class="fas fa-gavel"></i>
-              입찰항목
+              <span>입찰 항목</span>
+            </button>
+            <button class="nav-button" id="bidResultsBtn">
+              <i class="fas fa-clipboard-check"></i>
+              <span>입찰 결과</span>
+            </button>
+            <button
+              class="nav-button"
+              onclick="window.location.href = '/valuesPage'">
+              <i class="fas fa-chart-line"></i>
+              <span>낙찰 시세표</span>
+            </button>
+            <button
+              class="nav-button"
+              onclick="window.open('http://pf.kakao.com/_xcCxoqn/chat', '_blank')">
+              <i class="fas fa-comments"></i>
+              <span>실시간 문의</span>
             </button>
           </div>
           <div class="auth-container">
@@ -36,18 +56,6 @@
               로그아웃
             </button>
           </div>
-          <nav class="nav-container">
-            <button
-              class="nav-button"
-              onclick="window.location.href = '/valuesPage'">
-              <i class="fas fa-chart-line fa-lg"></i>
-              최근낙찰시세
-            </button>
-          </nav>
-          <button id="showNoticesBtn" class="notice-toggle">
-            <i class="fas fa-bullhorn fa-lg"></i>
-            공지사항 보기
-          </button>
         </div>
       </header>
 
@@ -61,47 +69,122 @@
           <i class="fas fa-filter"></i>
         </button>
         <section class="filters-container">
-          <div class="filter-group">
-            <h2>브랜드</h2>
-            <div class="filter-search">
+          <div class="search-filter-section">
+            <div class="search-container">
               <input
                 type="text"
-                id="brandSearch"
-                placeholder="브랜드 검색..." />
+                id="searchInput"
+                placeholder="상품명/상품코드/검색어 입력" />
+              <button id="searchButton">
+                <i class="fas fa-search"></i>
+              </button>
             </div>
-            <div id="brandFilters" class="filter-options"></div>
           </div>
 
-          <div class="filter-group">
-            <h2>라인</h2>
-            <div id="aucNumFilters" class="filter-options"></div>
+          <div class="filter-row">
+            <div class="filter-label">브랜드</div>
+            <div class="filter-content">
+              <select id="brandSelect">
+                <option value="">브랜드 선택</option>
+              </select>
+            </div>
+            <div class="filter-label">카테고리</div>
+            <div class="filter-content">
+              <select id="categorySelect">
+                <option value="">카테고리 선택</option>
+              </select>
+            </div>
           </div>
 
-          <div class="filter-group">
-            <h2>품목</h2>
-            <div id="categoryFilters" class="filter-options"></div>
+          <div class="filter-row">
+            <div class="filter-label">출품사</div>
+            <div class="filter-content" id="aucNumFilters"></div>
           </div>
 
-          <div class="filter-group">
-            <h2>경매 날짜</h2>
-            <div id="scheduledDateFilters" class="filter-options"></div>
+          <div class="filter-row">
+            <div class="filter-label">랭크</div>
+            <div class="filter-content" id="rankFilters"></div>
           </div>
 
-          <div class="filter-group">
-            <h2>랭크</h2>
-            <div id="rankFilters" class="filter-options"></div>
+          <div class="filter-row">
+            <div class="filter-label">경매일</div>
+            <div class="filter-content" id="scheduledDateFilters"></div>
           </div>
-          <button id="applyFiltersBtn" class="apply-filters">필터 적용</button>
+
+          <div class="filter-row">
+            <div class="filter-label">경매유형</div>
+            <div class="filter-content" id="auctionTypeFilters">
+              <div class="filter-item">
+                <input
+                  type="checkbox"
+                  id="auction-type-direct"
+                  value="direct" />
+                <label for="auction-type-direct">직접 경매</label>
+              </div>
+              <div class="filter-item">
+                <input type="checkbox" id="auction-type-live" value="live" />
+                <label for="auction-type-live">현장 경매</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-row">
+            <div class="filter-label">즐겨찾기</div>
+            <div class="filter-content" id="favoriteFilters">
+              <div class="filter-item">
+                <input type="checkbox" id="favorite-1" value="1" />
+                <label for="favorite-1">즐겨찾기 ①</label>
+              </div>
+              <div class="filter-item">
+                <input type="checkbox" id="favorite-2" value="2" />
+                <label for="favorite-2">즐겨찾기 ②</label>
+              </div>
+              <div class="filter-item">
+                <input type="checkbox" id="favorite-3" value="3" />
+                <label for="favorite-3">즐겨찾기 ③</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-row">
+            <div class="filter-label"></div>
+            <div class="filter-content">
+              <div class="filter-item">
+                <input type="checkbox" id="bid-items-only" />
+                <label for="bid-items-only">입찰항목만 표기</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-actions">
+            <button id="resetFiltersBtn" class="reset-filters">리셋</button>
+            <button id="applyFiltersBtn" class="apply-filters">검색</button>
+          </div>
         </section>
-        <div class="filter-group">
-          <h2>검색</h2>
-          <div class="search-container">
-            <input type="text" id="searchInput" placeholder="상품명 검색..." />
-            <button id="searchButton">
-              <i class="fas fa-search"></i>
+
+        <div class="view-controls">
+          <div class="items-per-page">
+            <select id="itemsPerPage">
+              <option value="20">20개씩 보기</option>
+              <option value="50">50개씩 보기</option>
+              <option value="100">100개씩 보기</option>
+            </select>
+          </div>
+          <div class="sort-options">
+            <select id="sortOption">
+              <option value="default">정렬 기준</option>
+            </select>
+          </div>
+          <div class="view-type">
+            <button id="cardViewBtn" class="view-btn active">
+              <i class="fas fa-th-large"></i>
+            </button>
+            <button id="listViewBtn" class="view-btn">
+              <i class="fas fa-list"></i>
             </button>
           </div>
         </div>
+
         <section class="products-section">
           <div class="loading-msg" id="loadingMsg">로딩 중...</div>
           <div class="product-grid" id="dataBody"></div>
@@ -155,6 +238,10 @@
               <div class="detail-item">
                 <span class="detail-label">액세서리 코드:</span>
                 <span class="modal-accessory-code"></span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">랭크:</span>
+                <span class="modal-rank"></span>
               </div>
             </div>
           </div>
