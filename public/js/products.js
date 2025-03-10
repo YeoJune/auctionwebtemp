@@ -1322,22 +1322,6 @@ function setupImageNavigation() {
 
 // 필터 설정 함수
 function setupFilters() {
-  // 브랜드 콤보박스 설정
-  const brandSelect = document.getElementById("brandSelect");
-  if (brandSelect) {
-    brandSelect.addEventListener("change", function () {
-      state.selectedBrands = this.value ? [this.value] : [];
-    });
-  }
-
-  // 카테고리 콤보박스 설정
-  const categorySelect = document.getElementById("categorySelect");
-  if (categorySelect) {
-    categorySelect.addEventListener("change", function () {
-      state.selectedCategories = this.value ? [this.value] : [];
-    });
-  }
-
   // 출품사 필터 설정
   document
     .getElementById("aucNumFilters")
@@ -1412,10 +1396,6 @@ function setupFilters() {
       state.selectedFavoriteNumbers = [];
       state.showBidItemsOnly = false;
 
-      // 콤보박스 초기화
-      document.getElementById("brandSelect").value = "";
-      document.getElementById("categorySelect").value = "";
-
       // 체크박스 초기화
       document
         .querySelectorAll('.filter-options input[type="checkbox"]')
@@ -1423,6 +1403,22 @@ function setupFilters() {
 
       // 입찰항목만 표기 체크박스 초기화
       document.getElementById("bid-items-only").checked = false;
+
+      document
+        .querySelectorAll("#brandCheckboxes input[type='checkbox']")
+        .forEach((checkbox) => {
+          checkbox.checked = false;
+        });
+
+      document
+        .querySelectorAll("#categoryCheckboxes input[type='checkbox']")
+        .forEach((checkbox) => {
+          checkbox.checked = false;
+        });
+
+      // 선택된 항목 수 업데이트
+      updateSelectedCount("brand");
+      updateSelectedCount("category");
 
       // 데이터 다시 가져오기
       state.currentPage = 1;

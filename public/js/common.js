@@ -85,18 +85,18 @@ function createFilterItem(value, type, selectedArray, label = value) {
 }
 
 // 필터 검색 설정
-function setupFilterSearch(inputId, filterId) {
+function setupFilterSearch(inputId, containerId) {
   const searchInput = document.getElementById(inputId);
-  const filterContainer = document.getElementById(filterId);
+  const container = document.getElementById(containerId);
 
-  searchInput?.addEventListener("input", function () {
+  if (!searchInput || !container) return;
+
+  searchInput.addEventListener("input", function () {
     const searchTerm = this.value.toLowerCase();
-    const filterItems = filterContainer.getElementsByClassName("filter-item");
+    const filterItems = container.querySelectorAll(".filter-item");
 
-    Array.from(filterItems).forEach((item) => {
-      const label = item
-        .getElementsByTagName("label")[0]
-        .innerText.toLowerCase();
+    filterItems.forEach((item) => {
+      const label = item.querySelector("label").textContent.toLowerCase();
       item.style.display = label.includes(searchTerm) ? "" : "none";
     });
   });
@@ -253,13 +253,13 @@ function displayFilters(brands, categories, dates, ranks, aucNums) {
 }
 
 function displayBrandFilters(brands) {
-  const brandSelect = document.getElementById("brandSelect");
-  if (!brandSelect) return;
+  const brandCheckboxes = document.getElementById("brandCheckboxes");
+  if (!brandCheckboxes) return;
 
-  // 기존 옵션 제거
-  while (brandSelect.options.length > 1) {
-    brandSelect.remove(1);
-  }
+  // 기존 옵션 제거 (전체 선택 제외)
+  const allCheckbox = brandCheckboxes.querySelector(".multiselect-all");
+  brandCheckboxes.innerHTML = "";
+  if (allCheckbox) brandCheckboxes.appendChild(allCheckbox);
 
   // 브랜드 정렬
   brands.sort((a, b) => {
@@ -268,34 +268,208 @@ function displayBrandFilters(brands) {
     return 0;
   });
 
-  // 새 옵션 추가
+  // 전체 선택 체크박스 이벤트 설정
+  const brandAllCheckbox = document.getElementById("brand-all");
+  if (brandAllCheckbox) {
+    brandAllCheckbox.addEventListener("change", function () {
+      const checkboxes = brandCheckboxes.querySelectorAll(
+        "input[type='checkbox']:not(#brand-all)"
+      );
+      checkboxes.forEach((checkbox) => {
+        checkbox.checked = this.checked;
+
+        // 체크 상태에 따라 selectedBrands 배열 업데이트
+        const brandValue = checkbox.value;
+        const index = window.state.selectedBrands.indexOf(brandValue);
+
+        if (this.checked && index === -1) {
+          window.state.selectedBrands.push(brandValue);
+        } else if (!this.checked && index !== -1) {
+          window.state.selectedBrands.splice(index, 1);
+        }
+      });
+
+      // 선택된 항목 수 업데이트
+      updateSelectedCount("brand");
+    });
+  }
+
+  // 새 체크박스 추가
   brands.forEach((brand) => {
-    const option = document.createElement("option");
-    option.value = brand.brand;
-    option.textContent = brand.brand;
-    brandSelect.appendChild(option);
+    if (!brand.brand) return; // 빈 브랜드명 제외
+
+    const item = createElement("div", "filter-item");
+
+    const checkbox = createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.id = `brand-${brand.brand.replace(/\s+/g, "-")}`;
+    checkbox.value = brand.brand;
+
+    // 이미 선택된 브랜드면 체크
+    if (window.state.selectedBrands.includes(brand.brand)) {
+      checkbox.checked = true;
+    }
+
+    checkbox.addEventListener("change", function () {
+      if (this.checked) {
+        window.state.selectedBrands.push(this.value);
+      } else {
+        const index = window.state.selectedBrands.indexOf(this.value);
+        if (index > -1) {
+          window.state.selectedBrands.splice(index, 1);
+        }
+      }
+
+      // "전체 선택" 체크박스 상태 업데이트
+      updateAllCheckbox("brand");
+      // 선택된 항목 수 업데이트
+      updateSelectedCount("brand");
+    });
+
+    const label = createElement("label");
+    label.htmlFor = checkbox.id;
+    label.textContent = brand.brand;
+
+    if (brand.count) {
+      const countSpan = createElement("span", "item-count");
+      countSpan.textContent = `(${brand.count})`;
+      label.appendChild(countSpan);
+    }
+
+    item.appendChild(checkbox);
+    item.appendChild(label);
+    brandCheckboxes.appendChild(item);
   });
+
+  // 선택된 항목 수 업데이트
+  updateSelectedCount("brand");
+  // 검색 기능 설정
+  setupFilterSearch("brandSearchInput", "brandCheckboxes");
 }
 
 function displayCategoryFilters(categories) {
-  const categorySelect = document.getElementById("categorySelect");
-  if (!categorySelect) return;
+  const categoryCheckboxes = document.getElementById("categoryCheckboxes");
+  if (!categoryCheckboxes) return;
 
-  // 기존 옵션 제거
-  while (categorySelect.options.length > 1) {
-    categorySelect.remove(1);
-  }
+  // 기존 옵션 제거 (전체 선택 제외)
+  const allCheckbox = categoryCheckboxes.querySelector(".multiselect-all");
+  categoryCheckboxes.innerHTML = "";
+  if (allCheckbox) categoryCheckboxes.appendChild(allCheckbox);
 
   // 카테고리 정렬
   categories.sort();
 
-  // 새 옵션 추가
+  // 전체 선택 체크박스 이벤트 설정
+  const categoryAllCheckbox = document.getElementById("category-all");
+  if (categoryAllCheckbox) {
+    categoryAllCheckbox.addEventListener("change", function () {
+      const checkboxes = categoryCheckboxes.querySelectorAll(
+        "input[type='checkbox']:not(#category-all)"
+      );
+      checkboxes.forEach((checkbox) => {
+        checkbox.checked = this.checked;
+
+        const categoryValue = checkbox.value;
+        const index = window.state.selectedCategories.indexOf(categoryValue);
+
+        if (this.checked && index === -1) {
+          window.state.selectedCategories.push(categoryValue);
+        } else if (!this.checked && index !== -1) {
+          window.state.selectedCategories.splice(index, 1);
+        }
+      });
+
+      // 선택된 항목 수 업데이트
+      updateSelectedCount("category");
+    });
+  }
+
+  // 새 체크박스 추가
   categories.forEach((category) => {
-    const option = document.createElement("option");
-    option.value = category;
-    option.textContent = category || "기타";
-    categorySelect.appendChild(option);
+    if (!category) category = "기타"; // 빈 카테고리는 "기타"로 표시
+
+    const item = createElement("div", "filter-item");
+
+    const checkbox = createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.id = `category-${category.replace(/\s+/g, "-")}`;
+    checkbox.value = category;
+
+    // 이미 선택된 카테고리면 체크
+    if (window.state.selectedCategories.includes(category)) {
+      checkbox.checked = true;
+    }
+
+    checkbox.addEventListener("change", function () {
+      if (this.checked) {
+        window.state.selectedCategories.push(this.value);
+      } else {
+        const index = window.state.selectedCategories.indexOf(this.value);
+        if (index > -1) {
+          window.state.selectedCategories.splice(index, 1);
+        }
+      }
+
+      // "전체 선택" 체크박스 상태 업데이트
+      updateAllCheckbox("category");
+      // 선택된 항목 수 업데이트
+      updateSelectedCount("category");
+    });
+
+    const label = createElement("label");
+    label.htmlFor = checkbox.id;
+    label.textContent = category;
+
+    item.appendChild(checkbox);
+    item.appendChild(label);
+    categoryCheckboxes.appendChild(item);
   });
+
+  // 선택된 항목 수 업데이트
+  updateSelectedCount("category");
+  // 검색 기능 설정
+  setupFilterSearch("categorySearchInput", "categoryCheckboxes");
+}
+
+function updateAllCheckbox(type) {
+  const container = document.getElementById(`${type}Checkboxes`);
+  if (!container) return;
+
+  const allCheckbox = document.getElementById(`${type}-all`);
+  if (!allCheckbox) return;
+
+  const checkboxes = container.querySelectorAll(
+    `input[type='checkbox']:not(#${type}-all)`
+  );
+  const checkedCount = container.querySelectorAll(
+    `input[type='checkbox']:not(#${type}-all):checked`
+  ).length;
+
+  // 모든 체크박스가 선택되었는지 확인
+  allCheckbox.checked =
+    checkedCount === checkboxes.length && checkboxes.length > 0;
+}
+
+// 선택된 항목 수 업데이트 함수
+function updateSelectedCount(type) {
+  const container = document.getElementById(`${type}Checkboxes`);
+  if (!container) return;
+
+  const checkboxes = container.querySelectorAll(
+    `input[type='checkbox']:not(#${type}-all)`
+  );
+  const checkedCount = container.querySelectorAll(
+    `input[type='checkbox']:not(#${type}-all):checked`
+  ).length;
+
+  let countElement = container.querySelector(`.multiselect-selected-count`);
+  if (!countElement) {
+    countElement = createElement("span", "multiselect-selected-count");
+    container.querySelector(".multiselect-all label").appendChild(countElement);
+  }
+
+  countElement.textContent =
+    checkedCount > 0 ? ` (${checkedCount}/${checkboxes.length})` : "";
 }
 
 function displayDateFilters(dates) {

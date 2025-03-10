@@ -20,11 +20,21 @@
               alt="Logo"
               onclick="location.href = '/productPage'" />
           </div>
-          <nav class="nav-container">
-            <button class="nav-button" onclick="location.href = '/productPage'">
-              상품 페이지
+          <div class="nav-container">
+            <button
+              class="nav-button"
+              id="productPageBtn"
+              onclick="location.href = '/productPage'">
+              <i class="fas fa-list"></i>
+              <span>상품 페이지</span>
             </button>
-          </nav>
+          </div>
+          <div class="auth-container">
+            <button id="signinBtn" class="auth-button">로그인</button>
+            <button id="signoutBtn" class="auth-button" style="display: none">
+              로그아웃
+            </button>
+          </div>
         </div>
       </header>
 
@@ -33,47 +43,105 @@
           <i class="fas fa-filter"></i>
         </button>
         <section class="filters-container">
-          <div class="filter-group">
-            <h2>브랜드</h2>
-            <div class="filter-search">
+          <div class="search-filter-section">
+            <div class="search-container">
               <input
                 type="text"
-                id="brandSearch"
-                placeholder="브랜드 검색..." />
+                id="searchInput"
+                placeholder="상품명/상품코드/검색어 입력" />
+              <button id="searchButton">
+                <i class="fas fa-search"></i>
+              </button>
             </div>
-            <div id="brandFilters" class="filter-options"></div>
           </div>
 
-          <div class="filter-group">
-            <h2>라인</h2>
-            <div id="aucNumFilters" class="filter-options"></div>
+          <div class="filter-row">
+            <div class="filter-label">브랜드</div>
+            <div class="filter-content">
+              <div class="multiselect-container">
+                <div class="multiselect-header">
+                  <input
+                    type="text"
+                    id="brandSearchInput"
+                    class="multiselect-search"
+                    placeholder="브랜드 검색..." />
+                </div>
+                <div class="multiselect-body" id="brandCheckboxes">
+                  <div class="multiselect-all">
+                    <input type="checkbox" id="brand-all" value="all" />
+                    <label for="brand-all">전체 선택</label>
+                  </div>
+                  <!-- 여기에 자바스크립트로 체크박스 추가 -->
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div class="filter-group">
-            <h2>품목</h2>
-            <div id="categoryFilters" class="filter-options"></div>
+          <div class="filter-row">
+            <div class="filter-label">카테고리</div>
+            <div class="filter-content">
+              <div class="multiselect-container">
+                <div class="multiselect-header">
+                  <input
+                    type="text"
+                    id="categorySearchInput"
+                    class="multiselect-search"
+                    placeholder="카테고리 검색..." />
+                </div>
+                <div class="multiselect-body" id="categoryCheckboxes">
+                  <div class="multiselect-all">
+                    <input type="checkbox" id="category-all" value="all" />
+                    <label for="category-all">전체 선택</label>
+                  </div>
+                  <!-- 여기에 자바스크립트로 체크박스 추가 -->
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div class="filter-group">
-            <h2>경매 날짜</h2>
-            <div id="scheduledDateFilters" class="filter-options"></div>
+          <div class="filter-row">
+            <div class="filter-label">출품사</div>
+            <div class="filter-content" id="aucNumFilters"></div>
           </div>
 
-          <div class="filter-group">
-            <h2>랭크</h2>
-            <div id="rankFilters" class="filter-options"></div>
+          <div class="filter-row">
+            <div class="filter-label">랭크</div>
+            <div class="filter-content" id="rankFilters"></div>
           </div>
-          <button id="applyFiltersBtn" class="apply-filters">필터 적용</button>
+
+          <div class="filter-actions">
+            <button id="resetFiltersBtn" class="reset-filters">리셋</button>
+            <button id="applyFiltersBtn" class="apply-filters">검색</button>
+          </div>
         </section>
-        <div class="filter-group">
-          <h2>검색</h2>
-          <div class="search-container">
-            <input type="text" id="searchInput" placeholder="상품명 검색..." />
-            <button id="searchButton">
-              <i class="fas fa-search"></i>
+
+        <div class="view-controls">
+          <div class="items-per-page">
+            <select id="itemsPerPage">
+              <option value="20">20개씩 보기</option>
+              <option value="50">50개씩 보기</option>
+              <option value="100">100개씩 보기</option>
+            </select>
+          </div>
+          <div class="sort-options">
+            <select id="sortOption">
+              <option value="default">정렬 기준</option>
+              <option value="date_desc">날짜 최신순</option>
+              <option value="date_asc">날짜 오래된순</option>
+              <option value="price_desc">가격 높은순</option>
+              <option value="price_asc">가격 낮은순</option>
+            </select>
+          </div>
+          <div class="view-type">
+            <button id="cardViewBtn" class="view-btn active">
+              <i class="fas fa-th-large"></i>
+            </button>
+            <button id="listViewBtn" class="view-btn">
+              <i class="fas fa-list"></i>
             </button>
           </div>
         </div>
+
         <section class="products-section">
           <div class="loading-msg" id="loadingMsg">로딩 중...</div>
           <div class="product-grid" id="dataBody"></div>
@@ -112,10 +180,6 @@
                 <p class="modal-description"></p>
               </div>
               <div class="detail-item">
-                <span class="detail-label">경매일:</span>
-                <span class="modal-scheduled-date"></span>
-              </div>
-              <div class="detail-item">
                 <span class="detail-label">브랜드:</span>
                 <span class="modal-brand2"></span>
               </div>
@@ -126,6 +190,14 @@
               <div class="detail-item">
                 <span class="detail-label">액세서리 코드:</span>
                 <span class="modal-accessory-code"></span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">랭크:</span>
+                <span class="modal-rank"></span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">경매일:</span>
+                <span class="modal-scheduled-date"></span>
               </div>
               <div class="detail-item">
                 <span class="detail-label">최종 가격:</span>

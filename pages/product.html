@@ -84,15 +84,41 @@
           <div class="filter-row">
             <div class="filter-label">브랜드</div>
             <div class="filter-content">
-              <select id="brandSelect">
-                <option value="">브랜드 선택</option>
-              </select>
+              <div class="multiselect-container">
+                <div class="multiselect-header">
+                  <input
+                    type="text"
+                    id="brandSearchInput"
+                    class="multiselect-search"
+                    placeholder="브랜드 검색..." />
+                </div>
+                <div class="multiselect-body" id="brandCheckboxes">
+                  <div class="multiselect-all">
+                    <input type="checkbox" id="brand-all" value="all" />
+                    <label for="brand-all">전체 선택</label>
+                  </div>
+                  <!-- 여기에 자바스크립트로 체크박스 추가 -->
+                </div>
+              </div>
             </div>
             <div class="filter-label">카테고리</div>
             <div class="filter-content">
-              <select id="categorySelect">
-                <option value="">카테고리 선택</option>
-              </select>
+              <div class="multiselect-container">
+                <div class="multiselect-header">
+                  <input
+                    type="text"
+                    id="categorySearchInput"
+                    class="multiselect-search"
+                    placeholder="카테고리 검색..." />
+                </div>
+                <div class="multiselect-body" id="categoryCheckboxes">
+                  <div class="multiselect-all">
+                    <input type="checkbox" id="category-all" value="all" />
+                    <label for="category-all">전체 선택</label>
+                  </div>
+                  <!-- 여기에 자바스크립트로 체크박스 추가 -->
+                </div>
+              </div>
             </div>
           </div>
 
