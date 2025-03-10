@@ -388,9 +388,9 @@ class StarAucCrawler extends AxiosCrawler {
         return remainItems;
       }
 
-      const pageItems = filteredItems.map((item) =>
-        this.extractItemInfo($, item)
-      );
+      const pageItems = filteredItems
+        .map((item) => this.extractItemInfo($, item))
+        .filter((item) => item !== null);
 
       console.log(`${pageItems.length}개 아이템 추출 완료, 페이지 ${page}`);
 

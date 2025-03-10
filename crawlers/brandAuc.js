@@ -254,7 +254,7 @@ class BrandAucCrawler extends AxiosCrawler {
 
     for (const item of items) {
       // 상태가 "SOLD BY HOLD" 또는 "SOLD"인 경우 제외
-      if (item.jotai === "SOLD BY HOLD" || item.jotai === "SOLD") {
+      if (item.jotaiEn === "SOLD BY HOLD" || item.jotaiEn === "SOLD") {
         continue;
       }
 
@@ -266,7 +266,7 @@ class BrandAucCrawler extends AxiosCrawler {
 
       // 필터 통과한 아이템 기본 정보 추출
       const processedItem = this.extractBasicItemInfo(item);
-      filteredItems.push(processedItem);
+      if (processedItem) filteredItems.push(processedItem);
     }
 
     // 필터링된 아이템에 대해 추가 처리 (이미지 처리 등)

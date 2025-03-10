@@ -310,7 +310,7 @@ class EcoAucCrawler extends AxiosCrawler {
           $(filteredElements[i]),
           filteredItems[i]
         );
-        pageItems.push(item);
+        if (item) pageItems.push(item);
       }
 
       const processedItems = await processImagesInChunks(pageItems);
