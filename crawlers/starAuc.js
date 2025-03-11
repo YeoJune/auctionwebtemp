@@ -430,6 +430,9 @@ class StarAucCrawler extends AxiosCrawler {
       bid_type: this.currentBidType, // 'live'로 고정
       auc_num: "3",
       lotNo: scriptData.lotNo,
+
+      kaijoCd: 0,
+      kaisaiKaisu: 0,
     };
 
     // 현재 입찰가가 있으면 추가

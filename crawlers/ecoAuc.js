@@ -538,6 +538,9 @@ class EcoAucCrawler extends AxiosCrawler {
       original_scheduled_date: original_scheduled_date,
       scheduled_date: scheduled_date,
       auc_num: "1",
+
+      kaijoCd: 0,
+      kaisaiKaisu: 0,
     };
 
     // 원본과 동일하게 객체 병합
