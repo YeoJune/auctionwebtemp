@@ -234,9 +234,7 @@ function renderDirectBidsTable(directBids) {
       <div class="item-info">
         <img src="${imageUrl}" alt="${itemTitle}" class="item-thumbnail" />
         <div class="item-details">
-          <div><a href="${itemUrl}" target="_blank">${
-      bid.item_id + ""
-    }</a></div>
+          <div><a href="${itemUrl}" target="_blank">${bid.item_id}</a></div>
           <div class="item-meta">
             <span>제목: ${bid.item?.original_title || "-"}</span>
             <span>경매번호: ${bid.item?.auc_num || "-"}</span>

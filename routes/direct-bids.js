@@ -45,7 +45,7 @@ router.get("/", async (req, res) => {
       mainQuery = `
         SELECT 
           d.id, d.item_id, d.user_id, d.current_price, d.status, d.created_at, d.updated_at,
-          i.id as item_id, i.original_title, i.auc_num, i.category, i.brand, i.rank,
+          i.item_id, i.original_title, i.auc_num, i.category, i.brand, i.rank,
           i.starting_price, i.scheduled_date, i.image
         FROM direct_bids d
         INNER JOIN (
@@ -68,7 +68,7 @@ router.get("/", async (req, res) => {
       mainQuery = `
         SELECT 
           d.id, d.item_id, d.user_id, d.current_price, d.status, d.created_at, d.updated_at,
-          i.id as item_id, i.original_title, i.auc_num, i.category, i.brand, i.rank,
+          i.item_id, i.original_title, i.auc_num, i.category, i.brand, i.rank,
           i.starting_price, i.scheduled_date, i.image
         FROM direct_bids d
         LEFT JOIN crawled_items i ON d.item_id = i.item_id
