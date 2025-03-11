@@ -944,6 +944,17 @@ select {
 }
 
 /* Detail Modal */
+.modal-body {
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.modal-left,
+.modal-right {
+  width: 50%;
+  padding: var(--spacing-md);
+}
+
 .main-image-container {
   position: relative;
   width: 100%;
