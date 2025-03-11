@@ -184,6 +184,20 @@ function renderDirectBidsTable(directBids) {
     let itemPrice = "-";
     let auc_num = null;
 
+    // 날짜를 KST로 변환
+    let scheduledDate = "-";
+    if (bid.item && bid.item.scheduled_date) {
+      const date = new Date(bid.item.scheduled_date);
+      scheduledDate = new Intl.DateTimeFormat("ko-KR", {
+        timeZone: "Asia/Seoul",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(date);
+    }
+
     if (bid.item) {
       imageUrl = bid.item.image || "/images/no-image.png";
       itemTitle = bid.item.original_title || "-";
