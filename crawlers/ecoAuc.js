@@ -320,12 +320,12 @@ class EcoAucCrawler extends AxiosCrawler {
     });
   }
 
-  async crawlItemDetails(itemId, item) {
+  async crawlItemDetails(itemId, item0) {
     return this.retryOperation(async () => {
       console.log(`Crawling details for item ${itemId}...`);
       await this.login();
 
-      const bidType = item?.bid_type || this.currentBidType;
+      const bidType = item0?.bid_type || this.currentBidType;
       const url = this.config.detailUrl(itemId, bidType);
 
       const response = await this.client.get(url);
