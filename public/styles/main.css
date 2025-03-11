@@ -1181,12 +1181,12 @@ select {
 }
 
 #favoriteFilters .filter-item:nth-child(2) label::before,
-#aucNumFilters .filter-item:nth-child(2) label::before {
+#aucNumFilters .filter-item:nth-child(3) label::before {
   content: "②";
 }
 
 #favoriteFilters .filter-item:nth-child(3) label::before,
-#aucNumFilters .filter-item:nth-child(2) label::before {
+#aucNumFilters .filter-item:nth-child(5) label::before {
   content: "③";
 }
 
