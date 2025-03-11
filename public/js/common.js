@@ -4,7 +4,7 @@
 function formatDate(dateString) {
   if (!dateString) return "-";
   const date = new Date(dateString);
-  const kstDate = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+  const kstDate = date;
   return kstDate.toISOString().split("T")[0];
 }
 
@@ -12,7 +12,7 @@ function formatDate(dateString) {
 function formatDateTime(dateString) {
   if (!dateString) return "-";
   const date = new Date(dateString);
-  const kstDate = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+  const kstDate = date;
 
   const year = kstDate.getFullYear();
   const month = String(kstDate.getMonth() + 1).padStart(2, "0");
