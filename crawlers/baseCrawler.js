@@ -569,13 +569,13 @@ class AxiosCrawler {
     const previousDay = new Date(scheduleDate);
     previousDay.setDate(previousDay.getDate() - 1);
     previousDay.setHours(18, 0, 0, 0);
-    return this.extractDate(previousDay.toISOString());
+    return this.extractDate(this.convertToKST(previousDay.toISOString()));
   }
 
   // 경매 시간이 이미 지났는지 확인
   isAuctionTimeValid(scheduledDate) {
     if (!scheduledDate) return false;
-    const auctionDate = new Date(scheduledDate);
+    const auctionDate = new Date(scheduledDate + "+09:00");
     const now = new Date();
     return auctionDate > now;
   }
