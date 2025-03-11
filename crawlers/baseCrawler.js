@@ -569,7 +569,7 @@ class AxiosCrawler {
     const previousDay = new Date(scheduleDate);
     previousDay.setDate(previousDay.getDate() - 1);
     previousDay.setHours(18, 0, 0, 0);
-    return this.convertToKST(previousDay.toISOString());
+    return this.extractDate(previousDay.toISOString());
   }
 
   // 경매 시간이 이미 지났는지 확인
