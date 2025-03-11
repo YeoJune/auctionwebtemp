@@ -253,21 +253,34 @@ class DatabaseManager {
     try {
       conn = await this.pool.getConnection();
 
+      // direct_bids와 live_bids 테이블에 있는 item_id 가져오기
+      const [bidItems] = await conn.query(`
+        SELECT DISTINCT item_id FROM direct_bids
+        UNION
+        SELECT DISTINCT item_id FROM live_bids
+      `);
+
+      // 입찰이 있는 아이템 ID 목록 생성
+      const bidItemIds = bidItems.map((item) => item.item_id);
+
+      // 삭제해서는 안 될 아이템 ID 목록 (입찰이 있는 아이템 + 파라미터로 받은 아이템)
+      const protectedItemIds = [...new Set([...bidItemIds, ...itemIds])];
+
       // Handle empty itemIds array
-      if (!itemIds.length) {
-        // If no items provided, delete all items for this auction
+      if (!protectedItemIds.length) {
+        // If no items provided and no bid items, delete all items
         const deleteAllQuery = `
           DELETE FROM ${tableName}
         `;
         await conn.query(deleteAllQuery);
       } else {
-        // MariaDB compliant query using FIND_IN_SET alternative
+        // MariaDB compliant query to delete items not in protected list
         const deleteQuery = `
           DELETE FROM ${tableName}
           WHERE item_id NOT IN (?)
         `;
 
-        await conn.query(deleteQuery, [itemIds]);
+        await conn.query(deleteQuery, [protectedItemIds]);
       }
 
       // If you need to clean up wishlists, use this query:
@@ -277,7 +290,9 @@ class DatabaseManager {
         WHERE ci.item_id IS NULL
       `);
 
-      console.log("Complete to delete outdated items");
+      console.log(
+        "Complete to delete outdated items (protected bid items preserved)"
+      );
     } catch (error) {
       console.error("Error deleting items:", error.message);
       throw error; // Propagate error to caller

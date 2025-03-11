@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>입찰 결과</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <link rel="stylesheet" href="/styles/common.css" />
+    <link rel="stylesheet" href="/styles/main.css" />
+    <link rel="stylesheet" href="/styles/bid-results.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="main-header">
+        <div class="header-content">
+          <div class="logo-container">
+            <img
+              src="images/logo.png"
+              alt="Logo"
+              onclick="location.href = '/productPage'" />
+          </div>
+          <div class="nav-container">
+            <button class="nav-button" id="productListBtn">
+              <i class="fas fa-list"></i>
+              <span>상품 리스트</span>
+            </button>
+            <button class="nav-button" id="favoritesBtn">
+              <i class="fas fa-star"></i>
+              <span>즐겨찾기</span>
+            </button>
+            <button class="nav-button" id="bidItemsBtn">
+              <i class="fas fa-gavel"></i>
+              <span>입찰 항목</span>
+            </button>
+            <button class="nav-button active" id="bidResultsBtn">
+              <i class="fas fa-clipboard-check"></i>
+              <span>입찰 결과</span>
+            </button>
+            <button
+              class="nav-button"
+              onclick="window.location.href = '/valuesPage'">
+              <i class="fas fa-chart-line"></i>
+              <span>낙찰 시세표</span>
+            </button>
+            <button
+              class="nav-button"
+              onclick="window.open('http://pf.kakao.com/_xcCxoqn/chat', '_blank')">
+              <i class="fas fa-comments"></i>
+              <span>실시간 문의</span>
+            </button>
+          </div>
+          <div class="auth-container">
+            <button id="signinBtn" class="auth-button">로그인</button>
+            <button id="signoutBtn" class="auth-button" style="display: none">
+              로그아웃
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main class="main-content">
+        <!-- 간소화된 필터 섹션 -->
+        <section class="simple-filter">
+          <div class="filter-group">
+            <label>경매 타입:</label>
+            <div class="radio-buttons">
+              <div class="radio-item">
+                <input
+                  type="radio"
+                  name="bidType"
+                  id="bidType-all"
+                  value="all"
+                  checked />
+                <label for="bidType-all">전체</label>
+              </div>
+              <div class="radio-item">
+                <input
+                  type="radio"
+                  name="bidType"
+                  id="bidType-live"
+                  value="live" />
+                <label for="bidType-live">현장 경매</label>
+              </div>
+              <div class="radio-item">
+                <input
+                  type="radio"
+                  name="bidType"
+                  id="bidType-direct"
+                  value="direct" />
+                <label for="bidType-direct">직접 경매</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <label>상태:</label>
+            <div class="radio-buttons">
+              <div class="radio-item">
+                <input
+                  type="radio"
+                  name="status"
+                  id="status-all"
+                  value="all"
+                  checked />
+                <label for="status-all">전체</label>
+              </div>
+              <div class="radio-item">
+                <input
+                  type="radio"
+                  name="status"
+                  id="status-completed"
+                  value="completed" />
+                <label for="status-completed">완료</label>
+              </div>
+              <div class="radio-item">
+                <input
+                  type="radio"
+                  name="status"
+                  id="status-cancelled"
+                  value="cancelled" />
+                <label for="status-cancelled">취소됨</label>
+              </div>
+              <div class="radio-item">
+                <input
+                  type="radio"
+                  name="status"
+                  id="status-inprogress"
+                  value="inprogress" />
+                <label for="status-inprogress">진행중</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-group">
+            <label>기간:</label>
+            <select id="dateRange">
+              <option value="7">최근 1주일</option>
+              <option value="30" selected>최근 1개월</option>
+              <option value="90">최근 3개월</option>
+              <option value="180">최근 6개월</option>
+              <option value="365">최근 1년</option>
+            </select>
+          </div>
+
+          <button id="applyFilters" class="primary-button">적용</button>
+        </section>
+
+        <!-- 결과 컨테이너 -->
+        <section class="results-container">
+          <div class="results-header">
+            <h2>입찰 결과</h2>
+            <div class="results-count">
+              총 <span id="totalResults">0</span>건
+            </div>
+          </div>
+
+          <div class="loading-msg" id="loadingMsg">로딩 중...</div>
+
+          <div class="bid-results-list" id="bidResultsList">
+            <!-- 결과 아이템이 여기에 추가됨 -->
+          </div>
+
+          <!-- 페이지네이션 -->
+          <div class="pagination" id="pagination"></div>
+        </section>
+      </main>
+    </div>
+
+    <!-- 상품 상세 모달 -->
+    <div id="detailModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="product-info">
+            <p class="modal-brand"></p>
+            <h2 class="modal-title"></h2>
+          </div>
+          <button class="close" aria-label="Close modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-left">
+            <div class="main-image-container">
+              <button class="image-nav prev" aria-label="Previous image">
+                &lt;
+              </button>
+              <img src="" alt="Main product image" class="main-image" />
+              <button class="image-nav next" aria-label="Next image">
+                &gt;
+              </button>
+            </div>
+            <div class="thumbnail-container"></div>
+          </div>
+          <div class="modal-right">
+            <div class="bid-info-holder"></div>
+            <div class="product-details">
+              <div class="detail-item description">
+                <span class="detail-label">상세 설명:</span>
+                <p class="modal-description"></p>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">예정일:</span>
+                <span class="modal-scheduled-date"></span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">브랜드:</span>
+                <span class="modal-brand2"></span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">카테고리:</span>
+                <span class="modal-category"></span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">액세서리 코드:</span>
+                <span class="modal-accessory-code"></span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">랭크:</span>
+                <span class="modal-rank"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/bid-results.js"></script>
+  </body>
+</html>

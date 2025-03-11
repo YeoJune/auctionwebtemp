@@ -78,9 +78,21 @@ router.get("/", async (req, res) => {
 
     // 상태 필터 추가
     if (status) {
-      countQuery += " AND d.status = ?";
-      mainQuery += " AND d.status = ?";
-      queryParams.push(status);
+      // 콤마로 구분된 상태 값 처리
+      const statusArray = status.split(",");
+
+      if (statusArray.length === 1) {
+        // 단일 상태
+        countQuery += " AND d.status = ?";
+        mainQuery += " AND d.status = ?";
+        queryParams.push(status);
+      } else {
+        // 복수 상태
+        const placeholders = statusArray.map(() => "?").join(",");
+        countQuery += ` AND d.status IN (${placeholders})`;
+        mainQuery += ` AND d.status IN (${placeholders})`;
+        queryParams.push(...statusArray);
+      }
     }
 
     // 일반 사용자는 자신의 입찰만 볼 수 있고, 관리자는 모든 입찰을 볼 수 있음

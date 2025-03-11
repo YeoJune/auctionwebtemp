@@ -14,7 +14,6 @@ const isAdmin = (req, res, next) => {
 // STATUS -> 'first', 'second', 'final', 'completed', 'cancelled'
 
 // GET endpoint to retrieve live bids, filtered by status
-// GET endpoint to retrieve live bids, filtered by status
 router.get("/", async (req, res) => {
   const { status, page = 1, limit = 10 } = req.query;
   const offset = (page - 1) * limit;
@@ -31,8 +30,19 @@ router.get("/", async (req, res) => {
 
   // Add status filter if provided
   if (status) {
-    queryConditions.push("b.status = ?");
-    queryParams.push(status);
+    // 콤마로 구분된 상태 값 처리
+    const statusArray = status.split(",");
+
+    if (statusArray.length === 1) {
+      // 단일 상태
+      queryConditions.push("b.status = ?");
+      queryParams.push(status);
+    } else {
+      // 복수 상태
+      const placeholders = statusArray.map(() => "?").join(",");
+      queryConditions.push(`b.status IN (${placeholders})`);
+      queryParams.push(...statusArray);
+    }
   }
 
   // Regular users can only see their own bids, admins can see all
