@@ -220,17 +220,21 @@ function renderDirectBidsTable(directBids) {
       <div class="item-info">
         <img src="${imageUrl}" alt="${itemTitle}" class="item-thumbnail" />
         <div class="item-details">
-          <div><a href="${itemUrl}" target="_blank">${bid.item_id}</a></div>
+          <div><a href="${itemUrl}" target="_blank">${
+      bid.item_id + ""
+    }</a></div>
           <div class="item-meta">
-            <span>제목: ${itemTitle}</span>
-            <span>카테고리: ${itemCategory}</span>
-            <span>브랜드: ${itemBrand}</span>
-            <span>등급: ${itemRank}</span>
+            <span>제목: ${bid.item?.original_title || "-"}</span>
+            <span>경매번호: ${bid.item?.auc_num || "-"}</span>
+            <span>카테고리: ${bid.item?.category || "-"}</span>
+            <span>브랜드: ${bid.item?.brand || "-"}</span>
+            <span>등급: ${bid.item?.rank || "-"}</span>
             <span>상품가: ${
               bid.item && bid.item.starting_price
                 ? formatCurrency(bid.item.starting_price, "JPY")
                 : "-"
             }</span>
+            <span>예정일시: ${scheduledDate}</span>
           </div>
         </div>
       </div>
