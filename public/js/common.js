@@ -211,6 +211,7 @@ function toggleLoading(show) {
 }
 
 // 모바일 필터 토글
+
 function setupMobileFilters() {
   const filterBtn = document.getElementById("mobileFilterBtn");
   const filtersContainer = document.querySelector(".filters-container");
@@ -235,11 +236,20 @@ function setupMobileFilters() {
     document.body.appendChild(backdrop);
   }
 
+  // 필터 닫기 함수
+  window.closeFilter = function () {
+    filtersContainer.classList.remove("active");
+    backdrop.style.display = "none";
+    document.body.style.overflow = "";
+    console.log("필터 닫기 함수 실행됨");
+  };
+
   if (filterBtn && filtersContainer) {
     // 이미 추가된 요소 확인 및 중복 방지
-    if (!document.querySelector(".filters-header")) {
+    let filtersHeader = document.querySelector(".filters-header");
+    if (!filtersHeader) {
       // 필터 헤더 추가
-      const filtersHeader = document.createElement("div");
+      filtersHeader = document.createElement("div");
       filtersHeader.className = "filters-header";
       filtersHeader.textContent = "필터";
       filtersContainer.prepend(filtersHeader);
@@ -247,60 +257,36 @@ function setupMobileFilters() {
 
     // 닫기 버튼이 이미 있는지 확인
     let closeBtn = document.querySelector(".filter-close-btn");
-    if (!closeBtn) {
-      // 필터 닫기 버튼 추가
-      closeBtn = document.createElement("button");
-      closeBtn.className = "filter-close-btn";
-      closeBtn.innerHTML = "&times;";
-      closeBtn.setAttribute("aria-label", "필터 닫기");
-      filtersContainer.prepend(closeBtn);
+    if (closeBtn) {
+      closeBtn.remove(); // 기존 버튼 제거
     }
 
-    // 이벤트 리스너를 다시 추가하기 전에 기존 이벤트 리스너 제거
-    const newFilterBtn = filterBtn.cloneNode(true);
-    filterBtn.parentNode.replaceChild(newFilterBtn, filterBtn);
+    // 필터 닫기 버튼 새로 추가 (onclick 직접 사용)
+    closeBtn = document.createElement("button");
+    closeBtn.className = "filter-close-btn";
+    closeBtn.innerHTML = "&times;";
+    closeBtn.setAttribute("aria-label", "필터 닫기");
+    closeBtn.setAttribute("onclick", "window.closeFilter()");
+    filtersContainer.prepend(closeBtn);
 
-    const newCloseBtn = closeBtn.cloneNode(true);
-    closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
-
-    const newBackdrop = backdrop.cloneNode(true);
-    backdrop.parentNode.replaceChild(newBackdrop, backdrop);
-
-    // 새 요소에 이벤트 리스너 추가
-    newFilterBtn.addEventListener("click", function () {
+    // 필터 열기 버튼 이벤트
+    filterBtn.onclick = function () {
       filtersContainer.classList.add("active");
-      newBackdrop.style.display = "block";
+      backdrop.style.display = "block";
       document.body.style.overflow = "hidden";
-    });
+    };
 
-    newCloseBtn.addEventListener("click", function () {
-      filtersContainer.classList.remove("active");
-      newBackdrop.style.display = "none";
-      document.body.style.overflow = "";
-    });
+    // 백드롭 이벤트
+    backdrop.onclick = window.closeFilter;
 
-    newBackdrop.addEventListener("click", function () {
-      filtersContainer.classList.remove("active");
-      newBackdrop.style.display = "none";
-      document.body.style.overflow = "";
-    });
+    console.log("모바일 필터 설정 완료: 직접 onclick 사용");
 
-    // 닫기 기능 테스트용 콘솔 로그
-    console.log("모바일 필터 설정 완료");
-
-    // ESC 키 이벤트 리스너는 document에 한 번만 필요
-    // 페이지가 로드될 때마다 추가되면 여러 번 실행될 수 있음
-    document.removeEventListener("keydown", escKeyHandler);
-    document.addEventListener("keydown", escKeyHandler);
-
-    function escKeyHandler(e) {
+    // ESC 키 이벤트 리스너
+    document.addEventListener("keydown", function (e) {
       if (e.key === "Escape" && filtersContainer.classList.contains("active")) {
-        filtersContainer.classList.remove("active");
-        newBackdrop.style.display = "none";
-        document.body.style.overflow = "";
-        console.log("ESC 키로 필터 닫기 실행");
+        window.closeFilter();
       }
-    }
+    });
   }
 }
 
