@@ -46,6 +46,56 @@ class DatabaseManager {
     }
   }
 
+  async updateItems(items, tableName) {
+    if (!items || items.length === 0) {
+      console.log("No updates to save");
+      return;
+    }
+
+    console.log(`Updating ${items.length} items in ${tableName}`);
+
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      for (const item of items) {
+        // item_id와 scheduled_date, starting_price만 업데이트
+        if (item.item_id && (item.scheduled_date || item.starting_price)) {
+          const updateFields = [];
+          const values = [];
+
+          if (item.scheduled_date) {
+            updateFields.push("scheduled_date = ?");
+            values.push(item.scheduled_date);
+          }
+
+          if (item.starting_price) {
+            updateFields.push("starting_price = ?");
+            values.push(item.starting_price);
+          }
+
+          if (updateFields.length > 0) {
+            // 업데이트 쿼리 실행
+            const query = `UPDATE ${tableName} SET ${updateFields.join(
+              ", "
+            )} WHERE item_id = ?`;
+            values.push(item.item_id);
+            await conn.query(query, values);
+          }
+        }
+      }
+
+      await conn.commit();
+      console.log(`Successfully updated ${items.length} items in ${tableName}`);
+    } catch (error) {
+      await conn.rollback();
+      console.error(`Error updating items in ${tableName}:`, error);
+      throw error;
+    } finally {
+      conn.release();
+    }
+  }
+
   async updateItemDetails(itemId, newDetails, tableName) {
     let conn;
     try {

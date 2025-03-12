@@ -546,6 +546,169 @@ class EcoAucCrawler extends AxiosCrawler {
     // 원본과 동일하게 객체 병합
     return Object.assign({}, item0, item);
   }
+
+  async crawlUpdates() {
+    try {
+      const startTime = Date.now();
+      console.log(`Starting updates crawl at ${new Date().toISOString()}`);
+
+      // 로그인
+      await this.login();
+
+      const allCrawledItems = [];
+
+      // Direct 경매 URL만 사용
+      const urlConfig = {
+        url: "https://www.ecoauc.com/client/timelimit-auctions",
+        type: "direct",
+      };
+
+      console.log(`Starting update crawl for bid type: ${urlConfig.type}`);
+
+      // 현재 URL과 bid_type 설정
+      this.config.searchUrl = urlConfig.url;
+      this.currentBidType = urlConfig.type;
+
+      // 모든 카테고리 순회
+      for (const categoryId of this.config.categoryIds) {
+        const categoryItems = [];
+
+        console.log(
+          `Starting update crawl for category ${categoryId} with bid type ${urlConfig.type}`
+        );
+        this.config.currentCategoryId = categoryId;
+
+        const totalPages = await this.getTotalPages(categoryId);
+        console.log(`Total pages in category ${categoryId}: ${totalPages}`);
+
+        // 모든 페이지 크롤링
+        for (let page = 1; page <= totalPages; page++) {
+          const pageItems = await this.crawlUpdatePage(categoryId, page);
+          categoryItems.push(...pageItems);
+        }
+
+        if (categoryItems && categoryItems.length > 0) {
+          allCrawledItems.push(...categoryItems);
+          console.log(
+            `Completed update crawl for category ${categoryId}, bid type ${urlConfig.type}. Items found: ${categoryItems.length}`
+          );
+        } else {
+          console.log(
+            `No update items found for category ${categoryId}, bid type ${urlConfig.type}`
+          );
+        }
+      }
+
+      if (allCrawledItems.length === 0) {
+        console.log("No update items were crawled. Aborting operation.");
+        return [];
+      }
+
+      console.log(
+        `Update crawling completed for all categories. Total items: ${allCrawledItems.length}`
+      );
+
+      const endTime = Date.now();
+      const executionTime = endTime - startTime;
+      console.log(
+        `Update operation completed in ${this.formatExecutionTime(
+          executionTime
+        )}`
+      );
+
+      return allCrawledItems;
+    } catch (error) {
+      console.error("Update crawl failed:", error);
+      return [];
+    }
+  }
+
+  async crawlUpdatePage(categoryId, page) {
+    return this.retryOperation(async () => {
+      console.log(`Crawling update page ${page} in category ${categoryId}...`);
+      const url =
+        this.config.searchUrl + this.config.searchParams(categoryId, page);
+
+      const response = await this.client.get(url);
+      const $ = cheerio.load(response.data);
+
+      // 아이템 컨테이너 선택
+      const itemElements = $(this.config.crawlSelectors.itemContainer);
+      console.log(`Found ${itemElements.length} items on update page ${page}`);
+
+      if (itemElements.length === 0) {
+        return [];
+      }
+
+      // 배열로 변환하여 처리
+      const pageItems = [];
+      itemElements.each((index, element) => {
+        const item = this.extractUpdateItemInfo($, $(element));
+        if (item) {
+          // null이 아닌 유효한 항목만 추가
+          pageItems.push(item);
+        }
+      });
+
+      console.log(`Crawled ${pageItems.length} update items from page ${page}`);
+      return pageItems;
+    });
+  }
+
+  extractUpdateItemInfo($, element) {
+    try {
+      // 아이템 ID 추출
+      const $id = element.find(this.config.crawlSelectors.id);
+      let itemId = null;
+
+      if ($id.length > 0) {
+        itemId = $id.attr("data-auction-item-id");
+      }
+
+      // 대체 방법: 직접 선택자로 시도
+      if (!itemId) {
+        const $altId = element.find("[data-auction-item-id]");
+        if ($altId.length > 0) {
+          itemId = $altId.attr("data-auction-item-id");
+        }
+      }
+
+      if (!itemId) {
+        return null;
+      }
+
+      // 날짜 추출
+      const $scheduledDate = element.find(
+        this.config.crawlSelectors.scheduledDate
+      );
+      const scheduledDateText =
+        $scheduledDate.length > 0 ? $scheduledDate.text().trim() : null;
+      const scheduledDate = this.extractDate(scheduledDateText);
+
+      // 시작가 추출
+      const $startingPrice = element.find(
+        this.config.crawlSelectors.startingPrice
+      );
+      const startingPriceText =
+        $startingPrice.length > 0 ? $startingPrice.text().trim() : null;
+      const startingPrice = this.currencyToInt(startingPriceText);
+
+      // 경매 날짜가 유효하지 않으면 null 반환
+      if (!this.isCollectionDay(scheduledDate)) {
+        return null;
+      }
+
+      return {
+        item_id: itemId,
+        scheduled_date: scheduledDate,
+        starting_price: startingPrice,
+        bid_type: this.currentBidType,
+      };
+    } catch (error) {
+      console.error("Error extracting update item info:", error);
+      return null;
+    }
+  }
 }
 
 class EcoAucValueCrawler extends AxiosCrawler {

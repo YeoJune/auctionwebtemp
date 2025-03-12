@@ -138,6 +138,74 @@ async function crawlAllValues() {
   }
 }
 
+async function crawlAllUpdates() {
+  const startTime = Date.now();
+  console.log(`Starting update crawl at ${new Date().toISOString()}`);
+
+  try {
+    // EcoAuc와 BrandAuc의 direct 타입 경매만 업데이트 크롤링
+    let ecoAucUpdates = await ecoAucCrawler.crawlUpdates();
+    let brandAucUpdates = await brandAucCrawler.crawlUpdates();
+
+    if (!ecoAucUpdates) ecoAucUpdates = [];
+    if (!brandAucUpdates) brandAucUpdates = [];
+
+    const allUpdates = [...ecoAucUpdates, ...brandAucUpdates];
+
+    // 업데이트 정보를 DB에 저장
+    await DBManager.updateItems(allUpdates, "crawled_items");
+
+    const endTime = Date.now();
+    const executionTime = endTime - startTime;
+    console.log(
+      `Update crawl operation completed in ${formatExecutionTime(
+        executionTime
+      )}`
+    );
+
+    return {
+      ecoAucCount: ecoAucUpdates.length,
+      brandAucCount: brandAucUpdates.length,
+      totalCount: allUpdates.length,
+      executionTime: formatExecutionTime(executionTime),
+    };
+  } catch (error) {
+    console.error("Update crawl failed:", error);
+    throw error;
+  } finally {
+  }
+}
+
+// 실행 시간 포맷팅 함수
+function formatExecutionTime(milliseconds) {
+  const seconds = Math.floor(milliseconds / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+
+  const remainingMinutes = minutes % 60;
+  const remainingSeconds = seconds % 60;
+
+  return `${hours}h ${remainingMinutes}m ${remainingSeconds}s`;
+}
+
+// 라우팅 추가
+router.get("/crawl-updates", isAdmin, async (req, res) => {
+  try {
+    const result = await crawlAllUpdates();
+
+    res.json({
+      message: "Update crawling completed successfully",
+      stats: result,
+    });
+  } catch (error) {
+    console.error("Update crawling error:", error);
+    res.status(500).json({
+      message: "Error during update crawling",
+      error: error.message,
+    });
+  }
+});
+
 router.get("/crawl", isAdmin, async (req, res) => {
   try {
     await crawlAll();
