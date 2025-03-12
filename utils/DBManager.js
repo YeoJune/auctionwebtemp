@@ -223,6 +223,134 @@ class DatabaseManager {
     }
   }
 
+  async deletePastScheduledItems(tableName = "crawled_items", batchSize = 500) {
+    let conn;
+    try {
+      conn = await this.pool.getConnection();
+      await conn.beginTransaction();
+
+      // 현재 날짜보다 이전 scheduled_date를 가진 아이템 조회
+      // 서버와 DB가 모두 KST 시간대를 사용하므로 별도의 시간대 변환 필요 없음
+      const [pastItems] = await conn.query(`
+      SELECT item_id, image, additional_images 
+      FROM ${tableName} 
+      WHERE scheduled_date < NOW()
+    `);
+
+      if (!pastItems.length) {
+        console.log(`No past scheduled items to delete from ${tableName}`);
+        await conn.commit();
+        return 0;
+      }
+
+      console.log(
+        `Found ${pastItems.length} past scheduled items to delete from ${tableName}`
+      );
+
+      // 이미지 경로 수집 (나중에 이미지 파일도 삭제하고 싶은 경우를 위해)
+      const imagesToDelete = new Set();
+      pastItems.forEach((item) => {
+        if (item.image) imagesToDelete.add(item.image);
+        if (item.additional_images) {
+          try {
+            const additionalImages = JSON.parse(item.additional_images);
+            if (Array.isArray(additionalImages)) {
+              additionalImages.forEach((img) => imagesToDelete.add(img));
+            }
+          } catch (error) {
+            console.error(
+              `Error parsing additional_images for item ${item.item_id}:`,
+              error
+            );
+          }
+        }
+      });
+
+      // direct_bids 또는 live_bids에 있는 아이템은 삭제하지 않음
+      const [bidItems] = await conn.query(`
+      SELECT DISTINCT item_id FROM direct_bids
+      UNION
+      SELECT DISTINCT item_id FROM live_bids
+    `);
+
+      const bidItemIds = new Set(bidItems.map((item) => item.item_id));
+
+      // 입찰이 없는 아이템만 필터링
+      const itemsToDelete = pastItems.filter(
+        (item) => !bidItemIds.has(item.item_id)
+      );
+      const itemIdsToDelete = itemsToDelete.map((item) => item.item_id);
+
+      if (!itemIdsToDelete.length) {
+        console.log(
+          `No past scheduled items without bids to delete from ${tableName}`
+        );
+        await conn.commit();
+        return 0;
+      }
+
+      console.log(
+        `Deleting ${itemIdsToDelete.length} past scheduled items from ${tableName}`
+      );
+
+      // 배치 단위로 아이템 삭제
+      for (let i = 0; i < itemIdsToDelete.length; i += batchSize) {
+        const batchIds = itemIdsToDelete.slice(i, i + batchSize);
+        await conn.query(
+          `
+        DELETE FROM ${tableName}
+        WHERE item_id IN (?)
+      `,
+          [batchIds]
+        );
+
+        console.log(
+          `Deleted batch ${Math.floor(i / batchSize) + 1} (${
+            batchIds.length
+          } items)`
+        );
+      }
+
+      // 위시리스트에서도 삭제된 아이템 정리
+      await conn.query(`
+      DELETE w FROM wishlists w
+      LEFT JOIN ${tableName} ci ON w.item_id = ci.item_id
+      WHERE ci.item_id IS NULL
+    `);
+
+      await conn.commit();
+      console.log(
+        `Successfully deleted ${itemIdsToDelete.length} past scheduled items from ${tableName}`
+      );
+
+      // 이미지 파일도 삭제하고 싶다면 아래 코드 주석 해제
+      /*
+    for (const imagePath of imagesToDelete) {
+      try {
+        const fullPath = path.join(__dirname, "..", "public", imagePath);
+        await fs.access(fullPath); // 파일 존재 여부 확인
+        await fs.unlink(fullPath);
+      } catch (error) {
+        if (error.code !== "ENOENT") { // 파일이 없는 경우는 무시
+          console.error(`Error deleting image ${imagePath}:`, error);
+        }
+      }
+    }
+    */
+
+      return itemIdsToDelete.length;
+    } catch (error) {
+      if (conn) await conn.rollback();
+      console.error(
+        `Error deleting past scheduled items from ${tableName}:`,
+        error
+      );
+      throw error;
+    } finally {
+      if (conn) await conn.release();
+    }
+  }
+
   async cleanupOldValueItems(daysThreshold = 90, batchSize = 500) {
     let conn;
     try {
