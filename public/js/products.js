@@ -8,6 +8,8 @@ window.state = {
   selectedRanks: [],
   selectedAucNums: [],
   selectedAuctionTypes: [], // 경매 유형 필터
+  sortBy: "scheduled_date", // 정렬 기준 필드 (기본값: 마감일)
+  sortOrder: "asc", // 정렬 방향 (기본값: 오름차순)
   currentPage: 1,
   itemsPerPage: 20,
   totalItems: 0,
@@ -1028,6 +1030,8 @@ async function fetchData() {
       aucNums: state.selectedAucNums.join(","),
       withDetails: "false",
       bidsOnly: state.showBidItemsOnly, // 파라미터 수정
+      sortBy: state.sortBy, // 정렬 기준 필드 추가
+      sortOrder: state.sortOrder, // 정렬 방향 추가
     };
 
     const queryString = API.createURLParams(params);
@@ -1066,6 +1070,27 @@ async function fetchData() {
   } finally {
     toggleLoading(false);
   }
+}
+
+function handleSortOptionChange() {
+  const sortOption = document.getElementById("sortOption");
+  if (!sortOption) return;
+
+  sortOption.addEventListener("change", function () {
+    const [sortBy, sortOrder] = this.value.split("-");
+    state.sortBy = sortBy;
+    state.sortOrder = sortOrder;
+    state.currentPage = 1; // Reset to first page when sorting changes
+    fetchData();
+  });
+}
+
+function initializeSortOptions() {
+  const sortOption = document.getElementById("sortOption");
+  if (!sortOption) return;
+
+  // Set the default value
+  sortOption.value = `${state.sortBy}-${state.sortOrder}`;
 }
 
 // 이벤트 핸들러들
@@ -1632,6 +1657,8 @@ function setupDropdownMenus() {
 // 초기화 함수
 function initialize() {
   state.itemsPerPage = 20; // 기본 20개씩 표시
+  state.sortBy = "scheduled_date"; // 기본 정렬 필드: 마감일
+  state.sortOrder = "asc"; // 기본 정렬 방향: 오름차순
 
   // DOM 완전히 로드된 후 실행
   document.addEventListener("DOMContentLoaded", function () {
@@ -1674,6 +1701,8 @@ function initialize() {
           displayFavoriteFilters(); // 즐겨찾기 필터 초기화
           setupItemsPerPage(); // 표시 개수 설정
           updateBidsOnlyFilter(); // 입찰항목만 표시 파라미터 수정
+          initializeSortOptions(); // 정렬 옵션 초기화
+          handleSortOptionChange(); // 정렬 변경 이벤트 리스너 설정
 
           // 필터 설정
           setupFilters();

@@ -11,7 +11,8 @@ window.state = {
   totalItems: 0,
   totalPages: 0,
   searchTerm: "",
-  sortOption: "default",
+  sortBy: "scheduled_date", // 기본 정렬 필드: 마감일
+  sortOrder: "asc", // 기본 정렬 방향: 오름차순
   currentData: [],
   images: [],
   currentImageIndex: 0,
@@ -501,7 +502,8 @@ async function fetchData() {
       search: state.searchTerm,
       ranks: state.selectedRanks,
       aucNums: state.selectedAucNums.join(","),
-      sortBy: state.sortOption !== "default" ? state.sortOption : undefined,
+      sortBy: state.sortBy, // 정렬 기준 필드
+      sortOrder: state.sortOrder, // 정렬 방향
     };
 
     const queryString = API.createURLParams(params);
@@ -517,6 +519,22 @@ async function fetchData() {
     alert("데이터를 불러오는 데 실패했습니다.");
   } finally {
     toggleLoading(false);
+  }
+}
+
+function setupSortOptions() {
+  const sortOption = document.getElementById("sortOption");
+  if (sortOption) {
+    // 기본값 설정
+    sortOption.value = `${state.sortBy}-${state.sortOrder}`;
+
+    sortOption.addEventListener("change", function () {
+      const [sortBy, sortOrder] = this.value.split("-");
+      state.sortBy = sortBy;
+      state.sortOrder = sortOrder;
+      state.currentPage = 1; // 페이지 1로 리셋
+      fetchData();
+    });
   }
 }
 
@@ -899,6 +917,11 @@ async function initialize() {
         // 검색어 초기화
         document.getElementById("searchInput").value = "";
         state.searchTerm = "";
+
+        // 정렬 옵션 초기화
+        state.sortBy = "scheduled_date";
+        state.sortOrder = "asc";
+        document.getElementById("sortOption").value = "scheduled_date-asc";
 
         // 데이터 다시 가져오기
         state.currentPage = 1;
