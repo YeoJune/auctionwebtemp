@@ -528,6 +528,14 @@ function getLiveCardHTML(item, bidInfo, favoriteNumber) {
   // 날짜 및 시간 표시
   const formattedDateTime = formatDateTime(item.scheduled_date);
 
+  // direct이고 current_price가 starting_price보다 큰 경우에만 current_price 이외에는 starting_price 표시
+  const live_price =
+    item.bid_type == "direct" &&
+    bidInfo.currentPrice &&
+    Number(bidInfo.current_price) > Number(item.starting_price)
+      ? bidInfo.current_price
+      : item.starting_price;
+
   return `
     <div class="product-header">
       <div class="product-brand">${item.brand}</div>
@@ -587,22 +595,10 @@ function getLiveCardHTML(item, bidInfo, favoriteNumber) {
   </div>
   <div class="info-cell">
     <div class="info-label">실시간</div>
-    <div class="info-value">${cleanNumberFormat(
-      item.bid_type === "direct" &&
-        Number(bidInfo?.current_price) > Number(item.starting_price)
-        ? bidInfo.current_price
-        : item.starting_price || 0
-    )}￥</div>
+    <div class="info-value">${cleanNumberFormat(live_price || 0)}￥</div>
     <div class="info-price-detail">
       ${cleanNumberFormat(
-        calculateTotalPrice(
-          item.bid_type === "direct" &&
-            Number(bidInfo?.current_price) > Number(item.starting_price)
-            ? bidInfo.current_price
-            : item.starting_price,
-          item.auc_num,
-          item.category
-        )
+        calculateTotalPrice(live_price, item.auc_num, item.category)
       )}원
     </div>
   </div>
