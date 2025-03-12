@@ -211,6 +211,8 @@ function toggleLoading(show) {
 }
 
 // 모바일 필터 토글
+// common.js에서 setupMobileFilters 함수를 아래 코드로 교체하세요
+
 function setupMobileFilters() {
   const filterBtn = document.getElementById("mobileFilterBtn");
   const filtersContainer = document.querySelector(".filters-container");
@@ -229,10 +231,31 @@ function setupMobileFilters() {
   document.body.appendChild(backdrop);
 
   if (filterBtn && filtersContainer) {
+    // 필터 헤더 추가
+    const filtersHeader = document.createElement("div");
+    filtersHeader.className = "filters-header";
+    filtersHeader.textContent = "필터";
+    filtersContainer.prepend(filtersHeader);
+
+    // 필터 닫기 버튼 추가
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "filter-close-btn";
+    closeBtn.innerHTML = "&times;";
+    closeBtn.setAttribute("aria-label", "필터 닫기");
+    filtersContainer.prepend(closeBtn);
+
+    // 필터 열기 버튼 이벤트
     filterBtn.addEventListener("click", () => {
       filtersContainer.classList.add("active");
       backdrop.style.display = "block";
       document.body.style.overflow = "hidden";
+    });
+
+    // 필터 닫기 버튼 이벤트
+    closeBtn.addEventListener("click", () => {
+      filtersContainer.classList.remove("active");
+      backdrop.style.display = "none";
+      document.body.style.overflow = "";
     });
 
     // 백드롭 클릭시 필터 닫기
