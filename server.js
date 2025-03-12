@@ -155,16 +155,13 @@ app.get("/", (req, res) => {
   res.sendFile(__dirname + "/public/pages/intro.html");
 });
 app.get("/productPage", (req, res) => {
-  if (req.session.user) res.sendFile(__dirname + "/pages/product.html");
-  else res.redirect("/signinPage");
+  res.sendFile(__dirname + "/pages/product.html");
 });
 app.get("/signinPage", (req, res) => {
-  if (req.session.user) res.redirect("/productPage");
-  else res.sendFile(__dirname + "/public/pages/signin.html");
+  res.sendFile(__dirname + "/public/pages/signin.html");
 });
 app.get("/valuesPage", (req, res) => {
-  if (req.session.user) res.sendFile(__dirname + "/pages/values.html");
-  else res.redirect("/signinPage");
+  res.sendFile(__dirname + "/pages/values.html");
 });
 app.get("/bidResultsPage", (req, res) => {
   if (req.session.user) res.sendFile(__dirname + "/pages/bid-results.html");
