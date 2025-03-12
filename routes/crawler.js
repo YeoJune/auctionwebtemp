@@ -19,6 +19,7 @@ dotenv.config();
 
 let isCrawling = false;
 let isValueCrawling = false;
+let isUpdateCrawling = false;
 
 const isAdmin = (req, res, next) => {
   if (req.session.user && req.session.user.id === "admin") {
@@ -139,40 +140,46 @@ async function crawlAllValues() {
 }
 
 async function crawlAllUpdates() {
-  const startTime = Date.now();
-  console.log(`Starting update crawl at ${new Date().toISOString()}`);
+  if (isUpdateCrawling) {
+    throw new Error("update crawling already in progress");
+  } else {
+    isUpdateCrawling = true;
+    const startTime = Date.now();
+    console.log(`Starting update crawl at ${new Date().toISOString()}`);
 
-  try {
-    // EcoAuc와 BrandAuc의 direct 타입 경매만 업데이트 크롤링
-    let ecoAucUpdates = await ecoAucCrawler.crawlUpdates();
-    let brandAucUpdates = await brandAucCrawler.crawlUpdates();
+    try {
+      // EcoAuc와 BrandAuc의 direct 타입 경매만 업데이트 크롤링
+      let ecoAucUpdates = await ecoAucCrawler.crawlUpdates();
+      let brandAucUpdates = await brandAucCrawler.crawlUpdates();
 
-    if (!ecoAucUpdates) ecoAucUpdates = [];
-    if (!brandAucUpdates) brandAucUpdates = [];
+      if (!ecoAucUpdates) ecoAucUpdates = [];
+      if (!brandAucUpdates) brandAucUpdates = [];
 
-    const allUpdates = [...ecoAucUpdates, ...brandAucUpdates];
+      const allUpdates = [...ecoAucUpdates, ...brandAucUpdates];
 
-    // 업데이트 정보를 DB에 저장
-    await DBManager.updateItems(allUpdates, "crawled_items");
+      // 업데이트 정보를 DB에 저장
+      await DBManager.updateItems(allUpdates, "crawled_items");
 
-    const endTime = Date.now();
-    const executionTime = endTime - startTime;
-    console.log(
-      `Update crawl operation completed in ${formatExecutionTime(
-        executionTime
-      )}`
-    );
+      const endTime = Date.now();
+      const executionTime = endTime - startTime;
+      console.log(
+        `Update crawl operation completed in ${formatExecutionTime(
+          executionTime
+        )}`
+      );
 
-    return {
-      ecoAucCount: ecoAucUpdates.length,
-      brandAucCount: brandAucUpdates.length,
-      totalCount: allUpdates.length,
-      executionTime: formatExecutionTime(executionTime),
-    };
-  } catch (error) {
-    console.error("Update crawl failed:", error);
-    throw error;
-  } finally {
+      return {
+        ecoAucCount: ecoAucUpdates.length,
+        brandAucCount: brandAucUpdates.length,
+        totalCount: allUpdates.length,
+        executionTime: formatExecutionTime(executionTime),
+      };
+    } catch (error) {
+      console.error("Update crawl failed:", error);
+      throw error;
+    } finally {
+      isUpdateCrawling = false;
+    }
   }
 }
 
@@ -234,15 +241,23 @@ router.get("/crawl-values", isAdmin, async (req, res) => {
 
 router.get("/crawl-status", isAdmin, (req, res) => {
   try {
-    res.json({ isCrawling, isValueCrawling });
+    res.json({
+      isCrawling,
+      isValueCrawling,
+      isUpdateCrawling,
+      updateInterval: process.env.UPDATE_INTERVAL || "3600",
+    });
   } catch (error) {
-    console.error("Crawling error:", error);
-    res.status(500).json({ message: "Error during crawling" });
+    console.error("Crawling status error:", error);
+    res.status(500).json({ message: "Error getting crawling status" });
   }
 });
 
 const scheduleCrawling = async () => {
   const settings = await getAdminSettings();
+
+  console.log(`Crawling schedule: ${settings.crawlSchedule}`);
+
   if (settings && settings.crawlSchedule) {
     const [hours, minutes] = settings.crawlSchedule.split(":");
     cron.schedule(
@@ -265,11 +280,42 @@ const scheduleCrawling = async () => {
   }
 };
 
+const scheduleUpdateCrawling = () => {
+  const updateInterval = parseInt(process.env.UPDATE_INTERVAL, 10) || 3600; // 기본값은 1시간(3600초)
+
+  console.log(
+    `Scheduling update crawling to run every ${updateInterval} seconds`
+  );
+
+  // 밀리초 단위로 변환하여 setInterval 설정
+  setInterval(async () => {
+    console.log("Running scheduled update crawling task");
+    try {
+      if (!isUpdateCrawling && !isCrawling && !isValueCrawling) {
+        const result = await crawlAllUpdates();
+        console.log("Scheduled update crawling completed successfully", {
+          ecoAucCount: result.ecoAucCount,
+          brandAucCount: result.brandAucCount,
+          totalCount: result.totalCount,
+          executionTime: result.executionTime,
+        });
+      } else {
+        console.log(
+          "Skipping scheduled update crawling - another crawling process is active"
+        );
+      }
+    } catch (error) {
+      console.error("Scheduled update crawling error:", error);
+    }
+  }, updateInterval * 1000);
+};
+
 if (process.env.ENV === "development") {
   console.log("development env");
 } else {
   console.log("product env");
   scheduleCrawling();
+  scheduleUpdateCrawling();
   loginAll();
 }
 
