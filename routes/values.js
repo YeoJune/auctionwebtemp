@@ -1,3 +1,4 @@
+// routes/values.js
 const express = require("express");
 const router = express.Router();
 const pool = require("../utils/DB");
@@ -14,6 +15,8 @@ router.get("/", async (req, res) => {
     search,
     ranks,
     withDetails = "false",
+    sortBy = "scheduled_date", // 정렬 기준 필드 (기본값: 제목)
+    sortOrder = "asc", // 정렬 방향 (기본값: 오름차순)
   } = req.query;
   const offset = (page - 1) * limit;
 
@@ -31,21 +34,34 @@ router.get("/", async (req, res) => {
       });
     }
 
+    // 랭크 필터 처리 - LIKE 문 제거하고 직접 비교로 변경
     if (ranks) {
       const rankList = ranks.split(",");
       if (rankList.length > 0) {
         const rankConditions = rankList.map((rank) => {
           switch (rank) {
+            case "N":
+              return "rank = 'N'";
+            case "S":
+              return "rank = 'S'";
             case "AB":
-              return "rank LIKE 'AB%'";
+              return "rank = 'AB'";
             case "A":
-              return "rank LIKE 'A%' AND rank NOT LIKE 'AB%'";
+              return "rank = 'A'";
             case "BC":
-              return "rank LIKE 'BC%'";
+              return "rank = 'BC'";
             case "B":
-              return "rank LIKE 'B%' AND rank NOT LIKE 'BC%'";
+              return "rank = 'B'";
+            case "C":
+              return "rank = 'C'";
+            case "D":
+              return "rank = 'D'";
+            case "E":
+              return "rank = 'E'";
+            case "F":
+              return "rank = 'F'";
             default:
-              return `rank LIKE '${rank}%'`;
+              return `rank = '${rank}'`;
           }
         });
         conditions.push(`(${rankConditions.join(" OR ")})`);
@@ -105,7 +121,32 @@ router.get("/", async (req, res) => {
     }
 
     const countQuery = `SELECT COUNT(*) as total FROM (${query}) as subquery`;
-    query += " ORDER BY scheduled_date DESC, item_id DESC LIMIT ? OFFSET ?";
+
+    // 정렬 처리
+    let orderByClause = "";
+    switch (sortBy) {
+      case "title":
+        orderByClause = "title";
+        break;
+      case "rank":
+        orderByClause = "rank";
+        break;
+      case "scheduled_date":
+        orderByClause = "scheduled_date";
+        break;
+      default:
+        orderByClause = "title";
+    }
+
+    // 정렬 방향 설정
+    const sortDirection = sortOrder.toLowerCase() === "desc" ? "DESC" : "ASC";
+    query += ` ORDER BY ${orderByClause} ${sortDirection}`;
+
+    if (orderByClause !== "item_id") {
+      query += ", item_id DESC"; // 보조 정렬 기준으로 item_id 추가
+    }
+
+    query += " LIMIT ? OFFSET ?";
     queryParams.push(parseInt(limit), offset);
 
     const [items] = await pool.query(query, queryParams);
@@ -211,32 +252,32 @@ router.get("/ranks", async (req, res) => {
     const [results] = await pool.query(`
       SELECT DISTINCT 
         CASE 
-          WHEN rank LIKE 'N%' THEN 'N'
-          WHEN rank LIKE 'S%' THEN 'S'
-          WHEN rank LIKE 'AB%' THEN 'AB'
-          WHEN rank LIKE 'A%' AND rank NOT LIKE 'AB%' THEN 'A'
-          WHEN rank LIKE 'BC%' THEN 'BC'
-          WHEN rank LIKE 'B%' AND rank NOT LIKE 'BC%' THEN 'B'
-          WHEN rank LIKE 'C%' THEN 'C'
-          WHEN rank LIKE 'D%' THEN 'D'
-          WHEN rank LIKE 'E%' THEN 'E'
-          WHEN rank LIKE 'F%' THEN 'F'
+          WHEN rank = 'N' THEN 'N'
+          WHEN rank = 'S' THEN 'S'
+          WHEN rank = 'AB' THEN 'AB'
+          WHEN rank = 'A' THEN 'A'
+          WHEN rank = 'BC' THEN 'BC'
+          WHEN rank = 'B' THEN 'B'
+          WHEN rank = 'C' THEN 'C'
+          WHEN rank = 'D' THEN 'D'
+          WHEN rank = 'E' THEN 'E'
+          WHEN rank = 'F' THEN 'F'
           ELSE 'N'
         END as rank,
         COUNT(*) as count
       FROM values_items
       GROUP BY 
         CASE 
-          WHEN rank LIKE 'N%' THEN 'N'
-          WHEN rank LIKE 'S%' THEN 'S'
-          WHEN rank LIKE 'AB%' THEN 'AB'
-          WHEN rank LIKE 'A%' AND rank NOT LIKE 'AB%' THEN 'A'
-          WHEN rank LIKE 'BC%' THEN 'BC'
-          WHEN rank LIKE 'B%' AND rank NOT LIKE 'BC%' THEN 'B'
-          WHEN rank LIKE 'C%' THEN 'C'
-          WHEN rank LIKE 'D%' THEN 'D'
-          WHEN rank LIKE 'E%' THEN 'E'
-          WHEN rank LIKE 'F%' THEN 'F'
+          WHEN rank = 'N' THEN 'N'
+          WHEN rank = 'S' THEN 'S'
+          WHEN rank = 'AB' THEN 'AB'
+          WHEN rank = 'A' THEN 'A'
+          WHEN rank = 'BC' THEN 'BC'
+          WHEN rank = 'B' THEN 'B'
+          WHEN rank = 'C' THEN 'C'
+          WHEN rank = 'D' THEN 'D'
+          WHEN rank = 'E' THEN 'E'
+          WHEN rank = 'F' THEN 'F'
           ELSE 'N'
         END
       ORDER BY 

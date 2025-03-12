@@ -48,6 +48,8 @@ router.get("/", async (req, res) => {
     auctionTypes,
     withDetails = "false",
     bidsOnly = "false", // 입찰한 상품만 표시하는 플래그 추가
+    sortBy = "scheduled_date", // 정렬 기준 필드 (기본값: 제목)
+    sortOrder = "asc", // 정렬 방향 (기본값: 오름차순)
   } = req.query;
   const offset = (page - 1) * limit;
   const userId = req.session.user?.id;
@@ -151,22 +153,34 @@ router.get("/", async (req, res) => {
       });
     }
 
-    // 랭크 필터 처리
+    // 랭크 필터 처리 - LIKE 문 제거하고 직접 비교로 변경
     if (ranks) {
       const rankList = ranks.split(",");
       if (rankList.length > 0) {
         const rankConditions = rankList.map((rank) => {
           switch (rank) {
+            case "N":
+              return "ci.rank = 'N'";
+            case "S":
+              return "ci.rank = 'S'";
             case "AB":
-              return "ci.rank LIKE 'AB%'";
+              return "ci.rank = 'AB'";
             case "A":
-              return "ci.rank LIKE 'A%' AND ci.rank NOT LIKE 'AB%'";
+              return "ci.rank = 'A'";
             case "BC":
-              return "ci.rank LIKE 'BC%'";
+              return "ci.rank = 'BC'";
             case "B":
-              return "ci.rank LIKE 'B%' AND ci.rank NOT LIKE 'BC%'";
+              return "ci.rank = 'B'";
+            case "C":
+              return "ci.rank = 'C'";
+            case "D":
+              return "ci.rank = 'D'";
+            case "E":
+              return "ci.rank = 'E'";
+            case "F":
+              return "ci.rank = 'F'";
             default:
-              return `ci.rank LIKE '${rank}%'`;
+              return `ci.rank = '${rank}'`;
           }
         });
         conditions.push(`(${rankConditions.join(" OR ")})`);
@@ -283,7 +297,26 @@ router.get("/", async (req, res) => {
       query += " AND " + conditions.join(" AND ");
     }
 
-    query += " ORDER BY ci.title ASC";
+    // 정렬 처리
+    let orderByClause = "";
+    switch (sortBy) {
+      case "title":
+        orderByClause = "ci.title";
+        break;
+      case "rank":
+        orderByClause = "ci.rank";
+        break;
+      case "scheduled_date":
+        orderByClause = "ci.scheduled_date";
+        break;
+      default:
+        orderByClause = "ci.title";
+    }
+
+    // 정렬 방향 설정
+    const sortDirection = sortOrder.toLowerCase() === "desc" ? "DESC" : "ASC";
+    query += ` ORDER BY ${orderByClause} ${sortDirection}`;
+
     query += " LIMIT ? OFFSET ?";
     queryParams.push(parseInt(limit), offset);
 
@@ -514,32 +547,32 @@ router.get("/ranks", async (req, res) => {
     const [results] = await pool.query(`
       SELECT DISTINCT 
         CASE 
-          WHEN rank LIKE 'N%' THEN 'N'
-          WHEN rank LIKE 'S%' THEN 'S'
-          WHEN rank LIKE 'AB%' THEN 'AB'
-          WHEN rank LIKE 'A%' AND rank NOT LIKE 'AB%' THEN 'A'
-          WHEN rank LIKE 'BC%' THEN 'BC'
-          WHEN rank LIKE 'B%' AND rank NOT LIKE 'BC%' THEN 'B'
-          WHEN rank LIKE 'C%' THEN 'C'
-          WHEN rank LIKE 'D%' THEN 'D'
-          WHEN rank LIKE 'E%' THEN 'E'
-          WHEN rank LIKE 'F%' THEN 'F'
+          WHEN rank = 'N' THEN 'N'
+          WHEN rank = 'S' THEN 'S'
+          WHEN rank = 'AB' THEN 'AB'
+          WHEN rank = 'A' THEN 'A'
+          WHEN rank = 'BC' THEN 'BC'
+          WHEN rank = 'B' THEN 'B'
+          WHEN rank = 'C' THEN 'C'
+          WHEN rank = 'D' THEN 'D'
+          WHEN rank = 'E' THEN 'E'
+          WHEN rank = 'F' THEN 'F'
           ELSE 'N'
         END as rank,
         COUNT(*) as count
       FROM crawled_items
       GROUP BY 
         CASE 
-          WHEN rank LIKE 'N%' THEN 'N'
-          WHEN rank LIKE 'S%' THEN 'S'
-          WHEN rank LIKE 'AB%' THEN 'AB'
-          WHEN rank LIKE 'A%' AND rank NOT LIKE 'AB%' THEN 'A'
-          WHEN rank LIKE 'BC%' THEN 'BC'
-          WHEN rank LIKE 'B%' AND rank NOT LIKE 'BC%' THEN 'B'
-          WHEN rank LIKE 'C%' THEN 'C'
-          WHEN rank LIKE 'D%' THEN 'D'
-          WHEN rank LIKE 'E%' THEN 'E'
-          WHEN rank LIKE 'F%' THEN 'F'
+          WHEN rank = 'N' THEN 'N'
+          WHEN rank = 'S' THEN 'S'
+          WHEN rank = 'AB' THEN 'AB'
+          WHEN rank = 'A' THEN 'A'
+          WHEN rank = 'BC' THEN 'BC'
+          WHEN rank = 'B' THEN 'B'
+          WHEN rank = 'C' THEN 'C'
+          WHEN rank = 'D' THEN 'D'
+          WHEN rank = 'E' THEN 'E'
+          WHEN rank = 'F' THEN 'F'
           ELSE 'N'
         END
       ORDER BY 
