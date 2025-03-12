@@ -277,7 +277,7 @@ function getDirectBidSectionHTML(bidInfo, itemId, aucNum, category) {
   // 시작가
   const live_price =
     item.bid_type == "direct" &&
-    bidInfo.currentPrice &&
+    bidInfo.current_price &&
     Number(bidInfo.current_price) > Number(item.starting_price)
       ? bidInfo.current_price
       : item.starting_price;
@@ -536,7 +536,7 @@ function getLiveCardHTML(item, bidInfo, favoriteNumber) {
   // direct이고 current_price가 starting_price보다 큰 경우에만 current_price 이외에는 starting_price 표시
   const live_price =
     item.bid_type == "direct" &&
-    bidInfo.currentPrice &&
+    bidInfo.current_price &&
     Number(bidInfo.current_price) > Number(item.starting_price)
       ? bidInfo.current_price
       : item.starting_price;
@@ -750,7 +750,7 @@ function getDirectCardHTML(item, bidInfo, favoriteNumber) {
 
   const live_price =
     item.bid_type == "direct" &&
-    bidInfo.currentPrice &&
+    bidInfo.current_price &&
     Number(bidInfo.current_price) > Number(item.starting_price)
       ? bidInfo.current_price
       : item.starting_price;
