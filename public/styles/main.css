@@ -1,4 +1,4 @@
-/* main.css */
+/* main.css - Merged Version */
 
 /* Navigation and Menu Styles */
 .nav-container {
@@ -18,19 +18,6 @@
   border-radius: 0;
   background-color: transparent;
   gap: 4px;
-}
-
-.nav-button i {
-  font-size: 24px;
-  margin-bottom: 4px;
-}
-
-.nav-button span {
-  font-size: 11px;
-  white-space: nowrap;
-}
-
-.nav-button {
   background-color: transparent;
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: white;
@@ -43,6 +30,17 @@
   gap: var(--spacing-xs);
 }
 
+.nav-button i {
+  font-size: 24px;
+  margin-bottom: 4px;
+  font-size: var(--font-size-md);
+}
+
+.nav-button span {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
 .nav-button:hover {
   background-color: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.4);
@@ -53,16 +51,17 @@
   border-color: rgba(255, 255, 255, 0.5);
 }
 
-.nav-button i {
-  font-size: var(--font-size-md);
-}
-
 /* Filter Section */
 .filters-container {
   padding: 15px;
   background-color: #fff;
   border-radius: 4px;
   margin-bottom: 20px;
+  background-color: var(--background-light);
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius-md);
+  margin-bottom: var(--spacing-lg);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
 
 .search-filter-section {
@@ -71,6 +70,10 @@
 
 .search-container {
   width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-md);
 }
 
 .search-container input {
@@ -79,10 +82,34 @@
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 14px;
+  flex: 1;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  padding: var(--spacing-sm);
 }
 
 .search-container input::placeholder {
   color: #999;
+}
+
+/* Filter groups */
+.filter-group {
+  margin-bottom: var(--spacing-md);
+}
+
+.filter-group h2 {
+  font-size: var(--font-size-md);
+  margin-bottom: var(--spacing-sm);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.filter-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  max-height: 200px;
+  overflow-y: auto;
 }
 
 /* Filter rows */
@@ -90,6 +117,7 @@
   display: flex;
   align-items: center;
   margin-bottom: 10px;
+  margin-bottom: 6px; /* Compact layout */
 }
 
 .filter-label {
@@ -104,6 +132,74 @@
   flex-wrap: wrap;
   gap: 5px;
   flex: 1;
+  align-items: center;
+}
+
+/* Filter items */
+.filter-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 10px;
+  margin-right: var(--spacing-sm);
+  margin-bottom: var(--spacing-xs);
+  margin-bottom: 0; /* Compact layout */
+}
+
+.filter-item input[type="checkbox"] {
+  margin: 0;
+  margin-right: var(--spacing-xs);
+  min-width: 18px;
+  min-height: 18px;
+}
+
+.filter-item label {
+  font-size: 13px;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+}
+
+/* Rank filter */
+#rankFilters .filter-item label {
+  font-weight: 600;
+}
+
+/* Numbered favorites and auction numbers */
+#favoriteFilters .filter-item label,
+#aucNumFilters .filter-item label {
+  position: relative;
+  padding-left: 24px;
+}
+
+#favoriteFilters .filter-item label::before,
+#aucNumFilters .filter-item label::before {
+  content: "①";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
+}
+
+#favoriteFilters .filter-item:nth-child(2) label::before,
+#aucNumFilters .filter-item:nth-child(2) label::before {
+  content: "②";
+}
+
+#favoriteFilters .filter-item:nth-child(3) label::before,
+#aucNumFilters .filter-item:nth-child(3) label::before {
+  content: "③";
+}
+
+/* Filter search */
+.filter-search {
+  margin-bottom: var(--spacing-sm);
+}
+
+#searchButton {
+  padding: var(--spacing-sm);
+  min-width: 40px;
+  border-radius: var(--border-radius-sm);
 }
 
 /* Select dropdowns */
@@ -117,6 +213,7 @@ select {
   height: 32px;
 }
 
+/* Multiselect container */
 .multiselect-container {
   position: relative;
   width: 100%;
@@ -160,28 +257,6 @@ select {
   font-weight: normal;
 }
 
-/* Filter items */
-.filter-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-right: 10px;
-}
-
-.filter-item input[type="checkbox"] {
-  margin: 0;
-}
-
-.filter-item label {
-  font-size: 13px;
-  cursor: pointer;
-}
-
-/* Rank filter */
-#rankFilters .filter-item label {
-  font-weight: 600;
-}
-
 /* Filter actions */
 .filter-actions {
   display: flex;
@@ -195,103 +270,23 @@ select {
   padding: 8px 30px;
   font-size: 14px;
   border-radius: 4px;
-}
-
-.reset-filters {
-  background-color: #f0f0f0;
-  color: #333;
-}
-
-.apply-filters {
-  background-color: var(--primary-color);
-  color: white;
-}
-
-.filters-container {
-  background-color: var(--background-light);
-  padding: var(--spacing-md);
-  border-radius: var(--border-radius-md);
-  margin-bottom: var(--spacing-lg);
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-}
-
-.filter-group {
-  margin-bottom: var(--spacing-md);
-}
-
-.filter-group h2 {
-  font-size: var(--font-size-md);
-  margin-bottom: var(--spacing-sm);
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
-.filter-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-sm);
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.filter-item {
-  display: flex;
-  align-items: center;
-  margin-right: var(--spacing-sm);
-  margin-bottom: var(--spacing-xs);
-}
-
-.filter-item input[type="checkbox"] {
-  margin-right: var(--spacing-xs);
-  min-width: 18px;
-  min-height: 18px;
-}
-
-.filter-item label {
-  font-size: var(--font-size-sm);
-}
-
-.filter-search {
-  margin-bottom: var(--spacing-sm);
-}
-
-.search-container {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  margin-bottom: var(--spacing-md);
-}
-
-.search-container input {
-  flex: 1;
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius-sm);
-  padding: var(--spacing-sm);
-}
-
-#searchButton {
-  padding: var(--spacing-sm);
-  min-width: 40px;
-  border-radius: var(--border-radius-sm);
-}
-
-.apply-filters,
-.reset-filters {
   display: block;
   padding: var(--spacing-sm) var(--spacing-md);
   margin-top: var(--spacing-sm);
 }
 
-.apply-filters {
-  background-color: var(--primary-color);
-  color: white;
-}
-
 .reset-filters {
+  background-color: #f0f0f0;
+  color: #333;
   background-color: var(--background-dark);
   color: var(--text-primary);
   margin-left: var(--spacing-sm);
   display: inline-block;
+}
+
+.apply-filters {
+  background-color: var(--primary-color);
+  color: white;
 }
 
 /* View Controls */
@@ -331,6 +326,13 @@ select {
   overflow: hidden;
   background-color: white;
   padding: 0;
+  background-color: var(--background-light);
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 /* Card Header */
@@ -339,11 +341,14 @@ select {
   padding: 8px;
 }
 
+/* Live Auction Product Card */
 .product-card[data-bid-type="live"] .product-header {
   background-color: var(--blue-dark);
   color: white;
+  padding: 8px;
 }
 
+/* Direct Auction Product Card */
 .product-card[data-bid-type="direct"] .product-header {
   background-color: var(--green-dark);
   color: white;
@@ -354,9 +359,13 @@ select {
   font-size: 12px;
   font-weight: 400;
   margin-bottom: 4px;
+  font-weight: 600;
+  font-size: var(--font-size-md);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
 }
 
-/* main.css에 추가 */
 .product-title {
   font-size: 14px;
   font-weight: 500;
@@ -369,9 +378,20 @@ select {
   margin-right: 50px;
   margin-bottom: 0;
   word-break: break-word;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0;
 }
 
-/* main.css에 추가 */
+.product-name {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  margin-top: var(--spacing-xs);
+  line-height: 1.4;
+}
+
+/* Additional info labels */
 .info-label {
   font-size: 10px;
   color: #666;
@@ -383,6 +403,7 @@ select {
   font-weight: 600;
 }
 
+/* Auction info */
 .auction-info {
   position: absolute;
   top: 12px;
@@ -402,6 +423,19 @@ select {
   font-weight: 600;
   font-size: 16px;
   margin-bottom: 5px;
+  position: relative;
+  padding-bottom: 8px;
+  background-color: white;
+  color: var(--blue-dark);
+  border-radius: var(--border-radius-circle);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  margin-left: var(--spacing-xs);
 }
 
 .product-card[data-bid-type="direct"] .auction-number {
@@ -431,81 +465,6 @@ select {
   color: var(--green-dark);
 }
 
-/* Bid Timer */
-.bid-timer {
-  display: flex;
-  justify-content: space-between;
-  padding: 4px 8px;
-  background-color: #e6f7ff;
-  font-size: 12px;
-}
-
-.bid-timer .scheduled-date {
-  font-weight: 400;
-}
-
-.bid-timer .remaining-time {
-  font-weight: 600;
-}
-
-.bid-timer.near-end {
-  background-color: #ffebeb;
-  color: #cc0000;
-}
-
-.product-card {
-  background-color: var(--background-light);
-  border-radius: var(--border-radius-sm);
-  overflow: hidden;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-/* Live Auction Product Card */
-.product-card[data-bid-type="live"] .product-header {
-  background-color: var(--blue-dark);
-  color: white;
-  padding: 8px;
-}
-
-/* Direct Auction Product Card */
-.product-card[data-bid-type="direct"] .product-header {
-  background-color: var(--green-dark);
-  color: white;
-  padding: 8px;
-}
-
-.product-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0;
-}
-
-.product-brand {
-  font-weight: 600;
-  font-size: var(--font-size-md);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-}
-
-.auction-number {
-  background-color: white;
-  color: var(--blue-dark);
-  border-radius: var(--border-radius-circle);
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--font-size-xs);
-  font-weight: 600;
-  margin-left: var(--spacing-xs);
-}
-
 .auction-type {
   font-size: var(--font-size-xs);
   background-color: rgba(255, 255, 255, 0.2);
@@ -513,13 +472,18 @@ select {
   border-radius: var(--border-radius-sm);
 }
 
-.product-name {
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  margin-top: var(--spacing-xs);
-  line-height: 1.4;
+.auction-type-indicator {
+  font-size: 10px;
+  position: absolute;
+  bottom: -3px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1px 4px;
+  border-radius: 8px;
+  white-space: nowrap;
 }
 
+/* Product Image */
 .product-image-container {
   position: relative;
   padding-top: 100%; /* 1:1 Aspect Ratio */
@@ -536,6 +500,7 @@ select {
   object-fit: contain;
 }
 
+/* Product Rank */
 .product-rank {
   position: absolute;
   bottom: 10px;
@@ -549,9 +514,6 @@ select {
   align-items: center;
   justify-content: center;
   font-weight: 600;
-}
-
-.product-rank {
   position: absolute;
   top: var(--spacing-sm);
   right: var(--spacing-sm);
@@ -567,70 +529,35 @@ select {
   font-size: var(--font-size-md);
 }
 
+/* Bid Timer */
 .bid-timer {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background-color: #e6f7ff;
+  font-size: 12px;
   background-color: #e6f7ff;
   color: var(--primary-color);
   text-align: center;
-  padding: 4px 8px;
   font-size: var(--font-size-sm);
   font-weight: 500;
 }
 
+.bid-timer .scheduled-date {
+  font-weight: 400;
+}
+
+.bid-timer .remaining-time {
+  font-weight: 600;
+}
+
 .bid-timer.near-end {
   background-color: #ffebeb;
+  color: #cc0000;
   color: var(--error-color);
 }
 
-.wishlist-buttons {
-  display: flex;
-  border-top: 1px solid #eee;
-  border-bottom: 1px solid #eee;
-}
-
-.wishlist-btn {
-  flex: 1;
-  padding: 8px 0;
-  font-size: 12px;
-  background-color: #f9f9f9;
-  color: #666;
-  border: none;
-  border-right: 1px solid #eee;
-}
-
-.wishlist-btn:last-child {
-  border-right: none;
-}
-
-.wishlist-btn.active {
-  background-color: var(--accent-color);
-  color: #8f7200;
-}
-
-.wishlist-buttons {
-  display: flex;
-  gap: 1px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.wishlist-btn {
-  flex: 1;
-  padding: var(--spacing-xs) var(--spacing-sm);
-  font-size: var(--font-size-xs);
-  background-color: var(--background-light);
-  color: var(--text-secondary);
-  border: none;
-  border-radius: 0;
-}
-
-.wishlist-btn.active {
-  background-color: var(--accent-color);
-  color: #8f7200;
-}
-
-.wishlist-btn:hover {
-  background-color: #f5f5f5;
-}
-
+/* Product Details */
 .product-details {
   padding: var(--spacing-md);
   flex: 1;
@@ -638,24 +565,20 @@ select {
   flex-direction: column;
 }
 
-/* main.css에 추가 */
-.auction-type-indicator {
-  font-size: 10px;
-  position: absolute;
-  bottom: -3px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 1px 4px;
-  border-radius: 8px;
-  white-space: nowrap;
+.product-details .detail-item {
+  margin-bottom: var(--spacing-sm);
+  display: flex;
+  flex-direction: column;
 }
 
-.auction-number {
-  position: relative;
-  padding-bottom: 8px;
+.detail-label {
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xs);
+  font-size: var(--font-size-sm);
 }
 
-/* 3칸 정보 그리드 추가 */
+/* Product Info Grid */
 .product-info-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -674,6 +597,43 @@ select {
   border-right: none;
 }
 
+/* Wishlist Buttons */
+.wishlist-buttons {
+  display: flex;
+  border-top: 1px solid #eee;
+  border-bottom: 1px solid #eee;
+  gap: 1px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.wishlist-btn {
+  flex: 1;
+  padding: 8px 0;
+  font-size: 12px;
+  background-color: #f9f9f9;
+  color: #666;
+  border: none;
+  border-right: 1px solid #eee;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  background-color: var(--background-light);
+  color: var(--text-secondary);
+  border-radius: 0;
+}
+
+.wishlist-btn:last-child {
+  border-right: none;
+}
+
+.wishlist-btn.active {
+  background-color: var(--accent-color);
+  color: #8f7200;
+}
+
+.wishlist-btn:hover {
+  background-color: #f5f5f5;
+}
+
 /* Bid Section */
 .bid-section {
   padding: 8px;
@@ -686,8 +646,19 @@ select {
 .real-time-price,
 .first-price,
 .second-price,
-.my-bid-price {
+.my-bid-price,
+.bid-price-info,
+.final-price {
   margin-bottom: 8px;
+  margin-bottom: var(--spacing-sm);
+}
+
+.real-time-price p,
+.bid-price-info p,
+.final-price p {
+  font-weight: 500;
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--spacing-xs);
 }
 
 .price-label {
@@ -711,15 +682,42 @@ select {
   color: #cc0000;
 }
 
+.price-details-container {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+/* Bid Info Styles */
+.bid-info {
+  margin-bottom: var(--spacing-sm);
+}
+
+.bid-info.live {
+  border-left: 3px solid var(--blue-dark);
+  padding-left: var(--spacing-sm);
+}
+
+.bid-info.direct {
+  border-left: 3px solid var(--green-dark);
+  padding-left: var(--spacing-sm);
+}
+
 /* Bid Input */
 .bid-input-container {
   margin-top: 10px;
+  margin-top: var(--spacing-sm);
 }
 
 .bid-input-label {
   font-size: 12px;
   color: #666;
   margin-bottom: 5px;
+  padding: 0 var(--spacing-sm);
+  background-color: #f5f5f5;
+  display: flex;
+  align-items: center;
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
 }
 
 .bid-input-group {
@@ -728,6 +726,8 @@ select {
   border-radius: 4px;
   overflow: hidden;
   height: 38px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
 }
 
 .bid-input {
@@ -736,6 +736,9 @@ select {
   padding: 0 8px;
   text-align: right;
   font-size: 14px;
+  padding: var(--spacing-sm);
+  min-height: 40px;
+  text-align: right;
 }
 
 .bid-input:focus {
@@ -759,6 +762,8 @@ select {
   background-color: #f5f5f5;
   font-size: 14px;
   color: #666;
+  padding: 0 var(--spacing-sm);
+  font-size: var(--font-size-sm);
 }
 
 .bid-button {
@@ -767,91 +772,17 @@ select {
   color: white;
   border-radius: 0;
   height: 38px;
-}
-
-.bid-info {
-  margin-bottom: var(--spacing-sm);
-}
-
-.bid-info.live {
-  border-left: 3px solid var(--blue-dark);
-  padding-left: var(--spacing-sm);
-}
-
-.bid-info.direct {
-  border-left: 3px solid var(--green-dark);
-  padding-left: var(--spacing-sm);
-}
-
-.real-time-price,
-.bid-price-info,
-.final-price {
-  margin-bottom: var(--spacing-sm);
-}
-
-.real-time-price p,
-.bid-price-info p,
-.final-price p {
-  font-weight: 500;
-  font-size: var(--font-size-sm);
-  margin-bottom: var(--spacing-xs);
-}
-
-.price-details-container {
-  font-size: var(--font-size-xs);
-  color: var(--text-secondary);
-}
-
-.bid-input-container {
-  margin-top: var(--spacing-sm);
-}
-
-.bid-input-group {
-  display: flex;
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius-sm);
-  overflow: hidden;
-}
-
-.bid-input-label {
-  padding: 0 var(--spacing-sm);
-  background-color: #f5f5f5;
-  display: flex;
-  align-items: center;
-  font-size: var(--font-size-xs);
-  white-space: nowrap;
-}
-
-.bid-input {
-  flex: 1;
-  border: none;
-  padding: var(--spacing-sm);
-  min-height: 40px;
-  text-align: right;
-}
-
-.bid-input:focus {
-  outline: none;
-}
-
-.bid-currency {
-  padding: 0 var(--spacing-sm);
-  background-color: #f5f5f5;
-  display: flex;
-  align-items: center;
-  font-size: var(--font-size-sm);
-}
-
-.bid-button {
   min-width: 60px;
   padding: var(--spacing-sm);
-  border-radius: 0;
 }
 
+/* Quick Bid Buttons */
 .quick-bid-buttons {
   display: flex;
   gap: 5px;
   margin-top: 8px;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-sm);
 }
 
 .quick-bid-btn {
@@ -861,19 +792,8 @@ select {
   background-color: #f0f0f0;
   color: #333;
   border: 1px solid #ddd;
-}
-
-.quick-bid-buttons {
-  display: flex;
-  gap: var(--spacing-xs);
-  margin-top: var(--spacing-sm);
-}
-
-.quick-bid-btn {
-  flex: 1;
   padding: var(--spacing-xs) var(--spacing-sm);
   font-size: var(--font-size-xs);
-  background-color: #f0f0f0;
   color: var(--text-primary);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-sm);
@@ -1029,19 +949,6 @@ select {
   object-fit: contain;
 }
 
-.product-details .detail-item {
-  margin-bottom: var(--spacing-sm);
-  display: flex;
-  flex-direction: column;
-}
-
-.detail-label {
-  font-weight: 600;
-  color: var(--text-secondary);
-  margin-bottom: var(--spacing-xs);
-  font-size: var(--font-size-sm);
-}
-
 /* Mobile Filter Toggle */
 .mobile-filter-toggle {
   display: none;
@@ -1058,6 +965,13 @@ select {
   z-index: 100;
   justify-content: center;
   align-items: center;
+  /* Updated mobile filter toggle */
+  bottom: 20px;
+  right: 20px;
+  width: 48px;
+  height: 48px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  z-index: 950;
 }
 
 /* Dropdown Menu Styles */
@@ -1089,7 +1003,7 @@ select {
   background-color: #f5f5f5;
 }
 
-/* 리스트 뷰 스타일 */
+/* List View Styles */
 .product-grid.list-view {
   grid-template-columns: 1fr;
   gap: 10px;
@@ -1158,7 +1072,6 @@ select {
   margin-right: 0;
   margin-top: 4px;
 }
-
 .product-grid.list-view .auction-number {
   position: absolute;
   top: 5px;
@@ -1172,13 +1085,13 @@ select {
   z-index: 1;
 }
 
-/* 값 페이지 특수 스타일 */
+/* Value Page Special Styles */
 .value-page .product-card {
   position: relative;
 }
 
 .value-page .product-card .bid-timer {
-  display: none; /* 값 페이지에서는 타이머 숨김 */
+  display: none; /* Hide timer on value page */
 }
 
 .value-page .product-grid.list-view .price-info {
@@ -1207,6 +1120,89 @@ select {
   border: none;
   color: var(--primary-color);
   cursor: pointer;
+}
+
+/* Filter header and close button */
+.filters-header {
+  position: sticky;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background-color: var(--primary-color);
+  color: white;
+  padding: 15px;
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  display: none;
+}
+
+.filter-close-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 36px;
+  height: 36px;
+  color: white;
+  border-radius: 50%;
+  display: flex !important; /* Ensure display with !important */
+  align-items: center;
+  justify-content: center;
+  font-size: 28px; /* Larger font size */
+  font-weight: bold;
+  z-index: 1010; /* Higher z-index */
+  cursor: pointer;
+  border: 2px solid white; /* Add border */
+  padding: 0;
+  min-height: 36px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  pointer-events: auto !important; /* Ensure click events */
+  opacity: 1 !important; /* Ensure visibility */
+}
+
+/* Hover effect enhancement */
+.filter-close-btn:hover {
+  transform: scale(1.1);
+}
+
+/* Only show button when filter container is active */
+.filters-container:not(.active) .filter-close-btn {
+  display: none !important;
+}
+
+.filters-container.active .filter-close-btn {
+  display: flex !important;
+}
+
+/* Add padding to top of filter content when header is visible */
+.filters-container.active .search-filter-section {
+  margin-top: 60px; /* Add margin for header height */
+}
+
+/* Filter backdrop style */
+.filter-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 899;
+  display: none;
+  touch-action: none; /* Prevent touch events */
+}
+
+/* Show header when filter container is active */
+.filters-container.active .filters-header {
+  display: block;
+}
+
+/* Focus style for close button */
+.filter-close-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.7), 0 0 0 5px #ff3b30;
 }
 
 /* Responsive Styles */
@@ -1248,7 +1244,7 @@ select {
     transform: translateX(-100%);
     transition: transform 0.3s ease;
     overflow-y: auto;
-    padding-bottom: 80px; /* 하단 여백 추가 */
+    padding-bottom: 80px; /* Add bottom padding */
   }
 
   .filters-container.active {
@@ -1276,7 +1272,7 @@ select {
     border-bottom: 1px solid var(--border-color);
   }
 
-  /* 필터 액션 버튼 개선 */
+  /* Improved filter action buttons */
   .filter-actions {
     position: fixed;
     bottom: 0;
@@ -1369,7 +1365,7 @@ select {
     right: 5px;
   }
 
-  /* 드롭다운 위치 조정 */
+  /* Dropdown position adjustment */
   .dropdown-content {
     position: fixed;
     top: auto;
@@ -1469,7 +1465,7 @@ select {
     padding: 5px 2px;
   }
 
-  /* 입찰 섹션 컴팩트화 */
+  /* Compact bid section */
   .bid-section {
     padding: 6px;
   }
@@ -1513,103 +1509,9 @@ select {
   }
 }
 
-/* 단일 카드 레이아웃 개선 */
+/* Single card layout improvement */
 @media (max-width: 350px) {
   .product-grid {
     grid-template-columns: 1fr;
   }
-}
-
-/* 모바일 필터 토글 버튼 개선 */
-.mobile-filter-toggle {
-  bottom: 20px;
-  right: 20px;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-  z-index: 950;
-}
-
-/* 필터 헤더 및 닫기 버튼 */
-.filters-header {
-  position: sticky;
-  top: 0;
-  left: 0;
-  width: 100%;
-  background-color: var(--primary-color);
-  color: white;
-  padding: 15px;
-  font-size: 18px;
-  font-weight: 600;
-  text-align: center;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  z-index: 1000;
-  display: none;
-}
-
-.filter-close-btn {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  width: 36px;
-  height: 36px;
-  color: white;
-  border-radius: 50%;
-  display: flex !important; /* !important로 반드시 표시되게 함 */
-  align-items: center;
-  justify-content: center;
-  font-size: 28px; /* 더 크게 */
-  font-weight: bold;
-  z-index: 1010; /* 더 높은 z-index */
-  cursor: pointer;
-  border: 2px solid white; /* 테두리 추가 */
-  padding: 0;
-  min-height: 36px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  pointer-events: auto !important; /* 클릭 이벤트 보장 */
-  opacity: 1 !important; /* 투명도 보장 */
-}
-
-/* 호버 효과 강화 */
-.filter-close-btn:hover {
-  transform: scale(1.1);
-}
-
-/* 필터 컨테이너가 활성화될 때만 버튼 표시 */
-.filters-container:not(.active) .filter-close-btn {
-  display: none !important;
-}
-
-.filters-container.active .filter-close-btn {
-  display: flex !important;
-}
-
-/* 필터 콘텐츠 상단 패딩 */
-.filters-container.active .search-filter-section {
-  margin-top: 60px; /* 헤더 높이만큼 여백 추가 */
-}
-
-/* 필터 백드롭 스타일 명시적 정의 */
-.filter-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 899;
-  display: none;
-  touch-action: none; /* 터치 이벤트 방지 */
-}
-
-/* 필터 컨테이너 활성화 시 헤더 표시 */
-.filters-container.active .filters-header {
-  display: block;
-}
-
-/* 필터 닫기 버튼을 위한 초점 표시 스타일 */
-.filter-close-btn:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.7), 0 0 0 5px #ff3b30;
 }
