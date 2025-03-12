@@ -89,9 +89,7 @@ router.get("/", async (req, res) => {
           'direct' as bid_type,
           db.id, 
           db.item_id, 
-          db.current_price as first_price,
-          NULL as second_price,
-          NULL as final_price,
+          db.current_price
           db.status
         FROM direct_bids db
         WHERE db.user_id = ?
