@@ -275,7 +275,12 @@ function getDirectBidSectionHTML(bidInfo, itemId, aucNum, category) {
   if (!item) return "";
 
   // 시작가
-  const startingPrice = parseFloat(item.starting_price) || 0;
+  const live_price =
+    item.bid_type == "direct" &&
+    bidInfo.currentPrice &&
+    Number(bidInfo.current_price) > Number(item.starting_price)
+      ? bidInfo.current_price
+      : item.starting_price;
 
   // 현재 내 입찰가
   const currentPrice = bidInfo?.current_price || 0;
@@ -293,10 +298,10 @@ function getDirectBidSectionHTML(bidInfo, itemId, aucNum, category) {
   let html = `<div class="bid-info direct">
     ${timerHTML}
     <div class="real-time-price">
-      <p>실시간 금액: ${cleanNumberFormat(startingPrice)} ¥</p>
+      <p>실시간 금액: ${cleanNumberFormat(live_price)} ¥</p>
       <div class="price-details-container">
         세금, 수수료 포함 ${cleanNumberFormat(
-          calculateTotalPrice(startingPrice, aucNum, category)
+          calculateTotalPrice(live_price, aucNum, category)
         )}원
       </div>
     </div>`;
@@ -743,6 +748,13 @@ function getDirectCardHTML(item, bidInfo, favoriteNumber) {
   // 날짜 및 시간 표시
   const formattedDateTime = formatDateTime(item.scheduled_date);
 
+  const live_price =
+    item.bid_type == "direct" &&
+    bidInfo.currentPrice &&
+    Number(bidInfo.current_price) > Number(item.starting_price)
+      ? bidInfo.current_price
+      : item.starting_price;
+
   return `
     <div class="product-header">
       <div class="product-brand">${item.brand}</div>
@@ -801,12 +813,10 @@ function getDirectCardHTML(item, bidInfo, favoriteNumber) {
   </div>
   <div class="info-cell">
     <div class="info-label">실시간</div>
-    <div class="info-value">${cleanNumberFormat(
-      item.starting_price || 0
-    )}￥</div>
+    <div class="info-value">${cleanNumberFormat(live_price || 0)}￥</div>
     <div class="info-price-detail">
       ${cleanNumberFormat(
-        calculateTotalPrice(item.starting_price, item.auc_num, item.category)
+        calculateTotalPrice(live_price, item.auc_num, item.category)
       )}원
     </div>
   </div>
@@ -850,14 +860,10 @@ function getDirectCardHTML(item, bidInfo, favoriteNumber) {
         <div class="real-time-price">
           <span class="price-label">실시간 금액</span>
           <span class="price-value">${cleanNumberFormat(
-            item.starting_price || 0
+            live_price || 0
           )}￥</span>
           <span class="price-detail">세금, 수수료 포함 ${cleanNumberFormat(
-            calculateTotalPrice(
-              item.starting_price,
-              item.auc_num,
-              item.category
-            )
+            calculateTotalPrice(live_price, item.auc_num, item.category)
           )}\\</span>
         </div>
         ${getDirectBidInfoHTML(bidInfo, item)}
