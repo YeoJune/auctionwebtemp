@@ -211,68 +211,96 @@ function toggleLoading(show) {
 }
 
 // 모바일 필터 토글
-// common.js에서 setupMobileFilters 함수를 아래 코드로 교체하세요
-
 function setupMobileFilters() {
   const filterBtn = document.getElementById("mobileFilterBtn");
   const filtersContainer = document.querySelector(".filters-container");
-  const backdrop = document.createElement("div");
-  backdrop.className = "filter-backdrop";
-  backdrop.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        z-index: 899;
-        display: none;
+
+  // 이미 백드롭이 있는지 확인
+  let backdrop = document.querySelector(".filter-backdrop");
+
+  // 백드롭이 없으면 생성
+  if (!backdrop) {
+    backdrop = document.createElement("div");
+    backdrop.className = "filter-backdrop";
+    backdrop.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 899;
+      display: none;
     `;
-  document.body.appendChild(backdrop);
+    document.body.appendChild(backdrop);
+  }
 
   if (filterBtn && filtersContainer) {
-    // 필터 헤더 추가
-    const filtersHeader = document.createElement("div");
-    filtersHeader.className = "filters-header";
-    filtersHeader.textContent = "필터";
-    filtersContainer.prepend(filtersHeader);
+    // 이미 추가된 요소 확인 및 중복 방지
+    if (!document.querySelector(".filters-header")) {
+      // 필터 헤더 추가
+      const filtersHeader = document.createElement("div");
+      filtersHeader.className = "filters-header";
+      filtersHeader.textContent = "필터";
+      filtersContainer.prepend(filtersHeader);
+    }
 
-    // 필터 닫기 버튼 추가
-    const closeBtn = document.createElement("button");
-    closeBtn.className = "filter-close-btn";
-    closeBtn.innerHTML = "&times;";
-    closeBtn.setAttribute("aria-label", "필터 닫기");
-    filtersContainer.prepend(closeBtn);
+    // 닫기 버튼이 이미 있는지 확인
+    let closeBtn = document.querySelector(".filter-close-btn");
+    if (!closeBtn) {
+      // 필터 닫기 버튼 추가
+      closeBtn = document.createElement("button");
+      closeBtn.className = "filter-close-btn";
+      closeBtn.innerHTML = "&times;";
+      closeBtn.setAttribute("aria-label", "필터 닫기");
+      filtersContainer.prepend(closeBtn);
+    }
 
-    // 필터 열기 버튼 이벤트
-    filterBtn.addEventListener("click", () => {
+    // 이벤트 리스너를 다시 추가하기 전에 기존 이벤트 리스너 제거
+    const newFilterBtn = filterBtn.cloneNode(true);
+    filterBtn.parentNode.replaceChild(newFilterBtn, filterBtn);
+
+    const newCloseBtn = closeBtn.cloneNode(true);
+    closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+
+    const newBackdrop = backdrop.cloneNode(true);
+    backdrop.parentNode.replaceChild(newBackdrop, backdrop);
+
+    // 새 요소에 이벤트 리스너 추가
+    newFilterBtn.addEventListener("click", function () {
       filtersContainer.classList.add("active");
-      backdrop.style.display = "block";
+      newBackdrop.style.display = "block";
       document.body.style.overflow = "hidden";
     });
 
-    // 필터 닫기 버튼 이벤트
-    closeBtn.addEventListener("click", () => {
+    newCloseBtn.addEventListener("click", function () {
       filtersContainer.classList.remove("active");
-      backdrop.style.display = "none";
+      newBackdrop.style.display = "none";
       document.body.style.overflow = "";
     });
 
-    // 백드롭 클릭시 필터 닫기
-    backdrop.addEventListener("click", () => {
+    newBackdrop.addEventListener("click", function () {
       filtersContainer.classList.remove("active");
-      backdrop.style.display = "none";
+      newBackdrop.style.display = "none";
       document.body.style.overflow = "";
     });
 
-    // ESC 키로 필터 닫기
-    document.addEventListener("keydown", (e) => {
+    // 닫기 기능 테스트용 콘솔 로그
+    console.log("모바일 필터 설정 완료");
+
+    // ESC 키 이벤트 리스너는 document에 한 번만 필요
+    // 페이지가 로드될 때마다 추가되면 여러 번 실행될 수 있음
+    document.removeEventListener("keydown", escKeyHandler);
+    document.addEventListener("keydown", escKeyHandler);
+
+    function escKeyHandler(e) {
       if (e.key === "Escape" && filtersContainer.classList.contains("active")) {
         filtersContainer.classList.remove("active");
-        backdrop.style.display = "none";
+        newBackdrop.style.display = "none";
         document.body.style.overflow = "";
+        console.log("ESC 키로 필터 닫기 실행");
       }
-    });
+    }
   }
 }
 
