@@ -296,7 +296,6 @@
   right: 15px;
   width: 36px;
   height: 36px;
-  background-color: #ff3b30; /* 빨간색 배경으로 변경 */
   color: white;
   border-radius: 50%;
   display: flex !important; /* !important로 반드시 표시되게 함 */
@@ -316,7 +315,6 @@
 
 /* 호버 효과 강화 */
 .filter-close-btn:hover {
-  background-color: #ff1a1a;
   transform: scale(1.1);
 }
 
