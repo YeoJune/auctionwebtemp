@@ -1123,10 +1123,12 @@ select {
     left: 0;
     width: 100%;
     height: 100%;
-    z-index: 900;
+    z-index: 1000;
+    background-color: var(--background-light);
     transform: translateX(-100%);
-    transition: transform var(--transition-normal);
+    transition: transform 0.3s ease;
     overflow-y: auto;
+    padding-bottom: 80px; /* 하단 여백 추가 */
   }
 
   .filters-container.active {
@@ -1153,15 +1155,125 @@ select {
     justify-content: center;
     border-bottom: 1px solid var(--border-color);
   }
+
+  /* 필터 액션 버튼 개선 */
+  .filter-actions {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: white;
+    padding: 10px 15px;
+    display: flex;
+    justify-content: space-between;
+    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+    z-index: 1001;
+  }
+
+  .reset-filters,
+  .apply-filters {
+    flex: 1;
+    margin: 0 5px;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-header {
+    height: auto;
+    padding: 8px;
+  }
+
+  .header-content {
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  .logo-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 5px;
+  }
+
+  .nav-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+  }
+
+  .nav-button {
+    width: 100%;
+    height: auto;
+    padding: 6px;
+    font-size: 10px;
+  }
+
+  .nav-button i {
+    font-size: 18px;
+    margin-bottom: 3px;
+  }
+
+  .auth-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 5px;
+  }
+
+  .modal-body {
+    flex-direction: column;
+    padding: 10px;
+  }
+
+  .modal-left,
+  .modal-right {
+    width: 100%;
+    padding: 10px;
+  }
+
+  .thumbnail {
+    width: 40px;
+    height: 40px;
+  }
+
+  .image-nav {
+    width: 32px;
+    height: 32px;
+    font-size: 18px;
+  }
+
+  .image-nav.prev {
+    left: 5px;
+  }
+
+  .image-nav.next {
+    right: 5px;
+  }
+
+  /* 드롭다운 위치 조정 */
+  .dropdown-content {
+    position: fixed;
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-height: 70vh;
+    overflow-y: auto;
+    border-radius: 15px 15px 0 0;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
+    z-index: 1001;
+  }
 }
 
 @media (max-width: 576px) {
   .product-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
   }
 
   .product-card {
     max-width: 100%;
+    font-size: 0.9em;
   }
 
   .wishlist-btn {
@@ -1172,44 +1284,195 @@ select {
   .quick-bid-buttons {
     flex-direction: column;
   }
+
+  .product-title {
+    font-size: 12px;
+    margin-right: 40px;
+  }
+
+  .product-brand {
+    font-size: 10px;
+  }
+
+  .auction-number {
+    width: 30px;
+    height: 30px;
+    font-size: 14px;
+  }
+
+  .product-header {
+    padding: 6px;
+  }
+
+  .bid-timer {
+    padding: 2px 6px;
+    font-size: 10px;
+  }
+
+  .info-cell {
+    padding: 4px 2px;
+  }
+
+  .info-label {
+    font-size: 9px;
+  }
+
+  .info-value {
+    font-size: 12px;
+  }
+
+  .info-price-detail {
+    font-size: 9px;
+  }
+
+  .wishlist-btn {
+    font-size: 10px;
+    padding: 5px 2px;
+  }
+
+  /* 입찰 섹션 컴팩트화 */
+  .bid-section {
+    padding: 6px;
+  }
+
+  .bid-input-group {
+    height: 32px;
+  }
+
+  .bid-input {
+    font-size: 12px;
+  }
+
+  .bid-currency {
+    font-size: 12px;
+    padding: 0 6px;
+  }
+
+  .bid-button {
+    padding: 0 8px;
+    font-size: 12px;
+    height: 32px;
+  }
+
+  .quick-bid-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 3px;
+  }
+
+  .quick-bid-btn {
+    padding: 4px;
+    font-size: 10px;
+  }
 }
 
-/* Numbered favorites and auction numbers */
-#favoriteFilters .filter-item label,
-#aucNumFilters .filter-item label {
-  position: relative;
-  padding-left: 24px;
+@media (max-width: 480px) {
+  .filter-close-btn {
+    width: 42px;
+    height: 42px;
+    font-size: 32px;
+  }
 }
 
-#favoriteFilters .filter-item label::before,
-#aucNumFilters .filter-item label::before {
-  content: "①";
-  position: absolute;
+/* 단일 카드 레이아웃 개선 */
+@media (max-width: 350px) {
+  .product-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 모바일 필터 토글 버튼 개선 */
+.mobile-filter-toggle {
+  bottom: 20px;
+  right: 20px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  z-index: 950;
+}
+
+/* 필터 헤더 및 닫기 버튼 */
+.filters-header {
+  position: sticky;
+  top: 0;
   left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 16px;
+  width: 100%;
+  background-color: var(--primary-color);
+  color: white;
+  padding: 15px;
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  display: none;
 }
 
-#favoriteFilters .filter-item:nth-child(2) label::before,
-#aucNumFilters .filter-item:nth-child(2) label::before {
-  content: "②";
-}
-
-#favoriteFilters .filter-item:nth-child(3) label::before,
-#aucNumFilters .filter-item:nth-child(3) label::before {
-  content: "③";
-}
-
-/* Compact filter layout */
-.filter-row {
-  margin-bottom: 6px;
-}
-
-.filter-content {
+.filter-close-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 36px;
+  height: 36px;
+  background-color: #ff3b30; /* 빨간색 배경 */
+  color: white;
+  border-radius: 50%;
+  display: flex !important; /* !important로 반드시 표시되게 함 */
   align-items: center;
+  justify-content: center;
+  font-size: 28px; /* 더 크게 */
+  font-weight: bold;
+  z-index: 1010; /* 더 높은 z-index */
+  cursor: pointer;
+  border: 2px solid white; /* 테두리 추가 */
+  padding: 0;
+  min-height: 36px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  pointer-events: auto !important; /* 클릭 이벤트 보장 */
+  opacity: 1 !important; /* 투명도 보장 */
 }
 
-.filter-item {
-  margin-bottom: 0;
+/* 호버 효과 강화 */
+.filter-close-btn:hover {
+  background-color: #ff1a1a;
+  transform: scale(1.1);
+}
+
+/* 필터 컨테이너가 활성화될 때만 버튼 표시 */
+.filters-container:not(.active) .filter-close-btn {
+  display: none !important;
+}
+
+.filters-container.active .filter-close-btn {
+  display: flex !important;
+}
+
+/* 필터 콘텐츠 상단 패딩 */
+.filters-container.active .search-filter-section {
+  margin-top: 60px; /* 헤더 높이만큼 여백 추가 */
+}
+
+/* 필터 백드롭 스타일 명시적 정의 */
+.filter-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 899;
+  display: none;
+  touch-action: none; /* 터치 이벤트 방지 */
+}
+
+/* 필터 컨테이너 활성화 시 헤더 표시 */
+.filters-container.active .filters-header {
+  display: block;
+}
+
+/* 필터 닫기 버튼을 위한 초점 표시 스타일 */
+.filter-close-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.7), 0 0 0 5px #ff3b30;
 }
