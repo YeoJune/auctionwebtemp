@@ -86,13 +86,7 @@
       document
         .getElementById("previewLoginBtn")
         .addEventListener("click", () => {
-          document.getElementById("id").value = "1234";
-          document.getElementById("password").value = "1234";
-          const submitEvent = new Event("submit", {
-            bubbles: true,
-            cancelable: true,
-          });
-          document.getElementById("signin-form").dispatchEvent(submitEvent);
+          location.href = "/api/auth/preview";
         });
     </script>
   </body>
