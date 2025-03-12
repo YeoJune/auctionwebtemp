@@ -588,11 +588,20 @@ function getLiveCardHTML(item, bidInfo, favoriteNumber) {
   <div class="info-cell">
     <div class="info-label">실시간</div>
     <div class="info-value">${cleanNumberFormat(
-      item.starting_price || 0
+      item.bid_type === "direct" && bidInfo?.current_price > item.starting_price
+        ? bidInfo.current_price
+        : item.starting_price || 0
     )}￥</div>
     <div class="info-price-detail">
       ${cleanNumberFormat(
-        calculateTotalPrice(item.starting_price, item.auc_num, item.category)
+        calculateTotalPrice(
+          item.bid_type === "direct" &&
+            bidInfo?.current_price > item.starting_price
+            ? bidInfo.current_price
+            : item.starting_price,
+          item.auc_num,
+          item.category
+        )
       )}원
     </div>
   </div>
