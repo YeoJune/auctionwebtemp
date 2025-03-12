@@ -89,7 +89,7 @@ router.get("/", async (req, res) => {
           'direct' as bid_type,
           db.id, 
           db.item_id, 
-          db.current_price
+          db.current_price,
           db.status
         FROM direct_bids db
         WHERE db.user_id = ?
