@@ -1,24 +1,33 @@
 // public/js/common.js
 
 // 날짜 포맷팅
-function formatDate(dateString) {
+function formatDate(dateString, isUTC2KST = false) {
   if (!dateString) return "-";
   const date = new Date(dateString);
-  const kstDate = date;
-  return kstDate.toISOString().split("T")[0];
+
+  let targetDate = date;
+  if (isUTC2KST) {
+    targetDate = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+  }
+
+  return targetDate.toISOString().split("T")[0];
 }
 
 // 날짜 + 시간 포맷팅 함수
-function formatDateTime(dateString) {
+function formatDateTime(dateString, isUTC2KST = false) {
   if (!dateString) return "-";
   const date = new Date(dateString);
-  const kstDate = date;
 
-  const year = kstDate.getFullYear();
-  const month = String(kstDate.getMonth() + 1).padStart(2, "0");
-  const day = String(kstDate.getDate()).padStart(2, "0");
-  const hours = String(kstDate.getHours()).padStart(2, "0");
-  const minutes = String(kstDate.getMinutes()).padStart(2, "0");
+  let targetDate = date;
+  if (isUTC2KST) {
+    targetDate = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+  }
+
+  const year = targetDate.getFullYear();
+  const month = String(targetDate.getMonth() + 1).padStart(2, "0");
+  const day = String(targetDate.getDate()).padStart(2, "0");
+  const hours = String(targetDate.getHours()).padStart(2, "0");
+  const minutes = String(targetDate.getMinutes()).padStart(2, "0");
 
   return `${year}-${month}-${day} ${hours}:${minutes}`;
 }
@@ -488,7 +497,7 @@ function displayDateFilters(dates) {
 
   dates.forEach((date) => {
     if (date.Date) {
-      const formattedDate = formatDate(date.Date);
+      const formattedDate = formatDate(date.Date, true);
       // 개수 표시 제거
       const dateItem = createFilterItem(
         date.Date,
