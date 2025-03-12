@@ -14,7 +14,7 @@ const isAdmin = (req, res, next) => {
 // STATUS -> 'active', 'completed', 'cancelled'
 // GET endpoint to retrieve all bids, with optional filtering
 router.get("/", async (req, res) => {
-  const { status, highestOnly, page = 1, limit = 10 } = req.query;
+  const { status, highestOnly, page = 1, limit = 10, fromDate } = req.query;
   const offset = (page - 1) * limit;
 
   if (!req.session.user) {
@@ -93,6 +93,13 @@ router.get("/", async (req, res) => {
         mainQuery += ` AND d.status IN (${placeholders})`;
         queryParams.push(...statusArray);
       }
+    }
+
+    // 날짜 필터 추가
+    if (fromDate) {
+      countQuery += " AND d.updated_at >= ?";
+      mainQuery += " AND d.updated_at >= ?";
+      queryParams.push(fromDate);
     }
 
     // 일반 사용자는 자신의 입찰만 볼 수 있고, 관리자는 모든 입찰을 볼 수 있음

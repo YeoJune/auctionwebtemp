@@ -211,14 +211,10 @@ async function fetchResults() {
         statusParam = STATUS_TYPES.CANCELLED;
         break;
       case "inprogress":
-        // 진행중인 상태들은 API에서 각각 요청해야 함
-        // 그러나 현재 API는 여러 상태를 동시에 요청할 수 있으므로
-        // 진행중인 모든 상태를 콤마로 구분하여 전달
         statusParam = STATUS_GROUPS.INPROGRESS.join(",");
         break;
       case "all":
       default:
-        // 전체 상태 (모든 상태 요청)
         statusParam = [
           ...STATUS_GROUPS.COMPLETED,
           ...STATUS_GROUPS.CANCELLED,
@@ -227,18 +223,27 @@ async function fetchResults() {
         break;
     }
 
+    // 날짜 범위 계산
+    const dateLimit = new Date();
+    dateLimit.setDate(dateLimit.getDate() - state.dateRange);
+    const fromDate = formatDate(dateLimit); // 기존의 formatDate 함수 사용
+
     let liveBidsPromise, directBidsPromise;
 
     // 현장 경매 결과 가져오기 (bidType이 'direct'가 아닌 경우)
     if (state.bidType !== "direct") {
-      liveBidsPromise = API.fetchAPI(`/live-bids?status=${statusParam}`);
+      liveBidsPromise = API.fetchAPI(
+        `/live-bids?status=${statusParam}&fromDate=${fromDate}`
+      );
     } else {
       liveBidsPromise = Promise.resolve({ bids: [] });
     }
 
     // 직접 경매 결과 가져오기 (bidType이 'live'가 아닌 경우)
     if (state.bidType !== "live") {
-      directBidsPromise = API.fetchAPI(`/direct-bids?status=${statusParam}`);
+      directBidsPromise = API.fetchAPI(
+        `/direct-bids?status=${statusParam}&fromDate=${fromDate}`
+      );
     } else {
       directBidsPromise = Promise.resolve({ bids: [] });
     }
@@ -259,8 +264,8 @@ async function fetchResults() {
       ...state.directBids.map((bid) => ({ ...bid, type: "direct" })),
     ];
 
-    // 날짜 기준으로 필터링
-    applyDateFilter();
+    // 클라이언트 측 날짜 필터링 제거 (서버에서 처리하므로)
+    state.filteredResults = state.combinedResults;
 
     // 정렬 및 표시
     sortAndDisplayResults();
@@ -272,18 +277,19 @@ async function fetchResults() {
     toggleLoading(false);
   }
 }
-
 // 날짜 필터 적용
 function applyDateFilter() {
-  const dateLimit = new Date();
-  dateLimit.setDate(dateLimit.getDate() - state.dateRange);
+  // 모든 결과는 이미 서버에서 필터링되어 있으므로 그대로 사용
+  state.filteredResults = state.combinedResults;
 
-  state.filteredResults = state.combinedResults.filter((bid) => {
-    const bidDate = new Date(bid.updated_at);
-    return bidDate >= dateLimit;
-  });
+  // 필요한 경우 결과 검증 (예: 날짜 형식이 올바른지)
+  const invalidResults = state.filteredResults.filter((bid) => !bid.updated_at);
+  if (invalidResults.length > 0) {
+    console.warn(`Found ${invalidResults.length} results with invalid dates`);
+  }
 }
 
+// 정렬 및 표시
 // 정렬 및 표시
 function sortAndDisplayResults() {
   // 날짜 기준 내림차순 정렬 (최신순)
@@ -291,7 +297,11 @@ function sortAndDisplayResults() {
     (a, b) => new Date(b.updated_at) - new Date(a.updated_at)
   );
 
-  // 페이지네이션 계산
+  // 서버에서 받은 total 값 사용 (클라이언트 측 계산 대신)
+  // 만약 API response에 total이 포함되어 있다면 다음과 같이 사용
+  // state.totalItems = liveResults.total + directResults.total;
+
+  // 그렇지 않은 경우 필터링된 결과의 길이 사용
   state.totalItems = state.filteredResults.length;
   state.totalPages = Math.ceil(state.totalItems / state.itemsPerPage);
 

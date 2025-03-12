@@ -15,7 +15,7 @@ const isAdmin = (req, res, next) => {
 
 // GET endpoint to retrieve live bids, filtered by status
 router.get("/", async (req, res) => {
-  const { status, page = 1, limit = 10 } = req.query;
+  const { status, page = 1, limit = 10, fromDate } = req.query;
   const offset = (page - 1) * limit;
 
   if (!req.session.user) {
@@ -43,6 +43,12 @@ router.get("/", async (req, res) => {
       queryConditions.push(`b.status IN (${placeholders})`);
       queryParams.push(...statusArray);
     }
+  }
+
+  // 날짜 필터 추가
+  if (fromDate) {
+    queryConditions.push("b.updated_at >= ?");
+    queryParams.push(fromDate);
   }
 
   // Regular users can only see their own bids, admins can see all
