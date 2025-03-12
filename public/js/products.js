@@ -588,7 +588,8 @@ function getLiveCardHTML(item, bidInfo, favoriteNumber) {
   <div class="info-cell">
     <div class="info-label">실시간</div>
     <div class="info-value">${cleanNumberFormat(
-      item.bid_type === "direct" && bidInfo?.current_price > item.starting_price
+      item.bid_type === "direct" &&
+        Number(bidInfo?.current_price) > Number(item.starting_price)
         ? bidInfo.current_price
         : item.starting_price || 0
     )}￥</div>
@@ -596,7 +597,7 @@ function getLiveCardHTML(item, bidInfo, favoriteNumber) {
       ${cleanNumberFormat(
         calculateTotalPrice(
           item.bid_type === "direct" &&
-            bidInfo?.current_price > item.starting_price
+            Number(bidInfo?.current_price) > Number(item.starting_price)
             ? bidInfo.current_price
             : item.starting_price,
           item.auc_num,
