@@ -79,55 +79,7 @@ router.get("/user", (req, res) => {
 
 // Add this route to your routes/auth.js file
 router.get("/preview", async (req, res) => {
-  let conn;
-  try {
-    const id = process.env.PREVIEW_USER_ID;
-    const password = process.env.PREVIEW_USER_PASSWORD;
-
-    conn = await pool.getConnection();
-    const hashedPassword = hashPassword(password);
-
-    // Check user in DB
-    const [users] = await conn.query(
-      "SELECT id, email, is_active, password FROM users WHERE id = ?",
-      [id]
-    );
-
-    if (users.length === 0) {
-      return res.status(401).json({
-        message: "접근 권한이 없습니다. 010-2894-8502를 통해 문의주세요.",
-      });
-    } else if (users[0].password != hashedPassword) {
-      return res.status(401).json({
-        message: "비밀번호가 다릅니다.",
-      });
-    }
-
-    const user = users[0];
-
-    if (!user.is_active) {
-      return res.status(403).json({
-        message:
-          "서비스 기간이 만기되었습니다. 010-2894-8502를 통해 문의주세요.",
-      });
-    }
-
-    // 로그인 성공
-    req.session.user = {
-      id: user.id,
-      email: user.email,
-    };
-
-    // Redirect to product page after successful login
-    res.redirect("/productPage");
-  } catch (err) {
-    console.error("자동 로그인 중 오류 발생:", err);
-    res
-      .status(500)
-      .json({ message: "자동 로그인 처리 중 오류가 발생했습니다." });
-  } finally {
-    if (conn) conn.release();
-  }
+  res.redirect("/productPage");
 });
 
 module.exports = router;
