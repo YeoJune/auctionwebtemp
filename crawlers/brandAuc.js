@@ -510,11 +510,6 @@ class BrandAucCrawler extends AxiosCrawler {
     const original_scheduled_date =
       this.extractDate(this.convertToKST(item.kaisaiYmd)) || null;
 
-    // 날짜 검증 - 유효한 경매만 포함
-    if (!this.isCollectionDay(original_scheduled_date)) {
-      return null;
-    }
-
     return {
       item_id: item.uketsukeBng,
       scheduled_date: original_scheduled_date,
