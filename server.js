@@ -161,7 +161,8 @@ app.get("/signinPage", (req, res) => {
   res.sendFile(__dirname + "/public/pages/signin.html");
 });
 app.get("/valuesPage", (req, res) => {
-  res.sendFile(__dirname + "/pages/values.html");
+  if (req.session.user) res.sendFile(__dirname + "/pages/values.html");
+  else res.redirect("/signinPage");
 });
 app.get("/bidResultsPage", (req, res) => {
   if (req.session.user) res.sendFile(__dirname + "/pages/bid-results.html");
