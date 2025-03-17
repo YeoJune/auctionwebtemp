@@ -310,7 +310,7 @@ router.get("/", async (req, res) => {
         orderByClause = "ci.scheduled_date";
         break;
       case "starting_price":
-        orderByClause = "ci.starting_price";
+        orderByClause = "ci.starting_price + 0";
         break;
       default:
         orderByClause = "ci.title";
