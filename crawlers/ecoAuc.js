@@ -527,6 +527,7 @@ class EcoAucCrawler extends AxiosCrawler {
     }
 
     const item = {
+      item_id: item0.item_id,
       original_title: title,
       title: this.removeLeadingBrackets(title),
       brand: brand,
@@ -544,7 +545,7 @@ class EcoAucCrawler extends AxiosCrawler {
     };
 
     // 원본과 동일하게 객체 병합
-    return Object.assign({}, item0, item);
+    return item;
   }
 
   async crawlUpdates() {
