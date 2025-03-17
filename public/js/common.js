@@ -309,9 +309,8 @@ function displayBrandFilters(brands) {
 
   // 브랜드 정렬
   brands.sort((a, b) => {
-    if (a.brand > b.brand) return 1;
-    if (a.brand < b.brand) return -1;
-    return 0;
+    // 개수 내림차순으로 정렬 (많은 것부터)
+    return (b.count || 0) - (a.count || 0);
   });
 
   // 전체 선택 체크박스 이벤트 설정
