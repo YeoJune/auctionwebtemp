@@ -154,8 +154,8 @@ class BrandAucCrawler extends AxiosCrawler {
 
       // Live 경매와 Direct 경매 모두 수집
       const bidTypes = [
-        { type: "live", otherCds: "2" },
-        { type: "direct", otherCds: "1" },
+        { type: "live", otherCds: "1" },
+        { type: "direct", otherCds: "2" },
       ];
 
       for (const bidConfig of bidTypes) {
@@ -402,7 +402,7 @@ class BrandAucCrawler extends AxiosCrawler {
       const size = 1000; // 한 페이지당 항목 수
 
       // Direct 경매만 크롤링 (otherCds: "1"은 direct 타입)
-      const bidConfig = { type: "direct", otherCds: "1" };
+      const bidConfig = { type: "direct", otherCds: "2" };
 
       console.log(`Starting update crawl for bid type: ${bidConfig.type}`);
 
