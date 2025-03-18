@@ -1,0 +1,118 @@
+/* 공지사항 섹션 스타일 */
+.notice-section {
+  width: 100%;
+  padding: 20px 0;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.notice-section h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #333;
+  font-size: 1.5rem;
+}
+
+.notice-container {
+  display: flex;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 10px 0;
+  gap: 15px;
+  scrollbar-width: thin;
+  scrollbar-color: #888 #f1f1f1;
+  -webkit-overflow-scrolling: touch;
+}
+
+.notice-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.notice-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.notice-container::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+.notice-container::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+.notice-item {
+  min-width: 280px;
+  max-width: 280px;
+  position: relative;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.notice-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.notice-item a {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.notice-item img {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  display: block;
+}
+
+.notice-title {
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 8px 12px;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background-color 0.3s ease;
+}
+
+.notice-item:hover .notice-title {
+  background-color: rgba(0, 0, 0, 0.85);
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .notice-item {
+    min-width: 220px;
+    max-width: 220px;
+  }
+
+  .notice-item img {
+    height: 130px;
+  }
+}
+
+@media (max-width: 480px) {
+  .notice-item {
+    min-width: 180px;
+    max-width: 180px;
+  }
+
+  .notice-item img {
+    height: 120px;
+  }
+
+  .notice-title {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+}

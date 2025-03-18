@@ -1616,11 +1616,6 @@ function initialize() {
           // 이미지 네비게이션 설정
           setupImageNavigation();
 
-          // 공지사항 버튼 이벤트
-          document
-            .getElementById("showNoticesBtn")
-            ?.addEventListener("click", showNoticeSection);
-
           // 초기 데이터 로드
           fetchData();
         }

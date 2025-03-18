@@ -1,3 +1,4 @@
+// routes/admin.js
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
@@ -70,7 +71,7 @@ const uploadIntro = multer({
   },
 });
 
-// Middleware to check if user is admin (unchanged)
+// Middleware to check if user is admin
 const isAdmin = (req, res, next) => {
   if (req.session.user && req.session.user.id === "admin") {
     next();
@@ -79,9 +80,31 @@ const isAdmin = (req, res, next) => {
   }
 };
 
-// router.get("/", isAdmin, (req, res) => {
-//   res.sendFile(path.join(__dirname, "../pages/admin.html"));
-// });
+// 클라이언트 측 공지사항 조회 API (접근 제한 없음)
+router.get("/public/notices", async (req, res) => {
+  try {
+    const notices = await getNotices();
+    res.json(notices);
+  } catch (error) {
+    console.error("Error getting public notices:", error);
+    res.status(500).json({ message: "Error getting notices" });
+  }
+});
+
+// 특정 공지사항 조회 API (접근 제한 없음)
+router.get("/public/notices/:id", async (req, res) => {
+  try {
+    const notice = await getNoticeById(req.params.id);
+    if (notice) {
+      res.json(notice);
+    } else {
+      res.status(404).json({ message: "Notice not found" });
+    }
+  } catch (error) {
+    console.error("Error getting notice:", error);
+    res.status(500).json({ message: "Error getting notice" });
+  }
+});
 
 router.get("/check-status", async (req, res) => {
   const isAdmin = req.session.user && req.session.user.id === "admin";
@@ -102,7 +125,7 @@ router.post(
   }
 );
 
-// Route to upload logo (unchanged)
+// Route to upload logo
 router.post("/upload-logo", isAdmin, uploadLogo.single("logo"), (req, res) => {
   if (req.file) {
     res.json({ message: "Logo uploaded successfully" });
@@ -111,7 +134,7 @@ router.post("/upload-logo", isAdmin, uploadLogo.single("logo"), (req, res) => {
   }
 });
 
-// Route to get admin settings (unchanged)
+// Route to get admin settings
 router.get("/settings", async (req, res) => {
   try {
     const settings = await getAdminSettings();
@@ -160,19 +183,26 @@ router.get("/notices/:id", async (req, res) => {
     res.status(500).json({ message: "Error getting notice" });
   }
 });
+
+// 이미지-URL 기반 공지 시스템을 위한 수정된 라우트들
 router.post(
-  "/upload-image",
+  "/notices",
   isAdmin,
   uploadNoticeImage.single("image"),
   async (req, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({
-          success: 0,
-          message: "No file uploaded",
-        });
+      const { title, targetUrl } = req.body;
+
+      // 제목과 이미지 필수 검증
+      if (!title) {
+        return res.status(400).json({ message: "Title is required" });
       }
 
+      if (!req.file) {
+        return res.status(400).json({ message: "Image is required" });
+      }
+
+      // 이미지 처리
       const uniqueSuffix = Date.now() + "-" + uuidv4();
       const filename = `notice-${uniqueSuffix}.webp`;
       const outputPath = path.join(
@@ -181,65 +211,80 @@ router.post(
         filename
       );
 
-      await sharp(req.file.buffer)
-        .webp({
-          quality: 100,
-        })
-        .toFile(outputPath);
+      await sharp(req.file.buffer).webp({ quality: 100 }).toFile(outputPath);
 
-      res.json({
-        success: 1,
-        file: {
-          url: `/images/notices/${filename}`,
-        },
-      });
+      const imageUrl = `/images/notices/${filename}`;
+
+      // 공지사항 저장
+      const newNotice = await addNotice(title, imageUrl, targetUrl || null);
+      res.status(201).json(newNotice);
     } catch (error) {
-      console.error("Error processing notice image:", error);
-      res.status(400).json({
-        success: 0,
-        message: "Image processing failed",
-      });
+      console.error("Error adding notice:", error);
+      res.status(500).json({ message: "Error adding notice" });
     }
   }
 );
 
-// Updated route for adding notices
-router.post("/notices", isAdmin, async (req, res) => {
-  try {
-    const { title, content } = req.body;
-    if (!title || !content) {
-      return res
-        .status(400)
-        .json({ message: "Title and content are required" });
-    }
-    const newNotice = await addNotice(title, content);
-    res.status(201).json(newNotice);
-  } catch (error) {
-    console.error("Error adding notice:", error);
-    res.status(500).json({ message: "Error adding notice" });
-  }
-});
+router.put(
+  "/notices/:id",
+  isAdmin,
+  uploadNoticeImage.single("image"),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { title, targetUrl, keepExistingImage } = req.body;
 
-// Updated route for updating notices
-router.put("/notices/:id", isAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { title, content } = req.body;
-    if (!title || !content) {
-      return res
-        .status(400)
-        .json({ message: "Title and content are required" });
+      // 제목 필수 검증
+      if (!title) {
+        return res.status(400).json({ message: "Title is required" });
+      }
+
+      let imageUrl;
+
+      // 새 이미지가 업로드된 경우
+      if (req.file) {
+        const uniqueSuffix = Date.now() + "-" + uuidv4();
+        const filename = `notice-${uniqueSuffix}.webp`;
+        const outputPath = path.join(
+          __dirname,
+          "../public/images/notices",
+          filename
+        );
+
+        await sharp(req.file.buffer).webp({ quality: 100 }).toFile(outputPath);
+
+        imageUrl = `/images/notices/${filename}`;
+      }
+      // 기존 이미지 유지하는 경우
+      else if (keepExistingImage === "true") {
+        const existingNotice = await getNoticeById(id);
+        if (!existingNotice) {
+          return res.status(404).json({ message: "Notice not found" });
+        }
+        imageUrl = existingNotice.imageUrl;
+      }
+      // 새 이미지도 없고 기존 이미지도 유지하지 않는 경우
+      else {
+        return res.status(400).json({ message: "Image is required" });
+      }
+
+      // 공지사항 업데이트
+      const updatedNotice = await updateNotice(
+        id,
+        title,
+        imageUrl,
+        targetUrl || null
+      );
+      if (!updatedNotice) {
+        return res.status(404).json({ message: "Notice not found" });
+      }
+      res.json(updatedNotice);
+    } catch (error) {
+      console.error("Error updating notice:", error);
+      res.status(500).json({ message: "Error updating notice" });
     }
-    const updatedNotice = await updateNotice(id, title, content);
-    if (!updatedNotice) {
-      return res.status(404).json({ message: "Notice not found" });
-    }
-    res.json(updatedNotice);
-  } catch (error) {
-    console.error("Error updating notice:", error);
-    res.status(500).json({ message: "Error updating notice" });
   }
-});
+);
 
 router.delete("/notices/:id", isAdmin, async (req, res) => {
   try {
@@ -248,12 +293,10 @@ router.delete("/notices/:id", isAdmin, async (req, res) => {
     if (!result) {
       return res.status(404).json({ message: "Notice not found" });
     }
-    res.json({ message: "Notice and associated images deleted successfully" });
+    res.json({ message: "Notice deleted successfully" });
   } catch (error) {
     console.error("Error deleting notice:", error);
-    res
-      .status(500)
-      .json({ message: "Error deleting notice and associated images" });
+    res.status(500).json({ message: "Error deleting notice" });
   }
 });
 

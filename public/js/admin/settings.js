@@ -13,9 +13,6 @@ document.addEventListener("DOMContentLoaded", function () {
   updateMetrics();
   setInterval(updateMetrics, 60000); // 1분마다 갱신
 
-  // Quill 에디터 초기화
-  initializeEditor();
-
   // 필터 설정 불러오기
   fetchFilterSettings()
     .then(displayFilterSettings)
@@ -52,10 +49,15 @@ document.addEventListener("DOMContentLoaded", function () {
   document
     .getElementById("newNoticeBtn")
     .addEventListener("click", clearNoticeForm);
-});
 
-// WebSocket 이벤트 리스너 설정 (실시간 알림 위한 선택적 구현)
-// ...
+  // 이미지 미리보기 이벤트 리스너
+  document
+    .getElementById("noticeImage")
+    .addEventListener("change", previewImage);
+  document
+    .getElementById("removeImageBtn")
+    .addEventListener("click", removeImage);
+});
 
 // ----- 메트릭스 관리 -----
 
@@ -260,46 +262,75 @@ async function submitCrawlSchedule() {
 
 // ----- 공지 관리 -----
 
-// Quill 에디터 초기화
-let quill;
-function initializeEditor() {
-  quill = new Quill("#editor", {
-    theme: "snow",
-    modules: {
-      toolbar: [
-        [{ header: [1, 2, false] }],
-        ["bold", "italic", "underline", "strike"],
-        ["image", "code-block"],
-        [{ list: "ordered" }, { list: "bullet" }],
-        ["clean"],
-      ],
-    },
-    placeholder: "내용을 입력하세요...",
-  });
+// 이미지 미리보기 함수
+function previewImage(e) {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const preview = document.getElementById("imagePreview");
+      preview.src = e.target.result;
+      document.getElementById("imagePreviewContainer").style.display = "block";
+    };
+    reader.readAsDataURL(file);
+  }
+}
 
-  // 이미지 핸들러 추가 (선택적 구현)
-  // ...
+// 이미지 제거 함수
+function removeImage() {
+  document.getElementById("noticeImage").value = "";
+  document.getElementById("imagePreviewContainer").style.display = "none";
 }
 
 // 공지 저장
 async function submitNotice() {
   const noticeId = document.getElementById("noticeId").value;
   const title = document.getElementById("noticeTitle").value;
-  const content = quill.root.innerHTML;
+  const targetUrl = document.getElementById("noticeUrl").value;
+  const imageFile = document.getElementById("noticeImage").files[0];
 
-  if (!title || !content || content === "<p><br></p>") {
-    showAlert("제목과 내용을 모두 입력해주세요.");
+  if (!title) {
+    showAlert("제목을 입력해주세요.");
+    return;
+  }
+
+  // 새 공지 작성시 이미지는 필수
+  if (!noticeId && !imageFile) {
+    showAlert("공지 이미지를 선택해주세요.");
     return;
   }
 
   try {
-    const noticeData = {
-      id: noticeId || undefined,
-      title,
-      content,
-    };
+    const formData = new FormData();
+    formData.append("title", title);
+    if (targetUrl) formData.append("targetUrl", targetUrl);
 
-    await saveNotice(noticeData); // API 함수 호출
+    if (imageFile) {
+      formData.append("image", imageFile);
+    } else if (noticeId) {
+      // 기존 이미지 유지
+      formData.append("keepExistingImage", "true");
+    }
+
+    let url = "/api/admin/notices";
+    let method = "POST";
+
+    if (noticeId) {
+      url = `/api/admin/notices/${noticeId}`;
+      method = "PUT";
+    }
+
+    const response = await fetch(url, {
+      method: method,
+      body: formData,
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "공지 저장 중 오류가 발생했습니다.");
+    }
+
     showAlert("공지가 성공적으로 저장되었습니다.", "success");
     clearNoticeForm();
 
@@ -315,7 +346,9 @@ async function submitNotice() {
 function clearNoticeForm() {
   document.getElementById("noticeId").value = "";
   document.getElementById("noticeTitle").value = "";
-  quill.setContents([]);
+  document.getElementById("noticeUrl").value = "";
+  document.getElementById("noticeImage").value = "";
+  document.getElementById("imagePreviewContainer").style.display = "none";
 }
 
 // 공지 목록 표시
@@ -331,22 +364,29 @@ function displayNotices(notices) {
   let html = "";
 
   notices.forEach((notice) => {
-    // 본문 미리보기 생성 (HTML 태그 제거하고 일부만 표시)
-    const contentPreview =
-      notice.content
-        .replace(/<[^>]*>?/gm, "") // HTML 태그 제거
-        .substring(0, 100) + (notice.content.length > 100 ? "..." : "");
-
     html += `
-        <div class="notice-item">
-          <h3>${notice.title}</h3>
-          <p>${contentPreview}</p>
-          <div class="notice-actions">
-            <button class="btn" onclick="editNotice('${notice.id}')">수정</button>
-            <button class="btn btn-danger" onclick="deleteSelectedNotice('${notice.id}')">삭제</button>
-          </div>
+      <div class="notice-item">
+        <h3>${notice.title}</h3>
+        <div class="notice-image-container">
+          <img src="${notice.imageUrl}" alt="${
+      notice.title
+    }" style="max-width: 100%; max-height: 200px;">
         </div>
-      `;
+        <div class="notice-url">
+          ${
+            notice.targetUrl
+              ? `링크: <a href="${notice.targetUrl}" target="_blank">${notice.targetUrl}</a>`
+              : "링크 없음"
+          }
+        </div>
+        <div class="notice-actions">
+          <button class="btn" onclick="editNotice('${notice.id}')">수정</button>
+          <button class="btn btn-danger" onclick="deleteSelectedNotice('${
+            notice.id
+          }')">삭제</button>
+        </div>
+      </div>
+    `;
   });
 
   noticeList.innerHTML = html;
@@ -359,10 +399,12 @@ async function editNotice(id) {
 
     document.getElementById("noticeId").value = notice.id;
     document.getElementById("noticeTitle").value = notice.title;
+    document.getElementById("noticeUrl").value = notice.targetUrl || "";
 
-    // Quill 내용 설정
-    quill.setContents([]);
-    quill.clipboard.dangerouslyPasteHTML(0, notice.content);
+    // 이미지 미리보기 설정
+    const preview = document.getElementById("imagePreview");
+    preview.src = notice.imageUrl;
+    document.getElementById("imagePreviewContainer").style.display = "block";
   } catch (error) {
     handleError(error, "공지를 불러오는데 실패했습니다.");
   }

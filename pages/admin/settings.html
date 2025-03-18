@@ -5,10 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>관리자 설정</title>
     <link rel="stylesheet" href="/styles/admin/common.css" />
-    <link
-      href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css"
-      rel="stylesheet" />
-    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+    <link rel="stylesheet" href="/styles/admin/settings.css" />
   </head>
   <body>
     <div class="admin-layout">
@@ -130,10 +127,34 @@
                   class="form-control"
                   placeholder="제목을 입력하세요" />
               </div>
-              <div class="editor-container">
-                <div id="editor">
-                  <p><br /></p>
+              <div class="form-group mt-3">
+                <label class="form-label">공지 이미지</label>
+                <input
+                  type="file"
+                  id="noticeImage"
+                  accept="image/*"
+                  class="form-control" />
+                <div
+                  id="imagePreviewContainer"
+                  class="mt-2"
+                  style="display: none">
+                  <img
+                    id="imagePreview"
+                    style="max-width: 100%; max-height: 300px" />
+                  <button
+                    id="removeImageBtn"
+                    class="btn btn-sm btn-danger mt-1">
+                    이미지 제거
+                  </button>
                 </div>
+              </div>
+              <div class="form-group mt-3">
+                <label class="form-label" for="noticeUrl">URL (선택사항)</label>
+                <input
+                  type="url"
+                  id="noticeUrl"
+                  class="form-control"
+                  placeholder="이미지 클릭시 이동할 URL을 입력하세요" />
               </div>
               <div class="button-group mt-3">
                 <button id="saveNoticeBtn" class="btn">공지 저장</button>
@@ -165,6 +186,39 @@
               <div id="categoryFilters" class="filter-grid"></div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 알림 모달 -->
+    <div id="alertModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <span class="modal-title">알림</span>
+          <span class="close-modal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <p id="alertMessage"></p>
+        </div>
+        <div class="modal-footer">
+          <button id="alertConfirmBtn" class="btn">확인</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 확인 모달 -->
+    <div id="confirmModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <span class="modal-title">확인</span>
+          <span class="close-modal">&times;</span>
+        </div>
+        <div class="modal-body">
+          <p id="confirmMessage"></p>
+        </div>
+        <div class="modal-footer">
+          <button id="confirmYesBtn" class="btn">예</button>
+          <button id="confirmNoBtn" class="btn btn-secondary">아니오</button>
         </div>
       </div>
     </div>
