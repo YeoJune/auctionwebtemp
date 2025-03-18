@@ -456,7 +456,6 @@ input[type="time"]:focus {
   }
 
   .header-content {
-    flex-wrap: nowrap;
     overflow-x: auto;
     gap: var(--spacing-xs);
   }
