@@ -1294,47 +1294,6 @@ select {
 }
 
 @media (max-width: 768px) {
-  .main-header {
-    height: auto;
-    padding: 8px;
-  }
-
-  .header-content {
-    flex-direction: column;
-    gap: 8px;
-    align-items: stretch;
-  }
-
-  .logo-container {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 5px;
-  }
-
-  .nav-container {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 5px;
-  }
-
-  .nav-button {
-    width: 100%;
-    height: auto;
-    padding: 6px;
-    font-size: 10px;
-  }
-
-  .nav-button i {
-    font-size: 18px;
-    margin-bottom: 3px;
-  }
-
-  .auth-container {
-    display: flex;
-    justify-content: center;
-    margin-top: 5px;
-  }
-
   .modal-body {
     flex-direction: column;
     padding: 10px;
