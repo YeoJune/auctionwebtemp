@@ -401,10 +401,17 @@ input[type="time"]:focus {
     transform: translateX(-100%);
     overflow-y: auto;
     z-index: 100;
+    /* 스크롤바 숨기기 */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
   }
 
   .nav-container.active {
     transform: translateX(0);
+  }
+
+  .nav-container::-webkit-scrollbar {
+    display: none;
   }
 
   .nav-button {
