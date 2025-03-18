@@ -152,7 +152,7 @@ app.use("/api/users", userRoutes);
 app.use(express.static("public"));
 
 app.get("/", (req, res) => {
-  res.sendFile(__dirname + "/public/pages/intro.html");
+  res.redirect("/productPage");
 });
 app.get("/productPage", (req, res) => {
   res.sendFile(__dirname + "/pages/product.html");
@@ -167,6 +167,14 @@ app.get("/valuesPage", (req, res) => {
 app.get("/bidResultsPage", (req, res) => {
   if (req.session.user) res.sendFile(__dirname + "/pages/bid-results.html");
   else res.redirect("/signinPage");
+});
+
+app.get("/inquiryPage", (req, res) => {
+  res.sendFile(__dirname + "/pages/inquiry.html");
+});
+
+app.get("/guidePage", (req, res) => {
+  res.sendFile(__dirname + "/pages/guide.html");
 });
 
 // 관리자 페이지 라우트

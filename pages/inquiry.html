@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>까사트레이드 - 가입문의</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap"
+      rel="stylesheet" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <link rel="stylesheet" href="/styles/common.css" />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Noto Sans KR", -apple-system, BlinkMacSystemFont,
+          sans-serif;
+        line-height: 1.6;
+        color: #1a1a1a;
+        background-color: #fafafa;
+      }
+
+      .section {
+        padding: 40px 24px;
+      }
+
+      .section-container {
+        max-width: 1280px;
+        margin: 0 auto;
+      }
+
+      .section-title {
+        text-align: center;
+        font-size: 36px;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin-bottom: 48px;
+        letter-spacing: -0.02em;
+      }
+
+      /* 헤더 배너 스타일 */
+      .header-banner {
+        background-color: #1e3a8a;
+        color: white;
+        padding: 60px 20px;
+        text-align: center;
+        margin-bottom: 40px;
+      }
+
+      .header-content {
+        max-width: 1280px;
+        margin: 0 auto;
+      }
+
+      .header-title {
+        font-size: 42px;
+        margin-bottom: 20px;
+        font-weight: 700;
+      }
+
+      .header-description {
+        font-size: 18px;
+        margin-bottom: 30px;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      /* 문의 양식 스타일 */
+      .inquiry {
+        background-color: #f8faff;
+        padding: 60px 0;
+      }
+
+      .inquiry-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 0 20px;
+      }
+
+      .inquiry-form {
+        background-color: white;
+        border-radius: 12px;
+        padding: 32px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+      }
+
+      .form-group {
+        margin-bottom: 24px;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: #1a1a1a;
+      }
+
+      .form-group input,
+      .form-group textarea,
+      .form-group select {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        font-family: "Noto Sans KR", sans-serif;
+        font-size: 16px;
+        transition: border-color 0.3s ease;
+      }
+
+      .form-group input:focus,
+      .form-group textarea:focus,
+      .form-group select:focus {
+        outline: none;
+        border-color: #1e3a8a;
+        box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.1);
+      }
+
+      .form-buttons {
+        text-align: center;
+        margin-top: 32px;
+      }
+
+      .submit-button {
+        background-color: #1e3a8a;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 14px 32px;
+        font-size: 16px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .submit-button:hover {
+        background-color: #1e40af;
+        transform: translateY(-2px);
+      }
+
+      .form-message {
+        margin-top: 16px;
+        padding: 12px;
+        border-radius: 8px;
+        text-align: center;
+        display: none;
+      }
+
+      .form-message.success {
+        display: block;
+        background-color: #ecfdf5;
+        color: #065f46;
+        border: 1px solid #a7f3d0;
+      }
+
+      .form-message.error {
+        display: block;
+        background-color: #fef2f2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+      }
+
+      .inquiry-notice {
+        text-align: center;
+        margin-bottom: 24px;
+        padding: 16px;
+        background-color: #eff6ff;
+        border-radius: 8px;
+        color: #1e3a8a;
+        line-height: 1.6;
+      }
+
+      /* 모바일 스타일 */
+      @media (max-width: 768px) {
+        .section-title {
+          font-size: 28px;
+          margin-bottom: 36px;
+        }
+        .inquiry-form {
+          padding: 24px;
+        }
+        .header-title {
+          font-size: 32px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <header class="main-header">
+        <div class="header-content">
+          <div class="logo-container">
+            <img
+              src="images/logo.png"
+              alt="Logo"
+              onclick="location.href = '/productPage'" />
+          </div>
+          <div class="nav-container">
+            <button class="nav-button" id="productListBtn">
+              <i class="fas fa-list"></i>
+              <span>상품 리스트</span>
+            </button>
+            <button class="nav-button" id="favoritesBtn">
+              <i class="fas fa-star"></i>
+              <span>즐겨찾기</span>
+            </button>
+            <button class="nav-button" id="bidItemsBtn">
+              <i class="fas fa-gavel"></i>
+              <span>입찰 항목</span>
+            </button>
+            <button
+              class="nav-button"
+              id="bidResultsBtn"
+              onclick="window.location.href = '/bidResultsPage'">
+              <i class="fas fa-clipboard-check"></i>
+              <span>입찰 결과</span>
+            </button>
+            <button
+              class="nav-button"
+              onclick="window.location.href = '/valuesPage'">
+              <i class="fas fa-chart-line"></i>
+              <span>낙찰 시세표</span>
+            </button>
+            <button
+              class="nav-button"
+              onclick="window.open('http://pf.kakao.com/_xcCxoqn/chat', '_blank')">
+              <i class="fas fa-comments"></i>
+              <span>실시간 문의</span>
+            </button>
+            <button
+              class="nav-button"
+              onclick="window.location.href = '/inquiryPage'">
+              <i class="fas fa-user-plus"></i>
+              <span>가입문의</span>
+            </button>
+            <button
+              class="nav-button"
+              onclick="window.location.href = '/guidePage'">
+              <i class="fas fa-book"></i>
+              <span>이용가이드</span>
+            </button>
+          </div>
+          <div class="auth-container">
+            <button id="signinBtn" class="auth-button">로그인</button>
+            <button id="signoutBtn" class="auth-button" style="display: none">
+              로그아웃
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- 배너 섹션 -->
+      <section class="header-banner">
+        <div class="header-content">
+          <h1 class="header-title">가입문의</h1>
+          <p class="header-description">
+            까사트레이드에 관심을 가져주셔서 감사합니다. 아래 양식을 작성해
+            주시면 빠른 시일 내에 연락드리겠습니다.
+          </p>
+        </div>
+      </section>
+
+      <!-- 입점신청 섹션 -->
+      <section class="section inquiry" id="inquiry">
+        <div class="section-container">
+          <h2 class="section-title">입점신청</h2>
+          <div class="inquiry-container">
+            <p class="inquiry-notice">
+              원활한 서비스 제공을 위해 입점 가능 고객사의 수에 제한이 있음을
+              안내드립니다.<br />
+              아래 신청서를 작성해 주시면, 검토 후 담당자가 순차적으로
+              연락드리겠습니다.
+            </p>
+            <form id="inquiryForm" class="inquiry-form">
+              <div class="form-group">
+                <label for="companyName">상호명 (개인일시 성함작성) *</label>
+                <input
+                  type="text"
+                  id="companyName"
+                  name="companyName"
+                  required />
+              </div>
+
+              <div class="form-group">
+                <label for="phone">연락처 *</label>
+                <input type="tel" id="phone" name="phone" required />
+              </div>
+
+              <div class="form-group">
+                <label for="businessInfo"
+                  >업체소개 (사업 형태, 취급 품목 등) *</label
+                >
+                <textarea
+                  id="businessInfo"
+                  name="businessInfo"
+                  rows="4"
+                  required></textarea>
+              </div>
+
+              <div class="form-group">
+                <label for="referral">어디를 통해 들어오셨나요? *</label>
+                <input
+                  type="text"
+                  id="referral"
+                  name="referral"
+                  placeholder="예: 인스타그램, 네이버 블로그, 지인 소개, 검색 등"
+                  required />
+              </div>
+
+              <!-- 스팸 방지 필드 -->
+              <input type="text" name="_gotcha" style="display: none" />
+              <input
+                type="hidden"
+                name="_subject"
+                value="까사트레이드 입점신청" />
+
+              <div class="form-buttons">
+                <button type="submit" class="submit-button">입점신청</button>
+              </div>
+
+              <div id="formMessage" class="form-message"></div>
+            </form>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      // DOM이 로드된 후 실행
+      document.addEventListener("DOMContentLoaded", function () {
+        // 폼 제출 처리
+        const inquiryForm = document.getElementById("inquiryForm");
+
+        if (inquiryForm) {
+          inquiryForm.addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+
+            fetch("https://formspree.io/f/mdkaqpdb", {
+              method: "POST",
+              body: formData,
+              headers: {
+                Accept: "application/json",
+              },
+            })
+              .then((response) => response.json())
+              .then((data) => {
+                const formMessage = document.getElementById("formMessage");
+                if (formMessage) {
+                  if (data.ok) {
+                    formMessage.className = "form-message success";
+                    formMessage.textContent =
+                      "입점신청이 성공적으로 접수되었습니다. 검토 후 담당자가 연락드리겠습니다.";
+                    inquiryForm.reset();
+                  } else {
+                    formMessage.className = "form-message error";
+                    formMessage.textContent =
+                      "입점신청 접수 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+                  }
+                  formMessage.style.display = "block";
+                }
+              })
+              .catch((error) => {
+                const formMessage = document.getElementById("formMessage");
+                if (formMessage) {
+                  formMessage.className = "form-message error";
+                  formMessage.textContent =
+                    "네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+                  formMessage.style.display = "block";
+                }
+              });
+          });
+        }
+      });
+    </script>
+  </body>
+</html>
