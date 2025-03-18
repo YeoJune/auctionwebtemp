@@ -699,7 +699,7 @@ function showNoticeDetail(notice) {
   });
 }
 
-// 모바일 메뉴 관련 함수 추가
+// 모바일 메뉴 초기화 함수
 function initMobileMenu() {
   // 헤더에 햄버거 메뉴 버튼 추가
   const headerContent = document.querySelector(".header-content");
@@ -733,18 +733,9 @@ function initMobileMenu() {
       toggleMobileMenu();
     });
   }
-
-  // 페이지 로드 시 모바일 메뉴가 기본적으로 닫히게 설정
-  const navContainer = document.querySelector(".nav-container");
-  const authContainer = document.querySelector(".auth-container");
-
-  if (window.innerWidth <= 768) {
-    if (navContainer) navContainer.classList.remove("active");
-    if (authContainer) authContainer.classList.remove("active");
-  }
 }
 
-// 모바일 메뉴 토글 함수 수정
+// 모바일 메뉴 토글 함수
 function toggleMobileMenu(force) {
   const navContainer = document.querySelector(".nav-container");
   const authContainer = document.querySelector(".auth-container");
@@ -784,32 +775,28 @@ function handleResize() {
   const overlay = document.querySelector(".menu-overlay");
 
   if (window.innerWidth > 768) {
-    // 태블릿/데스크톱 뷰에서는 강제로 네비게이션 표시 및 mobile active 클래스 제거
+    // 태블릿/데스크톱 뷰에서는 강제로 네비게이션 표시
     if (navContainer) navContainer.classList.remove("active");
     if (authContainer) authContainer.classList.remove("active");
     if (overlay) overlay.classList.remove("active");
     document.body.style.overflow = "";
-
-    // 메뉴 버튼 아이콘 원래대로
-    const menuButton = document.querySelector(".mobile-menu-toggle");
-    if (menuButton) {
-      menuButton.innerHTML = '<i class="fas fa-bars"></i>';
-      menuButton.setAttribute("aria-label", "모바일 메뉴 열기");
-    }
   }
 }
 
-// 초기화 함수
-function initializeCommonFeatures() {
-  // 모바일 필터 설정
-  setupMobileFilters();
-
+// 페이지 로드 시 실행
+document.addEventListener("DOMContentLoaded", function () {
   // 모바일 메뉴 초기화
   initMobileMenu();
 
   // 화면 크기 변경 시 이벤트
   window.addEventListener("resize", handleResize);
-}
 
-// DOMContentLoaded 이벤트
-document.addEventListener("DOMContentLoaded", initializeCommonFeatures);
+  // 페이지 로드 시 모바일 메뉴가 닫혀있도록 설정
+  if (window.innerWidth <= 768) {
+    const navContainer = document.querySelector(".nav-container");
+    const authContainer = document.querySelector(".auth-container");
+
+    if (navContainer) navContainer.classList.remove("active");
+    if (authContainer) authContainer.classList.remove("active");
+  }
+});
