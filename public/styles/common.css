@@ -90,6 +90,14 @@ body {
   align-items: center;
   height: 100%;
   gap: var(--spacing-md);
+  position: relative;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 110;
 }
 
 .logo-container img {
@@ -103,6 +111,7 @@ body {
   gap: var(--spacing-sm);
   flex: 1;
   justify-content: center;
+  transition: all 0.3s ease;
 }
 
 .auth-container {
@@ -304,6 +313,47 @@ input[type="time"]:focus {
   color: var(--text-secondary);
 }
 
+/* 모바일 네비게이션 관련 추가 스타일 */
+/* 햄버거 메뉴 버튼 스타일 */
+.mobile-menu-toggle {
+  display: none;
+  background-color: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  border-radius: var(--border-radius-sm);
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  font-size: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: absolute;
+  right: var(--spacing-md);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 110;
+}
+
+/* 햄버거 메뉴 배경 오버레이 */
+.menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 90;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease;
+}
+
+.menu-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
   .container {
@@ -327,6 +377,76 @@ input[type="time"]:focus {
 
   .main-header {
     padding: var(--spacing-sm);
+  }
+
+  .mobile-menu-toggle {
+    display: flex;
+  }
+
+  .header-content {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .nav-container {
+    position: fixed;
+    top: var(--header-height);
+    left: 0;
+    width: 100%;
+    height: calc(100vh - var(--header-height));
+    background-color: var(--blue-dark);
+    flex-direction: column;
+    padding: var(--spacing-md);
+    transform: translateX(-100%);
+    overflow-y: auto;
+    z-index: 100;
+  }
+
+  .nav-container.active {
+    transform: translateX(0);
+  }
+
+  .nav-button {
+    width: 100%;
+    height: auto;
+    flex-direction: row;
+    justify-content: flex-start;
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .nav-button i {
+    font-size: 1.2rem;
+    margin-right: var(--spacing-sm);
+    margin-bottom: 0;
+  }
+
+  .nav-button span {
+    font-size: var(--font-size-md);
+  }
+
+  .auth-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: var(--spacing-md);
+    background-color: rgba(0, 0, 0, 0.2);
+    display: flex;
+    justify-content: center;
+    z-index: 101;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+
+  .auth-container.active {
+    transform: translateX(0);
+  }
+
+  .auth-button {
+    width: 100%;
+    max-width: 200px;
   }
 
   .header-content {
