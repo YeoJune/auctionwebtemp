@@ -700,103 +700,55 @@ function showNoticeDetail(notice) {
 }
 
 // 모바일 메뉴 초기화 함수
+// 모바일 메뉴 초기화 함수
 function initMobileMenu() {
-  // 헤더에 햄버거 메뉴 버튼 추가
-  const headerContent = document.querySelector(".header-content");
-  if (!headerContent) return;
-
-  // 이미 생성된 버튼이 있으면 생성하지 않음
-  if (!document.querySelector(".mobile-menu-toggle")) {
-    const menuButton = document.createElement("button");
-    menuButton.className = "mobile-menu-toggle";
-    menuButton.innerHTML = '<i class="fas fa-bars"></i>';
-    menuButton.setAttribute("aria-label", "모바일 메뉴 열기");
-    headerContent.appendChild(menuButton);
-  }
-
-  // 오버레이 생성
-  if (!document.querySelector(".menu-overlay")) {
-    const overlay = document.createElement("div");
-    overlay.className = "menu-overlay";
-    document.body.appendChild(overlay);
-
-    // 오버레이 클릭 시 메뉴 닫기
-    overlay.addEventListener("click", function () {
-      toggleMobileMenu(false);
-    });
-  }
-
-  // 햄버거 메뉴 버튼 클릭 이벤트 리스너
-  const menuButton = document.querySelector(".mobile-menu-toggle");
-  if (menuButton) {
-    menuButton.addEventListener("click", function () {
-      toggleMobileMenu();
-    });
-  }
-}
-
-// 모바일 메뉴 토글 함수
-function toggleMobileMenu(force) {
   const navContainer = document.querySelector(".nav-container");
   const authContainer = document.querySelector(".auth-container");
-  const overlay = document.querySelector(".menu-overlay");
   const menuButton = document.querySelector(".mobile-menu-toggle");
 
-  if (!navContainer || !overlay) return;
+  if (!navContainer || !menuButton) return;
 
-  const isOpen =
-    typeof force === "boolean"
-      ? force
-      : !navContainer.classList.contains("active");
+  // 네비게이션 버튼들을 컨테이너로 감싸기
+  if (!document.querySelector(".nav-buttons-container")) {
+    const buttonsContainer = document.createElement("div");
+    buttonsContainer.className = "nav-buttons-container";
 
-  navContainer.classList.toggle("active", isOpen);
-  if (authContainer) authContainer.classList.toggle("active", isOpen);
-  overlay.classList.toggle("active", isOpen);
+    // 기존 버튼들을 컨테이너로 이동
+    const buttons = navContainer.querySelectorAll(".nav-button");
+    buttons.forEach((button) => {
+      navContainer.removeChild(button);
+      buttonsContainer.appendChild(button);
+    });
 
-  // 메뉴 아이콘 변경
-  if (menuButton) {
-    if (isOpen) {
-      menuButton.innerHTML = '<i class="fas fa-times"></i>';
-      menuButton.setAttribute("aria-label", "모바일 메뉴 닫기");
-    } else {
+    navContainer.appendChild(buttonsContainer);
+  }
+
+  // 메뉴 토글 버튼 클릭 이벤트
+  menuButton.addEventListener("click", function () {
+    const isActive = navContainer.classList.contains("active");
+
+    if (isActive) {
+      // 메뉴 닫기
+      navContainer.classList.remove("active");
+      if (authContainer) authContainer.classList.remove("active");
       menuButton.innerHTML = '<i class="fas fa-bars"></i>';
-      menuButton.setAttribute("aria-label", "모바일 메뉴 열기");
+      document.body.style.overflow = ""; // 스크롤 허용
+    } else {
+      // 메뉴 열기
+      navContainer.classList.add("active");
+      if (authContainer) authContainer.classList.add("active");
+      menuButton.innerHTML = '<i class="fas fa-times"></i>';
+      document.body.style.overflow = "hidden"; // 스크롤 방지
     }
-  }
+  });
 
-  // 메뉴가 열렸을 때 body 스크롤 방지
-  document.body.style.overflow = isOpen ? "hidden" : "";
-}
-
-// 화면 크기 변경 시 대응
-function handleResize() {
-  const navContainer = document.querySelector(".nav-container");
-  const authContainer = document.querySelector(".auth-container");
-  const overlay = document.querySelector(".menu-overlay");
-
-  if (window.innerWidth > 768) {
-    // 태블릿/데스크톱 뷰에서는 강제로 네비게이션 표시
-    if (navContainer) navContainer.classList.remove("active");
-    if (authContainer) authContainer.classList.remove("active");
-    if (overlay) overlay.classList.remove("active");
-    document.body.style.overflow = "";
-  }
+  // 페이지 로드 시 메뉴 초기 상태 설정
+  navContainer.classList.remove("active");
+  if (authContainer) authContainer.classList.remove("active");
+  menuButton.innerHTML = '<i class="fas fa-bars"></i>';
 }
 
 // 페이지 로드 시 실행
 document.addEventListener("DOMContentLoaded", function () {
-  // 모바일 메뉴 초기화
   initMobileMenu();
-
-  // 화면 크기 변경 시 이벤트
-  window.addEventListener("resize", handleResize);
-
-  // 페이지 로드 시 모바일 메뉴가 닫혀있도록 설정
-  if (window.innerWidth <= 768) {
-    const navContainer = document.querySelector(".nav-container");
-    const authContainer = document.querySelector(".auth-container");
-
-    if (navContainer) navContainer.classList.remove("active");
-    if (authContainer) authContainer.classList.remove("active");
-  }
 });
