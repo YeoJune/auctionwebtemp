@@ -699,53 +699,59 @@ function showNoticeDetail(notice) {
   });
 }
 
-// 모바일 메뉴 초기화 함수
-// 모바일 메뉴 초기화 함수
-function initMobileMenu() {
+function setupMobileMenu() {
+  // 요소 찾기
+  const menuToggle = document.querySelector(".mobile-menu-toggle");
   const navContainer = document.querySelector(".nav-container");
-  const authContainer = document.querySelector(".auth-container");
-  const menuButton = document.querySelector(".mobile-menu-toggle");
 
-  if (!navContainer || !menuButton) return;
+  if (!menuToggle || !navContainer) return;
 
-  // 네비게이션 버튼들을 컨테이너로 감싸기
-  if (!document.querySelector(".nav-buttons-container")) {
-    const buttonsContainer = document.createElement("div");
-    buttonsContainer.className = "nav-buttons-container";
+  // 메뉴 버튼을 그리드 컨테이너로 감싸기
+  const buttons = navContainer.querySelectorAll(".nav-button");
+  if (buttons.length > 0 && !document.querySelector(".menu-buttons-grid")) {
+    // 버튼 그리드 컨테이너 생성
+    const gridContainer = document.createElement("div");
+    gridContainer.className = "menu-buttons-grid";
 
-    // 기존 버튼들을 컨테이너로 이동
-    const buttons = navContainer.querySelectorAll(".nav-button");
+    // 기존 버튼들을 새 컨테이너로 이동
     buttons.forEach((button) => {
-      navContainer.removeChild(button);
-      buttonsContainer.appendChild(button);
+      // 원래 위치에서 버튼 제거
+      button.parentNode.removeChild(button);
+      // 그리드 컨테이너에 추가
+      gridContainer.appendChild(button);
     });
 
-    navContainer.appendChild(buttonsContainer);
+    // 그리드 컨테이너를 nav-container에 추가
+    navContainer.appendChild(gridContainer);
+
+    // auth-container가 있으면 마지막에 위치하도록
+    const authContainer = document.querySelector(".auth-container");
+    if (authContainer && authContainer.parentNode) {
+      authContainer.parentNode.removeChild(authContainer);
+      navContainer.appendChild(authContainer);
+    }
   }
 
-  // 메뉴 토글 버튼 클릭 이벤트
-  menuButton.addEventListener("click", function () {
+  // 토글 버튼 클릭 이벤트
+  menuToggle.addEventListener("click", function () {
     const isActive = navContainer.classList.contains("active");
 
     if (isActive) {
       // 메뉴 닫기
       navContainer.classList.remove("active");
-      if (authContainer) authContainer.classList.remove("active");
-      menuButton.innerHTML = '<i class="fas fa-bars"></i>';
-      document.body.style.overflow = ""; // 스크롤 허용
+      menuToggle.innerHTML = '<i class="fas fa-bars"></i>';
+      document.body.style.overflow = ""; // 스크롤 복원
     } else {
       // 메뉴 열기
       navContainer.classList.add("active");
-      if (authContainer) authContainer.classList.add("active");
-      menuButton.innerHTML = '<i class="fas fa-times"></i>';
+      menuToggle.innerHTML = '<i class="fas fa-times"></i>';
       document.body.style.overflow = "hidden"; // 스크롤 방지
     }
   });
 
-  // 페이지 로드 시 메뉴 초기 상태 설정
+  // 초기 상태 설정 - 메뉴 닫힘
   navContainer.classList.remove("active");
-  if (authContainer) authContainer.classList.remove("active");
-  menuButton.innerHTML = '<i class="fas fa-bars"></i>';
+  menuToggle.innerHTML = '<i class="fas fa-bars"></i>';
 }
 
 // 페이지 로드 시 실행

@@ -365,7 +365,6 @@ input[type="time"]:focus {
     width: 95%;
   }
 }
-
 @media (max-width: 768px) {
   :root {
     --spacing-md: 0.875rem;
@@ -388,85 +387,63 @@ input[type="time"]:focus {
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-    overflow: visible; /* 스크롤바 방지 */
   }
 
   /* 모바일 메뉴 수정: 기본 상태에서 숨김 */
   .nav-container {
     display: none;
-    position: fixed;
-    top: var(--header-height);
-    left: 0;
-    width: 100%;
-    height: calc(100vh - var(--header-height));
-    background-color: var(--blue-dark);
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 0;
-    z-index: 100;
-    overflow-y: auto;
   }
 
   /* 메뉴 활성화 시 표시 */
   .nav-container.active {
     display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--blue-dark);
+    z-index: 1000;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
   }
 
-  /* 메뉴 버튼 스타일 최적화 */
+  /* 메뉴 그리드 레이아웃 - 아이콘 2줄 배치 */
   .nav-button {
-    width: 100%;
-    margin: 0;
-    padding: 15px 20px;
-    display: flex;
+    width: 120px;
+    margin: 10px;
+    display: inline-flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
-    border-radius: 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: center;
+    background-color: transparent;
   }
 
   .nav-button i {
-    margin-right: 15px;
-    font-size: 18px;
-    width: 24px;
-    text-align: center;
-    margin-bottom: 0;
+    font-size: 24px;
+    margin-bottom: 10px;
+    margin-right: 0;
   }
 
   .nav-button span {
-    font-size: 16px;
+    font-size: 14px;
+    display: block;
   }
 
-  /* 메뉴 호버 효과 */
-  .nav-button:hover,
-  .nav-button:active {
-    background-color: rgba(255, 255, 255, 0.1);
+  /* 메뉴 버튼을 감싸는 그리드 컨테이너 */
+  .menu-buttons-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 400px;
+    margin: 0 auto;
   }
 
   /* 로그인 버튼 영역 */
   .auth-container {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    padding: 15px;
-    background-color: rgba(0, 0, 0, 0.2);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    display: none;
-    justify-content: center;
-    z-index: 100;
-  }
-
-  .auth-container.active {
-    display: flex;
-  }
-
-  .auth-button {
-    width: 100%;
-    max-width: 300px;
-    padding: 12px;
-    margin: 0 5px;
-    border-radius: 4px;
-    font-weight: 500;
+    margin-top: 30px;
   }
 
   .modal-content {
@@ -497,90 +474,5 @@ input[type="time"]:focus {
 
   .header-content {
     gap: var(--spacing-xs);
-  }
-}
-
-/* 모바일 메뉴 수정 CSS */
-@media (max-width: 768px) {
-  /* 1. 기본 상태에서 메뉴 숨김 - 트랜지션 없이 단순하게 */
-  .nav-container {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100vh;
-    background-color: var(--blue-dark);
-    z-index: 1000;
-    padding: 15px;
-  }
-
-  /* 2. 메뉴 열린 상태 - 단순히 표시 */
-  .nav-container.active {
-    display: block;
-  }
-
-  /* 3. 메뉴 버튼들을 중앙 정렬 및 2줄 배치 */
-  .nav-container.active {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-  }
-
-  /* 메뉴 버튼 컨테이너 */
-  .nav-container.active .nav-buttons-container {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 10px;
-    width: 90%;
-    max-width: 400px;
-  }
-
-  /* 메뉴 버튼 스타일 - 2줄 배치를 위한 너비 제한 */
-  .nav-container.active .nav-button {
-    width: calc(50% - 10px);
-    height: auto;
-    flex-direction: column;
-    padding: 15px 10px;
-    margin: 5px;
-    background-color: rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-  }
-
-  /* 아이콘 및 텍스트 정렬 */
-  .nav-container.active .nav-button i {
-    font-size: 24px;
-    margin-bottom: 8px;
-    margin-right: 0;
-  }
-
-  .nav-container.active .nav-button span {
-    font-size: 14px;
-  }
-
-  /* 로그인 버튼 영역 */
-  .auth-container {
-    position: fixed;
-    bottom: 20px;
-    left: 0;
-    width: 100%;
-    display: none;
-    justify-content: center;
-    z-index: 1001;
-  }
-
-  .auth-container.active {
-    display: flex;
-  }
-
-  /* X 버튼 위치 조정 */
-  .mobile-menu-toggle {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    z-index: 1010;
   }
 }
