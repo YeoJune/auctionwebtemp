@@ -699,88 +699,95 @@ function showNoticeDetail(notice) {
   });
 }
 
-// 화면 크기 변경 시 대응
-function handleResize() {
-  const navContainer = document.querySelector(".nav-container");
-  const authContainer = document.querySelector(".auth-container");
-  const overlay = document.querySelector(".menu-overlay");
-
-  if (window.innerWidth > 768) {
-    // 태블릿/데스크톱 뷰에서는 강제로 네비게이션 표시
-    if (navContainer) navContainer.classList.remove("active");
-    if (authContainer) authContainer.classList.remove("active");
-    if (overlay) overlay.classList.remove("active");
-    document.body.style.overflow = "";
-  }
-}
-
-// 모바일 메뉴 설정
+// 모바일 메뉴 설정 함수
 function setupMobileMenu() {
+  // 필요한 요소 찾기
   const menuToggle = document.querySelector(".mobile-menu-toggle");
   const navContainer = document.querySelector(".nav-container");
 
-  if (!menuToggle || !navContainer) {
-    console.error("메뉴 토글 또는 네비게이션 컨테이너를 찾을 수 없습니다");
-    return;
-  }
+  // 요소가 없으면 함수 종료
+  if (!menuToggle || !navContainer) return;
 
-  // 모바일 뷰에서 초기 상태 설정
-  if (window.innerWidth <= 768) {
-    navContainer.style.display = "none";
-  }
+  // 헤더 컨텐트 요소 찾기
+  const headerContent = document.querySelector(".header-content");
 
-  // 기존 이벤트 리스너 제거 (중복 방지)
-  menuToggle.removeEventListener("click", toggleMobileMenu);
+  // 모바일 메뉴 그리드 설정
+  setupMobileMenuGrid(navContainer);
 
-  // 이벤트 리스너 추가
-  menuToggle.addEventListener("click", toggleMobileMenu);
+  // 메뉴 닫기 버튼 추가
+  addMenuCloseButton(navContainer);
 
-  // 토글 함수
-  function toggleMobileMenu() {
-    const isActive = navContainer.classList.contains("active");
+  // 토글 버튼 클릭 이벤트
+  menuToggle.addEventListener("click", function (e) {
+    e.preventDefault();
+    navContainer.classList.add("active");
+  });
 
-    if (isActive) {
-      // 메뉴 닫기
+  // 화면 크기 변경 시 메뉴 상태 재설정
+  window.addEventListener("resize", function () {
+    if (window.innerWidth > 768) {
       navContainer.classList.remove("active");
-      navContainer.style.display = "none";
-      menuToggle.innerHTML = '<i class="fas fa-bars"></i>';
-      document.body.style.overflow = "";
-    } else {
-      // 메뉴 열기
-      navContainer.classList.add("active");
-      navContainer.style.display = "flex";
-      menuToggle.innerHTML = '<i class="fas fa-times"></i>';
-      document.body.style.overflow = "hidden";
     }
-  }
-
-  // 복제된 버튼들에 이벤트 리스너 다시 연결
-  const gridContainer = document.querySelector(".menu-buttons-grid");
-  if (gridContainer) {
-    const clonedButtons = gridContainer.querySelectorAll(".nav-button");
-    clonedButtons.forEach((button) => {
-      // 원본 버튼의 onclick 속성 복사
-      const originalButton = Array.from(
-        navContainer.querySelectorAll(".nav-button")
-      ).find((b) => b.textContent.trim() === button.textContent.trim());
-
-      if (originalButton && originalButton.onclick) {
-        button.onclick = originalButton.onclick;
-      }
-    });
-  }
+  });
 }
 
-// 기존 initializeCommonFeatures 함수에 추가
-function initializeCommonFeatures() {
-  // 모바일 필터 설정
-  setupMobileFilters();
+// 모바일 메뉴 그리드 설정 함수
+function setupMobileMenuGrid(navContainer) {
+  // 메뉴 버튼들 찾기
+  const navButtons = navContainer.querySelectorAll(".nav-button");
 
-  // 모바일 메뉴 설정
+  // 이미 그리드가 있으면 제거
+  const existingGrid = navContainer.querySelector(".menu-buttons-grid");
+  if (existingGrid) {
+    existingGrid.remove();
+  }
+
+  // 새 그리드 컨테이너 생성
+  const gridContainer = document.createElement("div");
+  gridContainer.className = "menu-buttons-grid";
+
+  // 버튼들을 그리드에 추가
+  navButtons.forEach((button) => {
+    // 버튼 복제
+    const clonedButton = button.cloneNode(true);
+
+    // 원본 버튼의 onclick 이벤트 복사
+    if (button.hasAttribute("onclick")) {
+      clonedButton.setAttribute("onclick", button.getAttribute("onclick"));
+    }
+
+    // 그리드에 추가
+    gridContainer.appendChild(clonedButton);
+  });
+
+  // 그리드를 네비게이션 컨테이너에 추가
+  navContainer.appendChild(gridContainer);
+}
+
+// 메뉴 닫기 버튼 추가 함수
+function addMenuCloseButton(navContainer) {
+  // 이미 닫기 버튼이 있으면 제거
+  const existingCloseBtn = navContainer.querySelector(".menu-close-btn");
+  if (existingCloseBtn) {
+    existingCloseBtn.remove();
+  }
+
+  // 새 닫기 버튼 생성
+  const closeBtn = document.createElement("button");
+  closeBtn.className = "menu-close-btn";
+  closeBtn.innerHTML = "&times;";
+  closeBtn.setAttribute("aria-label", "메뉴 닫기");
+
+  // 닫기 버튼 클릭 이벤트
+  closeBtn.addEventListener("click", function () {
+    navContainer.classList.remove("active");
+  });
+
+  // 네비게이션 컨테이너에 버튼 추가
+  navContainer.appendChild(closeBtn);
+}
+
+// 페이지 로드 시 초기화
+document.addEventListener("DOMContentLoaded", function () {
   setupMobileMenu();
-
-  // 화면 크기 변경 시 이벤트
-  window.addEventListener("resize", handleResize);
-}
-
-document.addEventListener("DOMContentLoaded", initializeCommonFeatures);
+});
