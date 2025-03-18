@@ -733,6 +733,17 @@ function initMobileMenu() {
       toggleMobileMenu();
     });
   }
+
+  // 메뉴 아이템에 클릭 이벤트 추가 - 클릭 시 자동으로 메뉴 닫힘
+  const navButtons = document.querySelectorAll(".nav-button");
+  navButtons.forEach((button) => {
+    button.addEventListener("click", function () {
+      // 모바일 화면에서만 자동으로 메뉴 닫기 동작
+      if (window.innerWidth <= 768) {
+        setTimeout(() => toggleMobileMenu(false), 150);
+      }
+    });
+  });
 }
 
 // 모바일 메뉴 토글 함수
@@ -764,17 +775,6 @@ function toggleMobileMenu(force) {
     }
   }
 
-  const header = document.querySelector(".main-header");
-  if (header) {
-    if (isOpen) {
-      header.style.height = "auto";
-      header.style.overflow = "visible";
-    } else {
-      header.style.height = "";
-      header.style.overflow = "";
-    }
-  }
-
   // 메뉴가 열렸을 때 body 스크롤 방지
   document.body.style.overflow = isOpen ? "hidden" : "";
 }
@@ -786,11 +786,18 @@ function handleResize() {
   const overlay = document.querySelector(".menu-overlay");
 
   if (window.innerWidth > 768) {
-    // 태블릿/데스크톱 뷰에서는 강제로 네비게이션 표시
+    // 태블릿/데스크톱 뷰에서는 강제로 네비게이션 표시 및 mobile active 클래스 제거
     if (navContainer) navContainer.classList.remove("active");
     if (authContainer) authContainer.classList.remove("active");
     if (overlay) overlay.classList.remove("active");
     document.body.style.overflow = "";
+
+    // 메뉴 버튼 아이콘 원래대로
+    const menuButton = document.querySelector(".mobile-menu-toggle");
+    if (menuButton) {
+      menuButton.innerHTML = '<i class="fas fa-bars"></i>';
+      menuButton.setAttribute("aria-label", "모바일 메뉴 열기");
+    }
   }
 }
 

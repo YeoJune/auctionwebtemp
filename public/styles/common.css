@@ -394,14 +394,16 @@ input[type="time"]:focus {
     top: var(--header-height);
     left: 0;
     width: 100%;
+    height: calc(100vh - var(--header-height));
     background-color: var(--blue-dark);
     flex-direction: column;
-    padding: var(--spacing-md);
+    align-items: center; /* 메뉴 중앙 정렬 */
+    padding: var(--spacing-xl) var(--spacing-md);
     transform: translateX(-100%);
     z-index: 100;
-    /* 스크롤바 숨기기 */
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
+    overflow-y: auto;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease;
   }
 
   .nav-container.active {
@@ -413,16 +415,21 @@ input[type="time"]:focus {
   }
 
   .nav-button {
-    width: 100%;
-    height: auto;
-    flex-direction: row;
-    justify-content: flex-start;
+    width: 90%; /* 너비 제한으로 양쪽 여백 확보 */
+    justify-content: center; /* 내용 중앙 정렬 */
     padding: var(--spacing-md);
-    margin-bottom: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+    border-radius: var(--border-radius-md);
+    background-color: rgba(255, 255, 255, 0.1); /* 배경 추가로 가시성 향상 */
+    transition: background-color 0.2s ease;
+  }
+
+  .nav-button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
   }
 
   .nav-button i {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     margin-right: var(--spacing-sm);
     margin-bottom: 0;
   }
@@ -436,8 +443,8 @@ input[type="time"]:focus {
     bottom: 0;
     left: 0;
     width: 100%;
-    padding: var(--spacing-md);
-    background-color: rgba(0, 0, 0, 0.2);
+    padding: var(--spacing-lg) var(--spacing-md);
+    background-color: rgba(0, 0, 0, 0.3); /* 더 진한 배경으로 강조 */
     display: flex;
     justify-content: center;
     z-index: 101;
@@ -450,13 +457,23 @@ input[type="time"]:focus {
   }
 
   .auth-button {
-    width: 100%;
-    max-width: 200px;
+    width: 90%;
+    max-width: 250px;
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius-md);
+    font-weight: 500;
   }
 
   .header-content {
-    overflow-x: auto;
-    gap: var(--spacing-xs);
+    display: flex;
+    justify-content: flex-start;
+    position: relative;
+    overflow: visible; /* 스크롤바 방지 */
+  }
+
+  .logo-container {
+    flex: 1;
+    justify-content: center; /* 모바일에서 로고 중앙 정렬 */
   }
 
   .modal-content {
