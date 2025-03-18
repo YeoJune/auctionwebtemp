@@ -177,6 +177,43 @@
         line-height: 1.6;
       }
 
+      /* 입점신청 설명 섹션 스타일 */
+      .signup-process {
+        margin-bottom: 32px;
+        background-color: white;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+      }
+
+      .signup-process h3 {
+        font-size: 20px;
+        color: #1e3a8a;
+        margin-bottom: 16px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #e5e7eb;
+      }
+
+      .signup-process ol {
+        padding-left: 20px;
+        margin-top: 10px;
+      }
+
+      .signup-process ol li {
+        margin-bottom: 8px;
+      }
+
+      .pricing-link {
+        color: #1e3a8a;
+        text-decoration: underline;
+        cursor: pointer;
+        font-weight: 500;
+      }
+
+      .pricing-link:hover {
+        color: #1e40af;
+      }
+
       /* 모바일 스타일 */
       @media (max-width: 768px) {
         .section-title {
@@ -268,6 +305,18 @@
         <div class="section-container">
           <h2 class="section-title">입점신청</h2>
           <div class="inquiry-container">
+            <!-- 회원 가입 절차 설명 추가 -->
+            <div class="signup-process">
+              <h3>회원 가입 및 경매 참여 절차</h3>
+              <ol>
+                <li>하단 입점신청 작성</li>
+                <li>보증급 입금 ( 입찰한도 셋팅 )</li>
+                <li>아이디 발급</li>
+                <li>회원가입 완료</li>
+                <li>경매참여 가능</li>
+              </ol>
+            </div>
+
             <p class="inquiry-notice">
               원활한 서비스 제공을 위해 입점 가능 고객사의 수에 제한이 있음을
               안내드립니다.<br />
@@ -290,14 +339,18 @@
               </div>
 
               <div class="form-group">
-                <label for="businessInfo"
-                  >업체소개 (사업 형태, 취급 품목 등) *</label
-                >
-                <textarea
-                  id="businessInfo"
-                  name="businessInfo"
-                  rows="4"
-                  required></textarea>
+                <label for="email">이메일 (계산서 발행) *</label>
+                <input type="email" id="email" name="email" required />
+              </div>
+
+              <div class="form-group">
+                <label for="address">희망 배송지 정보 *</label>
+                <input type="text" id="address" name="address" required />
+              </div>
+
+              <div class="form-group">
+                <label for="startDate">희망 경매 시작일 *</label>
+                <input type="text" id="startDate" name="startDate" required />
               </div>
 
               <div class="form-group">
@@ -310,12 +363,31 @@
                   required />
               </div>
 
-              <!-- 스팸 방지 필드 -->
-              <input type="text" name="_gotcha" style="display: none" />
-              <input
-                type="hidden"
-                name="_subject"
-                value="까사트레이드 입점신청" />
+              <div class="form-group">
+                <label for="deposit">희망보증금 (만원) *</label>
+                <input
+                  type="number"
+                  id="deposit"
+                  name="deposit"
+                  placeholder="예: 500"
+                  required />
+                <p style="margin-top: 5px; font-size: 14px; color: #6b7280">
+                  <a href="/guidePage#pricing" class="pricing-link"
+                    >보증금에 대한 자세한 내용은 이용가이드에 요금안내 탭을
+                    참고해주세요.</a
+                  >
+                </p>
+              </div>
+
+              <div class="form-group">
+                <label for="username">사용하실 아이디 *</label>
+                <input type="text" id="username" name="username" required />
+              </div>
+
+              <div class="form-group">
+                <label for="password">사용하실 비밀번호 *</label>
+                <input type="password" id="password" name="password" required />
+              </div>
 
               <div class="form-buttons">
                 <button type="submit" class="submit-button">입점신청</button>
