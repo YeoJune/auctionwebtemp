@@ -376,7 +376,8 @@ input[type="time"]:focus {
   }
 
   .main-header {
-    padding: var(--spacing-sm);
+    height: var(--header-height); /* 고정 높이 유지 */
+    overflow: visible; /* 중요: 드롭다운 메뉴가 넘쳐도 표시되도록 */
   }
 
   .mobile-menu-toggle {
