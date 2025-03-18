@@ -2,7 +2,6 @@
 
 // API 기본 설정
 const API_BASE_URL = "/api";
-let EXCHANGE_RATE = 9.0;
 
 // API 요청 기본 함수
 async function fetchAPI(endpoint, options = {}) {
@@ -86,18 +85,6 @@ async function fetchCommonFilters(baseEndpoint) {
   }
 }
 
-// 환율 정보 가져오기
-async function fetchExchangeRate() {
-  try {
-    const response = await fetchAPI("/data/exchange-rate");
-    EXCHANGE_RATE = response.rate;
-    return response.rate;
-  } catch (error) {
-    console.error("Error fetching exchange rate:", error);
-    return EXCHANGE_RATE; // 기본값 반환
-  }
-}
-
 // 이미지 URL 검증
 function validateImageUrl(url) {
   if (!url) return "/images/placeholder.png";
@@ -106,9 +93,7 @@ function validateImageUrl(url) {
 }
 
 // API 초기화
-async function initializeAPI() {
-  await fetchExchangeRate();
-}
+async function initializeAPI() {}
 
 // 내보내기
 window.API = {
@@ -118,7 +103,4 @@ window.API = {
   fetchCommonFilters,
   validateImageUrl,
   initialize: initializeAPI,
-  get exchangeRate() {
-    return EXCHANGE_RATE;
-  },
 };
