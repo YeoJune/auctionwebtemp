@@ -376,9 +376,6 @@ input[type="time"]:focus {
   }
 
   .main-header {
-    height: auto !important; /* 높이 제한 제거 */
-    min-height: var(--header-height); /* 최소 높이 유지 */
-    overflow: visible !important; /* 중요: 넘치는 콘텐츠 표시 */
     padding: var(--spacing-sm);
   }
 
@@ -390,7 +387,6 @@ input[type="time"]:focus {
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-    flex-wrap: nowrap;
   }
 
   .nav-container {

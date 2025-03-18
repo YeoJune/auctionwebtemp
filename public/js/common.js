@@ -764,6 +764,17 @@ function toggleMobileMenu(force) {
     }
   }
 
+  const header = document.querySelector(".main-header");
+  if (header) {
+    if (isOpen) {
+      header.style.height = "auto";
+      header.style.overflow = "visible";
+    } else {
+      header.style.height = "";
+      header.style.overflow = "";
+    }
+  }
+
   // 메뉴가 열렸을 때 body 스크롤 방지
   document.body.style.overflow = isOpen ? "hidden" : "";
 }
