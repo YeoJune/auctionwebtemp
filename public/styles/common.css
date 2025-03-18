@@ -376,8 +376,10 @@ input[type="time"]:focus {
   }
 
   .main-header {
-    height: var(--header-height); /* 고정 높이 유지 */
-    overflow: visible; /* 중요: 드롭다운 메뉴가 넘쳐도 표시되도록 */
+    height: auto !important; /* 높이 제한 제거 */
+    min-height: var(--header-height); /* 최소 높이 유지 */
+    overflow: visible !important; /* 중요: 넘치는 콘텐츠 표시 */
+    padding: var(--spacing-sm);
   }
 
   .mobile-menu-toggle {
