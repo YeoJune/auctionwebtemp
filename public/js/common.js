@@ -699,6 +699,22 @@ function showNoticeDetail(notice) {
   });
 }
 
+// 화면 크기 변경 시 대응
+function handleResize() {
+  const navContainer = document.querySelector(".nav-container");
+  const authContainer = document.querySelector(".auth-container");
+  const overlay = document.querySelector(".menu-overlay");
+
+  if (window.innerWidth > 768) {
+    // 태블릿/데스크톱 뷰에서는 강제로 네비게이션 표시
+    if (navContainer) navContainer.classList.remove("active");
+    if (authContainer) authContainer.classList.remove("active");
+    if (overlay) overlay.classList.remove("active");
+    document.body.style.overflow = "";
+  }
+}
+
+// 모바일 메뉴 설정
 function setupMobileMenu() {
   // 요소 찾기
   const menuToggle = document.querySelector(".mobile-menu-toggle");
@@ -715,20 +731,20 @@ function setupMobileMenu() {
 
     // 기존 버튼들을 새 컨테이너로 이동
     buttons.forEach((button) => {
-      // 원래 위치에서 버튼 제거
-      button.parentNode.removeChild(button);
+      // 원래 위치에서 버튼 복제 (제거하지 않고)
+      const clonedButton = button.cloneNode(true);
       // 그리드 컨테이너에 추가
-      gridContainer.appendChild(button);
+      gridContainer.appendChild(clonedButton);
     });
 
     // 그리드 컨테이너를 nav-container에 추가
     navContainer.appendChild(gridContainer);
 
-    // auth-container가 있으면 마지막에 위치하도록
+    // auth-container가 있으면 복제해서 마지막에 위치하도록
     const authContainer = document.querySelector(".auth-container");
-    if (authContainer && authContainer.parentNode) {
-      authContainer.parentNode.removeChild(authContainer);
-      navContainer.appendChild(authContainer);
+    if (authContainer) {
+      const clonedAuth = authContainer.cloneNode(true);
+      navContainer.appendChild(clonedAuth);
     }
   }
 
@@ -754,7 +770,14 @@ function setupMobileMenu() {
   menuToggle.innerHTML = '<i class="fas fa-bars"></i>';
 }
 
-// 페이지 로드 시 실행
-document.addEventListener("DOMContentLoaded", function () {
-  initMobileMenu();
-});
+// 기존 initializeCommonFeatures 함수에 추가
+function initializeCommonFeatures() {
+  // 모바일 필터 설정
+  setupMobileFilters();
+
+  // 모바일 메뉴 설정
+  setupMobileMenu();
+
+  // 화면 크기 변경 시 이벤트
+  window.addEventListener("resize", handleResize);
+}
