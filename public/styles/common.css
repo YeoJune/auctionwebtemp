@@ -394,7 +394,6 @@ input[type="time"]:focus {
     top: var(--header-height);
     left: 0;
     width: 100%;
-    height: calc(100vh - var(--header-height));
     background-color: var(--blue-dark);
     flex-direction: column;
     padding: var(--spacing-md);
