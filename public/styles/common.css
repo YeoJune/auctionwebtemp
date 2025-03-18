@@ -506,3 +506,102 @@ input[type="time"]:focus {
     gap: var(--spacing-xs);
   }
 }
+
+/* 모바일 메뉴 수정 CSS */
+@media (max-width: 768px) {
+  /* 1. 헤더 레이아웃 수정 */
+  .main-header {
+    padding: var(--spacing-sm);
+    height: auto;
+    min-height: 60px;
+  }
+
+  .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    overflow: visible; /* 스크롤바 방지 */
+  }
+
+  /* 2. 모바일에서 기본 네비게이션 완전히 숨김 */
+  .nav-container {
+    display: none;
+    position: fixed;
+    top: 60px; /* 헤더 높이에 맞춤 */
+    left: 0;
+    width: 100%;
+    height: calc(100vh - 60px);
+    background-color: var(--blue-dark);
+    z-index: 999;
+    padding: var(--spacing-md);
+    overflow-y: auto;
+  }
+
+  /* 3. 메뉴 활성화 시에만 표시 */
+  .nav-container.active {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* 4. 메뉴 버튼 스타일 개선 */
+  .nav-button {
+    width: 90%;
+    margin: var(--spacing-xs) 0;
+    padding: var(--spacing-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: var(--border-radius-md);
+  }
+
+  .nav-button i {
+    margin-right: var(--spacing-sm);
+  }
+
+  /* 5. 로고 스타일 */
+  .logo-container {
+    display: flex;
+    justify-content: flex-start;
+  }
+
+  /* 6. 햄버거 메뉴 버튼 */
+  .mobile-menu-toggle {
+    display: flex;
+    background-color: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    width: 40px;
+    height: 40px;
+  }
+
+  /* 7. 인증 버튼 영역 */
+  .auth-container {
+    position: static;
+    display: flex;
+    transform: none;
+    background-color: transparent;
+    padding: 0;
+    justify-content: flex-end;
+  }
+
+  /* 8. 메뉴 열렸을 때 인증 영역 스타일 */
+  .nav-container.active + .auth-container,
+  .auth-container.active {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: var(--spacing-md);
+    background-color: rgba(0, 0, 0, 0.2);
+    z-index: 999;
+    display: flex;
+    justify-content: center;
+  }
+
+  .auth-button {
+    width: auto;
+    min-width: 100px;
+  }
+}
