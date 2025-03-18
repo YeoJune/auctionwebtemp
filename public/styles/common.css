@@ -399,7 +399,6 @@ input[type="time"]:focus {
     flex-direction: column;
     padding: var(--spacing-md);
     transform: translateX(-100%);
-    overflow-y: auto;
     z-index: 100;
     /* 스크롤바 숨기기 */
     scrollbar-width: none; /* Firefox */
