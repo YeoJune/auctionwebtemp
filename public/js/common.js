@@ -716,58 +716,59 @@ function handleResize() {
 
 // 모바일 메뉴 설정
 function setupMobileMenu() {
-  // 요소 찾기
   const menuToggle = document.querySelector(".mobile-menu-toggle");
   const navContainer = document.querySelector(".nav-container");
 
-  if (!menuToggle || !navContainer) return;
-
-  // 메뉴 버튼을 그리드 컨테이너로 감싸기
-  const buttons = navContainer.querySelectorAll(".nav-button");
-  if (buttons.length > 0 && !document.querySelector(".menu-buttons-grid")) {
-    // 버튼 그리드 컨테이너 생성
-    const gridContainer = document.createElement("div");
-    gridContainer.className = "menu-buttons-grid";
-
-    // 기존 버튼들을 새 컨테이너로 이동
-    buttons.forEach((button) => {
-      // 원래 위치에서 버튼 복제 (제거하지 않고)
-      const clonedButton = button.cloneNode(true);
-      // 그리드 컨테이너에 추가
-      gridContainer.appendChild(clonedButton);
-    });
-
-    // 그리드 컨테이너를 nav-container에 추가
-    navContainer.appendChild(gridContainer);
-
-    // auth-container가 있으면 복제해서 마지막에 위치하도록
-    const authContainer = document.querySelector(".auth-container");
-    if (authContainer) {
-      const clonedAuth = authContainer.cloneNode(true);
-      navContainer.appendChild(clonedAuth);
-    }
+  if (!menuToggle || !navContainer) {
+    console.error("메뉴 토글 또는 네비게이션 컨테이너를 찾을 수 없습니다");
+    return;
   }
 
-  // 토글 버튼 클릭 이벤트
-  menuToggle.addEventListener("click", function () {
+  // 모바일 뷰에서 초기 상태 설정
+  if (window.innerWidth <= 768) {
+    navContainer.style.display = "none";
+  }
+
+  // 기존 이벤트 리스너 제거 (중복 방지)
+  menuToggle.removeEventListener("click", toggleMobileMenu);
+
+  // 이벤트 리스너 추가
+  menuToggle.addEventListener("click", toggleMobileMenu);
+
+  // 토글 함수
+  function toggleMobileMenu() {
     const isActive = navContainer.classList.contains("active");
 
     if (isActive) {
       // 메뉴 닫기
       navContainer.classList.remove("active");
+      navContainer.style.display = "none";
       menuToggle.innerHTML = '<i class="fas fa-bars"></i>';
-      document.body.style.overflow = ""; // 스크롤 복원
+      document.body.style.overflow = "";
     } else {
       // 메뉴 열기
       navContainer.classList.add("active");
+      navContainer.style.display = "flex";
       menuToggle.innerHTML = '<i class="fas fa-times"></i>';
-      document.body.style.overflow = "hidden"; // 스크롤 방지
+      document.body.style.overflow = "hidden";
     }
-  });
+  }
 
-  // 초기 상태 설정 - 메뉴 닫힘
-  navContainer.classList.remove("active");
-  menuToggle.innerHTML = '<i class="fas fa-bars"></i>';
+  // 복제된 버튼들에 이벤트 리스너 다시 연결
+  const gridContainer = document.querySelector(".menu-buttons-grid");
+  if (gridContainer) {
+    const clonedButtons = gridContainer.querySelectorAll(".nav-button");
+    clonedButtons.forEach((button) => {
+      // 원본 버튼의 onclick 속성 복사
+      const originalButton = Array.from(
+        navContainer.querySelectorAll(".nav-button")
+      ).find((b) => b.textContent.trim() === button.textContent.trim());
+
+      if (originalButton && originalButton.onclick) {
+        button.onclick = originalButton.onclick;
+      }
+    });
+  }
 }
 
 // 기존 initializeCommonFeatures 함수에 추가
