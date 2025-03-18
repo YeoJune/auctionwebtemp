@@ -52,6 +52,8 @@
         padding: 60px 20px;
         text-align: center;
         margin-bottom: 40px;
+        display: flex;
+        flex-direction: column;
       }
 
       .header-content {
@@ -503,17 +505,12 @@
               onclick="location.href = '/productPage'" />
           </div>
           <div class="nav-container">
-            <button class="nav-button" id="productListBtn">
+            <button
+              class="nav-button"
+              id="productListBtn"
+              onclick="location.href = '/productPage'">
               <i class="fas fa-list"></i>
               <span>상품 리스트</span>
-            </button>
-            <button class="nav-button" id="favoritesBtn">
-              <i class="fas fa-star"></i>
-              <span>즐겨찾기</span>
-            </button>
-            <button class="nav-button" id="bidItemsBtn">
-              <i class="fas fa-gavel"></i>
-              <span>입찰 항목</span>
             </button>
             <button
               class="nav-button"
