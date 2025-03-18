@@ -1,8 +1,5 @@
 let EXCHANGE_RATE = 0.9; // 환율
 
-// API 기본 설정
-const API_BASE_URL = "/api";
-
 // API 요청 기본 함수
 async function fetchAPI(endpoint, options = {}) {
   const defaultOptions = {
@@ -14,7 +11,7 @@ async function fetchAPI(endpoint, options = {}) {
   };
 
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(`${"/api"}${endpoint}`, {
       ...defaultOptions,
       ...options,
     });
