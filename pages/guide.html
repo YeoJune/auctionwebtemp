@@ -493,7 +493,67 @@
 
   <body>
     <div class="container">
-      <!-- 기존 헤더는 기존 코드로 대체될 것입니다 -->
+      <header class="main-header">
+        <div class="header-content">
+          <div class="logo-container">
+            <img
+              src="images/logo.png"
+              alt="Logo"
+              onclick="location.href = '/productPage'" />
+          </div>
+          <div class="nav-container">
+            <button class="nav-button" id="productListBtn">
+              <i class="fas fa-list"></i>
+              <span>상품 리스트</span>
+            </button>
+            <button class="nav-button" id="favoritesBtn">
+              <i class="fas fa-star"></i>
+              <span>즐겨찾기</span>
+            </button>
+            <button class="nav-button" id="bidItemsBtn">
+              <i class="fas fa-gavel"></i>
+              <span>입찰 항목</span>
+            </button>
+            <button
+              class="nav-button"
+              id="bidResultsBtn"
+              onclick="window.location.href = '/bidResultsPage'">
+              <i class="fas fa-clipboard-check"></i>
+              <span>입찰 결과</span>
+            </button>
+            <button
+              class="nav-button"
+              onclick="window.location.href = '/valuesPage'">
+              <i class="fas fa-chart-line"></i>
+              <span>낙찰 시세표</span>
+            </button>
+            <button
+              class="nav-button"
+              onclick="window.open('http://pf.kakao.com/_xcCxoqn/chat', '_blank')">
+              <i class="fas fa-comments"></i>
+              <span>실시간 문의</span>
+            </button>
+            <button
+              class="nav-button"
+              onclick="window.location.href = '/inquiryPage'">
+              <i class="fas fa-user-plus"></i>
+              <span>가입문의</span>
+            </button>
+            <button
+              class="nav-button"
+              onclick="window.location.href = '/guidePage'">
+              <i class="fas fa-book"></i>
+              <span>이용가이드</span>
+            </button>
+          </div>
+          <div class="auth-container">
+            <button id="signinBtn" class="auth-button">로그인</button>
+            <button id="signoutBtn" class="auth-button" style="display: none">
+              로그아웃
+            </button>
+          </div>
+        </div>
+      </header>
 
       <!-- 헤더 배너 섹션 -->
       <section class="header-banner">
