@@ -781,3 +781,5 @@ function initializeCommonFeatures() {
   // 화면 크기 변경 시 이벤트
   window.addEventListener("resize", handleResize);
 }
+
+document.addEventListener("DOMContentLoaded", initializeCommonFeatures);
