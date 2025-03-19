@@ -52,7 +52,7 @@ function displayNotices(notices) {
         </a>
       `;
     } else {
-      // URL이 없는 경우 이미지와 제목만 표시 (클릭 시 상세 보기 모달 표시 기능 추가 가능)
+      // URL이 없는 경우 이미지와 제목만 표시
       noticeItem.innerHTML = `
         <div class="notice-content">
           <img src="${escapeHTML(notice.imageUrl)}" alt="${escapeHTML(

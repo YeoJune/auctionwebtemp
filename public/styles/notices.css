@@ -22,6 +22,7 @@
   scrollbar-width: thin;
   scrollbar-color: #888 #f1f1f1;
   -webkit-overflow-scrolling: touch;
+  align-items: flex-start;
 }
 
 .notice-container::-webkit-scrollbar {
@@ -43,18 +44,15 @@
 }
 
 .notice-item {
-  width: auto;
-  min-width: 300px;
-  max-width: 100%;
   position: relative;
+  min-width: 280px;
+  width: auto;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   border-radius: 8px;
   overflow: hidden;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   background-color: white;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+  display: inline-block;
 }
 
 .notice-item:hover {
@@ -69,10 +67,9 @@
 }
 
 .notice-item img {
-  width: 100%;
-  height: auto;
-  max-height: 220px;
   display: block;
+  width: auto;
+  height: 200px;
   border-radius: 8px 8px 0 0;
 }
 
@@ -94,22 +91,14 @@
 
 /* 반응형 디자인 */
 @media (max-width: 768px) {
-  .notice-item {
-    min-width: 250px;
-  }
-
   .notice-item img {
-    max-height: 180px;
+    height: 180px;
   }
 }
 
 @media (max-width: 480px) {
-  .notice-item {
-    min-width: 200px;
-  }
-
   .notice-item img {
-    max-height: 160px;
+    height: 150px;
   }
 
   .notice-title {
