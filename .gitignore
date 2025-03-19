@@ -6,4 +6,4 @@ test.js
 public/images/products/**
 userData
 temp**
-utils/data/**
+utils/data
