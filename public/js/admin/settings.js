@@ -50,6 +50,9 @@ document.addEventListener("DOMContentLoaded", function () {
     .getElementById("newNoticeBtn")
     .addEventListener("click", clearNoticeForm);
 
+  document
+    .getElementById("resetMetricsBtn")
+    .addEventListener("click", resetMetricsData);
   // 이미지 미리보기 이벤트 리스너
   document
     .getElementById("noticeImage")
@@ -82,18 +85,59 @@ async function updateMetrics() {
     document.getElementById("totalDailyUsers").textContent =
       stats.totalDailyUsers || 0;
 
-    // 총 요청 수 업데이트
-    document.getElementById("totalRequests").textContent =
-      stats.totalRequests.toLocaleString() || 0;
+    // 총 요청 수 및 페이지뷰 업데이트
+    document.getElementById("totalRequests").textContent = (
+      stats.totalRequests || 0
+    ).toLocaleString();
+    document.getElementById("uniquePageviews").textContent = (
+      stats.uniquePageviews || 0
+    ).toLocaleString();
 
     // 마지막 초기화 시간 업데이트
-    if (stats.lastReset) {
-      const resetDate = new Date(stats.lastReset);
+    if (stats.lastManualReset) {
+      const resetDate = new Date(stats.lastManualReset);
       document.getElementById("lastReset").textContent =
         resetDate.toLocaleString();
+    } else if (stats.lastReset) {
+      const resetDate = new Date(stats.lastReset);
+      document.getElementById("lastReset").textContent =
+        resetDate.toLocaleString() + " (자동)";
     }
   } catch (error) {
     console.error("메트릭스 업데이트 중 오류:", error);
+  }
+}
+
+// 메트릭스 초기화
+async function resetMetricsData() {
+  if (
+    !confirmAction(
+      "정말로 모든 메트릭스 데이터를 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+    )
+  ) {
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/metrics/reset", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("메트릭스 초기화에 실패했습니다.");
+    }
+
+    const result = await response.json();
+    showAlert("메트릭스 데이터가 성공적으로 초기화되었습니다.", "success");
+
+    // 메트릭스 데이터 즉시 새로고침
+    updateMetrics();
+  } catch (error) {
+    handleError(error, "메트릭스 초기화 중 오류가 발생했습니다.");
   }
 }
 

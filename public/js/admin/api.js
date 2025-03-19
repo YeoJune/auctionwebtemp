@@ -69,6 +69,7 @@ async function fetchRecentActivities() {
 }
 
 // 사용자 통계 조회
+// 사용자 통계 조회
 async function fetchUserStats() {
   try {
     // API 호출
@@ -86,7 +87,9 @@ async function fetchUserStats() {
       dailyGuestUsers: 0,
       totalDailyUsers: 0,
       totalRequests: 0,
+      uniquePageviews: 0,
       lastReset: new Date().toISOString(),
+      lastManualReset: null,
     };
   }
 }

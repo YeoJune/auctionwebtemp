@@ -83,6 +83,8 @@ app.use(metricsModule.metricsMiddleware);
 
 // 메트릭스 조회 엔드포인트
 app.get("/api/metrics", metricsModule.getMetrics);
+app.get("/api/metrics", metricsModule.getMetrics);
+app.post("/api/metrics/reset", metricsModule.resetMetrics);
 
 // 라우트
 app.use("/api/auth", authRoutes);

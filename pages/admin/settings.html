@@ -34,8 +34,16 @@
         </div>
 
         <!-- 접속량 통계 섹션 -->
+        <!-- 접속량 통계 섹션 -->
         <div class="card">
-          <div class="card-title">접속량 통계</div>
+          <div class="card-title">
+            접속량 통계
+            <button
+              id="resetMetricsBtn"
+              class="btn btn-danger btn-sm float-right">
+              통계 초기화
+            </button>
+          </div>
           <div class="metrics-section">
             <div class="metrics-grid">
               <div class="metric-card">
@@ -73,11 +81,22 @@
               </div>
 
               <div class="metric-card">
-                <h3>총 요청 수</h3>
+                <h3>총 요청 및 페이지뷰</h3>
                 <div class="metric-value">
-                  <span id="totalRequests" class="main-value">0</span>
-                  <div class="sub-metrics">
-                    <small>마지막 초기화: <span id="lastReset">-</span></small>
+                  <div class="sub-metrics mt-2">
+                    <div class="sub-metric">
+                      <span class="label">총 요청:</span>
+                      <span id="totalRequests" class="value">0</span>
+                    </div>
+                    <div class="sub-metric">
+                      <span class="label">페이지뷰:</span>
+                      <span id="uniquePageviews" class="value">0</span>
+                    </div>
+                    <div class="sub-metric mt-2">
+                      <small
+                        >마지막 초기화: <span id="lastReset">-</span></small
+                      >
+                    </div>
                   </div>
                 </div>
               </div>

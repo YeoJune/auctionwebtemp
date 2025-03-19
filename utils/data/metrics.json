@@ -1,0 +1,13 @@
+{
+  "memberActiveUsers": {
+    "admin": 1742373025649
+  },
+  "guestActiveUsers": {},
+  "memberDailyUsers": [
+    "admin"
+  ],
+  "guestDailyUsers": [],
+  "totalRequests": 79,
+  "lastReset": 1742310000000,
+  "lastSaved": 1742374233745
+}
