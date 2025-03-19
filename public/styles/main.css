@@ -1,56 +1,5 @@
 /* main.css - Merged Version */
 
-/* Navigation and Menu Styles */
-.nav-container {
-  display: flex;
-  justify-content: flex-start;
-  flex-wrap: wrap;
-  gap: 2px;
-}
-
-.nav-button {
-  flex-direction: column;
-  width: 64px;
-  height: 64px;
-  padding: 8px 0;
-  margin: 0;
-  border: none;
-  border-radius: 0;
-  background-color: transparent;
-  gap: 4px;
-  background-color: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
-  border-radius: var(--border-radius-sm);
-  padding: var(--spacing-sm) var(--spacing-md);
-  font-size: var(--font-size-sm);
-  min-height: 40px;
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-}
-
-.nav-button i {
-  font-size: 24px;
-  margin-bottom: 4px;
-  font-size: var(--font-size-md);
-}
-
-.nav-button span {
-  font-size: 11px;
-  white-space: nowrap;
-}
-
-.nav-button:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.4);
-}
-
-.nav-button.active {
-  background-color: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.5);
-}
-
 /* Filter Section */
 .filters-container {
   padding: 15px;
