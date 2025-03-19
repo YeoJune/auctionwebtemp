@@ -175,8 +175,13 @@ function renderLiveBidsTable(liveBids) {
 
     // 날짜를 KST로 변환
     let scheduledDate = "-";
-    if (bid.item && bid.item.scheduled_date) {
-      const date = new Date(bid.item.scheduled_date);
+    if (
+      bid.item &&
+      (bid.item.scheduled_date || bid.item.original_scheduled_date)
+    ) {
+      const date = new Date(
+        bid.item.original_scheduled_date || bid.item.scheduled_date
+      );
       scheduledDate = new Intl.DateTimeFormat("ko-KR", {
         timeZone: "Asia/Seoul",
         year: "numeric",

@@ -26,6 +26,7 @@ class DatabaseManager {
       "kaijoCd",
       "kaisaiKaisu",
       "bid_type",
+      "original_scheduled_date",
     ];
     this.IMAGE_DIR = path.join(__dirname, "..", "public", "images", "products");
   }
