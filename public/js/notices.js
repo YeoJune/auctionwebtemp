@@ -1,4 +1,3 @@
-// public/js/notices.js
 document.addEventListener("DOMContentLoaded", function () {
   // 공지사항 로드
   loadNotices();
@@ -45,21 +44,31 @@ function displayNotices(notices) {
     if (notice.targetUrl) {
       // URL이 있는 경우 링크로 감싸기
       noticeItem.innerHTML = `
-          <a href="${escapeHTML(notice.targetUrl)}" target="_blank">
-            <img src="${escapeHTML(notice.imageUrl)}" alt="${escapeHTML(
-        notice.title
-      )}">
-            <div class="notice-title">${escapeHTML(notice.title)}</div>
-          </a>
-        `;
-    } else {
-      // URL이 없는 경우 이미지만 표시
-      noticeItem.innerHTML = `
+        <a href="${escapeHTML(notice.targetUrl)}" target="_blank">
           <img src="${escapeHTML(notice.imageUrl)}" alt="${escapeHTML(
         notice.title
       )}">
           <div class="notice-title">${escapeHTML(notice.title)}</div>
-        `;
+        </a>
+      `;
+    } else {
+      // URL이 없는 경우 이미지와 제목만 표시 (클릭 시 상세 보기 모달 표시 기능 추가 가능)
+      noticeItem.innerHTML = `
+        <div class="notice-content">
+          <img src="${escapeHTML(notice.imageUrl)}" alt="${escapeHTML(
+        notice.title
+      )}">
+          <div class="notice-title">${escapeHTML(notice.title)}</div>
+        </div>
+      `;
+
+      // 클릭 이벤트 추가 (상세 모달 표시 등)
+      noticeItem.addEventListener("click", () => {
+        // 상세 모달 표시 함수 호출 (있는 경우)
+        if (typeof showNoticeDetail === "function") {
+          showNoticeDetail(notice);
+        }
+      });
     }
 
     noticeContainer.appendChild(noticeItem);
@@ -87,11 +96,31 @@ function handleNoticeVisibility() {
   // 모바일에서는 공지사항 섹션의 높이를 제한
   if (window.innerWidth <= 768) {
     const noticeContainer = document.getElementById("noticeContainer");
-    noticeContainer.style.maxHeight = "170px"; // 모바일에서의 최대 높이
+    noticeContainer.style.maxHeight = "300px"; // 모바일에서의 최대 높이 (더 크게 조정됨)
   } else {
     // 데스크톱에서는 제한 없음
     const noticeContainer = document.getElementById("noticeContainer");
     noticeContainer.style.maxHeight = "";
+  }
+}
+
+// 공지사항 상세 모달 표시 함수 (선택적 구현)
+function showNoticeDetail(notice) {
+  // 기존 모달이 있으면 활용
+  const modal = document.getElementById("noticeDetailModal");
+  if (modal) {
+    // 모달 내용 업데이트
+    document.getElementById("noticeTitle").textContent = notice.title;
+    if (document.getElementById("noticeContent")) {
+      document.getElementById("noticeContent").innerHTML = notice.content || "";
+    }
+    if (document.getElementById("noticeImage")) {
+      document.getElementById("noticeImage").src = notice.imageUrl;
+      document.getElementById("noticeImage").style.display = "block";
+    }
+
+    // 모달 표시
+    modal.style.display = "block";
   }
 }
 
