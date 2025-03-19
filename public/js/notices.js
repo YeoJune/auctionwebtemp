@@ -96,7 +96,7 @@ function handleNoticeVisibility() {
   // 모바일에서는 공지사항 섹션의 높이를 제한
   if (window.innerWidth <= 768) {
     const noticeContainer = document.getElementById("noticeContainer");
-    noticeContainer.style.maxHeight = "300px"; // 모바일에서의 최대 높이 (더 크게 조정됨)
+    noticeContainer.style.maxHeight = "250px"; // 모바일에서의 최대 높이 (조정됨)
   } else {
     // 데스크톱에서는 제한 없음
     const noticeContainer = document.getElementById("noticeContainer");
