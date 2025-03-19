@@ -1,3 +1,4 @@
+// public/js/notices.js
 document.addEventListener("DOMContentLoaded", function () {
   // 공지사항 로드
   loadNotices();
@@ -5,10 +6,13 @@ document.addEventListener("DOMContentLoaded", function () {
   // 창 크기 변경 시 공지사항 섹션 표시/숨김 처리
   handleNoticeVisibility();
   window.addEventListener("resize", handleNoticeVisibility);
-
-  // 터치 이벤트 초기화
-  initTouchEvents();
 });
+
+// 전역 변수
+let currentSlide = 0;
+let slideInterval;
+let isAnimating = false;
+let totalSlides = 0;
 
 // 공지사항 가져오기 함수
 async function loadNotices() {
@@ -26,9 +30,12 @@ async function loadNotices() {
     displayNotices(notices);
     document.querySelector(".notice-section").style.display = "block";
 
+    // 슬라이드 이벤트 초기화
+    initSlideEvents();
+
     // 자동 슬라이드 시작 (여러 공지사항이 있는 경우)
     if (notices.length > 1) {
-      startNoticeSlider();
+      startAutoSlide();
     }
   } catch (error) {
     console.error("공지사항을 불러오는 중 오류가 발생했습니다:", error);
@@ -39,11 +46,11 @@ async function loadNotices() {
 // 공지사항 표시 함수
 function displayNotices(notices) {
   const noticeContainer = document.getElementById("noticeContainer");
+  totalSlides = notices.length;
+  currentSlide = 0;
 
   // 컨테이너 초기화
   noticeContainer.innerHTML = "";
-
-  // 네비게이션 버튼 제거 - 슬라이드 제스처로 대체
 
   // 슬라이더 래퍼 추가
   const sliderWrapper = document.createElement("div");
@@ -54,11 +61,7 @@ function displayNotices(notices) {
   notices.forEach((notice, index) => {
     const noticeItem = document.createElement("div");
     noticeItem.className = "notice-item";
-    noticeItem.dataset.index = index;
-
-    if (index === 0) {
-      noticeItem.classList.add("active");
-    }
+    noticeItem.style.display = index === 0 ? "block" : "none";
 
     // 이미지와 링크 생성
     if (notice.targetUrl) {
@@ -107,155 +110,216 @@ function displayNotices(notices) {
       const indicator = document.createElement("span");
       indicator.className = "notice-indicator";
       if (index === 0) indicator.classList.add("active");
-      indicator.dataset.index = index;
+
       indicator.addEventListener("click", () => {
-        const currentIndex = parseInt(
-          document.querySelector(".notice-item.active").dataset.index
-        );
-
-        // 방향 결정 (애니메이션용)
-        let direction = 1; // 기본은 오른쪽
-        if (currentIndex < index) {
-          direction = 1; // 다음으로 (왼쪽으로 슬라이드)
-        } else if (currentIndex > index) {
-          direction = -1; // 이전으로 (오른쪽으로 슬라이드)
-        } else {
-          return; // 같은 항목이면 무시
-        }
-
-        // 현재 아이템
-        const currentItem = document.querySelector(".notice-item.active");
-        const nextItem = document.querySelector(
-          `.notice-item[data-index="${index}"]`
-        );
-
-        if (direction > 0) {
-          // 다음으로 이동 (왼쪽으로 슬라이드)
-          currentItem.classList.add("notice-slide-out-left");
-          nextItem.classList.add("notice-slide-left");
-        } else {
-          // 이전으로 이동 (오른쪽으로 슬라이드)
-          currentItem.classList.add("notice-slide-out-right");
-          nextItem.classList.add("notice-slide-right");
-        }
-
-        // 애니메이션 시작 전에 다음 아이템 표시
-        nextItem.style.display = "block";
-
-        // 애니메이션 종료 후 클래스 정리
-        setTimeout(() => {
-          document.querySelectorAll(".notice-item").forEach((item) => {
-            item.classList.remove(
-              "active",
-              "notice-slide-left",
-              "notice-slide-right",
-              "notice-slide-out-left",
-              "notice-slide-out-right"
-            );
-          });
-          nextItem.classList.add("active");
-
-          // 인디케이터 업데이트
-          document.querySelectorAll(".notice-indicator").forEach((ind, idx) => {
-            ind.classList.toggle("active", idx === index);
-          });
-        }, 300);
-
-        // 자동 슬라이드 재시작
-        startNoticeSlider();
+        if (isAnimating) return;
+        goToSlide(index);
       });
+
       indicatorContainer.appendChild(indicator);
     });
 
     noticeContainer.appendChild(indicatorContainer);
   }
 
-  // 네비게이션 버튼 제거 - 슬라이드 제스처로 대체
+  // 네비게이션 버튼 추가
+  if (notices.length > 1) {
+    const prevButton = document.createElement("button");
+    prevButton.className = "notice-nav prev";
+    prevButton.innerHTML = '<i class="fas fa-chevron-left"></i>';
+    prevButton.setAttribute("aria-label", "이전 공지사항");
+
+    const nextButton = document.createElement("button");
+    nextButton.className = "notice-nav next";
+    nextButton.innerHTML = '<i class="fas fa-chevron-right"></i>';
+    nextButton.setAttribute("aria-label", "다음 공지사항");
+
+    noticeContainer.appendChild(prevButton);
+    noticeContainer.appendChild(nextButton);
+
+    // 이벤트 리스너 추가
+    prevButton.addEventListener("click", () => {
+      if (isAnimating) return;
+      prevSlide();
+    });
+
+    nextButton.addEventListener("click", () => {
+      if (isAnimating) return;
+      nextSlide();
+    });
+  }
 }
 
-// 공지사항 슬라이더 자동 재생
-let noticeInterval;
-function startNoticeSlider() {
-  // 이전에 설정된 인터벌 제거
-  if (noticeInterval) {
-    clearInterval(noticeInterval);
+// 슬라이드 이벤트 초기화
+function initSlideEvents() {
+  const container = document.getElementById("noticeContainer");
+  if (!container || totalSlides <= 1) return;
+
+  let touchStartX = 0;
+  let touchEndX = 0;
+
+  // 터치 이벤트 (모바일)
+  container.addEventListener(
+    "touchstart",
+    (e) => {
+      if (isAnimating) return;
+      touchStartX = e.touches[0].clientX;
+      pauseAutoSlide();
+    },
+    { passive: true }
+  );
+
+  container.addEventListener(
+    "touchend",
+    (e) => {
+      if (isAnimating) return;
+      touchEndX = e.changedTouches[0].clientX;
+      handleSwipe();
+      resumeAutoSlide();
+    },
+    { passive: true }
+  );
+
+  // 스와이프 처리 함수
+  function handleSwipe() {
+    const swipeDistance = touchEndX - touchStartX;
+    const minSwipeDistance = 50; // 최소 스와이프 거리
+
+    if (Math.abs(swipeDistance) < minSwipeDistance) return;
+
+    if (swipeDistance > 0) {
+      prevSlide();
+    } else {
+      nextSlide();
+    }
+  }
+}
+
+// 다음 슬라이드로 이동
+function nextSlide() {
+  goToSlide((currentSlide + 1) % totalSlides);
+}
+
+// 이전 슬라이드로 이동
+function prevSlide() {
+  goToSlide((currentSlide - 1 + totalSlides) % totalSlides);
+}
+
+// 특정 슬라이드로 이동
+function goToSlide(index) {
+  if (index === currentSlide || isAnimating || totalSlides <= 1) return;
+
+  isAnimating = true;
+
+  const items = document.querySelectorAll(".notice-item");
+  const direction = index > currentSlide ? 1 : -1;
+
+  // 현재 슬라이드와 새 슬라이드 요소
+  const currentItem = items[currentSlide];
+  const nextItem = items[index];
+
+  // 애니메이션 전 준비
+  nextItem.style.display = "block";
+
+  // 현재 슬라이드 위치
+  currentItem.style.position = "absolute";
+  currentItem.style.top = "0";
+  currentItem.style.left = "0";
+  currentItem.style.width = "100%";
+  currentItem.style.zIndex = "1";
+
+  // 새 슬라이드 위치 (화면 밖에서 시작)
+  nextItem.style.position = "absolute";
+  nextItem.style.top = "0";
+  nextItem.style.left = direction > 0 ? "100%" : "-100%";
+  nextItem.style.width = "100%";
+  nextItem.style.zIndex = "2";
+
+  // 애니메이션
+  const duration = 300; // ms
+  const startTime = performance.now();
+
+  function animate(time) {
+    const elapsed = time - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+
+    // 이징 함수 (ease-out)
+    const easeProgress = 1 - Math.pow(1 - progress, 2);
+
+    // 현재 슬라이드 이동
+    currentItem.style.left = -direction * 100 * easeProgress + "%";
+
+    // 새 슬라이드 이동
+    nextItem.style.left = direction * 100 * (1 - easeProgress) + "%";
+
+    if (progress < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      // 애니메이션 완료
+      finishTransition();
+    }
   }
 
-  // 5초마다 다음 공지사항으로 이동
-  noticeInterval = setInterval(() => {
-    navigateNotice(1);
+  function finishTransition() {
+    // 스타일 초기화
+    items.forEach((item) => {
+      item.style.position = "";
+      item.style.top = "";
+      item.style.left = "";
+      item.style.width = "";
+      item.style.zIndex = "";
+      item.style.display = "none";
+    });
+
+    // 새 슬라이드만 표시
+    nextItem.style.display = "block";
+
+    // 인디케이터 업데이트
+    updateIndicators(index);
+
+    // 현재 슬라이드 업데이트
+    currentSlide = index;
+
+    // 애니메이션 상태 초기화
+    isAnimating = false;
+  }
+
+  requestAnimationFrame(animate);
+}
+
+// 인디케이터 업데이트
+function updateIndicators(index) {
+  const indicators = document.querySelectorAll(".notice-indicator");
+  indicators.forEach((indicator, i) => {
+    indicator.classList.toggle("active", i === index);
+  });
+}
+
+// 자동 슬라이드 시작
+function startAutoSlide() {
+  // 이전 인터벌 제거
+  if (slideInterval) {
+    clearInterval(slideInterval);
+  }
+
+  // 5초마다 다음 슬라이드로 이동
+  slideInterval = setInterval(() => {
+    if (!isAnimating) {
+      nextSlide();
+    }
   }, 5000);
 }
 
-// 공지사항 수동 네비게이션
-function navigateNotice(direction) {
-  const items = document.querySelectorAll(".notice-item");
-  if (items.length <= 1) return;
-
-  // 현재 활성화된 공지사항 찾기
-  const currentItem = document.querySelector(".notice-item.active");
-  const currentIndex = parseInt(currentItem.dataset.index);
-  let nextIndex = currentIndex + direction;
-
-  // 인덱스 범위 조정
-  if (nextIndex < 0) nextIndex = items.length - 1;
-  if (nextIndex >= items.length) nextIndex = 0;
-
-  // 슬라이드 방향에 따른 애니메이션 클래스 설정
-  const nextItem = document.querySelector(
-    `.notice-item[data-index="${nextIndex}"]`
-  );
-
-  if (direction > 0) {
-    // 다음으로 이동 (왼쪽으로 슬라이드)
-    currentItem.classList.add("notice-slide-out-left");
-    nextItem.classList.add("notice-slide-left");
-  } else {
-    // 이전으로 이동 (오른쪽으로 슬라이드)
-    currentItem.classList.add("notice-slide-out-right");
-    nextItem.classList.add("notice-slide-right");
+// 자동 슬라이드 일시 중지
+function pauseAutoSlide() {
+  if (slideInterval) {
+    clearInterval(slideInterval);
   }
-
-  // 애니메이션 종료 후 클래스 정리
-  setTimeout(() => {
-    items.forEach((item) => {
-      item.classList.remove(
-        "active",
-        "notice-slide-left",
-        "notice-slide-right",
-        "notice-slide-out-left",
-        "notice-slide-out-right"
-      );
-    });
-    nextItem.classList.add("active");
-
-    // 인디케이터 업데이트
-    document.querySelectorAll(".notice-indicator").forEach((indicator, idx) => {
-      indicator.classList.toggle("active", idx === nextIndex);
-    });
-  }, 300); // 애니메이션 지속 시간과 일치
-
-  // 애니메이션 시작 전에 다음 아이템 표시
-  nextItem.style.display = "block";
-
-  // 자동 슬라이드 재시작
-  startNoticeSlider();
 }
 
-// 특정 인덱스의 공지사항으로 직접 이동 (인디케이터 클릭 시)
-function goToNotice(index) {
-  const items = document.querySelectorAll(".notice-item");
-  const currentItem = document.querySelector(".notice-item.active");
-  const currentIndex = parseInt(currentItem.dataset.index);
-
-  // 같은 인덱스면 무시
-  if (currentIndex === index) return;
-
-  // 방향 결정 (애니메이션 방향 설정 위함)
-  const direction = index > currentIndex ? 1 : -1;
-
-  // navigateNotice 함수 재사용
-  navigateNotice(direction);
+// 자동 슬라이드 재개
+function resumeAutoSlide() {
+  startAutoSlide();
 }
 
 // 보안을 위한 HTML 이스케이프 함수
@@ -275,8 +339,6 @@ function handleNoticeVisibility() {
 
   // 이미 숨겨진 상태이면 처리하지 않음
   if (noticeSection.style.display === "none") return;
-
-  // 반응형 처리는 CSS에서 주로 담당
 }
 
 // 공지사항 상세 모달 표시 함수 (선택적 구현)
@@ -307,79 +369,9 @@ if (window.API) {
   };
 }
 
-// 터치 슬라이드 기능 초기화
-function initTouchEvents() {
-  const container = document.getElementById("noticeContainer");
-  if (!container) return;
-
-  let touchStartX = 0;
-  let touchEndX = 0;
-
-  // 마우스 이벤트 (데스크톱)
-  container.addEventListener("mousedown", (e) => {
-    touchStartX = e.clientX;
-
-    // 드래그 중 텍스트 선택 방지
-    e.preventDefault();
-
-    // 마우스 드래그 이벤트
-    const handleMouseMove = (moveEvent) => {
-      // 드래그 중 텍스트 선택 방지
-      moveEvent.preventDefault();
-    };
-
-    // 마우스 업 이벤트
-    const handleMouseUp = (upEvent) => {
-      touchEndX = upEvent.clientX;
-      handleSwipe();
-
-      // 이벤트 리스너 제거
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
-
-    // 문서 전체에 이벤트 리스너 추가
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-  });
-
-  // 터치 이벤트 (모바일)
-  container.addEventListener(
-    "touchstart",
-    (e) => {
-      touchStartX = e.touches[0].clientX;
-    },
-    { passive: true }
-  );
-
-  container.addEventListener(
-    "touchend",
-    (e) => {
-      touchEndX = e.changedTouches[0].clientX;
-      handleSwipe();
-    },
-    { passive: true }
-  );
-
-  // 스와이프 처리 함수
-  function handleSwipe() {
-    const swipeDistance = touchEndX - touchStartX;
-    const minSwipeDistance = 50; // 최소 스와이프 거리 (픽셀)
-
-    // 우측에서 좌측으로 스와이프 (다음 공지사항)
-    if (swipeDistance < -minSwipeDistance) {
-      navigateNotice(1);
-    }
-    // 좌측에서 우측으로 스와이프 (이전 공지사항)
-    else if (swipeDistance > minSwipeDistance) {
-      navigateNotice(-1);
-    }
-  }
-}
-
 // 페이지 떠날 때 인터벌 정리
 window.addEventListener("beforeunload", () => {
-  if (noticeInterval) {
-    clearInterval(noticeInterval);
+  if (slideInterval) {
+    clearInterval(slideInterval);
   }
 });
