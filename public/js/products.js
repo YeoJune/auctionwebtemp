@@ -79,7 +79,7 @@ function getLiveBidSectionHTML(bidInfo, itemId, aucNum, category) {
         <div class="final-price">
           <p>최종 입찰금액: ${cleanNumberFormat(bidInfo.final_price)} ¥</p>
           <div class="price-details-container">
-            세금, 수수료포함 ${cleanNumberFormat(
+            관부가세 포함 ${cleanNumberFormat(
               calculateTotalPrice(bidInfo.final_price, aucNum, category)
             )}원
           </div>
@@ -93,7 +93,7 @@ function getLiveBidSectionHTML(bidInfo, itemId, aucNum, category) {
     <div class="real-time-price">
       <p>실시간 금액: ${cleanNumberFormat(startingPrice)} ¥</p>
       <div class="price-details-container">
-        세금, 수수료포함 ${cleanNumberFormat(
+        관부가세 포함 ${cleanNumberFormat(
           calculateTotalPrice(startingPrice, aucNum, category)
         )}원
       </div>
@@ -106,7 +106,7 @@ function getLiveBidSectionHTML(bidInfo, itemId, aucNum, category) {
         <div class="bid-price-info">
           <p>1차 입찰금액: ${cleanNumberFormat(bidInfo.first_price)} ¥</p>
           <div class="price-details-container first-price">
-            세금, 수수료포함 ${cleanNumberFormat(
+            관부가세 포함 ${cleanNumberFormat(
               calculateTotalPrice(bidInfo.first_price, aucNum, category)
             )}원
           </div>
@@ -119,7 +119,7 @@ function getLiveBidSectionHTML(bidInfo, itemId, aucNum, category) {
         <div class="bid-price-info">
           <p>2차 제안금액: ${cleanNumberFormat(bidInfo.second_price)} ¥</p>
           <div class="price-details-container second-price">
-            세금, 수수료포함 ${cleanNumberFormat(
+            관부가세 포함 ${cleanNumberFormat(
               calculateTotalPrice(bidInfo.second_price, aucNum, category)
             )}원
           </div>
@@ -181,7 +181,7 @@ function getDirectBidSectionHTML(bidInfo, itemId, aucNum, category) {
     <div class="real-time-price">
       <p>실시간 금액: ${cleanNumberFormat(live_price)} ¥</p>
       <div class="price-details-container">
-        세금, 수수료 포함 ${cleanNumberFormat(
+        관부가세 포함 ${cleanNumberFormat(
           calculateTotalPrice(live_price, aucNum, category)
         )}원
       </div>
@@ -192,7 +192,7 @@ function getDirectBidSectionHTML(bidInfo, itemId, aucNum, category) {
       <div class="bid-price-info">
         <p>나의 입찰 금액: ${cleanNumberFormat(currentPrice)} ¥</p>
         <div class="price-details-container my-price">
-          세금, 수수료 포함 ${cleanNumberFormat(
+          관부가세 포함 ${cleanNumberFormat(
             calculateTotalPrice(currentPrice, aucNum, category)
           )}원
         </div>
@@ -546,7 +546,7 @@ function getBidInfoHTML(bidInfo, item) {
         <span class="price-value">${cleanNumberFormat(
           bidInfo.first_price
         )}￥</span>
-        <span class="price-detail">세금, 수수료포함 ${cleanNumberFormat(
+        <span class="price-detail">관부가세 포함 ${cleanNumberFormat(
           calculateTotalPrice(bidInfo.first_price, item.auc_num, item.category)
         )}\\</span>
       </div>`;
@@ -560,7 +560,7 @@ function getBidInfoHTML(bidInfo, item) {
         <span class="price-value">${cleanNumberFormat(
           bidInfo.final_price
         )}￥</span>
-        <span class="price-detail">세금, 수수료포함 ${cleanNumberFormat(
+        <span class="price-detail">관부가세 포함 ${cleanNumberFormat(
           calculateTotalPrice(bidInfo.final_price, item.auc_num, item.category)
         )}\\</span>
       </div>`;
@@ -578,7 +578,7 @@ function getDirectBidInfoHTML(bidInfo, item) {
       <span class="price-value">${cleanNumberFormat(
         bidInfo.current_price
       )}￥</span>
-      <span class="price-detail">세금, 수수료포함 ${cleanNumberFormat(
+      <span class="price-detail">관부가세 포함 ${cleanNumberFormat(
         calculateTotalPrice(bidInfo.current_price, item.auc_num, item.category)
       )}\\</span>
     </div>
@@ -743,7 +743,7 @@ function getDirectCardHTML(item, bidInfo, favoriteNumber) {
           <span class="price-value">${cleanNumberFormat(
             live_price || 0
           )}￥</span>
-          <span class="price-detail">세금, 수수료 포함 ${cleanNumberFormat(
+          <span class="price-detail">관부가세 포함 ${cleanNumberFormat(
             calculateTotalPrice(live_price, item.auc_num, item.category)
           )}\\</span>
         </div>
@@ -1018,7 +1018,7 @@ function initializePriceCalculators() {
             : "";
         } else {
           container.innerHTML = price
-            ? `(세금, 수수료포함 ${cleanNumberFormat(totalPrice)}원)`
+            ? `(관부가세 포함 ${cleanNumberFormat(totalPrice)}원)`
             : "";
         }
       });
