@@ -517,6 +517,9 @@ class BrandAucCrawler extends AxiosCrawler {
       bid_type: this.currentBidType,
     };
   }
+  async directBid(item_id, price) {
+    print("Direct bid not implemented", item_id, price);
+  }
 }
 
 class BrandAucValueCrawler extends AxiosCrawler {

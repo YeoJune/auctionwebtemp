@@ -37,6 +37,11 @@ document.addEventListener("DOMContentLoaded", function () {
     .getElementById("submitCancel")
     .addEventListener("click", submitCancelBid);
 
+  // 플랫폼 반영 완료 표시 모달 제출 버튼
+  document
+    .getElementById("submitMarkAsSubmitted")
+    .addEventListener("click", markAsSubmitted);
+
   // 페이지 크기 변경 이벤트
   document.getElementById("pageSize")?.addEventListener("change", function () {
     itemsPerPage = parseInt(this.value);
@@ -210,12 +215,28 @@ function renderDirectBidsTable(directBids) {
         statusBadge = '<span class="badge">' + bid.status + "</span>";
     }
 
+    // 플랫폼 반영 상태 배지
+    let submittedBadge = "";
+    if (bid.submitted_to_platform) {
+      submittedBadge = '<span class="badge badge-success">반영됨</span>';
+    } else {
+      submittedBadge = '<span class="badge badge-warning">미반영</span>';
+    }
+
     // 작업 버튼
     let actionButtons = "";
     if (bid.status === "active") {
       actionButtons = `
         <button class="btn" onclick="openCompleteModal(${bid.id})">낙찰 완료</button>
         <button class="btn btn-secondary" onclick="openCancelModal(${bid.id})">취소</button>
+      `;
+    }
+
+    // 플랫폼 반영 관련 작업 버튼
+    let platformActionButton = "";
+    if (!bid.submitted_to_platform) {
+      platformActionButton = `
+        <button class="btn btn-secondary" onclick="openMarkAsSubmittedModal(${bid.id})">반영됨으로 표시</button>
       `;
     }
 
@@ -310,7 +331,11 @@ function renderDirectBidsTable(directBids) {
     <td>${formatDate(bid.created_at)}</td>
     <td>${formatDate(bid.updated_at)}</td>
     <td>${statusBadge}</td>
-    <td>${actionButtons}</td>
+    <td>${submittedBadge}</td>
+    <td>
+      ${actionButtons}
+      ${platformActionButton}
+    </td>
   </tr>
 `;
   });
@@ -369,5 +394,31 @@ async function submitCancelBid() {
     await loadDirectBids();
   } catch (error) {
     handleError(error, "입찰 취소 처리 중 오류가 발생했습니다.");
+  }
+}
+
+// 플랫폼 반영 완료 표시 모달 열기
+function openMarkAsSubmittedModal(bidId) {
+  document.getElementById("markSubmittedBidId").value = bidId;
+  openModal("markAsSubmittedModal");
+}
+
+// 플랫폼 반영 완료 표시 처리
+async function markAsSubmitted() {
+  const bidId = document.getElementById("markSubmittedBidId").value;
+
+  if (!bidId) {
+    showAlert("입찰 ID가 유효하지 않습니다.");
+    return;
+  }
+
+  try {
+    await markDirectBidAsSubmitted(bidId);
+    closeAllModals();
+    showAlert("플랫폼 반영 완료로 표시되었습니다.", "success");
+    // 데이터 새로고침
+    await loadDirectBids();
+  } catch (error) {
+    handleError(error, "반영 완료 표시 중 오류가 발생했습니다.");
   }
 }

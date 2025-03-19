@@ -222,6 +222,14 @@ async function cancelDirectBid(bidId) {
   });
 }
 
+// 직접 입찰 플랫폼 반영 완료 표시
+async function markDirectBidAsSubmitted(bidId) {
+  return fetchAPI(`/direct-bids/${bidId}/mark-submitted`, {
+    method: "PUT",
+    body: JSON.stringify({}),
+  });
+}
+
 // ---- 관리자 설정 API ----
 
 // 크롤링 상태 체크

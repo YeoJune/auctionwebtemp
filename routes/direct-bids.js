@@ -2,6 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const pool = require("../utils/DB");
+const submitBid = require("../utils/submitBid");
 
 const isAdmin = (req, res, next) => {
   if (req.session.user && req.session.user.id === "admin") {
@@ -54,7 +55,7 @@ router.get("/", async (req, res) => {
 
       mainQuery = `
         SELECT 
-          d.id, d.item_id, d.user_id, d.current_price, d.status, d.created_at, d.updated_at,
+          d.*,
           i.item_id, i.original_title, i.auc_num, i.category, i.brand, i.rank,
           i.starting_price, i.scheduled_date, i.image, i.original_scheduled_date
         FROM direct_bids d
@@ -77,7 +78,7 @@ router.get("/", async (req, res) => {
 
       mainQuery = `
         SELECT 
-          d.id, d.item_id, d.user_id, d.current_price, d.status, d.created_at, d.updated_at,
+          d.*,
           i.item_id, i.original_title, i.auc_num, i.category, i.brand, i.rank,
           i.starting_price, i.scheduled_date, i.image, i.original_scheduled_date
         FROM direct_bids d
@@ -176,6 +177,7 @@ router.get("/", async (req, res) => {
         user_id: row.user_id,
         current_price: row.current_price,
         status: row.status,
+        submitted_to_platform: row.submitted_to_platform,
         created_at: row.created_at,
         updated_at: row.updated_at,
       };
@@ -270,9 +272,9 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// 사용자의 입찰 (자동 생성/업데이트)
+// 사용자의 입찰 (자동 생성/업데이트) - 자동 제출 기능 추가
 router.post("/", async (req, res) => {
-  const { itemId, currentPrice } = req.body;
+  const { itemId, currentPrice, autoSubmit = true } = req.body;
 
   if (!req.session.user) {
     return res.status(401).json({ message: "Unauthorized" });
@@ -298,6 +300,16 @@ router.post("/", async (req, res) => {
     if (items.length === 0) {
       await connection.rollback();
       return res.status(404).json({ message: "Item not found" });
+    }
+
+    const item = items[0];
+
+    // 지원하는 경매 플랫폼인지 확인 (autoSubmit이 true인 경우)
+    if (autoSubmit && item.auc_num !== 1 && item.auc_num !== 2) {
+      await connection.rollback();
+      return res.status(400).json({
+        message: "Auto-submission is not supported for this auction platform",
+      });
     }
 
     // 2. 아이템에 대한 현재 사용자의 액티브 입찰 찾기
@@ -354,11 +366,48 @@ router.post("/", async (req, res) => {
 
     await connection.commit();
 
+    // 7. autoSubmit이 true인 경우 자동으로 입찰 제출
+    let submissionResult = null;
+    if (autoSubmit) {
+      // 관리자 또는 아이템 소유자만 자동 제출 가능
+      if (userId !== "admin") {
+        return res.status(403).json({
+          message: "Only administrators can auto-submit bids",
+          bidId: bidId,
+          status: "active",
+          currentPrice,
+          submitted: false,
+        });
+      }
+
+      submissionResult = await submitBid({
+        bid_id: bidId,
+        price: currentPrice,
+      });
+
+      if (submissionResult && !submissionResult.success) {
+        // 입찰 제출 실패해도 입찰 생성/업데이트는 성공적으로 이루어짐
+        return res.status(201).json({
+          message:
+            "Bid placed successfully but could not be submitted to platform automatically",
+          bidId: bidId,
+          status: "active",
+          currentPrice,
+          submitted: false,
+          submissionError: submissionResult.message,
+        });
+      }
+    }
+
     res.status(201).json({
-      message: "Bid placed successfully",
+      message: autoSubmit
+        ? "Bid placed and submitted to platform successfully"
+        : "Bid placed successfully",
       bidId: bidId,
       status: "active",
       currentPrice,
+      submitted: autoSubmit ? true : false,
+      submissionResult: submissionResult,
     });
   } catch (err) {
     await connection.rollback();
@@ -468,6 +517,135 @@ router.put("/:id/cancel", isAdmin, async (req, res) => {
     await connection.rollback();
     console.error("Error cancelling bid:", err);
     res.status(500).json({ message: "Error cancelling bid" });
+  } finally {
+    connection.release();
+  }
+});
+
+// 입찰 수동 제출 API
+router.post("/:id/submit", isAdmin, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // 입찰 정보 조회
+    const connection = await pool.getConnection();
+
+    try {
+      const [bids] = await connection.query(
+        "SELECT * FROM direct_bids WHERE id = ?",
+        [id]
+      );
+
+      if (bids.length === 0) {
+        return res.status(404).json({ message: "Bid not found" });
+      }
+
+      const bid = bids[0];
+
+      // 이미 제출된 입찰인지 확인
+      if (bid.submitted_to_platform) {
+        return res.status(400).json({
+          message: "This bid has already been submitted to the platform",
+        });
+      }
+
+      // 입찰 상태 확인
+      if (bid.status !== "active") {
+        return res.status(400).json({
+          message: "Only active bids can be submitted to the platform",
+        });
+      }
+
+      // submitBid 함수 호출
+      const result = await submitBid({
+        bid_id: id,
+        price: bid.current_price,
+      });
+
+      if (result.success) {
+        return res.status(200).json({
+          message: "Bid successfully submitted to platform",
+          bidId: id,
+          success: true,
+        });
+      } else {
+        return res.status(result.statusCode || 500).json({
+          message: result.message,
+          error: result.error,
+          success: false,
+        });
+      }
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    console.error("Error submitting bid:", error);
+    return res.status(500).json({
+      message: "Error submitting bid",
+      error: error.message,
+      success: false,
+    });
+  }
+});
+
+router.put("/:id/mark-submitted", async (req, res) => {
+  const { id } = req.params;
+
+  if (!req.session.user) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const userId = req.session.user.id;
+  const isUserAdmin = userId === "admin";
+
+  // 관리자만 수동으로 반영 완료 표시 가능
+  if (!isUserAdmin) {
+    return res.status(403).json({ message: "Access denied. Admin only." });
+  }
+
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    // 입찰 정보 확인
+    const [bids] = await connection.query(
+      "SELECT * FROM direct_bids WHERE id = ?",
+      [id]
+    );
+
+    if (bids.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ message: "Bid not found" });
+    }
+
+    const bid = bids[0];
+
+    // 이미 반영된 입찰인지 확인
+    if (bid.submitted_to_platform) {
+      await connection.rollback();
+      return res
+        .status(400)
+        .json({ message: "Bid already marked as submitted" });
+    }
+
+    // 플랫폼 반영 상태 업데이트
+    await connection.query(
+      "UPDATE direct_bids SET submitted_to_platform = TRUE WHERE id = ?",
+      [id]
+    );
+
+    await connection.commit();
+
+    res.status(200).json({
+      message: "Bid marked as submitted successfully",
+      bidId: id,
+      submitted_to_platform: true,
+    });
+  } catch (err) {
+    await connection.rollback();
+    console.error("Error marking bid as submitted:", err);
+    res.status(500).json({ message: "Error marking bid as submitted" });
   } finally {
     connection.release();
   }
