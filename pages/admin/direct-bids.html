@@ -49,6 +49,53 @@
             <span class="toggle-label">아이템별 최고가만 보기</span>
           </label>
 
+          <!-- 정렬 옵션 추가 -->
+          <div class="sort-options">
+            <div class="sort-field">
+              <label for="sortBy">정렬 기준:</label>
+              <select id="sortBy" class="form-control form-control-sm">
+                <option value="updated_at">변경일</option>
+                <option value="original_title">제목</option>
+                <option value="original_scheduled_date">예정일</option>
+                <option value="current_price">입찰가</option>
+                <option value="created_at">생성일</option>
+              </select>
+            </div>
+            <div class="sort-order">
+              <label for="sortOrder">정렬 방향:</label>
+              <select id="sortOrder" class="form-control form-control-sm">
+                <option value="desc">내림차순</option>
+                <option value="asc">오름차순</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 날짜 필터 추가 -->
+          <div class="date-filter">
+            <div class="date-inputs">
+              <div class="date-field">
+                <label for="fromDate">시작일:</label>
+                <input
+                  type="date"
+                  id="fromDate"
+                  class="form-control form-control-sm" />
+              </div>
+              <div class="date-field">
+                <label for="toDate">종료일:</label>
+                <input
+                  type="date"
+                  id="toDate"
+                  class="form-control form-control-sm" />
+              </div>
+            </div>
+            <div class="date-buttons">
+              <button id="applyDateFilter" class="btn btn-sm">적용</button>
+              <button id="resetDateFilter" class="btn btn-sm btn-secondary">
+                초기화
+              </button>
+            </div>
+          </div>
+
           <div class="page-size-selector">
             <label for="pageSize">페이지당 항목:</label>
             <select id="pageSize" class="form-control form-control-sm">

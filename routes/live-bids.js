@@ -13,9 +13,17 @@ const isAdmin = (req, res, next) => {
 
 // STATUS -> 'first', 'second', 'final', 'completed', 'cancelled'
 
-// GET endpoint to retrieve live bids, filtered by status
+// Updated GET endpoint for live-bids.js
 router.get("/", async (req, res) => {
-  const { status, page = 1, limit = 10, fromDate } = req.query;
+  const {
+    status,
+    page = 1,
+    limit = 10,
+    fromDate,
+    toDate,
+    sortBy = "updated_at",
+    sortOrder = "desc",
+  } = req.query;
   const offset = (page - 1) * limit;
 
   if (!req.session.user) {
@@ -45,10 +53,16 @@ router.get("/", async (req, res) => {
     }
   }
 
-  // 날짜 필터 추가
+  // 시작 날짜 필터 추가
   if (fromDate) {
     queryConditions.push("b.updated_at >= ?");
     queryParams.push(fromDate);
+  }
+
+  // 종료 날짜 필터 추가
+  if (toDate) {
+    queryConditions.push("b.updated_at <= ?");
+    queryParams.push(toDate);
   }
 
   // Regular users can only see their own bids, admins can see all
@@ -76,9 +90,43 @@ router.get("/", async (req, res) => {
     FROM live_bids b
     LEFT JOIN crawled_items i ON b.item_id = i.item_id
     WHERE ${whereClause}
-    ORDER BY b.updated_at DESC
-    LIMIT ? OFFSET ?
   `;
+
+  // 정렬 설정
+  let orderByColumn;
+  switch (sortBy) {
+    case "original_scheduled_date":
+      orderByColumn = "i.original_scheduled_date";
+      break;
+    case "scheduled_date":
+      orderByColumn = "i.scheduled_date";
+      break;
+    case "original_title":
+      orderByColumn = "i.original_title";
+      break;
+    case "first_price":
+      orderByColumn = "b.first_price";
+      break;
+    case "final_price":
+      orderByColumn = "b.final_price";
+      break;
+    case "created_at":
+      orderByColumn = "b.created_at";
+      break;
+    case "updated_at":
+    default:
+      orderByColumn = "b.updated_at";
+      break;
+  }
+
+  // 정렬 방향 설정
+  const direction = sortOrder.toUpperCase() === "ASC" ? "ASC" : "DESC";
+
+  // 정렬 쿼리 추가
+  const orderByClause = ` ORDER BY ${orderByColumn} ${direction}`;
+  const paginationClause = " LIMIT ? OFFSET ?";
+
+  const finalQuery = mainQuery + orderByClause + paginationClause;
 
   // Add pagination parameters
   queryParams.push(parseInt(limit), parseInt(offset));
@@ -95,7 +143,7 @@ router.get("/", async (req, res) => {
     const totalPages = Math.ceil(total / limit);
 
     // Get bids with item details in a single query
-    const [rows] = await connection.query(mainQuery, queryParams);
+    const [rows] = await connection.query(finalQuery, queryParams);
 
     // Format result to match expected structure
     const bidsWithItems = rows.map((row) => {

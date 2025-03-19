@@ -13,8 +13,18 @@ const isAdmin = (req, res, next) => {
 
 // STATUS -> 'active', 'completed', 'cancelled'
 // GET endpoint to retrieve all bids, with optional filtering
+// Updated GET endpoint for direct-bids.js
 router.get("/", async (req, res) => {
-  const { status, highestOnly, page = 1, limit = 10, fromDate } = req.query;
+  const {
+    status,
+    highestOnly,
+    page = 1,
+    limit = 10,
+    fromDate,
+    toDate,
+    sortBy = "updated_at",
+    sortOrder = "desc",
+  } = req.query;
   const offset = (page - 1) * limit;
 
   if (!req.session.user) {
@@ -46,7 +56,7 @@ router.get("/", async (req, res) => {
         SELECT 
           d.id, d.item_id, d.user_id, d.current_price, d.status, d.created_at, d.updated_at,
           i.item_id, i.original_title, i.auc_num, i.category, i.brand, i.rank,
-          i.starting_price, i.scheduled_date, i.image
+          i.starting_price, i.scheduled_date, i.image, i.original_scheduled_date
         FROM direct_bids d
         INNER JOIN (
           SELECT item_id, MAX(current_price) as max_price
@@ -69,7 +79,7 @@ router.get("/", async (req, res) => {
         SELECT 
           d.id, d.item_id, d.user_id, d.current_price, d.status, d.created_at, d.updated_at,
           i.item_id, i.original_title, i.auc_num, i.category, i.brand, i.rank,
-          i.starting_price, i.scheduled_date, i.image
+          i.starting_price, i.scheduled_date, i.image, i.original_scheduled_date
         FROM direct_bids d
         LEFT JOIN crawled_items i ON d.item_id = i.item_id
         WHERE 1=1
@@ -95,11 +105,18 @@ router.get("/", async (req, res) => {
       }
     }
 
-    // 날짜 필터 추가
+    // 시작 날짜 필터 추가
     if (fromDate) {
       countQuery += " AND d.updated_at >= ?";
       mainQuery += " AND d.updated_at >= ?";
       queryParams.push(fromDate);
+    }
+
+    // 종료 날짜 필터 추가
+    if (toDate) {
+      countQuery += " AND d.updated_at <= ?";
+      mainQuery += " AND d.updated_at <= ?";
+      queryParams.push(toDate);
     }
 
     // 일반 사용자는 자신의 입찰만 볼 수 있고, 관리자는 모든 입찰을 볼 수 있음
@@ -109,8 +126,35 @@ router.get("/", async (req, res) => {
       queryParams.push(req.session.user.id);
     }
 
-    // 최신순으로 정렬
-    mainQuery += " ORDER BY d.updated_at DESC";
+    // 정렬 설정
+    let orderByColumn;
+    switch (sortBy) {
+      case "original_scheduled_date":
+        orderByColumn = "i.original_scheduled_date";
+        break;
+      case "scheduled_date":
+        orderByColumn = "i.scheduled_date";
+        break;
+      case "original_title":
+        orderByColumn = "i.original_title";
+        break;
+      case "current_price":
+        orderByColumn = "d.current_price";
+        break;
+      case "created_at":
+        orderByColumn = "d.created_at";
+        break;
+      case "updated_at":
+      default:
+        orderByColumn = "d.updated_at";
+        break;
+    }
+
+    // 정렬 방향 설정
+    const direction = sortOrder.toUpperCase() === "ASC" ? "ASC" : "DESC";
+
+    // 정렬 쿼리 추가
+    mainQuery += ` ORDER BY ${orderByColumn} ${direction}`;
 
     // 페이지네이션 추가
     mainQuery += " LIMIT ? OFFSET ?";
@@ -148,6 +192,7 @@ router.get("/", async (req, res) => {
           rank: row.rank,
           starting_price: row.starting_price,
           scheduled_date: row.scheduled_date,
+          original_scheduled_date: row.original_scheduled_date,
           image: row.image,
         };
       }

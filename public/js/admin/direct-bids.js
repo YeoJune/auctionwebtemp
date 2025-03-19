@@ -6,6 +6,10 @@ let highestOnly = true;
 let currentPage = 1;
 let itemsPerPage = 10;
 let totalPages = 1;
+let currentSortBy = "updated_at"; // 기본 정렬 필드
+let currentSortOrder = "desc"; // 기본 정렬 방향
+let fromDate = ""; // 시작 날짜 필터
+let toDate = ""; // 종료 날짜 필터
 
 // 페이지 로드 시 실행
 document.addEventListener("DOMContentLoaded", function () {
@@ -39,6 +43,42 @@ document.addEventListener("DOMContentLoaded", function () {
     currentPage = 1; // 페이지 크기 변경 시 첫 페이지로 리셋
     loadDirectBids();
   });
+
+  // 정렬 옵션 변경 이벤트
+  document.getElementById("sortBy")?.addEventListener("change", function () {
+    currentSortBy = this.value;
+    currentPage = 1; // 정렬 변경 시 첫 페이지로 리셋
+    loadDirectBids();
+  });
+
+  // 정렬 방향 변경 이벤트
+  document.getElementById("sortOrder")?.addEventListener("change", function () {
+    currentSortOrder = this.value;
+    currentPage = 1; // 정렬 방향 변경 시 첫 페이지로 리셋
+    loadDirectBids();
+  });
+
+  // 날짜 필터 적용 버튼 이벤트
+  document
+    .getElementById("applyDateFilter")
+    ?.addEventListener("click", function () {
+      fromDate = document.getElementById("fromDate").value;
+      toDate = document.getElementById("toDate").value;
+      currentPage = 1; // 날짜 필터 변경 시 첫 페이지로 리셋
+      loadDirectBids();
+    });
+
+  // 날짜 필터 초기화 버튼 이벤트
+  document
+    .getElementById("resetDateFilter")
+    ?.addEventListener("click", function () {
+      document.getElementById("fromDate").value = "";
+      document.getElementById("toDate").value = "";
+      fromDate = "";
+      toDate = "";
+      currentPage = 1; // 날짜 필터 초기화 시 첫 페이지로 리셋
+      loadDirectBids();
+    });
 });
 
 // 필터 상태에 따라 데이터 로드
@@ -64,7 +104,11 @@ async function loadDirectBids() {
       currentStatus,
       highestOnly,
       currentPage,
-      itemsPerPage
+      itemsPerPage,
+      currentSortBy,
+      currentSortOrder,
+      fromDate,
+      toDate
     );
 
     if (!directBids?.bids || directBids.count === 0) {
@@ -186,8 +230,13 @@ function renderDirectBidsTable(directBids) {
 
     // 날짜를 KST로 변환
     let scheduledDate = "-";
-    if (bid.item && bid.item.scheduled_date) {
-      const date = new Date(bid.item.scheduled_date);
+    if (
+      bid.item &&
+      (bid.item.original_scheduled_date || bid.item.scheduled_date)
+    ) {
+      const date = new Date(
+        bid.item.original_scheduled_date || bid.item.scheduled_date
+      );
       scheduledDate = new Intl.DateTimeFormat("ko-KR", {
         timeZone: "Asia/Seoul",
         year: "numeric",

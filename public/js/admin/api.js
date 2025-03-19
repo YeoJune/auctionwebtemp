@@ -69,7 +69,6 @@ async function fetchRecentActivities() {
 }
 
 // 사용자 통계 조회
-// 사용자 통계 조회
 async function fetchUserStats() {
   try {
     // API 호출
@@ -96,13 +95,38 @@ async function fetchUserStats() {
 
 // ---- 현장 경매 API ----
 
-// 현장 경매 목록 조회 (페이지네이션 추가)
-async function fetchLiveBids(status = "", page = 1, limit = 10) {
+// 현장 경매 목록 조회 (페이지네이션, 정렬, 날짜 필터 추가)
+async function fetchLiveBids(
+  status = "",
+  page = 1,
+  limit = 10,
+  sortBy = "updated_at",
+  sortOrder = "desc",
+  fromDate = "",
+  toDate = ""
+) {
   const params = new URLSearchParams({
     status: status,
     page: page,
     limit: limit,
   });
+
+  if (sortBy) {
+    params.append("sortBy", sortBy);
+  }
+
+  if (sortOrder) {
+    params.append("sortOrder", sortOrder);
+  }
+
+  if (fromDate) {
+    params.append("fromDate", fromDate);
+  }
+
+  if (toDate) {
+    params.append("toDate", toDate);
+  }
+
   return fetchAPI(`/live-bids?${params.toString()}`);
 }
 
@@ -132,12 +156,16 @@ async function cancelBid(bidId) {
 
 // ---- 직접 경매 API ----
 
-// 직접 경매 목록 조회 (페이지네이션 추가)
+// 직접 경매 목록 조회 (페이지네이션, 정렬, 날짜 필터 추가)
 async function fetchDirectBids(
   status = "",
   highestOnly = true,
   page = 1,
-  limit = 10
+  limit = 10,
+  sortBy = "updated_at",
+  sortOrder = "desc",
+  fromDate = "",
+  toDate = ""
 ) {
   const params = new URLSearchParams({
     status: status,
@@ -145,6 +173,23 @@ async function fetchDirectBids(
     page: page,
     limit: limit,
   });
+
+  if (sortBy) {
+    params.append("sortBy", sortBy);
+  }
+
+  if (sortOrder) {
+    params.append("sortOrder", sortOrder);
+  }
+
+  if (fromDate) {
+    params.append("fromDate", fromDate);
+  }
+
+  if (toDate) {
+    params.append("toDate", toDate);
+  }
+
   return fetchAPI(`/direct-bids?${params.toString()}`);
 }
 
