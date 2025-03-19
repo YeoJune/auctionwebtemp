@@ -68,11 +68,9 @@ async function crawlAll() {
       );
 
       isCrawling = true;
-      let ecoAucItems = await ecoAucCrawler.crawlAllItems(existingEcoAucIds);
-      let brandAucItems = await brandAucCrawler.crawlAllItems(
-        existingBrandAuctionIds
-      );
-      let starAucItems = await starAucCrawler.crawlAllItems(existingStarAucIds);
+      let ecoAucItems = await ecoAucCrawler.crawlAllItems();
+      let brandAucItems = await brandAucCrawler.crawlAllItems();
+      let starAucItems = await starAucCrawler.crawlAllItems();
 
       if (!ecoAucItems) ecoAucItems = [];
       if (!brandAucItems) brandAucItems = [];
