@@ -1,6 +1,7 @@
 // metrics.js
 const fs = require("fs");
 const path = require("path");
+const url = require("url");
 
 // 메트릭스 데이터 파일 경로
 const METRICS_FILE = path.join(__dirname, "data", "metrics.json");
@@ -19,6 +20,10 @@ const defaultMetrics = {
 
 // 메트릭스 객체 (Map과 Set을 직렬화하기 위해 객체로 변환)
 let metrics = { ...defaultMetrics };
+
+// 이미 카운트된 세션 추적을 위한 맵
+// 키: 세션ID, 값: { lastPath: 마지막 경로, lastCounted: 마지막 카운트 시간 }
+const sessionPathTracker = new Map();
 
 // 데이터 디렉토리 확인 및 생성
 function ensureDataDirectory() {
@@ -87,27 +92,90 @@ function saveMetrics() {
   }
 }
 
+// 리소스 요청 여부 확인 (JS, CSS, 이미지 등)
+function isResourceRequest(req) {
+  const parsedUrl = url.parse(req.url);
+  const path = parsedUrl.pathname;
+
+  // 정적 리소스 요청인지 확인
+  if (path) {
+    const ext = path.split(".").pop().toLowerCase();
+    const resourceExtensions = [
+      "css",
+      "js",
+      "png",
+      "jpg",
+      "jpeg",
+      "gif",
+      "svg",
+      "ico",
+      "woff",
+      "woff2",
+      "ttf",
+      "eot",
+    ];
+
+    // API 요청이거나 정적 리소스면 제외
+    if (path.startsWith("/api/") || resourceExtensions.includes(ext)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 // 메트릭스 미들웨어
 function metricsMiddleware(req, res, next) {
   if (process.env.NODE_ENV === "development") {
     return next();
   }
 
+  // 항상 총 요청 수는 증가
   metrics.totalRequests++;
 
-  if (req.session?.user?.id) {
-    // 회원 사용자
-    const userId = req.session.user.id;
-    metrics.memberActiveUsers.set(userId, Date.now());
-    metrics.memberDailyUsers.add(userId);
-  } else if (req.sessionID) {
-    // 비회원 사용자 (세션 ID로 식별)
-    metrics.guestActiveUsers.set(req.sessionID, Date.now());
-    metrics.guestDailyUsers.add(req.sessionID);
+  // 정적 리소스 요청은 사용자 추적에서 제외
+  if (isResourceRequest(req)) {
+    return next();
+  }
+
+  const now = Date.now();
+  const currentPath = req.path || req.url;
+
+  // 세션ID 생성 (회원/비회원 구분)
+  const sessionId = req.session?.user?.id || req.sessionID;
+  const isMember = !!req.session?.user?.id;
+
+  // 같은 세션의 같은 페이지 방문을 필터링
+  const sessionInfo = sessionPathTracker.get(sessionId);
+  const TEN_SECONDS = 10 * 1000; // 10초 쿨다운
+
+  if (sessionInfo) {
+    // 같은 경로에 10초 이내 재접속하는 경우 카운트하지 않음 (새로고침 등)
+    if (
+      sessionInfo.lastPath === currentPath &&
+      now - sessionInfo.lastCounted < TEN_SECONDS
+    ) {
+      return next();
+    }
+  }
+
+  // 세션 추적 정보 업데이트
+  sessionPathTracker.set(sessionId, {
+    lastPath: currentPath,
+    lastCounted: now,
+  });
+
+  // 회원/비회원 분리하여 추적
+  if (isMember) {
+    metrics.memberActiveUsers.set(sessionId, now);
+    metrics.memberDailyUsers.add(sessionId);
+  } else {
+    metrics.guestActiveUsers.set(sessionId, now);
+    metrics.guestDailyUsers.add(sessionId);
   }
 
   // 5분마다 파일에 저장 (성능 최적화)
-  if (Date.now() - metrics.lastSaved > 5 * 60 * 1000) {
+  if (now - metrics.lastSaved > 5 * 60 * 1000) {
     saveMetrics();
   }
 
@@ -133,18 +201,23 @@ function setupMetricsJobs() {
       metrics.memberDailyUsers.clear();
       metrics.guestDailyUsers.clear();
       metrics.lastReset = midnight;
+
+      // 세션 추적기도 초기화
+      sessionPathTracker.clear();
     }
 
     // 30분 이상 비활성 사용자 제거
     for (const [userId, lastActivity] of metrics.memberActiveUsers) {
       if (now - lastActivity > INACTIVE_TIMEOUT) {
         metrics.memberActiveUsers.delete(userId);
+        sessionPathTracker.delete(userId);
       }
     }
 
     for (const [sessionId, lastActivity] of metrics.guestActiveUsers) {
       if (now - lastActivity > INACTIVE_TIMEOUT) {
         metrics.guestActiveUsers.delete(sessionId);
+        sessionPathTracker.delete(sessionId);
       }
     }
 
