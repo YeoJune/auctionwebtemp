@@ -288,6 +288,10 @@ input[type="time"]:focus {
   border-bottom: 1px solid var(--border-color);
 }
 
+.dropdown-container {
+  position: relative;
+}
+
 /* Responsive Design - 공통 요소 */
 @media (max-width: 1024px) {
   .container {

@@ -1443,94 +1443,59 @@ function updateBidsOnlyFilter() {
 
 // 드롭다운 메뉴 설정
 function setupDropdownMenus() {
-  // 상품 리스트 드롭다운
-  const productListBtn = document.getElementById("productListBtn");
-  if (productListBtn) {
-    const productListDropdown = document.createElement("div");
-    productListDropdown.className = "dropdown-content";
-    productListDropdown.innerHTML = `
-      <a href="#" data-type="all">전체 상품</a>
-      <a href="#" data-type="live">현장 경매</a>
-      <a href="#" data-type="direct">직접 경매</a>
-    `;
+  // 이미 HTML에 정의된 드롭다운 메뉴에 이벤트 리스너 추가
+  const dropdownButtons = document.querySelectorAll(
+    ".nav-item.dropdown-container > .nav-button"
+  );
 
-    productListBtn.parentNode.style.position = "relative";
-    productListBtn.parentNode.appendChild(productListDropdown);
-
-    productListBtn.addEventListener("click", function (e) {
+  dropdownButtons.forEach((button) => {
+    button.addEventListener("click", function (e) {
       e.preventDefault();
-      e.stopPropagation(); // 이벤트 전파 중지
-      productListDropdown.classList.toggle("active");
+
+      // 현재 버튼의 부모 요소 내에 있는 dropdown-content 찾기
+      const dropdown = this.parentNode.querySelector(".dropdown-content");
+      if (dropdown) {
+        dropdown.classList.toggle("active");
+      }
     });
+  });
 
-    // 드롭다운 아이템 클릭 이벤트
-    productListDropdown.addEventListener("click", function (e) {
-      if (e.target.tagName === "A") {
-        e.preventDefault();
-        e.stopPropagation(); // 이벤트 전파 중지
-        const type = e.target.dataset.type;
+  // 다른 곳 클릭 시 모든 드롭다운 닫기
+  document.addEventListener("click", function (e) {
+    const dropdowns = document.querySelectorAll(".dropdown-content");
+    dropdowns.forEach((dropdown) => {
+      // 클릭된 요소가 드롭다운 버튼이나 드롭다운 콘텐츠 자신이 아니라면 닫기
+      if (!dropdown.parentNode.contains(e.target)) {
+        dropdown.classList.remove("active");
+      }
+    });
+  });
 
+  // 드롭다운 내부 링크 클릭 이벤트
+  document.querySelectorAll(".dropdown-content a").forEach((link) => {
+    link.addEventListener("click", function (e) {
+      e.preventDefault();
+
+      // 필요한 처리 수행 (기존 코드와 동일)
+      if (this.dataset.type) {
+        const type = this.dataset.type;
         if (type === "all") {
           state.selectedAuctionTypes = [];
         } else {
           state.selectedAuctionTypes = [type];
         }
-
-        updateFilterUI();
-        fetchData();
-        productListDropdown.classList.remove("active");
-      }
-    });
-
-    // 다른 곳 클릭 시 드롭다운 닫기
-    document.addEventListener("click", function (e) {
-      if (!productListBtn.contains(e.target)) {
-        productListDropdown.classList.remove("active");
-      }
-    });
-  }
-
-  // 즐겨찾기 드롭다운
-  const favoritesBtn = document.getElementById("favoritesBtn");
-  if (favoritesBtn) {
-    const favoritesDropdown = document.createElement("div");
-    favoritesDropdown.className = "dropdown-content";
-    favoritesDropdown.innerHTML = `
-      <a href="#" data-favorite="1">즐겨찾기 ①</a>
-      <a href="#" data-favorite="2">즐겨찾기 ②</a>
-      <a href="#" data-favorite="3">즐겨찾기 ③</a>
-    `;
-
-    favoritesBtn.parentNode.style.position = "relative";
-    favoritesBtn.parentNode.appendChild(favoritesDropdown);
-
-    favoritesBtn.addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation(); // 이벤트 전파 중지
-      favoritesDropdown.classList.toggle("active");
-    });
-
-    // 드롭다운 아이템 클릭 이벤트
-    favoritesDropdown.addEventListener("click", function (e) {
-      if (e.target.tagName === "A") {
-        e.preventDefault();
-        e.stopPropagation(); // 이벤트 전파 중지
-        const favoriteNum = parseInt(e.target.dataset.favorite);
-
+      } else if (this.dataset.favorite) {
+        const favoriteNum = parseInt(this.dataset.favorite);
         state.selectedFavoriteNumbers = [favoriteNum];
-        updateFilterUI();
-        fetchData();
-        favoritesDropdown.classList.remove("active");
       }
-    });
 
-    // 다른 곳 클릭 시 드롭다운 닫기
-    document.addEventListener("click", function (e) {
-      if (!favoritesBtn.contains(e.target)) {
-        favoritesDropdown.classList.remove("active");
-      }
+      updateFilterUI();
+      fetchData();
+
+      // 드롭다운 닫기
+      this.closest(".dropdown-content").classList.remove("active");
     });
-  }
+  });
 }
 
 // 초기화 함수
