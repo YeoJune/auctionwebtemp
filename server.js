@@ -18,19 +18,10 @@ const liveBidsRoutes = require("./routes/live-bids");
 const directBidsRoutes = require("./routes/direct-bids");
 const userRoutes = require("./routes/users");
 const pool = require("./utils/DB");
+const metricsModule = require("./utils/metrics");
 
 const app = express();
 const server = http.createServer(app);
-
-const metrics = {
-  activeUsers: new Map(),
-  dailyUsers: new Set(),
-  totalRequests: 0,
-  lastReset: new Date().setHours(0, 0, 0, 0),
-};
-
-// 설정값
-const INACTIVE_TIMEOUT = 30 * 60 * 1000; // 30분
 
 // 프록시 설정
 app.set("trust proxy", 1);
@@ -87,53 +78,11 @@ app.use((req, res, next) => {
   next();
 });
 
-// 메트릭스 트래킹 미들웨어
-app.use((req, res, next) => {
-  metrics.totalRequests++;
+// 메트릭스 트래킹 미들웨어 추가
+app.use(metricsModule.metricsMiddleware);
 
-  if (req.session?.user?.id) {
-    const userId = req.session.user.id;
-    metrics.activeUsers.set(userId, Date.now());
-    metrics.dailyUsers.add(userId);
-  }
-  next();
-});
-
-app.get("/api/metrics", (req, res) => {
-  if (!req.session?.user?.id === "admin") {
-    return res.status(403).json({ message: "Unauthorized" });
-  }
-
-  const now = Date.now();
-  const activeCount = Array.from(metrics.activeUsers.values()).filter(
-    (lastActivity) => now - lastActivity <= INACTIVE_TIMEOUT
-  ).length;
-
-  res.json({
-    activeUsers: activeCount,
-    dailyUsers: metrics.dailyUsers.size,
-    totalRequests: metrics.totalRequests,
-  });
-});
-
-// 정기적인 작업 수행
-setInterval(() => {
-  const now = Date.now();
-  const midnight = new Date().setHours(0, 0, 0, 0);
-
-  // 자정 지났으면 일일 사용자 초기화
-  if (metrics.lastReset < midnight) {
-    metrics.dailyUsers.clear();
-    metrics.lastReset = midnight;
-  }
-
-  // 30분 이상 비활성 사용자 제거
-  for (const [userId, lastActivity] of metrics.activeUsers) {
-    if (now - lastActivity > INACTIVE_TIMEOUT) {
-      metrics.activeUsers.delete(userId);
-    }
-  }
-}, 300000); // 5분
+// 메트릭스 조회 엔드포인트
+app.get("/api/metrics", metricsModule.getMetrics);
 
 // 라우트
 app.use("/api/auth", authRoutes);
@@ -231,6 +180,9 @@ app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ message: "Something went wrong!" });
 });
+
+// 메트릭스 정기 작업 설정
+metricsModule.setupMetricsJobs();
 
 // 서버 시작
 const PORT = process.env.PORT || 3000;

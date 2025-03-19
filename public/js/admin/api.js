@@ -70,7 +70,25 @@ async function fetchRecentActivities() {
 
 // 사용자 통계 조회
 async function fetchUserStats() {
-  return fetchAPI("/metrics");
+  try {
+    // API 호출
+    return await fetchAPI("/metrics");
+  } catch (error) {
+    // 에러 발생 시 기본값 반환
+    console.error("사용자 통계 가져오기 실패:", error);
+
+    // metrics 모듈이 구현되지 않은 경우를 위한 샘플 데이터
+    return {
+      activeMemberUsers: 0,
+      activeGuestUsers: 0,
+      totalActiveUsers: 0,
+      dailyMemberUsers: 0,
+      dailyGuestUsers: 0,
+      totalDailyUsers: 0,
+      totalRequests: 0,
+      lastReset: new Date().toISOString(),
+    };
+  }
 }
 
 // ---- 현장 경매 API ----

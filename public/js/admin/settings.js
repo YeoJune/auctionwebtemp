@@ -64,15 +64,34 @@ document.addEventListener("DOMContentLoaded", function () {
 // 메트릭스 데이터 업데이트
 async function updateMetrics() {
   try {
-    const stats = await fetchUserStats().catch(() => {
-      // API가 아직 구현되지 않은 경우 샘플 데이터 사용
-      return { activeUsers: 12, dailyUsers: 45, totalRequests: 256 };
-    });
+    const stats = await fetchUserStats();
 
-    document.getElementById("activeUsers").textContent = stats.activeUsers || 0;
-    document.getElementById("dailyUsers").textContent = stats.dailyUsers || 0;
+    // 실시간 접속자 업데이트
+    document.getElementById("activeMemberUsers").textContent =
+      stats.activeMemberUsers || 0;
+    document.getElementById("activeGuestUsers").textContent =
+      stats.activeGuestUsers || 0;
+    document.getElementById("totalActiveUsers").textContent =
+      stats.totalActiveUsers || 0;
+
+    // 오늘 방문자 업데이트
+    document.getElementById("dailyMemberUsers").textContent =
+      stats.dailyMemberUsers || 0;
+    document.getElementById("dailyGuestUsers").textContent =
+      stats.dailyGuestUsers || 0;
+    document.getElementById("totalDailyUsers").textContent =
+      stats.totalDailyUsers || 0;
+
+    // 총 요청 수 업데이트
     document.getElementById("totalRequests").textContent =
-      stats.totalRequests || 0;
+      stats.totalRequests.toLocaleString() || 0;
+
+    // 마지막 초기화 시간 업데이트
+    if (stats.lastReset) {
+      const resetDate = new Date(stats.lastReset);
+      document.getElementById("lastReset").textContent =
+        resetDate.toLocaleString();
+    }
   } catch (error) {
     console.error("메트릭스 업데이트 중 오류:", error);
   }
