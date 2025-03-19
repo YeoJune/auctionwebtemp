@@ -29,6 +29,7 @@
   overflow: hidden;
   border-radius: 8px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  transition: height 0.3s ease; /* 높이 변화를 부드럽게 */
 }
 
 /* 공지사항 아이템 스타일 */
@@ -37,6 +38,11 @@
   background-color: white;
   overflow: hidden;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.notice-item a,
+.notice-item .notice-content {
+  transition: opacity 0.3s ease;
 }
 
 .notice-item:hover {
@@ -53,9 +59,10 @@
 .notice-image-container {
   width: 100%;
   position: relative;
-  padding-top: 40%; /* 높이 조정 */
+  padding-top: 40%; /* 고정된 높이 비율 */
   overflow: hidden;
   background-color: #f6f6f6;
+  min-height: 100px; /* 최소 높이 설정 */
 }
 
 .notice-image-container img {

@@ -1,4 +1,3 @@
-// public/js/notices.js
 document.addEventListener("DOMContentLoaded", function () {
   // 공지사항 로드
   loadNotices();
@@ -30,12 +29,26 @@ async function loadNotices() {
     displayNotices(notices);
     document.querySelector(".notice-section").style.display = "block";
 
-    // 슬라이드 이벤트 초기화
-    initSlideEvents();
+    // 첫 번째 슬라이드 이미지가 로드된 후 공지사항 컨테이너의 높이를 설정
+    if (notices.length > 0) {
+      const firstNoticeImg = new Image();
+      firstNoticeImg.onload = () => {
+        // 슬라이드 이벤트 초기화
+        initSlideEvents();
 
-    // 자동 슬라이드 시작 (여러 공지사항이 있는 경우)
-    if (notices.length > 1) {
-      startAutoSlide();
+        // 자동 슬라이드 시작 (여러 공지사항이 있는 경우)
+        if (notices.length > 1) {
+          startAutoSlide();
+        }
+      };
+      firstNoticeImg.onerror = () => {
+        // 이미지 로드 실패해도 슬라이드 초기화
+        initSlideEvents();
+        if (notices.length > 1) {
+          startAutoSlide();
+        }
+      };
+      firstNoticeImg.src = notices[0].imageUrl;
     }
   } catch (error) {
     console.error("공지사항을 불러오는 중 오류가 발생했습니다:", error);
@@ -56,6 +69,23 @@ function displayNotices(notices) {
   const sliderWrapper = document.createElement("div");
   sliderWrapper.className = "notice-slider-wrapper";
   noticeContainer.appendChild(sliderWrapper);
+
+  // 이미지 미리 로드 함수
+  function preloadImage(url) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = url;
+    });
+  }
+
+  // 모든 이미지 먼저 미리 로드
+  notices.forEach((notice) => {
+    preloadImage(notice.imageUrl).catch(() => {
+      console.warn("이미지 로드 실패:", notice.imageUrl);
+    });
+  });
 
   // 각 공지사항 아이템 생성
   notices.forEach((notice, index) => {
@@ -218,6 +248,11 @@ function goToSlide(index) {
   const currentItem = items[currentSlide];
   const nextItem = items[index];
 
+  // 고정 높이 설정을 위해 현재 슬라이더의 높이 계산
+  const sliderHeight = currentItem.offsetHeight;
+  const sliderWrapper = currentItem.parentElement;
+  sliderWrapper.style.height = sliderHeight + "px";
+
   // 애니메이션 전 준비
   nextItem.style.display = "block";
 
@@ -239,6 +274,17 @@ function goToSlide(index) {
   const duration = 300; // ms
   const startTime = performance.now();
 
+  // 슬라이드 실제 요소들 참조
+  const currentContent =
+    currentItem.querySelector(".notice-content") ||
+    currentItem.querySelector("a");
+  const nextContent =
+    nextItem.querySelector(".notice-content") || nextItem.querySelector("a");
+
+  // 투명도 초기화
+  if (currentContent) currentContent.style.opacity = "1";
+  if (nextContent) nextContent.style.opacity = "0";
+
   function animate(time) {
     const elapsed = time - startTime;
     const progress = Math.min(elapsed / duration, 1);
@@ -246,21 +292,29 @@ function goToSlide(index) {
     // 이징 함수 (ease-out)
     const easeProgress = 1 - Math.pow(1 - progress, 2);
 
-    // 현재 슬라이드 이동
-    currentItem.style.left = -direction * 100 * easeProgress + "%";
+    // 투명도 변경으로 부드러운 전환
+    if (currentContent)
+      currentContent.style.opacity = (1 - easeProgress).toString();
+    if (nextContent) nextContent.style.opacity = easeProgress.toString();
 
-    // 새 슬라이드 이동
+    // 위치 변경
+    currentItem.style.left = -direction * 100 * easeProgress + "%";
     nextItem.style.left = direction * 100 * (1 - easeProgress) + "%";
 
     if (progress < 1) {
       requestAnimationFrame(animate);
     } else {
       // 애니메이션 완료
+      if (currentContent) currentContent.style.opacity = "";
+      if (nextContent) nextContent.style.opacity = "";
       finishTransition();
     }
   }
 
   function finishTransition() {
+    // 슬라이더 래퍼 높이 초기화
+    const sliderWrapper = items[0].parentElement;
+
     // 스타일 초기화
     items.forEach((item) => {
       item.style.position = "";
@@ -273,6 +327,11 @@ function goToSlide(index) {
 
     // 새 슬라이드만 표시
     nextItem.style.display = "block";
+
+    // 슬라이더 래퍼 높이 초기화 (애니메이션 완료 후)
+    setTimeout(() => {
+      sliderWrapper.style.height = "";
+    }, 50);
 
     // 인디케이터 업데이트
     updateIndicators(index);
@@ -302,12 +361,12 @@ function startAutoSlide() {
     clearInterval(slideInterval);
   }
 
-  // 5초마다 다음 슬라이드로 이동
+  // 10초마다 다음 슬라이드로 이동
   slideInterval = setInterval(() => {
     if (!isAnimating) {
       nextSlide();
     }
-  }, 5000);
+  }, 10000);
 }
 
 // 자동 슬라이드 일시 중지
