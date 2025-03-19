@@ -1,5 +1,4 @@
 /* header.css */
-
 /* Common Header */
 .main-header {
   background-color: var(--blue-dark);
@@ -35,12 +34,54 @@
   cursor: pointer;
 }
 
+/* Navigation and Menu Styles */
 .nav-container {
   display: flex;
-  gap: var(--spacing-sm);
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 2px;
   flex: 1;
-  justify-content: flex-start; /* 왼쪽 정렬 */
   transition: all 0.3s ease;
+}
+
+.nav-button {
+  flex-direction: column;
+  width: 64px;
+  height: 64px;
+  padding: 8px 0;
+  margin: 0;
+  border: none;
+  border-radius: var(--border-radius-sm);
+  gap: 4px;
+  background-color: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: var(--font-size-sm);
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.nav-button i {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+
+.nav-button span {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.nav-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.nav-button.active {
+  background-color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 .auth-container {
@@ -49,31 +90,13 @@
   align-items: center;
 }
 
-/* 네비게이션 버튼 스타일 */
-.nav-button {
-  background-color: transparent;
-  color: white;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  border-radius: var(--border-radius-sm);
-  transition: all var(--transition-fast);
-}
-
-.nav-button:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.nav-button i {
-  margin-right: 5px;
-}
-
 /* 인증 버튼 스타일 */
 button.auth-button {
   background-color: transparent;
   border: 1px solid white;
   height: 36px;
   padding: 0 15px;
+  transition: all 0.2s ease;
 }
 
 button.auth-button:hover {
@@ -94,7 +117,27 @@ button.auth-button:hover {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  z-index: 120; /* 높은 z-index로 항상 최상위에 표시 */
+  z-index: 120;
+  transition: all 0.2s ease;
+}
+
+.mobile-menu-toggle:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* 햄버거 버튼 활성화 스타일 */
+.mobile-menu-toggle.active {
+  background-color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* 햄버거 아이콘 전환 애니메이션 */
+.mobile-menu-toggle i {
+  transition: transform 0.3s ease;
+}
+
+.mobile-menu-toggle.active i {
+  transform: rotate(90deg);
 }
 
 /* 모바일 반응형 스타일 */
@@ -107,7 +150,7 @@ button.auth-button:hover {
   .mobile-menu-toggle {
     display: flex;
     position: absolute;
-    right: 0;
+    right: 10px;
     top: 50%;
     transform: translateY(-50%);
   }
@@ -125,65 +168,39 @@ button.auth-button:hover {
   /* 모바일 메뉴 활성화 시 스타일 */
   .nav-container.active {
     display: flex;
-    position: absolute;
-    top: 100%; /* 헤더 바로 아래 위치 */
+    position: fixed;
+    top: var(--header-height);
     left: 0;
+    right: 0;
+    bottom: 0;
     width: 100%;
     background-color: var(--blue-dark);
     z-index: 110;
     flex-direction: column;
-    align-items: center;
     padding: 20px;
+    overflow-y: auto;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   }
 
-  /* 모바일 메뉴 그리드 레이아웃 */
-  .menu-buttons-grid {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
+  /* 모바일 메뉴에서 네비게이션 버튼 스타일 */
+  .nav-container.active .nav-button {
     width: 100%;
-    gap: 10px;
+    height: auto;
+    min-height: 60px;
+    flex-direction: row;
+    justify-content: flex-start;
+    padding: 10px 15px;
+    margin-bottom: 5px;
+    background-color: rgba(255, 255, 255, 0.05);
   }
 
-  /* 모바일 메뉴 버튼 스타일 */
-  .menu-buttons-grid .nav-button {
-    width: calc(50% - 20px); /* 2열 그리드 */
-    height: 80px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    margin: 5px;
-    padding: 10px;
-  }
-
-  .menu-buttons-grid .nav-button i {
-    font-size: 24px;
-    margin-bottom: 8px;
-    margin-right: 0;
-  }
-
-  .menu-buttons-grid .nav-button span {
-    font-size: 14px;
-  }
-
-  /* 닫기 버튼 스타일 */
-  .menu-close-btn {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: transparent;
-    color: white;
-    border: none;
+  .nav-container.active .nav-button i {
     font-size: 20px;
-    cursor: pointer;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 120;
+    margin-right: 15px;
+    margin-bottom: 0;
+  }
+
+  .nav-container.active .nav-button span {
+    font-size: 16px;
   }
 }

@@ -1204,12 +1204,6 @@ select {
     display: flex;
   }
 
-  .nav-button {
-    padding: var(--spacing-xs) var(--spacing-sm);
-    min-height: 36px;
-    font-size: var(--font-size-xs);
-  }
-
   .bid-input-group {
     flex-wrap: wrap;
   }

@@ -706,88 +706,90 @@ function setupMobileMenu() {
   const navContainer = document.querySelector(".nav-container");
 
   // 요소가 없으면 함수 종료
-  if (!menuToggle || !navContainer) return;
-
-  // 헤더 컨텐트 요소 찾기
-  const headerContent = document.querySelector(".header-content");
-
-  // 모바일 메뉴 그리드 설정
-  setupMobileMenuGrid(navContainer);
-
-  // 메뉴 닫기 버튼 추가
-  addMenuCloseButton(navContainer);
+  if (!menuToggle || !navContainer) {
+    console.error("Mobile menu elements not found");
+    return;
+  }
 
   // 토글 버튼 클릭 이벤트
   menuToggle.addEventListener("click", function (e) {
     e.preventDefault();
-    navContainer.classList.add("active");
+    e.stopPropagation();
+    toggleMobileMenu(navContainer, menuToggle);
+  });
+
+  // 네비게이션 버튼 클릭 시 메뉴 닫기 (선택적)
+  const navButtons = navContainer.querySelectorAll(".nav-button");
+  navButtons.forEach((button) => {
+    button.addEventListener("click", function () {
+      if (window.innerWidth <= 768) {
+        closeMobileMenu(navContainer, menuToggle);
+      }
+    });
+  });
+
+  // 외부 클릭 시 메뉴 닫기
+  document.addEventListener("click", function (e) {
+    if (
+      navContainer.classList.contains("active") &&
+      !navContainer.contains(e.target) &&
+      e.target !== menuToggle &&
+      !menuToggle.contains(e.target)
+    ) {
+      closeMobileMenu(navContainer, menuToggle);
+    }
   });
 
   // 화면 크기 변경 시 메뉴 상태 재설정
   window.addEventListener("resize", function () {
     if (window.innerWidth > 768) {
-      navContainer.classList.remove("active");
+      closeMobileMenu(navContainer, menuToggle);
     }
   });
 }
 
-// 모바일 메뉴 그리드 설정 함수
-function setupMobileMenuGrid(navContainer) {
-  // 메뉴 버튼들 찾기
-  const navButtons = navContainer.querySelectorAll(".nav-button");
-
-  // 이미 그리드가 있으면 제거
-  const existingGrid = navContainer.querySelector(".menu-buttons-grid");
-  if (existingGrid) {
-    existingGrid.remove();
+// 모바일 메뉴 토글 함수
+function toggleMobileMenu(navContainer, menuToggle) {
+  if (navContainer.classList.contains("active")) {
+    closeMobileMenu(navContainer, menuToggle);
+  } else {
+    openMobileMenu(navContainer, menuToggle);
   }
-
-  // 새 그리드 컨테이너 생성
-  const gridContainer = document.createElement("div");
-  gridContainer.className = "menu-buttons-grid";
-
-  // 버튼들을 그리드에 추가
-  navButtons.forEach((button) => {
-    // 버튼 복제
-    const clonedButton = button.cloneNode(true);
-
-    // 원본 버튼의 onclick 이벤트 복사
-    if (button.hasAttribute("onclick")) {
-      clonedButton.setAttribute("onclick", button.getAttribute("onclick"));
-    }
-
-    // 그리드에 추가
-    gridContainer.appendChild(clonedButton);
-  });
-
-  // 그리드를 네비게이션 컨테이너에 추가
-  navContainer.appendChild(gridContainer);
 }
 
-// 메뉴 닫기 버튼 추가 함수
-function addMenuCloseButton(navContainer) {
-  // 이미 닫기 버튼이 있으면 제거
-  const existingCloseBtn = navContainer.querySelector(".menu-close-btn");
-  if (existingCloseBtn) {
-    existingCloseBtn.remove();
+// 모바일 메뉴 열기 함수
+function openMobileMenu(navContainer, menuToggle) {
+  navContainer.classList.add("active");
+  document.body.style.overflow = "hidden"; // 배경 스크롤 방지
+
+  // 햄버거 아이콘을 X 아이콘으로 변경
+  const icon = menuToggle.querySelector("i");
+  if (icon) {
+    icon.classList.remove("fa-bars");
+    icon.classList.add("fa-times");
   }
 
-  // 새 닫기 버튼 생성
-  const closeBtn = document.createElement("button");
-  closeBtn.className = "menu-close-btn";
-  closeBtn.innerHTML = "&times;";
-  closeBtn.setAttribute("aria-label", "메뉴 닫기");
+  // 아이콘 이외의 시각적 표시를 추가할 수도 있음
+  menuToggle.classList.add("active");
+}
 
-  // 닫기 버튼 클릭 이벤트
-  closeBtn.addEventListener("click", function () {
-    navContainer.classList.remove("active");
-  });
+// 모바일 메뉴 닫기 함수
+function closeMobileMenu(navContainer, menuToggle) {
+  navContainer.classList.remove("active");
+  document.body.style.overflow = ""; // 배경 스크롤 복원
 
-  // 네비게이션 컨테이너에 버튼 추가
-  navContainer.appendChild(closeBtn);
+  // X 아이콘을 햄버거 아이콘으로 변경
+  const icon = menuToggle.querySelector("i");
+  if (icon) {
+    icon.classList.remove("fa-times");
+    icon.classList.add("fa-bars");
+  }
+
+  // 추가된 active 클래스 제거
+  menuToggle.classList.remove("active");
 }
 
 // 페이지 로드 시 초기화
 document.addEventListener("DOMContentLoaded", function () {
-  //setupMobileMenu();
+  setupMobileMenu();
 });
