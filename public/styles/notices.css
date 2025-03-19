@@ -53,6 +53,8 @@
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   background-color: white;
   flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .notice-item:hover {
@@ -68,11 +70,10 @@
 
 .notice-item img {
   width: 100%;
-  height: 220px;
-  object-fit: contain;
+  height: auto;
+  max-height: 220px;
   display: block;
   border-radius: 8px 8px 0 0;
-  background-color: #f8f8f8;
 }
 
 .notice-title {
@@ -98,8 +99,7 @@
   }
 
   .notice-item img {
-    height: 180px;
-    object-fit: contain;
+    max-height: 180px;
   }
 }
 
@@ -109,8 +109,7 @@
   }
 
   .notice-item img {
-    height: 180px;
-    object-fit: contain;
+    max-height: 160px;
   }
 
   .notice-title {
