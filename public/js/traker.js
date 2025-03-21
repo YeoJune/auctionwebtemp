@@ -1,4 +1,4 @@
-// public/js/traking.js
+// public/js/traker.js
 // Simple script to add Meta Pixel and TikTok Pixel tracking to your pages
 
 // Function to add Meta Pixel code
