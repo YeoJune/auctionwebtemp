@@ -172,10 +172,6 @@
     padding: 4px 8px;
     font-size: 0.85rem;
   }
-
-  .notice-image-container {
-    padding-top: 55%;
-  }
 }
 
 @media (max-width: 480px) {
@@ -193,9 +189,5 @@
   .notice-indicator {
     width: 6px;
     height: 6px;
-  }
-
-  .notice-image-container {
-    padding-top: 55%;
   }
 }
