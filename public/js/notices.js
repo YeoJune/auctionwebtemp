@@ -103,7 +103,6 @@ function displayNotices(notices) {
         notice.title
       )}">
           </div>
-          <div class="notice-title">${escapeHTML(notice.title)}</div>
         </a>
       `;
     } else {
@@ -115,7 +114,6 @@ function displayNotices(notices) {
         notice.title
       )}">
           </div>
-          <div class="notice-title">${escapeHTML(notice.title)}</div>
         </div>
       `;
 
