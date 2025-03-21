@@ -1,12 +1,14 @@
 /* 공지사항 섹션 스타일 */
 .notice-section {
   width: 100%;
+  padding: 0;
   background-color: #f8f9fa;
   border-bottom: 1px solid #e0e0e0;
 }
 
 .notice-section h2 {
   text-align: center;
+  margin: 0;
   color: #333;
   font-size: 1.3rem;
 }
@@ -57,7 +59,7 @@
 .notice-image-container {
   width: 100%;
   position: relative;
-  padding-top: 35%; /* 고정된 높이 비율 */
+  padding-top: 43%; /* 고정된 높이 비율 */
   overflow: hidden;
   background-color: #f6f6f6;
   min-height: 100px; /* 최소 높이 설정 */
