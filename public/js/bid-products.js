@@ -569,6 +569,7 @@ function getStatusClass(status) {
 }
 
 // 결과 표시
+// 결과 표시
 function displayProducts() {
   const container = document.getElementById("productList");
   if (!container) return;
@@ -608,83 +609,120 @@ function displayProducts() {
     const imageSection = document.createElement("div");
     imageSection.className = "item-image";
     imageSection.innerHTML = `
-        <img src="${API.validateImageUrl(item.image)}" alt="${
+      <img src="${API.validateImageUrl(item.image)}" alt="${
       item.original_title || "상품 이미지"
     }">
-        <div class="item-rank">${item.rank || "N"}</div>
-      `;
+      <div class="item-rank">${item.rank || "N"}</div>
+    `;
 
     // 상품 정보 섹션
     const infoSection = document.createElement("div");
     infoSection.className = "item-info";
     infoSection.innerHTML = `
-        <div class="item-brand">${item.brand || "-"}</div>
-        <div class="item-title">${item.original_title || "제목 없음"}</div>
-        <div class="item-category">${item.category || "-"}</div>
-      `;
+      <div class="item-brand">${item.brand || "-"}</div>
+      <div class="item-title">${item.original_title || "제목 없음"}</div>
+      <div class="item-category">${item.category || "-"}</div>
+    `;
 
     // 입찰 정보 섹션
     const bidInfoSection = document.createElement("div");
     bidInfoSection.className = "bid-info";
 
+    // 원화 가격 계산
+    const auctionId = item.auc_num || 1;
+    const category = item.category || "기타";
+    let japanesePrice = 0;
+
     let bidInfoHTML = `
-        <div class="bid-type ${
-          product.type === "live" ? "live-type" : "direct-type"
-        }">
-          ${product.type === "live" ? "현장 경매" : "직접 경매"}
+      <div class="bid-type ${
+        product.type === "live" ? "live-type" : "direct-type"
+      }">
+        ${product.type === "live" ? "현장 경매" : "직접 경매"}
+      </div>
+    `;
+
+    if (product.type === "direct") {
+      japanesePrice = product.current_price || 0;
+      bidInfoHTML += `
+        <div class="price-row">
+          <span class="price-label">입찰 금액:</span>
+          <span class="price-value">${formatNumber(
+            product.current_price
+          )} ¥</span>
+        </div>
+        <div class="price-row price-korean">
+          <span class="price-label">관부가세 포함:</span>
+          <span class="price-value">${formatNumber(
+            calculateTotalPrice(japanesePrice, auctionId, category)
+          )} ₩</span>
+        </div>
+      `;
+    } else {
+      bidInfoHTML += `
+        <div class="price-stages">
+          ${
+            product.first_price
+              ? `
+            <div class="price-row">
+              <span class="price-label">1차 입찰:</span>
+              <span class="price-value">${formatNumber(
+                product.first_price
+              )} ¥</span>
+            </div>
+          `
+              : ""
+          }
+          ${
+            product.second_price
+              ? `
+            <div class="price-row">
+              <span class="price-label">2차 제안:</span>
+              <span class="price-value">${formatNumber(
+                product.second_price
+              )} ¥</span>
+            </div>
+          `
+              : ""
+          }
+          ${
+            product.final_price
+              ? `
+            <div class="price-row">
+              <span class="price-label">최종 입찰:</span>
+              <span class="price-value">${formatNumber(
+                product.final_price
+              )} ¥</span>
+            </div>
+            <div class="price-row price-korean">
+              <span class="price-label">관부가세 포함:</span>
+              <span class="price-value">${formatNumber(
+                calculateTotalPrice(product.final_price, auctionId, category)
+              )} ₩</span>
+            </div>
+          `
+              : ""
+          }
         </div>
       `;
 
-    if (product.type === "live") {
-      bidInfoHTML += `
-          <div class="price-stages">
-            ${
-              product.first_price
-                ? `
-              <div class="price-row">
-                <span class="price-label">1차 입찰:</span>
-                <span class="price-value">${formatNumber(
-                  product.first_price
-                )} ¥</span>
-              </div>
-            `
-                : ""
-            }
-            ${
-              product.second_price
-                ? `
-              <div class="price-row">
-                <span class="price-label">2차 제안:</span>
-                <span class="price-value">${formatNumber(
-                  product.second_price
-                )} ¥</span>
-              </div>
-            `
-                : ""
-            }
-            ${
-              product.final_price
-                ? `
-              <div class="price-row">
-                <span class="price-label">최종 입찰:</span>
-                <span class="price-value">${formatNumber(
-                  product.final_price
-                )} ¥</span>
-              </div>
-            `
-                : ""
-            }
-          </div>
-        `;
-    } else {
-      bidInfoHTML += `
-          <div class="price-row">
-            <span class="price-label">입찰 금액:</span>
+      // 최종 가격 계산을 위한 가격 설정
+      japanesePrice =
+        product.final_price || product.second_price || product.first_price || 0;
+
+      // 최종 가격이 없지만 다른 가격이 있는 경우 원화 예상가 표시
+      if (
+        !product.final_price &&
+        (product.second_price || product.first_price)
+      ) {
+        bidInfoHTML += `
+          <div class="price-row price-korean">
+            <span class="price-label">관부가세 포함:</span>
             <span class="price-value">${formatNumber(
-              product.current_price
-            )} ¥</span>
+              calculateTotalPrice(japanesePrice, auctionId, category)
+            )} ₩</span>
           </div>
         `;
+      }
     }
 
     bidInfoSection.innerHTML = bidInfoHTML;
@@ -698,11 +736,11 @@ function displayProducts() {
     const statusText = getStatusDisplay(product.displayStatus);
 
     statusSection.innerHTML = `
-        <div class="status-badge ${statusClass}">
-          ${statusText}
-        </div>
-        <div class="result-date">${formatDateTime(product.updated_at)}</div>
-      `;
+      <div class="status-badge ${statusClass}">
+        ${statusText}
+      </div>
+      <div class="result-date">${formatDateTime(product.updated_at)}</div>
+    `;
 
     // 모든 섹션 추가
     resultItem.appendChild(imageSection);
@@ -869,7 +907,7 @@ function updatePriceInfoInModal(product, item) {
           )}
         </div>
         <div class="price-korean">
-          <strong>원화 예상가:</strong> ₩${formatNumber(koreanPrice)}
+          <strong>관부가세 포함:</strong> ₩${formatNumber(koreanPrice)}
         </div>
       `;
   } else {
@@ -901,7 +939,7 @@ function updatePriceInfoInModal(product, item) {
             <strong>최종 입찰가:</strong> ￥${formatNumber(product.final_price)}
           </div>
           <div class="price-korean">
-            <strong>원화 예상가:</strong> ₩${formatNumber(koreanPrice)}
+            <strong>관부가세 포함:</strong> ₩${formatNumber(koreanPrice)}
           </div>
         `;
     }

@@ -8,10 +8,8 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   margin-bottom: 20px;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 15px;
 }
 
 .search-container {
@@ -333,6 +331,15 @@
 
 .price-value {
   font-weight: 500;
+}
+
+.price-korean {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.price-korean .price-value {
+  font-weight: 700;
 }
 
 /* 결과 상태 */
