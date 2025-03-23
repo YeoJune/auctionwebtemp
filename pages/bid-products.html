@@ -100,28 +100,24 @@
           </div>
 
           <div class="view-controls">
-            <div class="view-mode-selector">
-              <button
-                class="view-mode-btn"
-                data-mode="grid"
-                title="그리드 보기">
-                <i class="fas fa-th"></i>
+            <div class="sort-options">
+              <button class="sort-btn active" data-sort="updated_at">
+                최신순 <i class="fas fa-sort"></i>
               </button>
-              <button
-                class="view-mode-btn"
-                data-mode="list"
-                title="리스트 보기">
-                <i class="fas fa-list"></i>
+              <button class="sort-btn" data-sort="starting_price">
+                가격순 <i class="fas fa-sort"></i>
+              </button>
+              <button class="sort-btn" data-sort="brand">
+                브랜드순 <i class="fas fa-sort"></i>
               </button>
             </div>
-
             <button class="mobile-filter-toggle" id="mobileFilterBtn">
               <i class="fas fa-filter"></i> 필터
             </button>
           </div>
         </section>
 
-        <!-- 필터 및 정렬 섹션 -->
+        <!-- 필터 및 결과 섹션 -->
         <div class="content-wrapper">
           <aside class="filters-container">
             <h3>필터</h3>
@@ -177,23 +173,23 @@
                     id="status-active"
                     value="active"
                     checked />
-                  <label for="status-active">입찰 가능</label>
+                  <label for="status-active">입찰 진행중</label>
                 </div>
                 <div class="radio-item">
                   <input
                     type="radio"
                     name="status"
-                    id="status-first"
-                    value="first" />
-                  <label for="status-first">1차 입찰</label>
+                    id="status-completed"
+                    value="completed" />
+                  <label for="status-completed">낙찰 완료</label>
                 </div>
                 <div class="radio-item">
                   <input
                     type="radio"
                     name="status"
-                    id="status-second"
-                    value="second" />
-                  <label for="status-second">2차 제안</label>
+                    id="status-cancelled"
+                    value="cancelled" />
+                  <label for="status-cancelled">취소됨</label>
                 </div>
               </div>
             </div>
@@ -220,19 +216,8 @@
           </aside>
 
           <section class="products-section">
-            <!-- 정렬 및 결과 카운트 -->
-            <div class="products-header">
-              <div class="sort-options">
-                <button class="sort-btn active asc" data-sort="scheduled_date">
-                  날짜순 <i class="fas fa-sort"></i>
-                </button>
-                <button class="sort-btn" data-sort="starting_price">
-                  가격순 <i class="fas fa-sort"></i>
-                </button>
-                <button class="sort-btn" data-sort="brand">
-                  브랜드순 <i class="fas fa-sort"></i>
-                </button>
-              </div>
+            <!-- 결과 카운트 -->
+            <div class="results-header">
               <div class="results-count">
                 총 <span id="totalResults">0</span>개 상품
               </div>
@@ -242,8 +227,8 @@
             <div class="loading-msg" id="loadingMsg">로딩 중...</div>
 
             <!-- 상품 목록 -->
-            <div class="product-list grid-view" id="productList">
-              <!-- 상품 카드가 여기에 추가됨 -->
+            <div class="bid-results-list" id="productList">
+              <!-- 상품 아이템이 여기에 추가됨 -->
             </div>
 
             <!-- 페이지네이션 -->

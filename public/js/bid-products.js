@@ -72,6 +72,9 @@ async function initialize() {
     // API 초기화
     await API.initialize();
 
+    // 환율 정보 가져오기
+    await fetchExchangeRate();
+
     // 인증 상태 확인
     await checkAuthStatus();
 
@@ -827,6 +830,20 @@ function updatePriceInfoInModal(product, item) {
   const statusClass = getStatusClass(product.displayStatus);
   const statusText = getStatusDisplay(product.displayStatus);
 
+  // 원화 가격 계산
+  const auctionId = item.auc_num || 1;
+  const category = item.category || "기타";
+  let japanesePrice = 0;
+
+  if (product.type === "direct") {
+    japanesePrice = product.current_price || 0;
+  } else {
+    japanesePrice =
+      product.final_price || product.second_price || product.first_price || 0;
+  }
+
+  const koreanPrice = calculateTotalPrice(japanesePrice, auctionId, category);
+
   let priceInfoHTML = `
       <div class="modal-price-info">
         <div class="price-status ${statusClass}">
@@ -850,6 +867,9 @@ function updatePriceInfoInModal(product, item) {
           <strong>현재 입찰가:</strong> ￥${formatNumber(
             product.current_price || 0
           )}
+        </div>
+        <div class="price-korean">
+          <strong>원화 예상가:</strong> ₩${formatNumber(koreanPrice)}
         </div>
       `;
   } else {
@@ -879,6 +899,9 @@ function updatePriceInfoInModal(product, item) {
       priceInfoHTML += `
           <div class="price-final">
             <strong>최종 입찰가:</strong> ￥${formatNumber(product.final_price)}
+          </div>
+          <div class="price-korean">
+            <strong>원화 예상가:</strong> ₩${formatNumber(koreanPrice)}
           </div>
         `;
     }
