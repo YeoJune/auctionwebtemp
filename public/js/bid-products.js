@@ -195,7 +195,6 @@ async function handleSignout() {
 }
 
 // 상품 데이터 가져오기
-// 상품 데이터 가져오기
 async function fetchProducts() {
   if (!state.isAuthenticated) {
     return;
@@ -236,7 +235,7 @@ async function fetchProducts() {
     // API 요청 URL 생성
     const queryString = API.createURLParams(params);
 
-    // 경매 타입에 따라 다른 엔드포인트 사용 - 기존 API 활용
+    // 경매 타입에 따라 다른 엔드포인트 사용
     let liveBidsPromise, directBidsPromise;
 
     if (state.bidType === "live" || state.bidType === "all") {
@@ -263,9 +262,14 @@ async function fetchProducts() {
       ...(directResults.bids || []).map((bid) => ({ ...bid, type: "direct" })),
     ];
 
+    // 날짜 정렬 (최신순)
+    combinedResults.sort(
+      (a, b) => new Date(b.updated_at) - new Date(a.updated_at)
+    );
+
     // 상태 업데이트
     state.products = combinedResults;
-    state.totalItems = (liveResults.total || 0) + (directResults.total || 0);
+    state.totalItems = combinedResults.length;
     state.totalPages = Math.ceil(state.totalItems / state.itemsPerPage);
 
     // URL 업데이트
@@ -516,98 +520,96 @@ function displayProducts() {
   // 뷰 모드에 따른 컨테이너 클래스 설정
   container.className = `product-list ${state.viewMode}-view`;
 
-  state.products.forEach((product) => {
+  // 현재 페이지에 해당하는 상품만 표시
+  const startIdx = (state.currentPage - 1) * state.itemsPerPage;
+  const endIdx = Math.min(startIdx + state.itemsPerPage, state.products.length);
+
+  for (let i = startIdx; i < endIdx; i++) {
+    const product = state.products[i];
+    const item = product.item;
+
+    if (!item) continue; // 아이템 정보가 없는 경우 건너뛰기
+
     const productCard = document.createElement("div");
     productCard.className = "product-card";
-    productCard.dataset.itemId = product.item_id;
+    productCard.dataset.itemId = item.item_id;
+    productCard.dataset.productId = product.id;
+    productCard.dataset.productType = product.type;
 
     // 그리드 뷰와 리스트 뷰에 맞는 구조 생성
     if (state.viewMode === "grid") {
-      productCard.innerHTML = createGridProductHTML(product);
+      productCard.innerHTML = createGridProductHTML(product, item);
     } else {
-      productCard.innerHTML = createListProductHTML(product);
+      productCard.innerHTML = createListProductHTML(product, item);
     }
 
     // 클릭 이벤트 추가
     productCard.addEventListener("click", () => {
-      showProductDetails(product.item_id);
+      showProductDetails(item.item_id);
     });
 
-    // 입찰 버튼 이벤트 (이벤트 버블링 방지)
-    const bidButton = productCard.querySelector(".bid-button");
-    if (bidButton) {
-      bidButton.addEventListener("click", (e) => {
-        e.stopPropagation();
-        showBidFormModal(product);
-      });
-    }
-
     container.appendChild(productCard);
-  });
+  }
 }
 
 // 그리드 뷰 HTML 생성
-function createGridProductHTML(product) {
-  const statusClass = getStatusClass(product.status || "active");
-  const statusText = getStatusDisplay(product.status || "active");
+function createGridProductHTML(product, item) {
+  const statusClass = getStatusClass(product.status);
+  const statusText = getStatusDisplay(product.status);
 
   return `
       <div class="product-image">
-        <img src="${API.validateImageUrl(product.image)}" alt="${
-    product.original_title || "상품 이미지"
+        <img src="${API.validateImageUrl(item.image)}" alt="${
+    item.original_title || "상품 이미지"
   }">
-        <div class="product-rank">${product.rank || "N"}</div>
+        <div class="product-rank">${item.rank || "N"}</div>
         <div class="status-badge ${statusClass}">${statusText}</div>
       </div>
       <div class="product-info">
-        <div class="product-brand">${product.brand || "-"}</div>
-        <div class="product-title">${
-          product.original_title || "제목 없음"
-        }</div>
+        <div class="product-brand">${item.brand || "-"}</div>
+        <div class="product-title">${item.original_title || "제목 없음"}</div>
         <div class="product-price">￥${formatNumber(
-          product.starting_price || 0
+          item.starting_price || 0
         )}</div>
         <div class="product-date">예정일: ${formatDate(
-          product.scheduled_date
+          item.scheduled_date
         )}</div>
-        <button class="bid-button">입찰하기</button>
       </div>
     `;
 }
 
 // 리스트 뷰 HTML 생성
-function createListProductHTML(product) {
-  const statusClass = getStatusClass(product.status || "active");
-  const statusText = getStatusDisplay(product.status || "active");
+function createListProductHTML(product, item) {
+  const statusClass = getStatusClass(product.status);
+  const statusText = getStatusDisplay(product.status);
 
   return `
       <div class="product-image">
-        <img src="${API.validateImageUrl(product.image)}" alt="${
-    product.original_title || "상품 이미지"
+        <img src="${API.validateImageUrl(item.image)}" alt="${
+    item.original_title || "상품 이미지"
   }">
-        <div class="product-rank">${product.rank || "N"}</div>
+        <div class="product-rank">${item.rank || "N"}</div>
       </div>
       <div class="product-info">
         <div class="top-row">
           <div>
-            <div class="product-brand">${product.brand || "-"}</div>
+            <div class="product-brand">${item.brand || "-"}</div>
             <div class="product-title">${
-              product.original_title || "제목 없음"
+              item.original_title || "제목 없음"
             }</div>
           </div>
           <div class="status-badge ${statusClass}">${statusText}</div>
         </div>
         <div class="middle-row">
-          <div class="product-category">${product.category || "-"}</div>
+          <div class="product-category">${item.category || "-"}</div>
           <div class="product-date">예정일: ${formatDate(
-            product.scheduled_date
+            item.scheduled_date
           )}</div>
         </div>
         <div class="bottom-row">
           <div class="product-price">￥${formatNumber(
-            product.starting_price || 0
+            item.starting_price || 0
           )}</div>
-          <button class="bid-button">입찰하기</button>
         </div>
       </div>
     `;
@@ -625,8 +627,9 @@ function handlePageChange(page) {
   if (page === state.currentPage) return;
 
   state.currentPage = page;
-  fetchProducts();
+  displayProducts();
   window.scrollTo(0, 0);
+  updateURL();
 }
 
 // 상품 상세 정보 표시
@@ -634,11 +637,13 @@ async function showProductDetails(itemId) {
   const modalManager = setupModal("detailModal");
   if (!modalManager) return;
 
-  const product = state.products.find((p) => p.item_id === itemId);
+  const product = state.products.find((p) => p.item?.item_id === itemId);
   if (!product) return;
 
+  const item = product.item;
+
   // 기본 정보로 모달 초기화
-  initializeModal(product);
+  initializeModal(product, item);
   modalManager.show();
 
   // 로딩 표시
@@ -646,20 +651,18 @@ async function showProductDetails(itemId) {
 
   try {
     // 상세 정보 가져오기
-    const productDetails = await API.fetchAPI(
-      `/detail/item-details/${itemId}`,
-      {
-        method: "POST",
-      }
-    );
+    const itemDetails = await API.fetchAPI(`/detail/item-details/${itemId}`, {
+      method: "POST",
+    });
 
     // 상세 정보 업데이트
-    updateModalWithDetails(productDetails);
+    updateModalWithDetails(itemDetails);
 
     // 추가 이미지가 있다면 업데이트
-    if (productDetails.additional_images) {
+    if (itemDetails.additional_images) {
       try {
-        initializeImages(JSON.parse(productDetails.additional_images));
+        const additionalImages = JSON.parse(itemDetails.additional_images);
+        initializeImages([item.image, ...additionalImages]);
       } catch (e) {
         console.error("이미지 파싱 오류:", e);
       }
@@ -672,60 +675,55 @@ async function showProductDetails(itemId) {
 }
 
 // 모달 초기화
-function initializeModal(product) {
-  document.querySelector(".modal-brand").textContent = product.brand || "-";
+function initializeModal(product, item) {
+  document.querySelector(".modal-brand").textContent = item.brand || "-";
   document.querySelector(".modal-title").textContent =
-    product.original_title || "-";
-  document.querySelector(".main-image").src = API.validateImageUrl(
-    product.image
-  );
+    item.original_title || "-";
+  document.querySelector(".main-image").src = API.validateImageUrl(item.image);
   document.querySelector(".modal-description").textContent = "로딩 중...";
   document.querySelector(".modal-category").textContent =
-    product.category || "로딩 중...";
-  document.querySelector(".modal-brand2").textContent = product.brand || "-";
+    item.category || "로딩 중...";
+  document.querySelector(".modal-brand2").textContent = item.brand || "-";
   document.querySelector(".modal-accessory-code").textContent =
-    product.accessory_code || "로딩 중...";
+    item.accessory_code || "로딩 중...";
   document.querySelector(".modal-scheduled-date").textContent =
-    formatDateTime(product.scheduled_date) || "로딩 중...";
-  document.querySelector(".modal-rank").textContent = product.rank || "N";
+    formatDateTime(item.scheduled_date) || "로딩 중...";
+  document.querySelector(".modal-rank").textContent = item.rank || "N";
 
   // 가격 정보 표시
-  updatePriceInfoInModal(product);
+  updatePriceInfoInModal(product, item);
 
   // 이미지 초기화
-  initializeImages([product.image]);
-
-  // 입찰 버튼 추가
-  addBidButtonToModal(product);
+  initializeImages([item.image]);
 }
 
 // 상세 정보로 모달 업데이트
-function updateModalWithDetails(product) {
+function updateModalWithDetails(item) {
   document.querySelector(".modal-description").textContent =
-    product.description || "설명 없음";
+    item.description || "설명 없음";
   document.querySelector(".modal-category").textContent =
-    product.category || "카테고리 없음";
+    item.category || "카테고리 없음";
   document.querySelector(".modal-accessory-code").textContent =
-    product.accessory_code || "액세서리 코드 없음";
+    item.accessory_code || "액세서리 코드 없음";
   document.querySelector(".modal-scheduled-date").textContent =
-    product.scheduled_date
-      ? formatDateTime(product.scheduled_date)
+    item.scheduled_date
+      ? formatDateTime(item.scheduled_date)
       : "날짜 정보 없음";
-  document.querySelector(".modal-brand").textContent = product.brand || "-";
-  document.querySelector(".modal-brand2").textContent = product.brand || "-";
+  document.querySelector(".modal-brand").textContent = item.brand || "-";
+  document.querySelector(".modal-brand2").textContent = item.brand || "-";
   document.querySelector(".modal-title").textContent =
-    product.original_title || "제목 없음";
-  document.querySelector(".modal-rank").textContent = product.rank || "N";
+    item.original_title || "제목 없음";
+  document.querySelector(".modal-rank").textContent = item.rank || "N";
 }
 
 // 가격 정보 표시
-function updatePriceInfoInModal(product) {
+function updatePriceInfoInModal(product, item) {
   const priceInfoHolder = document.querySelector(".bid-info-holder");
   if (!priceInfoHolder) return;
 
   // 상태에 따라 다른 표시와 클래스 적용
-  const statusClass = getStatusClass(product.status || "active");
-  const statusText = getStatusDisplay(product.status || "active");
+  const statusClass = getStatusClass(product.status);
+  const statusText = getStatusDisplay(product.status);
 
   let priceInfoHTML = `
       <div class="modal-price-info">
@@ -733,18 +731,21 @@ function updatePriceInfoInModal(product) {
           ${statusText}
         </div>
         <div class="price-date">
-          <strong>예정일:</strong> ${formatDateTime(product.scheduled_date)}
+          <strong>예정일:</strong> ${formatDateTime(item.scheduled_date)}
         </div>
         <div class="price-starting">
-          <strong>시작가:</strong> ￥${formatNumber(product.starting_price)}
+          <strong>시작가:</strong> ￥${formatNumber(item.starting_price)}
         </div>
     `;
 
   // 경매 타입에 따른 추가 정보
-  if (product.auc_num === 1 || product.auc_num === 2) {
+  if (product.type === "direct") {
     priceInfoHTML += `
         <div class="price-type">
           <strong>경매 유형:</strong> 직접 경매
+        </div>
+        <div class="price-current">
+          <strong>현재 입찰가:</strong> ￥${formatNumber(product.current_price)}
         </div>
       `;
   } else {
@@ -753,128 +754,39 @@ function updatePriceInfoInModal(product) {
           <strong>경매 유형:</strong> 현장 경매
         </div>
       `;
-  }
 
-  priceInfoHTML += "</div>";
-  priceInfoHolder.innerHTML = priceInfoHTML;
-}
-
-// 입찰 버튼 추가
-function addBidButtonToModal(product) {
-  const priceInfoHolder = document.querySelector(".bid-info-holder");
-  if (!priceInfoHolder) return;
-
-  // 이미 입찰 버튼이 있으면 제거
-  const existingButton = priceInfoHolder.querySelector(".modal-bid-button");
-  if (existingButton) {
-    existingButton.remove();
-  }
-
-  // 입찰 가능한 상태인지 확인
-  const isBiddable =
-    product.status === "active" ||
-    product.status === "first" ||
-    product.status === "second";
-
-  if (isBiddable) {
-    const bidButton = document.createElement("button");
-    bidButton.className = "modal-bid-button";
-    bidButton.textContent = "입찰하기";
-    bidButton.addEventListener("click", () => {
-      // 모달 닫기
-      document.getElementById("detailModal").style.display = "none";
-      // 입찰 폼 표시
-      showBidFormModal(product);
-    });
-
-    priceInfoHolder.appendChild(bidButton);
-  }
-}
-
-// 상품 정보 모달 표시 (입찰 처리 없이)
-function showBidFormModal(product) {
-  // 기존 모달이 있으면 제거
-  let infoModal = document.getElementById("productInfoModal");
-  if (infoModal) {
-    infoModal.remove();
-  }
-
-  // 새 모달 생성
-  infoModal = document.createElement("div");
-  infoModal.id = "productInfoModal";
-  infoModal.className = "modal";
-
-  const modalContent = `
-      <div class="modal-content product-info-modal">
-        <div class="modal-header">
-          <h2>상품 정보</h2>
-          <button class="close" aria-label="Close modal">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div class="product-summary">
-            <img src="${API.validateImageUrl(product.image)}" alt="${
-    product.original_title
-  }" class="product-thumbnail">
-            <div class="product-info">
-              <div class="product-brand">${product.brand || "-"}</div>
-              <div class="product-title">${
-                product.original_title || "제목 없음"
-              }</div>
-              <div class="product-price">시작가: ￥${formatNumber(
-                product.starting_price || 0
-              )}</div>
-              <div class="product-date">예정일: ${formatDate(
-                product.scheduled_date
-              )}</div>
-              <div class="product-status">상태: ${getStatusDisplay(
-                product.status || "active"
-              )}</div>
-            </div>
+    if (product.first_price) {
+      priceInfoHTML += `
+          <div class="price-first">
+            <strong>1차 입찰가:</strong> ￥${formatNumber(product.first_price)}
           </div>
-          
-          <div class="product-description">
-            <h3>상세 설명</h3>
-            <p>${product.description || "상세 설명이 없습니다."}</p>
-          </div>
-          
-          <div class="modal-actions">
-            <button type="button" class="primary-button view-detail-btn">상세 정보 보기</button>
-            <button type="button" class="secondary-button close-btn">닫기</button>
-          </div>
-        </div>
-      </div>
-    `;
-
-  infoModal.innerHTML = modalContent;
-  document.body.appendChild(infoModal);
-
-  // 모달 표시
-  infoModal.style.display = "flex";
-
-  // 닫기 버튼 이벤트
-  const closeBtn = infoModal.querySelector(".close");
-  const cancelBtn = infoModal.querySelector(".close-btn");
-  const detailBtn = infoModal.querySelector(".view-detail-btn");
-
-  closeBtn.addEventListener("click", () => {
-    infoModal.style.display = "none";
-  });
-
-  cancelBtn.addEventListener("click", () => {
-    infoModal.style.display = "none";
-  });
-
-  detailBtn.addEventListener("click", () => {
-    infoModal.style.display = "none";
-    showProductDetails(product.item_id);
-  });
-
-  // 외부 클릭 시 닫기
-  infoModal.addEventListener("click", (e) => {
-    if (e.target === infoModal) {
-      infoModal.style.display = "none";
+        `;
     }
-  });
+
+    if (product.second_price) {
+      priceInfoHTML += `
+          <div class="price-second">
+            <strong>2차 제안가:</strong> ￥${formatNumber(product.second_price)}
+          </div>
+        `;
+    }
+
+    if (product.final_price) {
+      priceInfoHTML += `
+          <div class="price-final">
+            <strong>최종 입찰가:</strong> ￥${formatNumber(product.final_price)}
+          </div>
+        `;
+    }
+  }
+
+  priceInfoHTML += `
+      <div class="price-updated">
+        <strong>최종 업데이트:</strong> ${formatDateTime(product.updated_at)}
+      </div>
+    </div>`;
+
+  priceInfoHolder.innerHTML = priceInfoHTML;
 }
 
 // 이미지 초기화
@@ -971,6 +883,14 @@ function setupNavButtons() {
   // 시세표 버튼 (onclick 속성으로 이미 처리됨)
 
   // 현재 페이지이므로 별도 처리 없음
+}
+
+// 로딩 표시 토글
+function toggleLoading(show) {
+  const loadingMsg = document.getElementById("loadingMsg");
+  if (loadingMsg) {
+    loadingMsg.style.display = show ? "block" : "none";
+  }
 }
 
 // DOM 완료 시 실행
