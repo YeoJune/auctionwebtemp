@@ -35,6 +35,13 @@
             </button>
             <button
               class="nav-button"
+              id="bidProductsBtn"
+              onclick="window.location.href = '/bidProductsPage'">
+              <i class="fas fa-gavel"></i>
+              <span>입찰 항목</span>
+            </button>
+            <button
+              class="nav-button active"
               id="bidResultsBtn"
               onclick="window.location.href = '/bidResultsPage'">
               <i class="fas fa-clipboard-check"></i>
@@ -75,172 +82,125 @@
       </header>
 
       <main class="main-content">
-        <!-- 간소화된 필터 섹션 -->
-        <section class="simple-filter">
-          <div class="filter-group">
-            <label>경매 타입:</label>
-            <div class="radio-buttons">
-              <div class="radio-item">
-                <input
-                  type="radio"
-                  name="bidType"
-                  id="bidType-all"
-                  value="all"
-                  checked />
-                <label for="bidType-all">전체</label>
-              </div>
-              <div class="radio-item">
-                <input
-                  type="radio"
-                  name="bidType"
-                  id="bidType-live"
-                  value="live" />
-                <label for="bidType-live">현장 경매</label>
-              </div>
-              <div class="radio-item">
-                <input
-                  type="radio"
-                  name="bidType"
-                  id="bidType-direct"
-                  value="direct" />
-                <label for="bidType-direct">직접 경매</label>
-              </div>
+        <section class="search-toolbar">
+          <div class="view-controls">
+            <div class="sort-options">
+              <button class="sort-btn active" data-sort="date">
+                날짜순 <i class="fas fa-sort"></i>
+              </button>
+              <button class="sort-btn" data-sort="total_price">
+                금액순 <i class="fas fa-sort"></i>
+              </button>
+              <button class="sort-btn" data-sort="item_count">
+                상품수 <i class="fas fa-sort"></i>
+              </button>
             </div>
+            <button class="mobile-filter-toggle" id="mobileFilterBtn">
+              <i class="fas fa-filter"></i> 필터
+            </button>
           </div>
-
-          <div class="filter-group">
-            <label>상태:</label>
-            <div class="radio-buttons">
-              <div class="radio-item">
-                <input
-                  type="radio"
-                  name="status"
-                  id="status-all"
-                  value="all"
-                  checked />
-                <label for="status-all">전체</label>
-              </div>
-              <div class="radio-item">
-                <input
-                  type="radio"
-                  name="status"
-                  id="status-completed"
-                  value="completed" />
-                <label for="status-completed">완료</label>
-              </div>
-              <div class="radio-item">
-                <input
-                  type="radio"
-                  name="status"
-                  id="status-cancelled"
-                  value="cancelled" />
-                <label for="status-cancelled">취소됨</label>
-              </div>
-              <div class="radio-item">
-                <input
-                  type="radio"
-                  name="status"
-                  id="status-inprogress"
-                  value="inprogress" />
-                <label for="status-inprogress">진행중</label>
-              </div>
-            </div>
-          </div>
-
-          <div class="filter-group">
-            <label>기간:</label>
-            <select id="dateRange">
-              <option value="7">최근 1주일</option>
-              <option value="30" selected>최근 1개월</option>
-              <option value="90">최근 3개월</option>
-              <option value="180">최근 6개월</option>
-              <option value="365">최근 1년</option>
-            </select>
-          </div>
-
-          <button id="applyFilters" class="primary-button">적용</button>
         </section>
 
-        <!-- 결과 컨테이너 -->
-        <section class="results-container">
-          <div class="results-header">
-            <h2>입찰 결과</h2>
-            <div class="results-count">
-              총 <span id="totalResults">0</span>건
+        <!-- 필터 및 결과 섹션 -->
+        <div class="content-wrapper">
+          <aside class="filters-container">
+            <h3>필터</h3>
+
+            <!-- 경매 타입 필터 -->
+            <div class="filter-section">
+              <h4>경매 타입</h4>
+              <div class="radio-buttons">
+                <div class="radio-item">
+                  <input
+                    type="radio"
+                    name="bidType"
+                    id="bidType-all"
+                    value="all"
+                    checked />
+                  <label for="bidType-all">전체</label>
+                </div>
+                <div class="radio-item">
+                  <input
+                    type="radio"
+                    name="bidType"
+                    id="bidType-live"
+                    value="live" />
+                  <label for="bidType-live">현장 경매</label>
+                </div>
+                <div class="radio-item">
+                  <input
+                    type="radio"
+                    name="bidType"
+                    id="bidType-direct"
+                    value="direct" />
+                  <label for="bidType-direct">직접 경매</label>
+                </div>
+              </div>
             </div>
-          </div>
 
-          <div class="loading-msg" id="loadingMsg">로딩 중...</div>
+            <!-- 기간 필터 -->
+            <div class="filter-section">
+              <h4>기간</h4>
+              <select id="dateRange">
+                <option value="7">최근 1주일</option>
+                <option value="30" selected>최근 1개월</option>
+                <option value="90">최근 3개월</option>
+                <option value="180">최근 6개월</option>
+                <option value="365">최근 1년</option>
+              </select>
+            </div>
 
-          <div class="bid-results-list" id="bidResultsList">
-            <!-- 결과 아이템이 여기에 추가됨 -->
-          </div>
+            <!-- 필터 적용/초기화 버튼 -->
+            <div class="filter-buttons">
+              <button id="applyFilters" class="primary-button">
+                필터 적용
+              </button>
+              <button id="resetFilters" class="secondary-button">초기화</button>
+            </div>
+          </aside>
 
-          <!-- 페이지네이션 -->
-          <div class="pagination" id="pagination"></div>
-        </section>
+          <section class="results-section">
+            <!-- 요약 통계 -->
+            <div class="summary-stats">
+              <div class="stat-box">
+                <div class="stat-label">총 상품 수</div>
+                <div class="stat-value" id="totalItemCount">0</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">총 금액 (¥)</div>
+                <div class="stat-value" id="totalJapaneseAmount">0</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">총 금액 (₩)</div>
+                <div class="stat-value" id="totalKoreanAmount">0</div>
+              </div>
+            </div>
+
+            <!-- 결과 카운트 -->
+            <div class="results-header">
+              <div class="results-count">
+                총 <span id="totalResults">0</span>개 날짜
+              </div>
+            </div>
+
+            <!-- 로딩 메시지 -->
+            <div class="loading-msg" id="loadingMsg">로딩 중...</div>
+
+            <!-- 일별 결과 목록 -->
+            <div class="daily-results-list" id="resultsList">
+              <!-- 여기에 일별 결과가 동적으로 추가됨 -->
+            </div>
+
+            <!-- 페이지네이션 -->
+            <div class="pagination" id="pagination"></div>
+          </section>
+        </div>
       </main>
-    </div>
-
-    <!-- 상품 상세 모달 -->
-    <div id="detailModal" class="modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <div class="product-info">
-            <p class="modal-brand"></p>
-            <h2 class="modal-title"></h2>
-          </div>
-          <button class="close" aria-label="Close modal">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div class="modal-left">
-            <div class="main-image-container">
-              <button class="image-nav prev" aria-label="Previous image">
-                &lt;
-              </button>
-              <img src="" alt="Main product image" class="main-image" />
-              <button class="image-nav next" aria-label="Next image">
-                &gt;
-              </button>
-            </div>
-            <div class="thumbnail-container"></div>
-          </div>
-          <div class="modal-right">
-            <div class="bid-info-holder"></div>
-            <div class="product-details">
-              <div class="detail-item description">
-                <span class="detail-label">상세 설명:</span>
-                <p class="modal-description"></p>
-              </div>
-              <div class="detail-item">
-                <span class="detail-label">예정일:</span>
-                <span class="modal-scheduled-date"></span>
-              </div>
-              <div class="detail-item">
-                <span class="detail-label">브랜드:</span>
-                <span class="modal-brand2"></span>
-              </div>
-              <div class="detail-item">
-                <span class="detail-label">카테고리:</span>
-                <span class="modal-category"></span>
-              </div>
-              <div class="detail-item">
-                <span class="detail-label">액세서리 코드:</span>
-                <span class="modal-accessory-code"></span>
-              </div>
-              <div class="detail-item">
-                <span class="detail-label">랭크:</span>
-                <span class="modal-rank"></span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
 
     <script src="/js/common.js"></script>
     <script src="/js/api.js"></script>
     <script src="/js/bid-results.js"></script>
-    <script src="/js/traker.js"></script>
+    <script src="/js/calculate-fee.js"></script>
   </body>
 </html>

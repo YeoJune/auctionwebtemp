@@ -2,66 +2,25 @@
 
 // 상태 관리
 window.state = {
-  bidType: "all",
-  status: "all",
-  dateRange: 30,
-  currentPage: 1,
-  itemsPerPage: 10,
-  liveBids: [],
-  directBids: [],
-  combinedResults: [],
-  filteredResults: [],
-  totalItems: 0,
-  totalPages: 0,
-  isAuthenticated: false,
-  images: [],
-  currentImageIndex: 0,
-};
-
-// 상태 정의
-const STATUS_TYPES = {
-  // 완료 상태
-  COMPLETED: "completed",
-  // 취소 상태
-  CANCELLED: "cancelled",
-  // 진행 중 상태들 (직접 경매)
-  ACTIVE: "active",
-  // 진행 중 상태들 (현장 경매)
-  FIRST: "first",
-  SECOND: "second",
-  FINAL: "final",
-};
-
-// 상태 그룹
-const STATUS_GROUPS = {
-  COMPLETED: [STATUS_TYPES.COMPLETED],
-  CANCELLED: [STATUS_TYPES.CANCELLED],
-  INPROGRESS: [
-    STATUS_TYPES.ACTIVE,
-    STATUS_TYPES.FIRST,
-    STATUS_TYPES.SECOND,
-    STATUS_TYPES.FINAL,
-  ],
-};
-
-// 상태 표시 텍스트
-const STATUS_DISPLAY = {
-  [STATUS_TYPES.COMPLETED]: "낙찰됨",
-  [STATUS_TYPES.CANCELLED]: "취소됨",
-  [STATUS_TYPES.ACTIVE]: "입찰중",
-  [STATUS_TYPES.FIRST]: "1차 입찰",
-  [STATUS_TYPES.SECOND]: "2차 제안",
-  [STATUS_TYPES.FINAL]: "최종 입찰",
-};
-
-// 상태 CSS 클래스
-const STATUS_CLASSES = {
-  [STATUS_TYPES.COMPLETED]: "completed",
-  [STATUS_TYPES.CANCELLED]: "cancelled",
-  [STATUS_TYPES.ACTIVE]: "status-active",
-  [STATUS_TYPES.FIRST]: "status-first",
-  [STATUS_TYPES.SECOND]: "status-second",
-  [STATUS_TYPES.FINAL]: "status-final",
+  bidType: "all", // 경매 타입: all, live, direct
+  dateRange: 30, // 날짜 범위(일)
+  currentPage: 1, // 현재 페이지
+  itemsPerPage: 7, // 페이지당 날짜 수 (일별 그룹화)
+  sortBy: "date", // 정렬 기준 (기본: 날짜)
+  sortOrder: "desc", // 정렬 순서 (기본: 내림차순)
+  liveBids: [], // 현장 경매 데이터
+  directBids: [], // 직접 경매 데이터
+  combinedResults: [], // 결합된 결과
+  dailyResults: [], // 일별로 그룹화된 결과
+  filteredResults: [], // 필터링된 결과
+  totalItems: 0, // 전체 아이템 수
+  totalPages: 0, // 전체 페이지 수
+  isAuthenticated: false, // 인증 상태
+  totalStats: {
+    itemCount: 0,
+    japaneseAmount: 0,
+    koreanAmount: 0,
+  },
 };
 
 // 초기화 함수
@@ -70,21 +29,73 @@ async function initialize() {
     // API 초기화
     await API.initialize();
 
+    // 환율 정보 가져오기
+    await fetchExchangeRate();
+
     // 인증 상태 확인
     await checkAuthStatus();
 
-    // 네비게이션 버튼 설정
-    setupNavButtons();
+    // URL 파라미터에서 초기 상태 로드
+    loadStateFromURL();
 
     // 이벤트 리스너 설정
     setupEventListeners();
 
+    // 네비게이션 버튼 설정
+    setupNavButtons();
+
     // 초기 데이터 로드
-    await fetchResults();
+    await fetchCompletedBids();
   } catch (error) {
     console.error("초기화 중 오류 발생:", error);
     alert("페이지 초기화 중 오류가 발생했습니다.");
   }
+}
+
+// URL에서 상태 로드
+function loadStateFromURL() {
+  const urlParams = new URLSearchParams(window.location.search);
+
+  if (urlParams.has("bidType")) state.bidType = urlParams.get("bidType");
+  if (urlParams.has("dateRange"))
+    state.dateRange = parseInt(urlParams.get("dateRange"));
+  if (urlParams.has("page"))
+    state.currentPage = parseInt(urlParams.get("page"));
+  if (urlParams.has("sortBy")) state.sortBy = urlParams.get("sortBy");
+  if (urlParams.has("sortOrder")) state.sortOrder = urlParams.get("sortOrder");
+
+  // UI 요소 상태 업데이트
+  updateUIFromState();
+}
+
+// URL 업데이트
+function updateURL() {
+  const params = new URLSearchParams();
+
+  if (state.bidType !== "all") params.append("bidType", state.bidType);
+  if (state.dateRange !== 30) params.append("dateRange", state.dateRange);
+  if (state.currentPage !== 1) params.append("page", state.currentPage);
+  if (state.sortBy !== "date") params.append("sortBy", state.sortBy);
+  if (state.sortOrder !== "desc") params.append("sortOrder", state.sortOrder);
+
+  // URL 업데이트 (history API 사용)
+  const url = `${window.location.pathname}?${params.toString()}`;
+  window.history.replaceState({}, "", url);
+}
+
+// UI 요소 상태 업데이트
+function updateUIFromState() {
+  // 경매 타입 라디오 버튼
+  document.querySelectorAll('input[name="bidType"]').forEach((radio) => {
+    radio.checked = radio.value === state.bidType;
+  });
+
+  // 날짜 범위 선택
+  const dateRange = document.getElementById("dateRange");
+  if (dateRange) dateRange.value = state.dateRange;
+
+  // 정렬 버튼 업데이트
+  updateSortButtonsUI();
 }
 
 // 인증 관련 함수
@@ -126,73 +137,8 @@ async function handleSignout() {
   }
 }
 
-// 이벤트 리스너 설정
-function setupEventListeners() {
-  // 경매 타입 라디오 버튼
-  document.querySelectorAll('input[name="bidType"]').forEach((radio) => {
-    radio.addEventListener("change", (e) => {
-      state.bidType = e.target.value;
-    });
-  });
-
-  // 상태 라디오 버튼
-  document.querySelectorAll('input[name="status"]').forEach((radio) => {
-    radio.addEventListener("change", (e) => {
-      state.status = e.target.value;
-    });
-  });
-
-  // 기간 드롭다운
-  document.getElementById("dateRange")?.addEventListener("change", (e) => {
-    state.dateRange = parseInt(e.target.value);
-  });
-
-  // 필터 적용 버튼
-  document.getElementById("applyFilters")?.addEventListener("click", () => {
-    state.currentPage = 1;
-    fetchResults();
-  });
-
-  // 로그아웃 버튼
-  document
-    .getElementById("signoutBtn")
-    ?.addEventListener("click", handleSignout);
-
-  // 상세 모달 닫기 버튼
-  const closeBtn = document.querySelector(".modal .close");
-  if (closeBtn) {
-    closeBtn.addEventListener("click", () => {
-      document.getElementById("detailModal").style.display = "none";
-    });
-  }
-
-  // 외부 클릭 시 모달 닫기
-  window.addEventListener("click", (e) => {
-    const modal = document.getElementById("detailModal");
-    if (e.target === modal) {
-      modal.style.display = "none";
-    }
-  });
-
-  // 이미지 네비게이션 버튼
-  const prevBtn = document.querySelector(".image-nav.prev");
-  const nextBtn = document.querySelector(".image-nav.next");
-
-  if (prevBtn) {
-    prevBtn.addEventListener("click", () => {
-      changeMainImage(state.currentImageIndex - 1);
-    });
-  }
-
-  if (nextBtn) {
-    nextBtn.addEventListener("click", () => {
-      changeMainImage(state.currentImageIndex + 1);
-    });
-  }
-}
-
-// 데이터 가져오기
-async function fetchResults() {
+// 완료된 입찰 데이터 가져오기
+async function fetchCompletedBids() {
   if (!state.isAuthenticated) {
     return;
   }
@@ -200,50 +146,33 @@ async function fetchResults() {
   toggleLoading(true);
 
   try {
-    // 선택된 상태에 따라 API 파라미터 준비
-    let statusParam;
-
-    switch (state.status) {
-      case "completed":
-        statusParam = STATUS_TYPES.COMPLETED;
-        break;
-      case "cancelled":
-        statusParam = STATUS_TYPES.CANCELLED;
-        break;
-      case "inprogress":
-        statusParam = STATUS_GROUPS.INPROGRESS.join(",");
-        break;
-      case "all":
-      default:
-        statusParam = [
-          ...STATUS_GROUPS.COMPLETED,
-          ...STATUS_GROUPS.CANCELLED,
-          ...STATUS_GROUPS.INPROGRESS,
-        ].join(",");
-        break;
-    }
-
     // 날짜 범위 계산
     const dateLimit = new Date();
     dateLimit.setDate(dateLimit.getDate() - state.dateRange);
-    const fromDate = formatDate(dateLimit); // 기존의 formatDate 함수 사용
+    const fromDate = formatDate(dateLimit);
 
+    // 정렬 및 페이지네이션 파라미터
+    const params = {
+      status: "completed", // 완료된 입찰만 가져옴
+      fromDate: fromDate,
+      sortBy: "updated_at", // 백엔드에서는 updated_at으로 정렬
+      sortOrder: "desc",
+    };
+
+    // API 요청 URL 생성
+    const queryString = API.createURLParams(params);
+
+    // 경매 타입에 따라 다른 엔드포인트 사용
     let liveBidsPromise, directBidsPromise;
 
-    // 현장 경매 결과 가져오기 (bidType이 'direct'가 아닌 경우)
-    if (state.bidType !== "direct") {
-      liveBidsPromise = API.fetchAPI(
-        `/live-bids?status=${statusParam}&fromDate=${fromDate}`
-      );
+    if (state.bidType === "live" || state.bidType === "all") {
+      liveBidsPromise = API.fetchAPI(`/live-bids?${queryString}`);
     } else {
       liveBidsPromise = Promise.resolve({ bids: [] });
     }
 
-    // 직접 경매 결과 가져오기 (bidType이 'live'가 아닌 경우)
-    if (state.bidType !== "live") {
-      directBidsPromise = API.fetchAPI(
-        `/direct-bids?status=${statusParam}&fromDate=${fromDate}`
-      );
+    if (state.bidType === "direct" || state.bidType === "all") {
+      directBidsPromise = API.fetchAPI(`/direct-bids?${queryString}`);
     } else {
       directBidsPromise = Promise.resolve({ bids: [] });
     }
@@ -254,121 +183,270 @@ async function fetchResults() {
       directBidsPromise,
     ]);
 
-    // 저장
+    // 결합 및 타입 정보 추가
     state.liveBids = liveResults.bids || [];
     state.directBids = directResults.bids || [];
 
-    // 결합 및 타입 정보 추가
-    state.combinedResults = [
-      ...state.liveBids.map((bid) => ({ ...bid, type: "live" })),
-      ...state.directBids.map((bid) => ({ ...bid, type: "direct" })),
-    ];
+    const liveBidsWithType = state.liveBids.map((bid) => ({
+      ...bid,
+      type: "live",
+    }));
 
-    // 클라이언트 측 날짜 필터링 제거 (서버에서 처리하므로)
-    state.filteredResults = state.combinedResults;
+    const directBidsWithType = state.directBids.map((bid) => ({
+      ...bid,
+      type: "direct",
+    }));
 
-    // 정렬 및 표시
-    sortAndDisplayResults();
+    state.combinedResults = [...liveBidsWithType, ...directBidsWithType];
+
+    // 일별로 그룹화
+    groupResultsByDate();
+
+    // URL 업데이트
+    updateURL();
+
+    // 결과 표시
+    displayResults();
+
+    // 페이지네이션 업데이트
+    updatePagination();
+
+    // 정렬 버튼 UI 업데이트
+    updateSortButtonsUI();
   } catch (error) {
-    console.error("입찰 결과를 가져오는 중 오류 발생:", error);
-    document.getElementById("bidResultsList").innerHTML =
+    console.error("낙찰 데이터를 가져오는 중 오류 발생:", error);
+    document.getElementById("resultsList").innerHTML =
       '<div class="no-results">데이터를 불러오는 데 실패했습니다.</div>';
   } finally {
     toggleLoading(false);
   }
 }
-// 날짜 필터 적용
-function applyDateFilter() {
-  // 모든 결과는 이미 서버에서 필터링되어 있으므로 그대로 사용
-  state.filteredResults = state.combinedResults;
 
-  // 필요한 경우 결과 검증 (예: 날짜 형식이 올바른지)
-  const invalidResults = state.filteredResults.filter((bid) => !bid.updated_at);
-  if (invalidResults.length > 0) {
-    console.warn(`Found ${invalidResults.length} results with invalid dates`);
-  }
+// 결과를 일별로 그룹화
+function groupResultsByDate() {
+  // 날짜별로 그룹화
+  const groupedByDate = {};
+
+  state.combinedResults.forEach((item) => {
+    // 날짜만 추출 (시간 제외)
+    const dateStr = formatDate(item.updated_at);
+
+    if (!groupedByDate[dateStr]) {
+      groupedByDate[dateStr] = {
+        date: dateStr,
+        items: [],
+        itemCount: 0,
+        totalJapanesePrice: 0,
+        totalKoreanPrice: 0,
+      };
+    }
+
+    // 가격 정보 계산
+    let japanesePrice = 0;
+    if (item.type === "direct") {
+      japanesePrice = item.current_price || 0;
+    } else {
+      japanesePrice = item.final_price || 0;
+    }
+
+    // 원화 가격 계산
+    const product = item.item || {};
+    const auctionId = product.auc_num || 1;
+    const category = product.category || "기타";
+    const koreanPrice = calculateTotalPrice(japanesePrice, auctionId, category);
+
+    // 그룹에 아이템 추가
+    groupedByDate[dateStr].items.push({
+      ...item,
+      japanesePrice,
+      koreanPrice,
+    });
+
+    // 합계 업데이트
+    groupedByDate[dateStr].itemCount++;
+    groupedByDate[dateStr].totalJapanesePrice += japanesePrice;
+    groupedByDate[dateStr].totalKoreanPrice += koreanPrice;
+  });
+
+  // 객체를 배열로 변환
+  state.dailyResults = Object.values(groupedByDate);
+
+  // 정렬 적용
+  sortDailyResults();
+
+  // 총 통계 업데이트
+  updateTotalStats();
 }
 
-// 정렬 및 표시
-// 정렬 및 표시
-function sortAndDisplayResults() {
-  // 날짜 기준 내림차순 정렬 (최신순)
-  state.filteredResults.sort(
-    (a, b) => new Date(b.updated_at) - new Date(a.updated_at)
+// 총 통계 업데이트
+function updateTotalStats() {
+  state.totalStats = {
+    itemCount: 0,
+    japaneseAmount: 0,
+    koreanAmount: 0,
+  };
+
+  state.dailyResults.forEach((day) => {
+    state.totalStats.itemCount += day.itemCount;
+    state.totalStats.japaneseAmount += day.totalJapanesePrice;
+    state.totalStats.koreanAmount += day.totalKoreanPrice;
+  });
+
+  // UI 업데이트
+  document.getElementById("totalItemCount").textContent = formatNumber(
+    state.totalStats.itemCount
   );
+  document.getElementById("totalJapaneseAmount").textContent =
+    formatNumber(state.totalStats.japaneseAmount) + " ¥";
+  document.getElementById("totalKoreanAmount").textContent =
+    formatNumber(state.totalStats.koreanAmount) + " ₩";
+}
 
-  // 서버에서 받은 total 값 사용 (클라이언트 측 계산 대신)
-  // 만약 API response에 total이 포함되어 있다면 다음과 같이 사용
-  // state.totalItems = liveResults.total + directResults.total;
+// 일별 결과 정렬
+function sortDailyResults() {
+  state.dailyResults.sort((a, b) => {
+    let valueA, valueB;
 
-  // 그렇지 않은 경우 필터링된 결과의 길이 사용
+    // 정렬 기준에 따른 값 추출
+    switch (state.sortBy) {
+      case "date":
+        valueA = new Date(a.date);
+        valueB = new Date(b.date);
+        break;
+      case "total_price":
+        valueA = a.totalKoreanPrice;
+        valueB = b.totalKoreanPrice;
+        break;
+      case "item_count":
+        valueA = a.itemCount;
+        valueB = b.itemCount;
+        break;
+      default:
+        valueA = new Date(a.date);
+        valueB = new Date(b.date);
+        break;
+    }
+
+    // 정렬 방향 적용
+    const direction = state.sortOrder === "asc" ? 1 : -1;
+    return direction * (valueA - valueB);
+  });
+
+  // 필터링된 결과 업데이트
+  state.filteredResults = [...state.dailyResults];
   state.totalItems = state.filteredResults.length;
   state.totalPages = Math.ceil(state.totalItems / state.itemsPerPage);
+}
 
-  // 결과 표시
+// 이벤트 리스너 설정
+function setupEventListeners() {
+  // 경매 타입 라디오 버튼
+  document.querySelectorAll('input[name="bidType"]').forEach((radio) => {
+    radio.addEventListener("change", (e) => {
+      state.bidType = e.target.value;
+      state.currentPage = 1;
+      fetchCompletedBids();
+    });
+  });
+
+  // 기간 드롭다운
+  document.getElementById("dateRange")?.addEventListener("change", (e) => {
+    state.dateRange = parseInt(e.target.value);
+    state.currentPage = 1;
+    fetchCompletedBids();
+  });
+
+  // 정렬 버튼들
+  const sortButtons = document.querySelectorAll(".sort-btn");
+  sortButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      handleSortChange(btn.dataset.sort);
+    });
+  });
+
+  // 필터 적용 버튼
+  document.getElementById("applyFilters")?.addEventListener("click", () => {
+    state.currentPage = 1;
+    fetchCompletedBids();
+  });
+
+  // 필터 초기화 버튼
+  document.getElementById("resetFilters")?.addEventListener("click", () => {
+    resetFilters();
+  });
+
+  // 로그아웃 버튼
+  document
+    .getElementById("signoutBtn")
+    ?.addEventListener("click", handleSignout);
+}
+
+// 정렬 변경 처리
+function handleSortChange(sortKey) {
+  if (state.sortBy === sortKey) {
+    // 같은 정렬 기준이면 정렬 방향 전환
+    state.sortOrder = state.sortOrder === "asc" ? "desc" : "asc";
+  } else {
+    // 새로운 정렬 기준
+    state.sortBy = sortKey;
+    state.sortOrder = "desc"; // 기본 내림차순 (최신순, 가격 높은순, 개수 많은순)
+  }
+
+  // 정렬 버튼 UI 업데이트
+  updateSortButtonsUI();
+
+  // 정렬 적용
+  sortDailyResults();
   displayResults();
 
-  // 페이지네이션 업데이트
-  updatePagination();
+  // URL 업데이트
+  updateURL();
 }
 
-// 로딩 표시 토글
-function toggleLoading(show) {
-  const loadingMsg = document.getElementById("loadingMsg");
-  if (loadingMsg) {
-    loadingMsg.style.display = show ? "block" : "none";
-  }
+// 정렬 버튼 UI 업데이트
+function updateSortButtonsUI() {
+  const sortButtons = document.querySelectorAll(".sort-btn");
+
+  sortButtons.forEach((btn) => {
+    // 모든 버튼에서 active 클래스와 방향 표시 제거
+    btn.classList.remove("active", "asc", "desc");
+
+    // 현재 정렬 기준인 버튼에 클래스 추가
+    if (btn.dataset.sort === state.sortBy) {
+      btn.classList.add("active", state.sortOrder);
+    }
+  });
 }
 
-// 페이지네이션 업데이트
-function updatePagination() {
-  const paginationElement = document.getElementById("pagination");
+// 필터 초기화
+function resetFilters() {
+  state.bidType = "all";
+  state.dateRange = 30;
+  state.currentPage = 1;
+  state.sortBy = "date";
+  state.sortOrder = "desc";
 
-  // 페이지네이션 엘리먼트가 없으면 종료
-  if (!paginationElement) return;
+  // UI 요소 초기화
+  updateUIFromState();
 
-  // 결과가 없거나 단일 페이지인 경우 페이지네이션 비우기
-  if (state.totalItems === 0 || state.totalPages <= 1) {
-    paginationElement.innerHTML = "";
-    return;
-  }
-
-  createPagination(state.currentPage, state.totalPages, handlePageChange);
-}
-
-// 페이지 변경 처리
-function handlePageChange(page) {
-  // 페이지가 숫자가 아니면 숫자로 변환
-  page = parseInt(page, 10);
-
-  // 같은 페이지 클릭 시 무시
-  if (page === state.currentPage) return;
-
-  console.log("Page changed from", state.currentPage, "to", page);
-  state.currentPage = page;
-  displayResults();
-  window.scrollTo(0, 0);
-}
-
-// 상태에 맞는 표시 텍스트 반환
-function getStatusDisplay(status) {
-  return STATUS_DISPLAY[status] || "알 수 없음";
-}
-
-// 상태에 맞는 CSS 클래스 반환
-function getStatusClass(status) {
-  return STATUS_CLASSES[status] || "inprogress";
+  // 데이터 다시 로드
+  fetchCompletedBids();
 }
 
 // 결과 표시
 function displayResults() {
-  const container = document.getElementById("bidResultsList");
-  container.innerHTML = "";
+  const container = document.getElementById("resultsList");
+  if (!container) return;
 
-  document.getElementById("totalResults").textContent = state.totalItems;
+  container.innerHTML = "";
+  const totalResultsElement = document.getElementById("totalResults");
+  if (totalResultsElement) {
+    totalResultsElement.textContent = state.totalItems;
+  }
 
   if (state.filteredResults.length === 0) {
-    container.innerHTML = '<div class="no-results">입찰 결과가 없습니다.</div>';
+    container.innerHTML =
+      '<div class="no-results">표시할 결과가 없습니다.</div>';
     return;
   }
 
@@ -380,384 +458,150 @@ function displayResults() {
   );
 
   for (let i = startIdx; i < endIdx; i++) {
-    const bid = state.filteredResults[i];
-    const item = bid.item;
-
-    if (!item) continue; // 아이템 정보가 없는 경우 건너뛰기
-
-    const resultItem = document.createElement("div");
-    resultItem.className = "bid-result-item";
-    resultItem.dataset.itemId = item.item_id;
-    resultItem.dataset.bidId = bid.id;
-    resultItem.dataset.bidType = bid.type;
-
-    // 이미지 섹션
-    const imageSection = document.createElement("div");
-    imageSection.className = "item-image";
-    imageSection.innerHTML = `
-        <img src="${API.validateImageUrl(item.image)}" alt="${
-      item.title || "상품 이미지"
-    }">
-        <div class="item-rank">${item.rank || "N"}</div>
-      `;
-
-    // 상품 정보 섹션
-    const infoSection = document.createElement("div");
-    infoSection.className = "item-info";
-    infoSection.innerHTML = `
-        <div class="item-brand">${item.brand || "-"}</div>
-        <div class="item-title">${
-          item.title || item.title || "제목 없음"
-        }</div>
-        <div class="item-category">${item.category || "-"}</div>
-      `;
-
-    // 입찰 정보 섹션
-    const bidInfoSection = document.createElement("div");
-    bidInfoSection.className = "bid-info";
-
-    let bidInfoHTML = `
-        <div class="bid-type ${
-          bid.type === "live" ? "live-type" : "direct-type"
-        }">
-          ${bid.type === "live" ? "현장 경매" : "직접 경매"}
-        </div>
-      `;
-
-    if (bid.type === "live") {
-      bidInfoHTML += `
-          <div class="price-stages">
-            ${
-              bid.first_price
-                ? `
-              <div class="price-row">
-                <span class="price-label">1차 입찰:</span>
-                <span class="price-value">${formatNumber(
-                  bid.first_price
-                )} ¥</span>
-              </div>
-            `
-                : ""
-            }
-            ${
-              bid.second_price
-                ? `
-              <div class="price-row">
-                <span class="price-label">2차 제안:</span>
-                <span class="price-value">${formatNumber(
-                  bid.second_price
-                )} ¥</span>
-              </div>
-            `
-                : ""
-            }
-            ${
-              bid.final_price
-                ? `
-              <div class="price-row">
-                <span class="price-label">최종 입찰:</span>
-                <span class="price-value">${formatNumber(
-                  bid.final_price
-                )} ¥</span>
-              </div>
-            `
-                : ""
-            }
-          </div>
-        `;
-    } else {
-      bidInfoHTML += `
-          <div class="price-row">
-            <span class="price-label">입찰 금액:</span>
-            <span class="price-value">${formatNumber(
-              bid.current_price
-            )} ¥</span>
-          </div>
-        `;
-    }
-
-    bidInfoSection.innerHTML = bidInfoHTML;
-
-    // 결과 상태 섹션
-    const statusSection = document.createElement("div");
-    statusSection.className = "result-status";
-
-    // 상태에 따라 다른 표시와 클래스 적용
-    const statusClass = getStatusClass(bid.status);
-    const statusText = getStatusDisplay(bid.status);
-
-    statusSection.innerHTML = `
-        <div class="status-badge ${statusClass}">
-          ${statusText}
-        </div>
-        <div class="result-date">${formatDateTime(bid.updated_at)}</div>
-      `;
-
-    // 모든 섹션 추가
-    resultItem.appendChild(imageSection);
-    resultItem.appendChild(infoSection);
-    resultItem.appendChild(bidInfoSection);
-    resultItem.appendChild(statusSection);
-
-    // 클릭 이벤트 추가
-    resultItem.addEventListener("click", () => {
-      showItemDetails(item.item_id);
-    });
-
-    // 컨테이너에 아이템 추가
-    container.appendChild(resultItem);
+    const dayResult = state.filteredResults[i];
+    const dateRow = createDailyResultRow(dayResult);
+    container.appendChild(dateRow);
   }
 }
 
-// 상세 정보 표시
-async function showItemDetails(itemId) {
-  const modalManager = setupModal("detailModal");
-  if (!modalManager) return;
+// 일별 결과 행 생성
+function createDailyResultRow(dayResult) {
+  const dateRow = document.createElement("div");
+  dateRow.className = "daily-result-item";
 
-  const item = state.filteredResults.find(
-    (r) => r.item?.item_id === itemId
-  )?.item;
-  if (!item) return;
+  // 날짜 헤더
+  const dateHeader = document.createElement("div");
+  dateHeader.className = "date-header";
 
-  // 기본 정보로 모달 초기화
-  initializeModal(item);
-  modalManager.show();
+  const dateLabel = document.createElement("h3");
+  dateLabel.textContent = formatDisplayDate(dayResult.date);
 
-  // 로딩 표시
-  showLoadingInModal();
+  const toggleButton = document.createElement("button");
+  toggleButton.className = "toggle-details";
+  toggleButton.innerHTML = '<i class="fas fa-chevron-down"></i>';
 
-  try {
-    // 상세 정보 가져오기
-    const updatedItem = await API.fetchAPI(`/detail/item-details/${itemId}`, {
-      method: "POST",
-    });
+  dateHeader.appendChild(dateLabel);
+  dateHeader.appendChild(toggleButton);
 
-    // 상세 정보 업데이트
-    updateModalWithDetails(updatedItem);
+  // 요약 정보
+  const summary = document.createElement("div");
+  summary.className = "date-summary";
+  summary.innerHTML = `
+    <div class="summary-item">
+      <span class="summary-label">상품 수:</span>
+      <span class="summary-value">${formatNumber(dayResult.itemCount)}개</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-label">총액 (¥):</span>
+      <span class="summary-value">${formatNumber(
+        dayResult.totalJapanesePrice
+      )} ¥</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-label">총액 (₩):</span>
+      <span class="summary-value">${formatNumber(
+        dayResult.totalKoreanPrice
+      )} ₩</span>
+    </div>
+  `;
 
-    // 추가 이미지가 있다면 업데이트
-    if (updatedItem.additional_images) {
-      initializeImages(JSON.parse(updatedItem.additional_images));
-    }
-  } catch (error) {
-    console.error("Failed to fetch item details:", error);
-  } finally {
-    hideLoadingInModal();
-  }
-}
+  // 상세 정보 (접혀있는 상태)
+  const details = document.createElement("div");
+  details.className = "date-details";
+  details.style.display = "none";
 
-function updateModalWithDetails(item) {
-  document.querySelector(".modal-description").textContent =
-    item.description || "설명 없음";
-  document.querySelector(".modal-category").textContent =
-    item.category || "카테고리 없음";
-  document.querySelector(".modal-accessory-code").textContent =
-    item.accessory_code || "액세서리 코드 없음";
-  document.querySelector(".modal-scheduled-date").textContent =
-    item.scheduled_date
-      ? formatDateTime(item.scheduled_date)
-      : "날짜 정보 없음";
-  document.querySelector(".modal-brand").textContent = item.brand || "-";
-  document.querySelector(".modal-brand2").textContent = item.brand || "-";
-  document.querySelector(".modal-title").textContent =
-    item.title || "제목 없음";
-  document.querySelector(".modal-rank").textContent = item.rank || "N";
-}
+  // 상세 내용 표 생성
+  const detailsTable = document.createElement("table");
+  detailsTable.className = "details-table";
+  detailsTable.innerHTML = `
+    <thead>
+      <tr>
+        <th>브랜드</th>
+        <th>상품명</th>
+        <th>경매 타입</th>
+        <th>금액 (¥)</th>
+        <th>금액 (₩)</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${dayResult.items
+        .map(
+          (item) => `
+        <tr>
+          <td>${item.item?.brand || "-"}</td>
+          <td>${item.item?.original_title || "제목 없음"}</td>
+          <td>${item.type === "live" ? "현장 경매" : "직접 경매"}</td>
+          <td>${formatNumber(item.japanesePrice)} ¥</td>
+          <td>${formatNumber(item.koreanPrice)} ₩</td>
+        </tr>
+      `
+        )
+        .join("")}
+    </tbody>
+  `;
 
-function initializeModal(item) {
-  document.querySelector(".modal-brand").textContent = item.brand || "-";
-  document.querySelector(".modal-title").textContent =
-    item.title || "-";
-  document.querySelector(".main-image").src = API.validateImageUrl(item.image);
-  document.querySelector(".modal-description").textContent = "로딩 중...";
-  document.querySelector(".modal-category").textContent =
-    item.category || "로딩 중...";
-  document.querySelector(".modal-brand2").textContent = item.brand || "-";
-  document.querySelector(".modal-accessory-code").textContent =
-    item.accessory_code || "로딩 중...";
-  document.querySelector(".modal-scheduled-date").textContent =
-    formatDateTime(item.scheduled_date) || "로딩 중...";
-  document.querySelector(".modal-rank").textContent = item.rank || "N";
+  details.appendChild(detailsTable);
 
-  // 입찰 정보 표시
-  displayBidInfoInModal(item.item_id);
-
-  // 이미지 초기화
-  initializeImages([item.image]);
-}
-
-function displayBidInfoInModal(itemId) {
-  const bidInfo = state.filteredResults.find(
-    (result) => result.item?.item_id === itemId
-  );
-  const bidInfoHolder = document.querySelector(".bid-info-holder");
-
-  if (!bidInfo || !bidInfoHolder) return;
-
-  // 상태에 따라 다른 표시와 클래스 적용
-  const statusClass = getStatusClass(bidInfo.status);
-  const statusText = getStatusDisplay(bidInfo.status);
-
-  let bidInfoHTML = `
-      <div class="modal-bid-info">
-        <div class="bid-status ${statusClass}">
-          ${statusText}
-        </div>
-        <div class="bid-date">
-          <strong>결과 일시:</strong> ${formatDateTime(bidInfo.updated_at)}
-        </div>
-    `;
-
-  if (bidInfo.type === "live") {
-    bidInfoHTML += `
-        <div class="bid-type">
-          <strong>경매 유형:</strong> 현장 경매
-        </div>
-        <div class="bid-prices">
-          ${
-            bidInfo.first_price
-              ? `<div class="price-item">
-              <strong>1차 입찰:</strong> ${formatNumber(bidInfo.first_price)} ¥
-            </div>`
-              : ""
-          }
-          ${
-            bidInfo.second_price
-              ? `<div class="price-item">
-              <strong>2차 제안:</strong> ${formatNumber(bidInfo.second_price)} ¥
-            </div>`
-              : ""
-          }
-          ${
-            bidInfo.final_price
-              ? `<div class="price-item">
-              <strong>최종 입찰:</strong> ${formatNumber(bidInfo.final_price)} ¥
-            </div>`
-              : ""
-          }
-        </div>
-      `;
-  } else {
-    bidInfoHTML += `
-        <div class="bid-type">
-          <strong>경매 유형:</strong> 직접 경매
-        </div>
-        <div class="bid-prices">
-          <div class="price-item">
-            <strong>입찰 금액:</strong> ${formatNumber(bidInfo.current_price)} ¥
-          </div>
-        </div>
-      `;
-  }
-
-  bidInfoHTML += "</div>";
-
-  bidInfoHolder.innerHTML = bidInfoHTML;
-}
-
-function initializeImages(imageUrls) {
-  const validImageUrls = imageUrls.filter((url) => url);
-
-  state.images = validImageUrls;
-  state.currentImageIndex = 0;
-
-  const mainImage = document.querySelector(".main-image");
-  const thumbnailContainer = document.querySelector(".thumbnail-container");
-
-  if (!mainImage || !thumbnailContainer) return;
-
-  // 메인 이미지 설정
-  if (validImageUrls.length > 0) {
-    mainImage.src = API.validateImageUrl(validImageUrls[0]);
-  }
-
-  // 썸네일 초기화
-  thumbnailContainer.innerHTML = "";
-
-  validImageUrls.forEach((img, index) => {
-    const thumbnailWrapper = createElement("div", "thumbnail");
-    thumbnailWrapper.classList.toggle("active", index === 0);
-
-    const thumbnail = createElement("img");
-    thumbnail.src = API.validateImageUrl(img);
-    thumbnail.alt = `Thumbnail ${index + 1}`;
-    thumbnail.loading = "lazy";
-
-    thumbnail.addEventListener("click", () => changeMainImage(index));
-    thumbnailWrapper.appendChild(thumbnail);
-    thumbnailContainer.appendChild(thumbnailWrapper);
+  // 토글 버튼 이벤트
+  toggleButton.addEventListener("click", function () {
+    const isExpanded = details.style.display !== "none";
+    details.style.display = isExpanded ? "none" : "block";
+    this.innerHTML = isExpanded
+      ? '<i class="fas fa-chevron-down"></i>'
+      : '<i class="fas fa-chevron-up"></i>';
   });
 
-  // 네비게이션 버튼 상태 업데이트
-  updateNavigationButtons();
+  // 모두 조합
+  dateRow.appendChild(dateHeader);
+  dateRow.appendChild(summary);
+  dateRow.appendChild(details);
+
+  return dateRow;
 }
 
-function changeMainImage(index) {
-  if (index < 0 || index >= state.images.length) return;
+// 표시용 날짜 포맷
+function formatDisplayDate(dateStr) {
+  const date = new Date(dateStr);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const weekday = ["일", "월", "화", "수", "목", "금", "토"][date.getDay()];
 
-  state.currentImageIndex = index;
-  const mainImage = document.querySelector(".main-image");
-  if (!mainImage) return;
-
-  mainImage.src = API.validateImageUrl(state.images[index]);
-
-  // 썸네일 active 상태 업데이트
-  const thumbnails = document.querySelectorAll(".thumbnail");
-  thumbnails.forEach((thumb, i) => {
-    thumb.classList.toggle("active", i === index);
-  });
-
-  updateNavigationButtons();
+  return `${year}년 ${month}월 ${day}일 (${weekday})`;
 }
 
-function updateNavigationButtons() {
-  const prevBtn = document.querySelector(".image-nav.prev");
-  const nextBtn = document.querySelector(".image-nav.next");
-
-  if (!prevBtn || !nextBtn) return;
-
-  prevBtn.disabled = state.currentImageIndex === 0;
-  nextBtn.disabled = state.currentImageIndex === state.images.length - 1;
+// 페이지네이션 업데이트
+function updatePagination() {
+  createPagination(state.currentPage, state.totalPages, handlePageChange);
 }
 
-// 모달 로딩 관련 함수들
-function showLoadingInModal() {
-  const existingLoader = document.getElementById("modal-loading");
-  if (existingLoader) return;
+// 페이지 변경 처리
+function handlePageChange(page) {
+  page = parseInt(page, 10);
 
-  const loadingElement = createElement("div", "modal-loading");
-  loadingElement.id = "modal-loading";
-  loadingElement.textContent = "상세 정보를 불러오는 중...";
+  if (page === state.currentPage) return;
 
-  document.querySelector(".modal-content")?.appendChild(loadingElement);
+  state.currentPage = page;
+  displayResults();
+  window.scrollTo(0, 0);
+  updateURL();
 }
 
-function hideLoadingInModal() {
-  document.getElementById("modal-loading")?.remove();
-}
-
+// 네비게이션 버튼 설정
 function setupNavButtons() {
-  // 상품 리스트 버튼
-  document.getElementById("productListBtn")?.addEventListener("click", () => {
-    window.location.href = "/productPage";
+  // 각 네비게이션 버튼에 이벤트 리스너 추가
+  const navButtons = document.querySelectorAll(".nav-button");
+  navButtons.forEach((button) => {
+    // 기존 onclick 속성 외에 추가 처리가 필요한 경우를 위한 공간
   });
+}
 
-  // 즐겨찾기 버튼
-  document.getElementById("favoritesBtn")?.addEventListener("click", () => {
-    // 즐겨찾기 필터 설정 및 페이지 이동
-    localStorage.setItem("favoriteFilter", "true");
-    window.location.href = "/productPage";
-  });
-
-  // 입찰 항목 버튼
-  document.getElementById("bidItemsBtn")?.addEventListener("click", () => {
-    // 입찰 항목 필터 설정 및 페이지 이동
-    localStorage.setItem("bidItemsFilter", "true");
-    window.location.href = "/productPage";
-  });
-
-  // 현재 페이지이므로 별도 처리 없음
-  // 낙찰 시세표 버튼은 onclick 속성으로 이미 처리됨
+// 로딩 표시 토글
+function toggleLoading(show) {
+  const loadingMsg = document.getElementById("loadingMsg");
+  if (loadingMsg) {
+    loadingMsg.style.display = show ? "block" : "none";
+  }
 }
 
 // DOM 완료 시 실행
