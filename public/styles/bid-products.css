@@ -358,16 +358,47 @@
   margin-bottom: 5px;
 }
 
+/* 상태 배지 기본 스타일 */
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 5px;
+}
+
+/* 직접 경매 진행중 상태 */
 .status-active {
   background-color: #f1f8e9;
   color: #689f38;
 }
 
+/* 현장 경매 1차 입찰 상태 */
+.status-first {
+  background-color: #e8eaf6;
+  color: #3f51b5;
+}
+
+/* 현장 경매 2차 제안 상태 */
+.status-second {
+  background-color: #e0f7fa;
+  color: #00acc1;
+}
+
+/* 현장 경매 최종 입찰 상태 */
+.status-final {
+  background-color: #e0f2f1;
+  color: #00897b;
+}
+
+/* 낙찰 완료 상태 */
 .status-completed {
   background-color: #e8f5e9;
   color: #2e7d32;
 }
 
+/* 취소됨 상태 */
 .status-cancelled {
   background-color: #ffebee;
   color: #c62828;
