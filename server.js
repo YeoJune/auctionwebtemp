@@ -119,6 +119,10 @@ app.get("/bidResultsPage", (req, res) => {
   if (req.session.user) res.sendFile(__dirname + "/pages/bid-results.html");
   else res.redirect("/signinPage");
 });
+app.get('/bidProductsPage', (req, res) => {
+  if (req.session.user) res.sendFile(__dirname + '/pages/bid-products.html');
+  else res.redirect('/signinPage');
+});
 
 app.get("/inquiryPage", (req, res) => {
   res.sendFile(__dirname + "/pages/inquiry.html");
