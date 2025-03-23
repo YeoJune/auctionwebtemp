@@ -241,19 +241,21 @@ function groupResultsByDate() {
       };
     }
 
-    // 가격 정보 계산
+    // 가격 정보 계산 - 숫자형으로 확실하게 변환
     let japanesePrice = 0;
     if (item.type === "direct") {
-      japanesePrice = item.current_price || 0;
+      japanesePrice = Number(item.current_price || 0);
     } else {
-      japanesePrice = item.final_price || 0;
+      japanesePrice = Number(item.final_price || 0);
     }
 
     // 원화 가격 계산
     const product = item.item || {};
     const auctionId = product.auc_num || 1;
     const category = product.category || "기타";
-    const koreanPrice = calculateTotalPrice(japanesePrice, auctionId, category);
+    const koreanPrice = Number(
+      calculateTotalPrice(japanesePrice, auctionId, category)
+    );
 
     // 그룹에 아이템 추가
     groupedByDate[dateStr].items.push({
@@ -262,8 +264,8 @@ function groupResultsByDate() {
       koreanPrice,
     });
 
-    // 합계 업데이트
-    groupedByDate[dateStr].itemCount++;
+    // 합계 업데이트 - 숫자형으로 확실하게 합산
+    groupedByDate[dateStr].itemCount += 1;
     groupedByDate[dateStr].totalJapanesePrice += japanesePrice;
     groupedByDate[dateStr].totalKoreanPrice += koreanPrice;
   });
@@ -287,9 +289,9 @@ function updateTotalStats() {
   };
 
   state.dailyResults.forEach((day) => {
-    state.totalStats.itemCount += day.itemCount;
-    state.totalStats.japaneseAmount += day.totalJapanesePrice;
-    state.totalStats.koreanAmount += day.totalKoreanPrice;
+    state.totalStats.itemCount += Number(day.itemCount);
+    state.totalStats.japaneseAmount += Number(day.totalJapanesePrice);
+    state.totalStats.koreanAmount += Number(day.totalKoreanPrice);
   });
 
   // UI 업데이트
