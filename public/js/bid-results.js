@@ -513,32 +513,49 @@ function createDailyResultRow(dayResult) {
   // 상세 내용 표 생성
   const detailsTable = document.createElement("table");
   detailsTable.className = "details-table";
-  detailsTable.innerHTML = `
-    <thead>
-      <tr>
-        <th>브랜드</th>
-        <th>상품명</th>
-        <th>경매 타입</th>
-        <th>금액 (¥)</th>
-        <th>금액 (₩)</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${dayResult.items
-        .map(
-          (item) => `
-        <tr>
-          <td>${item.item?.brand || "-"}</td>
-          <td>${item.item?.original_title || "제목 없음"}</td>
-          <td>${item.type === "live" ? "현장 경매" : "직접 경매"}</td>
-          <td>${formatNumber(item.japanesePrice)} ¥</td>
-          <td>${formatNumber(item.koreanPrice)} ₩</td>
-        </tr>
-      `
-        )
-        .join("")}
-    </tbody>
+
+  // 테이블 헤더 생성
+  const tableHeader = document.createElement("thead");
+  tableHeader.innerHTML = `
+    <tr>
+      <th>브랜드</th>
+      <th>상품명</th>
+      <th>경매 타입</th>
+      <th>금액 (¥)</th>
+      <th>금액 (₩)</th>
+    </tr>
   `;
+  detailsTable.appendChild(tableHeader);
+
+  // 테이블 본문 생성
+  const tableBody = document.createElement("tbody");
+  dayResult.items.forEach((item) => {
+    const row = document.createElement("tr");
+
+    const brandCell = document.createElement("td");
+    brandCell.textContent = item.item?.brand || "-";
+
+    const titleCell = document.createElement("td");
+    titleCell.textContent = item.item?.original_title || "제목 없음";
+
+    const typeCell = document.createElement("td");
+    typeCell.textContent = item.type === "live" ? "현장 경매" : "직접 경매";
+
+    const japaneseCell = document.createElement("td");
+    japaneseCell.textContent = `${formatNumber(item.japanesePrice)} ¥`;
+
+    const koreanCell = document.createElement("td");
+    koreanCell.textContent = `${formatNumber(item.koreanPrice)} ₩`;
+
+    row.appendChild(brandCell);
+    row.appendChild(titleCell);
+    row.appendChild(typeCell);
+    row.appendChild(japaneseCell);
+    row.appendChild(koreanCell);
+
+    tableBody.appendChild(row);
+  });
+  detailsTable.appendChild(tableBody);
 
   details.appendChild(detailsTable);
 
