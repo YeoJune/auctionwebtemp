@@ -195,6 +195,7 @@ async function handleSignout() {
 }
 
 // 상품 데이터 가져오기
+// 상품 데이터 가져오기
 async function fetchProducts() {
   if (!state.isAuthenticated) {
     return;
@@ -234,26 +235,38 @@ async function fetchProducts() {
 
     // API 요청 URL 생성
     const queryString = API.createURLParams(params);
-    let endpoint;
 
-    // 경매 타입에 따라 다른 엔드포인트 사용
-    if (state.bidType === "live") {
-      endpoint = `/items/live?${queryString}`;
-    } else if (state.bidType === "direct") {
-      endpoint = `/items/direct?${queryString}`;
+    // 경매 타입에 따라 다른 엔드포인트 사용 - 기존 API 활용
+    let liveBidsPromise, directBidsPromise;
+
+    if (state.bidType === "live" || state.bidType === "all") {
+      liveBidsPromise = API.fetchAPI(`/live-bids?${queryString}`);
     } else {
-      endpoint = `/items?${queryString}`;
+      liveBidsPromise = Promise.resolve({ bids: [] });
     }
 
-    // 데이터 요청
-    const result = await API.fetchAPI(endpoint);
+    if (state.bidType === "direct" || state.bidType === "all") {
+      directBidsPromise = API.fetchAPI(`/direct-bids?${queryString}`);
+    } else {
+      directBidsPromise = Promise.resolve({ bids: [] });
+    }
+
+    // 두 API 요청 병렬로 처리
+    const [liveResults, directResults] = await Promise.all([
+      liveBidsPromise,
+      directBidsPromise,
+    ]);
+
+    // 결합 및 타입 정보 추가
+    const combinedResults = [
+      ...(liveResults.bids || []).map((bid) => ({ ...bid, type: "live" })),
+      ...(directResults.bids || []).map((bid) => ({ ...bid, type: "direct" })),
+    ];
 
     // 상태 업데이트
-    state.products = result.items || [];
-    state.totalItems = result.total || result.items.length;
-    state.totalPages =
-      result.totalPages || Math.ceil(state.totalItems / state.itemsPerPage);
-    state.currentPage = result.currentPage || state.currentPage;
+    state.products = combinedResults;
+    state.totalItems = (liveResults.total || 0) + (directResults.total || 0);
+    state.totalPages = Math.ceil(state.totalItems / state.itemsPerPage);
 
     // URL 업데이트
     updateURL();
@@ -778,23 +791,23 @@ function addBidButtonToModal(product) {
   }
 }
 
-// 입찰 폼 모달 표시
+// 상품 정보 모달 표시 (입찰 처리 없이)
 function showBidFormModal(product) {
   // 기존 모달이 있으면 제거
-  let bidFormModal = document.getElementById("bidFormModal");
-  if (bidFormModal) {
-    bidFormModal.remove();
+  let infoModal = document.getElementById("productInfoModal");
+  if (infoModal) {
+    infoModal.remove();
   }
 
   // 새 모달 생성
-  bidFormModal = document.createElement("div");
-  bidFormModal.id = "bidFormModal";
-  bidFormModal.className = "modal";
+  infoModal = document.createElement("div");
+  infoModal.id = "productInfoModal";
+  infoModal.className = "modal";
 
   const modalContent = `
-      <div class="modal-content bid-form-modal">
+      <div class="modal-content product-info-modal">
         <div class="modal-header">
-          <h2>입찰하기</h2>
+          <h2>상품 정보</h2>
           <button class="close" aria-label="Close modal">&times;</button>
         </div>
         <div class="modal-body">
@@ -810,101 +823,56 @@ function showBidFormModal(product) {
               <div class="product-price">시작가: ￥${formatNumber(
                 product.starting_price || 0
               )}</div>
+              <div class="product-date">예정일: ${formatDate(
+                product.scheduled_date
+              )}</div>
+              <div class="product-status">상태: ${getStatusDisplay(
+                product.status || "active"
+              )}</div>
             </div>
           </div>
           
-          <form id="bidForm" class="bid-form">
-            <input type="hidden" name="itemId" value="${product.item_id}">
-            <input type="hidden" name="bidType" value="${
-              product.auc_num === 1 || product.auc_num === 2 ? "direct" : "live"
-            }">
-            
-            <div class="form-group">
-              <label for="bidAmount">입찰 금액 (￥)</label>
-              <input type="number" id="bidAmount" name="bidAmount" required min="${
-                product.starting_price || 0
-              }">
-              <small>시작가 이상으로 입력해 주세요.</small>
-            </div>
-            
-            <div class="form-actions">
-              <button type="submit" class="primary-button">입찰 제출</button>
-              <button type="button" class="secondary-button bid-cancel">취소</button>
-            </div>
-          </form>
+          <div class="product-description">
+            <h3>상세 설명</h3>
+            <p>${product.description || "상세 설명이 없습니다."}</p>
+          </div>
+          
+          <div class="modal-actions">
+            <button type="button" class="primary-button view-detail-btn">상세 정보 보기</button>
+            <button type="button" class="secondary-button close-btn">닫기</button>
+          </div>
         </div>
       </div>
     `;
 
-  bidFormModal.innerHTML = modalContent;
-  document.body.appendChild(bidFormModal);
+  infoModal.innerHTML = modalContent;
+  document.body.appendChild(infoModal);
 
   // 모달 표시
-  bidFormModal.style.display = "flex";
+  infoModal.style.display = "flex";
 
   // 닫기 버튼 이벤트
-  const closeBtn = bidFormModal.querySelector(".close");
-  const cancelBtn = bidFormModal.querySelector(".bid-cancel");
+  const closeBtn = infoModal.querySelector(".close");
+  const cancelBtn = infoModal.querySelector(".close-btn");
+  const detailBtn = infoModal.querySelector(".view-detail-btn");
 
   closeBtn.addEventListener("click", () => {
-    bidFormModal.style.display = "none";
+    infoModal.style.display = "none";
   });
 
   cancelBtn.addEventListener("click", () => {
-    bidFormModal.style.display = "none";
+    infoModal.style.display = "none";
+  });
+
+  detailBtn.addEventListener("click", () => {
+    infoModal.style.display = "none";
+    showProductDetails(product.item_id);
   });
 
   // 외부 클릭 시 닫기
-  bidFormModal.addEventListener("click", (e) => {
-    if (e.target === bidFormModal) {
-      bidFormModal.style.display = "none";
-    }
-  });
-
-  // 폼 제출 이벤트
-  const bidForm = document.getElementById("bidForm");
-  bidForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const formData = new FormData(bidForm);
-    const bidData = {
-      itemId: formData.get("itemId"),
-      bidType: formData.get("bidType"),
-      amount: parseFloat(formData.get("bidAmount")),
-    };
-
-    try {
-      // 입찰 유형에 따라 다른 API 호출
-      let response;
-
-      if (bidData.bidType === "direct") {
-        response = await API.fetchAPI("/direct-bids", {
-          method: "POST",
-          body: JSON.stringify({
-            itemId: bidData.itemId,
-            currentPrice: bidData.amount,
-            autoSubmit: false,
-          }),
-        });
-      } else {
-        response = await API.fetchAPI("/live-bids", {
-          method: "POST",
-          body: JSON.stringify({
-            itemId: bidData.itemId,
-            firstPrice: bidData.amount,
-          }),
-        });
-      }
-
-      // 성공 메시지
-      alert("입찰이 성공적으로 등록되었습니다.");
-      bidFormModal.style.display = "none";
-
-      // 상품 목록 새로고침
-      fetchProducts();
-    } catch (error) {
-      console.error("입찰 제출 중 오류 발생:", error);
-      alert(`입찰 제출 실패: ${error.message || "알 수 없는 오류"}`);
+  infoModal.addEventListener("click", (e) => {
+    if (e.target === infoModal) {
+      infoModal.style.display = "none";
     }
   });
 }
