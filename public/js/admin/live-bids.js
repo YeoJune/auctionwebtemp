@@ -27,7 +27,7 @@ document.addEventListener("DOMContentLoaded", function () {
     .getElementById("submitComplete")
     .addEventListener("click", submitCompleteBid);
 
-  // 입찰 취소 모달 제출 버튼
+  // 낙찰 실패 모달 제출 버튼
   document
     .getElementById("submitCancel")
     .addEventListener("click", submitCancelBid);
@@ -213,7 +213,7 @@ function renderLiveBidsTable(liveBids) {
     } else if (bid.status === "final") {
       actionButtons = `
         <button class="btn" onclick="openCompleteModal(${bid.id})">낙찰 완료</button>
-        <button class="btn btn-secondary" onclick="openCancelModal(${bid.id})">취소</button>
+        <button class="btn btn-secondary" onclick="openCancelModal(${bid.id})">낙찰 실패</button>
       `;
     }
 
@@ -396,13 +396,13 @@ async function submitCompleteBid() {
   }
 }
 
-// 입찰 취소 모달 열기
+// 낙찰 실패 모달 열기
 function openCancelModal(bidId) {
   document.getElementById("cancelBidId").value = bidId;
   openModal("cancelModal");
 }
 
-// 입찰 취소 제출
+// 낙찰 실패 제출
 async function submitCancelBid() {
   const bidId = document.getElementById("cancelBidId").value;
 
@@ -414,11 +414,11 @@ async function submitCancelBid() {
   try {
     await cancelBid(bidId);
     closeAllModals();
-    showAlert("입찰이 취소되었습니다.", "success");
+    showAlert("낙찰 실패로 처리되었습니다.", "success");
 
     // 데이터 새로고침
     await loadLiveBids();
   } catch (error) {
-    handleError(error, "입찰 취소 처리 중 오류가 발생했습니다.");
+    handleError(error, "낙찰 실패 처리 중 오류가 발생했습니다.");
   }
 }
