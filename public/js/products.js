@@ -91,7 +91,7 @@ function getLiveBidSectionHTML(bidInfo, itemId, aucNum, category) {
   let html = `<div class="bid-info live">
     ${timerHTML}
     <div class="real-time-price">
-      <p>실시간 금액: ${cleanNumberFormat(startingPrice)} ¥</p>
+      <p>시작 금액: ${cleanNumberFormat(startingPrice)} ¥</p>
       <div class="price-details-container">
         관부가세 포함 ${cleanNumberFormat(
           calculateTotalPrice(startingPrice, aucNum, category)
@@ -480,7 +480,7 @@ function getLiveCardHTML(item, bidInfo, favoriteNumber) {
     <div class="info-value">${item.rank || "N"}</div>
   </div>
   <div class="info-cell">
-    <div class="info-label">실시간</div>
+    <div class="info-label">시작 금액</div>
     <div class="info-value">${cleanNumberFormat(live_price || 0)}￥</div>
     <div class="info-price-detail">
       ${cleanNumberFormat(
