@@ -210,11 +210,15 @@ function toggleLoading(show) {
   }
 }
 
-// 모바일 필터 토글
-// 모바일 필터 토글 수정
 function setupMobileFilters() {
   const filterBtn = document.getElementById("mobileFilterBtn");
   const filtersContainer = document.querySelector(".filters-container");
+
+  // 요소가 없으면 함수 종료
+  if (!filterBtn || !filtersContainer) {
+    console.error("Mobile filter elements not found");
+    return;
+  }
 
   // 이미 백드롭이 있는지 확인
   let backdrop = document.querySelector(".filter-backdrop");
@@ -237,7 +241,11 @@ function setupMobileFilters() {
   }
 
   // 필터 닫기 함수를 전역에 정의
-  window.closeFilter = function () {
+  if (!window.mobileFilterFunctions) {
+    window.mobileFilterFunctions = {};
+  }
+
+  window.mobileFilterFunctions.closeFilter = function () {
     if (filtersContainer) {
       filtersContainer.classList.remove("active");
     }
@@ -248,70 +256,70 @@ function setupMobileFilters() {
     console.log("필터 닫기 함수 실행됨");
   };
 
-  if (filterBtn && filtersContainer) {
-    // 이미 추가된 요소 확인 및 중복 방지
-    let filtersHeader = filtersContainer.querySelector(".filters-header");
-    if (!filtersHeader) {
-      // 필터 헤더 추가
-      filtersHeader = document.createElement("div");
-      filtersHeader.className = "filters-header";
-      filtersHeader.textContent = "필터";
-      filtersContainer.prepend(filtersHeader);
+  // 이미 추가된 요소 확인 및 중복 방지
+  let filtersHeader = filtersContainer.querySelector(".filters-header");
+  if (!filtersHeader) {
+    // 필터 헤더 추가
+    filtersHeader = document.createElement("div");
+    filtersHeader.className = "filters-header";
+    filtersHeader.textContent = "필터";
+    filtersContainer.prepend(filtersHeader);
+  }
+
+  // 닫기 버튼이 이미 있는지 확인
+  let closeBtn = filtersContainer.querySelector(".filter-close-btn");
+  if (closeBtn) {
+    closeBtn.remove(); // 기존 버튼 제거
+  }
+
+  // 필터 닫기 버튼 새로 추가
+  closeBtn = document.createElement("button");
+  closeBtn.className = "filter-close-btn";
+  closeBtn.innerHTML = "&times;";
+  closeBtn.setAttribute("aria-label", "필터 닫기");
+
+  // 기존 이벤트 리스너 제거를 위해 버튼 복제 후 다시 추가
+  closeBtn.addEventListener("click", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    window.mobileFilterFunctions.closeFilter();
+  });
+
+  filtersContainer.prepend(closeBtn);
+
+  // 기존 버튼 이벤트 제거를 위해 복제
+  const filterBtnClone = filterBtn.cloneNode(true);
+  filterBtn.parentNode.replaceChild(filterBtnClone, filterBtn);
+
+  // 필터 열기 버튼 이벤트 추가
+  filterBtnClone.addEventListener("click", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    filtersContainer.classList.add("active");
+    backdrop.style.display = "block";
+    document.body.style.overflow = "hidden";
+  });
+
+  // 백드롭 이벤트 리스너 추가
+  backdrop.addEventListener("click", window.mobileFilterFunctions.closeFilter);
+
+  console.log("모바일 필터 설정 완료");
+
+  // ESC 키 이벤트 리스너
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && filtersContainer.classList.contains("active")) {
+      window.mobileFilterFunctions.closeFilter();
     }
+  });
 
-    // 닫기 버튼이 이미 있는지 확인
-    let closeBtn = filtersContainer.querySelector(".filter-close-btn");
-    if (closeBtn) {
-      closeBtn.remove(); // 기존 버튼 제거
-    }
-
-    // 필터 닫기 버튼 새로 추가
-    closeBtn = document.createElement("button");
-    closeBtn.className = "filter-close-btn";
-    closeBtn.innerHTML = "&times;";
-    closeBtn.setAttribute("aria-label", "필터 닫기");
-
-    // 이벤트 리스너 직접 추가 (onclick 속성 대신)
-    closeBtn.addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      window.closeFilter();
-    });
-
-    filtersContainer.prepend(closeBtn);
-
-    // 필터 열기 버튼 이벤트 - 이벤트 리스너 사용
-    // 기존 리스너 제거 후 새로 추가
-    filterBtn.removeEventListener("click", openFilterHandler);
-    filterBtn.addEventListener("click", openFilterHandler);
-
-    // 터치 이벤트도 추가
-    filterBtn.removeEventListener("touchstart", openFilterHandler);
-    filterBtn.addEventListener("touchstart", openFilterHandler);
-
-    function openFilterHandler(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      filtersContainer.classList.add("active");
-      backdrop.style.display = "block";
-      document.body.style.overflow = "hidden";
-    }
-
-    // 백드롭 이벤트 리스너 추가
-    backdrop.removeEventListener("click", window.closeFilter);
-    backdrop.addEventListener("click", window.closeFilter);
-
-    console.log("모바일 필터 설정 완료: 이벤트 리스너 방식 적용");
-
-    // ESC 키 이벤트 리스너
-    document.removeEventListener("keydown", escKeyHandler);
-    document.addEventListener("keydown", escKeyHandler);
-
-    function escKeyHandler(e) {
-      if (e.key === "Escape" && filtersContainer.classList.contains("active")) {
-        window.closeFilter();
+  // 필터 적용 버튼에 이벤트 추가
+  const applyFiltersBtn = document.getElementById("applyFiltersBtn");
+  if (applyFiltersBtn) {
+    applyFiltersBtn.addEventListener("click", function () {
+      if (window.innerWidth <= 768) {
+        window.mobileFilterFunctions.closeFilter();
       }
-    }
+    });
   }
 }
 
@@ -737,19 +745,31 @@ function setupMobileMenu() {
     return;
   }
 
-  // 토글 버튼 클릭 이벤트
-  menuToggle.addEventListener("click", function (e) {
+  // 기존 이벤트 리스너 제거 (중복 방지)
+  const menuToggleClone = menuToggle.cloneNode(true);
+  menuToggle.parentNode.replaceChild(menuToggleClone, menuToggle);
+
+  // 토글 버튼 클릭 이벤트 (새로운 요소에 이벤트 추가)
+  menuToggleClone.addEventListener("click", function (e) {
     e.preventDefault();
     e.stopPropagation();
-    toggleMobileMenu(navContainer, menuToggle);
+    if (navContainer.classList.contains("active")) {
+      closeMobileMenu(navContainer, menuToggleClone);
+    } else {
+      openMobileMenu(navContainer, menuToggleClone);
+    }
   });
 
-  // 네비게이션 버튼 클릭 시 메뉴 닫기 (선택적)
+  // 네비게이션 버튼 클릭 시 메뉴 닫기
   const navButtons = navContainer.querySelectorAll(".nav-button");
   navButtons.forEach((button) => {
-    button.addEventListener("click", function () {
+    // 버튼 클론 생성 및 이벤트 다시 설정
+    const buttonClone = button.cloneNode(true);
+    button.parentNode.replaceChild(buttonClone, button);
+
+    buttonClone.addEventListener("click", function () {
       if (window.innerWidth <= 768) {
-        closeMobileMenu(navContainer, menuToggle);
+        closeMobileMenu(navContainer, menuToggleClone);
       }
     });
   });
@@ -759,19 +779,21 @@ function setupMobileMenu() {
     if (
       navContainer.classList.contains("active") &&
       !navContainer.contains(e.target) &&
-      e.target !== menuToggle &&
-      !menuToggle.contains(e.target)
+      e.target !== menuToggleClone &&
+      !menuToggleClone.contains(e.target)
     ) {
-      closeMobileMenu(navContainer, menuToggle);
+      closeMobileMenu(navContainer, menuToggleClone);
     }
   });
 
   // 화면 크기 변경 시 메뉴 상태 재설정
   window.addEventListener("resize", function () {
     if (window.innerWidth > 768) {
-      closeMobileMenu(navContainer, menuToggle);
+      closeMobileMenu(navContainer, menuToggleClone);
     }
   });
+
+  console.log("모바일 메뉴 설정 완료");
 }
 
 // 모바일 메뉴 토글 함수

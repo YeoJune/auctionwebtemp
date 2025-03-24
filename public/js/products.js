@@ -1442,20 +1442,79 @@ function updateBidsOnlyFilter() {
 }
 
 // 드롭다운 메뉴 설정
+
 function setupDropdownMenus() {
-  // 이미 HTML에 정의된 드롭다운 메뉴에 이벤트 리스너 추가
+  // 드롭다운 버튼들 선택
   const dropdownButtons = document.querySelectorAll(
     ".nav-item.dropdown-container > .nav-button"
   );
 
   dropdownButtons.forEach((button) => {
-    button.addEventListener("click", function (e) {
+    // 이벤트 중복 방지를 위해 버튼 복제
+    const buttonClone = button.cloneNode(true);
+    button.parentNode.replaceChild(buttonClone, button);
+
+    buttonClone.addEventListener("click", function (e) {
       e.preventDefault();
+      e.stopPropagation();
 
       // 현재 버튼의 부모 요소 내에 있는 dropdown-content 찾기
       const dropdown = this.parentNode.querySelector(".dropdown-content");
       if (dropdown) {
+        // 다른 모든 드롭다운 닫기
+        document
+          .querySelectorAll(".dropdown-content")
+          .forEach((otherDropdown) => {
+            if (otherDropdown !== dropdown) {
+              otherDropdown.classList.remove("active");
+            }
+          });
+
+        // 현재 드롭다운 토글
         dropdown.classList.toggle("active");
+      }
+    });
+  });
+
+  // 드롭다운 내부 링크 클릭 이벤트
+  document.querySelectorAll(".dropdown-content a").forEach((link) => {
+    // 이벤트 중복 방지를 위해 링크 복제
+    const linkClone = link.cloneNode(true);
+    link.parentNode.replaceChild(linkClone, link);
+
+    linkClone.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      // 필요한 처리 수행
+      if (this.dataset.type) {
+        const type = this.dataset.type;
+        if (type === "all") {
+          window.state.selectedAuctionTypes = [];
+        } else {
+          window.state.selectedAuctionTypes = [type];
+        }
+      } else if (this.dataset.favorite) {
+        const favoriteNum = parseInt(this.dataset.favorite);
+        window.state.selectedFavoriteNumbers = [favoriteNum];
+      }
+
+      // 데이터 새로고침
+      if (typeof updateFilterUI === "function") {
+        updateFilterUI();
+      }
+      if (typeof fetchData === "function") {
+        fetchData();
+      }
+
+      // 드롭다운 닫기
+      this.closest(".dropdown-content").classList.remove("active");
+
+      // 모바일 메뉴 닫기
+      const navContainer = document.querySelector(".nav-container");
+      const menuToggle = document.querySelector(".mobile-menu-toggle");
+      if (navContainer && menuToggle && window.innerWidth <= 768) {
+        closeMobileMenu(navContainer, menuToggle);
       }
     });
   });
@@ -1465,41 +1524,19 @@ function setupDropdownMenus() {
     const dropdowns = document.querySelectorAll(".dropdown-content");
     dropdowns.forEach((dropdown) => {
       // 클릭된 요소가 드롭다운 버튼이나 드롭다운 콘텐츠 자신이 아니라면 닫기
-      if (!dropdown.parentNode.contains(e.target)) {
+      if (
+        !dropdown.contains(e.target) &&
+        !dropdown.parentNode.querySelector(".nav-button").contains(e.target)
+      ) {
         dropdown.classList.remove("active");
       }
     });
   });
 
-  // 드롭다운 내부 링크 클릭 이벤트
-  document.querySelectorAll(".dropdown-content a").forEach((link) => {
-    link.addEventListener("click", function (e) {
-      e.preventDefault();
-
-      // 필요한 처리 수행 (기존 코드와 동일)
-      if (this.dataset.type) {
-        const type = this.dataset.type;
-        if (type === "all") {
-          state.selectedAuctionTypes = [];
-        } else {
-          state.selectedAuctionTypes = [type];
-        }
-      } else if (this.dataset.favorite) {
-        const favoriteNum = parseInt(this.dataset.favorite);
-        state.selectedFavoriteNumbers = [favoriteNum];
-      }
-
-      updateFilterUI();
-      fetchData();
-
-      // 드롭다운 닫기
-      this.closest(".dropdown-content").classList.remove("active");
-    });
-  });
+  console.log("드롭다운 메뉴 설정 완료");
 }
 
 // 초기화 함수
-// 초기화 함수 수정
 function initialize() {
   state.itemsPerPage = 20; // 기본 20개씩 표시
   state.sortBy = "scheduled_date"; // 기본 정렬 필드: 마감일
@@ -1509,9 +1546,9 @@ function initialize() {
   document.addEventListener("DOMContentLoaded", function () {
     // 드롭다운 메뉴 설정
     setupDropdownMenus();
-    // 모바일 메뉴 설정 추가
+    // 모바일 메뉴 설정
     setupMobileMenu();
-    // 모바일 필터 설정 추가
+    // 모바일 필터 설정
     setupMobileFilters();
   });
 
@@ -1564,17 +1601,6 @@ function initialize() {
             .getElementById("searchInput")
             ?.addEventListener("keypress", (e) => {
               if (e.key === "Enter") handleSearch();
-            });
-
-          document
-            .getElementById("applyFiltersBtn")
-            ?.addEventListener("click", () => {
-              state.currentPage = 1;
-              fetchData();
-              // 모바일에서 필터 적용 후 닫기
-              if (window.innerWidth <= 768 && window.closeFilter) {
-                window.closeFilter();
-              }
             });
 
           document
