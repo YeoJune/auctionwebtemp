@@ -200,7 +200,7 @@ function renderLiveBidsTable(liveBids) {
         statusBadge = '<span class="badge badge-success">완료</span>';
         break;
       case "cancelled":
-        statusBadge = '<span class="badge badge-secondary">취소</span>';
+        statusBadge = '<span class="badge badge-secondary">낙찰 실패</span>';
         break;
       default:
         statusBadge = '<span class="badge">' + bid.status + "</span>";
