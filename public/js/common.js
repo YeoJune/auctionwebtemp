@@ -211,6 +211,7 @@ function toggleLoading(show) {
 }
 
 // 모바일 필터 토글
+// 모바일 필터 토글 수정
 function setupMobileFilters() {
   const filterBtn = document.getElementById("mobileFilterBtn");
   const filtersContainer = document.querySelector(".filters-container");
@@ -235,17 +236,21 @@ function setupMobileFilters() {
     document.body.appendChild(backdrop);
   }
 
-  // 필터 닫기 함수
+  // 필터 닫기 함수를 전역에 정의
   window.closeFilter = function () {
-    filtersContainer.classList.remove("active");
-    backdrop.style.display = "none";
+    if (filtersContainer) {
+      filtersContainer.classList.remove("active");
+    }
+    if (backdrop) {
+      backdrop.style.display = "none";
+    }
     document.body.style.overflow = "";
     console.log("필터 닫기 함수 실행됨");
   };
 
   if (filterBtn && filtersContainer) {
     // 이미 추가된 요소 확인 및 중복 방지
-    let filtersHeader = document.querySelector(".filters-header");
+    let filtersHeader = filtersContainer.querySelector(".filters-header");
     if (!filtersHeader) {
       // 필터 헤더 추가
       filtersHeader = document.createElement("div");
@@ -255,37 +260,58 @@ function setupMobileFilters() {
     }
 
     // 닫기 버튼이 이미 있는지 확인
-    let closeBtn = document.querySelector(".filter-close-btn");
+    let closeBtn = filtersContainer.querySelector(".filter-close-btn");
     if (closeBtn) {
       closeBtn.remove(); // 기존 버튼 제거
     }
 
-    // 필터 닫기 버튼 새로 추가 (onclick 직접 사용)
+    // 필터 닫기 버튼 새로 추가
     closeBtn = document.createElement("button");
     closeBtn.className = "filter-close-btn";
     closeBtn.innerHTML = "&times;";
     closeBtn.setAttribute("aria-label", "필터 닫기");
-    closeBtn.setAttribute("onclick", "window.closeFilter()");
+
+    // 이벤트 리스너 직접 추가 (onclick 속성 대신)
+    closeBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      window.closeFilter();
+    });
+
     filtersContainer.prepend(closeBtn);
 
-    // 필터 열기 버튼 이벤트
-    filterBtn.onclick = function () {
+    // 필터 열기 버튼 이벤트 - 이벤트 리스너 사용
+    // 기존 리스너 제거 후 새로 추가
+    filterBtn.removeEventListener("click", openFilterHandler);
+    filterBtn.addEventListener("click", openFilterHandler);
+
+    // 터치 이벤트도 추가
+    filterBtn.removeEventListener("touchstart", openFilterHandler);
+    filterBtn.addEventListener("touchstart", openFilterHandler);
+
+    function openFilterHandler(e) {
+      e.preventDefault();
+      e.stopPropagation();
       filtersContainer.classList.add("active");
       backdrop.style.display = "block";
       document.body.style.overflow = "hidden";
-    };
+    }
 
-    // 백드롭 이벤트
-    backdrop.onclick = window.closeFilter;
+    // 백드롭 이벤트 리스너 추가
+    backdrop.removeEventListener("click", window.closeFilter);
+    backdrop.addEventListener("click", window.closeFilter);
 
-    console.log("모바일 필터 설정 완료: 직접 onclick 사용");
+    console.log("모바일 필터 설정 완료: 이벤트 리스너 방식 적용");
 
     // ESC 키 이벤트 리스너
-    document.addEventListener("keydown", function (e) {
+    document.removeEventListener("keydown", escKeyHandler);
+    document.addEventListener("keydown", escKeyHandler);
+
+    function escKeyHandler(e) {
       if (e.key === "Escape" && filtersContainer.classList.contains("active")) {
         window.closeFilter();
       }
-    });
+    }
   }
 }
 
