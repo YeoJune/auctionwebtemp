@@ -779,18 +779,6 @@ function setupViewType() {
   }
 }
 
-// 정렬 옵션 설정
-function setupSortOptions() {
-  const sortOption = document.getElementById("sortOption");
-  if (sortOption) {
-    sortOption.addEventListener("change", function () {
-      state.sortOption = this.value;
-      state.currentPage = 1;
-      fetchData();
-    });
-  }
-}
-
 // 표시 개수 설정
 function setupItemsPerPage() {
   const itemsPerPage = document.getElementById("itemsPerPage");
