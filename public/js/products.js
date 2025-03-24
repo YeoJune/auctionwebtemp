@@ -1499,6 +1499,7 @@ function setupDropdownMenus() {
 }
 
 // 초기화 함수
+// 초기화 함수 수정
 function initialize() {
   state.itemsPerPage = 20; // 기본 20개씩 표시
   state.sortBy = "scheduled_date"; // 기본 정렬 필드: 마감일
@@ -1508,6 +1509,10 @@ function initialize() {
   document.addEventListener("DOMContentLoaded", function () {
     // 드롭다운 메뉴 설정
     setupDropdownMenus();
+    // 모바일 메뉴 설정 추가
+    setupMobileMenu();
+    // 모바일 필터 설정 추가
+    setupMobileFilters();
   });
 
   window.addEventListener("load", function () {
@@ -1566,6 +1571,10 @@ function initialize() {
             ?.addEventListener("click", () => {
               state.currentPage = 1;
               fetchData();
+              // 모바일에서 필터 적용 후 닫기
+              if (window.innerWidth <= 768 && window.closeFilter) {
+                window.closeFilter();
+              }
             });
 
           document
