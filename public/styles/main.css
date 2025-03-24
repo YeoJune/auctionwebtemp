@@ -1237,6 +1237,35 @@ select {
 }
 
 @media (max-width: 768px) {
+  /* 뷰 컨트롤 영역 반응형 개선 */
+  .view-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+  }
+
+  .items-per-page,
+  .sort-options,
+  .view-type {
+    width: 100%;
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .items-per-page select,
+  .sort-options select {
+    width: 100%;
+  }
+
+  .view-type {
+    display: flex;
+    justify-content: center;
+  }
+
+  .view-type .view-btn {
+    flex: 0 0 auto;
+    margin: 0 var(--spacing-xs);
+  }
+
   .modal-body {
     flex-direction: column;
     padding: 10px;
@@ -1404,6 +1433,17 @@ select {
 }
 
 @media (max-width: 480px) {
+  /* 모바일 환경에서 매우 작은 화면을 위한 추가 최적화 */
+  .view-controls {
+    gap: var(--spacing-xs);
+  }
+
+  .items-per-page,
+  .sort-options,
+  .view-type {
+    margin-bottom: var(--spacing-xs);
+  }
+
   .filter-close-btn {
     width: 42px;
     height: 42px;
