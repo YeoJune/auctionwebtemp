@@ -523,7 +523,7 @@ function createDailyResultRow(dayResult) {
       <th>브랜드</th>
       <th>상품명</th>
       <th>금액 (¥)</th>
-      <th>금액 (₩)</th>
+      <th>관부가세 포함 (₩)</th>
     </tr>
   `;
   detailsTable.appendChild(tableHeader);
