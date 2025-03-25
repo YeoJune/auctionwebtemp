@@ -2,14 +2,11 @@
 
 // 상태 관리
 window.state = {
-  bidType: "all", // 경매 타입: all, live, direct
   dateRange: 30, // 날짜 범위(일)
   currentPage: 1, // 현재 페이지
   itemsPerPage: 7, // 페이지당 날짜 수 (일별 그룹화)
   sortBy: "date", // 정렬 기준 (기본: 날짜)
   sortOrder: "desc", // 정렬 순서 (기본: 내림차순)
-  liveBids: [], // 현장 경매 데이터
-  directBids: [], // 직접 경매 데이터
   combinedResults: [], // 결합된 결과
   dailyResults: [], // 일별로 그룹화된 결과
   filteredResults: [], // 필터링된 결과
@@ -20,6 +17,8 @@ window.state = {
     itemCount: 0,
     japaneseAmount: 0,
     koreanAmount: 0,
+    feeAmount: 0,
+    grandTotalAmount: 0,
   },
 };
 
@@ -56,7 +55,6 @@ async function initialize() {
 function loadStateFromURL() {
   const urlParams = new URLSearchParams(window.location.search);
 
-  if (urlParams.has("bidType")) state.bidType = urlParams.get("bidType");
   if (urlParams.has("dateRange"))
     state.dateRange = parseInt(urlParams.get("dateRange"));
   if (urlParams.has("page"))
@@ -72,7 +70,6 @@ function loadStateFromURL() {
 function updateURL() {
   const params = new URLSearchParams();
 
-  if (state.bidType !== "all") params.append("bidType", state.bidType);
   if (state.dateRange !== 30) params.append("dateRange", state.dateRange);
   if (state.currentPage !== 1) params.append("page", state.currentPage);
   if (state.sortBy !== "date") params.append("sortBy", state.sortBy);
@@ -85,11 +82,6 @@ function updateURL() {
 
 // UI 요소 상태 업데이트
 function updateUIFromState() {
-  // 경매 타입 라디오 버튼
-  document.querySelectorAll('input[name="bidType"]').forEach((radio) => {
-    radio.checked = radio.value === state.bidType;
-  });
-
   // 날짜 범위 선택
   const dateRange = document.getElementById("dateRange");
   if (dateRange) dateRange.value = state.dateRange;
@@ -162,37 +154,22 @@ async function fetchCompletedBids() {
     // API 요청 URL 생성
     const queryString = API.createURLParams(params);
 
-    // 경매 타입에 따라 다른 엔드포인트 사용
-    let liveBidsPromise, directBidsPromise;
-
-    if (state.bidType === "live" || state.bidType === "all") {
-      liveBidsPromise = API.fetchAPI(`/live-bids?${queryString}`);
-    } else {
-      liveBidsPromise = Promise.resolve({ bids: [] });
-    }
-
-    if (state.bidType === "direct" || state.bidType === "all") {
-      directBidsPromise = API.fetchAPI(`/direct-bids?${queryString}`);
-    } else {
-      directBidsPromise = Promise.resolve({ bids: [] });
-    }
-
-    // 두 API 요청 병렬로 처리
+    // 경매 타입에 관계없이 모든 데이터 가져오기
     const [liveResults, directResults] = await Promise.all([
-      liveBidsPromise,
-      directBidsPromise,
+      API.fetchAPI(`/live-bids?${queryString}`),
+      API.fetchAPI(`/direct-bids?${queryString}`),
     ]);
 
     // 결합 및 타입 정보 추가
-    state.liveBids = liveResults.bids || [];
-    state.directBids = directResults.bids || [];
+    const liveBids = liveResults.bids || [];
+    const directBids = directResults.bids || [];
 
-    const liveBidsWithType = state.liveBids.map((bid) => ({
+    const liveBidsWithType = liveBids.map((bid) => ({
       ...bid,
       type: "live",
     }));
 
-    const directBidsWithType = state.directBids.map((bid) => ({
+    const directBidsWithType = directBids.map((bid) => ({
       ...bid,
       type: "direct",
     }));
@@ -249,7 +226,7 @@ function groupResultsByDate() {
       japanesePrice = Number(item.final_price || 0);
     }
 
-    // 원화 가격 계산
+    // 원화 가격 계산 (관부가세 포함)
     const product = item.item || {};
     const auctionId = product.auc_num || 1;
     const category = product.category || "기타";
@@ -262,6 +239,7 @@ function groupResultsByDate() {
       ...item,
       japanesePrice,
       koreanPrice,
+      image: product.image_url || "/images/placeholder.png",
     });
 
     // 합계 업데이트 - 숫자형으로 확실하게 합산
@@ -272,6 +250,12 @@ function groupResultsByDate() {
 
   // 객체를 배열로 변환
   state.dailyResults = Object.values(groupedByDate);
+
+  // 일별 수수료 계산 추가
+  state.dailyResults.forEach((day) => {
+    day.feeAmount = calculateFee(day.totalKoreanPrice);
+    day.grandTotal = day.totalKoreanPrice + day.feeAmount;
+  });
 
   // 정렬 적용
   sortDailyResults();
@@ -286,12 +270,16 @@ function updateTotalStats() {
     itemCount: 0,
     japaneseAmount: 0,
     koreanAmount: 0,
+    feeAmount: 0,
+    grandTotalAmount: 0,
   };
 
   state.dailyResults.forEach((day) => {
     state.totalStats.itemCount += Number(day.itemCount);
     state.totalStats.japaneseAmount += Number(day.totalJapanesePrice);
     state.totalStats.koreanAmount += Number(day.totalKoreanPrice);
+    state.totalStats.feeAmount += Number(day.feeAmount);
+    state.totalStats.grandTotalAmount += Number(day.grandTotal);
   });
 
   // UI 업데이트
@@ -302,6 +290,10 @@ function updateTotalStats() {
     formatNumber(state.totalStats.japaneseAmount) + " ¥";
   document.getElementById("totalKoreanAmount").textContent =
     formatNumber(state.totalStats.koreanAmount) + " ₩";
+  document.getElementById("totalFeeAmount").textContent =
+    formatNumber(state.totalStats.feeAmount) + " ₩";
+  document.getElementById("grandTotalAmount").textContent =
+    formatNumber(state.totalStats.grandTotalAmount) + " ₩";
 }
 
 // 일별 결과 정렬
@@ -316,8 +308,8 @@ function sortDailyResults() {
         valueB = new Date(b.date);
         break;
       case "total_price":
-        valueA = a.totalKoreanPrice;
-        valueB = b.totalKoreanPrice;
+        valueA = a.grandTotal;
+        valueB = b.grandTotal;
         break;
       case "item_count":
         valueA = a.itemCount;
@@ -342,20 +334,9 @@ function sortDailyResults() {
 
 // 이벤트 리스너 설정
 function setupEventListeners() {
-  // 경매 타입 라디오 버튼
-  document.querySelectorAll('input[name="bidType"]').forEach((radio) => {
-    radio.addEventListener("change", (e) => {
-      state.bidType = e.target.value;
-      state.currentPage = 1;
-      fetchCompletedBids();
-    });
-  });
-
   // 기간 드롭다운
   document.getElementById("dateRange")?.addEventListener("change", (e) => {
     state.dateRange = parseInt(e.target.value);
-    state.currentPage = 1;
-    fetchCompletedBids();
   });
 
   // 정렬 버튼들
@@ -422,7 +403,6 @@ function updateSortButtonsUI() {
 
 // 필터 초기화
 function resetFilters() {
-  state.bidType = "all";
   state.dateRange = 30;
   state.currentPage = 1;
   state.sortBy = "date";
@@ -500,10 +480,18 @@ function createDailyResultRow(dayResult) {
       )} ¥</span>
     </div>
     <div class="summary-item">
-      <span class="summary-label">총액 (₩):</span>
+      <span class="summary-label">관부가세 포함 (₩):</span>
       <span class="summary-value">${formatNumber(
         dayResult.totalKoreanPrice
       )} ₩</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-label">수수료 (₩):</span>
+      <span class="summary-value">${formatNumber(dayResult.feeAmount)} ₩</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-label">총액 (₩):</span>
+      <span class="summary-value">${formatNumber(dayResult.grandTotal)} ₩</span>
     </div>
   `;
 
@@ -520,9 +508,9 @@ function createDailyResultRow(dayResult) {
   const tableHeader = document.createElement("thead");
   tableHeader.innerHTML = `
     <tr>
+      <th>이미지</th>
       <th>브랜드</th>
       <th>상품명</th>
-      <th>경매 타입</th>
       <th>금액 (¥)</th>
       <th>금액 (₩)</th>
     </tr>
@@ -534,14 +522,19 @@ function createDailyResultRow(dayResult) {
   dayResult.items.forEach((item) => {
     const row = document.createElement("tr");
 
+    // 이미지 셀
+    const imageCell = document.createElement("td");
+    const imageElement = document.createElement("img");
+    imageElement.src = item.image;
+    imageElement.alt = item.item?.original_title || "상품 이미지";
+    imageElement.classList.add("product-thumbnail");
+    imageCell.appendChild(imageElement);
+
     const brandCell = document.createElement("td");
     brandCell.textContent = item.item?.brand || "-";
 
     const titleCell = document.createElement("td");
     titleCell.textContent = item.item?.original_title || "제목 없음";
-
-    const typeCell = document.createElement("td");
-    typeCell.textContent = item.type === "live" ? "현장 경매" : "직접 경매";
 
     const japaneseCell = document.createElement("td");
     japaneseCell.textContent = `${formatNumber(item.japanesePrice)} ¥`;
@@ -549,9 +542,9 @@ function createDailyResultRow(dayResult) {
     const koreanCell = document.createElement("td");
     koreanCell.textContent = `${formatNumber(item.koreanPrice)} ₩`;
 
+    row.appendChild(imageCell);
     row.appendChild(brandCell);
     row.appendChild(titleCell);
-    row.appendChild(typeCell);
     row.appendChild(japaneseCell);
     row.appendChild(koreanCell);
 

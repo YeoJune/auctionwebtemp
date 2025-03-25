@@ -1,47 +1,14 @@
+// public/js/calculate-fee.js
+
 let EXCHANGE_RATE = 0.9; // 환율
 
-// API 요청 기본 함수
-async function fetchAPI(endpoint, options = {}) {
-  const defaultOptions = {
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  };
-
-  try {
-    const response = await fetch(`${"/api"}${endpoint}`, {
-      ...defaultOptions,
-      ...options,
-    });
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        // 인증 실패 처리
-        if (window.handleAuthFailure) {
-          window.handleAuthFailure();
-        }
-        throw new Error("Unauthorized");
-      }
-      const errorData = await response.json();
-      throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
-      );
-    }
-
-    return response.json();
-  } catch (error) {
-    console.error("API request failed:", error);
-    throw error;
-  }
-}
-
+// 환율 가져오기
 async function fetchExchangeRate() {
   try {
-    const response = await fetchAPI("/data/exchange-rate");
-    EXCHANGE_RATE = response.rate;
-    return response.rate;
+    const response = await fetch("/api/data/exchange-rate");
+    const data = await response.json();
+    EXCHANGE_RATE = data.rate;
+    return data.rate;
   } catch (error) {
     console.error("Error fetching exchange rate:", error);
     return EXCHANGE_RATE; // 기본값 반환
@@ -144,11 +111,11 @@ function calculateCustomsDuty(amountKRW, category) {
 }
 
 /**
- * 최종 가격 계산 함수
+ * 최종 가격 계산 함수 (관부가세 포함)
  * @param {number} price - 상품 가격
  * @param {number} auctionId - 플랫폼 구분 (1: ecoauc, 2: brand, 3: starbuyers)
  * @param {string} category - 상품 카테고리
- * @returns {number} 최종 계산된 가격
+ * @returns {number} 최종 계산된 가격 (관부가세 포함)
  */
 function calculateTotalPrice(price, auctionId, category) {
   price = parseFloat(price) || 0;
@@ -166,8 +133,51 @@ function calculateTotalPrice(price, auctionId, category) {
   return Math.round(totalAmountKRW + customsDuty);
 }
 
+/**
+ * 입찰금액 기준 수수료 계산 함수
+ * @param {number} price - 입찰 금액
+ * @returns {number|string} 계산된 수수료 또는 "별도 협의" 문자열
+ */
+function calculateFee(price) {
+  if (!price) return 0;
+  price = Number(price);
+
+  // 숫자가 아닌 경우 0 반환
+  if (isNaN(price)) return 0;
+
+  let fee = 0;
+
+  // 5,000,000원 이하: 10%
+  if (price <= 5000000) {
+    fee = price * 0.1;
+  } else {
+    fee = 5000000 * 0.1; // 5,000,000원까지 10%
+    price -= 5000000;
+
+    // 5,000,000원 ~ 10,000,000원 구간: 7%
+    if (price <= 5000000) {
+      fee += price * 0.07;
+    } else {
+      fee += 5000000 * 0.07; // 5,000,000원까지 7%
+      price -= 5000000;
+
+      // 10,000,000원 ~ 50,000,000원 구간: 5%
+      if (price <= 40000000) {
+        fee += price * 0.05;
+      } else {
+        fee += 40000000 * 0.05; // 40,000,000원까지 5%
+        // 50,000,000원 이상은 별도 협의
+        return "별도 협의";
+      }
+    }
+  }
+
+  return Math.round(fee);
+}
+
+// DOM 로드 시 환율 정보 가져오기
 document.addEventListener("DOMContentLoaded", function () {
   fetchExchangeRate().then((rate) => {
-    console.log("Exchange rate:", rate);
+    console.log("Exchange rate loaded:", rate);
   });
 });

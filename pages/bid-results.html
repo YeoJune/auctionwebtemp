@@ -95,52 +95,10 @@
                 상품수 <i class="fas fa-sort"></i>
               </button>
             </div>
-            <button class="mobile-filter-toggle" id="mobileFilterBtn">
-              <i class="fas fa-filter"></i> 필터
-            </button>
-          </div>
-        </section>
 
-        <!-- 필터 및 결과 섹션 -->
-        <div class="content-wrapper">
-          <aside class="filters-container">
-            <h3>필터</h3>
-
-            <!-- 경매 타입 필터 -->
-            <div class="filter-section">
-              <h4>경매 타입</h4>
-              <div class="radio-buttons">
-                <div class="radio-item">
-                  <input
-                    type="radio"
-                    name="bidType"
-                    id="bidType-all"
-                    value="all"
-                    checked />
-                  <label for="bidType-all">전체</label>
-                </div>
-                <div class="radio-item">
-                  <input
-                    type="radio"
-                    name="bidType"
-                    id="bidType-live"
-                    value="live" />
-                  <label for="bidType-live">현장 경매</label>
-                </div>
-                <div class="radio-item">
-                  <input
-                    type="radio"
-                    name="bidType"
-                    id="bidType-direct"
-                    value="direct" />
-                  <label for="bidType-direct">직접 경매</label>
-                </div>
-              </div>
-            </div>
-
-            <!-- 기간 필터 -->
-            <div class="filter-section">
-              <h4>기간</h4>
+            <!-- 기간 필터를 여기로 이동 -->
+            <div class="date-filter">
+              <label for="dateRange">기간:</label>
               <select id="dateRange">
                 <option value="7">최근 1주일</option>
                 <option value="30" selected>최근 1개월</option>
@@ -148,18 +106,23 @@
                 <option value="180">최근 6개월</option>
                 <option value="365">최근 1년</option>
               </select>
-            </div>
-
-            <!-- 필터 적용/초기화 버튼 -->
-            <div class="filter-buttons">
-              <button id="applyFilters" class="primary-button">
-                필터 적용
+              <button id="applyFilters" class="primary-button small-button">
+                적용
               </button>
-              <button id="resetFilters" class="secondary-button">초기화</button>
+              <button id="resetFilters" class="secondary-button small-button">
+                초기화
+              </button>
             </div>
-          </aside>
 
-          <section class="results-section">
+            <button class="mobile-filter-toggle" id="mobileFilterBtn">
+              <i class="fas fa-filter"></i> 필터
+            </button>
+          </div>
+        </section>
+
+        <!-- 결과 섹션 -->
+        <div class="content-wrapper">
+          <section class="results-section full-width">
             <!-- 요약 통계 -->
             <div class="summary-stats">
               <div class="stat-box">
@@ -173,6 +136,14 @@
               <div class="stat-box">
                 <div class="stat-label">총 금액 (₩)</div>
                 <div class="stat-value" id="totalKoreanAmount">0</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">총 수수료</div>
+                <div class="stat-value" id="totalFeeAmount">0</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">총액 (수수료 포함)</div>
+                <div class="stat-value" id="grandTotalAmount">0</div>
               </div>
             </div>
 
