@@ -535,17 +535,30 @@ function createDailyResultRow(dayResult) {
 
     // 이미지 셀
     const imageCell = document.createElement("td");
-    const imageElement = document.createElement("img");
 
-    // 이미지 처리 (오류 시 대체 이미지 사용)
-    imageElement.src = item.image;
-    imageElement.onerror = function () {
-      this.src = "/images/placeholder.png";
-    };
+    // 이미지가 있는 경우에만 이미지 요소 생성
+    if (item.image && item.image !== "/images/placeholder.png") {
+      const imageElement = document.createElement("img");
+      imageElement.src = item.image;
+      imageElement.alt = item.item?.original_title || "상품 이미지";
+      imageElement.classList.add("product-thumbnail");
 
-    imageElement.alt = item.item?.original_title || "상품 이미지";
-    imageElement.classList.add("product-thumbnail");
-    imageCell.appendChild(imageElement);
+      // 이미지 로드 오류 시 텍스트로 대체하고 다시 로드 시도하지 않음
+      imageElement.onerror = function () {
+        const placeholder = document.createElement("div");
+        placeholder.className = "product-thumbnail-placeholder";
+        placeholder.textContent = "No Image";
+        this.parentNode.replaceChild(placeholder, this);
+      };
+
+      imageCell.appendChild(imageElement);
+    } else {
+      // 이미지 없는 경우 텍스트 플레이스홀더 표시
+      const placeholder = document.createElement("div");
+      placeholder.className = "product-thumbnail-placeholder";
+      placeholder.textContent = "No Image";
+      imageCell.appendChild(placeholder);
+    }
 
     const brandCell = document.createElement("td");
     brandCell.textContent = item.item?.brand || "-";
