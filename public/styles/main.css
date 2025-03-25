@@ -1182,6 +1182,7 @@ select {
     grid-template-columns: repeat(2, 1fr);
   }
 
+  /* 필터 컨테이너 전체 설정 */
   .filters-container {
     position: fixed;
     top: 0;
@@ -1193,29 +1194,15 @@ select {
     transform: translateX(-100%);
     transition: transform 0.3s ease;
     overflow-y: auto;
-    padding-bottom: 80px; /* Add bottom padding */
+    /* 하단 버튼 영역만큼 패딩 추가 */
+    padding-bottom: 70px;
   }
 
   .filters-container.active {
     transform: translateX(0);
   }
 
-  .mobile-filter-toggle {
-    display: flex;
-  }
-
-  .bid-input-group {
-    flex-wrap: wrap;
-  }
-
-  .bid-input-label {
-    width: 100%;
-    padding: var(--spacing-xs);
-    justify-content: center;
-    border-bottom: 1px solid var(--border-color);
-  }
-
-  /* Improved filter action buttons */
+  /* 필터 액션 버튼 위치 고정 및 스타일 개선 */
   .filter-actions {
     position: fixed;
     bottom: 0;
@@ -1233,6 +1220,57 @@ select {
   .apply-filters {
     flex: 1;
     margin: 0 5px;
+  }
+
+  /* 멀티셀렉트 컨테이너 너비 제한 */
+  .multiselect-container {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* 브랜드, 카테고리 필터 레이아웃 개선 */
+  .filter-row {
+    flex-direction: column;
+    align-items: flex-start;
+    margin-bottom: 15px;
+  }
+
+  .filter-label {
+    width: 100%;
+    margin-bottom: 5px;
+    font-weight: 600;
+  }
+
+  .filter-content {
+    width: 100%;
+  }
+
+  /* 멀티셀렉트 내부 스크롤 최적화 */
+  .multiselect-body {
+    max-height: 150px;
+  }
+
+  /* 필터 아이템 가독성 개선 */
+  .filter-item label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 85%;
+  }
+
+  .mobile-filter-toggle {
+    display: flex;
+  }
+
+  .bid-input-group {
+    flex-wrap: wrap;
+  }
+
+  .bid-input-label {
+    width: 100%;
+    padding: var(--spacing-xs);
+    justify-content: center;
+    border-bottom: 1px solid var(--border-color);
   }
 }
 
@@ -1429,6 +1467,38 @@ select {
   .quick-bid-btn {
     padding: 4px;
     font-size: 10px;
+  }
+
+  /* 필터 레이블과 컨텐츠 간격 조정 */
+  .filter-label {
+    font-size: 14px;
+    padding: 3px 0;
+  }
+
+  /* 브랜드, 카테고리 옵션 크기 조정 */
+  .multiselect-container {
+    font-size: 13px;
+  }
+
+  .multiselect-search {
+    height: 32px;
+    font-size: 13px;
+  }
+
+  /* 체크박스 아이템 높이 조정 */
+  .filter-item {
+    padding: 2px 0;
+  }
+
+  /* 액션 버튼 패딩 줄이기 */
+  .filter-actions {
+    padding: 8px 10px;
+  }
+
+  .reset-filters,
+  .apply-filters {
+    padding: 8px 0;
+    font-size: 14px;
   }
 }
 
