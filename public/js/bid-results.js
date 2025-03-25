@@ -164,15 +164,19 @@ async function fetchCompletedBids() {
     const liveBids = liveResults.bids || [];
     const directBids = directResults.bids || [];
 
-    const liveBidsWithType = liveBids.map((bid) => ({
-      ...bid,
-      type: "live",
-    }));
+    const liveBidsWithType = liveBids
+      .filter((bid) => bid)
+      .map((bid) => ({
+        ...bid,
+        type: "live",
+      }));
 
-    const directBidsWithType = directBids.map((bid) => ({
-      ...bid,
-      type: "direct",
-    }));
+    const directBidsWithType = directBids
+      .filter((bid) => bid)
+      .map((bid) => ({
+        ...bid,
+        type: "direct",
+      }));
 
     state.combinedResults = [...liveBidsWithType, ...directBidsWithType];
 
@@ -234,12 +238,19 @@ function groupResultsByDate() {
       calculateTotalPrice(japanesePrice, auctionId, category)
     );
 
+    // 이미지 경로 처리
+    let imagePath = "/images/placeholder.png";
+    if (product && product.image) {
+      // 상대 경로는 그대로 사용, 절대 경로는 도메인 추가 필요 없음
+      imagePath = product.image;
+    }
+
     // 그룹에 아이템 추가
     groupedByDate[dateStr].items.push({
       ...item,
       japanesePrice,
       koreanPrice,
-      image: product.image_url || "/images/placeholder.png",
+      image: imagePath,
     });
 
     // 합계 업데이트 - 숫자형으로 확실하게 합산
@@ -525,7 +536,13 @@ function createDailyResultRow(dayResult) {
     // 이미지 셀
     const imageCell = document.createElement("td");
     const imageElement = document.createElement("img");
+
+    // 이미지 처리 (오류 시 대체 이미지 사용)
     imageElement.src = item.image;
+    imageElement.onerror = function () {
+      this.src = "/images/placeholder.png";
+    };
+
     imageElement.alt = item.item?.original_title || "상품 이미지";
     imageElement.classList.add("product-thumbnail");
     imageCell.appendChild(imageElement);
@@ -599,22 +616,4 @@ function handlePageChange(page) {
   updateURL();
 }
 
-// 네비게이션 버튼 설정
-function setupNavButtons() {
-  // 각 네비게이션 버튼에 이벤트 리스너 추가
-  const navButtons = document.querySelectorAll(".nav-button");
-  navButtons.forEach((button) => {
-    // 기존 onclick 속성 외에 추가 처리가 필요한 경우를 위한 공간
-  });
-}
-
-// 로딩 표시 토글
-function toggleLoading(show) {
-  const loadingMsg = document.getElementById("loadingMsg");
-  if (loadingMsg) {
-    loadingMsg.style.display = show ? "block" : "none";
-  }
-}
-
-// DOM 완료 시 실행
-document.addEventListener("DOMContentLoaded", initialize);
+// 네비
