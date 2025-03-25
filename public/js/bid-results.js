@@ -616,4 +616,22 @@ function handlePageChange(page) {
   updateURL();
 }
 
-// 네비
+// 네비게이션 버튼 설정
+function setupNavButtons() {
+  // 각 네비게이션 버튼에 이벤트 리스너 추가
+  const navButtons = document.querySelectorAll(".nav-button");
+  navButtons.forEach((button) => {
+    // 기존 onclick 속성 외에 추가 처리가 필요한 경우를 위한 공간
+  });
+}
+
+// 로딩 표시 토글
+function toggleLoading(show) {
+  const loadingMsg = document.getElementById("loadingMsg");
+  if (loadingMsg) {
+    loadingMsg.style.display = show ? "block" : "none";
+  }
+}
+
+// DOM 완료 시 실행
+document.addEventListener("DOMContentLoaded", initialize);
