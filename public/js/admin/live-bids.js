@@ -481,13 +481,13 @@ function updateWinningPriceKRW() {
 
   // 최종 입찰가와 비교
   const priceComparisonMsg = document.getElementById("priceComparisonMessage");
-  if (finalPrice && winningPrice < finalPrice) {
+  if (finalPrice && winningPrice > finalPrice) {
     priceComparisonMsg.textContent =
-      "※ 입력한 금액이 최종 입찰가보다 낮습니다. 낙찰 실패로 처리됩니다.";
+      "※ 입력한 금액이 최종 입찰가보다 높습니다. 낙찰 실패로 처리됩니다.";
     priceComparisonMsg.className = "price-comparison warning";
-  } else if (finalPrice && winningPrice > finalPrice) {
+  } else if (finalPrice && winningPrice < finalPrice) {
     priceComparisonMsg.textContent =
-      "※ 입력한 금액이 최종 입찰가보다 높습니다. 낙찰 완료로 처리됩니다.";
+      "※ 입력한 금액이 최종 입찰가보다 낮습니다. 낙찰 완료로 처리됩니다.";
     priceComparisonMsg.className = "price-comparison success";
   } else {
     priceComparisonMsg.textContent = "";

@@ -468,10 +468,10 @@ router.put("/:id/complete", isAdmin, async (req, res) => {
       return res.status(400).json({ message: "Bid is not in final stage" });
     }
 
-    // 낙찰 금액이 최종 입찰가보다 낮은 경우 자동으로 낙찰 실패 처리
+    // 낙찰 금액이 최종 입찰가보다 높은 경우 자동으로 낙찰 실패 처리
     if (
       winningPrice &&
-      parseFloat(winningPrice) < parseFloat(bid.final_price)
+      parseFloat(winningPrice) > parseFloat(bid.final_price)
     ) {
       await connection.query(
         'UPDATE live_bids SET status = "cancelled", final_price = ? WHERE id = ?',
@@ -481,7 +481,7 @@ router.put("/:id/complete", isAdmin, async (req, res) => {
       await connection.commit();
 
       return res.status(200).json({
-        message: "Bid automatically cancelled due to lower winning price",
+        message: "Bid automatically cancelled due to higher winning price",
         bidId: id,
         status: "cancelled",
       });
