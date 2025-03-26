@@ -321,8 +321,8 @@ body {
 }
 
 /* 테이블 헤더의 상품 정보 열을 더 넓게 설정 */
-#liveBidsTable th:nth-child(2),
-#directBidsTable th:nth-child(2) {
+#liveBidsTable th:nth-child(3),
+#directBidsTable th:nth-child(3) {
   width: 40%;
 }
 
