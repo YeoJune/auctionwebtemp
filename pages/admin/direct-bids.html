@@ -41,6 +41,19 @@
           <div class="filter-tab" data-status="cancelled">낙찰 실패</div>
         </div>
 
+        <!-- 일괄 작업 버튼 -->
+        <div class="bulk-actions">
+          <button id="bulkCompleteBtn" class="btn" disabled>
+            선택 항목 낙찰 완료
+          </button>
+          <button id="bulkCancelBtn" class="btn btn-secondary" disabled>
+            선택 항목 낙찰 실패
+          </button>
+          <button id="bulkMarkSubmittedBtn" class="btn" disabled>
+            선택 항목 반영됨으로 표시
+          </button>
+        </div>
+
         <!-- 필터 옵션 -->
         <div class="filter-options">
           <label class="toggle-switch">
@@ -136,19 +149,6 @@
 
         <!-- 페이지네이션 추가 -->
         <div id="pagination" class="pagination"></div>
-
-        <!-- 일괄 작업 버튼 -->
-        <div class="bulk-actions">
-          <button id="bulkCompleteBtn" class="btn" disabled>
-            선택 항목 낙찰 완료
-          </button>
-          <button id="bulkCancelBtn" class="btn btn-secondary" disabled>
-            선택 항목 낙찰 실패
-          </button>
-          <button id="bulkMarkSubmittedBtn" class="btn" disabled>
-            선택 항목 반영됨으로 표시
-          </button>
-        </div>
       </div>
     </div>
 
