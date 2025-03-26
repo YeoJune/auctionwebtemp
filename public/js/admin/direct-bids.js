@@ -84,6 +84,26 @@ document.addEventListener("DOMContentLoaded", function () {
       currentPage = 1; // 날짜 필터 초기화 시 첫 페이지로 리셋
       loadDirectBids();
     });
+
+  // Add event listeners for bulk actions
+  document
+    .getElementById("bulkCompleteBtn")
+    ?.addEventListener("click", openBulkCompleteModal);
+  document
+    .getElementById("bulkCancelBtn")
+    ?.addEventListener("click", openBulkCancelModal);
+  document
+    .getElementById("bulkMarkSubmittedBtn")
+    ?.addEventListener("click", openBulkMarkAsSubmittedModal);
+  document
+    .getElementById("submitBulkComplete")
+    ?.addEventListener("click", submitBulkComplete);
+  document
+    .getElementById("submitBulkCancel")
+    ?.addEventListener("click", submitBulkCancel);
+  document
+    .getElementById("submitBulkMarkAsSubmitted")
+    ?.addEventListener("click", submitBulkMarkAsSubmitted);
 });
 
 // 필터 상태에 따라 데이터 로드
@@ -299,6 +319,9 @@ function renderDirectBidsTable(directBids) {
 
     html += `
   <tr>
+    <td><input type="checkbox" class="bid-checkbox" data-bid-id="${
+      bid.id
+    }" /></td>
     <td>${bid.id}</td>
     <td>
       <div class="item-info">
@@ -341,6 +364,31 @@ function renderDirectBidsTable(directBids) {
   });
 
   tableBody.innerHTML = html;
+  addCheckboxEventListeners();
+}
+
+function addCheckboxEventListeners() {
+  document
+    .getElementById("selectAllBids")
+    ?.addEventListener("change", function () {
+      const isChecked = this.checked;
+      document.querySelectorAll(".bid-checkbox").forEach((checkbox) => {
+        checkbox.checked = isChecked;
+      });
+      updateBulkActionButtons();
+    });
+  document.querySelectorAll(".bid-checkbox").forEach((checkbox) => {
+    checkbox.addEventListener("change", updateBulkActionButtons);
+  });
+}
+
+function updateBulkActionButtons() {
+  const checkedCount = document.querySelectorAll(
+    ".bid-checkbox:checked"
+  ).length;
+  document.getElementById("bulkCompleteBtn").disabled = checkedCount === 0;
+  document.getElementById("bulkCancelBtn").disabled = checkedCount === 0;
+  document.getElementById("bulkMarkSubmittedBtn").disabled = checkedCount === 0;
 }
 
 // 입찰 완료 모달 열기
@@ -420,5 +468,75 @@ async function markAsSubmitted() {
     await loadDirectBids();
   } catch (error) {
     handleError(error, "반영 완료 표시 중 오류가 발생했습니다.");
+  }
+}
+
+// Bulk action modals and submissions
+function openBulkCompleteModal() {
+  const count = document.querySelectorAll(".bid-checkbox:checked").length;
+  if (count === 0) return;
+  document.getElementById("bulkCompleteCount").textContent = count;
+  openModal("bulkCompleteModal");
+}
+
+async function submitBulkComplete() {
+  const checkedBids = document.querySelectorAll(".bid-checkbox:checked");
+  try {
+    for (const checkbox of checkedBids) {
+      await completeDirectBid(checkbox.dataset.bidId);
+    }
+    closeAllModals();
+    showAlert(`${checkedBids.length}개 입찰이 완료되었습니다.`, "success");
+    await loadDirectBids();
+  } catch (error) {
+    handleError(error, "일괄 입찰 완료 처리 중 오류가 발생했습니다.");
+  }
+}
+
+function openBulkCancelModal() {
+  const count = document.querySelectorAll(".bid-checkbox:checked").length;
+  if (count === 0) return;
+  document.getElementById("bulkCancelCount").textContent = count;
+  openModal("bulkCancelModal");
+}
+
+async function submitBulkCancel() {
+  const checkedBids = document.querySelectorAll(".bid-checkbox:checked");
+  try {
+    for (const checkbox of checkedBids) {
+      await cancelDirectBid(checkbox.dataset.bidId);
+    }
+    closeAllModals();
+    showAlert(
+      `${checkedBids.length}개 입찰이 낙찰 실패로 처리되었습니다.`,
+      "success"
+    );
+    await loadDirectBids();
+  } catch (error) {
+    handleError(error, "일괄 입찰 취소 처리 중 오류가 발생했습니다.");
+  }
+}
+
+function openBulkMarkAsSubmittedModal() {
+  const count = document.querySelectorAll(".bid-checkbox:checked").length;
+  if (count === 0) return;
+  document.getElementById("bulkMarkSubmittedCount").textContent = count;
+  openModal("bulkMarkAsSubmittedModal");
+}
+
+async function submitBulkMarkAsSubmitted() {
+  const checkedBids = document.querySelectorAll(".bid-checkbox:checked");
+  try {
+    for (const checkbox of checkedBids) {
+      await markDirectBidAsSubmitted(checkbox.dataset.bidId);
+    }
+    closeAllModals();
+    showAlert(
+      `${checkedBids.length}개 입찰이 플랫폼 반영 완료로 표시되었습니다.`,
+      "success"
+    );
+    await loadDirectBids();
+  } catch (error) {
+    handleError(error, "일괄 반영 완료 표시 중 오류가 발생했습니다.");
   }
 }

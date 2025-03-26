@@ -443,6 +443,7 @@ router.put("/:id/final", async (req, res) => {
 // 관리자의 낙찰 완료 처리
 router.put("/:id/complete", isAdmin, async (req, res) => {
   const { id } = req.params;
+  const { winningPrice } = req.body; // 낙찰 금액 파라미터 추가
 
   const connection = await pool.getConnection();
 
@@ -467,11 +468,37 @@ router.put("/:id/complete", isAdmin, async (req, res) => {
       return res.status(400).json({ message: "Bid is not in final stage" });
     }
 
-    // 낙찰 완료 처리
-    await connection.query(
-      'UPDATE live_bids SET status = "completed" WHERE id = ?',
-      [id]
-    );
+    // 낙찰 금액이 최종 입찰가보다 높은 경우 자동으로 낙찰 실패 처리
+    if (
+      winningPrice &&
+      parseFloat(winningPrice) > parseFloat(bid.final_price)
+    ) {
+      await connection.query(
+        'UPDATE live_bids SET status = "cancelled", final_price = ? WHERE id = ?',
+        [winningPrice, id]
+      );
+
+      await connection.commit();
+
+      return res.status(200).json({
+        message: "Bid automatically cancelled due to higher winning price",
+        bidId: id,
+        status: "cancelled",
+      });
+    }
+
+    // 낙찰 완료 처리 (최종 입찰가 업데이트)
+    let updateQuery = 'UPDATE live_bids SET status = "completed"';
+    let queryParams = [id];
+
+    // 낙찰 금액이 제공된 경우 final_price 업데이트
+    if (winningPrice) {
+      updateQuery =
+        'UPDATE live_bids SET status = "completed", final_price = ?';
+      queryParams = [winningPrice, id];
+    }
+
+    await connection.query(updateQuery + " WHERE id = ?", queryParams);
 
     await connection.commit();
 
@@ -479,6 +506,7 @@ router.put("/:id/complete", isAdmin, async (req, res) => {
       message: "Bid completed successfully",
       bidId: id,
       status: "completed",
+      winningPrice: winningPrice || bid.final_price,
     });
   } catch (err) {
     await connection.rollback();

@@ -32,6 +32,36 @@ document.addEventListener("DOMContentLoaded", function () {
     .getElementById("submitCancel")
     .addEventListener("click", submitCancelBid);
 
+  // 일괄 낙찰 완료 버튼 이벤트
+  document
+    .getElementById("bulkCompleteBtn")
+    .addEventListener("click", openBulkCompleteModal);
+
+  // 일괄 낙찰 실패 버튼 이벤트
+  document
+    .getElementById("bulkCancelBtn")
+    .addEventListener("click", openBulkCancelModal);
+
+  // 일괄 낙찰 완료 모달 제출 버튼
+  document
+    .getElementById("submitBulkComplete")
+    .addEventListener("click", submitBulkComplete);
+
+  // 일괄 낙찰 실패 모달 제출 버튼
+  document
+    .getElementById("submitBulkCancel")
+    .addEventListener("click", submitBulkCancel);
+
+  // 낙찰 금액 입력 시 관부가세 포함 가격 업데이트
+  document
+    .getElementById("winningPrice")
+    .addEventListener("input", updateWinningPriceKRW);
+
+  // 일괄 낙찰 금액 입력 시 관부가세 포함 가격 업데이트
+  document
+    .getElementById("bulkWinningPrice")
+    .addEventListener("input", updateBulkWinningPriceKRW);
+
   // 페이지 크기 변경 이벤트
   document.getElementById("pageSize")?.addEventListener("change", function () {
     itemsPerPage = parseInt(this.value);
@@ -285,6 +315,11 @@ function renderLiveBidsTable(liveBids) {
 
     html += `
   <tr>
+    <td><input type="checkbox" class="bid-checkbox" data-bid-id="${
+      bid.id
+    }" data-final-price="${bid.final_price || 0}" data-auc-num="${
+      bid.item?.auc_num || 1
+    }" data-category="${bid.item?.category || "기타"}"></td>
     <td>${bid.id}</td>
     <td>
       <div class="item-info">
@@ -314,29 +349,63 @@ function renderLiveBidsTable(liveBids) {
     </td>
     <td>
       <div>현지가: ${formatCurrency(bid.first_price, "JPY")}</div>
-      <div class="total-price">최종가: ${firstTotalPrice}</div>
+      <div class="total-price">관부가세 포함: ${firstTotalPrice}</div>
     </td>
     <td>
       <div>현지가: ${
         bid.second_price ? formatCurrency(bid.second_price, "JPY") : "-"
       }</div>
-      <div class="total-price">최종가: ${secondTotalPrice}</div>
+      <div class="total-price">관부가세 포함: ${secondTotalPrice}</div>
     </td>
     <td>
       <div>현지가: ${
         bid.final_price ? formatCurrency(bid.final_price, "JPY") : "-"
       }</div>
-      <div class="total-price">최종가: ${finalTotalPrice}</div>
+      <div class="total-price">관부가세 포함: ${finalTotalPrice}</div>
     </td>
     <td>${statusBadge}</td>
     <td>${formatDate(bid.created_at)}</td>
     <td>${formatDate(bid.updated_at)}</td>
     <td>${actionButtons}</td>
   </tr>
-`;
+ `;
   });
 
   tableBody.innerHTML = html;
+
+  // 체크박스 이벤트 리스너 추가
+  addCheckboxEventListeners();
+}
+
+// 체크박스 이벤트 리스너 추가 함수
+function addCheckboxEventListeners() {
+  // 전체 선택 체크박스 이벤트
+  document
+    .getElementById("selectAllBids")
+    ?.addEventListener("change", function () {
+      const isChecked = this.checked;
+      document.querySelectorAll(".bid-checkbox").forEach((checkbox) => {
+        checkbox.checked = isChecked;
+      });
+      updateBulkActionButtons();
+    });
+
+  // 개별 체크박스 이벤트
+  document.querySelectorAll(".bid-checkbox").forEach((checkbox) => {
+    checkbox.addEventListener("change", updateBulkActionButtons);
+  });
+}
+
+// 일괄 처리 버튼 상태 업데이트
+function updateBulkActionButtons() {
+  const checkedCount = document.querySelectorAll(
+    ".bid-checkbox:checked"
+  ).length;
+  const bulkCompleteBtn = document.getElementById("bulkCompleteBtn");
+  const bulkCancelBtn = document.getElementById("bulkCancelBtn");
+
+  if (bulkCompleteBtn) bulkCompleteBtn.disabled = checkedCount === 0;
+  if (bulkCancelBtn) bulkCancelBtn.disabled = checkedCount === 0;
 }
 
 // 2차 제안가 제안 모달 열기
@@ -372,12 +441,64 @@ async function submitSecondPrice() {
 // 입찰 완료 모달 열기
 function openCompleteModal(bidId) {
   document.getElementById("completeBidId").value = bidId;
+  document.getElementById("winningPrice").value = "";
+  document.getElementById("winningPriceKRW").textContent = "관부가세 포함: -";
+  document.getElementById("priceComparisonMessage").textContent = "";
+  document.getElementById("priceComparisonMessage").className =
+    "price-comparison";
+
   openModal("completeModal");
+}
+
+// 관부가세 포함 가격 업데이트
+function updateWinningPriceKRW() {
+  const bidId = document.getElementById("completeBidId").value;
+  const winningPrice = parseFloat(
+    document.getElementById("winningPrice").value
+  );
+
+  if (!winningPrice || isNaN(winningPrice)) {
+    document.getElementById("winningPriceKRW").textContent = "관부가세 포함: -";
+    document.getElementById("priceComparisonMessage").textContent = "";
+    return;
+  }
+
+  // 해당 입찰 찾기
+  const checkbox = document.querySelector(
+    `.bid-checkbox[data-bid-id="${bidId}"]`
+  );
+  if (!checkbox) return;
+
+  const auc_num = checkbox.dataset.aucNum || 1;
+  const category = checkbox.dataset.category || "기타";
+  const finalPrice = parseFloat(checkbox.dataset.finalPrice) || 0;
+
+  // 관부가세 포함 가격 계산
+  const totalPrice = calculateTotalPrice(winningPrice, auc_num, category);
+  document.getElementById(
+    "winningPriceKRW"
+  ).textContent = `관부가세 포함: ${formatCurrency(totalPrice, "KRW")}`;
+
+  // 최종 입찰가와 비교
+  const priceComparisonMsg = document.getElementById("priceComparisonMessage");
+  if (finalPrice && winningPrice > finalPrice) {
+    priceComparisonMsg.textContent =
+      "※ 입력한 금액이 최종 입찰가보다 높습니다. 낙찰 실패로 처리됩니다.";
+    priceComparisonMsg.className = "price-comparison warning";
+  } else if (finalPrice && winningPrice < finalPrice) {
+    priceComparisonMsg.textContent =
+      "※ 입력한 금액이 최종 입찰가보다 낮습니다. 낙찰 완료로 처리됩니다.";
+    priceComparisonMsg.className = "price-comparison success";
+  } else {
+    priceComparisonMsg.textContent = "";
+    priceComparisonMsg.className = "price-comparison";
+  }
 }
 
 // 입찰 완료 제출
 async function submitCompleteBid() {
   const bidId = document.getElementById("completeBidId").value;
+  const winningPrice = document.getElementById("winningPrice").value;
 
   if (!bidId) {
     showAlert("입찰 ID가 유효하지 않습니다.");
@@ -385,7 +506,13 @@ async function submitCompleteBid() {
   }
 
   try {
-    await completeBid(bidId);
+    // winningPrice가 있으면 전달, 없으면 기본값 사용
+    if (winningPrice) {
+      await completeBid(bidId, parseFloat(winningPrice));
+    } else {
+      await completeBid(bidId);
+    }
+
     closeAllModals();
     showAlert("입찰이 완료되었습니다.", "success");
 
@@ -420,5 +547,112 @@ async function submitCancelBid() {
     await loadLiveBids();
   } catch (error) {
     handleError(error, "낙찰 실패 처리 중 오류가 발생했습니다.");
+  }
+}
+
+// 일괄 낙찰 완료 모달 열기
+function openBulkCompleteModal() {
+  const checkedBids = document.querySelectorAll(".bid-checkbox:checked");
+  const count = checkedBids.length;
+
+  if (count === 0) return;
+
+  document.getElementById("bulkCompleteCount").textContent = count;
+  document.getElementById("bulkWinningPrice").value = "";
+  document.getElementById("bulkWinningPriceKRW").textContent =
+    "관부가세 포함: -";
+
+  openModal("bulkCompleteModal");
+}
+
+// 일괄 관부가세 포함 가격 업데이트
+function updateBulkWinningPriceKRW() {
+  const winningPrice = parseFloat(
+    document.getElementById("bulkWinningPrice").value
+  );
+  if (!winningPrice || isNaN(winningPrice)) {
+    document.getElementById("bulkWinningPriceKRW").textContent =
+      "관부가세 포함: -";
+    return;
+  }
+
+  // 카테고리와 경매번호는 일괄 처리에서 단순화를 위해 기본값 사용
+  const totalPrice = calculateTotalPrice(winningPrice, 1, "기타");
+  document.getElementById(
+    "bulkWinningPriceKRW"
+  ).textContent = `관부가세 포함: ${formatCurrency(totalPrice, "KRW")}`;
+}
+
+// 일괄 낙찰 완료 제출
+async function submitBulkComplete() {
+  const checkedBids = document.querySelectorAll(".bid-checkbox:checked");
+  const winningPrice = document.getElementById("bulkWinningPrice").value;
+
+  if (checkedBids.length === 0) {
+    closeAllModals();
+    return;
+  }
+
+  try {
+    // 체크된 각 입찰에 대해 낙찰 완료 처리
+    for (const checkbox of checkedBids) {
+      const bidId = checkbox.dataset.bidId;
+
+      // winningPrice가 있으면 전달, 없으면 기본값 사용
+      if (winningPrice) {
+        await completeBid(bidId, parseFloat(winningPrice));
+      } else {
+        await completeBid(bidId);
+      }
+    }
+
+    closeAllModals();
+    showAlert(`${checkedBids.length}개 입찰이 완료되었습니다.`, "success");
+
+    // 데이터 새로고침
+    await loadLiveBids();
+  } catch (error) {
+    handleError(error, "일괄 입찰 완료 처리 중 오류가 발생했습니다.");
+  }
+}
+
+// 일괄 낙찰 실패 모달 열기
+function openBulkCancelModal() {
+  const checkedBids = document.querySelectorAll(".bid-checkbox:checked");
+  const count = checkedBids.length;
+
+  if (count === 0) return;
+
+  document.getElementById("bulkCancelCount").textContent = count;
+
+  openModal("bulkCancelModal");
+}
+
+// 일괄 낙찰 실패 제출
+async function submitBulkCancel() {
+  const checkedBids = document.querySelectorAll(".bid-checkbox:checked");
+
+  if (checkedBids.length === 0) {
+    closeAllModals();
+    return;
+  }
+
+  try {
+    // 체크된 각 입찰에 대해 낙찰 실패 처리
+    for (const checkbox of checkedBids) {
+      const bidId = checkbox.dataset.bidId;
+      await cancelBid(bidId);
+    }
+
+    closeAllModals();
+    showAlert(
+      `${checkedBids.length}개 입찰이 낙찰 실패로 처리되었습니다.`,
+      "success"
+    );
+
+    // 데이터 새로고침
+    await loadLiveBids();
+  } catch (error) {
+    handleError(error, "일괄 입찰 취소 처리 중 오류가 발생했습니다.");
   }
 }

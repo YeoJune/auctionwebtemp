@@ -138,11 +138,16 @@ async function proposeSecondPrice(bidId, secondPrice) {
   });
 }
 
-// 입찰 완료 처리
-async function completeBid(bidId) {
+// 입찰 완료 처리 (winningPrice 파라미터 추가)
+async function completeBid(bidId, winningPrice) {
+  const body =
+    winningPrice !== undefined
+      ? JSON.stringify({ winningPrice })
+      : JSON.stringify({});
+
   return fetchAPI(`/live-bids/${bidId}/complete`, {
     method: "PUT",
-    body: JSON.stringify({}),
+    body: body,
   });
 }
 

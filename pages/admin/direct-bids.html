@@ -112,6 +112,7 @@
           <table class="data-table" id="directBidsTable">
             <thead>
               <tr>
+                <th><input type="checkbox" id="selectAllBids" /></th>
                 <th>ID</th>
                 <th>상품 정보</th>
                 <th>고객 정보</th>
@@ -125,7 +126,7 @@
             </thead>
             <tbody id="directBidsTableBody">
               <tr>
-                <td colspan="9" class="text-center">
+                <td colspan="10" class="text-center">
                   데이터를 불러오는 중입니다...
                 </td>
               </tr>
@@ -135,6 +136,19 @@
 
         <!-- 페이지네이션 추가 -->
         <div id="pagination" class="pagination"></div>
+
+        <!-- 일괄 작업 버튼 -->
+        <div class="bulk-actions">
+          <button id="bulkCompleteBtn" class="btn" disabled>
+            선택 항목 낙찰 완료
+          </button>
+          <button id="bulkCancelBtn" class="btn btn-secondary" disabled>
+            선택 항목 낙찰 실패
+          </button>
+          <button id="bulkMarkSubmittedBtn" class="btn" disabled>
+            선택 항목 반영됨으로 표시
+          </button>
+        </div>
       </div>
     </div>
 
@@ -194,6 +208,76 @@
         <div class="modal-footer">
           <button class="btn btn-secondary close-modal">취소</button>
           <button class="btn" id="submitMarkAsSubmitted">
+            반영됨으로 표시
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 일괄 낙찰 완료 모달 -->
+    <div class="modal-overlay" id="bulkCompleteModal">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3 class="modal-title">일괄 낙찰 완료 처리</h3>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>
+            선택한 <span id="bulkCompleteCount">0</span>개 항목을 낙찰 완료
+            처리하시겠습니까?
+          </p>
+          <p>완료 후에는 취소할 수 없습니다.</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary close-modal">취소</button>
+          <button class="btn" id="submitBulkComplete">완료 처리</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 일괄 낙찰 실패 모달 -->
+    <div class="modal-overlay" id="bulkCancelModal">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3 class="modal-title">일괄 낙찰 실패 처리</h3>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>
+            선택한 <span id="bulkCancelCount">0</span>개 항목을 낙찰 실패
+            처리하시겠습니까?
+          </p>
+          <p>취소 후에는 되돌릴 수 없습니다.</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary close-modal">취소</button>
+          <button class="btn btn-danger" id="submitBulkCancel">
+            입찰 취소
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 일괄 플랫폼 반영 완료 표시 모달 -->
+    <div class="modal-overlay" id="bulkMarkAsSubmittedModal">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3 class="modal-title">일괄 플랫폼 반영 완료 표시</h3>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>
+            선택한 <span id="bulkMarkSubmittedCount">0</span>개 항목을 플랫폼
+            반영 완료로 표시하시겠습니까?
+          </p>
+          <p>
+            ※ 이 작업은 실제 플랫폼에 입찰을 반영하지 않습니다. 반드시 수동으로
+            입찰 완료 후 체크해주세요.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary close-modal">취소</button>
+          <button class="btn" id="submitBulkMarkAsSubmitted">
             반영됨으로 표시
           </button>
         </div>
