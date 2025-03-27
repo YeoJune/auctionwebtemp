@@ -4,6 +4,82 @@ const router = express.Router();
 const pool = require("../utils/DB");
 const { processItem } = require("../utils/processItem");
 
+// ===== 캐싱 관련 설정 =====
+// 기본 캐시 만료 시간: 1시간
+const CACHE_DURATION = 60 * 60 * 1000;
+
+// 캐시 저장소
+const cache = {
+  // 필터 데이터 캐시
+  filters: {
+    // 단순 목록 캐시
+    lists: {
+      brands: { data: null, lastFetched: null },
+      categories: { data: null, lastFetched: null },
+    },
+    // 통계 정보가 포함된 필터 캐시
+    withStats: {
+      brands: { data: null, lastFetched: null },
+      dates: { data: null, lastFetched: null },
+      aucNums: { data: null, lastFetched: null },
+      ranks: { data: null, lastFetched: null },
+    },
+  },
+};
+
+// 캐시 유효성 검사 함수
+function isCacheValid(cacheItem) {
+  const currentTime = new Date().getTime();
+  return (
+    cacheItem.data !== null &&
+    cacheItem.lastFetched !== null &&
+    currentTime - cacheItem.lastFetched < CACHE_DURATION
+  );
+}
+
+// 캐시 업데이트 함수
+function updateCache(cacheItem, data) {
+  cacheItem.data = data;
+  cacheItem.lastFetched = new Date().getTime();
+}
+
+// 캐시 무효화 함수
+function invalidateCache(type, subType = null) {
+  if (type === "all") {
+    // 모든 캐시 초기화
+    Object.keys(cache.filters).forEach((category) => {
+      Object.keys(cache.filters[category]).forEach((item) => {
+        cache.filters[category][item].data = null;
+        cache.filters[category][item].lastFetched = null;
+      });
+    });
+  } else if (type === "filters") {
+    if (subType === null) {
+      // 모든 필터 캐시 초기화
+      Object.keys(cache.filters).forEach((category) => {
+        Object.keys(cache.filters[category]).forEach((item) => {
+          cache.filters[category][item].data = null;
+          cache.filters[category][item].lastFetched = null;
+        });
+      });
+    } else if (cache.filters.lists[subType]) {
+      // 특정 목록 필터 캐시 초기화
+      cache.filters.lists[subType].data = null;
+      cache.filters.lists[subType].lastFetched = null;
+
+      // 관련 통계 캐시도 초기화
+      if (cache.filters.withStats[subType]) {
+        cache.filters.withStats[subType].data = null;
+        cache.filters.withStats[subType].lastFetched = null;
+      }
+    } else if (cache.filters.withStats[subType]) {
+      // 특정 통계 필터 캐시만 초기화
+      cache.filters.withStats[subType].data = null;
+      cache.filters.withStats[subType].lastFetched = null;
+    }
+  }
+}
+
 router.get("/", async (req, res) => {
   const {
     page = 1,
@@ -189,14 +265,23 @@ router.get("/", async (req, res) => {
   }
 });
 
+// 캐싱 적용된 brands-with-count 엔드포인트
 router.get("/brands-with-count", async (req, res) => {
   try {
+    // 캐시 확인
+    if (isCacheValid(cache.filters.withStats.brands)) {
+      return res.json(cache.filters.withStats.brands.data);
+    }
+
     const [results] = await pool.query(`
       SELECT brand, COUNT(*) as count
       FROM values_items
       GROUP BY brand
       ORDER BY count DESC, brand ASC
     `);
+
+    // 캐시 업데이트
+    updateCache(cache.filters.withStats.brands, results);
 
     res.json(results);
   } catch (error) {
@@ -205,14 +290,23 @@ router.get("/brands-with-count", async (req, res) => {
   }
 });
 
+// 캐싱 적용된 scheduled-dates-with-count 엔드포인트
 router.get("/scheduled-dates-with-count", async (req, res) => {
   try {
+    // 캐시 확인
+    if (isCacheValid(cache.filters.withStats.dates)) {
+      return res.json(cache.filters.withStats.dates.data);
+    }
+
     const [results] = await pool.query(`
       SELECT DATE(scheduled_date) as Date, COUNT(*) as count
       FROM values_items
       GROUP BY DATE(scheduled_date)
       ORDER BY Date ASC
     `);
+
+    // 캐시 업데이트
+    updateCache(cache.filters.withStats.dates, results);
 
     res.json(results);
   } catch (error) {
@@ -223,36 +317,66 @@ router.get("/scheduled-dates-with-count", async (req, res) => {
   }
 });
 
+// 캐싱 적용된 brands 엔드포인트
 router.get("/brands", async (req, res) => {
   try {
+    // 캐시 확인
+    if (isCacheValid(cache.filters.lists.brands)) {
+      return res.json(cache.filters.lists.brands.data);
+    }
+
     const [results] = await pool.query(`
       SELECT DISTINCT brand 
       FROM values_items 
       ORDER BY brand ASC
     `);
-    res.json(results.map((row) => row.brand));
+
+    const brandsList = results.map((row) => row.brand);
+
+    // 캐시 업데이트
+    updateCache(cache.filters.lists.brands, brandsList);
+
+    res.json(brandsList);
   } catch (error) {
     console.error("Error fetching brands:", error);
     res.status(500).json({ message: "Error fetching brands" });
   }
 });
 
+// 캐싱 적용된 categories 엔드포인트
 router.get("/categories", async (req, res) => {
   try {
+    // 캐시 확인
+    if (isCacheValid(cache.filters.lists.categories)) {
+      return res.json(cache.filters.lists.categories.data);
+    }
+
     const [results] = await pool.query(`
       SELECT DISTINCT category 
       FROM values_items 
       ORDER BY category ASC
     `);
-    res.json(results.map((row) => row.category));
+
+    const categoriesList = results.map((row) => row.category);
+
+    // 캐시 업데이트
+    updateCache(cache.filters.lists.categories, categoriesList);
+
+    res.json(categoriesList);
   } catch (error) {
     console.error("Error fetching categories:", error);
     res.status(500).json({ message: "Error fetching categories" });
   }
 });
 
+// 캐싱 적용된 ranks 엔드포인트
 router.get("/ranks", async (req, res) => {
   try {
+    // 캐시 확인
+    if (isCacheValid(cache.filters.withStats.ranks)) {
+      return res.json(cache.filters.withStats.ranks.data);
+    }
+
     const [results] = await pool.query(`
       SELECT DISTINCT 
         CASE 
@@ -287,6 +411,10 @@ router.get("/ranks", async (req, res) => {
       ORDER BY 
         FIELD(rank, 'N', 'S', 'A', 'AB', 'B', 'BC', 'C', 'D', 'E', 'F')
     `);
+
+    // 캐시 업데이트
+    updateCache(cache.filters.withStats.ranks, results);
+
     res.json(results);
   } catch (error) {
     console.error("Error fetching ranks:", error);
@@ -294,8 +422,14 @@ router.get("/ranks", async (req, res) => {
   }
 });
 
+// 캐싱 적용된 auc-nums 엔드포인트
 router.get("/auc-nums", async (req, res) => {
   try {
+    // 캐시 확인
+    if (isCacheValid(cache.filters.withStats.aucNums)) {
+      return res.json(cache.filters.withStats.aucNums.data);
+    }
+
     const [results] = await pool.query(`
       SELECT auc_num, COUNT(*) as count
       FROM values_items
@@ -304,10 +438,33 @@ router.get("/auc-nums", async (req, res) => {
       ORDER BY auc_num ASC
     `);
 
+    // 캐시 업데이트
+    updateCache(cache.filters.withStats.aucNums, results);
+
     res.json(results);
   } catch (error) {
     console.error("Error fetching auction numbers:", error);
     res.status(500).json({ message: "Error fetching auction numbers" });
+  }
+});
+
+// 캐시 무효화 엔드포인트 (관리자용)
+router.post("/invalidate-cache", (req, res) => {
+  try {
+    const { type, subType } = req.body;
+
+    // 관리자 권한 확인
+    if (!req.session.user?.isAdmin) {
+      return res
+        .status(403)
+        .json({ message: "Unauthorized: Admin access required" });
+    }
+
+    invalidateCache(type, subType);
+    res.json({ message: "Cache invalidated successfully" });
+  } catch (error) {
+    console.error("Error invalidating cache:", error);
+    res.status(500).json({ message: "Error invalidating cache" });
   }
 });
 

@@ -10,9 +10,97 @@ const apiUrl = `https://api.currencyfreaks.com/v2.0/rates/latest?apikey=${proces
 
 dotenv.config();
 
-let cachedRate = null;
-let lastFetchedTime = null;
-const cacheDuration = 60 * 60 * 1000;
+// ===== 캐싱 관련 설정 =====
+// 기본 캐시 만료 시간: 1시간
+const CACHE_DURATION = 60 * 60 * 1000;
+
+// 캐시 저장소
+const cache = {
+  // 환율 캐시
+  exchange: {
+    data: null,
+    lastFetched: null,
+  },
+  // 필터 데이터 캐시
+  filters: {
+    // enabled 필터 캐시
+    enabled: {
+      brands: { data: null, lastFetched: null },
+      categories: { data: null, lastFetched: null },
+      dates: { data: null, lastFetched: null },
+    },
+    // 통계 정보가 포함된 필터 캐시
+    withStats: {
+      brands: { data: null, lastFetched: null },
+      dates: { data: null, lastFetched: null },
+      aucNums: { data: null, lastFetched: null },
+      ranks: { data: null, lastFetched: null },
+      auctionTypes: { data: null, lastFetched: null },
+    },
+  },
+};
+
+// 캐시 유효성 검사 함수
+function isCacheValid(cacheItem) {
+  const currentTime = new Date().getTime();
+  return (
+    cacheItem.data !== null &&
+    cacheItem.lastFetched !== null &&
+    currentTime - cacheItem.lastFetched < CACHE_DURATION
+  );
+}
+
+// 캐시 업데이트 함수
+function updateCache(cacheItem, data) {
+  cacheItem.data = data;
+  cacheItem.lastFetched = new Date().getTime();
+}
+
+// 캐시 무효화 함수
+function invalidateCache(type, subType = null) {
+  if (type === "all") {
+    // 모든 캐시 초기화
+    Object.keys(cache).forEach((key) => {
+      if (typeof cache[key] === "object") {
+        if (cache[key].data !== undefined) {
+          cache[key].data = null;
+          cache[key].lastFetched = null;
+        } else {
+          Object.keys(cache[key]).forEach((subKey) => {
+            Object.keys(cache[key][subKey]).forEach((item) => {
+              cache[key][subKey][item].data = null;
+              cache[key][subKey][item].lastFetched = null;
+            });
+          });
+        }
+      }
+    });
+  } else if (type === "filters") {
+    if (subType === null) {
+      // 모든 필터 캐시 초기화
+      Object.keys(cache.filters).forEach((category) => {
+        Object.keys(cache.filters[category]).forEach((item) => {
+          cache.filters[category][item].data = null;
+          cache.filters[category][item].lastFetched = null;
+        });
+      });
+    } else if (cache.filters.enabled[subType]) {
+      // 특정 필터의 enabled 캐시만 초기화
+      cache.filters.enabled[subType].data = null;
+      cache.filters.enabled[subType].lastFetched = null;
+
+      // 관련 통계 캐시도 초기화
+      if (cache.filters.withStats[subType]) {
+        cache.filters.withStats[subType].data = null;
+        cache.filters.withStats[subType].lastFetched = null;
+      }
+    }
+  } else if (type === "exchange") {
+    // 환율 캐시 초기화
+    cache.exchange.data = null;
+    cache.exchange.lastFetched = null;
+  }
+}
 
 function formatDate(dateString) {
   const date = new Date(dateString);
@@ -21,17 +109,40 @@ function formatDate(dateString) {
   return kstDate.toISOString().split("T")[0];
 }
 
-// Helper function to get enabled filter values
+// 캐싱을 적용한 필터 조회 함수
 async function getEnabledFilters(filterType) {
+  // 캐시 맵핑
+  const cacheMapping = {
+    brand: cache.filters.enabled.brands,
+    category: cache.filters.enabled.categories,
+    date: cache.filters.enabled.dates,
+  };
+
+  const cacheItem = cacheMapping[filterType];
+
+  // 캐시가 유효한 경우 캐시된 데이터 반환
+  if (cacheItem && isCacheValid(cacheItem)) {
+    return cacheItem.data;
+  }
+
+  // 캐시가 없거나 만료된 경우 DB에서 조회
   const [enabled] = await pool.query(
     `
     SELECT filter_value 
     FROM filter_settings 
     WHERE filter_type = ? AND is_enabled = TRUE
-  `,
+    `,
     [filterType]
   );
-  return enabled.map((item) => item.filter_value);
+
+  const result = enabled.map((item) => item.filter_value);
+
+  // 캐시 업데이트
+  if (cacheItem) {
+    updateCache(cacheItem, result);
+  }
+
+  return result;
 }
 
 router.get("/", async (req, res) => {
@@ -411,8 +522,14 @@ router.get("/", async (req, res) => {
   }
 });
 
+// 캐싱 적용된 brands-with-count 엔드포인트
 router.get("/brands-with-count", async (req, res) => {
   try {
+    // 캐시 확인
+    if (isCacheValid(cache.filters.withStats.brands)) {
+      return res.json(cache.filters.withStats.brands.data);
+    }
+
     const enabledBrands = await getEnabledFilters("brand");
     if (enabledBrands.length === 0) {
       return res.json([]);
@@ -430,6 +547,9 @@ router.get("/brands-with-count", async (req, res) => {
       enabledBrands
     );
 
+    // 캐시 업데이트
+    updateCache(cache.filters.withStats.brands, results);
+
     res.json(results);
   } catch (error) {
     console.error("Error fetching brands with count:", error);
@@ -437,8 +557,14 @@ router.get("/brands-with-count", async (req, res) => {
   }
 });
 
+// 캐싱 적용된 auction-types 엔드포인트
 router.get("/auction-types", async (req, res) => {
   try {
+    // 캐시 확인
+    if (isCacheValid(cache.filters.withStats.auctionTypes)) {
+      return res.json(cache.filters.withStats.auctionTypes.data);
+    }
+
     const [results] = await pool.query(`
       SELECT bid_type, COUNT(*) as count
       FROM crawled_items
@@ -447,6 +573,9 @@ router.get("/auction-types", async (req, res) => {
       ORDER BY count DESC
     `);
 
+    // 캐시 업데이트
+    updateCache(cache.filters.withStats.auctionTypes, results);
+
     res.json(results);
   } catch (error) {
     console.error("Error fetching auction types:", error);
@@ -454,8 +583,14 @@ router.get("/auction-types", async (req, res) => {
   }
 });
 
+// 캐싱 적용된 scheduled-dates-with-count 엔드포인트
 router.get("/scheduled-dates-with-count", async (req, res) => {
   try {
+    // 캐시 확인
+    if (isCacheValid(cache.filters.withStats.dates)) {
+      return res.json(cache.filters.withStats.dates.data);
+    }
+
     const enabledDates = await getEnabledFilters("date");
     if (enabledDates.length === 0) {
       return res.json([]);
@@ -473,6 +608,9 @@ router.get("/scheduled-dates-with-count", async (req, res) => {
       enabledDates
     );
 
+    // 캐시 업데이트
+    updateCache(cache.filters.withStats.dates, results);
+
     res.json(results);
   } catch (error) {
     console.error("Error fetching scheduled dates with count:", error);
@@ -482,6 +620,7 @@ router.get("/scheduled-dates-with-count", async (req, res) => {
   }
 });
 
+// 캐싱 적용된 brands 엔드포인트
 router.get("/brands", async (req, res) => {
   try {
     const enabledBrands = await getEnabledFilters("brand");
@@ -492,8 +631,14 @@ router.get("/brands", async (req, res) => {
   }
 });
 
+// 캐싱 적용된 auc-nums 엔드포인트
 router.get("/auc-nums", async (req, res) => {
   try {
+    // 캐시 확인
+    if (isCacheValid(cache.filters.withStats.aucNums)) {
+      return res.json(cache.filters.withStats.aucNums.data);
+    }
+
     const [results] = await pool.query(`
       SELECT auc_num, COUNT(*) as count
       FROM crawled_items
@@ -502,6 +647,9 @@ router.get("/auc-nums", async (req, res) => {
       ORDER BY auc_num ASC
     `);
 
+    // 캐시 업데이트
+    updateCache(cache.filters.withStats.aucNums, results);
+
     res.json(results);
   } catch (error) {
     console.error("Error fetching auction numbers:", error);
@@ -509,6 +657,7 @@ router.get("/auc-nums", async (req, res) => {
   }
 });
 
+// 캐싱 적용된 categories 엔드포인트
 router.get("/categories", async (req, res) => {
   try {
     const enabledCategories = await getEnabledFilters("category");
@@ -519,34 +668,45 @@ router.get("/categories", async (req, res) => {
   }
 });
 
+// 환율 캐싱 개선
 router.get("/exchange-rate", async (req, res) => {
-  const currentTime = new Date().getTime();
-
-  if (
-    cachedRate &&
-    lastFetchedTime &&
-    currentTime - lastFetchedTime < cacheDuration
-  ) {
-    //console.log('Returning cached data');
-    return res.json({ rate: cachedRate });
-  }
-
   try {
+    // 캐시 확인
+    if (isCacheValid(cache.exchange)) {
+      return res.json({ rate: cache.exchange.data });
+    }
+
     const response = await axios.get(apiUrl);
+    const rate = response.data.rates.KRW / response.data.rates.JPY;
 
-    cachedRate = response.data.rates.KRW / response.data.rates.JPY;
-    lastFetchedTime = currentTime;
+    // 캐시 업데이트
+    updateCache(cache.exchange, rate);
 
-    //console.log('Fetched new data from API');
-    res.json({ rate: cachedRate });
+    res.json({ rate });
   } catch (error) {
     console.error("Error fetching exchange rate:", error);
+
+    // 캐시된 데이터가 있으면 오류 시 캐시 반환
+    if (cache.exchange.data !== null) {
+      return res.json({
+        rate: cache.exchange.data,
+        cached: true,
+        error: "Failed to fetch new exchange rate, using cached data",
+      });
+    }
+
     res.status(500).json({ error: "Failed to fetch exchange rate" });
   }
 });
 
+// 캐싱 적용된 ranks 엔드포인트
 router.get("/ranks", async (req, res) => {
   try {
+    // 캐시 확인
+    if (isCacheValid(cache.filters.withStats.ranks)) {
+      return res.json(cache.filters.withStats.ranks.data);
+    }
+
     const [results] = await pool.query(`
       SELECT DISTINCT 
         CASE 
@@ -581,10 +741,34 @@ router.get("/ranks", async (req, res) => {
       ORDER BY 
         FIELD(rank, 'N', 'S', 'A', 'AB', 'B', 'BC', 'C', 'D', 'E', 'F')
     `);
+
+    // 캐시 업데이트
+    updateCache(cache.filters.withStats.ranks, results);
+
     res.json(results);
   } catch (error) {
     console.error("Error fetching ranks:", error);
     res.status(500).json({ message: "Error fetching ranks" });
+  }
+});
+
+// 캐시 무효화 엔드포인트 (관리자용)
+router.post("/invalidate-cache", (req, res) => {
+  try {
+    const { type, subType } = req.body;
+
+    // 관리자 권한 확인
+    if (!req.session.user?.isAdmin) {
+      return res
+        .status(403)
+        .json({ message: "Unauthorized: Admin access required" });
+    }
+
+    invalidateCache(type, subType);
+    res.json({ message: "Cache invalidated successfully" });
+  } catch (error) {
+    console.error("Error invalidating cache:", error);
+    res.status(500).json({ message: "Error invalidating cache" });
   }
 });
 
