@@ -479,14 +479,27 @@ function openBulkCompleteModal() {
   openModal("bulkCompleteModal");
 }
 
+// 일괄 낙찰 완료 제출 (기존 submitBulkComplete 함수 수정)
 async function submitBulkComplete() {
   const checkedBids = document.querySelectorAll(".bid-checkbox:checked");
-  try {
-    for (const checkbox of checkedBids) {
-      await completeDirectBid(checkbox.dataset.bidId);
-    }
+  if (checkedBids.length === 0) {
     closeAllModals();
-    showAlert(`${checkedBids.length}개 입찰이 완료되었습니다.`, "success");
+    return;
+  }
+
+  try {
+    // 체크된 입찰 ID 추출
+    const bidIds = Array.from(checkedBids).map(
+      (checkbox) => checkbox.dataset.bidId
+    );
+
+    // 수정된 API 함수 호출 - 이제 배열을 직접 전달
+    await completeDirectBid(bidIds);
+
+    closeAllModals();
+    showAlert(`${bidIds.length}개 입찰이 완료되었습니다.`, "success");
+
+    // 데이터 새로고침
     await loadDirectBids();
   } catch (error) {
     handleError(error, "일괄 입찰 완료 처리 중 오류가 발생했습니다.");
@@ -500,17 +513,30 @@ function openBulkCancelModal() {
   openModal("bulkCancelModal");
 }
 
+// 일괄 낙찰 실패 제출 (기존 submitBulkCancel 함수 수정)
 async function submitBulkCancel() {
   const checkedBids = document.querySelectorAll(".bid-checkbox:checked");
+  if (checkedBids.length === 0) {
+    closeAllModals();
+    return;
+  }
+
   try {
-    for (const checkbox of checkedBids) {
-      await cancelDirectBid(checkbox.dataset.bidId);
-    }
+    // 체크된 입찰 ID 추출
+    const bidIds = Array.from(checkedBids).map(
+      (checkbox) => checkbox.dataset.bidId
+    );
+
+    // 수정된 API 함수 호출 - 이제 배열을 직접 전달
+    await cancelDirectBid(bidIds);
+
     closeAllModals();
     showAlert(
-      `${checkedBids.length}개 입찰이 낙찰 실패로 처리되었습니다.`,
+      `${bidIds.length}개 입찰이 낙찰 실패로 처리되었습니다.`,
       "success"
     );
+
+    // 데이터 새로고침
     await loadDirectBids();
   } catch (error) {
     handleError(error, "일괄 입찰 취소 처리 중 오류가 발생했습니다.");
@@ -524,17 +550,30 @@ function openBulkMarkAsSubmittedModal() {
   openModal("bulkMarkAsSubmittedModal");
 }
 
+// 일괄 플랫폼 반영 완료 제출 (기존 submitBulkMarkAsSubmitted 함수 수정)
 async function submitBulkMarkAsSubmitted() {
   const checkedBids = document.querySelectorAll(".bid-checkbox:checked");
+  if (checkedBids.length === 0) {
+    closeAllModals();
+    return;
+  }
+
   try {
-    for (const checkbox of checkedBids) {
-      await markDirectBidAsSubmitted(checkbox.dataset.bidId);
-    }
+    // 체크된 입찰 ID 추출
+    const bidIds = Array.from(checkedBids).map(
+      (checkbox) => checkbox.dataset.bidId
+    );
+
+    // 수정된 API 함수 호출 - 이제 배열을 직접 전달
+    await markDirectBidAsSubmitted(bidIds);
+
     closeAllModals();
     showAlert(
-      `${checkedBids.length}개 입찰이 플랫폼 반영 완료로 표시되었습니다.`,
+      `${bidIds.length}개 입찰이 플랫폼 반영 완료로 표시되었습니다.`,
       "success"
     );
+
+    // 데이터 새로고침
     await loadDirectBids();
   } catch (error) {
     handleError(error, "일괄 반영 완료 표시 중 오류가 발생했습니다.");

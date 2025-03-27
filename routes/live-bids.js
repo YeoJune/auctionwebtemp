@@ -440,127 +440,99 @@ router.put("/:id/final", async (req, res) => {
   }
 });
 
-// 관리자의 낙찰 완료 처리
-router.put("/:id/complete", isAdmin, async (req, res) => {
-  const { id } = req.params;
-  const { winningPrice } = req.body; // 낙찰 금액 파라미터 추가
+// 낙찰 완료 처리 - 단일 또는 다중 처리 지원
+router.put("/complete", isAdmin, async (req, res) => {
+  const { id, ids, winningPrice } = req.body; // 단일 id 또는 다중 ids 배열 수신
+
+  // id나 ids 중 하나는 필수
+  if (!id && (!ids || !Array.isArray(ids) || ids.length === 0)) {
+    return res.status(400).json({ message: "Bid ID(s) are required" });
+  }
+
+  // 단일 ID를 배열로 변환하여 일관된 처리
+  const bidIds = id ? [id] : ids;
 
   const connection = await pool.getConnection();
 
   try {
     await connection.beginTransaction();
 
-    // 입찰 정보 확인
-    const [bids] = await connection.query(
-      "SELECT * FROM live_bids WHERE id = ?",
-      [id]
-    );
+    // 한 번의 쿼리로 여러 입찰 상태를 업데이트
+    const placeholders = bidIds.map(() => "?").join(",");
 
-    if (bids.length === 0) {
-      await connection.rollback();
-      return res.status(404).json({ message: "Bid not found" });
-    }
+    let updateResult;
 
-    const bid = bids[0];
-
-    if (bid.status !== "final") {
-      await connection.rollback();
-      return res.status(400).json({ message: "Bid is not in final stage" });
-    }
-
-    // 낙찰 금액이 최종 입찰가보다 높은 경우 자동으로 낙찰 실패 처리
-    if (
-      winningPrice &&
-      parseFloat(winningPrice) > parseFloat(bid.final_price)
-    ) {
-      await connection.query(
-        'UPDATE live_bids SET status = "cancelled", final_price = ? WHERE id = ?',
-        [winningPrice, id]
+    // 낙찰 금액이 있는 경우
+    if (winningPrice !== undefined) {
+      // 낙찰 금액이 있을 경우 한 번에 모든 해당 입찰 업데이트
+      [updateResult] = await connection.query(
+        `UPDATE live_bids SET status = 'completed', final_price = ? WHERE id IN (${placeholders}) AND status = 'final'`,
+        [winningPrice, ...bidIds]
       );
-
-      await connection.commit();
-
-      return res.status(200).json({
-        message: "Bid automatically cancelled due to higher winning price",
-        bidId: id,
-        status: "cancelled",
-      });
+    } else {
+      // 낙찰 금액이 없을 경우 기존 최종 입찰가로 완료 처리
+      [updateResult] = await connection.query(
+        `UPDATE live_bids SET status = 'completed' WHERE id IN (${placeholders}) AND status = 'final'`,
+        bidIds
+      );
     }
-
-    // 낙찰 완료 처리 (최종 입찰가 업데이트)
-    let updateQuery = 'UPDATE live_bids SET status = "completed"';
-    let queryParams = [id];
-
-    // 낙찰 금액이 제공된 경우 final_price 업데이트
-    if (winningPrice) {
-      updateQuery =
-        'UPDATE live_bids SET status = "completed", final_price = ?';
-      queryParams = [winningPrice, id];
-    }
-
-    await connection.query(updateQuery + " WHERE id = ?", queryParams);
 
     await connection.commit();
 
     res.status(200).json({
-      message: "Bid completed successfully",
-      bidId: id,
+      message: id
+        ? "Bid completed successfully"
+        : `${updateResult.affectedRows} bids completed successfully`,
       status: "completed",
-      winningPrice: winningPrice || bid.final_price,
+      winningPrice: winningPrice,
     });
   } catch (err) {
     await connection.rollback();
-    console.error("Error completing bid:", err);
-    res.status(500).json({ message: "Error completing bid" });
+    console.error("Error completing bid(s):", err);
+    res.status(500).json({ message: "Error completing bid(s)" });
   } finally {
     connection.release();
   }
 });
 
-// 관리자의 경매 취소 처리
-router.put("/:id/cancel", isAdmin, async (req, res) => {
-  const { id } = req.params;
+// 낙찰 실패 처리 - 단일 또는 다중 처리 지원
+router.put("/cancel", isAdmin, async (req, res) => {
+  const { id, ids } = req.body; // 단일 id 또는 다중 ids 배열 수신
+
+  // id나 ids 중 하나는 필수
+  if (!id && (!ids || !Array.isArray(ids) || ids.length === 0)) {
+    return res.status(400).json({ message: "Bid ID(s) are required" });
+  }
+
+  // 단일 ID를 배열로 변환하여 일관된 처리
+  const bidIds = id ? [id] : ids;
 
   const connection = await pool.getConnection();
 
   try {
     await connection.beginTransaction();
 
-    // 입찰 정보 확인
-    const [bids] = await connection.query(
-      "SELECT * FROM live_bids WHERE id = ?",
-      [id]
-    );
+    // 한 번의 쿼리로 여러 입찰 상태를 업데이트
+    const placeholders = bidIds.map(() => "?").join(",");
 
-    if (bids.length === 0) {
-      await connection.rollback();
-      return res.status(404).json({ message: "Bid not found" });
-    }
-
-    const bid = bids[0];
-
-    if (bid.status === "completed") {
-      await connection.rollback();
-      return res.status(400).json({ message: "Cannot cancel completed bid" });
-    }
-
-    // 경매 취소 처리
-    await connection.query(
-      'UPDATE live_bids SET status = "cancelled" WHERE id = ?',
-      [id]
+    // 완료 상태가 아닌 입찰만 취소 처리
+    const [updateResult] = await connection.query(
+      `UPDATE live_bids SET status = 'cancelled' WHERE id IN (${placeholders}) AND status != 'completed'`,
+      bidIds
     );
 
     await connection.commit();
 
     res.status(200).json({
-      message: "Bid cancelled successfully",
-      bidId: id,
+      message: id
+        ? "Bid cancelled successfully"
+        : `${updateResult.affectedRows} bids cancelled successfully`,
       status: "cancelled",
     });
   } catch (err) {
     await connection.rollback();
-    console.error("Error cancelling bid:", err);
-    res.status(500).json({ message: "Error cancelling bid" });
+    console.error("Error cancelling bid(s):", err);
+    res.status(500).json({ message: "Error cancelling bid(s)" });
   } finally {
     connection.release();
   }

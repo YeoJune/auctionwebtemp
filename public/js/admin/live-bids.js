@@ -583,31 +583,31 @@ function updateBulkWinningPriceKRW() {
   ).textContent = `관부가세 포함: ${formatCurrency(totalPrice, "KRW")}`;
 }
 
-// 일괄 낙찰 완료 제출
+// 일괄 낙찰 완료 제출 (기존 submitBulkComplete 함수 수정)
 async function submitBulkComplete() {
   const checkedBids = document.querySelectorAll(".bid-checkbox:checked");
-  const winningPrice = document.getElementById("bulkWinningPrice").value;
-
   if (checkedBids.length === 0) {
     closeAllModals();
     return;
   }
 
   try {
-    // 체크된 각 입찰에 대해 낙찰 완료 처리
-    for (const checkbox of checkedBids) {
-      const bidId = checkbox.dataset.bidId;
+    // 체크된 입찰 ID 추출
+    const bidIds = Array.from(checkedBids).map(
+      (checkbox) => checkbox.dataset.bidId
+    );
 
-      // winningPrice가 있으면 전달, 없으면 기본값 사용
-      if (winningPrice) {
-        await completeBid(bidId, parseFloat(winningPrice));
-      } else {
-        await completeBid(bidId);
-      }
-    }
+    // 낙찰 금액 추출
+    const winningPrice = document.getElementById("bulkWinningPrice").value;
+
+    // 수정된 API 함수 호출 - 이제 배열을 직접 전달
+    await completeBid(
+      bidIds,
+      winningPrice ? parseFloat(winningPrice) : undefined
+    );
 
     closeAllModals();
-    showAlert(`${checkedBids.length}개 입찰이 완료되었습니다.`, "success");
+    showAlert(`${bidIds.length}개 입찰이 완료되었습니다.`, "success");
 
     // 데이터 새로고침
     await loadLiveBids();
@@ -628,25 +628,26 @@ function openBulkCancelModal() {
   openModal("bulkCancelModal");
 }
 
-// 일괄 낙찰 실패 제출
+// 일괄 낙찰 실패 제출 (기존 submitBulkCancel 함수 수정)
 async function submitBulkCancel() {
   const checkedBids = document.querySelectorAll(".bid-checkbox:checked");
-
   if (checkedBids.length === 0) {
     closeAllModals();
     return;
   }
 
   try {
-    // 체크된 각 입찰에 대해 낙찰 실패 처리
-    for (const checkbox of checkedBids) {
-      const bidId = checkbox.dataset.bidId;
-      await cancelBid(bidId);
-    }
+    // 체크된 입찰 ID 추출
+    const bidIds = Array.from(checkedBids).map(
+      (checkbox) => checkbox.dataset.bidId
+    );
+
+    // 수정된 API 함수 호출 - 이제 배열을 직접 전달
+    await cancelBid(bidIds);
 
     closeAllModals();
     showAlert(
-      `${checkedBids.length}개 입찰이 낙찰 실패로 처리되었습니다.`,
+      `${bidIds.length}개 입찰이 낙찰 실패로 처리되었습니다.`,
       "success"
     );
 

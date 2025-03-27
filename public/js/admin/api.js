@@ -138,24 +138,32 @@ async function proposeSecondPrice(bidId, secondPrice) {
   });
 }
 
-// 입찰 완료 처리 (winningPrice 파라미터 추가)
-async function completeBid(bidId, winningPrice) {
-  const body =
-    winningPrice !== undefined
-      ? JSON.stringify({ winningPrice })
-      : JSON.stringify({});
+// 현장 경매 낙찰 완료 처리 - 단일 또는 다중 처리 지원
+async function completeBid(idOrIds, winningPrice) {
+  // 단일 ID인지 배열인지 확인
+  const isArray = Array.isArray(idOrIds);
+  const payload = isArray ? { ids: idOrIds } : { id: idOrIds };
 
-  return fetchAPI(`/live-bids/${bidId}/complete`, {
+  // winningPrice가 있으면 추가
+  if (winningPrice !== undefined) {
+    payload.winningPrice = winningPrice;
+  }
+
+  return fetchAPI("/live-bids/complete", {
     method: "PUT",
-    body: body,
+    body: JSON.stringify(payload),
   });
 }
 
-// 입찰 취소 처리
-async function cancelBid(bidId) {
-  return fetchAPI(`/live-bids/${bidId}/cancel`, {
+// 현장 경매 낙찰 실패 처리 - 단일 또는 다중 처리 지원
+async function cancelBid(idOrIds) {
+  // 단일 ID인지 배열인지 확인
+  const isArray = Array.isArray(idOrIds);
+  const payload = isArray ? { ids: idOrIds } : { id: idOrIds };
+
+  return fetchAPI("/live-bids/cancel", {
     method: "PUT",
-    body: JSON.stringify({}),
+    body: JSON.stringify(payload),
   });
 }
 
@@ -211,27 +219,39 @@ async function placeBid(itemId, currentPrice) {
   });
 }
 
-// 입찰 완료 처리
-async function completeDirectBid(bidId) {
-  return fetchAPI(`/direct-bids/${bidId}/complete`, {
+// 직접 경매 낙찰 완료 처리 - 단일 또는 다중 처리 지원
+async function completeDirectBid(idOrIds) {
+  // 단일 ID인지 배열인지 확인
+  const isArray = Array.isArray(idOrIds);
+  const payload = isArray ? { ids: idOrIds } : { id: idOrIds };
+
+  return fetchAPI("/direct-bids/complete", {
     method: "PUT",
-    body: JSON.stringify({}),
+    body: JSON.stringify(payload),
   });
 }
 
-// 입찰 취소 처리
-async function cancelDirectBid(bidId) {
-  return fetchAPI(`/direct-bids/${bidId}/cancel`, {
+// 직접 경매 낙찰 실패 처리 - 단일 또는 다중 처리 지원
+async function cancelDirectBid(idOrIds) {
+  // 단일 ID인지 배열인지 확인
+  const isArray = Array.isArray(idOrIds);
+  const payload = isArray ? { ids: idOrIds } : { id: idOrIds };
+
+  return fetchAPI("/direct-bids/cancel", {
     method: "PUT",
-    body: JSON.stringify({}),
+    body: JSON.stringify(payload),
   });
 }
 
-// 직접 입찰 플랫폼 반영 완료 표시
-async function markDirectBidAsSubmitted(bidId) {
-  return fetchAPI(`/direct-bids/${bidId}/mark-submitted`, {
+// 직접 경매 플랫폼 반영 완료 표시 - 단일 또는 다중 처리 지원
+async function markDirectBidAsSubmitted(idOrIds) {
+  // 단일 ID인지 배열인지 확인
+  const isArray = Array.isArray(idOrIds);
+  const payload = isArray ? { ids: idOrIds } : { id: idOrIds };
+
+  return fetchAPI("/direct-bids/mark-submitted", {
     method: "PUT",
-    body: JSON.stringify({}),
+    body: JSON.stringify(payload),
   });
 }
 
