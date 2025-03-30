@@ -12,40 +12,15 @@ document.addEventListener("DOMContentLoaded", function () {
 async function loadDashboardData() {
   try {
     // 요약 정보 로드
-    const summary = await fetchDashboardSummary().catch(() => {
-      // API가 아직 구현되지 않은 경우 샘플 데이터 사용
-      return {
-        liveBids: { first: 5, second: 3, final: 2 },
-        directAuctions: { scheduled: 4, active: 2, ended: 10 },
-        invoices: { pending: 5, processing: 3, completed: 8 },
-      };
-    });
+    const summary = await fetchDashboardSummary();
     updateSummaryCards(summary);
 
     // 최근 활동 로드
-    const activities = await fetchRecentActivities().catch(() => {
-      // API가 아직 구현되지 않은 경우 샘플 데이터 사용
-      return [
-        { type: "bid", time: new Date(), content: "새 입찰이 등록되었습니다." },
-        {
-          type: "auction",
-          time: new Date(Date.now() - 30 * 60000),
-          content: "경매가 종료되었습니다.",
-        },
-        {
-          type: "invoice",
-          time: new Date(Date.now() - 120 * 60000),
-          content: "새 인보이스가 생성되었습니다.",
-        },
-      ];
-    });
+    const activities = await fetchRecentActivities();
     updateRecentActivities(activities);
 
     // 사용자 통계 로드
-    const stats = await fetchUserStats().catch(() => {
-      // API가 아직 구현되지 않은 경우 샘플 데이터 사용
-      return { activeUsers: 12, dailyUsers: 45, totalRequests: 256 };
-    });
+    const stats = await fetchUserStats();
     updateUserStats(stats);
 
     // 1. 비즈니스 핵심 지표 (KPI) 로드
@@ -132,10 +107,10 @@ function updateRecentActivities(activities) {
 
 // 사용자 통계 업데이트
 function updateUserStats(stats) {
-  document.getElementById("activeUsers").textContent =
-    stats.totalActiveUsers || stats.activeUsers || 0;
-  document.getElementById("dailyUsers").textContent =
-    stats.totalDailyUsers || stats.dailyUsers || 0;
+  document.getElementById("activeTotalUsers").textContent =
+    stats.totalActiveUsers || 0;
+  document.getElementById("dailyTotalUsers").textContent =
+    stats.totalDailyUsers || 0;
   document.getElementById("totalRequests").textContent = stats.totalRequests
     ? stats.totalRequests.toLocaleString()
     : 0;
@@ -507,7 +482,7 @@ function extractActiveUsers(liveBids, directBids) {
 
 // 활동적인 사용자 업데이트
 function updateActiveUsers(activeUsers) {
-  const activeUsersContainer = document.getElementById("activeUsers");
+  const activeUsersContainer = document.getElementById("activeUsersList");
 
   if (activeUsers.length === 0) {
     activeUsersContainer.innerHTML =
