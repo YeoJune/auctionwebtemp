@@ -83,7 +83,6 @@ app.use(metricsModule.metricsMiddleware);
 
 // 메트릭스 조회 엔드포인트
 app.get("/api/metrics", metricsModule.getMetrics);
-app.get("/api/metrics", metricsModule.getMetrics);
 app.post("/api/metrics/reset", metricsModule.resetMetrics);
 
 // 라우트
@@ -119,9 +118,9 @@ app.get("/bidResultsPage", (req, res) => {
   if (req.session.user) res.sendFile(__dirname + "/pages/bid-results.html");
   else res.redirect("/signinPage");
 });
-app.get('/bidProductsPage', (req, res) => {
-  if (req.session.user) res.sendFile(__dirname + '/pages/bid-products.html');
-  else res.redirect('/signinPage');
+app.get("/bidProductsPage", (req, res) => {
+  if (req.session.user) res.sendFile(__dirname + "/pages/bid-products.html");
+  else res.redirect("/signinPage");
 });
 
 app.get("/inquiryPage", (req, res) => {
