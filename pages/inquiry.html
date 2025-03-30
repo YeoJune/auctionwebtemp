@@ -81,7 +81,7 @@
       }
 
       .inquiry-container {
-        max-width: 600px;
+        max-width: 800px;
         margin: 0 auto;
         padding: 0 20px;
       }
@@ -213,6 +213,22 @@
 
       .pricing-link:hover {
         color: #1e40af;
+      }
+
+      .guide-tip {
+        background: #fffbeb;
+        border-left: 4px solid #f59e0b;
+        padding: 16px;
+        margin-top: 24px;
+        border-radius: 0 8px 8px 0;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      .tip-icon {
+        font-size: 24px;
+        line-height: 1;
       }
 
       /* 모바일 스타일 */
@@ -378,18 +394,16 @@
                 </p>
               </div>
 
-              <div class="form-group">
-                <label for="username">사용하실 아이디 *</label>
-                <input type="text" id="username" name="username" required />
-              </div>
-
-              <div class="form-group">
-                <label for="password">사용하실 비밀번호 *</label>
-                <input type="password" id="password" name="password" required />
-              </div>
-
               <div class="form-buttons">
                 <button type="submit" class="submit-button">입점신청</button>
+              </div>
+
+              <div class="guide-tip">
+                <div class="tip-icon">💡</div>
+                <p>
+                  TIP: 회원가입 시 사업자등록증 사본을 미리 준비해두시면 승인
+                  과정이 더 빠르게 진행됩니다.
+                </p>
               </div>
 
               <div id="formMessage" class="form-message"></div>
