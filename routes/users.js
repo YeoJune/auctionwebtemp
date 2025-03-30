@@ -121,6 +121,35 @@ router.post("/", requireAuth, async (req, res) => {
   }
 });
 
+router.get("/:id", requireAuth, async (req, res) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const id = req.params.id;
+
+    // 회원 정보 조회
+    const [users] = await conn.query(
+      `SELECT id, registration_date, email, business_number, company_name, 
+       phone, address, created_at, is_active 
+       FROM users WHERE id = ?`,
+      [id]
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({ message: "회원을 찾을 수 없습니다." });
+    }
+
+    res.json(users[0]);
+  } catch (error) {
+    console.error("회원 조회 오류:", error);
+    res
+      .status(500)
+      .json({ message: "회원 정보를 불러오는 중 오류가 발생했습니다." });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
 // 회원 수정
 router.put("/:id", requireAuth, async (req, res) => {
   let conn;
