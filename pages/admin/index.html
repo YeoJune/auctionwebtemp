@@ -238,6 +238,68 @@
         font-weight: bold;
         color: #2c6ecb;
       }
+
+      .auction-item {
+  display: flex;
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.auction-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.item-image {
+  width: 60px;
+  height: 60px;
+  margin-right: 10px;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.item-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.item-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.item-title {
+  font-weight: bold;
+  margin-bottom: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 3px;
+}
+
+.item-brand {
+  font-size: 12px;
+  color: #666;
+}
+
+.price {
+  font-weight: bold;
+  color: #2c6ecb;
+}
+
+.bid-status {
+  color: #666;
+}
     </style>
   </head>
   <body>
