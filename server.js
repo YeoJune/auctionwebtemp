@@ -19,6 +19,7 @@ const directBidsRoutes = require("./routes/direct-bids");
 const userRoutes = require("./routes/users");
 const pool = require("./utils/DB");
 const metricsModule = require("./utils/metrics");
+const dashboardRoutes = require("./routes/dashboard");
 
 const app = express();
 const server = http.createServer(app);
@@ -97,6 +98,7 @@ app.use("/api/detail", detailRoutes);
 app.use("/api/live-bids", liveBidsRoutes);
 app.use("/api/direct-bids", directBidsRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 // 정적 파일 서빙
 app.use(express.static("public"));

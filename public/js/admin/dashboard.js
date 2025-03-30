@@ -11,18 +11,99 @@ document.addEventListener("DOMContentLoaded", function () {
 // 대시보드 데이터 로드
 async function loadDashboardData() {
   try {
-    // 1. 사용자 통계 로드 (이미 구현된 API)
+    // 요약 정보 로드
+    const summary = await fetchDashboardSummary();
+    updateSummaryCards(summary);
+
+    // 최근 활동 로드
+    const activities = await fetchRecentActivities();
+    updateRecentActivities(activities);
+
+    // 사용자 통계 로드
     const stats = await fetchUserStats();
     updateUserStats(stats);
 
-    // 2. 비즈니스 KPI 데이터 계산
-    await loadBusinessKPIs();
+    // 비즈니스 KPI 데이터 로드
+    const kpiData = await fetchBusinessKPI();
+    updateBusinessKPIs(
+      kpiData.successRate,
+      kpiData.avgBidPrice,
+      kpiData.todayBids
+    );
 
-    // 3. 활성 경매 데이터 로드
-    await loadActiveAuctions();
+    // 활성 경매 데이터 로드
+    const auctions = await fetchActiveAuctions();
+    updateActiveAuctions(auctions.liveAuctions, auctions.directAuctions);
+
+    // 활성 사용자 데이터 로드
+    const users = await fetchActiveUsers();
+    updateActiveUsers(users);
   } catch (error) {
     console.error("대시보드 데이터를 불러오는 중 오류가 발생했습니다:", error);
   }
+}
+
+// 요약 카드 업데이트
+function updateSummaryCards(summary) {
+  // 현장 경매 요약
+  document.getElementById("liveBidsFirst").textContent =
+    summary.liveBids.first || 0;
+  document.getElementById("liveBidsSecond").textContent =
+    summary.liveBids.second || 0;
+  document.getElementById("liveBidsFinal").textContent =
+    summary.liveBids.final || 0;
+
+  // 직접 경매 요약
+  document.getElementById("directAuctionsScheduled").textContent =
+    summary.directAuctions.scheduled || 0;
+  document.getElementById("directAuctionsActive").textContent =
+    summary.directAuctions.active || 0;
+  document.getElementById("directAuctionsEnded").textContent =
+    summary.directAuctions.ended || 0;
+
+  // 인보이스 부분은 제외합니다
+}
+
+// 최근 활동 업데이트
+function updateRecentActivities(activities) {
+  const activitiesContainer = document.getElementById("recentActivities");
+
+  if (!activities || activities.length === 0) {
+    activitiesContainer.innerHTML =
+      '<div class="activity-item">최근 활동이 없습니다.</div>';
+    return;
+  }
+
+  let html = "";
+
+  activities.forEach((activity) => {
+    const time = formatDate(activity.time);
+
+    // 활동 타입에 따른 아이콘/스타일 설정
+    let activityClass = "";
+    switch (activity.type) {
+      case "bid":
+        activityClass = "activity-bid";
+        break;
+      case "auction":
+        activityClass = "activity-auction";
+        break;
+      case "invoice":
+        activityClass = "activity-invoice";
+        break;
+      default:
+        activityClass = "activity-default";
+    }
+
+    html += `
+      <div class="activity-item ${activityClass}">
+        <div class="activity-time">${time}</div>
+        <div class="activity-content">${activity.content}</div>
+      </div>
+    `;
+  });
+
+  activitiesContainer.innerHTML = html;
 }
 
 // 사용자 통계 업데이트
@@ -34,101 +115,6 @@ function updateUserStats(stats) {
   document.getElementById("totalRequests").textContent = stats.totalRequests
     ? stats.totalRequests.toLocaleString()
     : 0;
-}
-
-// 비즈니스 KPI 데이터 로드 및 업데이트
-async function loadBusinessKPIs() {
-  try {
-    // 라이브 비드 데이터 로드 (첫 번째 페이지, 상태 필터 없음)
-    const liveBidsResponse = await fetchLiveBids();
-    const liveBids = liveBidsResponse?.bids || [];
-
-    // 직접 비드 데이터 로드
-    const directBidsResponse = await fetchDirectBids();
-    const directBids = directBidsResponse?.bids || [];
-
-    // KPI 계산
-    const stats = calculateKPIStats(liveBids, directBids);
-
-    // KPI 카드 업데이트
-    updateBusinessKPIs(stats.successRate, stats.avgBidPrice, stats.todayBids);
-  } catch (error) {
-    console.error("비즈니스 KPI 로드 중 오류:", error);
-    // 오류 발생시 UI에 '-' 표시
-    updateBusinessKPIs("-", "-", "-");
-  }
-}
-
-// KPI 통계 계산
-function calculateKPIStats(liveBids, directBids) {
-  // 1. 경매 성공률 계산
-  const completedLiveBids = liveBids.filter(
-    (bid) => bid.status === "completed"
-  ).length;
-  const completedDirectBids = directBids.filter(
-    (bid) => bid.status === "completed"
-  ).length;
-
-  const cancelledLiveBids = liveBids.filter(
-    (bid) => bid.status === "cancelled"
-  ).length;
-  const cancelledDirectBids = directBids.filter(
-    (bid) => bid.status === "cancelled"
-  ).length;
-
-  const totalCompleted = completedLiveBids + completedDirectBids;
-  const totalCancelled = cancelledLiveBids + cancelledDirectBids;
-  const totalProcessed = totalCompleted + totalCancelled;
-
-  const successRate =
-    totalProcessed > 0
-      ? ((totalCompleted / totalProcessed) * 100).toFixed(1)
-      : 0;
-
-  // 2. 평균 입찰가 계산
-  let totalBidPrice = 0;
-  let validBidCount = 0;
-
-  liveBids.forEach((bid) => {
-    // 최종 입찰가, 2차 입찰가 또는 1차 입찰가 중 가장 높은 값 사용
-    const bidPrice = bid.final_price || bid.second_price || bid.first_price;
-    if (bidPrice) {
-      totalBidPrice += bidPrice;
-      validBidCount++;
-    }
-  });
-
-  directBids.forEach((bid) => {
-    if (bid.current_price) {
-      totalBidPrice += bid.current_price;
-      validBidCount++;
-    }
-  });
-
-  const avgBidPrice =
-    validBidCount > 0 ? Math.round(totalBidPrice / validBidCount) : 0;
-
-  // 3. 오늘의 입찰 수 계산
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const todayLiveBids = liveBids.filter((bid) => {
-    const bidDate = new Date(bid.created_at);
-    return bidDate >= today;
-  }).length;
-
-  const todayDirectBids = directBids.filter((bid) => {
-    const bidDate = new Date(bid.created_at);
-    return bidDate >= today;
-  }).length;
-
-  const todayBids = todayLiveBids + todayDirectBids;
-
-  return {
-    successRate,
-    avgBidPrice,
-    todayBids,
-  };
 }
 
 // 비즈니스 KPI 데이터 업데이트
@@ -145,37 +131,13 @@ function updateBusinessKPIs(successRate, avgBidPrice, todayBids) {
     typeof todayBids === "number" ? todayBids : todayBids;
 }
 
-// 활성 경매 데이터 로드
-async function loadActiveAuctions() {
-  try {
-    // 현장 경매 데이터 로드
-    const liveBidsResponse = await fetchLiveBids("active", 1, 5);
-    const liveBids = liveBidsResponse?.bids || [];
-
-    // 직접 경매 데이터 로드
-    const directBidsResponse = await fetchDirectBids("active", true, 1, 5);
-    const directBids = directBidsResponse?.bids || [];
-
-    // 최근 활동 사용자 추출
-    const recentUsers = extractRecentUsers(liveBids, directBids);
-
-    // UI 업데이트
-    updateActiveAuctions(liveBids, directBids);
-    updateActiveUsers(recentUsers);
-  } catch (error) {
-    console.error("활성 경매 데이터 로드 중 오류:", error);
-    updateActiveAuctions([], []);
-    updateActiveUsers([]);
-  }
-}
-
 // 활성 경매 업데이트
 function updateActiveAuctions(liveBids, directBids) {
   const liveAuctionsContainer = document.getElementById("liveAuctions");
   const directAuctionsContainer = document.getElementById("directAuctions");
 
   // 현장 경매 표시
-  if (liveBids.length === 0) {
+  if (!liveBids || liveBids.length === 0) {
     liveAuctionsContainer.innerHTML =
       '<div class="no-data">활성 현장 경매가 없습니다.</div>';
   } else {
@@ -200,7 +162,7 @@ function updateActiveAuctions(liveBids, directBids) {
   }
 
   // 직접 경매 표시
-  if (directBids.length === 0) {
+  if (!directBids || directBids.length === 0) {
     directAuctionsContainer.innerHTML =
       '<div class="no-data">활성 직접 경매가 없습니다.</div>';
   } else {
@@ -244,48 +206,11 @@ function getBidStatusText(status) {
   }
 }
 
-// 최근 활동 사용자 추출
-function extractRecentUsers(liveBids, directBids) {
-  // 모든 입찰 병합
-  const allBids = [
-    ...liveBids.map((bid) => ({
-      userId: bid.user_id,
-      bidType: "live",
-      time: new Date(bid.created_at),
-    })),
-    ...directBids.map((bid) => ({
-      userId: bid.user_id,
-      bidType: "direct",
-      time: new Date(bid.created_at),
-    })),
-  ];
-
-  // 시간 순으로 정렬
-  allBids.sort((a, b) => b.time - a.time);
-
-  // 사용자 ID별 그룹화 (중복 제거)
-  const uniqueUsers = {};
-  allBids.forEach((bid) => {
-    if (!uniqueUsers[bid.userId]) {
-      uniqueUsers[bid.userId] = {
-        userId: bid.userId,
-        lastActivity: bid.time,
-        bidType: bid.bidType,
-      };
-    }
-  });
-
-  // 배열로 변환하여 최신 활동순으로 정렬
-  return Object.values(uniqueUsers)
-    .sort((a, b) => b.lastActivity - a.lastActivity)
-    .slice(0, 5); // 상위 5명만 표시
-}
-
 // 활동 사용자 업데이트
 function updateActiveUsers(users) {
   const usersContainer = document.getElementById("activeUsersList");
 
-  if (users.length === 0) {
+  if (!users || users.length === 0) {
     usersContainer.innerHTML =
       '<div class="no-data">최근 활동 사용자가 없습니다.</div>';
     return;
@@ -294,40 +219,18 @@ function updateActiveUsers(users) {
   let html = "";
 
   users.forEach((user) => {
-    const lastActivity = formatDate(user.lastActivity);
-    const bidTypeText = user.bidType === "live" ? "현장 경매" : "직접 경매";
+    const lastActivity = formatDate(user.last_activity);
 
     html += `
       <div class="active-user">
-        <div class="user-id">${user.userId}</div>
+        <div class="user-id">${user.user_id}</div>
         <div class="activity-stats">
           <span>마지막 활동: ${lastActivity}</span>
-          <span>활동 유형: ${bidTypeText}</span>
+          <span>활동 수: ${user.bid_count}회</span>
         </div>
       </div>
     `;
   });
 
   usersContainer.innerHTML = html;
-}
-
-// 통화 포맷팅 함수 (JPY 지원)
-function formatCurrency(amount, currency = "KRW") {
-  if (!amount) return "-";
-
-  if (currency === "JPY") {
-    // 일본 엔으로 표시
-    return new Intl.NumberFormat("ja-JP", {
-      style: "currency",
-      currency: "JPY",
-      maximumFractionDigits: 0,
-    }).format(amount);
-  } else {
-    // 한국 원으로 표시 (기본 통화)
-    return new Intl.NumberFormat("ko-KR", {
-      style: "currency",
-      currency: "KRW",
-      maximumFractionDigits: 0,
-    }).format(amount);
-  }
 }

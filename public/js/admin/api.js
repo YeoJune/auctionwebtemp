@@ -58,6 +58,42 @@ async function fetchAPI(endpoint, options = {}) {
 
 // ---- 대시보드 API ----
 
+// 요약 정보 조회
+async function fetchDashboardSummary() {
+  return fetchAPI("/dashboard/summary");
+}
+
+// 최근 활동 조회
+async function fetchRecentActivities() {
+  return fetchAPI("/dashboard/activities");
+}
+
+// 사용자 통계 조회
+async function fetchUserStats() {
+  try {
+    // API 호출
+    return await fetchAPI("/metrics");
+  } catch (error) {
+    console.error("사용자 통계 가져오기 실패:", error);
+    throw error;
+  }
+}
+
+// 비즈니스 KPI 데이터 조회
+async function fetchBusinessKPI() {
+  return fetchAPI("/dashboard/kpi");
+}
+
+// 활성 경매 정보 조회
+async function fetchActiveAuctions() {
+  return fetchAPI("/dashboard/active-auctions");
+}
+
+// 활성 사용자 정보 조회
+async function fetchActiveUsers() {
+  return fetchAPI("/dashboard/active-users");
+}
+
 // 사용자 통계 조회
 async function fetchUserStats() {
   try {
