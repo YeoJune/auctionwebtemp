@@ -19,71 +19,59 @@ router.get("/summary", isAdmin, async (req, res) => {
   try {
     // 현장 경매 상태별 개수 조회
     const [liveBidsCount] = await connection.query(`
-      SELECT 
-        SUM(CASE WHEN status = 'first' THEN 1 ELSE 0 END) as first,
-        SUM(CASE WHEN status = 'second' THEN 1 ELSE 0 END) as second,
-        SUM(CASE WHEN status = 'final' THEN 1 ELSE 0 END) as final,
-        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
-        SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled
+      SELECT status, COUNT(*) as count
       FROM live_bids
+      GROUP BY status
     `);
 
-    // 직접 경매 상태별 개수 조회 (예약, 활성, 종료)
-    const [directAuctionsCount] = await connection.query(`
-      SELECT 
-        SUM(CASE 
-          WHEN i.scheduled_date > NOW() THEN 1 
-          ELSE 0 
-        END) as scheduled,
-        SUM(CASE 
-          WHEN d.status = 'active' THEN 1 
-          ELSE 0 
-        END) as active,
-        SUM(CASE 
-          WHEN d.status IN ('completed', 'cancelled') THEN 1 
-          ELSE 0 
-        END) as ended
+    // 직접 경매 상태 조회
+    const [directBidsCount] = await connection.query(`
+      SELECT d.status, COUNT(*) as count
       FROM direct_bids d
-      LEFT JOIN crawled_items i ON d.item_id = i.item_id
+      GROUP BY d.status
     `);
 
-    // 인보이스 상태별 개수 조회 (가상 테이블, 실제로 구현 시 적절한 테이블 사용)
-    // 이 부분은 인보이스 테이블 구조에 따라 조정 필요
-    const [invoiceCount] = await connection
-      .query(
-        `
-      SELECT 
-        COUNT(*) as total,
-        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
-        SUM(CASE WHEN status = 'processing' THEN 1 ELSE 0 END) as processing,
-        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed
-      FROM invoices
-    `
-      )
-      .catch(() => {
-        // 인보이스 테이블이 없을 경우 기본값 반환
-        return [[{ total: 0, pending: 0, processing: 0, completed: 0 }]];
-      });
+    // 예약된 경매 조회 (미래 날짜인 경우)
+    const [scheduledAuctions] = await connection.query(`
+      SELECT COUNT(*) as count
+      FROM direct_bids d
+      JOIN crawled_items i ON d.item_id = i.item_id
+      WHERE i.scheduled_date > NOW()
+    `);
+
+    // 결과를 가공하여 응답 형태로 변환
+    const liveBidsResult = {
+      first: 0,
+      second: 0,
+      final: 0,
+      completed: 0,
+      cancelled: 0,
+    };
+
+    liveBidsCount.forEach((item) => {
+      if (item.status in liveBidsResult) {
+        liveBidsResult[item.status] = item.count;
+      }
+    });
+
+    const directBidsResult = {
+      scheduled: scheduledAuctions[0].count || 0,
+      active: 0,
+      ended: 0,
+    };
+
+    directBidsCount.forEach((item) => {
+      if (item.status === "active") {
+        directBidsResult.active = item.count;
+      } else if (item.status === "completed" || item.status === "cancelled") {
+        directBidsResult.ended += item.count;
+      }
+    });
 
     // 응답 데이터 구성
     const summary = {
-      liveBids: {
-        first: liveBidsCount[0].first || 0,
-        second: liveBidsCount[0].second || 0,
-        final: liveBidsCount[0].final || 0,
-        completed: liveBidsCount[0].completed || 0,
-        cancelled: liveBidsCount[0].cancelled || 0,
-      },
-      directAuctions: {
-        scheduled: directAuctionsCount[0].scheduled || 0,
-        active: directAuctionsCount[0].active || 0,
-        ended: directAuctionsCount[0].ended || 0,
-      },
-      invoices: {
-        pending: invoiceCount[0].pending || 0,
-        processing: invoiceCount[0].processing || 0,
-        completed: invoiceCount[0].completed || 0,
-      },
+      liveBids: liveBidsResult,
+      directAuctions: directBidsResult,
     };
 
     res.status(200).json(summary);
@@ -104,12 +92,9 @@ router.get("/activities", isAdmin, async (req, res) => {
     // 최근 현장 경매 활동
     const [recentLiveBids] = await connection.query(
       `
-      SELECT 
-        'bid' as type,
-        CONCAT('현장 경매: ', l.id, ' 상태 변경 - ', l.status) as content,
-        l.updated_at as time
-      FROM live_bids l
-      ORDER BY l.updated_at DESC
+      SELECT id, status, updated_at
+      FROM live_bids
+      ORDER BY updated_at DESC
       LIMIT ?
     `,
       [parseInt(limit, 10)]
@@ -118,42 +103,29 @@ router.get("/activities", isAdmin, async (req, res) => {
     // 최근 직접 경매 활동
     const [recentDirectBids] = await connection.query(
       `
-      SELECT 
-        'auction' as type,
-        CONCAT('직접 경매: ', d.id, ' 상태 변경 - ', d.status) as content,
-        d.updated_at as time
-      FROM direct_bids d
-      ORDER BY d.updated_at DESC
+      SELECT id, status, updated_at
+      FROM direct_bids
+      ORDER BY updated_at DESC
       LIMIT ?
     `,
       [parseInt(limit, 10)]
     );
 
-    // 최근 인보이스 활동 (구현 시 실제 테이블 사용)
-    const [recentInvoices] = await connection
-      .query(
-        `
-      SELECT 
-        'invoice' as type,
-        CONCAT('인보이스: ', i.id, ' 상태 변경 - ', i.status) as content,
-        i.updated_at as time
-      FROM invoices i
-      ORDER BY i.updated_at DESC
-      LIMIT ?
-    `,
-        [parseInt(limit, 10)]
-      )
-      .catch(() => {
-        // 인보이스 테이블이 없을 경우 빈 배열 반환
-        return [[]];
-      });
+    // 자바스크립트에서 데이터 가공
+    const liveBidActivities = recentLiveBids.map((bid) => ({
+      type: "bid",
+      content: `현장 경매: ${bid.id} 상태 변경 - ${bid.status}`,
+      time: bid.updated_at,
+    }));
+
+    const directBidActivities = recentDirectBids.map((bid) => ({
+      type: "auction",
+      content: `직접 경매: ${bid.id} 상태 변경 - ${bid.status}`,
+      time: bid.updated_at,
+    }));
 
     // 모든 활동 병합 및 최신순 정렬
-    const allActivities = [
-      ...recentLiveBids,
-      ...recentDirectBids,
-      ...recentInvoices,
-    ]
+    const allActivities = [...liveBidActivities, ...directBidActivities]
       .sort((a, b) => new Date(b.time) - new Date(a.time))
       .slice(0, parseInt(limit, 10));
 
@@ -176,52 +148,89 @@ router.get("/kpi", isAdmin, async (req, res) => {
     today.setHours(0, 0, 0, 0);
     const todayStr = today.toISOString().split("T")[0];
 
-    // 1. 경매 성공률 계산
-    const [successRateData] = await connection.query(`
-      SELECT
-        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_count,
-        SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_count
-      FROM (
-        SELECT status FROM live_bids WHERE status IN ('completed', 'cancelled')
-        UNION ALL
-        SELECT status FROM direct_bids WHERE status IN ('completed', 'cancelled')
-      ) as combined_bids
+    // 완료된 경매와 취소된 경매 수 조회
+    const [liveBidsStatus] = await connection.query(`
+      SELECT status, COUNT(*) as count
+      FROM live_bids
+      WHERE status IN ('completed', 'cancelled')
+      GROUP BY status
     `);
 
-    const completedCount = successRateData[0].completed_count || 0;
-    const cancelledCount = successRateData[0].cancelled_count || 0;
+    // 직접 경매 상태 조회
+    const [directBidsStatus] = await connection.query(`
+      SELECT status, COUNT(*) as count
+      FROM direct_bids
+      WHERE status IN ('completed', 'cancelled')
+      GROUP BY status
+    `);
+
+    // 평균 입찰가 조회
+    const [liveBidPrices] = await connection.query(`
+      SELECT final_price
+      FROM live_bids
+      WHERE final_price IS NOT NULL
+    `);
+
+    const [directBidPrices] = await connection.query(`
+      SELECT current_price
+      FROM direct_bids
+      WHERE current_price IS NOT NULL
+    `);
+
+    // 오늘의 입찰 수 조회
+    const [todayLiveBids] = await connection.query(
+      `
+      SELECT COUNT(*) as count
+      FROM live_bids
+      WHERE DATE(created_at) = ?
+    `,
+      [todayStr]
+    );
+
+    const [todayDirectBids] = await connection.query(
+      `
+      SELECT COUNT(*) as count
+      FROM direct_bids
+      WHERE DATE(created_at) = ?
+    `,
+      [todayStr]
+    );
+
+    // 자바스크립트에서 데이터 가공
+    let completedCount = 0;
+    let cancelledCount = 0;
+
+    liveBidsStatus.forEach((item) => {
+      if (item.status === "completed") completedCount += item.count;
+      if (item.status === "cancelled") cancelledCount += item.count;
+    });
+
+    directBidsStatus.forEach((item) => {
+      if (item.status === "completed") completedCount += item.count;
+      if (item.status === "cancelled") cancelledCount += item.count;
+    });
+
     const totalProcessed = completedCount + cancelledCount;
     const successRate =
       totalProcessed > 0
         ? ((completedCount / totalProcessed) * 100).toFixed(1)
         : 0;
 
-    // 2. 평균 입찰가 계산
-    const [avgBidPriceData] = await connection.query(`
-      SELECT AVG(price) as avg_price
-      FROM (
-        SELECT final_price as price FROM live_bids WHERE final_price IS NOT NULL
-        UNION ALL
-        SELECT current_price as price FROM direct_bids WHERE current_price IS NOT NULL
-      ) as bid_prices
-    `);
+    // 평균 입찰가 계산
+    const allPrices = [
+      ...liveBidPrices.map((item) => item.final_price),
+      ...directBidPrices.map((item) => item.current_price),
+    ].filter((price) => price !== null && price !== undefined);
 
-    const avgBidPrice = avgBidPriceData[0].avg_price || 0;
+    let avgBidPrice = 0;
+    if (allPrices.length > 0) {
+      const sum = allPrices.reduce((acc, price) => acc + price, 0);
+      avgBidPrice = Math.round(sum / allPrices.length);
+    }
 
-    // 3. 오늘의 입찰 수 계산
-    const [todayBidsData] = await connection.query(
-      `
-      SELECT COUNT(*) as count
-      FROM (
-        SELECT created_at FROM live_bids WHERE DATE(created_at) = ?
-        UNION ALL
-        SELECT created_at FROM direct_bids WHERE DATE(created_at) = ?
-      ) as today_bids
-    `,
-      [todayStr, todayStr]
-    );
-
-    const todayBids = todayBidsData[0].count || 0;
+    // 오늘의 입찰 수 합산
+    const todayBids =
+      (todayLiveBids[0]?.count || 0) + (todayDirectBids[0]?.count || 0);
 
     res.status(200).json({
       successRate,
@@ -244,7 +253,7 @@ router.get("/active-auctions", isAdmin, async (req, res) => {
     // 활성 현장 경매 조회 (final 상태)
     const [liveAuctions] = await connection.query(`
       SELECT 
-        l.id, l.item_id, l.final_price, l.status,
+        l.id, l.item_id, l.final_price, l.status, l.first_price, l.second_price,
         i.original_title, i.category, i.brand, i.image
       FROM live_bids l
       JOIN crawled_items i ON l.item_id = i.item_id
@@ -282,27 +291,68 @@ router.get("/active-users", isAdmin, async (req, res) => {
   const connection = await pool.getConnection();
 
   try {
-    // 최근 활동 사용자 (최근 입찰을 기준으로)
-    const [activeUsers] = await connection.query(`
-      SELECT 
-        user_id,
-        MAX(activity_time) as last_activity,
-        COUNT(*) as bid_count
-      FROM (
-        SELECT 
-          user_id, 
-          updated_at as activity_time
-        FROM live_bids
-        UNION ALL
-        SELECT 
-          user_id, 
-          updated_at as activity_time
-        FROM direct_bids
-      ) as user_activities
-      GROUP BY user_id
-      ORDER BY last_activity DESC
-      LIMIT 5
+    // 각 테이블의 최근 활동 데이터 조회
+    const [liveBidUsers] = await connection.query(`
+      SELECT user_id, updated_at
+      FROM live_bids
+      ORDER BY updated_at DESC
     `);
+
+    const [directBidUsers] = await connection.query(`
+      SELECT user_id, updated_at
+      FROM direct_bids
+      ORDER BY updated_at DESC
+    `);
+
+    // 자바스크립트에서 데이터 가공
+    const userActivities = {};
+
+    // 현장 경매 활동 처리
+    liveBidUsers.forEach((activity) => {
+      const userId = activity.user_id;
+      const activityTime = new Date(activity.updated_at);
+
+      if (
+        !userActivities[userId] ||
+        new Date(userActivities[userId].last_activity) < activityTime
+      ) {
+        userActivities[userId] = {
+          user_id: userId,
+          last_activity: activity.updated_at,
+          bid_count: userActivities[userId]
+            ? userActivities[userId].bid_count + 1
+            : 1,
+        };
+      } else {
+        userActivities[userId].bid_count++;
+      }
+    });
+
+    // 직접 경매 활동 처리
+    directBidUsers.forEach((activity) => {
+      const userId = activity.user_id;
+      const activityTime = new Date(activity.updated_at);
+
+      if (
+        !userActivities[userId] ||
+        new Date(userActivities[userId].last_activity) < activityTime
+      ) {
+        userActivities[userId] = {
+          user_id: userId,
+          last_activity: activity.updated_at,
+          bid_count: userActivities[userId]
+            ? userActivities[userId].bid_count + 1
+            : 1,
+        };
+      } else {
+        userActivities[userId].bid_count++;
+      }
+    });
+
+    // 배열로 변환하고 최신 활동순으로 정렬
+    const activeUsers = Object.values(userActivities)
+      .sort((a, b) => new Date(b.last_activity) - new Date(a.last_activity))
+      .slice(0, 5); // 상위 5명만 반환
 
     res.status(200).json(activeUsers);
   } catch (err) {
