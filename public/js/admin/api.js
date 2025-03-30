@@ -336,7 +336,7 @@ async function fetchUsers(status = "") {
 
 // 특정 회원 조회
 async function fetchUser(userId) {
-  return fetchAPI(`/users/${userId}`);
+  return fetchAPI(`/users/${encodeURIComponent(userId)}`);
 }
 
 // 새 회원 생성
@@ -367,7 +367,7 @@ async function updateUser(userId, userData) {
     }
   }
 
-  return fetchAPI(`/users/${userId}`, {
+  return fetchAPI(`/users/${encodeURIComponent(userId)}`, {
     method: "PUT",
     body: JSON.stringify(userData),
   });
@@ -375,7 +375,7 @@ async function updateUser(userId, userData) {
 
 // 회원 삭제
 async function deleteUser(userId) {
-  return fetchAPI(`/users/${userId}`, {
+  return fetchAPI(`/users/${encodeURIComponent(userId)}`, {
     method: "DELETE",
   });
 }

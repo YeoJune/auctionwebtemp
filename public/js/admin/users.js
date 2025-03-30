@@ -82,10 +82,33 @@ function renderUsers(users) {
     button.addEventListener("click", async function () {
       const id = this.dataset.id;
       try {
+        // 로딩 상태 표시
+        const loadingText = "사용자 정보를 불러오는 중...";
+        showNoData("usersTableBody", loadingText);
+
+        // 사용자 ID URL 인코딩 및 로깅
+        console.log(`사용자 정보 요청 ID: ${id}`);
         const user = await fetchUser(id);
+
+        if (!user) {
+          throw new Error("사용자 정보를 찾을 수 없습니다.");
+        }
+
+        // 사용자 데이터 로깅
+        console.log("불러온 사용자 정보:", user);
+
+        // 사용자 폼 열기
         openUserForm(user);
+
+        // 사용자 목록 다시 로드
+        loadUsers();
       } catch (error) {
-        handleError(error, "회원 정보를 불러오는 중 오류가 발생했습니다.");
+        console.error("사용자 정보 로드 오류:", error);
+        alert(
+          "회원 정보를 불러오는데 실패했습니다: " +
+            (error.message || "알 수 없는 오류")
+        );
+        loadUsers(); // 목록 다시 로드
       }
     });
   });
@@ -104,18 +127,37 @@ function renderUsers(users) {
 // 날짜만 형식화 (YYYY-MM-DD)
 function formatDateOnly(dateString) {
   if (!dateString) return "-";
-  const date = new Date(dateString);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "-";
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  } catch (e) {
+    console.error("날짜 형식화 오류:", e);
+    return "-";
+  }
 }
 
 // 날짜를 입력 필드용 형식으로 변환 (YYYY-MM-DD)
 function formatDateForInput(dateString) {
   if (!dateString) return "";
-  const date = new Date(dateString);
-  return date.toISOString().split("T")[0];
+
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "";
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  } catch (e) {
+    console.error("날짜 입력 형식화 오류:", e);
+    return "";
+  }
 }
 
 // 회원 등록/수정 모달 열기
@@ -152,7 +194,7 @@ function openUserForm(user = null) {
 
     // 상태 설정
     document.querySelector(
-      `input[name="userStatus"][value="${user.is_active}"]`
+      `input[name="userStatus"][value="${user.is_active ? "true" : "false"}"]`
     ).checked = true;
 
     // 비밀번호 필드
@@ -216,10 +258,16 @@ async function saveUser() {
 
     let response;
     if (editMode) {
+      // 수정 요청 로깅
+      console.log(`회원 수정 요청: ${id}`, userData);
+
       // 수정
       response = await updateUser(id, userData);
       alert("회원 정보가 수정되었습니다.");
     } else {
+      // 등록 요청 로깅
+      console.log("회원 등록 요청:", userData);
+
       // 등록
       response = await createUser(userData);
       alert("회원이 등록되었습니다.");
@@ -228,6 +276,7 @@ async function saveUser() {
     closeAllModals();
     loadUsers();
   } catch (error) {
+    console.error("회원 저장 오류:", error);
     alert("오류가 발생했습니다: " + (error.message || "알 수 없는 오류"));
   }
 }
@@ -235,11 +284,13 @@ async function saveUser() {
 // 회원 삭제
 async function removeUser(id) {
   try {
+    console.log(`회원 삭제 요청: ${id}`);
     await deleteUser(id);
 
     alert("회원이 삭제되었습니다.");
     loadUsers();
   } catch (error) {
+    console.error("회원 삭제 오류:", error);
     alert(
       "삭제 중 오류가 발생했습니다: " + (error.message || "알 수 없는 오류")
     );
@@ -261,6 +312,7 @@ async function syncWithSheets() {
     alert("동기화가 완료되었습니다.");
     loadUsers();
   } catch (error) {
+    console.error("동기화 오류:", error);
     alert(
       "동기화 중 오류가 발생했습니다: " + (error.message || "알 수 없는 오류")
     );
