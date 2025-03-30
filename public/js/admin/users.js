@@ -53,20 +53,13 @@ function renderUsers(users) {
       ? formatDateOnly(user.registration_date)
       : "-";
 
-    // 주소가 너무 길면 축약 (최대 30자)
-    const shortAddress = user.address
-      ? user.address.length > 30
-        ? user.address.substring(0, 30) + "..."
-        : user.address
-      : "-";
-
     row.innerHTML = `
         <td>${user.id}</td>
         <td>${registrationDate}</td>
         <td>${user.company_name || "-"}</td>
         <td>${user.phone || "-"}</td>
         <td>${user.email || "-"}</td>
-        <td title="${user.address || ""}">${shortAddress}</td>
+        <td title="${user.address || ""}">${user.address}</td>
         <td>
           <span class="status-badge ${user.is_active ? "active" : "inactive"}">
             ${user.is_active ? "활성" : "비활성"}
