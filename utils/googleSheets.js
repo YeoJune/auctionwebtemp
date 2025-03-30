@@ -333,86 +333,147 @@ class GoogleSheetsManager {
       if (conn) conn.release();
     }
   }
+
   async syncUsersWithDB() {
     let conn;
     try {
       conn = await pool.getConnection();
       await conn.beginTransaction();
 
-      // 1. Get all users from Google Sheets
+      // 1. 구글 시트에서 모든 사용자 가져오기
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: "회원목록!C2:M",
+        range: "회원목록!B2:M", // B열(가입일)부터 M열(활성화)까지
       });
       const users = response.data.values || [];
 
-      // 2. Create users table if not exists
+      // 2. 사용자 테이블이 없는 경우 생성
       await conn.query(`
         CREATE TABLE IF NOT EXISTS users (
           id VARCHAR(50) PRIMARY KEY,
+          registration_date DATE NULL,
           password VARCHAR(64),
           email VARCHAR(100),
+          business_number VARCHAR(20),
+          company_name VARCHAR(100),
+          phone VARCHAR(20),
+          address TEXT,
           is_active BOOLEAN,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         )
       `);
 
-      // Get all user IDs from Google Sheets
-      const sheetUserIds = users.map((user) => user[0]);
+      // 구글 시트에서 모든 사용자 ID 가져오기
+      const sheetUserIds = users.map((user) => user[1]); // C열이 ID (배열 인덱스는 0부터 시작하므로 C열은 1)
 
-      // Get all user IDs from DB
+      // DB에서 모든 사용자 ID 가져오기
       const [dbUsers] = await conn.query("SELECT id FROM users");
       const dbUserIds = dbUsers.map((user) => user.id);
 
-      // Find users to delete (in DB but not in sheet)
+      // 삭제할 사용자 찾기 (DB에는 있지만 시트에는 없는 사용자)
       const userIdsToDelete = dbUserIds.filter(
         (id) => !sheetUserIds.includes(id)
       );
 
-      // Delete users not in sheet
+      // 시트에 없는 사용자 삭제
       if (userIdsToDelete.length > 0) {
         await conn.query("DELETE FROM users WHERE id IN (?)", [
           userIdsToDelete,
         ]);
         console.log(
-          `Deleted users not in Google Sheet: ${userIdsToDelete.join(", ")}`
+          `삭제된 사용자(시트에 없음): ${userIdsToDelete.join(", ")}`
         );
       }
 
-      // 3. Sync each user
+      // 3. 각 사용자 동기화
       for (const user of users) {
-        const [userId, password, _2, _3, _4, email, _5, _6, _7, _8, isActive] =
-          user;
+        // 시트 컬럼 매핑 (B열부터 시작)
+        const [
+          registrationDateStr, // B열: 가입일 (2025.1.8 형식)
+          userId, // C열: id
+          password, // D열: pw
+          businessNumber, // E열: 사업자등록번호
+          companyName, // F열: 업체명
+          phoneRaw, // G열: 연락처
+          email, // H열: 이메일
+          address, // I열: 수취주소
+          _J,
+          _K,
+          _L, // J, K, L열 (사용하지 않음)
+          isActive, // M열: 활성화
+        ] = user;
 
-        const hashedPassword = hashPassword(password);
+        // 가입일 형식 변환 (2025.1.8 -> 2025-01-08)
+        let registrationDate = null;
+        if (registrationDateStr) {
+          const dateParts = registrationDateStr.split(".");
+          if (dateParts.length === 3) {
+            const year = dateParts[0];
+            const month = dateParts[1].padStart(2, "0");
+            const day = dateParts[2].padStart(2, "0");
+            registrationDate = `${year}-${month}-${day}`;
+          }
+        }
 
+        // 전화번호 형식 정규화
+        let phone = phoneRaw ? phoneRaw.replace(/[^0-9]/g, "") : null;
+        if (phone) {
+          // 10으로 시작하면 010으로 변경
+          if (phone.startsWith("10")) {
+            phone = "0" + phone;
+          }
+        }
+
+        // 비밀번호 해싱
+        const hashedPassword = password ? hashPassword(password) : null;
+
+        // 사용자 삽입 또는 업데이트
         await conn.query(
           `
-          INSERT INTO users (id, password, email, is_active) 
-          VALUES (?, ?, ?, ?)
+          INSERT INTO users (
+            id, registration_date, password, email, 
+            business_number, company_name, phone, address, is_active
+          ) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
           ON DUPLICATE KEY UPDATE 
+            registration_date = ?,
             password = ?,
             email = ?,
+            business_number = ?,
+            company_name = ?,
+            phone = ?,
+            address = ?,
             is_active = ?
-        `,
+          `,
           [
             userId,
+            registrationDate,
             hashedPassword,
             email,
-            isActive === "TRUE",
+            businessNumber,
+            companyName,
+            phone,
+            address,
+            isActive === "TRUE" || isActive === true,
+            // 중복 키 업데이트를 위한 값들
+            registrationDate,
             hashedPassword,
             email,
-            isActive === "TRUE",
+            businessNumber,
+            companyName,
+            phone,
+            address,
+            isActive === "TRUE" || isActive === true,
           ]
         );
       }
 
       await conn.commit();
-      console.log("Users synced successfully with DB");
+      console.log("사용자가 DB와 성공적으로 동기화되었습니다");
     } catch (error) {
       if (conn) await conn.rollback();
-      console.error("Error syncing users with DB:", error);
+      console.error("사용자를 DB와 동기화하는 중 오류 발생:", error);
       throw error;
     } finally {
       if (conn) conn.release();

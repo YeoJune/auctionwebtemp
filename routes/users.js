@@ -24,9 +24,11 @@ router.get("/", requireAuth, async (req, res) => {
   try {
     conn = await pool.getConnection();
 
-    // 회원 목록 조회
+    // 회원 목록 조회 - 새로운 필드 포함
     const [users] = await conn.query(
-      "SELECT id, email, created_at, is_active FROM users ORDER BY created_at DESC"
+      `SELECT id, registration_date, email, business_number, company_name, 
+       phone, address, created_at, is_active 
+       FROM users ORDER BY created_at DESC`
     );
 
     res.json(users);
@@ -45,7 +47,17 @@ router.post("/", requireAuth, async (req, res) => {
   let conn;
   try {
     conn = await pool.getConnection();
-    const { id, password, email, is_active } = req.body;
+    const {
+      id,
+      password,
+      email,
+      is_active,
+      registration_date,
+      business_number,
+      company_name,
+      phone,
+      address,
+    } = req.body;
 
     // 필수 필드 검증
     if (!id || !password) {
@@ -62,13 +74,42 @@ router.post("/", requireAuth, async (req, res) => {
       return res.status(400).json({ message: "이미 사용 중인 아이디입니다." });
     }
 
+    // 전화번호 형식 정규화
+    let normalizedPhone = phone ? phone.replace(/[^0-9]/g, "") : null;
+    if (normalizedPhone) {
+      // 10으로 시작하면 010으로 변경
+      if (normalizedPhone.startsWith("10")) {
+        normalizedPhone = "0" + normalizedPhone;
+      }
+    }
+
     // 비밀번호 해싱
     const hashedPassword = hashPassword(password);
 
     // 회원 추가
     await conn.query(
-      "INSERT INTO users (id, password, email, is_active) VALUES (?, ?, ?, ?)",
-      [id, hashedPassword, email || null, is_active === false ? 0 : 1]
+      `INSERT INTO users (
+        id, 
+        registration_date,
+        password, 
+        email, 
+        business_number,
+        company_name,
+        phone,
+        address,
+        is_active
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        registration_date || null,
+        hashedPassword,
+        email || null,
+        business_number || null,
+        company_name || null,
+        normalizedPhone || null,
+        address || null,
+        is_active === false ? 0 : 1,
+      ]
     );
 
     res.status(201).json({ message: "회원이 등록되었습니다." });
@@ -86,7 +127,16 @@ router.put("/:id", requireAuth, async (req, res) => {
   try {
     conn = await pool.getConnection();
     const id = req.params.id;
-    const { email, password, is_active } = req.body;
+    const {
+      email,
+      password,
+      is_active,
+      registration_date,
+      business_number,
+      company_name,
+      phone,
+      address,
+    } = req.body;
 
     // 회원 존재 확인
     const [existing] = await conn.query("SELECT id FROM users WHERE id = ?", [
@@ -96,9 +146,23 @@ router.put("/:id", requireAuth, async (req, res) => {
       return res.status(404).json({ message: "회원을 찾을 수 없습니다." });
     }
 
+    // 전화번호 형식 정규화
+    let normalizedPhone = null;
+    if (phone !== undefined) {
+      normalizedPhone = phone ? phone.replace(/[^0-9]/g, "") : null;
+      if (normalizedPhone && normalizedPhone.startsWith("10")) {
+        normalizedPhone = "0" + normalizedPhone;
+      }
+    }
+
     // 업데이트할 필드 설정
     const updateFields = [];
     const updateValues = [];
+
+    if (registration_date !== undefined) {
+      updateFields.push("registration_date = ?");
+      updateValues.push(registration_date);
+    }
 
     if (email !== undefined) {
       updateFields.push("email = ?");
@@ -108,6 +172,26 @@ router.put("/:id", requireAuth, async (req, res) => {
     if (password) {
       updateFields.push("password = ?");
       updateValues.push(hashPassword(password));
+    }
+
+    if (business_number !== undefined) {
+      updateFields.push("business_number = ?");
+      updateValues.push(business_number);
+    }
+
+    if (company_name !== undefined) {
+      updateFields.push("company_name = ?");
+      updateValues.push(company_name);
+    }
+
+    if (phone !== undefined) {
+      updateFields.push("phone = ?");
+      updateValues.push(normalizedPhone);
+    }
+
+    if (address !== undefined) {
+      updateFields.push("address = ?");
+      updateValues.push(address);
     }
 
     if (is_active !== undefined) {

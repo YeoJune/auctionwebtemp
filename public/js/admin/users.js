@@ -48,10 +48,17 @@ function renderUsers(users) {
   users.forEach((user) => {
     const row = document.createElement("tr");
 
+    // 날짜 형식 변환 (YYYY-MM-DD 형식)
+    const registrationDate = user.registration_date
+      ? formatDateOnly(user.registration_date)
+      : "-";
+
     row.innerHTML = `
         <td>${user.id}</td>
+        <td>${registrationDate}</td>
+        <td>${user.company_name || "-"}</td>
+        <td>${user.phone || "-"}</td>
         <td>${user.email || "-"}</td>
-        <td>${formatDate(user.created_at)}</td>
         <td>
           <span class="status-badge ${user.is_active ? "active" : "inactive"}">
             ${user.is_active ? "활성" : "비활성"}
@@ -60,9 +67,7 @@ function renderUsers(users) {
         <td>
           <button class="btn btn-action edit-btn" data-id="${
             user.id
-          }" data-email="${user.email || ""}" data-status="${
-      user.is_active
-    }">수정</button>
+          }">수정</button>
           <button class="btn btn-action delete-btn" data-id="${
             user.id
           }">삭제</button>
@@ -74,11 +79,14 @@ function renderUsers(users) {
 
   // 수정 버튼 이벤트
   document.querySelectorAll(".edit-btn").forEach((button) => {
-    button.addEventListener("click", function () {
+    button.addEventListener("click", async function () {
       const id = this.dataset.id;
-      const email = this.dataset.email;
-      const isActive = this.dataset.status === "true";
-      openUserForm(id, email, isActive);
+      try {
+        const user = await fetchUser(id);
+        openUserForm(user);
+      } catch (error) {
+        handleError(error, "회원 정보를 불러오는 중 오류가 발생했습니다.");
+      }
     });
   });
 
@@ -93,41 +101,72 @@ function renderUsers(users) {
   });
 }
 
+// 날짜만 형식화 (YYYY-MM-DD)
+function formatDateOnly(dateString) {
+  if (!dateString) return "-";
+  const date = new Date(dateString);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+// 날짜를 입력 필드용 형식으로 변환 (YYYY-MM-DD)
+function formatDateForInput(dateString) {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  return date.toISOString().split("T")[0];
+}
+
 // 회원 등록/수정 모달 열기
-function openUserForm(id = "", email = "", isActive = true) {
+function openUserForm(user = null) {
   const form = document.getElementById("userForm");
   form.reset();
 
   const editMode = document.getElementById("editMode");
   const userId = document.getElementById("userId");
+  const userPassword = document.getElementById("userPassword");
+  const registrationDate = document.getElementById("registrationDate");
+  const businessNumber = document.getElementById("businessNumber");
+  const companyName = document.getElementById("companyName");
+  const phone = document.getElementById("phone");
   const userEmail = document.getElementById("userEmail");
+  const address = document.getElementById("address");
 
   // 수정 모드 설정
-  if (id) {
+  if (user) {
     editMode.value = "1";
     document.getElementById("userFormTitle").textContent = "회원 정보 수정";
-    userId.value = id;
+    userId.value = user.id;
     userId.readOnly = true;
-    userEmail.value = email;
+
+    // 사용자 데이터 설정
+    if (user.registration_date) {
+      registrationDate.value = formatDateForInput(user.registration_date);
+    }
+    businessNumber.value = user.business_number || "";
+    companyName.value = user.company_name || "";
+    phone.value = user.phone || "";
+    userEmail.value = user.email || "";
+    address.value = user.address || "";
 
     // 상태 설정
     document.querySelector(
-      `input[name="userStatus"][value="${isActive}"]`
+      `input[name="userStatus"][value="${user.is_active}"]`
     ).checked = true;
 
     // 비밀번호 필드
-    document.getElementById("userPassword").placeholder = "변경시에만 입력";
-    document.getElementById("userPassword").required = false;
+    userPassword.placeholder = "변경시에만 입력";
+    userPassword.required = false;
   } else {
     editMode.value = "0";
     document.getElementById("userFormTitle").textContent = "새 회원 등록";
     userId.readOnly = false;
     userId.value = "";
-    userEmail.value = "";
 
     // 비밀번호 필드
-    document.getElementById("userPassword").placeholder = "비밀번호 입력";
-    document.getElementById("userPassword").required = true;
+    userPassword.placeholder = "비밀번호 입력";
+    userPassword.required = true;
   }
 
   openModal("userFormModal");
@@ -139,7 +178,12 @@ async function saveUser() {
     const editMode = document.getElementById("editMode").value === "1";
     const id = document.getElementById("userId").value;
     const password = document.getElementById("userPassword").value;
+    const registrationDate = document.getElementById("registrationDate").value;
+    const businessNumber = document.getElementById("businessNumber").value;
+    const companyName = document.getElementById("companyName").value;
+    const phone = document.getElementById("phone").value;
     const email = document.getElementById("userEmail").value;
+    const address = document.getElementById("address").value;
     const isActive =
       document.querySelector('input[name="userStatus"]:checked').value ===
       "true";
@@ -156,7 +200,12 @@ async function saveUser() {
 
     const userData = {
       id: id,
-      email: email,
+      registration_date: registrationDate || null,
+      email: email || null,
+      business_number: businessNumber || null,
+      company_name: companyName || null,
+      phone: phone || null,
+      address: address || null,
       is_active: isActive,
     };
 
@@ -204,6 +253,9 @@ async function syncWithSheets() {
       return;
     }
 
+    const loadingText = "동기화 중입니다...";
+    showNoData("usersTableBody", loadingText);
+
     await syncUsers();
 
     alert("동기화가 완료되었습니다.");
@@ -212,5 +264,6 @@ async function syncWithSheets() {
     alert(
       "동기화 중 오류가 발생했습니다: " + (error.message || "알 수 없는 오류")
     );
+    loadUsers(); // 오류 발생 시에도 목록 새로고침
   }
 }

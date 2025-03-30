@@ -341,6 +341,15 @@ async function fetchUser(userId) {
 
 // 새 회원 생성
 async function createUser(userData) {
+  // 날짜 필드가 있는 경우 서버에서 처리할 수 있도록 형식화
+  if (userData.registration_date) {
+    // 날짜 형식이 이미 YYYY-MM-DD인 경우 그대로 사용
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(userData.registration_date)) {
+      const date = new Date(userData.registration_date);
+      userData.registration_date = date.toISOString().split("T")[0];
+    }
+  }
+
   return fetchAPI("/users", {
     method: "POST",
     body: JSON.stringify(userData),
@@ -349,6 +358,15 @@ async function createUser(userData) {
 
 // 회원 정보 수정
 async function updateUser(userId, userData) {
+  // 날짜 필드가 있는 경우 서버에서 처리할 수 있도록 형식화
+  if (userData.registration_date) {
+    // 날짜 형식이 이미 YYYY-MM-DD인 경우 그대로 사용
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(userData.registration_date)) {
+      const date = new Date(userData.registration_date);
+      userData.registration_date = date.toISOString().split("T")[0];
+    }
+  }
+
   return fetchAPI(`/users/${userId}`, {
     method: "PUT",
     body: JSON.stringify(userData),
