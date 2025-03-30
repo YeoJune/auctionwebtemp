@@ -8,6 +8,64 @@ function hashPassword(password) {
   return crypto.createHash("sha256").update(password).digest("hex");
 }
 
+/**
+ * 다양한 형식의 날짜 문자열을 YYYY-MM-DD 형식으로 변환
+ */
+function formatDateString(dateStr) {
+  // 입력이 없거나 null이면 null 반환
+  if (!dateStr) return null;
+
+  // 이미 YYYY-MM-DD 형식이면 그대로 반환
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return dateStr;
+  }
+
+  // YYYY.MM.DD 또는 YYYY.M.D 형식 처리
+  const dotFormat = /^(\d{4})\.(\d{1,2})\.(\d{1,2})$/;
+  if (dotFormat.test(dateStr)) {
+    const matches = dateStr.match(dotFormat);
+    const year = matches[1];
+    const month = matches[2].padStart(2, "0");
+    const day = matches[3].padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  // YYYY/MM/DD 또는 YYYY/M/D 형식 처리
+  const slashFormat = /^(\d{4})\/(\d{1,2})\/(\d{1,2})$/;
+  if (slashFormat.test(dateStr)) {
+    const matches = dateStr.match(slashFormat);
+    const year = matches[1];
+    const month = matches[2].padStart(2, "0");
+    const day = matches[3].padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  // YY.MM.DD 또는 YY.M.D 형식 처리 (20xx년으로 간주)
+  const shortYearFormat = /^(\d{2})\.(\d{1,2})\.(\d{1,2})$/;
+  if (shortYearFormat.test(dateStr)) {
+    const matches = dateStr.match(shortYearFormat);
+    const year = `20${matches[1]}`; // 20xx년으로 가정 (21세기)
+    const month = matches[2].padStart(2, "0");
+    const day = matches[3].padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  // 그 외 형식은 Date 객체로 파싱 시도
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) {
+      return null; // 유효하지 않은 날짜
+    }
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  } catch (e) {
+    return null; // 파싱 실패
+  }
+}
+
 class GoogleSheetsManager {
   constructor() {
     this.CREDENTIALS_PATH = path.join("./service-account-key.json");
@@ -404,17 +462,8 @@ class GoogleSheetsManager {
           isActive, // M열: 활성화
         ] = user;
 
-        // 가입일 형식 변환 (2025.1.8 -> 2025-01-08)
-        let registrationDate = null;
-        if (registrationDateStr) {
-          const dateParts = registrationDateStr.split(".");
-          if (dateParts.length === 3) {
-            const year = dateParts[0];
-            const month = dateParts[1].padStart(2, "0");
-            const day = dateParts[2].padStart(2, "0");
-            registrationDate = `${year}-${month}-${day}`;
-          }
-        }
+        // 가입일 형식 변환 - 정규 표현식을 사용한 향상된 처리
+        let registrationDate = formatDateString(registrationDateStr);
 
         // 전화번호 형식 정규화
         let phone = phoneRaw ? phoneRaw.replace(/[^0-9]/g, "") : null;
