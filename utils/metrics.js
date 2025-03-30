@@ -50,7 +50,7 @@ function ensureDataDirectory() {
   }
 }
 
-// 메트릭스 데이터 로드
+// 메트릭스 데이터 로드 - 개선된 버전
 function loadMetrics() {
   if (process.env.NODE_ENV === "development") {
     return;
@@ -73,14 +73,39 @@ function loadMetrics() {
       metrics.guestDailyUsers = new Set(data.guestDailyUsers || []);
       metrics.totalRequests = data.totalRequests || 0;
       metrics.uniquePageviews = data.uniquePageviews || 0;
-      metrics.lastReset = data.lastReset || new Date().setHours(0, 0, 0, 0);
+
+      // lastReset 값 확인 및 적절히 설정
+      const todayMidnight = new Date().setHours(0, 0, 0, 0);
+      const savedLastReset = data.lastReset || todayMidnight;
+
+      // 저장된 lastReset이 오늘 자정보다 이전이면 오늘 자정으로 업데이트하고 통계 초기화
+      if (savedLastReset < todayMidnight) {
+        console.log(
+          "저장된 lastReset이 오늘 이전 값입니다. 통계를 초기화합니다."
+        );
+        metrics.lastReset = todayMidnight;
+        metrics.memberDailyUsers.clear();
+        metrics.guestDailyUsers.clear();
+      } else {
+        metrics.lastReset = savedLastReset;
+      }
+
       metrics.lastSaved = data.lastSaved || Date.now();
       metrics.lastManualReset = data.lastManualReset || null;
 
-      console.log("메트릭스 데이터를 로드했습니다.");
+      console.log(
+        "메트릭스 데이터를 로드했습니다. lastReset:",
+        new Date(metrics.lastReset).toISOString()
+      );
+    } else {
+      // 파일이 없으면 오늘 자정으로 lastReset 설정
+      metrics.lastReset = new Date().setHours(0, 0, 0, 0);
+      console.log("메트릭스 파일이 없어 기본값으로 설정했습니다.");
     }
   } catch (error) {
     console.error("메트릭스 데이터 로드 중 오류:", error);
+    // 오류 발생 시 안전하게 오늘 자정으로 설정
+    metrics.lastReset = new Date().setHours(0, 0, 0, 0);
   }
 }
 
@@ -209,7 +234,7 @@ function metricsMiddleware(req, res, next) {
   next();
 }
 
-// 메트릭스 정기 작업 (비활성 사용자 제거, 일일 리셋, 저장)
+// metrics 정기 작업 (비활성 사용자 제거, 일일 리셋, 저장)
 function setupMetricsJobs() {
   if (process.env.NODE_ENV === "development") {
     return;
@@ -221,29 +246,41 @@ function setupMetricsJobs() {
   // 5분마다 실행
   setInterval(() => {
     const now = Date.now();
-    const midnight = new Date().setHours(0, 0, 0, 0);
+    const todayMidnight = new Date().setHours(0, 0, 0, 0);
 
     // 자정 지났으면 일일 사용자 초기화
-    if (metrics.lastReset < midnight) {
+    // lastReset이 오늘의 자정보다 이전인지 확인 (즉, 어제 이전의 값인지)
+    if (metrics.lastReset < todayMidnight) {
+      console.log("자정이 지나 일일 사용자 통계를 초기화합니다.");
       metrics.memberDailyUsers.clear();
       metrics.guestDailyUsers.clear();
-      metrics.lastReset = midnight;
+      metrics.lastReset = todayMidnight;
 
       // 페이지뷰 추적기도 초기화
       pageviewTracker.clear();
+
+      // 초기화 후 즉시 저장
+      saveMetrics();
     }
 
     // 30분 이상 비활성 사용자 제거
+    let inactiveUsersRemoved = 0;
     for (const [userId, lastActivity] of metrics.memberActiveUsers) {
       if (now - lastActivity > INACTIVE_TIMEOUT) {
         metrics.memberActiveUsers.delete(userId);
+        inactiveUsersRemoved++;
       }
     }
 
     for (const [visitorId, lastActivity] of metrics.guestActiveUsers) {
       if (now - lastActivity > INACTIVE_TIMEOUT) {
         metrics.guestActiveUsers.delete(visitorId);
+        inactiveUsersRemoved++;
       }
+    }
+
+    if (inactiveUsersRemoved > 0) {
+      console.log(`${inactiveUsersRemoved}명의 비활성 사용자를 제거했습니다.`);
     }
 
     // 메트릭스 저장

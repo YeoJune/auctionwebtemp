@@ -58,16 +58,6 @@ async function fetchAPI(endpoint, options = {}) {
 
 // ---- 대시보드 API ----
 
-// 요약 정보 조회
-async function fetchDashboardSummary() {
-  return fetchAPI("/admin/dashboard/summary");
-}
-
-// 최근 활동 조회
-async function fetchRecentActivities() {
-  return fetchAPI("/admin/dashboard/activities");
-}
-
 // 사용자 통계 조회
 async function fetchUserStats() {
   try {
