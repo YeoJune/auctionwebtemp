@@ -53,12 +53,20 @@ function renderUsers(users) {
       ? formatDateOnly(user.registration_date)
       : "-";
 
+    // 주소가 너무 길면 축약 (최대 30자)
+    const shortAddress = user.address
+      ? user.address.length > 30
+        ? user.address.substring(0, 30) + "..."
+        : user.address
+      : "-";
+
     row.innerHTML = `
         <td>${user.id}</td>
         <td>${registrationDate}</td>
         <td>${user.company_name || "-"}</td>
         <td>${user.phone || "-"}</td>
         <td>${user.email || "-"}</td>
+        <td title="${user.address || ""}">${shortAddress}</td>
         <td>
           <span class="status-badge ${user.is_active ? "active" : "inactive"}">
             ${user.is_active ? "활성" : "비활성"}
@@ -83,8 +91,7 @@ function renderUsers(users) {
       const id = this.dataset.id;
       try {
         // 로딩 상태 표시
-        const loadingText = "사용자 정보를 불러오는 중...";
-        showNoData("usersTableBody", loadingText);
+        showLoading("usersTableBody");
 
         // 사용자 ID URL 인코딩 및 로깅
         console.log(`사용자 정보 요청 ID: ${id}`);
