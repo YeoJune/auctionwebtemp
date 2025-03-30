@@ -132,28 +132,37 @@ function updateBusinessKPIs(successRate, avgBidPrice, todayBids) {
 }
 
 // 활성 경매 업데이트
-function updateActiveAuctions(liveBids, directBids) {
+function updateActiveAuctions(liveAuctions, directAuctions) {
   const liveAuctionsContainer = document.getElementById("liveAuctions");
   const directAuctionsContainer = document.getElementById("directAuctions");
 
   // 현장 경매 표시
-  if (!liveBids || liveBids.length === 0) {
+  if (!liveAuctions || liveAuctions.length === 0) {
     liveAuctionsContainer.innerHTML =
       '<div class="no-data">활성 현장 경매가 없습니다.</div>';
   } else {
     let liveHtml = "";
-    liveBids.forEach((bid) => {
-      const itemTitle = bid.item?.original_title || "제목 없음";
+    liveAuctions.forEach((bid) => {
+      const itemTitle = bid.original_title || "제목 없음";
       const bidPrice =
         bid.final_price || bid.second_price || bid.first_price || 0;
-      const formattedPrice = formatCurrency(bidPrice, "JPY");
+      const formattedPrice = formatCurrency(parseFloat(bidPrice), "JPY");
+
+      // 이미지 경로 처리
+      const imageUrl = bid.image || "/images/no-image.png";
 
       liveHtml += `
         <div class="auction-item">
-          <div class="item-title">${itemTitle}</div>
-          <div class="item-meta">
-            <span class="price">${formattedPrice}</span>
-            <span class="bid-status">${getBidStatusText(bid.status)}</span>
+          <div class="item-image">
+            <img src="${imageUrl}" alt="${itemTitle}" class="item-thumbnail">
+          </div>
+          <div class="item-details">
+            <div class="item-title">${itemTitle}</div>
+            <div class="item-meta">
+              <span class="price">${formattedPrice}</span>
+              <span class="bid-status">${getBidStatusText(bid.status)}</span>
+            </div>
+            <div class="item-brand">${bid.brand || "-"}</div>
           </div>
         </div>
       `;
@@ -162,22 +171,31 @@ function updateActiveAuctions(liveBids, directBids) {
   }
 
   // 직접 경매 표시
-  if (!directBids || directBids.length === 0) {
+  if (!directAuctions || directAuctions.length === 0) {
     directAuctionsContainer.innerHTML =
       '<div class="no-data">활성 직접 경매가 없습니다.</div>';
   } else {
     let directHtml = "";
-    directBids.forEach((bid) => {
-      const itemTitle = bid.item?.original_title || "제목 없음";
+    directAuctions.forEach((bid) => {
+      const itemTitle = bid.original_title || "제목 없음";
       const bidPrice = bid.current_price || 0;
-      const formattedPrice = formatCurrency(bidPrice, "JPY");
+      const formattedPrice = formatCurrency(parseFloat(bidPrice), "JPY");
+
+      // 이미지 경로 처리
+      const imageUrl = bid.image || "/images/no-image.png";
 
       directHtml += `
         <div class="auction-item">
-          <div class="item-title">${itemTitle}</div>
-          <div class="item-meta">
-            <span class="price">${formattedPrice}</span>
-            <span class="bid-status">${getBidStatusText(bid.status)}</span>
+          <div class="item-image">
+            <img src="${imageUrl}" alt="${itemTitle}" class="item-thumbnail">
+          </div>
+          <div class="item-details">
+            <div class="item-title">${itemTitle}</div>
+            <div class="item-meta">
+              <span class="price">${formattedPrice}</span>
+              <span class="bid-status">${getBidStatusText(bid.status)}</span>
+            </div>
+            <div class="item-brand">${bid.brand || "-"}</div>
           </div>
         </div>
       `;
