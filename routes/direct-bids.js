@@ -304,14 +304,6 @@ router.post("/", async (req, res) => {
 
     const item = items[0];
 
-    // 지원하는 경매 플랫폼인지 확인 (autoSubmit이 true인 경우)
-    if (autoSubmit && item.auc_num !== 1 && item.auc_num !== 2) {
-      await connection.rollback();
-      return res.status(400).json({
-        message: "Auto-submission is not supported for this auction platform",
-      });
-    }
-
     // 2. 아이템에 대한 현재 사용자의 액티브 입찰 찾기
     const [userBids] = await connection.query(
       "SELECT * FROM direct_bids WHERE item_id = ? AND user_id = ? AND status = 'active'",
