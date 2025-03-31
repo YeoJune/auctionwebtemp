@@ -361,17 +361,6 @@ router.post("/", async (req, res) => {
     // 7. autoSubmit이 true인 경우 자동으로 입찰 제출
     let submissionResult = null;
     if (autoSubmit) {
-      // 관리자 또는 아이템 소유자만 자동 제출 가능
-      if (userId !== "admin") {
-        return res.status(403).json({
-          message: "Only administrators can auto-submit bids",
-          bidId: bidId,
-          status: "active",
-          currentPrice,
-          submitted: false,
-        });
-      }
-
       submissionResult = await submitBid({
         bid_id: bidId,
         price: currentPrice,
