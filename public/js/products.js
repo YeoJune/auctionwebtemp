@@ -1456,6 +1456,9 @@ function setupDropdownMenus() {
     });
   };
 
+  // 현재 모바일 환경인지 확인하는 함수
+  const isMobile = () => window.innerWidth <= 768;
+
   // 드롭다운 버튼 이벤트 설정
   dropdownButtons.forEach((button) => {
     // 중요: 이벤트 중복 방지를 위해 이전 리스너 제거
@@ -1463,11 +1466,12 @@ function setupDropdownMenus() {
     button.parentNode.replaceChild(newButton, button);
 
     newButton.addEventListener("click", function (e) {
-      // 중요: 햄버거 메뉴 버튼이면 이벤트 처리 중단
+      // 모바일 메뉴 토글 버튼 클릭 시 이벤트 차단
       if (e.target.closest(".mobile-menu-toggle")) {
         return;
       }
 
+      // 이벤트 전파 중지
       e.preventDefault();
       e.stopPropagation();
 
@@ -1517,7 +1521,7 @@ function setupDropdownMenus() {
       closeAllDropdowns();
 
       // 모바일 환경에서 메뉴 닫기 처리
-      if (window.innerWidth <= 768) {
+      if (isMobile()) {
         if (
           window.mobileMenuFunctions &&
           window.mobileMenuFunctions.closeMobileMenu
