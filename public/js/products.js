@@ -1441,21 +1441,14 @@ function updateBidsOnlyFilter() {
   }
 }
 
-// 드롭다운 메뉴 설정
-// 개선된 드롭다운 메뉴 스크립트
+// products.js의 setupDropdownMenus 함수 수정
+// 헤더 드롭다운 메뉴는 유지하면서 모바일 메뉴 충돌 방지
 
-/**
- * 드롭다운 메뉴 기능을 설정합니다.
- * 모바일과 데스크탑 환경 모두 고려하여 구현합니다.
- */
 function setupDropdownMenus() {
   // 드롭다운 버튼들 선택
   const dropdownButtons = document.querySelectorAll(
     ".nav-item.dropdown-container > .nav-button"
   );
-
-  // 모바일 화면 여부 체크 함수
-  const isMobile = () => window.innerWidth <= 768;
 
   // 모든 드롭다운 닫기 함수
   const closeAllDropdowns = (exceptDropdown = null) => {
@@ -1470,6 +1463,11 @@ function setupDropdownMenus() {
   dropdownButtons.forEach((button) => {
     // 이벤트 중복 방지를 위해 새로운 리스너 설정
     button.addEventListener("click", function (e) {
+      // mobile-menu-toggle 버튼 클릭 시에는 작동하지 않도록 함
+      if (e.target.closest(".mobile-menu-toggle")) {
+        return;
+      }
+
       e.preventDefault();
       e.stopPropagation();
 
@@ -1485,24 +1483,7 @@ function setupDropdownMenus() {
 
       // 현재 드롭다운 토글
       dropdown.classList.toggle("active");
-
-      // 모바일 환경에서 드롭다운 위치 조정
-      if (isMobile() && dropdown.classList.contains("active")) {
-        positionMobileDropdown(dropdown);
-      }
     });
-
-    // 터치 이벤트 추가 (모바일 최적화)
-    button.addEventListener(
-      "touchstart",
-      function (e) {
-        // 기본 터치 이벤트 동작 방지
-        if (isMobile()) {
-          e.preventDefault();
-        }
-      },
-      { passive: false }
-    );
   });
 
   // 드롭다운 내부 링크 클릭 이벤트
@@ -1535,73 +1516,20 @@ function setupDropdownMenus() {
       // 드롭다운 닫기
       closeAllDropdowns();
 
-      // 모바일 메뉴 닫기 (모바일 환경인 경우)
-      if (isMobile()) {
+      // 모바일 환경에서 메뉴 닫기 처리 (common.js의 함수 활용)
+      if (window.innerWidth <= 768) {
         const navContainer = document.querySelector(".nav-container");
         const menuToggle = document.querySelector(".mobile-menu-toggle");
         if (
           navContainer &&
           menuToggle &&
-          navContainer.classList.contains("active")
+          navContainer.classList.contains("active") &&
+          typeof closeMobileMenu === "function"
         ) {
           closeMobileMenu(navContainer, menuToggle);
         }
       }
     });
-  });
-
-  // 모바일 환경에서 드롭다운 위치 지정 함수
-  function positionMobileDropdown(dropdown) {
-    if (isMobile()) {
-      // 모바일 환경에서는 화면 하단에 표시
-      dropdown.style.position = "fixed";
-      dropdown.style.top = "auto";
-      dropdown.style.bottom = "0";
-      dropdown.style.left = "0";
-      dropdown.style.right = "0";
-      dropdown.style.width = "100%";
-      dropdown.style.maxHeight = "70vh";
-      dropdown.style.borderRadius = "15px 15px 0 0";
-      dropdown.style.boxShadow = "0 -2px 10px rgba(0, 0, 0, 0.2)";
-      dropdown.style.overflowY = "auto";
-      dropdown.style.zIndex = "1001";
-    } else {
-      // 데스크탑 환경에서는 기본 스타일 유지
-      dropdown.style.position = "";
-      dropdown.style.top = "";
-      dropdown.style.bottom = "";
-      dropdown.style.left = "";
-      dropdown.style.right = "";
-      dropdown.style.width = "";
-      dropdown.style.maxHeight = "";
-      dropdown.style.borderRadius = "";
-      dropdown.style.boxShadow = "";
-      dropdown.style.overflowY = "";
-      dropdown.style.zIndex = "";
-    }
-  }
-
-  // 화면 크기 변경 시 드롭다운 스타일 재설정
-  window.addEventListener("resize", function () {
-    const activeDropdown = document.querySelector(".dropdown-content.active");
-    if (activeDropdown) {
-      if (isMobile()) {
-        positionMobileDropdown(activeDropdown);
-      } else {
-        // 데스크탑으로 전환 시 스타일 초기화
-        activeDropdown.style.position = "";
-        activeDropdown.style.top = "";
-        activeDropdown.style.bottom = "";
-        activeDropdown.style.left = "";
-        activeDropdown.style.right = "";
-        activeDropdown.style.width = "";
-        activeDropdown.style.maxHeight = "";
-        activeDropdown.style.borderRadius = "";
-        activeDropdown.style.boxShadow = "";
-        activeDropdown.style.overflowY = "";
-        activeDropdown.style.zIndex = "";
-      }
-    }
   });
 
   // 다른 곳 클릭 시 모든 드롭다운 닫기
@@ -1612,73 +1540,6 @@ function setupDropdownMenus() {
       !e.target.closest(".nav-item.dropdown-container > .nav-button")
     ) {
       closeAllDropdowns();
-    }
-  });
-
-  // 모바일 환경에서 드롭다운 백드롭 추가
-  function createDropdownBackdrop() {
-    let backdrop = document.querySelector(".dropdown-backdrop");
-
-    if (!backdrop) {
-      backdrop = document.createElement("div");
-      backdrop.className = "dropdown-backdrop";
-      backdrop.style.position = "fixed";
-      backdrop.style.top = "0";
-      backdrop.style.left = "0";
-      backdrop.style.width = "100%";
-      backdrop.style.height = "100%";
-      backdrop.style.backgroundColor = "rgba(0, 0, 0, 0.3)";
-      backdrop.style.zIndex = "1000";
-      backdrop.style.display = "none";
-      document.body.appendChild(backdrop);
-
-      // 백드롭 클릭 시 모든 드롭다운 닫기
-      backdrop.addEventListener("click", function () {
-        closeAllDropdowns();
-        backdrop.style.display = "none";
-      });
-    }
-
-    return backdrop;
-  }
-
-  // 드롭다운 활성화 시 백드롭 표시 (모바일 전용)
-  const dropdownBackdrop = createDropdownBackdrop();
-
-  // 드롭다운 상태 변경 감지 (MutationObserver 사용)
-  const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      if (
-        mutation.type === "attributes" &&
-        mutation.attributeName === "class" &&
-        mutation.target.classList.contains("dropdown-content")
-      ) {
-        // 활성화된 드롭다운이 있는지 확인
-        const activeDropdown = document.querySelector(
-          ".dropdown-content.active"
-        );
-
-        // 모바일 환경에서만 백드롭 표시
-        if (isMobile() && activeDropdown) {
-          dropdownBackdrop.style.display = "block";
-          positionMobileDropdown(activeDropdown);
-        } else {
-          dropdownBackdrop.style.display = "none";
-        }
-      }
-    });
-  });
-
-  // 모든 드롭다운 요소 관찰 설정
-  document.querySelectorAll(".dropdown-content").forEach((dropdown) => {
-    observer.observe(dropdown, { attributes: true });
-  });
-
-  // ESC 키 누를 때 드롭다운 닫기
-  document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape") {
-      closeAllDropdowns();
-      dropdownBackdrop.style.display = "none";
     }
   });
 
