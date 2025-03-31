@@ -360,3 +360,48 @@ button.auth-button:hover {
     content: "▲";
   }
 }
+
+/* header.css 또는 별도 스타일 파일에 추가할 CSS */
+
+/* 모바일 환경에서 메뉴와 토글 버튼 표시 확보 */
+@media (max-width: 768px) {
+  /* 모바일 메뉴 토글 버튼 항상 표시 */
+  .mobile-menu-toggle {
+    display: flex !important;
+  }
+
+  /* 네비게이션 컨테이너 기본 숨김 상태 */
+  .nav-container:not(.active) {
+    display: none;
+  }
+
+  /* 네비게이션 컨테이너 활성화 시 표시 */
+  .nav-container.active {
+    display: flex !important;
+    position: fixed;
+    top: var(--header-height);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    background-color: var(--blue-dark);
+    z-index: 110;
+    flex-direction: column;
+    padding: 20px;
+    overflow-y: auto;
+  }
+
+  /* 모바일 메뉴에서 드롭다운 표시 개선 */
+  .nav-container.active .dropdown-content {
+    position: static;
+    width: 100%;
+    max-width: none;
+    margin: 5px 0 10px 20px;
+    background-color: rgba(255, 255, 255, 0.1);
+    box-shadow: none;
+  }
+
+  .nav-container.active .dropdown-content a {
+    color: white;
+  }
+}
