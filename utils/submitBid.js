@@ -1,4 +1,3 @@
-// utils/submitBid.js
 const pool = require("./DB");
 const { ecoAucCrawler, brandAucCrawler } = require("../crawlers/index");
 
@@ -71,25 +70,36 @@ async function submitBid(bidData) {
     // 3. 플랫폼에 입찰 제출
     let bidResult;
 
-    if (item.auc_num == 1) {
-      // EcoAuc 경매
-      bidResult = await ecoAucCrawler.directBid(item.item_id, price);
-    } else if (item.auc_num == 2) {
-      // 임시 (구현 전에만 이걸 해)
+    try {
+      if (item.auc_num == 1) {
+        // EcoAuc 경매
+        bidResult = await ecoAucCrawler.directBid(item.item_id, price);
+      } else if (item.auc_num == 2) {
+        // 임시 (구현 전에만 이걸 해)
+        await connection.rollback();
+        return {
+          success: false,
+          message: "Unsupported auction platform",
+          statusCode: 400,
+        };
+        // BrandAuc 경매
+        // bidResult = await brandAucCrawler.directBid(item.item_id, price);
+      } else {
+        await connection.rollback();
+        return {
+          success: false,
+          message: "Unsupported auction platform",
+          statusCode: 400,
+        };
+      }
+    } catch (crawlerError) {
+      // 크롤러에서 예외 발생시 명시적으로 submitted_to_platform = false 유지
       await connection.rollback();
       return {
         success: false,
-        message: "Unsupported auction platform",
-        statusCode: 400,
-      };
-      // BrandAuc 경매
-      // bidResult = await brandAucCrawler.directBid(item.item_id, price);
-    } else {
-      await connection.rollback();
-      return {
-        success: false,
-        message: "Unsupported auction platform",
-        statusCode: 400,
+        message: "Error in crawler during bid submission",
+        error: crawlerError.message,
+        statusCode: 500,
       };
     }
 
@@ -112,7 +122,7 @@ async function submitBid(bidData) {
         statusCode: 200,
       };
     } else {
-      // 실패 시 오류 반환
+      // 실패 시 오류 반환 및 명시적으로 submitted_to_platform = false 유지
       await connection.rollback();
       return {
         success: false,
@@ -122,6 +132,7 @@ async function submitBid(bidData) {
       };
     }
   } catch (error) {
+    // 전체 프로세스 오류 시 명시적으로 submitted_to_platform = false 유지
     await connection.rollback();
     return {
       success: false,
