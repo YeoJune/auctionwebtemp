@@ -736,94 +736,99 @@ function showNoticeDetail(notice) {
 // 모바일 메뉴 토글 함수
 function toggleMobileMenu(navContainer, menuToggle) {
   if (navContainer.classList.contains("active")) {
-    closeMobileMenu(navContainer, menuToggle);
-  } else {
-    openMobileMenu(navContainer, menuToggle);
-  }
-}
-
-function setupMobileMenu() {
-  // 필요한 요소 찾기
-  const menuToggle = document.querySelector(".mobile-menu-toggle");
-  const navContainer = document.querySelector(".nav-container");
-
-  // 요소가 없으면 함수 종료
-  if (!menuToggle || !navContainer) {
-    console.error("Mobile menu elements not found");
-    return;
-  }
-
-  // 토글 버튼 클릭 이벤트
-  menuToggle.addEventListener("click", function (e) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    // 메뉴 토글
-    if (navContainer.classList.contains("active")) {
+    if (
+      window.mobileMenuFunctions &&
+      window.mobileMenuFunctions.closeMobileMenu
+    ) {
+      window.mobileMenuFunctions.closeMobileMenu();
+    } else {
       closeMobileMenu(navContainer, menuToggle);
+    }
+  } else {
+    if (
+      window.mobileMenuFunctions &&
+      window.mobileMenuFunctions.openMobileMenu
+    ) {
+      window.mobileMenuFunctions.openMobileMenu();
     } else {
       openMobileMenu(navContainer, menuToggle);
     }
-  });
+  }
+}
+function setupMobileMenu() {
+  const navContainer = document.querySelector(".nav-container");
+  const menuToggle = document.querySelector(".mobile-menu-toggle");
 
-  // 네비게이션 버튼 클릭 시 메뉴 닫기 (드롭다운 버튼 제외)
-  const navButtons = navContainer.querySelectorAll(
-    ".nav-button:not(.dropdown-container .nav-button)"
-  );
-  navButtons.forEach((button) => {
-    button.addEventListener("click", function () {
-      if (window.innerWidth <= 768) {
-        closeMobileMenu(navContainer, menuToggle);
-      }
-    });
-  });
-
-  // 모바일 메뉴 외부 클릭 시 메뉴 닫기
-  document.addEventListener("click", function (e) {
-    if (
-      navContainer.classList.contains("active") &&
-      !navContainer.contains(e.target) &&
-      e.target !== menuToggle &&
-      !menuToggle.contains(e.target)
-    ) {
-      closeMobileMenu(navContainer, menuToggle);
-    }
-  });
-
-  // 화면 크기 변경 시 메뉴 상태 재설정
-  window.addEventListener("resize", function () {
-    if (window.innerWidth > 768) {
-      closeMobileMenu(navContainer, menuToggle);
-    }
-  });
-
-  // 모바일 메뉴 백드롭 생성
-  let menuBackdrop = document.querySelector(".menu-backdrop");
-  if (!menuBackdrop) {
-    menuBackdrop = document.createElement("div");
-    menuBackdrop.className = "menu-backdrop";
-    menuBackdrop.style.position = "fixed";
-    menuBackdrop.style.top = "0";
-    menuBackdrop.style.left = "0";
-    menuBackdrop.style.width = "100%";
-    menuBackdrop.style.height = "100%";
-    menuBackdrop.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
-    menuBackdrop.style.zIndex = "90";
-    menuBackdrop.style.display = "none";
-    document.body.appendChild(menuBackdrop);
-
-    // 백드롭 클릭 시 메뉴 닫기
-    menuBackdrop.addEventListener("click", function () {
-      closeMobileMenu(navContainer, menuToggle);
-    });
+  if (!navContainer || !menuToggle) {
+    console.error("모바일 메뉴 요소를 찾을 수 없습니다");
+    return;
   }
 
-  // ESC 키 이벤트 리스너
+  // 이전 이벤트 리스너 제거를 위해 클론 생성
+  const newMenuToggle = menuToggle.cloneNode(true);
+  menuToggle.parentNode.replaceChild(newMenuToggle, menuToggle);
+
+  // 모바일 메뉴 토글 이벤트 추가
+  newMenuToggle.addEventListener("click", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    // 햄버거 버튼 클릭 시 메뉴 토글
+    toggleMobileMenu(navContainer, newMenuToggle);
+  });
+
+  // ESC 키 이벤트
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && navContainer.classList.contains("active")) {
-      closeMobileMenu(navContainer, menuToggle);
+      closeMobileMenu(navContainer, newMenuToggle);
     }
   });
+
+  // 백드롭 클릭 시 메뉴 닫기
+  const backdrop = document.createElement("div");
+  backdrop.className = "mobile-menu-backdrop";
+  backdrop.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 899;
+    display: none;
+  `;
+  document.body.appendChild(backdrop);
+
+  backdrop.addEventListener("click", function () {
+    closeMobileMenu(navContainer, newMenuToggle);
+  });
+
+  // 메뉴가 열릴 때 백드롭도 표시
+  window.mobileMenuFunctions = {
+    openMobileMenu: function () {
+      navContainer.classList.add("active");
+      backdrop.style.display = "block";
+      document.body.style.overflow = "hidden";
+
+      // 햄버거 아이콘을 X로 변경
+      const icon = newMenuToggle.querySelector("i");
+      if (icon) {
+        icon.classList.remove("fa-bars");
+        icon.classList.add("fa-times");
+      }
+    },
+    closeMobileMenu: function () {
+      navContainer.classList.remove("active");
+      backdrop.style.display = "none";
+      document.body.style.overflow = "";
+
+      // X 아이콘을 햄버거로 변경
+      const icon = newMenuToggle.querySelector("i");
+      if (icon) {
+        icon.classList.remove("fa-times");
+        icon.classList.add("fa-bars");
+      }
+    },
+  };
 
   console.log("모바일 메뉴 설정 완료");
 }

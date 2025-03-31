@@ -1441,9 +1441,6 @@ function updateBidsOnlyFilter() {
   }
 }
 
-// products.js의 setupDropdownMenus 함수 수정
-// 헤더 드롭다운 메뉴는 유지하면서 모바일 메뉴 충돌 방지
-
 function setupDropdownMenus() {
   // 드롭다운 버튼들 선택
   const dropdownButtons = document.querySelectorAll(
@@ -1461,9 +1458,12 @@ function setupDropdownMenus() {
 
   // 드롭다운 버튼 이벤트 설정
   dropdownButtons.forEach((button) => {
-    // 이벤트 중복 방지를 위해 새로운 리스너 설정
-    button.addEventListener("click", function (e) {
-      // mobile-menu-toggle 버튼 클릭 시에는 작동하지 않도록 함
+    // 중요: 이벤트 중복 방지를 위해 이전 리스너 제거
+    const newButton = button.cloneNode(true);
+    button.parentNode.replaceChild(newButton, button);
+
+    newButton.addEventListener("click", function (e) {
+      // 중요: 햄버거 메뉴 버튼이면 이벤트 처리 중단
       if (e.target.closest(".mobile-menu-toggle")) {
         return;
       }
@@ -1516,17 +1516,13 @@ function setupDropdownMenus() {
       // 드롭다운 닫기
       closeAllDropdowns();
 
-      // 모바일 환경에서 메뉴 닫기 처리 (common.js의 함수 활용)
+      // 모바일 환경에서 메뉴 닫기 처리
       if (window.innerWidth <= 768) {
-        const navContainer = document.querySelector(".nav-container");
-        const menuToggle = document.querySelector(".mobile-menu-toggle");
         if (
-          navContainer &&
-          menuToggle &&
-          navContainer.classList.contains("active") &&
-          typeof closeMobileMenu === "function"
+          window.mobileMenuFunctions &&
+          window.mobileMenuFunctions.closeMobileMenu
         ) {
-          closeMobileMenu(navContainer, menuToggle);
+          window.mobileMenuFunctions.closeMobileMenu();
         }
       }
     });
@@ -1534,6 +1530,11 @@ function setupDropdownMenus() {
 
   // 다른 곳 클릭 시 모든 드롭다운 닫기
   document.addEventListener("click", function (e) {
+    // 햄버거 메뉴 버튼 클릭은 무시
+    if (e.target.closest(".mobile-menu-toggle")) {
+      return;
+    }
+
     // 클릭된 요소가 드롭다운 버튼이나 드롭다운 콘텐츠 내부가 아니면 모든 드롭다운 닫기
     if (
       !e.target.closest(".dropdown-content") &&
