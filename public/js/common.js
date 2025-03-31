@@ -753,10 +753,6 @@ function setupMobileMenu() {
   menuToggleClone.addEventListener("click", function (e) {
     e.preventDefault();
     e.stopPropagation();
-
-    // 중요: 이 이벤트가 햄버거 버튼 클릭임을 표시하는 플래그
-    e.isHamburgerClick = true;
-
     if (navContainer.classList.contains("active")) {
       closeMobileMenu(navContainer, menuToggleClone);
     } else {
@@ -764,77 +760,22 @@ function setupMobileMenu() {
     }
   });
 
-  // 중요: 모바일 메뉴 내에 있는 드롭다운 버튼들에 대한 이벤트 설정
-  const dropdownButtons = navContainer.querySelectorAll(
-    ".dropdown-container > .nav-button"
-  );
-
-  dropdownButtons.forEach((button) => {
-    if (button.classList.contains("mobile-menu-toggle")) return; // 햄버거 버튼은 제외
-
-    // 기존 이벤트 리스너 제거를 위한 클론
+  // 네비게이션 버튼 클릭 시 메뉴 닫기
+  const navButtons = navContainer.querySelectorAll(".nav-button");
+  navButtons.forEach((button) => {
+    // 버튼 클론 생성 및 이벤트 다시 설정
     const buttonClone = button.cloneNode(true);
     button.parentNode.replaceChild(buttonClone, button);
 
-    buttonClone.addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      // 모바일 환경일 때만 특별 처리
-      if (window.innerWidth <= 768) {
-        // 해당 버튼의 드롭다운 찾기
-        const dropdown = this.parentNode.querySelector(".dropdown-content");
-        if (!dropdown) return;
-
-        // 드롭다운 토글
-        dropdown.classList.toggle("active");
-
-        // 모든 다른 드롭다운은 닫기
-        navContainer
-          .querySelectorAll(".dropdown-content")
-          .forEach((otherDropdown) => {
-            if (otherDropdown !== dropdown) {
-              otherDropdown.classList.remove("active");
-            }
-          });
-      }
-    });
-  });
-
-  // 네비게이션 버튼 중 드롭다운이 아닌 일반 링크에 대한 처리
-  const regularNavButtons = navContainer.querySelectorAll(
-    ".nav-button:not(.dropdown-container > .nav-button)"
-  );
-  regularNavButtons.forEach((button) => {
-    if (button.classList.contains("mobile-menu-toggle")) return; // 햄버거 버튼은 제외
-
-    // 일반 네비게이션 버튼 클릭 시 모바일 메뉴 닫기
-    button.addEventListener("click", function () {
+    buttonClone.addEventListener("click", function () {
       if (window.innerWidth <= 768) {
         closeMobileMenu(navContainer, menuToggleClone);
       }
     });
   });
 
-  // 드롭다운 내의 링크 클릭 처리
-  navContainer.querySelectorAll(".dropdown-content a").forEach((link) => {
-    link.addEventListener("click", function (e) {
-      if (window.innerWidth <= 768) {
-        // 필요한 데이터 처리 후 메뉴 닫기
-        setTimeout(() => {
-          closeMobileMenu(navContainer, menuToggleClone);
-        }, 100);
-      }
-    });
-  });
-
   // 외부 클릭 시 메뉴 닫기
   document.addEventListener("click", function (e) {
-    // 햄버거 버튼 클릭은 무시 (여기서 처리하지 않음)
-    if (e.isHamburgerClick || e.target.closest(".mobile-menu-toggle")) {
-      return;
-    }
-
     if (
       navContainer.classList.contains("active") &&
       !navContainer.contains(e.target) &&
