@@ -799,9 +799,23 @@ function setupMobileMenu() {
 // 모바일 메뉴 토글 함수
 function toggleMobileMenu(navContainer, menuToggle) {
   if (navContainer.classList.contains("active")) {
-    closeMobileMenu(navContainer, menuToggle);
+    if (
+      window.mobileMenuFunctions &&
+      window.mobileMenuFunctions.closeMobileMenu
+    ) {
+      window.mobileMenuFunctions.closeMobileMenu();
+    } else {
+      closeMobileMenu(navContainer, menuToggle);
+    }
   } else {
-    openMobileMenu(navContainer, menuToggle);
+    if (
+      window.mobileMenuFunctions &&
+      window.mobileMenuFunctions.openMobileMenu
+    ) {
+      window.mobileMenuFunctions.openMobileMenu();
+    } else {
+      openMobileMenu(navContainer, menuToggle);
+    }
   }
 }
 
