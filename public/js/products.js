@@ -1520,17 +1520,14 @@ function setupDropdownMenus() {
     });
   };
 
-  // 드롭다운 버튼 이벤트 설정
+  // 드롭다운 버튼 이벤트 설정 (모바일이 아닐 때만 동작)
   dropdownButtons.forEach((button) => {
-    // 이벤트 충돌 방지: 이미 setupMobileMenu에서 클론 처리했으므로 여기서는 직접 이벤트 추가
+    // 햄버거 버튼은 무시
+    if (button.classList.contains("mobile-menu-toggle")) return;
+
     button.addEventListener("click", function (e) {
-      // 중요: 모바일 메뉴 토글 버튼(햄버거)인 경우 이벤트 처리하지 않음
-      if (
-        this.classList.contains("mobile-menu-toggle") ||
-        e.target.closest(".mobile-menu-toggle")
-      ) {
-        return;
-      }
+      // 모바일 환경에서는 이 이벤트를 처리하지 않음 (모바일용 함수에서 처리)
+      if (window.innerWidth <= 768) return;
 
       e.preventDefault();
       e.stopPropagation();
@@ -1553,6 +1550,9 @@ function setupDropdownMenus() {
   // 드롭다운 내부 링크 클릭 이벤트
   document.querySelectorAll(".dropdown-content a").forEach((link) => {
     link.addEventListener("click", function (e) {
+      // 모바일 환경에서는 별도 처리 (setupMobileMenu에서 처리)
+      if (window.innerWidth <= 768) return;
+
       e.preventDefault();
       e.stopPropagation();
 
@@ -1579,24 +1579,14 @@ function setupDropdownMenus() {
 
       // 드롭다운 닫기
       closeAllDropdowns();
-
-      // 모바일 환경에서 메뉴 닫기 처리 (common.js의 함수 활용)
-      if (window.innerWidth <= 768) {
-        const navContainer = document.querySelector(".nav-container");
-        const menuToggle = document.querySelector(".mobile-menu-toggle");
-        if (
-          navContainer &&
-          menuToggle &&
-          navContainer.classList.contains("active")
-        ) {
-          closeMobileMenu(navContainer, menuToggle);
-        }
-      }
     });
   });
 
-  // 다른 곳 클릭 시 모든 드롭다운 닫기
+  // 다른 곳 클릭 시 모든 드롭다운 닫기 (모바일이 아닐 때만)
   document.addEventListener("click", function (e) {
+    // 모바일 환경에서는 이 이벤트를 처리하지 않음
+    if (window.innerWidth <= 768) return;
+
     // 햄버거 버튼 클릭은 처리하지 않음
     if (e.target.closest(".mobile-menu-toggle")) {
       return;
