@@ -135,6 +135,7 @@ function getLiveBidSectionHTML(bidInfo, itemId, aucNum, category) {
           bidInfo?.first_price ? "최종입찰 금액" : "1차금액 입력"
         }</span>
         <input type="number" placeholder="" class="bid-input" data-item-id="${itemId}" data-bid-type="live">
+        <span class="bid-value-display">000</span>
         <span class="bid-currency">¥</span>
         <button class="bid-button" onclick="event.stopPropagation(); handleLiveBidSubmit(this.parentElement.querySelector('.bid-input').value, '${itemId}')">입찰</button>
       </div>
@@ -213,6 +214,7 @@ function getDirectBidSectionHTML(bidInfo, itemId, aucNum, category) {
     <div class="bid-input-container">
       <div class="bid-input-group">
         <input type="number" placeholder="나의 입찰 금액" class="bid-input" data-item-id="${itemId}" data-bid-type="direct">
+        <span class="bid-value-display">000</span>
         <span class="bid-currency">¥</span>
         <button class="bid-button" onclick="event.stopPropagation(); handleDirectBidSubmit(this.parentElement.querySelector('.bid-input').value, '${itemId}')">입찰</button>
       </div>
