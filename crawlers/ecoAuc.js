@@ -764,8 +764,6 @@ class EcoAucCrawler extends AxiosCrawler {
         },
       });
 
-      console.log(bidResponse);
-
       // 응답 확인
       if (bidResponse.status === 200 && bidResponse.data.success) {
         console.log(`Bid successful for item ${item_id} with price ${price}`);
