@@ -56,18 +56,6 @@ async function submitBid(bidData) {
 
   const bid = bids[0];
 
-  // 이미 플랫폼에 반영된 입찰인지 확인
-  if (bid.submitted_to_platform && bid.current_price == price) {
-    console.log(`Bid ID ${bid_id} has already been submitted to the platform`);
-    await connection.rollback();
-    connection.release();
-    return {
-      success: false,
-      message: "Bid has already been submitted to the platform",
-      statusCode: 400,
-    };
-  }
-
   console.log(`Retrieving item information for item ID: ${bid.item_id}`);
   // 2. 아이템 정보 조회
   const [items] = await connection.query(
