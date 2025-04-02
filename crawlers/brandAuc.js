@@ -518,7 +518,11 @@ class BrandAucCrawler extends AxiosCrawler {
     };
   }
   async directBid(item_id, price) {
-    print("Direct bid not implemented", item_id, price);
+    return {
+      success: false,
+      message: "Bid failed",
+      error: "Not Implemented",
+    };
   }
 }
 

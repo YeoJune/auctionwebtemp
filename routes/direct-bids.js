@@ -286,6 +286,11 @@ router.post("/", async (req, res) => {
     return res.status(400).json({ message: "Item ID and price are required" });
   }
 
+  // 가격이 1000단위인지 확인
+  if (currentPrice % 1000 !== 0) {
+    return res.status(400).json({ message: "Price must be in units of 1000" });
+  }
+
   const connection = await pool.getConnection();
 
   try {
