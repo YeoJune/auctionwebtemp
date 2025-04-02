@@ -184,7 +184,7 @@ function getDirectBidSectionHTML(bidInfo, itemId, aucNum, category) {
     ${timerHTML}
     ${
       hasHigherBid
-        ? '<div class="higher-bid-alert modal">더 높은 입찰 존재</div>'
+        ? '<div class="higher-bid-alert">더 높은 입찰 존재</div>'
         : ""
     }
     <div class="real-time-price">
@@ -652,12 +652,13 @@ function getDirectCardHTML(item, bidInfo, favoriteNumber) {
 
   return `
     <div class="product-header">
-      <div class="product-brand">${item.brand}</div>
+      <div class="product-brand">${item.brand}
       ${
         hasHigherBid
           ? '<div class="higher-bid-alert">더 높은 입찰 존재</div>'
           : ""
       }
+      </div>
       <div class="product-title">${item.title}</div>
       <div class="auction-info">
         <div class="auction-number">

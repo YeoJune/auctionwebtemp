@@ -353,11 +353,6 @@ select {
   animation: pulse 2s infinite;
 }
 
-.higher-bid-alert.modal {
-  margin-bottom: 10px;
-  width: fit-content;
-}
-
 /* Additional info labels */
 .info-label {
   font-size: 12px;
