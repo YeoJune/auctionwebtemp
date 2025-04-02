@@ -57,7 +57,7 @@ async function submitBid(bidData) {
   const bid = bids[0];
 
   // 이미 플랫폼에 반영된 입찰인지 확인
-  if (bid.submitted_to_platform) {
+  if (bid.submitted_to_platform && bid.current_price == price) {
     console.log(`Bid ID ${bid_id} has already been submitted to the platform`);
     await connection.rollback();
     connection.release();
