@@ -181,12 +181,12 @@ function getDirectBidSectionHTML(bidInfo, itemId, aucNum, category) {
     : "";
 
   let html = `<div class="bid-info direct">
-    ${timerHTML}
     ${
       hasHigherBid
         ? '<div class="higher-bid-alert">더 높은 입찰 존재</div>'
         : ""
     }
+    ${timerHTML}
     <div class="real-time-price">
       <p>실시간 금액: ${cleanNumberFormat(live_price)} ¥</p>
       <div class="price-details-container">
