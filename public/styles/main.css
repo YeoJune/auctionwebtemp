@@ -340,6 +340,24 @@ select {
   line-height: 1.4;
 }
 
+.higher-bid-alert {
+  background-color: #ff4d4d;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+  display: inline-flex;
+  align-items: center;
+  animation: pulse 2s infinite;
+}
+
+.higher-bid-alert.modal {
+  margin-bottom: 10px;
+  width: fit-content;
+}
+
 /* Additional info labels */
 .info-label {
   font-size: 12px;

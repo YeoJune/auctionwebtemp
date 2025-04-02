@@ -166,6 +166,10 @@ function getDirectBidSectionHTML(bidInfo, itemId, aucNum, category) {
   // 현재 내 입찰가
   const currentPrice = bidInfo?.current_price || 0;
 
+  // 나의 입찰가와 실시간 가격 비교
+  const hasHigherBid =
+    Number(live_price) > Number(currentPrice) && currentPrice > 0;
+
   // 타이머 HTML
   const timer = getRemainingTime(item.scheduled_date);
   const timerHTML = timer
@@ -178,6 +182,11 @@ function getDirectBidSectionHTML(bidInfo, itemId, aucNum, category) {
 
   let html = `<div class="bid-info direct">
     ${timerHTML}
+    ${
+      hasHigherBid
+        ? '<div class="higher-bid-alert modal">더 높은 입찰 존재</div>'
+        : ""
+    }
     <div class="real-time-price">
       <p>실시간 금액: ${cleanNumberFormat(live_price)} ¥</p>
       <div class="price-details-container">
@@ -636,9 +645,19 @@ function getDirectCardHTML(item, bidInfo, favoriteNumber) {
       ? bidInfo.current_price
       : item.starting_price;
 
+  // 나의 입찰가와 실시간 가격 비교
+  const myBidPrice = bidInfo?.current_price || 0;
+  const hasHigherBid =
+    Number(live_price) > Number(myBidPrice) && myBidPrice > 0;
+
   return `
     <div class="product-header">
       <div class="product-brand">${item.brand}</div>
+      ${
+        hasHigherBid
+          ? '<div class="higher-bid-alert">더 높은 입찰 존재</div>'
+          : ""
+      }
       <div class="product-title">${item.title}</div>
       <div class="auction-info">
         <div class="auction-number">
