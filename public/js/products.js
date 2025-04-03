@@ -595,6 +595,8 @@ async function showDetails(itemId) {
         method: "POST",
       });
 
+      state.currentData.push(item);
+
       if (item.bids) {
         if (item.bids.live) {
           state.liveBidData.push(item.bids.live);
