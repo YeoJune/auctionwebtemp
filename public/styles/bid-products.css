@@ -1,160 +1,61 @@
-/* bid-products.css - 시각적으로 개선된 버전 */
+/* bid-products.css */
 
-/* 기본 레이아웃 구조 */
-.content-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-/* 상단 컨트롤 섹션 */
-.top-control-section {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
+/* 검색 및 필터 툴바 */
+.search-toolbar {
   background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  padding: 20px;
+  padding: 15px;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   margin-bottom: 20px;
-}
-
-/* 필터 컨테이너 - 상단 */
-.filters-container.top-filters {
-  width: 100%;
   display: flex;
-  flex-direction: column;
-  background-color: #f8f9fa;
-  border-radius: 6px;
-  padding: 20px;
-  margin-bottom: 0;
+  justify-content: flex-end;
+  align-items: center;
 }
 
-.filter-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-  align-items: flex-start;
-}
-
-.filter-section {
-  margin-bottom: 15px;
-}
-
-.inline-filter {
+.search-container {
   flex: 1;
   min-width: 200px;
 }
 
-.filter-section h4 {
-  margin: 0 0 12px 0;
-  font-size: 15px;
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
-/* 라디오 버튼 그룹 */
-.horizontal.radio-buttons {
+.search-form {
   display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
+  position: relative;
 }
 
-.radio-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.radio-item input[type="radio"] {
-  width: 18px;
-  height: 18px;
-  margin: 0;
-}
-
-.radio-item label {
-  font-size: 14px;
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
-/* 선택 요소 */
-select {
-  width: 100%;
-  padding: 10px 15px;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  font-size: 14px;
-  background-color: white;
-  color: var(--text-primary);
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 15px center;
-  cursor: pointer;
-}
-
-/* 필터 버튼 */
-.filter-buttons {
-  display: flex;
-  gap: 15px;
-  margin-top: 20px;
-}
-
-.primary-button {
-  background-color: var(--primary-color);
-  color: white;
+.search-form input {
   flex: 1;
-  padding: 12px 20px;
-  border-radius: 6px;
-  cursor: pointer;
+  padding: 10px 40px 10px 15px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.search-form button {
+  background: none;
   border: none;
-  font-size: 15px;
-  font-weight: 500;
-  transition: background-color 0.2s;
-  min-height: 45px;
-}
-
-.secondary-button {
-  background-color: white;
-  color: var(--text-primary);
-  flex: 1;
-  padding: 12px 20px;
-  border-radius: 6px;
-  cursor: pointer;
-  border: 1px solid var(--border-color);
-  font-size: 15px;
-  font-weight: 500;
-  transition: all 0.2s;
-  min-height: 45px;
-}
-
-.primary-button:hover {
-  background-color: var(--primary-hover);
-}
-
-.secondary-button:hover {
-  border-color: var(--primary-color);
-  color: var(--primary-color);
-}
-
-/* 검색 툴바 */
-.search-toolbar {
-  background-color: white;
-  padding: 15px 20px;
-  border-radius: 6px;
-  margin-bottom: 0;
+  color: var(--text-secondary);
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 40px;
+  padding: 0;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  border-top: 1px solid var(--border-color);
+  justify-content: center;
 }
 
-/* 정렬 옵션 */
+.search-form button:hover {
+  color: var(--primary-color);
+  background: none;
+}
+
+.view-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
 .sort-options {
   display: flex;
   gap: 10px;
@@ -164,15 +65,13 @@ select {
   background: none;
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
-  padding: 8px 15px;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 13px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  min-height: 38px;
-  transition: all 0.2s;
+  gap: 5px;
+  min-height: 32px;
 }
 
 .sort-btn:hover {
@@ -195,33 +94,112 @@ select {
   transform: rotate(180deg);
 }
 
-/* 뷰 컨트롤 */
-.view-controls {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-/* 모바일 필터 토글 */
 .mobile-filter-toggle {
   display: none;
   background-color: var(--primary-color);
   color: white;
-  padding: 8px 15px;
-  font-size: 14px;
-  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 4px;
   align-items: center;
-  gap: 8px;
-  min-height: 38px;
-  cursor: pointer;
-  transition: background-color 0.2s;
+  gap: 5px;
+  min-height: 32px;
 }
 
-.mobile-filter-toggle:hover {
+/* 필터 및 콘텐츠 섹션 */
+.content-wrapper {
+  display: flex;
+  flex-direction: column; /* 세로 방향으로 요소 배치 */
+  gap: 20px;
+}
+
+.top-control-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.filters-container.top-filters {
+  width: 100%;
+  position: static;
+  margin-bottom: 15px;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.filters-container {
+  width: 250px;
+  flex-shrink: 0;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 15px;
+  height: fit-content;
+  position: sticky;
+  top: calc(var(--header-height) + 20px);
+}
+
+.filters-container h3 {
+  margin: 0 0 15px 0;
+  font-size: 18px;
+  color: var(--text-primary);
+}
+
+.filter-section {
+  margin-bottom: 20px;
+}
+
+.filter-section h4 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.primary-button {
+  background-color: var(--primary-color);
+  color: white;
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: none;
+  font-size: 14px;
+  min-height: 32px;
+}
+
+.secondary-button {
+  background-color: white;
+  color: var(--text-primary);
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  font-size: 14px;
+  min-height: 32px;
+}
+
+.primary-button:hover {
   background-color: var(--primary-hover);
 }
 
-/* 결과 섹션 */
+.secondary-button:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+/* 상품 섹션 */
 .products-section {
   flex: 1;
   min-width: 0;
@@ -229,71 +207,58 @@ select {
 
 .results-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   margin-bottom: 15px;
-  padding: 0 5px;
 }
 
 .results-count {
-  font-size: 15px;
-  color: var(--text-primary);
-  font-weight: 500;
+  font-size: 14px;
+  color: var(--text-secondary);
 }
 
-/* 상품 리스트 */
+/* 상품 리스트 (common) */
 .bid-results-list {
+  min-height: 200px;
   background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  padding: 0;
-  overflow: hidden;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 15px;
 }
 
 .no-results {
   text-align: center;
-  padding: 40px 0;
-  color: var(--text-secondary);
+  padding: 30px 0;
+  color: #666;
   font-size: 16px;
-}
-
-/* 로딩 메시지 */
-.loading-msg {
-  text-align: center;
-  padding: 40px 0;
-  font-size: var(--font-size-lg);
-  color: var(--text-secondary);
 }
 
 /* 상품 아이템 */
 .bid-result-item {
   display: flex;
-  padding: 20px;
+  padding: 15px 0;
   border-bottom: 1px solid #eee;
-  gap: 20px;
-  align-items: flex-start;
+  gap: 15px;
+  align-items: center;
   cursor: pointer;
-  transition: background-color 0.2s;
 }
 
 .bid-result-item:hover {
-  background-color: #f9f9fa;
+  background-color: #f9f9f9;
 }
 
 .bid-result-item:last-child {
   border-bottom: none;
 }
 
-/* 아이템 이미지 */
 .item-image {
   position: relative;
-  width: 100px;
-  height: 100px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
+  width: 80px;
+  height: 80px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
   overflow: hidden;
   flex-shrink: 0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .item-image img {
@@ -304,10 +269,10 @@ select {
 
 .item-rank {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 26px;
-  height: 26px;
+  top: 5px;
+  right: 5px;
+  width: 24px;
+  height: 24px;
   background-color: var(--primary-color);
   color: white;
   border-radius: 50%;
@@ -316,55 +281,47 @@ select {
   justify-content: center;
   font-size: 12px;
   font-weight: bold;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* 아이템 정보 */
 .item-info {
   flex: 1;
   min-width: 0;
-  padding-top: 5px;
 }
 
 .item-brand {
   font-weight: 600;
-  margin-bottom: 6px;
-  font-size: 15px;
-  color: #555;
+  margin-bottom: 3px;
+  font-size: 14px;
 }
 
 .item-title {
-  margin-bottom: 8px;
-  font-size: 16px;
-  line-height: 1.4;
-  font-weight: 500;
-  color: var(--text-primary);
+  margin-bottom: 5px;
+  font-size: 14px;
+  line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -line-clamp: 2;
   -webkit-box-orient: vertical;
 }
 
 .item-category {
-  font-size: 14px;
-  color: var(--text-secondary);
+  font-size: 12px;
+  color: #666;
 }
 
 /* 입찰 정보 */
 .bid-info {
-  width: 200px;
+  width: 180px;
   flex-shrink: 0;
-  padding-top: 5px;
 }
 
 .bid-type {
   display: inline-block;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 500;
-  margin-bottom: 12px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  margin-bottom: 8px;
 }
 
 .live-type {
@@ -384,28 +341,21 @@ select {
 .price-row {
   display: flex;
   justify-content: space-between;
-  font-size: 14px;
-  margin-bottom: 5px;
-  line-height: 1.5;
+  font-size: 13px;
+  margin-bottom: 3px;
 }
 
 .price-label {
-  color: var(--text-secondary);
+  color: #666;
 }
 
 .price-value {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .price-korean {
   color: var(--primary-color);
   font-weight: 600;
-  margin-top: 3px;
-}
-
-.price-korean .price-label {
-  color: var(--primary-color);
-  opacity: 0.8;
 }
 
 .price-korean .price-value {
@@ -414,297 +364,98 @@ select {
 
 /* 결과 상태 */
 .result-status {
-  width: 130px;
+  width: 120px;
   text-align: center;
   flex-shrink: 0;
-  padding-top: 5px;
 }
 
-/* 상태 배지 */
 .status-badge {
   display: inline-block;
-  padding: 6px 12px;
-  border-radius: 20px;
+  padding: 4px 10px;
+  border-radius: 4px;
   font-size: 13px;
   font-weight: 500;
-  margin-bottom: 8px;
+  margin-bottom: 5px;
 }
 
+/* 상태 배지 기본 스타일 */
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 5px;
+}
+
+/* 직접 경매 진행중 상태 */
 .status-active {
   background-color: #f1f8e9;
-  color: #558b2f;
+  color: #689f38;
 }
 
+/* 현장 경매 1차 입찰 상태 */
 .status-first {
   background-color: #e8eaf6;
-  color: #3949ab;
+  color: #3f51b5;
 }
 
+/* 현장 경매 2차 제안 상태 */
 .status-second {
-  background-color: #e3f2fd;
-  color: #1976d2;
+  background-color: #e0f7fa;
+  color: #00acc1;
 }
 
+/* 현장 경매 최종 입찰 상태 */
 .status-final {
   background-color: #e0f2f1;
   color: #00897b;
 }
 
+/* 낙찰 완료 상태 */
 .status-completed {
   background-color: #e8f5e9;
   color: #2e7d32;
 }
 
+/* 취소됨 상태 */
 .status-cancelled {
   background-color: #ffebee;
   color: #c62828;
 }
 
 .result-date {
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-/* 입찰 액션 영역 */
-.bid-action {
-  width: 100%;
-  margin-top: 15px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  padding: 15px;
-}
-
-.bid-input-container.compact {
-  display: flex;
-  flex-direction: column;
-  max-width: 360px;
-  margin: 0 auto;
-}
-
-.bid-input-container.compact .bid-input-group {
-  display: flex;
-  position: relative;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.bid-input-container.compact input {
-  flex: 1;
-  padding: 12px 80px 12px 15px;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  font-size: 15px;
-  height: 45px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.bid-input-container.compact input:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(0, 48, 135, 0.1);
-}
-
-.bid-input-container.compact .bid-value-display {
-  position: absolute;
-  right: 50px;
-  font-size: 15px;
+  font-size: 12px;
   color: #666;
-  pointer-events: none;
 }
 
-.bid-input-container.compact .bid-currency {
-  position: absolute;
-  right: 15px;
-  font-size: 15px;
-  font-weight: 500;
-  color: #555;
-}
-
-.bid-input-container.compact .bid-button {
-  background-color: var(--primary-color);
-  color: white;
-  padding: 12px 20px;
-  border-radius: 6px;
-  border: none;
-  font-size: 15px;
-  font-weight: 500;
-  min-height: 45px;
-  margin-left: 10px;
-  transition: background-color 0.2s;
-}
-
-.bid-input-container.compact .bid-button:hover {
-  background-color: var(--primary-hover);
-}
-
-.price-details-container {
-  font-size: 13px;
-  color: var(--primary-color);
-  margin-top: 8px;
-  min-height: 20px;
-  text-align: center;
-}
-
-/* 페이지네이션 */
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  margin-top: 30px;
-  padding: 20px 0;
-}
-
-.pagination button {
-  min-width: 40px;
-  min-height: 40px;
-  padding: 0;
-  font-size: 15px;
-  border-radius: 6px;
-  background-color: white;
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  transition: all 0.2s;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.pagination button:hover:not(.active):not(:disabled) {
-  border-color: var(--primary-color);
-  color: var(--primary-color);
-}
-
-.pagination button.active {
-  background-color: var(--primary-color);
-  color: white;
-  border-color: var(--primary-color);
-  font-weight: 600;
-}
-
-.pagination button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* 모달 스타일 */
-.modal {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 1000;
-  overflow: hidden;
-  justify-content: center;
-  align-items: center;
-}
-
-.modal-content {
-  background-color: white;
-  margin: 2% auto;
-  width: 90%;
-  max-width: 1200px;
-  height: 90%;
-  border-radius: 12px;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  position: relative;
-}
-
-.modal-header {
-  padding: 20px 25px;
-  border-bottom: 1px solid var(--border-color);
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  position: relative;
-}
-
-.product-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.modal-title {
-  font-size: 22px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 5px 0 0;
-  line-height: 1.3;
-}
-
-.modal-brand {
-  font-size: 16px;
-  color: var(--text-secondary);
-  margin: 0;
-}
-
-.close {
-  position: absolute;
-  right: 20px;
-  top: 20px;
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1;
-  padding: 0;
-  cursor: pointer;
-  color: var(--text-secondary);
-  background: none;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.2s;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  min-height: unset;
-}
-
-.close:hover {
-  color: var(--text-primary);
-  background-color: #f5f5f5;
-}
-
+/* 모달 커스텀 스타일 */
 .modal-body {
-  flex: 1;
   display: flex;
-  overflow: hidden;
+  gap: 20px;
 }
 
 .modal-left {
   flex: 1;
   min-width: 0;
-  padding: 25px;
-  overflow-y: auto;
 }
 
 .modal-right {
-  width: 40%;
-  min-width: 350px;
-  max-width: 450px;
-  padding: 25px;
-  background-color: #f8f9fa;
-  border-left: 1px solid var(--border-color);
-  overflow-y: auto;
+  width: 35%;
+  min-width: 300px;
 }
 
-/* 메인 이미지 컨테이너 */
 .main-image-container {
   position: relative;
   width: 100%;
-  height: 400px;
-  background-color: #f9f9fa;
-  margin-bottom: 15px;
+  height: 300px;
+  background-color: #f9f9f9;
+  margin-bottom: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
+  border-radius: 4px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .main-image {
@@ -713,37 +464,31 @@ select {
   object-fit: contain;
 }
 
-/* 이미지 네비게이션 */
 .image-nav {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: rgba(0, 0, 0, 0.5);
   color: white;
   border: none;
-  width: 40px;
-  height: 40px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 20px;
+  font-size: 18px;
   padding: 0;
   z-index: 1;
-  transition: background-color 0.2s;
-}
-
-.image-nav:hover:not(:disabled) {
-  background-color: rgba(0, 0, 0, 0.8);
 }
 
 .image-nav.prev {
-  left: 15px;
+  left: 10px;
 }
 
 .image-nav.next {
-  right: 15px;
+  right: 10px;
 }
 
 .image-nav:disabled {
@@ -751,33 +496,25 @@ select {
   cursor: not-allowed;
 }
 
-/* 썸네일 컨테이너 */
 .thumbnail-container {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 20px;
 }
 
 .thumbnail {
-  width: 70px;
-  height: 70px;
-  border-radius: 6px;
+  width: 60px;
+  height: 60px;
+  border-radius: 4px;
   overflow: hidden;
   cursor: pointer;
   opacity: 0.7;
-  transition: all 0.2s;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.thumbnail:hover {
-  opacity: 0.9;
+  transition: opacity 0.2s;
 }
 
 .thumbnail.active {
   opacity: 1;
   border: 2px solid var(--primary-color);
-  transform: scale(1.05);
 }
 
 .thumbnail img {
@@ -786,151 +523,55 @@ select {
   object-fit: cover;
 }
 
-/* 모달 내 입찰 정보 */
 .bid-info-holder {
-  margin-bottom: 25px;
+  margin-bottom: 20px;
 }
 
 .modal-price-info {
-  padding: 20px;
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 15px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
 }
 
 .price-status {
   display: inline-block;
-  padding: 6px 15px;
-  border-radius: 20px;
+  padding: 4px 12px;
+  border-radius: 4px;
   font-weight: 600;
-  margin-bottom: 15px;
+  margin-bottom: 10px;
   font-size: 14px;
 }
 
-.price-date,
-.price-starting,
-.price-type,
-.price-current,
-.price-first,
-.price-second,
-.price-final,
-.price-korean,
-.price-updated {
-  margin-bottom: 10px;
-  font-size: 15px;
-  line-height: 1.5;
-}
-
 .price-korean {
-  margin-top: 10px;
+  margin-top: 5px;
   font-weight: bold;
   color: var(--primary-color);
-  padding: 10px 15px;
-  background-color: #f1f5f9;
-  border-radius: 6px;
 }
 
-/* 모달 내 상품 상세 정보 */
 .product-details {
-  margin-top: 30px;
+  margin-top: 20px;
 }
 
 .detail-item {
-  margin-bottom: 15px;
+  margin-bottom: 10px;
 }
 
 .detail-label {
   font-weight: 600;
   display: block;
-  margin-bottom: 5px;
-  color: var(--text-primary);
-  font-size: 15px;
+  margin-bottom: 3px;
 }
 
 .modal-description {
-  margin-top: 8px;
-  line-height: 1.6;
-  color: var(--text-primary);
-  font-size: 15px;
-  max-height: 250px;
+  margin-top: 5px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  font-size: 14px;
+  max-height: 200px;
   overflow-y: auto;
-  background-color: white;
-  padding: 15px;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-/* 모달 내 입찰 폼 */
-.modal .bid-info-holder {
-  background-color: white;
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 25px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.modal .bid-input-container {
-  margin-top: 20px;
-}
-
-.modal .bid-input-group {
-  display: flex;
-  position: relative;
-  align-items: center;
-  margin-bottom: 15px;
-}
-
-.modal .bid-input {
-  flex: 1;
-  padding: 12px 80px 12px 15px;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  font-size: 15px;
-  height: 50px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.modal .bid-input:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(0, 48, 135, 0.1);
-}
-
-.modal .bid-value-display {
-  position: absolute;
-  right: 40px;
-  font-size: 15px;
-  color: #666;
-  pointer-events: none;
-}
-
-.modal .bid-currency {
-  position: absolute;
-  right: 15px;
-  font-size: 15px;
-  font-weight: 500;
-  color: #555;
-}
-
-.modal .bid-button {
-  margin-top: 10px;
-  background-color: var(--primary-color);
-  color: white;
-  padding: 15px;
-  border-radius: 6px;
-  border: none;
-  font-size: 16px;
-  font-weight: 500;
-  width: 100%;
-  height: 50px;
-  transition: background-color 0.2s;
-}
-
-.modal .bid-button:hover {
-  background-color: var(--primary-hover);
-}
-
-/* 로딩 메시지 */
+/* 추가 로딩 메시지 스타일 */
 .modal-loading {
   position: absolute;
   top: 0;
@@ -941,133 +582,53 @@ select {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  color: var(--text-primary);
+  font-size: 16px;
+  color: var(--text-secondary);
   z-index: 2;
-  flex-direction: column;
-  gap: 15px;
 }
 
-.modal-loading::after {
-  content: "";
-  width: 40px;
-  height: 40px;
-  border: 3px solid var(--primary-color);
-  border-radius: 50%;
-  border-top-color: transparent;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* 모바일 필터 스타일 */
-.filter-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 899;
-  display: none;
-}
-
-.filters-container {
-  position: fixed;
-  left: -320px;
-  top: 0;
-  bottom: 0;
-  width: 320px;
-  background-color: white;
-  z-index: 900;
-  transition: left 0.3s ease;
-  overflow-y: auto;
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-}
-
-.filters-container.active {
-  left: 0;
-}
-
-.filter-close-btn {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  background: white;
-  color: var(--text-primary);
-  font-size: 22px;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  border-radius: 50%;
+/* 페이지네이션 */
+.pagination {
   display: flex;
-  align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  z-index: 10;
-  border: none;
-  cursor: pointer;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-lg);
+  padding: var(--spacing-md) 0;
 }
 
-.filter-close-btn:hover {
-  background-color: #f5f5f5;
+.pagination button {
+  min-width: 38px;
+  min-height: 38px;
+  padding: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  border-radius: var(--border-radius-sm);
+  background-color: white;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
 }
 
-.filters-header {
-  font-size: 18px;
-  font-weight: bold;
-  padding: 20px;
-  border-bottom: 1px solid var(--border-color);
+.pagination button.active {
   background-color: var(--primary-color);
   color: white;
+  border-color: var(--primary-color);
+}
+
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* 반응형 스타일 */
 @media (max-width: 992px) {
   .content-wrapper {
-    padding: 15px;
-  }
-
-  .top-control-section {
-    padding: 15px;
-  }
-
-  .filters-container.top-filters {
-    padding: 15px;
-  }
-
-  .modal-body {
     flex-direction: column;
-    overflow-y: auto;
   }
 
-  .modal-left,
-  .modal-right {
+  .filters-container {
     width: 100%;
-    max-width: none;
-  }
-
-  .modal-right {
-    border-left: none;
-    border-top: 1px solid var(--border-color);
-  }
-
-  .main-image-container {
-    height: 350px;
-  }
-}
-
-/* ==================
-   9. RESPONSIVE STYLES
-   ================== */
-
-@media (max-width: 992px) {
-  .content-wrapper {
-    flex-direction: column;
+    margin-bottom: 20px;
+    position: static;
   }
 
   .modal-body {
@@ -1080,7 +641,6 @@ select {
 }
 
 @media (max-width: 768px) {
-  /* Search toolbar */
   .search-toolbar {
     flex-direction: column;
     align-items: stretch;
@@ -1097,12 +657,10 @@ select {
     width: 100%;
   }
 
-  /* Mobile filter toggle */
   .mobile-filter-toggle {
     display: flex;
   }
 
-  /* Filter container */
   .filters-container {
     position: fixed;
     left: -280px;
@@ -1119,23 +677,6 @@ select {
     left: 0;
   }
 
-  /* Top filters in mobile */
-  .top-filters {
-    display: none;
-  }
-
-  .top-filters.active-filter {
-    display: flex;
-    position: relative;
-    left: 0;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  }
-
-  .expanded-toolbar {
-    margin-top: 250px; /* Space for top filters */
-  }
-
-  /* Product items */
   .bid-result-item {
     flex-wrap: wrap;
   }
@@ -1162,14 +703,12 @@ select {
     padding-left: 75px;
   }
 
-  /* Modal */
   .main-image-container {
     height: 200px;
   }
 }
 
 @media (max-width: 480px) {
-  /* Sort options */
   .sort-options {
     flex-wrap: wrap;
     gap: 5px;
@@ -1180,18 +719,187 @@ select {
     min-width: 90px;
   }
 
-  /* Bid info and status */
   .bid-info,
   .result-status {
     padding-left: 0;
   }
 
-  /* Filter buttons */
   .filter-buttons {
     flex-direction: column;
   }
+}
 
-  /* Bid action */
+/* 상단 필터 스타일 */
+.top-filters {
+  width: 100%;
+  position: static;
+  margin-bottom: 15px;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  align-items: center;
+}
+
+.inline-filter {
+  margin-bottom: 0;
+  min-width: 180px;
+  flex: 1;
+}
+
+/* 수평 라디오 버튼 그룹 */
+.horizontal.radio-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* 제품 섹션이 전체 너비를 차지하도록 수정 */
+.products-section {
+  width: 100%;
+  flex: 1;
+  min-width: 0;
+}
+
+/* 모바일에서 상단 필터 표시 */
+@media (max-width: 768px) {
+  .top-filters {
+    display: none;
+  }
+
+  .top-filters.active-filter {
+    display: flex;
+    position: relative;
+    left: 0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  }
+
+  .expanded-toolbar {
+    margin-top: 250px; /* 상단 필터 높이만큼 공간 확보 */
+  }
+}
+
+/* 리스트 내 입찰 영역 스타일 */
+.bid-action {
+  width: 100%;
+  padding-left: 75px;
+  margin-top: 10px;
+}
+
+.bid-input-container.compact {
+  display: flex;
+  flex-direction: column;
+  max-width: 300px;
+}
+
+.bid-input-container.compact .bid-input-group {
+  display: flex;
+  position: relative;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.bid-input-container.compact input {
+  flex: 1;
+  padding: 6px 50px 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.bid-input-container.compact .bid-value-display {
+  position: absolute;
+  right: 45px;
+  font-size: 14px;
+  color: #888;
+  pointer-events: none;
+}
+
+.bid-input-container.compact .bid-currency {
+  position: absolute;
+  right: 25px;
+  font-size: 14px;
+  color: #666;
+}
+
+.bid-input-container.compact .bid-button {
+  position: absolute;
+  right: -60px;
+  background-color: var(--primary-color);
+  color: white;
+  padding: 6px 15px;
+  border-radius: 4px;
+  border: none;
+  font-size: 14px;
+}
+
+.price-details-container {
+  font-size: 12px;
+  color: var(--primary-color);
+  margin-top: 5px;
+  min-height: 18px;
+}
+
+/* 모달 내 입찰 영역 스타일 개선 */
+.modal .bid-info-holder {
+  background-color: #f8f8f8;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 25px;
+}
+
+.modal .bid-input-container {
+  margin-top: 15px;
+}
+
+.modal .bid-input-group {
+  display: flex;
+  position: relative;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.modal .bid-input {
+  flex: 1;
+  padding: 8px 80px 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.modal .bid-value-display {
+  position: absolute;
+  right: 40px;
+  font-size: 14px;
+  color: #888;
+  pointer-events: none;
+}
+
+.modal .bid-currency {
+  position: absolute;
+  right: 15px;
+  font-size: 14px;
+  color: #666;
+}
+
+.modal .bid-button {
+  margin-top: 8px;
+  background-color: var(--primary-color);
+  color: white;
+  padding: 8px 15px;
+  border-radius: 4px;
+  border: none;
+  font-size: 14px;
+  width: 100%;
+}
+
+/* 모바일 뷰에서 입찰 영역 조정 */
+@media (max-width: 768px) {
   .bid-action {
     padding-left: 0;
   }
