@@ -82,140 +82,145 @@
       </header>
 
       <main class="main-content">
-        <section class="search-toolbar">
-          <div class="view-controls">
-            <div class="sort-options">
-              <button class="sort-btn active" data-sort="updated_at">
-                최신순 <i class="fas fa-sort"></i>
-              </button>
-              <button class="sort-btn" data-sort="starting_price">
-                가격순 <i class="fas fa-sort"></i>
-              </button>
-              <button class="sort-btn" data-sort="brand">
-                브랜드순 <i class="fas fa-sort"></i>
-              </button>
-            </div>
-            <button class="mobile-filter-toggle" id="mobileFilterBtn">
-              <i class="fas fa-filter"></i> 필터
-            </button>
-          </div>
-        </section>
-
-        <!-- 필터 및 결과 섹션 -->
         <div class="content-wrapper">
-          <aside class="filters-container">
-            <h3>필터</h3>
+          <section class="top-control-section">
+            <!-- Filters moved to the top -->
+            <div class="filters-container top-filters">
+              <div class="filter-row">
+                <!-- Auction Type Filter -->
+                <div class="filter-section inline-filter">
+                  <h4>경매 타입</h4>
+                  <div class="radio-buttons horizontal">
+                    <div class="radio-item">
+                      <input
+                        type="radio"
+                        name="bidType"
+                        id="bidType-all"
+                        value="all"
+                        checked />
+                      <label for="bidType-all">전체</label>
+                    </div>
+                    <div class="radio-item">
+                      <input
+                        type="radio"
+                        name="bidType"
+                        id="bidType-live"
+                        value="live" />
+                      <label for="bidType-live">현장 경매</label>
+                    </div>
+                    <div class="radio-item">
+                      <input
+                        type="radio"
+                        name="bidType"
+                        id="bidType-direct"
+                        value="direct" />
+                      <label for="bidType-direct">직접 경매</label>
+                    </div>
+                  </div>
+                </div>
 
-            <!-- 경매 타입 필터 -->
-            <div class="filter-section">
-              <h4>경매 타입</h4>
-              <div class="radio-buttons">
-                <div class="radio-item">
-                  <input
-                    type="radio"
-                    name="bidType"
-                    id="bidType-all"
-                    value="all"
-                    checked />
-                  <label for="bidType-all">전체</label>
+                <!-- Status Filter -->
+                <div class="filter-section inline-filter">
+                  <h4>상태</h4>
+                  <div class="radio-buttons horizontal">
+                    <div class="radio-item">
+                      <input
+                        type="radio"
+                        name="status"
+                        id="status-all"
+                        value="all" />
+                      <label for="status-all">전체</label>
+                    </div>
+                    <div class="radio-item">
+                      <input
+                        type="radio"
+                        name="status"
+                        id="status-active"
+                        value="active"
+                        checked />
+                      <label for="status-active">입찰 진행중</label>
+                    </div>
+                    <div class="radio-item">
+                      <input
+                        type="radio"
+                        name="status"
+                        id="status-completed"
+                        value="completed" />
+                      <label for="status-completed">낙찰 완료</label>
+                    </div>
+                    <div class="radio-item">
+                      <input
+                        type="radio"
+                        name="status"
+                        id="status-cancelled"
+                        value="cancelled" />
+                      <label for="status-cancelled">낙찰 실패</label>
+                    </div>
+                  </div>
                 </div>
-                <div class="radio-item">
-                  <input
-                    type="radio"
-                    name="bidType"
-                    id="bidType-live"
-                    value="live" />
-                  <label for="bidType-live">현장 경매</label>
+
+                <!-- Date Range Filter -->
+                <div class="filter-section inline-filter">
+                  <h4>기간</h4>
+                  <select id="dateRange">
+                    <option value="7">최근 1주일</option>
+                    <option value="30" selected>최근 1개월</option>
+                    <option value="90">최근 3개월</option>
+                    <option value="180">최근 6개월</option>
+                    <option value="365">최근 1년</option>
+                  </select>
                 </div>
-                <div class="radio-item">
-                  <input
-                    type="radio"
-                    name="bidType"
-                    id="bidType-direct"
-                    value="direct" />
-                  <label for="bidType-direct">직접 경매</label>
+
+                <!-- Filter Buttons -->
+                <div class="filter-buttons">
+                  <button id="applyFilters" class="primary-button">
+                    필터 적용
+                  </button>
+                  <button id="resetFilters" class="secondary-button">
+                    초기화
+                  </button>
                 </div>
               </div>
             </div>
 
-            <!-- 상태 필터 -->
-            <div class="filter-section">
-              <h4>상태</h4>
-              <div class="radio-buttons">
-                <div class="radio-item">
-                  <input
-                    type="radio"
-                    name="status"
-                    id="status-all"
-                    value="all" />
-                  <label for="status-all">전체</label>
+            <!-- Sorting Toolbar -->
+            <section class="search-toolbar">
+              <div class="view-controls">
+                <div class="sort-options">
+                  <button class="sort-btn active" data-sort="updated_at">
+                    최신순 <i class="fas fa-sort"></i>
+                  </button>
+                  <button class="sort-btn" data-sort="starting_price">
+                    가격순 <i class="fas fa-sort"></i>
+                  </button>
+                  <button class="sort-btn" data-sort="brand">
+                    브랜드순 <i class="fas fa-sort"></i>
+                  </button>
                 </div>
-                <div class="radio-item">
-                  <input
-                    type="radio"
-                    name="status"
-                    id="status-active"
-                    value="active"
-                    checked />
-                  <label for="status-active">입찰 진행중</label>
-                </div>
-                <div class="radio-item">
-                  <input
-                    type="radio"
-                    name="status"
-                    id="status-completed"
-                    value="completed" />
-                  <label for="status-completed">낙찰 완료</label>
-                </div>
-                <div class="radio-item">
-                  <input
-                    type="radio"
-                    name="status"
-                    id="status-cancelled"
-                    value="cancelled" />
-                  <label for="status-cancelled">낙찰 실패</label>
-                </div>
+                <button class="mobile-filter-toggle" id="mobileFilterBtn">
+                  <i class="fas fa-filter"></i> 필터
+                </button>
               </div>
-            </div>
-
-            <!-- 기간 필터 -->
-            <div class="filter-section">
-              <h4>기간</h4>
-              <select id="dateRange">
-                <option value="7">최근 1주일</option>
-                <option value="30" selected>최근 1개월</option>
-                <option value="90">최근 3개월</option>
-                <option value="180">최근 6개월</option>
-                <option value="365">최근 1년</option>
-              </select>
-            </div>
-
-            <!-- 필터 적용/초기화 버튼 -->
-            <div class="filter-buttons">
-              <button id="applyFilters" class="primary-button">
-                필터 적용
-              </button>
-              <button id="resetFilters" class="secondary-button">초기화</button>
-            </div>
-          </aside>
+            </section>
+          </section>
 
           <section class="products-section">
-            <!-- 결과 카운트 -->
+            <!-- Results Count -->
             <div class="results-header">
               <div class="results-count">
                 총 <span id="totalResults">0</span>개 상품
               </div>
             </div>
 
-            <!-- 로딩 메시지 -->
+            <!-- Loading Message -->
             <div class="loading-msg" id="loadingMsg">로딩 중...</div>
 
-            <!-- 상품 목록 -->
+            <!-- Product List -->
             <div class="bid-results-list" id="productList">
-              <!-- 상품 아이템이 여기에 추가됨 -->
+              <!-- Product items will be added here -->
             </div>
 
-            <!-- 페이지네이션 -->
+            <!-- Pagination -->
             <div class="pagination" id="pagination"></div>
           </section>
         </div>

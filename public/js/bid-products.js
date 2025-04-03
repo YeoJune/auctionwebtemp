@@ -803,8 +803,59 @@ function displayProducts() {
     resultItem.appendChild(statusSection);
 
     // 클릭 이벤트 추가
-    resultItem.addEventListener("click", () => {
+    resultItem.addEventListener("click", (e) => {
+      // 클릭된 요소가 입찰 버튼이나 입력 필드인 경우 이벤트 전파 중지
+      if (e.target.closest(".bid-button") || e.target.closest(".bid-input")) {
+        e.stopPropagation();
+        return;
+      }
+
       showProductDetails(item.item_id);
+    });
+
+    // 경매 입찰 섹션 클릭 시에도 상세 페이지로 이동하지 않도록 처리
+const bidSection = document.createElement("div");
+bidSection.className = "bid-action";
+
+// 입찰 가능 상태인 경우만 입찰 UI 추가
+if (product.displayStatus === "active" || 
+    product.displayStatus === "first" || 
+    product.displayStatus === "second") {
+  
+  const timer = BidManager.getRemainingTime(item.scheduled_date);
+  
+  if (timer) { // 마감되지 않은 경우만 입찰 UI 표시
+    // 경매 타입에 따라 다른 입찰 UI 표시
+    if (product.type === "direct") {
+      const directBidInfo = state.directBids.find(b => b.id === product.id);
+      
+      bidSection.innerHTML = `
+        <div class="bid-input-container compact">
+          <input type="number" placeholder="입찰 금액" class="bid-input" data-item-id="${item.item_id}" data-bid-type="direct">
+          <span class="bid-currency">¥</span>
+          <button class="bid-button" onclick="event.stopPropagation(); BidManager.handleDirectBidSubmit(this.parentElement.querySelector('.bid-input').value, '${item.item_id}')">입찰</button>
+        </div>
+      `;
+    } else {
+      const liveBidInfo = state.liveBids.find(b => b.id === product.id);
+      
+      // 상태에 따라 다른 라벨 표시
+      const bidLabel = liveBidInfo?.first_price ? "최종 입찰" : "1차 입찰";
+      
+      bidSection.innerHTML = `
+        <div class="bid-input-container compact">
+          <input type="number" placeholder="${bidLabel}" class="bid-input" data-item-id="${item.item_id}" data-bid-type="live">
+          <span class="bid-currency">¥</span>
+          <button class="bid-button" onclick="event.stopPropagation(); BidManager.handleLiveBidSubmit(this.parentElement.querySelector('.bid-input').value, '${item.item_id}')">입찰</button>
+        </div>
+      `;
+    }
+    
+    resultItem.appendChild(bidSection);
+    
+    // 이벤트 버블링 방지 (입찰 UI 클릭 시 상세 페이지로 이동하지 않도록)
+    bidSection.addEventListener('click', (e) => {
+      e.stopPropagation();
     });
 
     // 컨테이너에 아이템 추가
@@ -914,41 +965,45 @@ function updateModalWithDetails(item) {
   document.querySelector(".modal-rank").textContent = item.rank || "N";
 }
 
-// 입찰 정보 표시
 function displayBidInfoInModal(product, item) {
   const bidSection = document.querySelector(".bid-info-holder");
   if (!bidSection) return;
 
-  // 입찰 가능 상태인 경우 BidManager를 사용하여 입찰 폼 생성
-  if (
-    product.displayStatus === "active" ||
-    product.displayStatus === "first" ||
-    product.displayStatus === "second"
-  ) {
-    if (product.type === "direct") {
-      const directBidInfo = state.directBids.find((b) => b.id === product.id);
-      bidSection.innerHTML = BidManager.getDirectBidSectionHTML(
-        directBidInfo,
-        item.item_id,
-        item.auc_num,
-        item.category
-      );
-    } else {
-      const liveBidInfo = state.liveBids.find((b) => b.id === product.id);
-      bidSection.innerHTML = BidManager.getLiveBidSectionHTML(
-        liveBidInfo,
-        item.item_id,
-        item.auc_num,
-        item.category
-      );
-    }
+  // 남은 시간 확인
+  const timer = BidManager.getRemainingTime(item.scheduled_date);
 
-    // 가격 계산기 초기화
-    BidManager.initializePriceCalculators();
-  } else {
+  // 마감되었거나 완료/취소 상태인 경우 읽기 전용 표시
+  if (
+    !timer ||
+    product.displayStatus === "completed" ||
+    product.displayStatus === "cancelled"
+  ) {
     // 입찰 불가 상태인 경우 읽기 전용 입찰 정보 표시
     displayReadOnlyBidInfo(product, item, bidSection);
+    return;
   }
+
+  // 입찰 가능 상태인 경우 BidManager를 사용하여 입찰 폼 생성
+  if (product.type === "direct") {
+    const directBidInfo = state.directBids.find((b) => b.id === product.id);
+    bidSection.innerHTML = BidManager.getDirectBidSectionHTML(
+      directBidInfo,
+      item.item_id,
+      item.auc_num,
+      item.category
+    );
+  } else {
+    const liveBidInfo = state.liveBids.find((b) => b.id === product.id);
+    bidSection.innerHTML = BidManager.getLiveBidSectionHTML(
+      liveBidInfo,
+      item.item_id,
+      item.auc_num,
+      item.category
+    );
+  }
+
+  // 가격 계산기 초기화
+  BidManager.initializePriceCalculators();
 }
 
 // 읽기 전용 입찰 정보 표시
