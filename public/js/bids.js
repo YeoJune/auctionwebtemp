@@ -243,8 +243,7 @@ window.BidManager = (function () {
     const valueDisplay =
       inputElement.parentElement.querySelector(".bid-value-display");
     if (valueDisplay) {
-      const value = inputElement.value || "000";
-      valueDisplay.textContent = value;
+      valueDisplay.textContent = "000"; // 항상 "000"으로 고정
     }
   }
 
