@@ -186,7 +186,18 @@ function setupModal(modalId) {
   const closeBtn = modal.querySelector(".close");
 
   if (closeBtn) {
-    closeBtn.onclick = () => (modal.style.display = "none");
+    closeBtn.onclick = () => {
+      modal.style.display = "none";
+
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has("item_id")) {
+        urlParams.delete("item_id");
+        const newUrl =
+          window.location.pathname +
+          (urlParams.toString() ? `?${urlParams}` : "");
+        window.history.replaceState({}, document.title, newUrl);
+      }
+    };
   }
 
   window.onclick = (event) => {

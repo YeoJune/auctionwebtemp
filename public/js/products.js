@@ -585,8 +585,21 @@ async function showDetails(itemId) {
   const modalManager = setupModal("detailModal");
   if (!modalManager) return;
 
-  const item = state.currentData.find((data) => data.item_id == itemId);
-  if (!item) return;
+  // 현재 데이터에서 아이템 찾기
+  let item = state.currentData.find((data) => data.item_id == itemId);
+
+  // 데이터 없는 경우 API 요청
+  if (!item) {
+    try {
+      item = await API.fetchAPI(`/detail/item-details/${itemId}`, {
+        method: "POST",
+      });
+    } catch (error) {
+      console.error("Failed to fetch item details:", error);
+      alert("상세 정보를 불러올 수 없습니다.");
+      return;
+    }
+  }
 
   // 기본 정보로 모달 초기화
   initializeModal(item);
@@ -1198,7 +1211,13 @@ function initialize() {
           });
 
           // 초기 데이터 로드
-          fetchData();
+          fetchData().then(() => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const itemId = urlParams.get("item_id");
+            if (itemId) {
+              showDetails(itemId);
+            }
+          });
         }
       )
       .catch((error) => {
