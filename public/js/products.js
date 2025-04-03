@@ -601,8 +601,6 @@ async function showDetails(itemId) {
     }
   }
 
-  console.log(itemId, item);
-
   // 기본 정보로 모달 초기화
   initializeModal(item);
   modalManager.show();
@@ -646,7 +644,7 @@ function initializeModal(item) {
   document.querySelector(".modal-rank").textContent = item.rank || "N";
 
   // 입찰 정보 초기화
-  initializeBidInfo(item.item_id);
+  initializeBidInfo(item.item_id, item);
 
   // 이미지 초기화
   initializeImages([item.image]);
@@ -670,8 +668,8 @@ function updateModalWithDetails(item) {
   document.querySelector(".modal-rank").textContent = item.rank || "N";
 }
 
-function initializeBidInfo(itemId) {
-  const item = state.currentData.find((i) => i.item_id == itemId);
+function initializeBidInfo(itemId, item = null) {
+  if (!item) item = state.currentData.find((i) => i.item_id == itemId);
   const bidSection = document.querySelector(".modal-content .bid-info-holder");
 
   if (!bidSection || !item) return;
