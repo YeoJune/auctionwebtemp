@@ -1,5 +1,5 @@
 // utils/processItem.js
-const pool = require("./DB");
+const pool = require("./DB"); // Assuming DB.js exports the pool
 const { processImagesInChunks } = require("./processImage");
 const {
   ecoAucCrawler,
@@ -10,7 +10,24 @@ const {
 } = require("../crawlers/index");
 const DBManager = require("./DBManager");
 
-async function processItem(itemId, isValue, res, returnData = false) {
+/**
+ * Fetches and potentially updates details for a single item.
+ * Can optionally include user-specific bid data.
+ *
+ * @param {string} itemId - The ID of the item to process.
+ * @param {boolean} isValue - Flag indicating if it's a 'values_items' table item.
+ * @param {object|null} res - Express response object (used if not returning data).
+ * @param {boolean} returnData - If true, returns the item data instead of sending response.
+ * @param {number|string|null} userId - The ID of the user to fetch bid data for (optional).
+ * @returns {Promise<object|null>} - Item data if returnData is true, otherwise null.
+ */
+async function processItem(
+  itemId,
+  isValue,
+  res,
+  returnData = false,
+  userId = null
+) {
   try {
     const tableName = isValue ? "values_items" : "crawled_items";
     const [items] = await pool.query(
@@ -25,56 +42,137 @@ async function processItem(itemId, isValue, res, returnData = false) {
 
     let item = items[0];
 
+    // --- Fetch User Bid Data ---
+    let userBids = { live: null, direct: null };
+    if (userId) {
+      try {
+        // Fetch live bid for this specific item and user
+        const [liveBids] = await pool.query(
+          `
+          SELECT
+            'live' as bid_type, id, item_id, first_price,
+            second_price, final_price, status
+          FROM live_bids
+          WHERE user_id = ? AND item_id = ?
+          LIMIT 1
+          `,
+          [userId, itemId]
+        );
+        if (liveBids.length > 0) {
+          userBids.live = liveBids[0];
+        }
+
+        // Fetch direct bid for this specific item and user
+        const [directBids] = await pool.query(
+          `
+          SELECT
+            'direct' as bid_type, id, item_id, current_price, status
+          FROM direct_bids
+          WHERE user_id = ? AND item_id = ?
+          LIMIT 1
+          `,
+          [userId, itemId]
+        );
+        if (directBids.length > 0) {
+          userBids.direct = directBids[0];
+        }
+      } catch (bidError) {
+        console.error(
+          `Error fetching bids for user ${userId}, item ${itemId}:`,
+          bidError
+        );
+        // Continue without bid data if fetching fails
+      }
+    }
+    // Attach bids to the item object
+    item.bids = userBids;
+    // --- End Fetch User Bid Data ---
+
+    // If description exists, no need to crawl, return item with bids
     if (item.description) {
       if (returnData) return item;
       return res.json(item);
     }
 
+    // Determine crawler based on auc_num and isValue
     let crawler;
     if (item.auc_num == 1) {
-      if (isValue) crawler = ecoAucValueCrawler;
-      else crawler = ecoAucCrawler;
+      crawler = isValue ? ecoAucValueCrawler : ecoAucCrawler;
     } else if (item.auc_num == 2) {
-      if (isValue) crawler = brandAucValueCrawler;
-      else crawler = brandAucCrawler;
+      crawler = isValue ? brandAucValueCrawler : brandAucCrawler;
     } else if (item.auc_num == 3) {
-      if (isValue) crawler = null;
-      else crawler = starAucCrawler;
+      crawler = isValue ? null : starAucCrawler; // No value crawler for starAuc assumed
     }
 
+    // If no suitable crawler, return current item data with bids
     if (!crawler) {
+      console.warn(
+        `No crawler found for item ${itemId}, auc_num ${item.auc_num}, isValue ${isValue}`
+      );
       if (returnData) return item;
       return res.json(item);
     }
 
+    // Proceed with crawling
     try {
-      const crawledDetails = await crawler.crawlItemDetails(itemId, item);
-      const processedDetails = (
-        await processImagesInChunks([crawledDetails])
-      )[0];
+      const crawledDetails = await crawler.crawlItemDetails(itemId, item); // Pass original item for context if needed
 
-      if (processedDetails) {
-        await DBManager.updateItemDetails(itemId, processedDetails, tableName);
+      // Check if crawling returned anything meaningful before processing images/updating DB
+      if (
+        crawledDetails &&
+        (crawledDetails.description || crawledDetails.images?.length > 0)
+      ) {
+        const processedDetails = (
+          await processImagesInChunks([crawledDetails])
+        )[0];
 
-        const [updatedItems] = await pool.query(
-          `SELECT * FROM ${tableName} WHERE item_id = ?`,
-          [itemId]
-        );
+        if (processedDetails) {
+          await DBManager.updateItemDetails(
+            itemId,
+            processedDetails,
+            tableName
+          );
 
-        if (returnData) return updatedItems[0];
-        return res.json(updatedItems[0]);
+          // Fetch the updated item data
+          const [updatedItems] = await pool.query(
+            `SELECT * FROM ${tableName} WHERE item_id = ?`,
+            [itemId]
+          );
+
+          if (updatedItems.length > 0) {
+            let updatedItem = updatedItems[0];
+            // Attach the previously fetched bids to the updated item
+            updatedItem.bids = userBids;
+
+            if (returnData) return updatedItem;
+            return res.json(updatedItem);
+          } else {
+            // Should not happen if update was successful, but handle defensively
+            console.error(`Item ${itemId} not found after update.`);
+            if (returnData) return item; // Return original item with bids
+            return res.json(item);
+          }
+        } else {
+          console.warn(
+            `Processing crawled details yielded no result for item ${itemId}`
+          );
+          if (returnData) return item; // Return original item with bids
+          return res.json(item);
+        }
       } else {
-        if (returnData) return item;
+        console.warn(`Crawling returned no new details for item ${itemId}`);
+        if (returnData) return item; // Return original item with bids
         return res.json(item);
       }
     } catch (error) {
-      console.error("Error crawling item details:", error);
+      console.error(`Error crawling item details for ${itemId}:`, error);
+      // Return the original item data (with bids) if crawling fails
       if (returnData) return item;
       return res.json(item);
     }
   } catch (error) {
-    console.error("Error getting item details:", error);
-    if (returnData) return null;
+    console.error(`Error processing item ${itemId}:`, error);
+    if (returnData) return null; // Indicate failure if returning data
     return res.status(500).json({ message: "Error getting item details" });
   }
 }
