@@ -26,299 +26,6 @@ window.state = {
   showBidItemsOnly: false, // 입찰 항목만 표시 여부
 };
 
-// 남은 시간 계산 함수
-function getRemainingTime(scheduledDate) {
-  if (!scheduledDate) return null;
-
-  const now = new Date();
-  const endDate = new Date(scheduledDate);
-
-  // 이미 지난 날짜면 null 반환
-  if (endDate <= now) return null;
-
-  const diff = endDate - now;
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-  return {
-    hours,
-    minutes,
-    seconds,
-    total: diff,
-    text: `${hours.toString().padStart(2, "0")}:${minutes
-      .toString()
-      .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`,
-    isNearEnd: diff <= 10 * 60 * 1000, // 10분 이하 남았는지
-  };
-}
-
-// 입찰 섹션 HTML 생성 - 현장 경매용
-function getLiveBidSectionHTML(bidInfo, itemId, aucNum, category) {
-  const item = state.currentData.find((item) => item.item_id === itemId);
-  if (!item) return "";
-
-  // 시작가
-  const startingPrice = parseFloat(item.starting_price) || 0;
-
-  // 타이머 HTML
-  const timer = getRemainingTime(item.scheduled_date);
-  const timerHTML = timer
-    ? `
-    <div class="bid-timer ${timer.isNearEnd ? "near-end" : ""}">
-      입찰마감 남은시간 [${timer.text}]
-    </div>
-  `
-    : "";
-
-  // 최종 입찰가가 있는 경우
-  if (bidInfo?.final_price) {
-    return `
-      <div class="bid-info live">
-        ${timerHTML}
-        <div class="final-price">
-          <p>최종 입찰금액: ${cleanNumberFormat(bidInfo.final_price)} ¥</p>
-          <div class="price-details-container">
-            관부가세 포함 ${cleanNumberFormat(
-              calculateTotalPrice(bidInfo.final_price, aucNum, category)
-            )}원
-          </div>
-        </div>
-      </div>`;
-  }
-
-  // 1차/2차 입찰 진행 중인 경우
-  let html = `<div class="bid-info live">
-    ${timerHTML}
-    <div class="real-time-price">
-      <p>시작 금액: ${cleanNumberFormat(startingPrice)} ¥</p>
-      <div class="price-details-container">
-        관부가세 포함 ${cleanNumberFormat(
-          calculateTotalPrice(startingPrice, aucNum, category)
-        )}원
-      </div>
-    </div>`;
-
-  if (bidInfo?.first_price || bidInfo?.second_price) {
-    // 1차 입찰이 있는 경우
-    if (bidInfo.first_price) {
-      html += `
-        <div class="bid-price-info">
-          <p>1차 입찰금액: ${cleanNumberFormat(bidInfo.first_price)} ¥</p>
-          <div class="price-details-container first-price">
-            관부가세 포함 ${cleanNumberFormat(
-              calculateTotalPrice(bidInfo.first_price, aucNum, category)
-            )}원
-          </div>
-        </div>`;
-    }
-
-    // 2차 제안이 있는 경우
-    if (bidInfo.second_price) {
-      html += `
-        <div class="bid-price-info">
-          <p>2차 제안금액: ${cleanNumberFormat(bidInfo.second_price)} ¥</p>
-          <div class="price-details-container second-price">
-            관부가세 포함 ${cleanNumberFormat(
-              calculateTotalPrice(bidInfo.second_price, aucNum, category)
-            )}원
-          </div>
-        </div>`;
-    }
-  }
-
-  // 입찰 입력 UI
-  html += `
-    <div class="bid-input-container">
-      <div class="bid-input-group">
-        <span class="bid-input-label">${
-          bidInfo?.first_price ? "최종입찰 금액" : "1차금액 입력"
-        }</span>
-        <input type="number" placeholder="" class="bid-input" data-item-id="${itemId}" data-bid-type="live">
-        <span class="bid-value-display">000</span>
-        <span class="bid-currency">¥</span>
-        <button class="bid-button" onclick="event.stopPropagation(); handleLiveBidSubmit(this.parentElement.querySelector('.bid-input').value, '${itemId}')">입찰</button>
-      </div>
-      <div class="price-details-container"></div>
-      <div class="quick-bid-buttons">
-        <button class="quick-bid-btn" onclick="event.stopPropagation(); quickAddBid('${itemId}', 1, 'live')">+1,000¥</button>
-        <button class="quick-bid-btn" onclick="event.stopPropagation(); quickAddBid('${itemId}', 5, 'live')">+5,000¥</button>
-        <button class="quick-bid-btn" onclick="event.stopPropagation(); quickAddBid('${itemId}', 10, 'live')">+10,000¥</button>
-      </div>
-    </div>
-  </div>`;
-
-  return html;
-}
-
-// 입찰 섹션 HTML 생성 - 직접 경매용
-function getDirectBidSectionHTML(bidInfo, itemId, aucNum, category) {
-  const item = state.currentData.find((item) => item.item_id === itemId);
-  if (!item) return "";
-
-  // 시작가
-  const live_price =
-    item.bid_type == "direct" &&
-    bidInfo?.current_price &&
-    Number(bidInfo.current_price) > Number(item.starting_price)
-      ? bidInfo.current_price
-      : item.starting_price;
-
-  // 현재 내 입찰가
-  const currentPrice = bidInfo?.current_price || 0;
-
-  // 나의 입찰가와 실시간 가격 비교
-  const hasHigherBid =
-    Number(live_price) > Number(currentPrice) && currentPrice > 0;
-
-  // 타이머 HTML
-  const timer = getRemainingTime(item.scheduled_date);
-  const timerHTML = timer
-    ? `
-    <div class="bid-timer ${timer.isNearEnd ? "near-end" : ""}">
-      입찰마감 남은시간 [${timer.text}]
-    </div>
-  `
-    : "";
-
-  let html = `<div class="bid-info direct">
-    ${
-      hasHigherBid
-        ? '<div class="higher-bid-alert">더 높은 입찰 존재</div>'
-        : ""
-    }
-    ${timerHTML}
-    <div class="real-time-price">
-      <p>실시간 금액: ${cleanNumberFormat(live_price)} ¥</p>
-      <div class="price-details-container">
-        관부가세 포함 ${cleanNumberFormat(
-          calculateTotalPrice(live_price, aucNum, category)
-        )}원
-      </div>
-    </div>`;
-
-  if (currentPrice > 0) {
-    html += `
-      <div class="bid-price-info">
-        <p>나의 입찰 금액: ${cleanNumberFormat(currentPrice)} ¥</p>
-        <div class="price-details-container my-price">
-          관부가세 포함 ${cleanNumberFormat(
-            calculateTotalPrice(currentPrice, aucNum, category)
-          )}원
-        </div>
-      </div>`;
-  }
-
-  // 입찰 입력 UI
-  html += `
-    <div class="bid-input-container">
-      <div class="bid-input-group">
-        <input type="number" placeholder="나의 입찰 금액" class="bid-input" data-item-id="${itemId}" data-bid-type="direct">
-        <span class="bid-value-display">000</span>
-        <span class="bid-currency">¥</span>
-        <button class="bid-button" onclick="event.stopPropagation(); handleDirectBidSubmit(this.parentElement.querySelector('.bid-input').value, '${itemId}')">입찰</button>
-      </div>
-      <div class="price-details-container"></div>
-      <div class="quick-bid-buttons">
-        <button class="quick-bid-btn" onclick="event.stopPropagation(); quickAddBid('${itemId}', 1, 'direct')">+1,000¥</button>
-        <button class="quick-bid-btn" onclick="event.stopPropagation(); quickAddBid('${itemId}', 5, 'direct')">+5,000¥</button>
-        <button class="quick-bid-btn" onclick="event.stopPropagation(); quickAddBid('${itemId}', 10, 'direct')">+10,000¥</button>
-      </div>
-    </div>
-  </div>`;
-
-  return html;
-}
-
-function updateBidValueDisplay(inputElement) {
-  const valueDisplay =
-    inputElement.parentElement.querySelector(".bid-value-display");
-  if (valueDisplay) {
-    valueDisplay.textContent = "000";
-  }
-}
-
-// 현장 경매 입찰 제출 처리
-async function handleLiveBidSubmit(value, itemId) {
-  if (!state.isAuthenticated) {
-    alert("입찰하려면 로그인이 필요합니다.");
-    return;
-  }
-
-  if (!value) {
-    alert("입찰 금액을 입력해주세요.");
-    return;
-  }
-
-  const numericValue = parseFloat(value) * 1000; // 1000 곱하기
-  const item = state.currentData.find((item) => item.item_id === itemId);
-  const bidInfo = state.liveBidData.find((bid) => bid.item_id === itemId);
-
-  try {
-    // 이미 입찰한 내역이 있는지 확인
-    if (bidInfo) {
-      // 2차 입찰 이후면 최종 입찰 처리
-      if (bidInfo.status === "second") {
-        await API.fetchAPI(`/live-bids/${bidInfo.id}/final`, {
-          method: "PUT",
-          body: JSON.stringify({
-            finalPrice: numericValue,
-          }),
-        });
-        alert("최종 입찰금액이 등록되었습니다.");
-      } else {
-        alert("이미 입찰한 상품입니다. 관리자의 2차 제안을 기다려주세요.");
-        return;
-      }
-    } else {
-      // 첫 입찰
-      await API.fetchAPI("/live-bids", {
-        method: "POST",
-        body: JSON.stringify({
-          itemId,
-          firstPrice: numericValue,
-        }),
-      });
-      alert("1차 입찰금액이 등록되었습니다.");
-    }
-
-    await fetchData(); // 데이터 새로고침
-  } catch (error) {
-    alert(`입찰 신청 중 오류가 발생했습니다: ${error.message}`);
-  }
-}
-
-// 직접 경매 입찰 제출 처리
-async function handleDirectBidSubmit(value, itemId) {
-  if (!state.isAuthenticated) {
-    alert("입찰하려면 로그인이 필요합니다.");
-    return;
-  }
-
-  if (!value) {
-    alert("입찰 금액을 입력해주세요.");
-    return;
-  }
-
-  const numericValue = parseFloat(value) * 1000; // 1000 곱하기
-  const item = state.currentData.find((item) => item.item_id === itemId);
-
-  try {
-    await API.fetchAPI("/direct-bids", {
-      method: "POST",
-      body: JSON.stringify({
-        itemId,
-        currentPrice: numericValue,
-      }),
-    });
-
-    alert("입찰 금액이 등록되었습니다.");
-    await fetchData(); // 데이터 새로고침
-  } catch (error) {
-    alert(`입찰 신청 중 오류가 발생했습니다: ${error.message}`);
-  }
-}
-
 // 데이터 표시 함수
 function displayData(data) {
   const dataBody = document.getElementById("dataBody");
@@ -337,44 +44,14 @@ function displayData(data) {
     dataBody.appendChild(card);
   });
 
-  initializePriceCalculators();
-  startTimerUpdates();
-}
+  // BidManager에 현재 데이터 전달
+  BidManager.updateCurrentData(state.currentData);
 
-// 타이머 업데이트 시작
-function startTimerUpdates() {
-  // 기존 타이머가 있으면 제거
-  if (window.timerInterval) {
-    clearInterval(window.timerInterval);
-  }
+  // 가격 계산기 초기화
+  BidManager.initializePriceCalculators();
 
-  // 1초마다 타이머 업데이트
-  window.timerInterval = setInterval(() => {
-    document.querySelectorAll(".bid-timer").forEach((timerElement) => {
-      const itemId = timerElement.closest(".product-card")?.dataset.itemId;
-      if (!itemId) return;
-
-      const item = state.currentData.find((item) => item.item_id === itemId);
-      if (!item || !item.scheduled_date) return;
-
-      const timer = getRemainingTime(item.scheduled_date);
-      if (!timer) {
-        timerElement.querySelector(".remaining-time").textContent = "[마감됨]";
-        timerElement.classList.remove("near-end");
-        return;
-      }
-
-      timerElement.querySelector(
-        ".remaining-time"
-      ).textContent = `[${timer.text}]`;
-
-      if (timer.isNearEnd) {
-        timerElement.classList.add("near-end");
-      } else {
-        timerElement.classList.remove("near-end");
-      }
-    });
-  }, 1000);
+  // 타이머 업데이트 시작
+  BidManager.startTimerUpdates();
 }
 
 // 제품 카드 생성
@@ -418,7 +95,7 @@ function createProductCard(item) {
 // 현장 경매 카드 HTML
 function getLiveCardHTML(item, bidInfo, favoriteNumber) {
   // 타이머 정보
-  const timer = getRemainingTime(item.scheduled_date);
+  const timer = BidManager.getRemainingTime(item.scheduled_date);
   const isNearEnd = timer?.isNearEnd;
   const timerText = timer ? timer.text : "--:--:--";
 
@@ -545,95 +222,21 @@ function getLiveCardHTML(item, bidInfo, favoriteNumber) {
 
 // getBidInfoHTML 함수 수정
 function getBidInfoHTML(bidInfo, item) {
-  if (!bidInfo) return "";
-
-  let html = "";
-
-  // 1차 입찰 정보
-  if (bidInfo.first_price) {
-    html += `
-      <div class="bid-price-info">
-        <span class="price-label">1차 입찰금액</span>
-        <span class="price-value">${cleanNumberFormat(
-          bidInfo.first_price
-        )}￥</span>
-        <span class="price-detail">관부가세 포함 ${cleanNumberFormat(
-          calculateTotalPrice(bidInfo.first_price, item.auc_num, item.category)
-        )}\\</span>
-      </div>`;
-  }
-
-  // 최종 입찰가 정보만 표시 (2차 제안 제외)
-  if (bidInfo.final_price) {
-    html += `
-      <div class="final-price">
-        <span class="price-label">최종 입찰금액</span>
-        <span class="price-value">${cleanNumberFormat(
-          bidInfo.final_price
-        )}￥</span>
-        <span class="price-detail">관부가세 포함 ${cleanNumberFormat(
-          calculateTotalPrice(bidInfo.final_price, item.auc_num, item.category)
-        )}\\</span>
-      </div>`;
-  }
-
-  return html;
+  return BidManager.getBidInfoForCard(bidInfo, item);
 }
 
 function getDirectBidInfoHTML(bidInfo, item) {
-  if (!bidInfo || !bidInfo.current_price) return "";
-
-  return `
-    <div class="my-bid-price">
-      <span class="price-label">나의 입찰 금액</span>
-      <span class="price-value">${cleanNumberFormat(
-        bidInfo.current_price
-      )}￥</span>
-      <span class="price-detail">관부가세 포함 ${cleanNumberFormat(
-        calculateTotalPrice(bidInfo.current_price, item.auc_num, item.category)
-      )}\\</span>
-    </div>
-  `;
+  return BidManager.getDirectBidInfoHTML(bidInfo, item);
 }
 
-function quickAddBid(itemId, amount, bidType) {
-  // 이벤트 버블링과 기본 동작 방지
-  if (event) {
-    event.stopPropagation();
-    event.preventDefault();
-  }
-
-  const item = state.currentData.find((item) => item.item_id === itemId);
-  if (!item) return;
-
-  const inputElement = document.querySelector(
-    `.bid-input[data-item-id="${itemId}"][data-bid-type="${bidType}"]`
-  );
-  if (!inputElement) return;
-
-  // 현재 input 값을 가져오기
-  let currentValue = parseFloat(inputElement.value) || 0;
-
-  // 값이 없으면 시작가를 기준으로 설정
-  if (currentValue === 0) {
-    currentValue = parseFloat(item.starting_price) / 1000 || 0;
-  }
-
-  // 새 값 설정 (1000으로 나눈 값을 표시)
-  const newValue = currentValue + amount;
-  inputElement.value = newValue;
-
-  // 가격 표시 업데이트
-  updateBidValueDisplay(inputElement);
-
-  // 가격 상세 정보 업데이트 이벤트 발생
-  inputElement.dispatchEvent(new Event("input"));
+function getBidInputHTML(bidInfo, item, bidType) {
+  return BidManager.getBidInputHTML(bidInfo, item, bidType);
 }
 
 // 직접 경매 카드 HTML
 function getDirectCardHTML(item, bidInfo, favoriteNumber) {
   // 타이머 정보
-  const timer = getRemainingTime(item.scheduled_date);
+  const timer = BidManager.getRemainingTime(item.scheduled_date);
   const isNearEnd = timer?.isNearEnd;
   const timerText = timer ? timer.text : "--:--:--";
 
@@ -776,63 +379,19 @@ function getDirectCardHTML(item, bidInfo, favoriteNumber) {
   `;
 }
 
-function getBidInputHTML(bidInfo, item, bidType) {
-  // 최종 입찰가가 있으면 입력 UI를 표시하지 않음
-  if (bidType === "live" && bidInfo?.final_price) {
-    return "";
-  }
-
-  let bidInputLabel = "";
-  if (bidType === "live") {
-    bidInputLabel = bidInfo?.first_price
-      ? "최종입찰 금액 입력"
-      : "1차금액 입력";
-  }
-
-  return `
-    <div class="bid-input-container">
-      ${
-        bidInputLabel
-          ? `<div class="bid-input-label">${bidInputLabel}</div>`
-          : ""
-      }
-      <div class="bid-input-group">
-        <input type="number" class="bid-input" data-item-id="${
-          item.item_id
-        }" data-bid-type="${bidType}">
-        <span class="bid-value-display">000</span>
-        <span class="bid-currency">￥</span>
-        <button class="bid-button" onclick="event.stopPropagation(); handle${
-          bidType === "live" ? "Live" : "Direct"
-        }BidSubmit(this.parentElement.querySelector('.bid-input').value, '${
-    item.item_id
-  }')">입찰</button>
-      </div>
-      <div class="price-details-container"></div>
-      </div>
-      <div class="quick-bid-buttons">
-        <button class="quick-bid-btn" onclick="event.stopPropagation(); quickAddBid('${
-          item.item_id
-        }', 1, '${bidType}')">+1,000￥</button>
-        <button class="quick-bid-btn" onclick="event.stopPropagation(); quickAddBid('${
-          item.item_id
-        }', 5, '${bidType}')">+5,000￥</button>
-        <button class="quick-bid-btn" onclick="event.stopPropagation(); quickAddBid('${
-          item.item_id
-        }', 10, '${bidType}')">+10,000￥</button>
-      </div>
-    </div>
-  `;
-}
-
 // 인증 관련 함수들
 async function checkAuthStatus() {
   try {
     const response = await API.fetchAPI("/auth/user");
     state.isAuthenticated = !!response.user;
+
+    // BidManager에 인증 상태 전달
+    BidManager.setAuthStatus(state.isAuthenticated);
+
     updateAuthUI();
   } catch (error) {
     state.isAuthenticated = false;
+    BidManager.setAuthStatus(false);
     updateAuthUI();
   }
 }
@@ -963,6 +522,9 @@ async function fetchData() {
       }
     });
 
+    // BidManager에 입찰 데이터 전달
+    BidManager.updateBidData(state.liveBidData, state.directBidData);
+
     displayData(data.data);
     createPagination(state.currentPage, state.totalPages, handlePageChange);
   } catch (error) {
@@ -1011,41 +573,11 @@ async function handleSignout() {
   try {
     await API.fetchAPI("/auth/logout", { method: "POST" });
     state.isAuthenticated = false;
+    BidManager.setAuthStatus(false);
     location.reload();
   } catch (error) {
     alert("로그아웃 중 오류가 발생했습니다.");
   }
-}
-
-function initializePriceCalculators() {
-  document.querySelectorAll(".bid-input").forEach((input) => {
-    const container = input.closest(".bid-input-group").nextElementSibling;
-    const itemId = input.getAttribute("data-item-id");
-    const bidType = input.getAttribute("data-bid-type");
-    const item = state.currentData.find((item) => item.item_id == itemId);
-
-    if (container && item) {
-      input.addEventListener("input", function () {
-        const price = parseFloat(this.value) * 1000 || 0; // 입력값에 1000 곱하기
-        const totalPrice = calculateTotalPrice(
-          price,
-          item.auc_num,
-          item.category
-        );
-
-        // 입찰 타입에 따라 다른 메시지 표시
-        if (bidType === "direct") {
-          container.innerHTML = price
-            ? `(모든부대비용 포함 ${cleanNumberFormat(totalPrice)}원)`
-            : "";
-        } else {
-          container.innerHTML = price
-            ? `(관부가세 포함 ${cleanNumberFormat(totalPrice)}원)`
-            : "";
-        }
-      });
-    }
-  });
 }
 
 // 상세 정보 표시
@@ -1086,6 +618,7 @@ async function showDetails(itemId) {
 function initializeModal(item) {
   document.querySelector(".modal-brand").textContent = item.brand;
   document.querySelector(".modal-title").textContent = item.title;
+  document.querySelector(".modal-title").dataset.itemId = item.item_id; // 타이머 업데이트용 데이터 속성 추가
   document.querySelector(".main-image").src = API.validateImageUrl(item.image);
   document.querySelector(".modal-description").textContent = "로딩 중...";
   document.querySelector(".modal-category").textContent =
@@ -1131,7 +664,7 @@ function initializeBidInfo(itemId) {
   // 경매 타입에 따라 다른 입찰 섹션 표시
   if (item.bid_type === "direct") {
     const directBidInfo = state.directBidData.find((b) => b.item_id == itemId);
-    bidSection.innerHTML = getDirectBidSectionHTML(
+    bidSection.innerHTML = BidManager.getDirectBidSectionHTML(
       directBidInfo,
       itemId,
       item.auc_num,
@@ -1139,7 +672,7 @@ function initializeBidInfo(itemId) {
     );
   } else {
     const liveBidInfo = state.liveBidData.find((b) => b.item_id == itemId);
-    bidSection.innerHTML = getLiveBidSectionHTML(
+    bidSection.innerHTML = BidManager.getLiveBidSectionHTML(
       liveBidInfo,
       itemId,
       item.auc_num,
@@ -1148,7 +681,7 @@ function initializeBidInfo(itemId) {
   }
 
   // 가격 계산기 초기화
-  initializePriceCalculators();
+  BidManager.initializePriceCalculators();
 }
 
 function initializeImages(imageUrls) {
@@ -1247,7 +780,7 @@ function updateWishlistUI(itemId) {
   }
 }
 
-// 이미지 네비게이션 이벤트 리스너 설정
+// 이미지 네비게이션 이벤트 리스너 설정 (계속)
 function setupImageNavigation() {
   document.querySelector(".prev")?.addEventListener("click", () => {
     changeMainImage(state.currentImageIndex - 1);
@@ -1509,6 +1042,9 @@ function setupDropdownMenus() {
 
       // 현재 드롭다운 토글
       dropdown.classList.toggle("active");
+
+      // 버튼 상태 토글 (화살표 회전 애니메이션용)
+      this.classList.toggle("active", dropdown.classList.contains("active"));
     });
   });
 
@@ -1652,6 +1188,14 @@ function initialize() {
 
           // 이미지 네비게이션 설정
           setupImageNavigation();
+
+          // BidManager 초기화
+          BidManager.initialize(state.isAuthenticated, []);
+
+          // 입찰 성공 이벤트 리스너 등록
+          window.addEventListener("bidSuccess", function () {
+            fetchData(); // 데이터 새로고침
+          });
 
           // 초기 데이터 로드
           fetchData();
