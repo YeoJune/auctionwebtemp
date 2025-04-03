@@ -804,7 +804,7 @@ function displayProducts() {
     resultItem.appendChild(bidInfoSection);
     resultItem.appendChild(statusSection);
 
-    // 활성화된 경매인 경우에만 입찰 UI 추가
+    // bid-products.js의 입찰 UI 추가 부분
     if (
       (product.displayStatus === "active" ||
         product.displayStatus === "first" ||
@@ -814,16 +814,17 @@ function displayProducts() {
       const bidActionSection = document.createElement("div");
       bidActionSection.className = "bid-action";
 
-      // 간소화된 입찰 UI 생성 (기존 BidManager에서 HTML 생성하는 대신 간단한 UI 적용)
       if (product.type === "direct") {
         bidActionSection.innerHTML = `
    <div class="bid-input-container compact">
-     <input type="number" class="bid-input" data-item-id="${item.item_id}" data-bid-type="direct">
-     <span class="bid-value-display">000</span>
-     <span class="bid-currency">¥</span>
-     <button class="bid-button" onclick="event.stopPropagation(); BidManager.handleDirectBidSubmit(this.parentElement.querySelector('.bid-input').value, '${item.item_id}')">입찰</button>
+     <div class="bid-input-group">
+       <input type="number" class="bid-input" data-item-id="${item.item_id}" data-bid-type="direct">
+       <span class="bid-value-display">000</span>
+       <span class="bid-currency">¥</span>
+       <button class="bid-button" onclick="event.stopPropagation(); BidManager.handleDirectBidSubmit(this.parentElement.querySelector('.bid-input').value, '${item.item_id}')">입찰</button>
+     </div>
+     <div class="price-details-container"></div>
    </div>
-   <div class="price-details-container"></div>
  `;
       } else {
         const liveBidInfo = state.liveBids.find((b) => b.id === product.id);
@@ -831,12 +832,14 @@ function displayProducts() {
 
         bidActionSection.innerHTML = `
    <div class="bid-input-container compact">
-     <input type="number" class="bid-input" data-item-id="${item.item_id}" data-bid-type="live">
-     <span class="bid-value-display">000</span>
-     <span class="bid-currency">¥</span>
-     <button class="bid-button" onclick="event.stopPropagation(); BidManager.handleLiveBidSubmit(this.parentElement.querySelector('.bid-input').value, '${item.item_id}')">입찰</button>
+     <div class="bid-input-group">
+       <input type="number" class="bid-input" data-item-id="${item.item_id}" data-bid-type="live">
+       <span class="bid-value-display">000</span>
+       <span class="bid-currency">¥</span>
+       <button class="bid-button" onclick="event.stopPropagation(); BidManager.handleLiveBidSubmit(this.parentElement.querySelector('.bid-input').value, '${item.item_id}')">입찰</button>
+     </div>
+     <div class="price-details-container"></div>
    </div>
-   <div class="price-details-container"></div>
  `;
       }
 

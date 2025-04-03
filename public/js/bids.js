@@ -552,7 +552,15 @@ window.BidManager = (function () {
    */
   function initializePriceCalculators() {
     document.querySelectorAll(".bid-input").forEach((input) => {
-      const container = input.closest(".bid-input-group").nextElementSibling;
+      // 바로 다음 형제 요소를 찾는 대신 가장 가까운 price-details-container 찾기
+      const container =
+        input.closest(".bid-input-group")?.nextElementSibling ||
+        input
+          .closest(".bid-input-container")
+          ?.querySelector(".price-details-container");
+
+      if (!container) return; // 컨테이너가 없으면 건너뛰기
+
       const itemId = input.getAttribute("data-item-id");
       const bidType = input.getAttribute("data-bid-type");
       const item = _state.currentData.find((item) => item.item_id == itemId);
@@ -577,7 +585,7 @@ window.BidManager = (function () {
               : "";
           }
 
-          // 입력값 표시 업데이트
+          // 가격 표시 업데이트
           updateBidValueDisplay(this);
         });
       }
