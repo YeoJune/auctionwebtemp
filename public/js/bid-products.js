@@ -353,6 +353,8 @@ async function fetchProducts() {
 
     // 정렬 버튼 UI 업데이트
     updateSortButtonsUI();
+
+    BidManager.initializePriceCalculators();
   } catch (error) {
     console.error("상품 데이터를 가져오는 중 오류 발생:", error);
     document.getElementById("productList").innerHTML =
@@ -797,73 +799,65 @@ function displayProducts() {
       `;
 
     // 모든 섹션 추가
-    // 모든 섹션 추가
     resultItem.appendChild(imageSection);
     resultItem.appendChild(infoSection);
     resultItem.appendChild(bidInfoSection);
     resultItem.appendChild(statusSection);
 
-    // 여기에 입찰 UI 섹션 추가 코드를 넣어야 함
-    // 경매 입찰 섹션 추가 (활성화된 경매만)
+    // 활성화된 경매인 경우에만 입찰 UI 추가
     if (
-      product.displayStatus === "active" ||
-      product.displayStatus === "first" ||
-      product.displayStatus === "second"
+      (product.displayStatus === "active" ||
+        product.displayStatus === "first" ||
+        product.displayStatus === "second") &&
+      BidManager.getRemainingTime(item.scheduled_date)
     ) {
-      const timer = BidManager.getRemainingTime(item.scheduled_date);
+      const bidActionSection = document.createElement("div");
+      bidActionSection.className = "bid-action";
 
-      if (timer) {
-        // 마감되지 않은 경우만 입찰 UI 표시
-        const bidSection = document.createElement("div");
-        bidSection.className = "bid-action";
+      // 간소화된 입찰 UI 생성 (기존 BidManager에서 HTML 생성하는 대신 간단한 UI 적용)
+      if (product.type === "direct") {
+        bidActionSection.innerHTML = `
+   <div class="bid-input-container compact">
+     <input type="number" class="bid-input" data-item-id="${item.item_id}" data-bid-type="direct">
+     <span class="bid-value-display">000</span>
+     <span class="bid-currency">¥</span>
+     <button class="bid-button" onclick="event.stopPropagation(); BidManager.handleDirectBidSubmit(this.parentElement.querySelector('.bid-input').value, '${item.item_id}')">입찰</button>
+   </div>
+   <div class="price-details-container"></div>
+ `;
+      } else {
+        const liveBidInfo = state.liveBids.find((b) => b.id === product.id);
+        const bidLabel = liveBidInfo?.first_price ? "최종입찰" : "1차입찰";
 
-        // 경매 타입에 따라 다른 입찰 UI 표시
-        if (product.type === "direct") {
-          const directBidInfo = state.directBids.find(
-            (b) => b.id === product.id
-          );
-
-          bidSection.innerHTML = `
-        <div class="bid-input-container compact">
-          <input type="number" placeholder="입찰 금액" class="bid-input" data-item-id="${item.item_id}" data-bid-type="direct">
-          <span class="bid-currency">¥</span>
-          <button class="bid-button" onclick="event.stopPropagation(); BidManager.handleDirectBidSubmit(this.parentElement.querySelector('.bid-input').value, '${item.item_id}')">입찰</button>
-        </div>
-      `;
-        } else {
-          const liveBidInfo = state.liveBids.find((b) => b.id === product.id);
-
-          // 상태에 따라 다른 라벨 표시
-          const bidLabel = liveBidInfo?.first_price ? "최종 입찰" : "1차 입찰";
-
-          bidSection.innerHTML = `
-        <div class="bid-input-container compact">
-          <input type="number" placeholder="${bidLabel}" class="bid-input" data-item-id="${item.item_id}" data-bid-type="live">
-          <span class="bid-currency">¥</span>
-          <button class="bid-button" onclick="event.stopPropagation(); BidManager.handleLiveBidSubmit(this.parentElement.querySelector('.bid-input').value, '${item.item_id}')">입찰</button>
-        </div>
-      `;
-        }
-
-        resultItem.appendChild(bidSection);
-
-        // 이벤트 버블링 방지 (입찰 UI 클릭 시 상세 페이지로 이동하지 않도록)
-        bidSection.addEventListener("click", (e) => {
-          e.stopPropagation();
-        });
+        bidActionSection.innerHTML = `
+   <div class="bid-input-container compact">
+     <input type="number" class="bid-input" data-item-id="${item.item_id}" data-bid-type="live">
+     <span class="bid-value-display">000</span>
+     <span class="bid-currency">¥</span>
+     <button class="bid-button" onclick="event.stopPropagation(); BidManager.handleLiveBidSubmit(this.parentElement.querySelector('.bid-input').value, '${item.item_id}')">입찰</button>
+   </div>
+   <div class="price-details-container"></div>
+ `;
       }
+
+      resultItem.appendChild(bidActionSection);
     }
 
     // 클릭 이벤트 추가
     resultItem.addEventListener("click", (e) => {
-      // 클릭된 요소가 입찰 버튼이나 입력 필드인 경우 이벤트 전파 중지
-      if (e.target.closest(".bid-button") || e.target.closest(".bid-input")) {
+      // 클릭된 요소가 입찰 관련 요소인 경우 이벤트 전파 중지
+      if (
+        e.target.closest(".bid-input-container") ||
+        e.target.closest(".bid-button") ||
+        e.target.closest(".quick-bid-btn")
+      ) {
         e.stopPropagation();
         return;
       }
 
       showProductDetails(item.item_id);
     });
+
     // 컨테이너에 아이템 추가
     container.appendChild(resultItem);
   }
