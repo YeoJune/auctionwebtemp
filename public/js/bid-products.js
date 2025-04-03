@@ -99,10 +99,40 @@ async function initialize() {
 
     // 초기 데이터 로드
     await fetchProducts();
+
+    // BidManager 초기화 - 인증 상태와 현재 데이터 전달
+    BidManager.initialize(
+      state.isAuthenticated,
+      state.filteredResults.map((item) => item.item)
+    );
+
+    // 입찰 이벤트 리스너 설정
+    setupBidEventListeners();
   } catch (error) {
     console.error("초기화 중 오류 발생:", error);
     alert("페이지 초기화 중 오류가 발생했습니다.");
   }
+}
+
+// 입찰 이벤트 리스너 설정
+function setupBidEventListeners() {
+  // 입찰 성공 이벤트 리스너
+  window.addEventListener("bidSuccess", async function (e) {
+    const { itemId, type } = e.detail;
+
+    // 데이터 새로고침
+    await fetchProducts();
+
+    // 상세 모달이 열려있는 경우 해당 항목 업데이트
+    const modal = document.getElementById("detailModal");
+    if (modal && modal.style.display === "flex") {
+      const modalItemId =
+        document.querySelector(".modal-title")?.dataset?.itemId;
+      if (modalItemId === itemId) {
+        showProductDetails(itemId);
+      }
+    }
+  });
 }
 
 // URL에서 상태 로드
@@ -169,9 +199,18 @@ async function checkAuthStatus() {
   try {
     const response = await API.fetchAPI("/auth/user");
     state.isAuthenticated = !!response.user;
+
+    // BidManager에 인증 상태 전달
+    if (window.BidManager) {
+      BidManager.setAuthStatus(state.isAuthenticated);
+    }
+
     updateAuthUI();
   } catch (error) {
     state.isAuthenticated = false;
+    if (window.BidManager) {
+      BidManager.setAuthStatus(false);
+    }
     updateAuthUI();
   }
 }
@@ -197,6 +236,9 @@ async function handleSignout() {
   try {
     await API.fetchAPI("/auth/logout", { method: "POST" });
     state.isAuthenticated = false;
+    if (window.BidManager) {
+      BidManager.setAuthStatus(false);
+    }
     window.location.href = "/signinPage";
   } catch (error) {
     alert("로그아웃 중 오류가 발생했습니다.");
@@ -291,6 +333,14 @@ async function fetchProducts() {
 
     // 필터링된 결과 업데이트
     updateFilteredResults();
+
+    // BidManager에 필터링된 결과의 상품 데이터 전달
+    BidManager.updateCurrentData(
+      state.filteredResults.map((item) => item.item)
+    );
+
+    // BidManager에 입찰 데이터 전달
+    BidManager.updateBidData(state.liveBids, state.directBids);
 
     // URL 업데이트
     updateURL();
@@ -574,7 +624,6 @@ function getStatusClass(status) {
 }
 
 // 결과 표시
-// 결과 표시
 function displayProducts() {
   const container = document.getElementById("productList");
   if (!container) return;
@@ -827,6 +876,7 @@ function initializeModal(product, item) {
   document.querySelector(".modal-brand").textContent = item.brand || "-";
   document.querySelector(".modal-title").textContent =
     item.original_title || "-";
+  document.querySelector(".modal-title").dataset.itemId = item.item_id;
   document.querySelector(".main-image").src = API.validateImageUrl(item.image);
   document.querySelector(".modal-description").textContent = "로딩 중...";
   document.querySelector(".modal-category").textContent =
@@ -839,7 +889,7 @@ function initializeModal(product, item) {
   document.querySelector(".modal-rank").textContent = item.rank || "N";
 
   // 가격 정보 표시
-  updatePriceInfoInModal(product, item);
+  displayBidInfoInModal(product, item);
 
   // 이미지 초기화
   initializeImages([item.image]);
@@ -864,12 +914,45 @@ function updateModalWithDetails(item) {
   document.querySelector(".modal-rank").textContent = item.rank || "N";
 }
 
-// 가격 정보 표시
-// 가격 정보 표시
-function updatePriceInfoInModal(product, item) {
-  const priceInfoHolder = document.querySelector(".bid-info-holder");
-  if (!priceInfoHolder) return;
+// 입찰 정보 표시
+function displayBidInfoInModal(product, item) {
+  const bidSection = document.querySelector(".bid-info-holder");
+  if (!bidSection) return;
 
+  // 입찰 가능 상태인 경우 BidManager를 사용하여 입찰 폼 생성
+  if (
+    product.displayStatus === "active" ||
+    product.displayStatus === "first" ||
+    product.displayStatus === "second"
+  ) {
+    if (product.type === "direct") {
+      const directBidInfo = state.directBids.find((b) => b.id === product.id);
+      bidSection.innerHTML = BidManager.getDirectBidSectionHTML(
+        directBidInfo,
+        item.item_id,
+        item.auc_num,
+        item.category
+      );
+    } else {
+      const liveBidInfo = state.liveBids.find((b) => b.id === product.id);
+      bidSection.innerHTML = BidManager.getLiveBidSectionHTML(
+        liveBidInfo,
+        item.item_id,
+        item.auc_num,
+        item.category
+      );
+    }
+
+    // 가격 계산기 초기화
+    BidManager.initializePriceCalculators();
+  } else {
+    // 입찰 불가 상태인 경우 읽기 전용 입찰 정보 표시
+    displayReadOnlyBidInfo(product, item, bidSection);
+  }
+}
+
+// 읽기 전용 입찰 정보 표시
+function displayReadOnlyBidInfo(product, item, container) {
   // 상태에 따라 다른 표시와 클래스 적용 - 실제 상태 사용
   const statusClass = getStatusClass(product.displayStatus);
   const statusText = getStatusDisplay(product.displayStatus);
@@ -963,7 +1046,7 @@ function updatePriceInfoInModal(product, item) {
       </div>
     </div>`;
 
-  priceInfoHolder.innerHTML = priceInfoHTML;
+  container.innerHTML = priceInfoHTML;
 }
 
 // 이미지 초기화
@@ -1067,5 +1150,54 @@ function toggleLoading(show) {
   }
 }
 
+// 모바일 필터 토글
+function setupMobileFilters() {
+  const filterBtn = document.getElementById("mobileFilterBtn");
+  const filtersContainer = document.querySelector(".filters-container");
+
+  if (!filterBtn || !filtersContainer) return;
+
+  // 이벤트 리스너가 중복되지 않도록 복제 후 새로 추가
+  const newFilterBtn = filterBtn.cloneNode(true);
+  filterBtn.parentNode.replaceChild(newFilterBtn, filterBtn);
+
+  newFilterBtn.addEventListener("click", function () {
+    filtersContainer.classList.toggle("active");
+
+    // 백드롭 생성 및 추가
+    let backdrop = document.querySelector(".filter-backdrop");
+    if (!backdrop) {
+      backdrop = document.createElement("div");
+      backdrop.className = "filter-backdrop";
+      document.body.appendChild(backdrop);
+
+      backdrop.addEventListener("click", function () {
+        filtersContainer.classList.remove("active");
+        backdrop.style.display = "none";
+      });
+    }
+
+    backdrop.style.display = filtersContainer.classList.contains("active")
+      ? "block"
+      : "none";
+  });
+
+  // 필터 닫기 버튼 추가
+  if (!filtersContainer.querySelector(".filter-close-btn")) {
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "filter-close-btn";
+    closeBtn.innerHTML = "&times;";
+    closeBtn.addEventListener("click", function () {
+      filtersContainer.classList.remove("active");
+      document.querySelector(".filter-backdrop").style.display = "none";
+    });
+
+    filtersContainer.insertBefore(closeBtn, filtersContainer.firstChild);
+  }
+}
+
 // DOM 완료 시 실행
-document.addEventListener("DOMContentLoaded", initialize);
+document.addEventListener("DOMContentLoaded", function () {
+  initialize();
+  setupMobileFilters();
+});
