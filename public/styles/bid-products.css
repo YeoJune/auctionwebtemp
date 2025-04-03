@@ -516,6 +516,10 @@
   margin-bottom: 20px;
 }
 
+.bid-info-holder div {
+  width: 100%;
+}
+
 .modal-price-info {
   padding: 15px;
   background-color: #f5f5f5;
