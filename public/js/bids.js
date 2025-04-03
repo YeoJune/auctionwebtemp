@@ -365,9 +365,18 @@ window.BidManager = (function () {
     const item = _state.currentData.find((item) => item.item_id === itemId);
     if (!item) return;
 
-    const inputElement = document.querySelector(
+    // 클릭된 버튼의 상위 컨테이너 찾기 (모달 또는 카드)
+    const container =
+      event.target.closest(".modal-content") ||
+      event.target.closest(".product-card");
+
+    if (!container) return;
+
+    // 해당 컨테이너 내에서만 입력 요소 찾기
+    const inputElement = container.querySelector(
       `.bid-input[data-item-id="${itemId}"][data-bid-type="${bidType}"]`
     );
+
     if (!inputElement) return;
 
     // 현재 input 값을 가져오기
