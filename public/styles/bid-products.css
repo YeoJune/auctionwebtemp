@@ -109,7 +109,27 @@
 /* 필터 및 콘텐츠 섹션 */
 .content-wrapper {
   display: flex;
+  flex-direction: column; /* 세로 방향으로 요소 배치 */
   gap: 20px;
+}
+
+.top-control-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.filters-container.top-filters {
+  width: 100%;
+  position: static;
+  margin-bottom: 15px;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .filters-container {
@@ -723,18 +743,27 @@
   display: flex;
   flex-wrap: wrap;
   gap: 15px;
-  align-items: flex-start;
+  align-items: center;
 }
 
 .inline-filter {
   margin-bottom: 0;
   min-width: 180px;
+  flex: 1;
 }
 
+/* 수평 라디오 버튼 그룹 */
 .horizontal.radio-buttons {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+/* 제품 섹션이 전체 너비를 차지하도록 수정 */
+.products-section {
+  width: 100%;
+  flex: 1;
+  min-width: 0;
 }
 
 /* 모바일에서 상단 필터 표시 */
