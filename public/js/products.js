@@ -594,6 +594,15 @@ async function showDetails(itemId) {
       item = await API.fetchAPI(`/detail/item-details/${itemId}`, {
         method: "POST",
       });
+
+      if (item.bids) {
+        if (item.bids.live) {
+          state.liveBidData.push(item.bids.live);
+        }
+        if (item.bids.direct) {
+          state.directBidData.push(item.bids.direct);
+        }
+      }
     } catch (error) {
       console.error("Failed to fetch item details:", error);
       alert("상세 정보를 불러올 수 없습니다.");
