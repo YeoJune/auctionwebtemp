@@ -601,6 +601,8 @@ async function showDetails(itemId) {
     }
   }
 
+  console.log(itemId, item);
+
   // 기본 정보로 모달 초기화
   initializeModal(item);
   modalManager.show();
