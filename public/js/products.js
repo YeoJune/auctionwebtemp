@@ -581,6 +581,7 @@ async function handleSignout() {
 }
 
 // 상세 정보 표시
+// 상세 정보 표시 함수 수정
 async function showDetails(itemId) {
   const modalManager = setupModal("detailModal");
   if (!modalManager) return;
@@ -616,6 +617,9 @@ async function showDetails(itemId) {
   initializeModal(item);
   modalManager.show();
 
+  // 이미지 네비게이션 이벤트 리스너 설정
+  setupImageNavigation();
+
   // 로딩 표시
   showLoadingInModal();
 
@@ -631,6 +635,8 @@ async function showDetails(itemId) {
     // 추가 이미지가 있다면 업데이트
     if (updatedItem.additional_images) {
       initializeImages(JSON.parse(updatedItem.additional_images));
+      // 이미지가 업데이트된 후 네비게이션 리스너 재설정
+      setupImageNavigation();
     }
   } catch (error) {
     console.error("Failed to fetch item details:", error);
@@ -804,15 +810,32 @@ function updateWishlistUI(itemId) {
   }
 }
 
-// 이미지 네비게이션 이벤트 리스너 설정 (계속)
+// 이미지 네비게이션 이벤트 리스너 설정 함수 개선
 function setupImageNavigation() {
-  document.querySelector(".prev")?.addEventListener("click", () => {
-    changeMainImage(state.currentImageIndex - 1);
-  });
+  // 이벤트 리스너 중복 방지를 위해 기존 리스너 제거
+  const prevBtn = document.querySelector(".image-nav.prev");
+  const nextBtn = document.querySelector(".image-nav.next");
 
-  document.querySelector(".next")?.addEventListener("click", () => {
-    changeMainImage(state.currentImageIndex + 1);
-  });
+  if (prevBtn) {
+    // 기존 리스너 제거 및 새 리스너 추가
+    const newPrevBtn = prevBtn.cloneNode(true);
+    prevBtn.parentNode.replaceChild(newPrevBtn, prevBtn);
+    newPrevBtn.addEventListener("click", () => {
+      changeMainImage(state.currentImageIndex - 1);
+    });
+  }
+
+  if (nextBtn) {
+    // 기존 리스너 제거 및 새 리스너 추가
+    const newNextBtn = nextBtn.cloneNode(true);
+    nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
+    newNextBtn.addEventListener("click", () => {
+      changeMainImage(state.currentImageIndex + 1);
+    });
+  }
+
+  // 네비게이션 버튼 상태 업데이트
+  updateNavigationButtons();
 }
 
 // 필터 설정 함수
