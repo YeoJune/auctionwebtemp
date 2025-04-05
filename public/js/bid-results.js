@@ -264,7 +264,13 @@ function groupResultsByDate() {
 
   // 일별 수수료 계산 추가
   state.dailyResults.forEach((day) => {
+    // 수수료 계산
     day.feeAmount = calculateFee(day.totalKoreanPrice);
+
+    // VAT 계산 (수수료의 10%)
+    day.vatAmount = Math.round((day.feeAmount / 1.1) * 0.1);
+
+    // 총액 계산
     day.grandTotal = day.totalKoreanPrice + day.feeAmount;
   });
 
@@ -282,6 +288,7 @@ function updateTotalStats() {
     japaneseAmount: 0,
     koreanAmount: 0,
     feeAmount: 0,
+    vatAmount: 0,
     grandTotalAmount: 0,
   };
 
@@ -290,6 +297,7 @@ function updateTotalStats() {
     state.totalStats.japaneseAmount += Number(day.totalJapanesePrice);
     state.totalStats.koreanAmount += Number(day.totalKoreanPrice);
     state.totalStats.feeAmount += Number(day.feeAmount);
+    state.totalStats.vatAmount += Number(day.vatAmount);
     state.totalStats.grandTotalAmount += Number(day.grandTotal);
   });
 
@@ -303,6 +311,8 @@ function updateTotalStats() {
     formatNumber(state.totalStats.koreanAmount) + " ₩";
   document.getElementById("totalFeeAmount").textContent =
     formatNumber(state.totalStats.feeAmount) + " ₩";
+  document.getElementById("totalVatAmount").textContent =
+    formatNumber(state.totalStats.vatAmount) + " ₩";
   document.getElementById("grandTotalAmount").textContent =
     formatNumber(state.totalStats.grandTotalAmount) + " ₩";
 }
@@ -499,6 +509,7 @@ function createDailyResultRow(dayResult) {
     <div class="summary-item">
       <span class="summary-label">수수료 (₩):</span>
       <span class="summary-value">${formatNumber(dayResult.feeAmount)} ₩</span>
+      <span class="vat-note">VAT ${formatNumber(dayResult.vatAmount)} ₩</span>
     </div>
     <div class="summary-item">
       <span class="summary-label">총액 (₩):</span>

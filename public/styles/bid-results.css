@@ -132,6 +132,15 @@
   flex-wrap: wrap;
 }
 
+.vat-note {
+  font-size: 0.75rem;
+  color: #777;
+  display: block;
+  margin-top: 2px;
+  text-align: right;
+  padding-right: 5px;
+}
+
 .stat-box {
   flex: 1;
   background-color: white;
