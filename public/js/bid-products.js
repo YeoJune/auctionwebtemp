@@ -883,21 +883,31 @@ function displayProducts() {
   }
 }
 
-// 페이지네이션 업데이트
-function updatePagination() {
-  createPagination(state.currentPage, state.totalPages, handlePageChange);
-}
-
-// 페이지 변경 처리
+// 페이지 변경 처리 - 최종 수정 버전
 function handlePageChange(page) {
   page = parseInt(page, 10);
 
   if (page === state.currentPage) return;
 
+  // 상태 업데이트
   state.currentPage = page;
+
+  // 제품 다시 표시
   displayProducts();
+
+  // 페이지네이션 다시 생성
+  updatePagination();
+
+  // 페이지 상단으로 스크롤
   window.scrollTo(0, 0);
+
+  // URL 업데이트
   updateURL();
+}
+
+// 페이지네이션 업데이트
+function updatePagination() {
+  createPagination(state.currentPage, state.totalPages, handlePageChange);
 }
 
 // 상품 상세 정보 표시
