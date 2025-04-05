@@ -808,10 +808,10 @@ function displayProducts() {
     }
 
     statusSection.innerHTML = `
+      ${timerHTML}
       <div class="status-badge ${statusClass}">
         ${statusText}
       </div>
-      ${timerHTML}
       <div class="result-date">${formatDateTime(product.updated_at)}</div>
     `;
 
