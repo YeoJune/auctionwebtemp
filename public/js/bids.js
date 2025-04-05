@@ -577,7 +577,7 @@ window.BidManager = (function () {
           // 입찰 타입에 따라 다른 메시지 표시
           if (bidType === "direct") {
             container.innerHTML = price
-              ? `(모든부대비용 포함 ${cleanNumberFormat(totalPrice)}원)`
+              ? `(관부가세 포함 ${cleanNumberFormat(totalPrice)}원)`
               : "";
           } else {
             container.innerHTML = price

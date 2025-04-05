@@ -354,6 +354,8 @@ async function fetchProducts() {
     // 정렬 버튼 UI 업데이트
     updateSortButtonsUI();
 
+    BidManager.startTimerUpdates();
+
     BidManager.initializePriceCalculators();
   } catch (error) {
     console.error("상품 데이터를 가져오는 중 오류 발생:", error);
@@ -791,12 +793,27 @@ function displayProducts() {
     const statusClass = getStatusClass(product.displayStatus);
     const statusText = getStatusDisplay(product.displayStatus);
 
+    // 타이머 HTML 추가
+    let timerHTML = "";
+    const timer = BidManager.getRemainingTime(item.scheduled_date);
+    if (
+      timer &&
+      (product.displayStatus === "active" ||
+        product.displayStatus === "first" ||
+        product.displayStatus === "second")
+    ) {
+      timerHTML = `<div class="bid-timer ${timer.isNearEnd ? "near-end" : ""}">
+                 남은시간: <span class="remaining-time">[${timer.text}]</span>
+               </div>`;
+    }
+
     statusSection.innerHTML = `
-        <div class="status-badge ${statusClass}">
-          ${statusText}
-        </div>
-        <div class="result-date">${formatDateTime(product.updated_at)}</div>
-      `;
+      <div class="status-badge ${statusClass}">
+        ${statusText}
+      </div>
+      ${timerHTML}
+      <div class="result-date">${formatDateTime(product.updated_at)}</div>
+    `;
 
     // 모든 섹션 추가
     resultItem.appendChild(imageSection);
