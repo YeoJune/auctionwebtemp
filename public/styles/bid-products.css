@@ -442,7 +442,7 @@
 /* bid-timer 관련 CSS 스타일 */
 .bid-timer {
   font-size: 0.85rem;
-  margin-top: 4px;
+  margin-bottom: 5px;
   padding: 2px 4px;
   border-radius: 4px;
   background-color: rgba(0, 0, 0, 0.05);
@@ -471,23 +471,16 @@
 
 /* 확장된 입찰 UI를 오른쪽에 배치 */
 .bid-action.expanded {
-  grid-area: bid-action;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px;
-  background-color: #f9f9f9;
-  border-radius: 4px;
-  border: 1px solid #eee;
-  margin-top: 0;
-  grid-column: 3 / span 2;
+  width: 180px;
+  flex-shrink: 0;
+  padding: 0;
+  background: none;
+  border: none;
 }
 
 /* 입찰 입력 폼 스타일 */
 .bid-action.expanded .bid-input-container {
-  width: auto;
-  min-width: 200px;
-  margin: 0;
+  margin-top: 5px;
 }
 
 /* 빠른 입찰 버튼 그룹 */

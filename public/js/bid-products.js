@@ -693,85 +693,54 @@ function displayProducts() {
         product.displayStatus === "second") &&
       timer;
 
-    // 입찰 정보 및 상태 섹션
-    // 입찰 가능 여부에 따라 다르게 표시
+    // 입찰 가능 여부에 따라 레이아웃 조정
     if (isActiveBid) {
-      // 입찰 가능한 경우 - 간소화된 정보만 표시
-      // bid-info와 result-status 섹션을 간소화하고 대부분의 정보는 bid-action에 포함
+      // 입찰 가능한 경우 - bid-info 대신 bid-action 배치
 
-      // 간소화된 입찰 정보 섹션
-      const bidInfoSection = document.createElement("div");
-      bidInfoSection.className = "bid-info simplified";
-      bidInfoSection.innerHTML = `
-        <div class="bid-type ${
-          product.type === "live" ? "live-type" : "direct-type"
-        }">
-          ${product.type === "live" ? "현장 경매" : "직접 경매"}
-        </div>
-        <div class="item-starting-price">
-          <span class="price-label">시작가:</span>
-          <span class="price-value">${formatNumber(
-            item.starting_price || 0
-          )} ¥</span>
-        </div>
-      `;
-
-      // 간소화된 상태 섹션
+      // 결과 상태 섹션
       const statusSection = document.createElement("div");
-      statusSection.className = "result-status simplified";
+      statusSection.className = "result-status";
 
       const statusClass = getStatusClass(product.displayStatus);
       const statusText = getStatusDisplay(product.displayStatus);
 
       statusSection.innerHTML = `
-        <div class="status-badge ${statusClass}">${statusText}</div>
+        <div class="status-badge ${statusClass}">
+          ${statusText}
+        </div>
+        <div class="result-date">${formatDateTime(product.updated_at)}</div>
       `;
 
-      // 기본 섹션 추가
-      resultItem.appendChild(imageSection);
-      resultItem.appendChild(infoSection);
-      resultItem.appendChild(bidInfoSection);
-      resultItem.appendChild(statusSection);
-
-      // 확장된 입찰 액션 섹션 - 타이머와 입찰 UI 포함
+      // bid-action 섹션 생성 (bid-info 자리에 배치될 것임)
       const bidActionSection = document.createElement("div");
       bidActionSection.className = "bid-action expanded";
-
-      // 타이머 추가
-      const timerHTML = `<div class="bid-timer ${
-        timer.isNearEnd ? "near-end" : ""
-      }">
-        남은시간: <span class="remaining-time">[${timer.text}]</span>
-      </div>`;
 
       // 직접 경매와 현장 경매에 따라 적절한 UI 생성
       if (product.type === "direct") {
         const directBidInfo = state.directBids.find((b) => b.id === product.id);
-        // 타이머를 포함한 HTML 생성
-        bidActionSection.innerHTML =
-          timerHTML +
-          BidManager.getDirectBidSectionHTML(
-            directBidInfo,
-            item.item_id,
-            item.auc_num,
-            item.category
-          );
+        bidActionSection.innerHTML = BidManager.getDirectBidSectionHTML(
+          directBidInfo,
+          item.item_id,
+          item.auc_num,
+          item.category
+        );
       } else {
         const liveBidInfo = state.liveBids.find((b) => b.id === product.id);
-        // 타이머를 포함한 HTML 생성
-        bidActionSection.innerHTML =
-          timerHTML +
-          BidManager.getLiveBidSectionHTML(
-            liveBidInfo,
-            item.item_id,
-            item.auc_num,
-            item.category
-          );
+        bidActionSection.innerHTML = BidManager.getLiveBidSectionHTML(
+          liveBidInfo,
+          item.item_id,
+          item.auc_num,
+          item.category
+        );
       }
 
-      resultItem.appendChild(bidActionSection);
+      // bid-info 대신 bid-action 추가
+      resultItem.appendChild(imageSection);
+      resultItem.appendChild(infoSection);
+      resultItem.appendChild(bidActionSection); // bid-info 위치에 bid-action 배치
+      resultItem.appendChild(statusSection);
     } else {
-      // 입찰 불가능한 경우 - 일반적인 정보 모두 표시
+      // 입찰 불가능한 경우 - 기존 방식대로 표시
       const bidInfoSection = document.createElement("div");
       bidInfoSection.className = "bid-info";
 
