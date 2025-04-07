@@ -736,10 +736,6 @@ function displayProducts() {
         );
       }
 
-      // DOMParser를 사용하여 HTML 문자열을 파싱
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(bidHtml, "text/html");
-
       // bid-action 섹션 생성
       const bidActionSection = document.createElement("div");
       bidActionSection.className = "bid-action expanded";
@@ -748,70 +744,27 @@ function displayProducts() {
       const leftContent = document.createElement("div");
       leftContent.className = "bid-action-left";
 
-      // 타이머 요소 추출
-      const timerElement = doc.querySelector(".bid-timer");
+      // 기존 문서에서 요소를 직접 찾아서 이동
+      const timerElement = document.querySelector(".bid-timer");
       if (timerElement) {
-        leftContent.appendChild(timerElement.cloneNode(true));
+        leftContent.appendChild(timerElement); // 기존 요소 그대로 이동
       }
 
-      // 가격 정보 요소 추출
-      const priceElements = doc.querySelectorAll(
+      const priceElements = document.querySelectorAll(
         ".real-time-price, .bid-price-info, .final-price"
       );
       priceElements.forEach((el) => {
-        leftContent.appendChild(el.cloneNode(true));
+        leftContent.appendChild(el); // 기존 요소 그대로 이동
       });
 
       // 우측 컨텐츠 영역 생성 (입력 폼)
       const rightContent = document.createElement("div");
       rightContent.className = "bid-input-container";
 
-      // 입력 요소 추출
-      const inputContainer = doc.querySelector(".bid-input-container");
+      // 기존 입력 요소 직접 이동
+      const inputContainer = document.querySelector(".bid-input-container");
       if (inputContainer) {
-        // HTML을 복사한 후
-        rightContent.innerHTML = inputContainer.innerHTML;
-
-        // quick-bid-btn 버튼들에 이벤트 핸들러를 명시적으로 추가
-        const quickBidBtns = rightContent.querySelectorAll(".quick-bid-btn");
-
-        quickBidBtns.forEach((btn) => {
-          // 기존 onclick 속성 제거 (있다면)
-          if (btn.hasAttribute("onclick")) {
-            btn.removeAttribute("onclick");
-          }
-
-          // 버튼의 텍스트에서 금액 추출 ("+1,000¥" -> 1)
-          const amountText = btn.textContent.trim();
-          const amount = parseInt(amountText.replace(/[^0-9]/g, "")) / 1000;
-
-          // 이벤트 리스너 직접 추가
-          btn.addEventListener("click", function (e) {
-            e.stopPropagation();
-            e.preventDefault();
-            BidManager.quickAddBid(itemId, amount, product.type);
-          });
-        });
-
-        // 입찰 버튼에도 이벤트 핸들러 명시적 추가
-        const bidButton = rightContent.querySelector(".bid-button");
-        if (bidButton) {
-          // 기존 onclick 속성 제거 (있다면)
-          if (bidButton.hasAttribute("onclick")) {
-            bidButton.removeAttribute("onclick");
-          }
-
-          bidButton.addEventListener("click", function (e) {
-            e.stopPropagation();
-            const inputValue =
-              this.parentElement.querySelector(".bid-input").value;
-            if (product.type === "live") {
-              BidManager.handleLiveBidSubmit(inputValue, itemId);
-            } else {
-              BidManager.handleDirectBidSubmit(inputValue, itemId);
-            }
-          });
-        }
+        rightContent.appendChild(inputContainer); // 이벤트 핸들러도 그대로 유지됨
       }
 
       // 좌우 컨텐츠를 bid-action에 추가
