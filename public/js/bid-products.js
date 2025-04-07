@@ -824,7 +824,7 @@ function displayProducts() {
     resultItem.appendChild(bidInfoSection);
     resultItem.appendChild(statusSection);
 
-    // 입찰 UI 추가 - 확장된 버전
+    // 입찰 UI 추가 - 모달과 동일한 기능으로 구현
     if (
       (product.displayStatus === "active" ||
         product.displayStatus === "first" ||
@@ -856,9 +856,9 @@ function displayProducts() {
       resultItem.appendChild(bidActionSection);
     }
 
-    // 클릭 이벤트 추가 - 수정된 버전
+    // 클릭 이벤트 추가
     resultItem.addEventListener("click", (e) => {
-      // 입찰 관련 요소 클릭 시 이벤트 전파 중지 (확장된 조건)
+      // 입찰 관련 요소 클릭 시 이벤트 전파 중지
       if (
         e.target.closest(".bid-action") ||
         e.target.closest(".bid-input-container") ||
