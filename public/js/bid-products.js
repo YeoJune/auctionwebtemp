@@ -108,6 +108,9 @@ async function initialize() {
 
     // 입찰 이벤트 리스너 설정
     setupBidEventListeners();
+
+    // 타이머 업데이트 시작
+    BidManager.startTimerUpdates();
   } catch (error) {
     console.error("초기화 중 오류 발생:", error);
     alert("페이지 초기화 중 오류가 발생했습니다.");
@@ -821,7 +824,7 @@ function displayProducts() {
     resultItem.appendChild(bidInfoSection);
     resultItem.appendChild(statusSection);
 
-    // bid-products.js의 입찰 UI 추가 부분
+    // 입찰 UI 추가 - 확장된 버전
     if (
       (product.displayStatus === "active" ||
         product.displayStatus === "first" ||
@@ -829,47 +832,40 @@ function displayProducts() {
       BidManager.getRemainingTime(item.scheduled_date)
     ) {
       const bidActionSection = document.createElement("div");
-      bidActionSection.className = "bid-action";
+      bidActionSection.className = "bid-action expanded";
 
+      // 직접 경매와 현장 경매에 따라 적절한 UI 생성
       if (product.type === "direct") {
-        bidActionSection.innerHTML = `
-   <div class="bid-input-container compact">
-     <div class="bid-input-group">
-       <input type="number" class="bid-input" data-item-id="${item.item_id}" data-bid-type="direct">
-       <span class="bid-value-display">000</span>
-       <span class="bid-currency">¥</span>
-       <button class="bid-button" onclick="event.stopPropagation(); BidManager.handleDirectBidSubmit(this.parentElement.querySelector('.bid-input').value, '${item.item_id}')">입찰</button>
-     </div>
-     <div class="price-details-container"></div>
-   </div>
- `;
+        const directBidInfo = state.directBids.find((b) => b.id === product.id);
+        bidActionSection.innerHTML = BidManager.getDirectBidSectionHTML(
+          directBidInfo,
+          item.item_id,
+          item.auc_num,
+          item.category
+        );
       } else {
         const liveBidInfo = state.liveBids.find((b) => b.id === product.id);
-        const bidLabel = liveBidInfo?.first_price ? "최종입찰" : "1차입찰";
-
-        bidActionSection.innerHTML = `
-   <div class="bid-input-container compact">
-     <div class="bid-input-group">
-       <input type="number" class="bid-input" data-item-id="${item.item_id}" data-bid-type="live">
-       <span class="bid-value-display">000</span>
-       <span class="bid-currency">¥</span>
-       <button class="bid-button" onclick="event.stopPropagation(); BidManager.handleLiveBidSubmit(this.parentElement.querySelector('.bid-input').value, '${item.item_id}')">입찰</button>
-     </div>
-     <div class="price-details-container"></div>
-   </div>
- `;
+        bidActionSection.innerHTML = BidManager.getLiveBidSectionHTML(
+          liveBidInfo,
+          item.item_id,
+          item.auc_num,
+          item.category
+        );
       }
 
       resultItem.appendChild(bidActionSection);
     }
 
-    // 클릭 이벤트 추가
+    // 클릭 이벤트 추가 - 수정된 버전
     resultItem.addEventListener("click", (e) => {
-      // 클릭된 요소가 입찰 관련 요소인 경우 이벤트 전파 중지
+      // 입찰 관련 요소 클릭 시 이벤트 전파 중지 (확장된 조건)
       if (
+        e.target.closest(".bid-action") ||
         e.target.closest(".bid-input-container") ||
         e.target.closest(".bid-button") ||
-        e.target.closest(".quick-bid-btn")
+        e.target.closest(".quick-bid-btn") ||
+        e.target.closest(".price-calculator") ||
+        e.target.closest(".bid-input-group")
       ) {
         e.stopPropagation();
         return;
@@ -881,6 +877,9 @@ function displayProducts() {
     // 컨테이너에 아이템 추가
     container.appendChild(resultItem);
   }
+
+  // 입찰 가격 계산기 초기화
+  BidManager.initializePriceCalculators();
 }
 
 // 페이지 변경 처리 - 최종 수정 버전
@@ -923,6 +922,12 @@ async function showProductDetails(itemId) {
   // 기본 정보로 모달 초기화
   initializeModal(product, item);
   modalManager.show();
+
+  // URL 파라미터 업데이트 (상품 ID 추가)
+  const urlParams = new URLSearchParams(window.location.search);
+  urlParams.set("item_id", itemId);
+  const newUrl = window.location.pathname + "?" + urlParams.toString();
+  window.history.replaceState({}, document.title, newUrl);
 
   // 로딩 표시
   showLoadingInModal();
