@@ -357,7 +357,8 @@ window.BidManager = (function () {
    */
   function quickAddBid(itemId, amount, bidType) {
     // 이벤트 버블링과 기본 동작 방지
-    if (event) {
+    // 이 부분 수정: event 객체가 없을 수도 있음을 고려
+    if (typeof event !== "undefined" && event) {
       event.stopPropagation();
       event.preventDefault();
     }
@@ -365,10 +366,32 @@ window.BidManager = (function () {
     const item = _state.currentData.find((item) => item.item_id === itemId);
     if (!item) return;
 
-    // 클릭된 버튼의 상위 컨테이너 찾기 (모달 또는 카드)
-    const container =
-      event.target.closest(".modal-content") ||
-      event.target.closest(".product-card");
+    // 클릭된 버튼의 상위 컨테이너 찾기 수정
+    // event 객체가 존재할 때만 이 로직 사용
+    let container = null;
+    if (typeof event !== "undefined" && event && event.target) {
+      container =
+        event.target.closest(".modal-content") ||
+        event.target.closest(".product-card") ||
+        event.target.closest(".bid-result-item");
+    }
+
+    // 컨테이너를 찾지 못했으면 document에서 해당 itemId를 가진 모든 컨테이너 검색
+    if (!container) {
+      const modalContainer = document
+        .querySelector(
+          `.modal-content .bid-input[data-item-id="${itemId}"][data-bid-type="${bidType}"]`
+        )
+        ?.closest(".modal-content");
+      const cardContainer = document.querySelector(
+        `.product-card[data-item-id="${itemId}"]`
+      );
+      const resultItemContainer = document.querySelector(
+        `.bid-result-item[data-item-id="${itemId}"]`
+      );
+
+      container = modalContainer || cardContainer || resultItemContainer;
+    }
 
     if (!container) return;
 

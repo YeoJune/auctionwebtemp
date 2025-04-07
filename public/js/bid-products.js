@@ -769,12 +769,85 @@ function displayProducts() {
       // 입력 요소 추출
       const inputContainer = doc.querySelector(".bid-input-container");
       if (inputContainer) {
-        rightContent.innerHTML = inputContainer.innerHTML;
-      }
+        // HTML만 복사하지 말고, 실제 요소를 복사해서 이벤트도 올바르게 처리되도록 합니다
+        const inputGroup = inputContainer.querySelector(".bid-input-group");
+        const quickBidButtons =
+          inputContainer.querySelector(".quick-bid-buttons");
 
-      // 좌우 컨텐츠를 bid-action에 추가
-      bidActionSection.appendChild(leftContent);
-      bidActionSection.appendChild(rightContent);
+        if (inputGroup) {
+          const newInputGroup = inputGroup.cloneNode(true);
+          rightContent.appendChild(newInputGroup);
+        }
+
+        if (quickBidButtons) {
+          const newQuickBidButtons = document.createElement("div");
+          newQuickBidButtons.className = "quick-bid-buttons";
+
+          // 여기서 quick-bid-btn을 직접 생성하고 이벤트 리스너를 명시적으로 추가합니다
+          const amounts = [1, 5, 10]; // 1000엔, 5000엔, 10000엔
+          amounts.forEach((amount) => {
+            const btn = document.createElement("button");
+            btn.className = "quick-bid-btn";
+            btn.textContent = `+${amount},000¥`;
+
+            // 이벤트 리스너 직접 추가
+            btn.addEventListener("click", function (e) {
+              e.stopPropagation(); // 이벤트 버블링 방지
+              e.preventDefault(); // 기본 동작 방지
+
+              // BidManager.quickAddBid 함수 직접 호출
+              BidManager.quickAddBid(item.item_id, amount, product.type);
+            });
+
+            newQuickBidButtons.appendChild(btn);
+          });
+
+          rightContent.appendChild(newQuickBidButtons);
+        }
+      } else {
+        // 입력 컨테이너가 없는 경우 대체 코드
+        rightContent.innerHTML = `
+    <div class="bid-input-group">
+      <input type="number" placeholder="" class="bid-input" data-item-id="${item.item_id}" data-bid-type="${product.type}">
+      <span class="bid-value-display">000</span>
+      <span class="bid-currency">¥</span>
+      <button class="bid-button">입찰</button>
+    </div>
+    <div class="price-details-container"></div>
+    <div class="quick-bid-buttons">
+      <button class="quick-bid-btn">+1,000¥</button>
+      <button class="quick-bid-btn">+5,000¥</button>
+      <button class="quick-bid-btn">+10,000¥</button>
+    </div>
+  `;
+
+        // 입력 컨테이너가 없는 경우 이벤트 리스너 수동 추가
+        const inputBtn = rightContent.querySelector(".bid-button");
+        if (inputBtn) {
+          inputBtn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            const inputValue =
+              this.parentElement.querySelector(".bid-input").value;
+            if (product.type === "live") {
+              BidManager.handleLiveBidSubmit(inputValue, item.item_id);
+            } else {
+              BidManager.handleDirectBidSubmit(inputValue, item.item_id);
+            }
+          });
+        }
+
+        // Quick bid 버튼 이벤트 추가
+        const quickBtns = rightContent.querySelectorAll(".quick-bid-btn");
+        const amounts = [1, 5, 10];
+        quickBtns.forEach((btn, index) => {
+          btn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            e.preventDefault();
+            const amount = amounts[index];
+            BidManager.quickAddBid(item.item_id, amount, product.type);
+          });
+        });
+      }
 
       // 모든 섹션 추가
       resultItem.appendChild(imageSection);
