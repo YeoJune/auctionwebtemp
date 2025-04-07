@@ -488,12 +488,12 @@
 /* 좌측 컨텐츠 영역 */
 .bid-action-left {
   flex: 1;
-  min-width: 120px;
+  min-width: 180px;
 }
 
 /* 우측 입력 영역 */
 .bid-action.expanded .bid-input-container {
-  width: 360px;
+  width: 300px;
   margin: 0;
 }
 
