@@ -849,6 +849,10 @@ function displayProducts() {
         });
       }
 
+      // 좌우 컨텐츠를 bid-action에 추가
+      bidActionSection.appendChild(leftContent);
+      bidActionSection.appendChild(rightContent);
+
       // 모든 섹션 추가
       resultItem.appendChild(imageSection);
       resultItem.appendChild(infoSection);
