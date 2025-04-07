@@ -631,103 +631,313 @@ function getStatusClass(status) {
 }
 
 // 결과 표시
-function displayProducts(products) {
-  const productList = document.getElementById("product-list");
-  productList.innerHTML = "";
+function displayProducts() {
+  const container = document.getElementById("productList");
+  if (!container) return;
 
-  products.forEach((product) => {
+  container.innerHTML = "";
+  const totalResultsElement = document.getElementById("totalResults");
+  if (totalResultsElement) {
+    totalResultsElement.textContent = state.totalItems;
+  }
+
+  if (state.filteredResults.length === 0) {
+    container.innerHTML =
+      '<div class="no-results">표시할 상품이 없습니다.</div>';
+    return;
+  }
+
+  // 현재 페이지에 해당하는 결과만 표시
+  const startIdx = (state.currentPage - 1) * state.itemsPerPage;
+  const endIdx = Math.min(
+    startIdx + state.itemsPerPage,
+    state.filteredResults.length
+  );
+
+  for (let i = startIdx; i < endIdx; i++) {
+    const product = state.filteredResults[i];
+    const item = product.item;
+
+    if (!item) continue; // 아이템 정보가 없는 경우 건너뛰기
+
     const resultItem = document.createElement("div");
-    resultItem.className = "result-item";
+    resultItem.className = "bid-result-item";
+    resultItem.dataset.itemId = item.item_id;
+    resultItem.dataset.bidId = product.id;
+    resultItem.dataset.bidType = product.type;
 
     // 이미지 섹션
     const imageSection = document.createElement("div");
-    imageSection.className = "image-section";
+    imageSection.className = "item-image";
+    imageSection.innerHTML = `
+          <img src="${API.validateImageUrl(item.image)}" alt="${
+      item.original_title || "상품 이미지"
+    }">
+          <div class="item-rank">${item.rank || "N"}</div>
+      `;
 
-    const thumbnail = document.createElement("img");
-    thumbnail.src = product.image_url;
-    thumbnail.alt = product.name;
-
-    const imageTitle = document.createElement("div");
-    imageTitle.className = "image-title";
-    imageTitle.textContent = product.name;
-
-    imageSection.appendChild(thumbnail);
-    imageSection.appendChild(imageTitle);
-
-    // 정보 섹션
+    // 상품 정보 섹션
     const infoSection = document.createElement("div");
-    infoSection.className = "info-section";
+    infoSection.className = "item-info";
+    infoSection.innerHTML = `
+          <div class="item-brand">${item.brand || "-"}</div>
+          <div class="item-title">${item.original_title || "제목 없음"}</div>
+          <div class="item-category">${item.category || "-"}</div>
+      `;
 
-    const category = document.createElement("div");
-    category.className = "category";
-    category.textContent = product.category_name;
+    // 타이머 체크
+    const timer = BidManager.getRemainingTime(item.scheduled_date);
+    const isActiveBid =
+      (product.displayStatus === "active" ||
+        product.displayStatus === "first" ||
+        product.displayStatus === "second") &&
+      timer;
 
-    const price = document.createElement("div");
-    price.className = "price";
-    price.textContent = `${product.price.toLocaleString()}원`;
+    // 상태 섹션
+    const statusSection = document.createElement("div");
+    statusSection.className = "result-status";
 
-    const deadline = document.createElement("div");
-    deadline.className = "deadline";
-    deadline.textContent = `마감일: ${product.deadline}`;
+    // 상태에 따라 다른 표시와 클래스 적용
+    const statusClass = getStatusClass(product.displayStatus); // Assuming getStatusClass exists
+    const statusText = getStatusDisplay(product.displayStatus); // Assuming getStatusDisplay exists
 
-    infoSection.appendChild(category);
-    infoSection.appendChild(price);
-    infoSection.appendChild(deadline);
+    statusSection.innerHTML = `
+          <div class="bid-type ${
+            product.type === "live" ? "live-type" : "direct-type"
+          }">
+              ${product.type === "live" ? "현장 경매" : "직접 경매"}
+          </div>
+          <div class="status-badge ${statusClass}">
+              ${statusText}
+          </div>
+          <div class="result-date">${formatDateTime(
+            product.updated_at
+          )}</div> // Assuming formatDateTime exists
+      `;
 
-    // 입찰 상태 판단
-    const now = new Date();
-    const scheduledStart = new Date(product.scheduled_start_time);
-    const scheduledEnd = new Date(product.scheduled_end_time);
-    const isActiveBid = now >= scheduledStart && now <= scheduledEnd;
-
+    // 입찰 가능 여부에 따라 레이아웃 다르게 구성
     if (isActiveBid) {
-      // 입찰 영역 렌더링
-      const bidHtml = product.is_live
-        ? BidManager.getLiveBidSectionHTML(product)
-        : BidManager.getDirectBidSectionHTML(product);
+      // --- START: Modified section ---
+      let bidHtml = "";
+      const itemId = item.item_id; // Get item_id for potential use
 
-      // 임시 DOM으로 파싱
-      const tempWrapper = document.createElement("div");
-      tempWrapper.innerHTML = bidHtml;
+      if (product.type === "direct") {
+        const directBidInfo = state.directBids.find((b) => b.id === product.id);
+        bidHtml = BidManager.getDirectBidSectionHTML(
+          directBidInfo,
+          item.item_id,
+          item.auc_num,
+          item.category
+        );
+      } else {
+        const liveBidInfo = state.liveBids.find((b) => b.id === product.id);
+        bidHtml = BidManager.getLiveBidSectionHTML(
+          liveBidInfo,
+          item.item_id,
+          item.auc_num,
+          item.category
+        );
+      }
 
-      // 고유 요소 선택
-      const timerElement = tempWrapper.querySelector(".bid-timer");
-      const priceElements = tempWrapper.querySelectorAll(
-        ".real-time-price, .bid-price-info, .final-price"
-      );
-      const inputContainer = tempWrapper.querySelector(".bid-input-container");
-
-      // bid-action 섹션 구성
+      // bid-action 섹션 생성
       const bidActionSection = document.createElement("div");
       bidActionSection.className = "bid-action expanded";
 
+      // 좌측 컨텐츠 영역 생성
       const leftContent = document.createElement("div");
       leftContent.className = "bid-action-left";
-      if (timerElement) leftContent.appendChild(timerElement);
-      priceElements.forEach((el) => leftContent.appendChild(el));
 
+      // 우측 컨텐츠 영역 생성 (입력 폼)
       const rightContent = document.createElement("div");
-      rightContent.className = "bid-input-container";
-      if (inputContainer) rightContent.appendChild(inputContainer);
+      rightContent.className = "bid-input-container"; // Use the same class as in the HTML string for consistency
 
+      // 임시 div를 만들어 HTML 파싱 및 요소 이동
+      const tempDiv = document.createElement("div");
+      tempDiv.innerHTML = bidHtml; // Parse the HTML string inside the temporary div
+
+      // 타이머 요소 추출 및 이동
+      const timerElement = tempDiv.querySelector(".bid-timer");
+      if (timerElement) {
+        leftContent.appendChild(timerElement); // Move the element
+      }
+
+      // 가격 정보 요소 추출 및 이동
+      const priceElements = tempDiv.querySelectorAll(
+        ".real-time-price, .bid-price-info, .final-price" // Adjust selectors as needed based on BidManager output
+      );
+      priceElements.forEach((el) => {
+        leftContent.appendChild(el); // Move the elements
+      });
+
+      // 입력 컨테이너 요소 추출 및 **내용** 이동
+      // input container 자체를 옮기는 것이 아니라, 그 안의 요소들을 rightContent로 옮김
+      const inputContainerSource = tempDiv.querySelector(
+        ".bid-input-container"
+      );
+      if (inputContainerSource) {
+        // Move all children from the source input container to the rightContent div
+        while (inputContainerSource.firstChild) {
+          rightContent.appendChild(inputContainerSource.firstChild);
+        }
+      }
+      // --- NOTE: Event listeners ---
+      // This approach relies on BidManager.get...HTML either:
+      // 1. Using inline onclick attributes (like <button onclick="...">). These usually survive the move.
+      // 2. Attaching listeners using addEventListener *before* returning the HTML string (less common for string-based approaches).
+      // 3. Or, preferably, using event delegation on a static parent (like #productList) to handle clicks on .bid-button, .quick-bid-btn etc.
+      // The manual re-attachment of listeners within this loop is REMOVED as requested.
+
+      // 좌우 컨텐츠를 bid-action에 추가
       bidActionSection.appendChild(leftContent);
       bidActionSection.appendChild(rightContent);
 
+      // 모든 섹션 추가
       resultItem.appendChild(imageSection);
       resultItem.appendChild(infoSection);
-      resultItem.appendChild(bidActionSection);
-    } else {
-      const statusSection = document.createElement("div");
-      statusSection.className = "status-section";
-      statusSection.textContent = "입찰 비활성 상태";
+      resultItem.appendChild(bidActionSection); // bid-info 자리에 bid-action 배치
+      resultItem.appendChild(statusSection);
 
+      // --- END: Modified section ---
+    } else {
+      // 입찰 불가능한 경우 - 기존 방식대로 표시 (이 부분은 변경 없음)
+      const bidInfoSection = document.createElement("div");
+      bidInfoSection.className = "bid-info";
+
+      // 원화 가격 계산
+      const auctionId = item.auc_num || 1;
+      const category = item.category || "기타";
+      let japanesePrice = 0;
+
+      let bidInfoHTML = ``;
+
+      if (product.type === "direct") {
+        japanesePrice = product.current_price || 0;
+        bidInfoHTML += `
+                  <div class="price-row">
+                      <span class="price-label">입찰 금액:</span>
+                      <span class="price-value">${formatNumber(
+                        product.current_price
+                      )} ¥</span>
+                  </div>
+                  <div class="price-row price-korean">
+                      <span class="price-label">관부가세 포함:</span>
+                      <span class="price-value">${formatNumber(
+                        calculateTotalPrice(japanesePrice, auctionId, category)
+                      )} ₩</span>
+                  </div>
+              `; // Assuming formatNumber and calculateTotalPrice exist
+      } else {
+        bidInfoHTML += `
+                  <div class="price-stages">
+                      ${
+                        product.first_price
+                          ? `
+                          <div class="price-row">
+                              <span class="price-label">1차 입찰:</span>
+                              <span class="price-value">${formatNumber(
+                                product.first_price
+                              )} ¥</span>
+                          </div>
+                          `
+                          : ""
+                      }
+                      ${
+                        product.second_price
+                          ? `
+                          <div class="price-row">
+                              <span class="price-label">2차 제안:</span>
+                              <span class="price-value">${formatNumber(
+                                product.second_price
+                              )} ¥</span>
+                          </div>
+                          `
+                          : ""
+                      }
+                      ${
+                        product.final_price
+                          ? `
+                          <div class="price-row">
+                              <span class="price-label">최종 입찰:</span>
+                              <span class="price-value">${formatNumber(
+                                product.final_price
+                              )} ¥</span>
+                          </div>
+                          <div class="price-row price-korean">
+                              <span class="price-label">관부가세 포함:</span>
+                              <span class="price-value">${formatNumber(
+                                calculateTotalPrice(
+                                  product.final_price,
+                                  auctionId,
+                                  category
+                                )
+                              )} ₩</span>
+                          </div>
+                          `
+                          : ""
+                      }
+                  </div>
+              `; // Assuming formatNumber and calculateTotalPrice exist
+
+        // 최종 가격 계산을 위한 가격 설정
+        japanesePrice =
+          product.final_price ||
+          product.second_price ||
+          product.first_price ||
+          0;
+
+        // 최종 가격이 없지만 다른 가격이 있는 경우 원화 예상가 표시
+        if (
+          !product.final_price &&
+          (product.second_price || product.first_price)
+        ) {
+          bidInfoHTML += `
+                      <div class="price-row price-korean">
+                          <span class="price-label">관부가세 포함:</span>
+                          <span class="price-value">${formatNumber(
+                            calculateTotalPrice(
+                              japanesePrice,
+                              auctionId,
+                              category
+                            )
+                          )} ₩</span>
+                      </div>
+                  `; // Assuming formatNumber and calculateTotalPrice exist
+        }
+      }
+
+      bidInfoSection.innerHTML = bidInfoHTML;
+
+      // 모든 섹션 추가
       resultItem.appendChild(imageSection);
       resultItem.appendChild(infoSection);
+      resultItem.appendChild(bidInfoSection);
       resultItem.appendChild(statusSection);
     }
 
-    productList.appendChild(resultItem);
-  });
+    // 클릭 이벤트 추가 (이 부분은 변경 없음)
+    resultItem.addEventListener("click", (e) => {
+      // 입찰 관련 요소 클릭 시 이벤트 전파 중지
+      if (
+        e.target.closest(".bid-action") || // Check the new container
+        e.target.closest(".bid-input-container") || // Check the moved container
+        e.target.closest(".bid-button") ||
+        e.target.closest(".quick-bid-btn") ||
+        e.target.closest(".price-calculator") || // Keep existing checks if relevant
+        e.target.closest(".bid-input-group")
+      ) {
+        e.stopPropagation();
+        return;
+      }
+
+      showProductDetails(item.item_id); // Assuming showProductDetails exists
+    });
+
+    // 컨테이너에 아이템 추가
+    container.appendChild(resultItem);
+  }
+
+  // 입찰 가격 계산기 초기화 (이 부분은 변경 없음)
+  BidManager.initializePriceCalculators(); // Assuming initializePriceCalculators exists
 }
 
 // 페이지 변경 처리 - 최종 수정 버전
