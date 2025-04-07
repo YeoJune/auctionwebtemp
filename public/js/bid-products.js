@@ -769,84 +769,49 @@ function displayProducts() {
       // 입력 요소 추출
       const inputContainer = doc.querySelector(".bid-input-container");
       if (inputContainer) {
-        // HTML만 복사하지 말고, 실제 요소를 복사해서 이벤트도 올바르게 처리되도록 합니다
-        const inputGroup = inputContainer.querySelector(".bid-input-group");
-        const quickBidButtons =
-          inputContainer.querySelector(".quick-bid-buttons");
+        // HTML을 복사한 후
+        rightContent.innerHTML = inputContainer.innerHTML;
 
-        if (inputGroup) {
-          const newInputGroup = inputGroup.cloneNode(true);
-          rightContent.appendChild(newInputGroup);
-        }
+        // quick-bid-btn 버튼들에 이벤트 핸들러를 명시적으로 추가
+        const quickBidBtns = rightContent.querySelectorAll(".quick-bid-btn");
 
-        if (quickBidButtons) {
-          const newQuickBidButtons = document.createElement("div");
-          newQuickBidButtons.className = "quick-bid-buttons";
+        quickBidBtns.forEach((btn) => {
+          // 기존 onclick 속성 제거 (있다면)
+          if (btn.hasAttribute("onclick")) {
+            btn.removeAttribute("onclick");
+          }
 
-          // 여기서 quick-bid-btn을 직접 생성하고 이벤트 리스너를 명시적으로 추가합니다
-          const amounts = [1, 5, 10]; // 1000엔, 5000엔, 10000엔
-          amounts.forEach((amount) => {
-            const btn = document.createElement("button");
-            btn.className = "quick-bid-btn";
-            btn.textContent = `+${amount},000¥`;
+          // 버튼의 텍스트에서 금액 추출 ("+1,000¥" -> 1)
+          const amountText = btn.textContent.trim();
+          const amount = parseInt(amountText.replace(/[^0-9]/g, "")) / 1000;
 
-            // 이벤트 리스너 직접 추가
-            btn.addEventListener("click", function (e) {
-              e.stopPropagation(); // 이벤트 버블링 방지
-              e.preventDefault(); // 기본 동작 방지
-
-              // BidManager.quickAddBid 함수 직접 호출
-              BidManager.quickAddBid(item.item_id, amount, product.type);
-            });
-
-            newQuickBidButtons.appendChild(btn);
+          // 이벤트 리스너 직접 추가
+          btn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            e.preventDefault();
+            BidManager.quickAddBid(itemId, amount, product.type);
           });
+        });
 
-          rightContent.appendChild(newQuickBidButtons);
-        }
-      } else {
-        // 입력 컨테이너가 없는 경우 대체 코드
-        rightContent.innerHTML = `
-    <div class="bid-input-group">
-      <input type="number" placeholder="" class="bid-input" data-item-id="${item.item_id}" data-bid-type="${product.type}">
-      <span class="bid-value-display">000</span>
-      <span class="bid-currency">¥</span>
-      <button class="bid-button">입찰</button>
-    </div>
-    <div class="price-details-container"></div>
-    <div class="quick-bid-buttons">
-      <button class="quick-bid-btn">+1,000¥</button>
-      <button class="quick-bid-btn">+5,000¥</button>
-      <button class="quick-bid-btn">+10,000¥</button>
-    </div>
-  `;
+        // 입찰 버튼에도 이벤트 핸들러 명시적 추가
+        const bidButton = rightContent.querySelector(".bid-button");
+        if (bidButton) {
+          // 기존 onclick 속성 제거 (있다면)
+          if (bidButton.hasAttribute("onclick")) {
+            bidButton.removeAttribute("onclick");
+          }
 
-        // 입력 컨테이너가 없는 경우 이벤트 리스너 수동 추가
-        const inputBtn = rightContent.querySelector(".bid-button");
-        if (inputBtn) {
-          inputBtn.addEventListener("click", function (e) {
+          bidButton.addEventListener("click", function (e) {
             e.stopPropagation();
             const inputValue =
               this.parentElement.querySelector(".bid-input").value;
             if (product.type === "live") {
-              BidManager.handleLiveBidSubmit(inputValue, item.item_id);
+              BidManager.handleLiveBidSubmit(inputValue, itemId);
             } else {
-              BidManager.handleDirectBidSubmit(inputValue, item.item_id);
+              BidManager.handleDirectBidSubmit(inputValue, itemId);
             }
           });
         }
-
-        // Quick bid 버튼 이벤트 추가
-        const quickBtns = rightContent.querySelectorAll(".quick-bid-btn");
-        const amounts = [1, 5, 10];
-        quickBtns.forEach((btn, index) => {
-          btn.addEventListener("click", function (e) {
-            e.stopPropagation();
-            e.preventDefault();
-            const amount = amounts[index];
-            BidManager.quickAddBid(item.item_id, amount, product.type);
-          });
-        });
       }
 
       // 좌우 컨텐츠를 bid-action에 추가
