@@ -475,25 +475,25 @@
 
 /* 확장된 입찰 UI를 오른쪽에 배치 */
 .bid-action.expanded {
-  width: 220px; /* 너비 증가 */
+  width: 280px; /* 너비 증가 */
   flex-shrink: 0;
   padding: 0;
   background: none;
   border: none;
   display: flex;
   justify-content: space-between;
-  gap: 10px;
+  gap: 15px;
 }
 
 /* 좌측 컨텐츠 스타일링 */
 .bid-action-left {
   flex: 1;
-  min-width: 0;
+  min-width: 120px;
 }
 
 /* 우측 입력 컨테이너 스타일링 */
 .bid-action.expanded .bid-input-container {
-  width: 120px;
+  width: 140px;
   margin: 0;
 }
 
@@ -508,6 +508,7 @@
   flex: 1;
   font-size: 11px;
   padding: 3px 2px;
+  margin: 0 2px;
 }
 
 /* 입력 그룹 스타일링 */
