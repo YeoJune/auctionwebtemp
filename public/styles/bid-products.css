@@ -475,7 +475,7 @@
 
 /* 확장된 입찰 UI를 오른쪽에 배치 */
 .bid-action.expanded {
-  width: 540px;
+  width: 480px;
   flex-shrink: 0;
   background: none;
   border: none;
@@ -488,12 +488,12 @@
 /* 좌측 컨텐츠 영역 */
 .bid-action-left {
   flex: 1;
-  min-width: 320px;
+  min-width: 120px;
 }
 
 /* 우측 입력 영역 */
 .bid-action.expanded .bid-input-container {
-  width: 140px;
+  width: 360px;
   margin: 0;
 }
 
