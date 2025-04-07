@@ -383,6 +383,10 @@
   gap: 5px;
 }
 
+.result-status .bid-type {
+  margin-bottom: 5px;
+}
+
 .status-badge {
   width: 100%;
   text-align: center;
@@ -471,23 +475,44 @@
 
 /* 확장된 입찰 UI를 오른쪽에 배치 */
 .bid-action.expanded {
-  width: 180px;
+  width: 220px; /* 너비 증가 */
   flex-shrink: 0;
   padding: 0;
   background: none;
   border: none;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
 }
 
-/* 입찰 입력 폼 스타일 */
+/* 좌측 컨텐츠 스타일링 */
+.bid-action-left {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 우측 입력 컨테이너 스타일링 */
 .bid-action.expanded .bid-input-container {
+  width: 120px;
+  margin: 0;
+}
+
+/* 빠른 입찰 버튼 스타일링 */
+.bid-action.expanded .quick-bid-buttons {
+  display: flex;
+  justify-content: space-between;
   margin-top: 5px;
 }
 
-/* 빠른 입찰 버튼 그룹 */
-.bid-action.expanded .quick-bid-buttons {
-  display: flex;
-  gap: 5px;
-  margin: 0;
+.bid-action.expanded .quick-bid-btn {
+  flex: 1;
+  font-size: 11px;
+  padding: 3px 2px;
+}
+
+/* 입력 그룹 스타일링 */
+.bid-action.expanded .bid-input-group {
+  height: 32px;
 }
 
 /* 리스트 아이템 레이아웃 조정 */

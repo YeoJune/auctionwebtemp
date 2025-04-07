@@ -697,7 +697,7 @@ function displayProducts() {
     if (isActiveBid) {
       // 입찰 가능한 경우 - bid-info 대신 bid-action 배치
 
-      // 결과 상태 섹션
+      // 결과 상태 섹션 (bid-type 포함)
       const statusSection = document.createElement("div");
       statusSection.className = "result-status";
 
@@ -705,6 +705,11 @@ function displayProducts() {
       const statusText = getStatusDisplay(product.displayStatus);
 
       statusSection.innerHTML = `
+        <div class="bid-type ${
+          product.type === "live" ? "live-type" : "direct-type"
+        }">
+          ${product.type === "live" ? "현장 경매" : "직접 경매"}
+        </div>
         <div class="status-badge ${statusClass}">
           ${statusText}
         </div>
@@ -715,26 +720,125 @@ function displayProducts() {
       const bidActionSection = document.createElement("div");
       bidActionSection.className = "bid-action expanded";
 
-      // 직접 경매와 현장 경매에 따라 적절한 UI 생성
-      if (product.type === "direct") {
-        const directBidInfo = state.directBids.find((b) => b.id === product.id);
-        bidActionSection.innerHTML = BidManager.getDirectBidSectionHTML(
-          directBidInfo,
-          item.item_id,
-          item.auc_num,
-          item.category
-        );
-      } else {
-        const liveBidInfo = state.liveBids.find((b) => b.id === product.id);
-        bidActionSection.innerHTML = BidManager.getLiveBidSectionHTML(
-          liveBidInfo,
-          item.item_id,
-          item.auc_num,
-          item.category
-        );
+      // 타이머 및 가격 정보 등을 포함하는 좌측 컨텐츠
+      const bidActionLeftContent = document.createElement("div");
+      bidActionLeftContent.className = "bid-action-left";
+
+      // 타이머 추가
+      if (timer) {
+        bidActionLeftContent.innerHTML = `
+          <div class="bid-timer ${timer.isNearEnd ? "near-end" : ""}">
+            남은시간: <span class="remaining-time">[${timer.text}]</span>
+          </div>
+        `;
       }
 
-      // bid-info 대신 bid-action 추가
+      // 현재 가격 정보 추가
+      const auctionId = item.auc_num || 1;
+      const category = item.category || "기타";
+      let japanesePrice = 0;
+
+      if (product.type === "direct") {
+        japanesePrice = product.current_price || 0;
+        bidActionLeftContent.innerHTML += `
+          <div class="price-row">
+            <span class="price-label">입찰 금액:</span>
+            <span class="price-value">${formatNumber(japanesePrice)} ¥</span>
+          </div>
+        `;
+      } else {
+        japanesePrice =
+          product.final_price ||
+          product.second_price ||
+          product.first_price ||
+          0;
+
+        if (product.first_price) {
+          bidActionLeftContent.innerHTML += `
+            <div class="price-row">
+              <span class="price-label">1차 입찰:</span>
+              <span class="price-value">${formatNumber(
+                product.first_price
+              )} ¥</span>
+            </div>
+          `;
+        }
+
+        if (product.second_price) {
+          bidActionLeftContent.innerHTML += `
+            <div class="price-row">
+              <span class="price-label">2차 제안:</span>
+              <span class="price-value">${formatNumber(
+                product.second_price
+              )} ¥</span>
+            </div>
+          `;
+        }
+      }
+
+      // 입찰 입력 컨테이너 (우측에 배치)
+      const bidInputContainer = document.createElement("div");
+      bidInputContainer.className = "bid-input-container";
+
+      // 직접 경매와 현장 경매에 따라 적절한 입력 UI 생성
+      if (product.type === "direct") {
+        bidInputContainer.innerHTML = `
+          <div class="bid-input-group">
+            <input type="number" class="bid-input" data-item-id="${
+              item.item_id
+            }" data-bid-type="direct">
+            <span class="bid-value-display">000</span>
+            <span class="bid-currency">¥</span>
+            <button class="bid-button" onclick="event.stopPropagation(); BidManager.handleDirectBidSubmit(this.parentElement.querySelector('.bid-input').value, '${
+              item.item_id
+            }')">입찰</button>
+          </div>
+          <div class="quick-bid-buttons">
+            <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.setQuickBidValue(this.parentElement.closest('.bid-action').querySelector('.bid-input'), ${Math.round(
+              japanesePrice * 1.03
+            )})">+3%</button>
+            <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.setQuickBidValue(this.parentElement.closest('.bid-action').querySelector('.bid-input'), ${Math.round(
+              japanesePrice * 1.05
+            )})">+5%</button>
+            <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.setQuickBidValue(this.parentElement.closest('.bid-action').querySelector('.bid-input'), ${Math.round(
+              japanesePrice * 1.1
+            )})">+10%</button>
+          </div>
+        `;
+      } else {
+        const liveBidInfo = state.liveBids.find((b) => b.id === product.id);
+        const bidLabel = liveBidInfo?.first_price ? "최종입찰" : "1차입찰";
+
+        bidInputContainer.innerHTML = `
+          <div class="bid-input-group">
+            <input type="number" class="bid-input" data-item-id="${
+              item.item_id
+            }" data-bid-type="live">
+            <span class="bid-value-display">000</span>
+            <span class="bid-currency">¥</span>
+            <button class="bid-button" onclick="event.stopPropagation(); BidManager.handleLiveBidSubmit(this.parentElement.querySelector('.bid-input').value, '${
+              item.item_id
+            }')">${bidLabel}</button>
+          </div>
+          <div class="quick-bid-buttons">
+            <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.setQuickBidValue(this.parentElement.closest('.bid-action').querySelector('.bid-input'), ${Math.round(
+              japanesePrice * 1.03
+            )})">+3%</button>
+            <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.setQuickBidValue(this.parentElement.closest('.bid-action').querySelector('.bid-input'), ${Math.round(
+              japanesePrice * 1.05
+            )})">+5%</button>
+            <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.setQuickBidValue(this.parentElement.closest('.bid-action').querySelector('.bid-input'), ${Math.round(
+              japanesePrice * 1.1
+            )})">+10%</button>
+          </div>
+        `;
+      }
+
+      // 좌측, 우측 컨텐츠를 bid-action에 추가
+      bidActionSection.appendChild(bidActionLeftContent);
+      bidActionSection.appendChild(bidInputContainer);
+
+      // 모든 섹션 추가
       resultItem.appendChild(imageSection);
       resultItem.appendChild(infoSection);
       resultItem.appendChild(bidActionSection); // bid-info 위치에 bid-action 배치
