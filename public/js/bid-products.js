@@ -685,16 +685,102 @@ function displayProducts() {
         <div class="item-category">${item.category || "-"}</div>
       `;
 
-    // 입찰 정보 섹션
-    const bidInfoSection = document.createElement("div");
-    bidInfoSection.className = "bid-info";
+    // 타이머 체크 (이 시점에서 한 번만 계산)
+    const timer = BidManager.getRemainingTime(item.scheduled_date);
+    const isActiveBid =
+      (product.displayStatus === "active" ||
+        product.displayStatus === "first" ||
+        product.displayStatus === "second") &&
+      timer;
 
-    // 원화 가격 계산
-    const auctionId = item.auc_num || 1;
-    const category = item.category || "기타";
-    let japanesePrice = 0;
+    // 입찰 정보 및 상태 섹션
+    // 입찰 가능 여부에 따라 다르게 표시
+    if (isActiveBid) {
+      // 입찰 가능한 경우 - 간소화된 정보만 표시
+      // bid-info와 result-status 섹션을 간소화하고 대부분의 정보는 bid-action에 포함
 
-    let bidInfoHTML = `
+      // 간소화된 입찰 정보 섹션
+      const bidInfoSection = document.createElement("div");
+      bidInfoSection.className = "bid-info simplified";
+      bidInfoSection.innerHTML = `
+        <div class="bid-type ${
+          product.type === "live" ? "live-type" : "direct-type"
+        }">
+          ${product.type === "live" ? "현장 경매" : "직접 경매"}
+        </div>
+        <div class="item-starting-price">
+          <span class="price-label">시작가:</span>
+          <span class="price-value">${formatNumber(
+            item.starting_price || 0
+          )} ¥</span>
+        </div>
+      `;
+
+      // 간소화된 상태 섹션
+      const statusSection = document.createElement("div");
+      statusSection.className = "result-status simplified";
+
+      const statusClass = getStatusClass(product.displayStatus);
+      const statusText = getStatusDisplay(product.displayStatus);
+
+      statusSection.innerHTML = `
+        <div class="status-badge ${statusClass}">${statusText}</div>
+      `;
+
+      // 기본 섹션 추가
+      resultItem.appendChild(imageSection);
+      resultItem.appendChild(infoSection);
+      resultItem.appendChild(bidInfoSection);
+      resultItem.appendChild(statusSection);
+
+      // 확장된 입찰 액션 섹션 - 타이머와 입찰 UI 포함
+      const bidActionSection = document.createElement("div");
+      bidActionSection.className = "bid-action expanded";
+
+      // 타이머 추가
+      const timerHTML = `<div class="bid-timer ${
+        timer.isNearEnd ? "near-end" : ""
+      }">
+        남은시간: <span class="remaining-time">[${timer.text}]</span>
+      </div>`;
+
+      // 직접 경매와 현장 경매에 따라 적절한 UI 생성
+      if (product.type === "direct") {
+        const directBidInfo = state.directBids.find((b) => b.id === product.id);
+        // 타이머를 포함한 HTML 생성
+        bidActionSection.innerHTML =
+          timerHTML +
+          BidManager.getDirectBidSectionHTML(
+            directBidInfo,
+            item.item_id,
+            item.auc_num,
+            item.category
+          );
+      } else {
+        const liveBidInfo = state.liveBids.find((b) => b.id === product.id);
+        // 타이머를 포함한 HTML 생성
+        bidActionSection.innerHTML =
+          timerHTML +
+          BidManager.getLiveBidSectionHTML(
+            liveBidInfo,
+            item.item_id,
+            item.auc_num,
+            item.category
+          );
+      }
+
+      resultItem.appendChild(bidActionSection);
+    } else {
+      // 입찰 불가능한 경우 - 일반적인 정보 모두 표시
+      const bidInfoSection = document.createElement("div");
+      bidInfoSection.className = "bid-info";
+
+      // 원화 가격 계산
+      const auctionId = item.auc_num || 1;
+      const category = item.category || "기타";
+      let japanesePrice = 0;
+
+      let bidInfoHTML = `
         <div class="bid-type ${
           product.type === "live" ? "live-type" : "direct-type"
         }">
@@ -702,9 +788,9 @@ function displayProducts() {
         </div>
       `;
 
-    if (product.type === "direct") {
-      japanesePrice = product.current_price || 0;
-      bidInfoHTML += `
+      if (product.type === "direct") {
+        japanesePrice = product.current_price || 0;
+        bidInfoHTML += `
           <div class="price-row">
             <span class="price-label">입찰 금액:</span>
             <span class="price-value">${formatNumber(
@@ -718,8 +804,8 @@ function displayProducts() {
             )} ₩</span>
           </div>
         `;
-    } else {
-      bidInfoHTML += `
+      } else {
+        bidInfoHTML += `
           <div class="price-stages">
             ${
               product.first_price
@@ -766,16 +852,19 @@ function displayProducts() {
           </div>
         `;
 
-      // 최종 가격 계산을 위한 가격 설정
-      japanesePrice =
-        product.final_price || product.second_price || product.first_price || 0;
+        // 최종 가격 계산을 위한 가격 설정
+        japanesePrice =
+          product.final_price ||
+          product.second_price ||
+          product.first_price ||
+          0;
 
-      // 최종 가격이 없지만 다른 가격이 있는 경우 원화 예상가 표시
-      if (
-        !product.final_price &&
-        (product.second_price || product.first_price)
-      ) {
-        bidInfoHTML += `
+        // 최종 가격이 없지만 다른 가격이 있는 경우 원화 예상가 표시
+        if (
+          !product.final_price &&
+          (product.second_price || product.first_price)
+        ) {
+          bidInfoHTML += `
             <div class="price-row price-korean">
               <span class="price-label">관부가세 포함:</span>
               <span class="price-value">${formatNumber(
@@ -783,77 +872,31 @@ function displayProducts() {
               )} ₩</span>
             </div>
           `;
-      }
-    }
-
-    bidInfoSection.innerHTML = bidInfoHTML;
-
-    // 결과 상태 섹션
-    const statusSection = document.createElement("div");
-    statusSection.className = "result-status";
-
-    // 상태에 따라 다른 표시와 클래스 적용 - 실제 상태(displayStatus)를 사용
-    const statusClass = getStatusClass(product.displayStatus);
-    const statusText = getStatusDisplay(product.displayStatus);
-
-    // 타이머 HTML 추가
-    let timerHTML = "";
-    const timer = BidManager.getRemainingTime(item.scheduled_date);
-    if (
-      timer &&
-      (product.displayStatus === "active" ||
-        product.displayStatus === "first" ||
-        product.displayStatus === "second")
-    ) {
-      timerHTML = `<div class="bid-timer ${timer.isNearEnd ? "near-end" : ""}">
-                 남은시간: <span class="remaining-time">[${timer.text}]</span>
-               </div>`;
-    }
-
-    statusSection.innerHTML = `
-      ${timerHTML}
-      <div class="status-badge ${statusClass}">
-        ${statusText}
-      </div>
-      <div class="result-date">${formatDateTime(product.updated_at)}</div>
-    `;
-
-    // 모든 섹션 추가
-    resultItem.appendChild(imageSection);
-    resultItem.appendChild(infoSection);
-    resultItem.appendChild(bidInfoSection);
-    resultItem.appendChild(statusSection);
-
-    // 입찰 UI 추가 - 모달과 동일한 기능으로 구현
-    if (
-      (product.displayStatus === "active" ||
-        product.displayStatus === "first" ||
-        product.displayStatus === "second") &&
-      BidManager.getRemainingTime(item.scheduled_date)
-    ) {
-      const bidActionSection = document.createElement("div");
-      bidActionSection.className = "bid-action expanded";
-
-      // 직접 경매와 현장 경매에 따라 적절한 UI 생성
-      if (product.type === "direct") {
-        const directBidInfo = state.directBids.find((b) => b.id === product.id);
-        bidActionSection.innerHTML = BidManager.getDirectBidSectionHTML(
-          directBidInfo,
-          item.item_id,
-          item.auc_num,
-          item.category
-        );
-      } else {
-        const liveBidInfo = state.liveBids.find((b) => b.id === product.id);
-        bidActionSection.innerHTML = BidManager.getLiveBidSectionHTML(
-          liveBidInfo,
-          item.item_id,
-          item.auc_num,
-          item.category
-        );
+        }
       }
 
-      resultItem.appendChild(bidActionSection);
+      bidInfoSection.innerHTML = bidInfoHTML;
+
+      // 결과 상태 섹션
+      const statusSection = document.createElement("div");
+      statusSection.className = "result-status";
+
+      // 상태에 따라 다른 표시와 클래스 적용
+      const statusClass = getStatusClass(product.displayStatus);
+      const statusText = getStatusDisplay(product.displayStatus);
+
+      statusSection.innerHTML = `
+        <div class="status-badge ${statusClass}">
+          ${statusText}
+        </div>
+        <div class="result-date">${formatDateTime(product.updated_at)}</div>
+      `;
+
+      // 모든 섹션 추가
+      resultItem.appendChild(imageSection);
+      resultItem.appendChild(infoSection);
+      resultItem.appendChild(bidInfoSection);
+      resultItem.appendChild(statusSection);
     }
 
     // 클릭 이벤트 추가
