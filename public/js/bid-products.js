@@ -631,283 +631,103 @@ function getStatusClass(status) {
 }
 
 // 결과 표시
-function displayProducts() {
-  const container = document.getElementById("productList");
-  if (!container) return;
+function displayProducts(products) {
+  const productList = document.getElementById("product-list");
+  productList.innerHTML = "";
 
-  container.innerHTML = "";
-  const totalResultsElement = document.getElementById("totalResults");
-  if (totalResultsElement) {
-    totalResultsElement.textContent = state.totalItems;
-  }
-
-  if (state.filteredResults.length === 0) {
-    container.innerHTML =
-      '<div class="no-results">표시할 상품이 없습니다.</div>';
-    return;
-  }
-
-  // 현재 페이지에 해당하는 결과만 표시
-  const startIdx = (state.currentPage - 1) * state.itemsPerPage;
-  const endIdx = Math.min(
-    startIdx + state.itemsPerPage,
-    state.filteredResults.length
-  );
-
-  for (let i = startIdx; i < endIdx; i++) {
-    const product = state.filteredResults[i];
-    const item = product.item;
-
-    if (!item) continue; // 아이템 정보가 없는 경우 건너뛰기
-
+  products.forEach((product) => {
     const resultItem = document.createElement("div");
-    resultItem.className = "bid-result-item";
-    resultItem.dataset.itemId = item.item_id;
-    resultItem.dataset.bidId = product.id;
-    resultItem.dataset.bidType = product.type;
+    resultItem.className = "result-item";
 
     // 이미지 섹션
     const imageSection = document.createElement("div");
-    imageSection.className = "item-image";
-    imageSection.innerHTML = `
-        <img src="${API.validateImageUrl(item.image)}" alt="${
-      item.original_title || "상품 이미지"
-    }">
-        <div class="item-rank">${item.rank || "N"}</div>
-      `;
+    imageSection.className = "image-section";
 
-    // 상품 정보 섹션
+    const thumbnail = document.createElement("img");
+    thumbnail.src = product.image_url;
+    thumbnail.alt = product.name;
+
+    const imageTitle = document.createElement("div");
+    imageTitle.className = "image-title";
+    imageTitle.textContent = product.name;
+
+    imageSection.appendChild(thumbnail);
+    imageSection.appendChild(imageTitle);
+
+    // 정보 섹션
     const infoSection = document.createElement("div");
-    infoSection.className = "item-info";
-    infoSection.innerHTML = `
-        <div class="item-brand">${item.brand || "-"}</div>
-        <div class="item-title">${item.original_title || "제목 없음"}</div>
-        <div class="item-category">${item.category || "-"}</div>
-      `;
+    infoSection.className = "info-section";
 
-    // 타이머 체크
-    const timer = BidManager.getRemainingTime(item.scheduled_date);
-    const isActiveBid =
-      (product.displayStatus === "active" ||
-        product.displayStatus === "first" ||
-        product.displayStatus === "second") &&
-      timer;
+    const category = document.createElement("div");
+    category.className = "category";
+    category.textContent = product.category_name;
 
-    // 상태 섹션
-    const statusSection = document.createElement("div");
-    statusSection.className = "result-status";
+    const price = document.createElement("div");
+    price.className = "price";
+    price.textContent = `${product.price.toLocaleString()}원`;
 
-    // 상태에 따라 다른 표시와 클래스 적용
-    const statusClass = getStatusClass(product.displayStatus);
-    const statusText = getStatusDisplay(product.displayStatus);
+    const deadline = document.createElement("div");
+    deadline.className = "deadline";
+    deadline.textContent = `마감일: ${product.deadline}`;
 
-    statusSection.innerHTML = `
-      <div class="bid-type ${
-        product.type === "live" ? "live-type" : "direct-type"
-      }">
-        ${product.type === "live" ? "현장 경매" : "직접 경매"}
-      </div>
-      <div class="status-badge ${statusClass}">
-        ${statusText}
-      </div>
-      <div class="result-date">${formatDateTime(product.updated_at)}</div>
-    `;
+    infoSection.appendChild(category);
+    infoSection.appendChild(price);
+    infoSection.appendChild(deadline);
 
-    // 입찰 가능 여부에 따라 레이아웃 다르게 구성
+    // 입찰 상태 판단
+    const now = new Date();
+    const scheduledStart = new Date(product.scheduled_start_time);
+    const scheduledEnd = new Date(product.scheduled_end_time);
+    const isActiveBid = now >= scheduledStart && now <= scheduledEnd;
+
     if (isActiveBid) {
-      // 기존 BidManager HTML을 가져와서 파싱 후 좌우로 분리
-      let bidHtml = "";
+      // 입찰 영역 렌더링
+      const bidHtml = product.is_live
+        ? BidManager.getLiveBidSectionHTML(product)
+        : BidManager.getDirectBidSectionHTML(product);
 
-      if (product.type === "direct") {
-        const directBidInfo = state.directBids.find((b) => b.id === product.id);
-        bidHtml = BidManager.getDirectBidSectionHTML(
-          directBidInfo,
-          item.item_id,
-          item.auc_num,
-          item.category
-        );
-      } else {
-        const liveBidInfo = state.liveBids.find((b) => b.id === product.id);
-        bidHtml = BidManager.getLiveBidSectionHTML(
-          liveBidInfo,
-          item.item_id,
-          item.auc_num,
-          item.category
-        );
-      }
+      // 임시 DOM으로 파싱
+      const tempWrapper = document.createElement("div");
+      tempWrapper.innerHTML = bidHtml;
 
-      // bid-action 섹션 생성
+      // 고유 요소 선택
+      const timerElement = tempWrapper.querySelector(".bid-timer");
+      const priceElements = tempWrapper.querySelectorAll(
+        ".real-time-price, .bid-price-info, .final-price"
+      );
+      const inputContainer = tempWrapper.querySelector(".bid-input-container");
+
+      // bid-action 섹션 구성
       const bidActionSection = document.createElement("div");
       bidActionSection.className = "bid-action expanded";
 
-      // 좌측 컨텐츠 영역 생성
       const leftContent = document.createElement("div");
       leftContent.className = "bid-action-left";
+      if (timerElement) leftContent.appendChild(timerElement);
+      priceElements.forEach((el) => leftContent.appendChild(el));
 
-      // 기존 문서에서 요소를 직접 찾아서 이동
-      const timerElement = document.querySelector(".bid-timer");
-      if (timerElement) {
-        leftContent.appendChild(timerElement); // 기존 요소 그대로 이동
-      }
-
-      const priceElements = document.querySelectorAll(
-        ".real-time-price, .bid-price-info, .final-price"
-      );
-      priceElements.forEach((el) => {
-        leftContent.appendChild(el); // 기존 요소 그대로 이동
-      });
-
-      // 우측 컨텐츠 영역 생성 (입력 폼)
       const rightContent = document.createElement("div");
       rightContent.className = "bid-input-container";
+      if (inputContainer) rightContent.appendChild(inputContainer);
 
-      // 기존 입력 요소 직접 이동
-      const inputContainer = document.querySelector(".bid-input-container");
-      if (inputContainer) {
-        rightContent.appendChild(inputContainer); // 이벤트 핸들러도 그대로 유지됨
-      }
-
-      // 좌우 컨텐츠를 bid-action에 추가
       bidActionSection.appendChild(leftContent);
       bidActionSection.appendChild(rightContent);
 
-      // 모든 섹션 추가
       resultItem.appendChild(imageSection);
       resultItem.appendChild(infoSection);
-      resultItem.appendChild(bidActionSection); // bid-info 자리에 bid-action 배치
-      resultItem.appendChild(statusSection);
+      resultItem.appendChild(bidActionSection);
     } else {
-      // 입찰 불가능한 경우 - 기존 방식대로 표시
-      const bidInfoSection = document.createElement("div");
-      bidInfoSection.className = "bid-info";
+      const statusSection = document.createElement("div");
+      statusSection.className = "status-section";
+      statusSection.textContent = "입찰 비활성 상태";
 
-      // 원화 가격 계산
-      const auctionId = item.auc_num || 1;
-      const category = item.category || "기타";
-      let japanesePrice = 0;
-
-      let bidInfoHTML = ``;
-
-      if (product.type === "direct") {
-        japanesePrice = product.current_price || 0;
-        bidInfoHTML += `
-          <div class="price-row">
-            <span class="price-label">입찰 금액:</span>
-            <span class="price-value">${formatNumber(
-              product.current_price
-            )} ¥</span>
-          </div>
-          <div class="price-row price-korean">
-            <span class="price-label">관부가세 포함:</span>
-            <span class="price-value">${formatNumber(
-              calculateTotalPrice(japanesePrice, auctionId, category)
-            )} ₩</span>
-          </div>
-        `;
-      } else {
-        bidInfoHTML += `
-          <div class="price-stages">
-            ${
-              product.first_price
-                ? `
-              <div class="price-row">
-                <span class="price-label">1차 입찰:</span>
-                <span class="price-value">${formatNumber(
-                  product.first_price
-                )} ¥</span>
-              </div>
-            `
-                : ""
-            }
-            ${
-              product.second_price
-                ? `
-              <div class="price-row">
-                <span class="price-label">2차 제안:</span>
-                <span class="price-value">${formatNumber(
-                  product.second_price
-                )} ¥</span>
-              </div>
-            `
-                : ""
-            }
-            ${
-              product.final_price
-                ? `
-              <div class="price-row">
-                <span class="price-label">최종 입찰:</span>
-                <span class="price-value">${formatNumber(
-                  product.final_price
-                )} ¥</span>
-              </div>
-              <div class="price-row price-korean">
-                <span class="price-label">관부가세 포함:</span>
-                <span class="price-value">${formatNumber(
-                  calculateTotalPrice(product.final_price, auctionId, category)
-                )} ₩</span>
-              </div>
-            `
-                : ""
-            }
-          </div>
-        `;
-
-        // 최종 가격 계산을 위한 가격 설정
-        japanesePrice =
-          product.final_price ||
-          product.second_price ||
-          product.first_price ||
-          0;
-
-        // 최종 가격이 없지만 다른 가격이 있는 경우 원화 예상가 표시
-        if (
-          !product.final_price &&
-          (product.second_price || product.first_price)
-        ) {
-          bidInfoHTML += `
-            <div class="price-row price-korean">
-              <span class="price-label">관부가세 포함:</span>
-              <span class="price-value">${formatNumber(
-                calculateTotalPrice(japanesePrice, auctionId, category)
-              )} ₩</span>
-            </div>
-          `;
-        }
-      }
-
-      bidInfoSection.innerHTML = bidInfoHTML;
-
-      // 모든 섹션 추가
       resultItem.appendChild(imageSection);
       resultItem.appendChild(infoSection);
-      resultItem.appendChild(bidInfoSection);
       resultItem.appendChild(statusSection);
     }
 
-    // 클릭 이벤트 추가
-    resultItem.addEventListener("click", (e) => {
-      // 입찰 관련 요소 클릭 시 이벤트 전파 중지
-      if (
-        e.target.closest(".bid-action") ||
-        e.target.closest(".bid-input-container") ||
-        e.target.closest(".bid-button") ||
-        e.target.closest(".quick-bid-btn") ||
-        e.target.closest(".price-calculator") ||
-        e.target.closest(".bid-input-group")
-      ) {
-        e.stopPropagation();
-        return;
-      }
-
-      showProductDetails(item.item_id);
-    });
-
-    // 컨테이너에 아이템 추가
-    container.appendChild(resultItem);
-  }
-
-  // 입찰 가격 계산기 초기화
-  BidManager.initializePriceCalculators();
+    productList.appendChild(resultItem);
+  });
 }
 
 // 페이지 변경 처리 - 최종 수정 버전
