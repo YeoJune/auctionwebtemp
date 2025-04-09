@@ -7,6 +7,7 @@ const {
   brandAucCrawler,
   brandAucValueCrawler,
   starAucCrawler,
+  starAucValueCrawler,
 } = require("../crawlers/index");
 const DBManager = require("./DBManager");
 
@@ -101,7 +102,7 @@ async function processItem(
     } else if (item.auc_num == 2) {
       crawler = isValue ? brandAucValueCrawler : brandAucCrawler;
     } else if (item.auc_num == 3) {
-      crawler = isValue ? null : starAucCrawler; // No value crawler for starAuc assumed
+      crawler = isValue ? starAucValueCrawler : starAucCrawler;
     }
 
     // If no suitable crawler, return current item data with bids

@@ -7,6 +7,7 @@ const {
   brandAucCrawler,
   brandAucValueCrawler,
   starAucCrawler,
+  starAucValueCrawler,
 } = require("../crawlers/index");
 const DBManager = require("../utils/DBManager");
 const pool = require("../utils/DB");
@@ -36,6 +37,7 @@ async function loginAll() {
     brandAucCrawler,
     brandAucValueCrawler,
     starAucCrawler,
+    starAucValueCrawler,
   ];
 
   await Promise.all(crawlers.map((crawler) => crawler.login()));
@@ -44,8 +46,6 @@ async function loginAll() {
 async function crawlAll() {
   if (isCrawling) {
     throw new Error("already crawling");
-  } else if (isValueCrawling) {
-    throw new Error("value crawler is activating");
   } else {
     try {
       const [existingItems] = await pool.query(
@@ -98,8 +98,6 @@ async function crawlAll() {
 async function crawlAllValues() {
   if (isValueCrawling) {
     throw new Error("already crawling");
-  } else if (isCrawling) {
-    throw new Error("crawler is activating");
   } else {
     try {
       const [existingItems] = await pool.query(
@@ -115,6 +113,11 @@ async function crawlAllValues() {
           .filter((item) => item.auc_num == 2)
           .map((item) => item.item_id)
       );
+      const existingStarAucIds = new Set(
+        existingItems
+          .filter((item) => item.auc_num == 3)
+          .map((item) => item.item_id)
+      );
 
       isValueCrawling = true;
 
@@ -124,10 +127,15 @@ async function crawlAllValues() {
       let brandAucItems = await brandAucValueCrawler.crawlAllItems(
         existingBrandAuctionIds
       );
+      let starAucItems = await starAucValueCrawler.crawlAllItems(
+        existingStarAucIds
+      );
 
       if (!ecoAucItems) ecoAucItems = [];
       if (!brandAucItems) brandAucItems = [];
-      const allItems = [...ecoAucItems, ...brandAucItems];
+      if (!starAucItems) starAucItems = [];
+
+      const allItems = [...ecoAucItems, ...brandAucItems, ...starAucItems];
       await DBManager.saveItems(allItems, "values_items");
       await DBManager.cleanupOldValueItems();
       await DBManager.cleanupUnusedImages();
