@@ -423,7 +423,7 @@ class BrandAucCrawler extends AxiosCrawler {
       title: this.removeLeadingBrackets(original_title),
       brand: this.convertFullWidthToAscii(item.maker || ""),
       rank: item.hyoka || "",
-      starting_price: item.startKng || 0,
+      starting_price: item.genzaiKng || item.startKng || 0,
       image: item.photoUrl
         ? item.photoUrl.replace(/(brand_img\/)(\d+)/, "$16")
         : null,
@@ -665,16 +665,55 @@ class BrandAucCrawler extends AxiosCrawler {
     return {
       item_id: item.uketsukeBng,
       scheduled_date: original_scheduled_date || null,
-      starting_price: item.startKng || 0,
+      starting_price: item.genzaiKng || item.startKng || 0,
       bid_type: this.currentBidType,
     };
   }
+
   async directBid(item_id, price) {
-    return {
-      success: false,
-      message: "Bid failed",
-      error: "Not Implemented",
-    };
+    try {
+      // 로그인 상태 확인
+      await this.login();
+
+      // 입찰 API 호출
+      const response = await this.client.post(
+        "https://bid.brand-auc.com/api/v1/brand-bid/jizen-nyusatsu/",
+        {
+          uketsukeBng: item_id,
+          kaijoKbn: 1, // 기본값 1 사용, 필요시 조정 가능
+          nyusatsuKng: price,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Referer: "https://bid.brand-auc.com/",
+            "X-Requested-With": "XMLHttpRequest",
+          },
+        }
+      );
+
+      // 응답 처리
+      if (response.status === 201) {
+        return {
+          success: true,
+          message: "Bid successful",
+          data: response.data,
+        };
+      } else {
+        return {
+          success: false,
+          message: "Bid failed",
+          error: response.data,
+        };
+      }
+    } catch (error) {
+      console.error(`Error placing bid for item ${item_id}:`, error.message);
+      return {
+        success: false,
+        message: "Bid failed",
+        error: error.message,
+      };
+    }
   }
 }
 
