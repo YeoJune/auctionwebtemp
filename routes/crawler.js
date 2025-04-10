@@ -121,15 +121,9 @@ async function crawlAllValues() {
 
       isValueCrawling = true;
 
-      let ecoAucItems = await ecoAucValueCrawler.crawlAllItems(
-        existingEcoAucIds
-      );
-      let brandAucItems = await brandAucValueCrawler.crawlAllItems(
-        existingBrandAuctionIds
-      );
-      let starAucItems = await starAucValueCrawler.crawlAllItems(
-        existingStarAucIds
-      );
+      let ecoAucItems = await ecoAucValueCrawler.crawlAllItems();
+      let brandAucItems = await brandAucValueCrawler.crawlAllItems();
+      let starAucItems = await starAucValueCrawler.crawlAllItems();
 
       if (!ecoAucItems) ecoAucItems = [];
       if (!brandAucItems) brandAucItems = [];
@@ -137,7 +131,6 @@ async function crawlAllValues() {
 
       const allItems = [...ecoAucItems, ...brandAucItems, ...starAucItems];
       await DBManager.saveItems(allItems, "values_items");
-      await DBManager.cleanupOldValueItems();
       await DBManager.cleanupUnusedImages();
     } catch (error) {
       throw error;
@@ -318,41 +311,12 @@ const scheduleUpdateCrawling = () => {
   }, updateInterval * 1000);
 };
 
-const schedulePastItemsDeletion = () => {
-  const deleteInterval = 3600; // 1시간(3600초)
-
-  console.log(
-    `Scheduling past items deletion to run every ${deleteInterval} seconds`
-  );
-
-  // 밀리초 단위로 변환하여 setInterval 설정
-  setInterval(async () => {
-    console.log("Running scheduled past items deletion task");
-    try {
-      if (!isUpdateCrawling && !isCrawling && !isValueCrawling) {
-        console.log("Starting deletion of past scheduled items");
-        const deletedCount = await DBManager.deletePastScheduledItems();
-        console.log(
-          `Scheduled past items deletion completed successfully. Deleted ${deletedCount} items.`
-        );
-      } else {
-        console.log(
-          "Skipping scheduled past items deletion - another crawling process is active"
-        );
-      }
-    } catch (error) {
-      console.error("Scheduled past items deletion error:", error);
-    }
-  }, deleteInterval * 1000);
-};
-
 if (process.env.ENV === "development") {
   console.log("development env");
 } else {
   console.log("product env");
   scheduleCrawling();
   scheduleUpdateCrawling();
-  schedulePastItemsDeletion();
   loginAll();
 }
 
