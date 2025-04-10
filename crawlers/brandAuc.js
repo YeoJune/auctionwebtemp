@@ -63,7 +63,6 @@ class BrandAucCrawler extends AxiosCrawler {
     this.currentLocale = "en"; // 언어 설정(영어)
   }
 
-  // BrandAucCrawler 클래스의 login 메서드 수정
   async login() {
     // 부모 클래스(AxiosCrawler)의 login 메서드 호출
     // 이미 로그인 되어있는지, 다른 로그인 진행중인지 등을 체크
@@ -182,6 +181,9 @@ class BrandAucCrawler extends AxiosCrawler {
       for (const bidConfig of bidTypes) {
         console.log(`Starting crawl for bid type: ${bidConfig.type}`);
 
+        // 현재 bid_type 설정
+        this.currentBidType = bidConfig.type;
+
         if (bidConfig.type === "live") {
           // 기존 Live 경매 크롤링 방식
           const firstPageResponse = await this.client.get(
@@ -191,7 +193,7 @@ class BrandAucCrawler extends AxiosCrawler {
                 page: 0,
                 size: size,
                 gamenId: "B02-01",
-                otherCds: bidConfig.otherCds, // 여기에 otherCds 파라미터 추가
+                otherCds: bidConfig.otherCds,
               },
               headers: {
                 Accept: "application/json",
@@ -206,13 +208,11 @@ class BrandAucCrawler extends AxiosCrawler {
             `Found ${totalItems} items across ${totalPages} pages for bid type: ${bidConfig.type}`
           );
 
-          // 현재 bid_type 설정
-          this.currentBidType = bidConfig.type;
-
           // 첫 페이지 아이템 처리
           const firstPageItems = await this.processItemsPage(
             firstPageResponse.data.content,
-            existingIds
+            existingIds,
+            bidConfig.type
           );
           allCrawledItems.push(...firstPageItems);
 
@@ -242,7 +242,8 @@ class BrandAucCrawler extends AxiosCrawler {
             if (response.data && response.data.content) {
               const pageItems = await this.processItemsPage(
                 response.data.content,
-                existingIds
+                existingIds,
+                bidConfig.type
               );
               allCrawledItems.push(...pageItems);
 
@@ -295,13 +296,11 @@ class BrandAucCrawler extends AxiosCrawler {
             `Found ${totalItems} items across ${totalPages} pages for bid type: ${bidConfig.type}`
           );
 
-          // 현재 bid_type 설정
-          this.currentBidType = bidConfig.type;
-
           // 첫 페이지 아이템 처리
-          const firstPageItems = await this.processDirectItemsPage(
+          const firstPageItems = await this.processItemsPage(
             firstPageResponse.data.content,
-            existingIds
+            existingIds,
+            bidConfig.type
           );
           allCrawledItems.push(...firstPageItems);
 
@@ -328,9 +327,10 @@ class BrandAucCrawler extends AxiosCrawler {
             );
 
             if (response.data && response.data.content) {
-              const pageItems = await this.processDirectItemsPage(
+              const pageItems = await this.processItemsPage(
                 response.data.content,
-                existingIds
+                existingIds,
+                bidConfig.type
               );
               allCrawledItems.push(...pageItems);
 
@@ -361,13 +361,16 @@ class BrandAucCrawler extends AxiosCrawler {
     }
   }
 
-  async processItemsPage(items, existingIds) {
+  async processItemsPage(items, existingIds, bidType = "live") {
     // 아이템 필터링
     const filteredItems = [];
 
     for (const item of items) {
-      // 상태가 "SOLD BY HOLD" 또는 "SOLD"인 경우 제외
-      if (item.jotaiEn === "SOLD BY HOLD" || item.jotaiEn === "SOLD") {
+      // Live 경매일 경우 상태 확인
+      if (
+        bidType === "live" &&
+        (item.jotaiEn === "SOLD BY HOLD" || item.jotaiEn === "SOLD")
+      ) {
         continue;
       }
 
@@ -378,7 +381,7 @@ class BrandAucCrawler extends AxiosCrawler {
       }
 
       // 필터 통과한 아이템 기본 정보 추출
-      const processedItem = this.extractBasicItemInfo(item);
+      const processedItem = this.extractItemInfo(item, bidType);
       if (processedItem) filteredItems.push(processedItem);
     }
 
@@ -388,41 +391,22 @@ class BrandAucCrawler extends AxiosCrawler {
     return processedItems;
   }
 
-  // 직접 입찰 아이템 처리를 위한 새로운 메소드
-  async processDirectItemsPage(items, existingIds) {
-    // 아이템 필터링
-    const filteredItems = [];
+  extractItemInfo(item, bidType = "live") {
+    // 공통 필드 및 타입별 다른 필드 설정
+    const genreField = bidType === "direct" ? "genre" : "genreEn";
+    const titleField = bidType === "direct" ? "shohin" : "shohinEn";
+    const category =
+      this.config.categoryTable[item[genreField]] || item[genreField];
 
-    for (const item of items) {
-      // 이미 처리된 아이템 제외
-      if (existingIds.has(item.uketsukeBng)) {
-        filteredItems.push({ item_id: item.uketsukeBng });
-        continue;
-      }
-
-      // 필터 통과한 아이템 기본 정보 추출
-      const processedItem = this.extractDirectItemInfo(item);
-      if (processedItem) filteredItems.push(processedItem);
-    }
-
-    // 필터링된 아이템에 대해 추가 처리 (이미지 처리 등)
-    const processedItems = await processImagesInChunks(filteredItems);
-
-    return processedItems;
-  }
-
-  extractBasicItemInfo(item) {
-    // API 응답에서 필요한 정보 추출
-    const category = this.config.categoryTable[item.genreEn] || item.genreEn;
+    // 날짜 처리 - direct 타입은 미리 저장된 값 사용, live는 아이템별 값 사용
     const original_scheduled_date =
-      this.extractDate(this.convertToKST(item.kaisaiYmd)) || null;
+      bidType === "direct"
+        ? this.extractDate(this.convertToKST(this.auctionDate))
+        : this.extractDate(this.convertToKST(item.kaisaiYmd));
 
-    // bid_type은 현재 설정된 값 사용
-    const bid_type = this.currentBidType;
-
-    // 날짜 처리 로직
+    // 최종 날짜 계산 (live 타입은 하루 전 18시로 설정)
     let scheduled_date = original_scheduled_date;
-    if (bid_type === "live") {
+    if (bidType === "live") {
       scheduled_date = this.getPreviousDayAt18(original_scheduled_date);
 
       // 이미 지난 경매는 필터링
@@ -431,7 +415,7 @@ class BrandAucCrawler extends AxiosCrawler {
       }
     }
 
-    const original_title = this.convertFullWidthToAscii(item.shohinEn || "");
+    const original_title = this.convertFullWidthToAscii(item[titleField] || "");
 
     return {
       item_id: item.uketsukeBng,
@@ -446,51 +430,19 @@ class BrandAucCrawler extends AxiosCrawler {
       category: category,
       original_scheduled_date: original_scheduled_date,
       scheduled_date: scheduled_date,
-      bid_type: bid_type,
+      bid_type: bidType,
       auc_num: "2",
 
-      // 상세 정보 요청 시 필요한 데이터
-      kaijoCd: item.kaijoCd,
-      kaisaiKaisu: item.kaisaiKaisu,
-    };
-  }
-
-  // Direct 아이템의 기본 정보 추출을 위한 메소드
-  extractDirectItemInfo(item) {
-    // API 응답에서 필요한 정보 추출
-    const category = this.config.categoryTable[item.genre] || item.genre;
-
-    // 경매 날짜는 경매 정보 API에서 가져온 값 사용
-    const original_scheduled_date =
-      this.extractDate(this.convertToKST(this.auctionDate)) || null;
-
-    // Direct 입찰 타입 설정
-    const bid_type = "direct";
-
-    // 입찰 마감일 계산
-    let scheduled_date = original_scheduled_date;
-
-    const original_title = this.convertFullWidthToAscii(item.shohin || "");
-
-    return {
-      item_id: item.uketsukeBng,
-      original_title: original_title,
-      title: this.removeLeadingBrackets(original_title),
-      brand: this.convertFullWidthToAscii(item.maker || ""),
-      rank: item.hyoka || "",
-      starting_price: item.startKng || 0,
-      image: item.photoUrl
-        ? item.photoUrl.replace(/(brand_img\/)(\d+)/, "$16")
-        : null,
-      category: category,
-      original_scheduled_date: original_scheduled_date,
-      scheduled_date: scheduled_date,
-      bid_type: bid_type,
-      auc_num: "2",
-
-      // 상세 정보 요청 시 필요한 데이터
-      kaisaiKaisu: this.auctionKaisu,
-      kaijoKbn: item.kaijoKbn || 1,
+      // 상세 정보 요청 시 필요한 데이터 - 타입별로 다르게 설정
+      ...(bidType === "direct"
+        ? {
+            kaisaiKaisu: this.auctionKaisu,
+            kaijoKbn: item.kaijoKbn || 1,
+          }
+        : {
+            kaijoCd: item.kaijoCd,
+            kaisaiKaisu: item.kaisaiKaisu,
+          }),
     };
   }
 
@@ -624,8 +576,9 @@ class BrandAucCrawler extends AxiosCrawler {
       this.currentBidType = "direct";
 
       // 첫 페이지 아이템 처리
-      const firstPageItems = await this.processUpdateDirectItemsPage(
-        firstPageResponse.data.content
+      const firstPageItems = await this.processUpdateItemsPage(
+        firstPageResponse.data.content,
+        "direct"
       );
       allCrawledItems.push(...firstPageItems);
 
@@ -652,8 +605,9 @@ class BrandAucCrawler extends AxiosCrawler {
         );
 
         if (response.data && response.data.content) {
-          const pageItems = await this.processUpdateDirectItemsPage(
-            response.data.content
+          const pageItems = await this.processUpdateItemsPage(
+            response.data.content,
+            "direct"
           );
           allCrawledItems.push(...pageItems);
 
@@ -680,58 +634,37 @@ class BrandAucCrawler extends AxiosCrawler {
     }
   }
 
-  async processUpdateDirectItemsPage(items) {
+  async processUpdateItemsPage(items, bidType = "live") {
     // 필요한 정보만 추출
     const updateItems = [];
 
     for (const item of items) {
-      // 필터링된 아이템들에 대해 간소화된 정보 추출
-      const processedItem = this.extractUpdateDirectItemInfo(item);
-      if (processedItem) updateItems.push(processedItem);
-    }
-
-    return updateItems;
-  }
-
-  extractUpdateDirectItemInfo(item) {
-    // API 응답에서 필요한 최소한의 정보만 추출
-    const original_scheduled_date =
-      this.extractDate(this.convertToKST(this.auctionDate)) || null;
-
-    return {
-      item_id: item.uketsukeBng,
-      scheduled_date: original_scheduled_date,
-      starting_price: item.startKng || 0,
-      bid_type: this.currentBidType,
-    };
-  }
-
-  async processUpdateItemsPage(items) {
-    // 필요한 정보만 추출
-    const updateItems = [];
-
-    for (const item of items) {
-      // 상태가 "SOLD BY HOLD" 또는 "SOLD"인 경우 제외
-      if (item.jotaiEn === "SOLD BY HOLD" || item.jotaiEn === "SOLD") {
+      // Live 경매일 경우 상태 확인
+      if (
+        bidType === "live" &&
+        (item.jotaiEn === "SOLD BY HOLD" || item.jotaiEn === "SOLD")
+      ) {
         continue;
       }
 
       // 필터링된 아이템들에 대해 간소화된 정보 추출
-      const processedItem = this.extractUpdateItemInfo(item);
+      const processedItem = this.extractUpdateItemInfo(item, bidType);
       if (processedItem) updateItems.push(processedItem);
     }
 
     return updateItems;
   }
 
-  extractUpdateItemInfo(item) {
+  extractUpdateItemInfo(item, bidType = "live") {
     // API 응답에서 필요한 최소한의 정보만 추출
     const original_scheduled_date =
-      this.extractDate(this.convertToKST(item.kaisaiYmd)) || null;
+      bidType === "direct"
+        ? this.extractDate(this.convertToKST(this.auctionDate))
+        : this.extractDate(this.convertToKST(item.kaisaiYmd));
 
     return {
       item_id: item.uketsukeBng,
-      scheduled_date: original_scheduled_date,
+      scheduled_date: original_scheduled_date || null,
       starting_price: item.startKng || 0,
       bid_type: this.currentBidType,
     };
