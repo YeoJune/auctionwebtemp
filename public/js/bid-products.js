@@ -152,6 +152,11 @@ function loadStateFromURL() {
   if (urlParams.has("sortOrder")) state.sortOrder = urlParams.get("sortOrder");
   if (urlParams.has("keyword")) state.keyword = urlParams.get("keyword");
 
+  // 페이지 번호가 숫자가 아니거나 유효하지 않은 경우 기본값으로 설정
+  if (isNaN(state.currentPage) || state.currentPage < 1) {
+    state.currentPage = 1;
+  }
+
   // UI 요소 상태 업데이트
   updateUIFromState();
 }
@@ -259,7 +264,6 @@ async function fetchProducts() {
   try {
     // 선택된 상태에 따라 API 파라미터 준비
     let statusParam;
-
     switch (state.status) {
       case "active":
         statusParam = STATUS_GROUPS.ACTIVE.join(",");
@@ -281,32 +285,73 @@ async function fetchProducts() {
     dateLimit.setDate(dateLimit.getDate() - state.dateRange);
     const fromDate = formatDate(dateLimit);
 
-    // 정렬 및 페이지네이션 파라미터
-    const params = {
+    // 기본 API 파라미터
+    const baseParams = {
       status: statusParam,
       fromDate: fromDate,
-      page: state.currentPage,
-      limit: state.itemsPerPage,
       sortBy: state.sortBy,
       sortOrder: state.sortOrder,
     };
 
-    // API 요청 URL 생성
-    const queryString = API.createURLParams(params);
+    // 키워드 검색 파라미터 추가
+    if (state.keyword && state.keyword.trim() !== "") {
+      baseParams.keyword = state.keyword.trim();
+    }
 
     // 경매 타입에 따라 다른 엔드포인트 사용
     let liveBidsPromise, directBidsPromise;
+    let liveParams, directParams;
 
-    if (state.bidType === "live" || state.bidType === "all") {
-      liveBidsPromise = API.fetchAPI(`/live-bids?${queryString}`);
-    } else {
-      liveBidsPromise = Promise.resolve({ bids: [] });
-    }
+    // bidType이 "all"인 경우 각 API에서 절반씩 가져오기
+    if (state.bidType === "all") {
+      // 각 API의 절반씩 데이터 요청
+      const halfLimit = Math.floor(state.itemsPerPage / 2);
+      const remainingLimit = state.itemsPerPage - halfLimit; // 홀수일 경우 나머지 처리
 
-    if (state.bidType === "direct" || state.bidType === "all") {
-      directBidsPromise = API.fetchAPI(`/direct-bids?${queryString}`);
+      // 페이지 계산 - 각 API에 동일한 페이지 번호 사용
+      liveParams = {
+        ...baseParams,
+        limit: halfLimit,
+        page: state.currentPage,
+      };
+
+      directParams = {
+        ...baseParams,
+        limit: remainingLimit,
+        page: state.currentPage,
+      };
+
+      liveBidsPromise = API.fetchAPI(
+        `/live-bids?${API.createURLParams(liveParams)}`
+      );
+      directBidsPromise = API.fetchAPI(
+        `/direct-bids?${API.createURLParams(directParams)}`
+      );
     } else {
-      directBidsPromise = Promise.resolve({ bids: [] });
+      // bidType이 "live" 또는 "direct"인 경우 해당 API만 호출
+      const params = {
+        ...baseParams,
+        page: state.currentPage,
+        limit: state.itemsPerPage,
+      };
+
+      const queryString = API.createURLParams(params);
+
+      if (state.bidType === "live") {
+        liveBidsPromise = API.fetchAPI(`/live-bids?${queryString}`);
+        directBidsPromise = Promise.resolve({
+          bids: [],
+          total: 0,
+          totalPages: 0,
+        });
+      } else {
+        directBidsPromise = API.fetchAPI(`/direct-bids?${queryString}`);
+        liveBidsPromise = Promise.resolve({
+          bids: [],
+          total: 0,
+          totalPages: 0,
+        });
+      }
     }
 
     // 두 API 요청 병렬로 처리
@@ -334,8 +379,31 @@ async function fetchProducts() {
 
     state.combinedResults = [...liveBidsWithType, ...directBidsWithType];
 
-    // 필터링된 결과 업데이트
-    updateFilteredResults();
+    // 페이지네이션 정보 계산
+    if (state.bidType === "all") {
+      // 전체 타입인 경우 두 API의 총합으로 계산
+      const liveTotal = liveResults.total || 0;
+      const directTotal = directResults.total || 0;
+      state.totalItems = liveTotal + directTotal;
+
+      // 더 큰 총 페이지 수 적용
+      state.totalPages = Math.max(
+        liveResults.totalPages || 0,
+        directResults.totalPages || 0,
+        Math.ceil(state.totalItems / state.itemsPerPage)
+      );
+    } else if (state.bidType === "live") {
+      // 라이브 경매만 사용하는 경우
+      state.totalItems = liveResults.total || 0;
+      state.totalPages = liveResults.totalPages || 1;
+    } else {
+      // 직접 경매만 사용하는 경우
+      state.totalItems = directResults.total || 0;
+      state.totalPages = directResults.totalPages || 1;
+    }
+
+    // 필터링된 결과를 이제 combinedResults로 바로 설정
+    state.filteredResults = state.combinedResults;
 
     // BidManager에 필터링된 결과의 상품 데이터 전달
     BidManager.updateCurrentData(
@@ -358,7 +426,6 @@ async function fetchProducts() {
     updateSortButtonsUI();
 
     BidManager.startTimerUpdates();
-
     BidManager.initializePriceCalculators();
   } catch (error) {
     console.error("상품 데이터를 가져오는 중 오류 발생:", error);
@@ -371,83 +438,8 @@ async function fetchProducts() {
 
 // 필터링된 결과 업데이트
 function updateFilteredResults() {
-  // 현재 상태를 기준으로 결과 필터링
-  let filtered = state.combinedResults;
-
-  // 키워드 검색
-  if (state.keyword) {
-    const keyword = state.keyword.toLowerCase();
-    filtered = filtered.filter((item) => {
-      const product = item.item;
-      if (!product) return false;
-
-      return (
-        (product.original_title &&
-          product.original_title.toLowerCase().includes(keyword)) ||
-        (product.brand && product.brand.toLowerCase().includes(keyword)) ||
-        (product.category && product.category.toLowerCase().includes(keyword))
-      );
-    });
-  }
-
-  // 정렬 적용
-  filtered.sort((a, b) => {
-    let valueA, valueB;
-
-    // 정렬 기준에 따른 값 추출
-    switch (state.sortBy) {
-      case "scheduled_date":
-        valueA = a.item?.scheduled_date
-          ? new Date(a.item.scheduled_date)
-          : new Date(0);
-        valueB = b.item?.scheduled_date
-          ? new Date(b.item.scheduled_date)
-          : new Date(0);
-        break;
-      case "original_title":
-        valueA = a.item?.original_title || "";
-        valueB = b.item?.original_title || "";
-        break;
-      case "brand":
-        valueA = a.item?.brand || "";
-        valueB = b.item?.brand || "";
-        break;
-      case "starting_price":
-        valueA = a.item?.starting_price || 0;
-        valueB = b.item?.starting_price || 0;
-        break;
-      case "current_price":
-        valueA =
-          a.type === "direct"
-            ? a.current_price || 0
-            : a.final_price || a.second_price || a.first_price || 0;
-        valueB =
-          b.type === "direct"
-            ? b.current_price || 0
-            : b.final_price || b.second_price || b.first_price || 0;
-        break;
-      case "updated_at":
-      default:
-        valueA = new Date(a.updated_at || 0);
-        valueB = new Date(b.updated_at || 0);
-        break;
-    }
-
-    // 정렬 방향 적용
-    const direction = state.sortOrder === "asc" ? 1 : -1;
-
-    // 문자열 비교
-    if (typeof valueA === "string" && typeof valueB === "string") {
-      return direction * valueA.localeCompare(valueB);
-    }
-
-    // 숫자 또는 날짜 비교
-    return direction * (valueA - valueB);
-  });
-
-  state.filteredResults = filtered;
-  state.totalItems = filtered.length;
-  state.totalPages = Math.ceil(state.totalItems / state.itemsPerPage);
+  // 백엔드에서 이미 필터링된 결과를 사용
+  state.filteredResults = state.combinedResults;
 }
 
 // 이벤트 리스너 설정
@@ -899,8 +891,8 @@ function displayProducts() {
   BidManager.initializePriceCalculators();
 }
 
-// 페이지 변경 처리 - 최종 수정 버전
-function handlePageChange(page) {
+// 페이지 변경 처리 - 수정 버전
+async function handlePageChange(page) {
   page = parseInt(page, 10);
 
   if (page === state.currentPage) return;
@@ -908,17 +900,13 @@ function handlePageChange(page) {
   // 상태 업데이트
   state.currentPage = page;
 
-  // 제품 다시 표시
-  displayProducts();
-
-  // 페이지네이션 다시 생성
-  updatePagination();
+  // 서버에서 새 페이지의 데이터 가져오기
+  await fetchProducts();
 
   // 페이지 상단으로 스크롤
   window.scrollTo(0, 0);
 
-  // URL 업데이트
-  updateURL();
+  // URL은 fetchProducts 내에서 이미 업데이트됨
 }
 
 // 페이지네이션 업데이트
