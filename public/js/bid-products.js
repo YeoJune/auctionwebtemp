@@ -596,17 +596,10 @@ function displayProducts() {
     return;
   }
 
-  const startIdx = (state.currentPage - 1) * state.itemsPerPage;
-  const endIdx = Math.min(
-    startIdx + state.itemsPerPage,
-    state.filteredResults.length
-  );
-
-  for (let i = startIdx; i < endIdx; i++) {
-    const product = state.filteredResults[i];
+  // 서버에서 이미 페이지네이션된 데이터를 받았으므로 모든 결과를 바로 표시
+  state.filteredResults.forEach((product) => {
     const item = product.item;
-
-    if (!item) continue;
+    if (!item) return;
 
     const resultItem = document.createElement("div");
     resultItem.className = "bid-result-item";
@@ -843,7 +836,7 @@ function displayProducts() {
     });
 
     container.appendChild(resultItem);
-  }
+  });
 
   BidManager.initializePriceCalculators();
 }
