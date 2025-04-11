@@ -92,7 +92,7 @@ router.get("/", async (req, res) => {
     ranks,
     withDetails = "false",
     sortBy = "scheduled_date", // 정렬 기준 필드 (기본값: 제목)
-    sortOrder = "asc", // 정렬 방향 (기본값: 오름차순)
+    sortOrder = "desc", // 정렬 방향 (기본값: 오름차순)
   } = req.query;
   const offset = (page - 1) * limit;
 
