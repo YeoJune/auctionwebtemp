@@ -611,7 +611,7 @@ function displayProducts() {
     imageSection.className = "item-image";
     imageSection.innerHTML = `
           <img src="${API.validateImageUrl(item.image)}" alt="${
-      item.original_title || "상품 이미지"
+      item.title || "상품 이미지"
     }">
           <div class="item-rank">${item.rank || "N"}</div>
       `;
@@ -620,7 +620,7 @@ function displayProducts() {
     infoSection.className = "item-info";
     infoSection.innerHTML = `
           <div class="item-brand">${item.brand || "-"}</div>
-          <div class="item-title">${item.original_title || "제목 없음"}</div>
+          <div class="item-title">${item.title || "제목 없음"}</div>
           <div class="item-category">${item.category || "-"}</div>
       `;
 
@@ -915,8 +915,7 @@ async function showProductDetails(itemId) {
 // 모달 초기화
 function initializeModal(product, item) {
   document.querySelector(".modal-brand").textContent = item.brand || "-";
-  document.querySelector(".modal-title").textContent =
-    item.original_title || "-";
+  document.querySelector(".modal-title").textContent = item.title || "-";
   document.querySelector(".modal-title").dataset.itemId = item.item_id;
   document.querySelector(".main-image").src = API.validateImageUrl(item.image);
   document.querySelector(".modal-description").textContent = "로딩 중...";
@@ -951,7 +950,7 @@ function updateModalWithDetails(item) {
   document.querySelector(".modal-brand").textContent = item.brand || "-";
   document.querySelector(".modal-brand2").textContent = item.brand || "-";
   document.querySelector(".modal-title").textContent =
-    item.original_title || "제목 없음";
+    item.title || "제목 없음";
   document.querySelector(".modal-rank").textContent = item.rank || "N";
 }
 
