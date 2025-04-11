@@ -70,21 +70,6 @@ class BrandAucCrawler extends AxiosCrawler {
 
     // 부모 메서드에서 이미 로그인 되어있다고 판단되면 종료
     if (shouldContinue === true) {
-      // 쿠키가 있는지 확인하고 없으면 설정
-      const cookies = await this.cookieJar.getCookies(this.config.baseUrl);
-      const hasLanguageCookie = cookies.some(
-        (cookie) => cookie.key === "brand_language"
-      );
-
-      if (!hasLanguageCookie) {
-        // 쿠키 설정
-        await this.cookieJar.setCookie(
-          "brand_language=en",
-          this.config.baseUrl
-        );
-        console.log("Set brand_language cookie to English");
-      }
-
       return true;
     }
 
@@ -94,11 +79,11 @@ class BrandAucCrawler extends AxiosCrawler {
     }
 
     // 이제 실제 로그인 로직 구현
+    // 여기서는 throw Error로 끝나는 부모의 login() 메서드를 오버라이드
     this.loginPromise = this.retryOperation(async () => {
       try {
         console.log("Logging in to Brand Auction...");
 
-        // 1. 일반 로그인 (기존 방식)
         // 로그인 페이지 가져오기
         const response = await this.client.get(this.config.loginPageUrl);
 
@@ -109,12 +94,6 @@ class BrandAucCrawler extends AxiosCrawler {
         if (!csrfToken) {
           throw new Error("CSRF token not found");
         }
-
-        // 영어 언어 쿠키 설정
-        await this.cookieJar.setCookie(
-          "brand_language=en",
-          this.config.baseUrl
-        );
 
         // Form 데이터 준비
         const formData = new URLSearchParams();
@@ -129,7 +108,7 @@ class BrandAucCrawler extends AxiosCrawler {
 
         // 로그인 요청
         const loginResponse = await this.client.post(
-          this.config.loginPostUrl,
+          this.config.loginPageUrl, // '/login'이 상대 경로니까 원래 URL 그대로 사용
           formData,
           {
             headers: {
@@ -174,8 +153,6 @@ class BrandAucCrawler extends AxiosCrawler {
           }
         );
 
-        console.log("bid login attempt completed");
-
         // 로그인 후 검증
         if (await this.loginCheck()) {
           console.log("Login successful");
@@ -208,7 +185,7 @@ class BrandAucCrawler extends AxiosCrawler {
 
       // Live 경매와 Direct 경매 모두 수집
       const bidTypes = [
-        { type: "live", otherCds: "1" }, // Live 경매는 기존 방식 유지
+        // { type: "live", otherCds: "1" }, // Live 경매는 기존 방식 유지
         { type: "direct" }, // Direct 경매는 새로운 API 사용
       ];
 
@@ -287,6 +264,10 @@ class BrandAucCrawler extends AxiosCrawler {
             }
           }
         } else if (bidConfig.type === "direct") {
+          await this.cookieJar.setCookie(
+            "brand_language=en",
+            "https://bid.brand-auc.com"
+          );
           // 새로운 Direct 경매 크롤링 방식
           // 먼저 경매 정보 가져오기
           const auctionInfoResponse = await this.client.get(
