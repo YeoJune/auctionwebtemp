@@ -98,6 +98,7 @@ class BrandAucCrawler extends AxiosCrawler {
       try {
         console.log("Logging in to Brand Auction...");
 
+        // 1. 일반 로그인 (기존 방식)
         // 로그인 페이지 가져오기
         const response = await this.client.get(this.config.loginPageUrl);
 
@@ -128,7 +129,7 @@ class BrandAucCrawler extends AxiosCrawler {
 
         // 로그인 요청
         const loginResponse = await this.client.post(
-          this.config.loginPageUrl,
+          this.config.loginPostUrl,
           formData,
           {
             headers: {
@@ -141,6 +142,39 @@ class BrandAucCrawler extends AxiosCrawler {
             },
           }
         );
+
+        // 2. bid 로그인
+        console.log("Logging in to bid.brand-auc.com system...");
+
+        // bid 로그인 페이지 가져오기
+        const bidLoginUrl = "https://bid.brand-auc.com/loginPage";
+        const bidResponse = await this.client.get(bidLoginUrl);
+
+        // bid Form 데이터 준비
+        const bidFormData = new URLSearchParams();
+        bidFormData.append("username", this.config.loginData.userId);
+        bidFormData.append("password", this.config.loginData.password);
+        bidFormData.append("_csrf", csrfToken);
+        bidFormData.append("client_id", "brandVpaMember");
+        bidFormData.append("loginType", "vpaLogin");
+
+        // bid 로그인 요청
+        const bidLoginResponse = await this.client.post(
+          "https://member.brand-auc.com/login", // 실제 로그인 처리 URL
+          bidFormData,
+          {
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+              Referer: bidLoginUrl,
+            },
+            maxRedirects: 5,
+            validateStatus: function (status) {
+              return status >= 200 && status < 400;
+            },
+          }
+        );
+
+        console.log("bid login attempt completed");
 
         // 로그인 후 검증
         if (await this.loginCheck()) {
@@ -533,9 +567,7 @@ class BrandAucCrawler extends AxiosCrawler {
         "https://bid.brand-auc.com/api/v1/brand-bid/com/auction-info",
         {
           headers: {
-            Accept: "application/json",
-            Referer: "https://bid.brand-auc.com/",
-            "X-Requested-With": "XMLHttpRequest",
+            Accept: "application/json, text/plain, */*",
           },
         }
       );
