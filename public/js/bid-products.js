@@ -254,6 +254,7 @@ async function handleSignout() {
 }
 
 // 상품 데이터 가져오기
+// 상품 데이터 가져오기
 async function fetchProducts() {
   if (!state.isAuthenticated) {
     return;
@@ -281,136 +282,92 @@ async function fetchProducts() {
     }
 
     // 날짜 범위 계산
+    const now = new Date();
     const dateLimit = new Date();
     dateLimit.setDate(dateLimit.getDate() - state.dateRange);
     const fromDate = formatDate(dateLimit);
+    const toDate = formatDate(now);
 
-    // 기본 API 파라미터
-    const baseParams = {
+    // API 파라미터
+    const params = {
       status: statusParam,
       fromDate: fromDate,
+      toDate: toDate,
+      page: state.currentPage,
+      limit: state.itemsPerPage,
       sortBy: state.sortBy,
       sortOrder: state.sortOrder,
     };
 
     // 키워드 검색 파라미터 추가
     if (state.keyword && state.keyword.trim() !== "") {
-      baseParams.keyword = state.keyword.trim();
+      params.keyword = state.keyword.trim();
     }
 
-    // 경매 타입에 따라 다른 엔드포인트 사용
-    let liveBidsPromise, directBidsPromise;
-    let liveParams, directParams;
+    const queryString = API.createURLParams(params);
+    let results;
 
-    // bidType이 "all"인 경우 각 API에서 절반씩 가져오기
-    if (state.bidType === "all") {
-      // 각 API의 절반씩 데이터 요청
-      const halfLimit = Math.floor(state.itemsPerPage / 2);
-      const remainingLimit = state.itemsPerPage - halfLimit; // 홀수일 경우 나머지 처리
+    // all 옵션 제거 - direct 또는 live 중 하나만 선택하도록 변경
+    if (state.bidType === "direct") {
+      // 직접 경매만 가져오기
+      const directResults = await API.fetchAPI(`/direct-bids?${queryString}`);
 
-      // 페이지 계산 - 각 API에 동일한 페이지 번호 사용
-      liveParams = {
-        ...baseParams,
-        limit: halfLimit,
-        page: state.currentPage,
-      };
+      state.directBids = directResults.bids || [];
+      state.liveBids = [];
 
-      directParams = {
-        ...baseParams,
-        limit: remainingLimit,
-        page: state.currentPage,
-      };
+      state.totalItems = directResults.total || 0;
+      state.totalPages = directResults.totalPages || 1;
 
-      liveBidsPromise = API.fetchAPI(
-        `/live-bids?${API.createURLParams(liveParams)}`
-      );
-      directBidsPromise = API.fetchAPI(
-        `/direct-bids?${API.createURLParams(directParams)}`
-      );
+      results = directResults;
     } else {
-      // bidType이 "live" 또는 "direct"인 경우 해당 API만 호출
-      const params = {
-        ...baseParams,
-        page: state.currentPage,
-        limit: state.itemsPerPage,
-      };
+      // 기본값은 라이브 경매 (all 대신)
+      state.bidType = "live";
+      document.getElementById("bidType-live").checked = true;
 
-      const queryString = API.createURLParams(params);
+      const liveResults = await API.fetchAPI(`/live-bids?${queryString}`);
 
-      if (state.bidType === "live") {
-        liveBidsPromise = API.fetchAPI(`/live-bids?${queryString}`);
-        directBidsPromise = Promise.resolve({
-          bids: [],
-          total: 0,
-          totalPages: 0,
-        });
-      } else {
-        directBidsPromise = API.fetchAPI(`/direct-bids?${queryString}`);
-        liveBidsPromise = Promise.resolve({
-          bids: [],
-          total: 0,
-          totalPages: 0,
-        });
-      }
+      state.liveBids = liveResults.bids || [];
+      state.directBids = [];
+
+      state.totalItems = liveResults.total || 0;
+      state.totalPages = liveResults.totalPages || 1;
+
+      results = liveResults;
     }
 
-    // 두 API 요청 병렬로 처리
-    const [liveResults, directResults] = await Promise.all([
-      liveBidsPromise,
-      directBidsPromise,
-    ]);
-
-    // 결합 및 타입 정보 추가
-    state.liveBids = liveResults.bids || [];
-    state.directBids = directResults.bids || [];
-
-    // 상태 원본 유지 - 백엔드 상태 그대로 사용
+    // 데이터 타입 정보 추가
     const liveBidsWithType = state.liveBids.map((bid) => ({
       ...bid,
       type: "live",
-      displayStatus: bid.status, // 실제 상태를 그대로 표시용으로 사용
+      displayStatus: bid.status,
     }));
 
     const directBidsWithType = state.directBids.map((bid) => ({
       ...bid,
       type: "direct",
-      displayStatus: bid.status, // 실제 상태를 그대로 표시용으로 사용
+      displayStatus: bid.status,
     }));
 
+    // 결합 결과 설정
     state.combinedResults = [...liveBidsWithType, ...directBidsWithType];
-
-    // 페이지네이션 정보 계산
-    if (state.bidType === "all") {
-      // 전체 타입인 경우 두 API의 총합으로 계산
-      const liveTotal = liveResults.total || 0;
-      const directTotal = directResults.total || 0;
-      state.totalItems = liveTotal + directTotal;
-
-      // 더 큰 총 페이지 수 적용
-      state.totalPages = Math.max(
-        liveResults.totalPages || 0,
-        directResults.totalPages || 0,
-        Math.ceil(state.totalItems / state.itemsPerPage)
-      );
-    } else if (state.bidType === "live") {
-      // 라이브 경매만 사용하는 경우
-      state.totalItems = liveResults.total || 0;
-      state.totalPages = liveResults.totalPages || 1;
-    } else {
-      // 직접 경매만 사용하는 경우
-      state.totalItems = directResults.total || 0;
-      state.totalPages = directResults.totalPages || 1;
-    }
-
-    // 필터링된 결과를 이제 combinedResults로 바로 설정
     state.filteredResults = state.combinedResults;
 
-    // BidManager에 필터링된 결과의 상품 데이터 전달
+    // 페이지 번호 유효성 검사 - 페이지 수가 0이면 1로 설정
+    if (state.totalPages === 0) {
+      state.totalPages = 1;
+    }
+
+    // 현재 페이지가 총 페이지 수를 초과하면 조정
+    if (state.currentPage > state.totalPages) {
+      state.currentPage = 1;
+      // 첫 페이지의 데이터를 가져오기 위해 함수를 재귀적으로 호출
+      return await fetchProducts();
+    }
+
+    // BidManager에 데이터 전달
     BidManager.updateCurrentData(
       state.filteredResults.map((item) => item.item)
     );
-
-    // BidManager에 입찰 데이터 전달
     BidManager.updateBidData(state.liveBids, state.directBids);
 
     // URL 업데이트
@@ -891,11 +848,13 @@ function displayProducts() {
   BidManager.initializePriceCalculators();
 }
 
-// 페이지 변경 처리 - 수정 버전
+// 페이지 변경 처리
 async function handlePageChange(page) {
   page = parseInt(page, 10);
 
-  if (page === state.currentPage) return;
+  if (page === state.currentPage || page < 1 || page > state.totalPages) {
+    return;
+  }
 
   // 상태 업데이트
   state.currentPage = page;
@@ -905,8 +864,6 @@ async function handlePageChange(page) {
 
   // 페이지 상단으로 스크롤
   window.scrollTo(0, 0);
-
-  // URL은 fetchProducts 내에서 이미 업데이트됨
 }
 
 // 페이지네이션 업데이트
