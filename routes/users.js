@@ -328,7 +328,7 @@ router.delete("/:id", requireAuth, async (req, res) => {
 router.post("/sync", requireAuth, async (req, res) => {
   try {
     // DB 정보를 우선으로 하는 동기화 메서드 호출
-    await GoogleSheetsManager.syncDBToSheet();
+    await GoogleSheetsManager.syncUsersWithDB();
     res.json({ message: "DB에서 스프레드시트로 동기화가 완료되었습니다." });
   } catch (error) {
     console.error("동기화 오류:", error);
