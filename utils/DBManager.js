@@ -8,6 +8,8 @@ class DatabaseManager {
     this.pool = pool;
     this.RETRY_DELAY = 1000;
     this.MAX_RETRIES = 1;
+
+    // 기본 컬럼 정의 (공통적으로 사용될 수 있는 컬럼들)
     this.crawledItemColumns = [
       "item_id",
       "original_title",
@@ -28,6 +30,50 @@ class DatabaseManager {
       "bid_type",
       "original_scheduled_date",
     ];
+
+    // 테이블별 컬럼 정의
+    this.tableColumns = {
+      crawled_items: [
+        "item_id",
+        "original_title",
+        "title",
+        "scheduled_date",
+        "auc_num",
+        "category",
+        "brand",
+        "rank",
+        "starting_price",
+        "image",
+        "description",
+        "additional_images",
+        "accessory_code",
+        "final_price",
+        "kaijoCd",
+        "kaisaiKaisu",
+        "bid_type",
+        "original_scheduled_date",
+      ],
+      values_items: [
+        "item_id",
+        "original_title",
+        "title",
+        "scheduled_date",
+        "auc_num",
+        "category",
+        "brand",
+        "rank",
+        "starting_price",
+        "image",
+        "description",
+        "additional_images",
+        "accessory_code",
+        "final_price",
+        "kaijoCd",
+        "kaisaiKaisu",
+      ],
+      // 필요한 다른 테이블들의 컬럼 정의를 여기에 추가할 수 있습니다
+    };
+
     this.IMAGE_DIR = path.join(__dirname, "..", "public", "images", "products");
   }
 
@@ -106,8 +152,12 @@ class DatabaseManager {
         const updateFields = [];
         const updateValues = [];
 
+        // 테이블별 컬럼을 사용
+        const validColumns =
+          this.tableColumns[tableName] || this.crawledItemColumns;
+
         for (const [key, value] of Object.entries(newDetails)) {
-          if (this.crawledItemColumns.includes(key)) {
+          if (validColumns.includes(key)) {
             updateFields.push(`${key} = ?`);
             updateValues.push(value);
           }
@@ -310,6 +360,7 @@ class DatabaseManager {
       if (conn) await conn.release();
     }
   }
+
   async deleteItemsWithout(itemIds, tableName) {
     let conn;
     try {
@@ -362,6 +413,7 @@ class DatabaseManager {
       if (conn) await conn.release();
     }
   }
+
   async saveItems(items, tableName, batchSize = 1000) {
     if (!items || !Array.isArray(items))
       throw new Error("Invalid input: items must be an array");
@@ -375,9 +427,21 @@ class DatabaseManager {
         // Filter out items without title for insertion/update
         const validItems = items.filter((item) => item.title);
         if (validItems.length) {
-          const columns = this.crawledItemColumns.filter((col) =>
-            validItems[0].hasOwnProperty(col)
+          // 테이블별 정의된 컬럼 사용
+          const tableSpecificColumns =
+            this.tableColumns[tableName] || this.crawledItemColumns;
+
+          // 모든 아이템의 속성을 수집하여 해당 테이블에 정의된 컬럼 중 사용할 컬럼을 결정
+          const itemKeys = new Set();
+          validItems.forEach((item) => {
+            Object.keys(item).forEach((key) => itemKeys.add(key));
+          });
+
+          // 아이템의 속성 중 테이블에 정의된 컬럼만 사용
+          const columns = tableSpecificColumns.filter((col) =>
+            itemKeys.has(col)
           );
+
           const placeholders = columns.map(() => "?").join(", ");
           const updateClauses = columns
             .map((col) => `${col} = VALUES(${col})`)
@@ -394,7 +458,8 @@ class DatabaseManager {
 
             const values = batch.flatMap((item) =>
               columns.map((col) => {
-                const value = item[col];
+                // 속성이 없는 경우 null을 사용
+                const value = item.hasOwnProperty(col) ? item[col] : null;
                 return value;
               })
             );
@@ -409,7 +474,10 @@ class DatabaseManager {
               // 개별 아이템 삽입 시도
               for (let j = 0; j < batch.length; j++) {
                 const singleItemValues = columns.map((col) => {
-                  const value = batch[j][col];
+                  // 속성이 없는 경우 null을 사용
+                  const value = batch[j].hasOwnProperty(col)
+                    ? batch[j][col]
+                    : null;
                   return value;
                 });
                 const singleInsertQuery = `
