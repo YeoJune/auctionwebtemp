@@ -52,6 +52,7 @@
                 <th>연락처</th>
                 <th>이메일</th>
                 <th>주소</th>
+                <th>수수료율</th>
                 <th>상태</th>
                 <th>작업</th>
               </tr>
@@ -123,6 +124,19 @@
             <div class="form-group">
               <label class="form-label" for="address">주소</label>
               <textarea id="address" class="form-control" rows="2"></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="commissionRate"
+                >수수료율 (%)</label
+              >
+              <input
+                type="number"
+                id="commissionRate"
+                class="form-control"
+                step="0.01"
+                min="0"
+                max="100"
+                placeholder="예: 5.00" />
             </div>
             <div class="form-group">
               <label class="form-label">상태</label>

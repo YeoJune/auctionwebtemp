@@ -1,6 +1,7 @@
 // public/js/calculate-fee.js
 
 let EXCHANGE_RATE = 0.9; // 환율
+let USER_COMMISSION_RATE = null; // 사용자별 수수료율 (초기값: null)
 
 // 환율 가져오기
 async function fetchExchangeRate() {
@@ -12,6 +13,28 @@ async function fetchExchangeRate() {
   } catch (error) {
     console.error("Error fetching exchange rate:", error);
     return EXCHANGE_RATE; // 기본값 반환
+  }
+}
+
+// 현재 로그인한 사용자의 수수료율 가져오기
+async function fetchUserCommissionRate() {
+  try {
+    const response = await fetch("/api/users/current");
+    const userData = await response.json();
+
+    if (userData && userData.commission_rate !== undefined) {
+      console.log(`현재 사용자의 수수료율: ${userData.commission_rate}%`);
+      USER_COMMISSION_RATE = userData.commission_rate;
+      return userData.commission_rate;
+    } else {
+      console.log(
+        "사용자 수수료율이 설정되어 있지 않습니다. 기본 수수료율을 사용합니다."
+      );
+      return null;
+    }
+  } catch (error) {
+    console.error("사용자 수수료율 조회 중 오류 발생:", error);
+    return null; // 오류 발생 시 기본 수수료율 사용
   }
 }
 
@@ -145,6 +168,12 @@ function calculateFee(price) {
   // 숫자가 아닌 경우 0 반환
   if (isNaN(price)) return 0;
 
+  // 사용자별 수수료율이 설정되어 있으면 해당 수수료율 적용
+  if (USER_COMMISSION_RATE !== null) {
+    return Math.round(price * (USER_COMMISSION_RATE / 100));
+  }
+
+  // 기본 수수료율 적용 (기존 로직)
   let fee = 0;
 
   // 5,000,000원 이하: 10%
@@ -175,9 +204,18 @@ function calculateFee(price) {
   return Math.round(fee);
 }
 
-// DOM 로드 시 환율 정보 가져오기
+// DOM 로드 시 환율 및 사용자 수수료율 정보 가져오기
 document.addEventListener("DOMContentLoaded", function () {
+  // 환율 가져오기
   fetchExchangeRate().then((rate) => {
     console.log("Exchange rate loaded:", rate);
+  });
+
+  // 사용자 수수료율 가져오기
+  fetchUserCommissionRate().then((rate) => {
+    console.log(
+      "User commission rate loaded:",
+      rate !== null ? rate + "%" : "기본 수수료율 사용"
+    );
   });
 });

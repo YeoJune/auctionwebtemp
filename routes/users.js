@@ -18,16 +18,45 @@ const requireAuth = (req, res, next) => {
   next();
 };
 
+router.get("/current", requireAuth, async (req, res) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const userId = req.session.user.id; // 세션에서 사용자 ID 가져오기
+
+    // 사용자 정보 조회
+    const [users] = await conn.query(
+      `SELECT id, registration_date, email, business_number, company_name, 
+       phone, address, is_active, created_at, commission_rate 
+       FROM users WHERE id = ?`,
+      [userId]
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({ message: "회원을 찾을 수 없습니다." });
+    }
+
+    res.json(users[0]);
+  } catch (error) {
+    console.error("현재 사용자 정보 조회 오류:", error);
+    res
+      .status(500)
+      .json({ message: "사용자 정보를 불러오는 중 오류가 발생했습니다." });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
 // 회원 목록 조회
 router.get("/", requireAuth, async (req, res) => {
   let conn;
   try {
     conn = await pool.getConnection();
 
-    // 회원 목록 조회 - 새로운 필드 포함
+    // 회원 목록 조회 - 수수료율 필드 추가
     const [users] = await conn.query(
       `SELECT id, registration_date, email, business_number, company_name, 
-       phone, address, created_at, is_active 
+       phone, address, created_at, is_active, commission_rate 
        FROM users ORDER BY created_at DESC`
     );
 
@@ -49,10 +78,10 @@ router.get("/:id", requireAuth, async (req, res) => {
     conn = await pool.getConnection();
     const id = req.params.id;
 
-    // 회원 정보 조회
+    // 회원 정보 조회 - 수수료율 필드 추가
     const [users] = await conn.query(
       `SELECT id, registration_date, email, business_number, company_name, 
-       phone, address, is_active, created_at 
+       phone, address, is_active, created_at, commission_rate 
        FROM users WHERE id = ?`,
       [id]
     );
@@ -87,6 +116,7 @@ router.post("/", requireAuth, async (req, res) => {
       company_name,
       phone,
       address,
+      commission_rate, // 수수료율 필드 추가
     } = req.body;
 
     // 필수 필드 검증
@@ -121,7 +151,7 @@ router.post("/", requireAuth, async (req, res) => {
     // 비밀번호 해싱
     const hashedPassword = hashPassword(password);
 
-    // 회원 추가
+    // 회원 추가 - 수수료율 필드 추가
     await conn.query(
       `INSERT INTO users (
         id, 
@@ -132,8 +162,9 @@ router.post("/", requireAuth, async (req, res) => {
         company_name,
         phone,
         address,
-        is_active
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        is_active,
+        commission_rate
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         formattedDate,
@@ -144,6 +175,7 @@ router.post("/", requireAuth, async (req, res) => {
         normalizedPhone || null,
         address || null,
         is_active === false ? 0 : 1,
+        commission_rate || null, // 수수료율 기본값 null
       ]
     );
 
@@ -171,6 +203,7 @@ router.put("/:id", requireAuth, async (req, res) => {
       company_name,
       phone,
       address,
+      commission_rate, // 수수료율 필드 추가
     } = req.body;
 
     // 회원 존재 확인
@@ -239,6 +272,12 @@ router.put("/:id", requireAuth, async (req, res) => {
       updateValues.push(is_active ? 1 : 0);
     }
 
+    // 수수료율 필드 업데이트 처리
+    if (commission_rate !== undefined) {
+      updateFields.push("commission_rate = ?");
+      updateValues.push(commission_rate);
+    }
+
     if (updateFields.length === 0) {
       return res.status(400).json({ message: "수정할 정보가 없습니다." });
     }
@@ -285,11 +324,12 @@ router.delete("/:id", requireAuth, async (req, res) => {
   }
 });
 
-// 스프레드시트와 동기화
+// 스프레드시트와 동기화 - DB 우선으로 변경
 router.post("/sync", requireAuth, async (req, res) => {
   try {
-    await GoogleSheetsManager.syncUsersWithDB();
-    res.json({ message: "동기화가 완료되었습니다." });
+    // DB 정보를 우선으로 하는 동기화 메서드 호출
+    await GoogleSheetsManager.syncDBToSheet();
+    res.json({ message: "DB에서 스프레드시트로 동기화가 완료되었습니다." });
   } catch (error) {
     console.error("동기화 오류:", error);
     res.status(500).json({ message: "동기화 중 오류가 발생했습니다." });

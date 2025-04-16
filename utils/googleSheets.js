@@ -391,7 +391,6 @@ class GoogleSheetsManager {
       if (conn) conn.release();
     }
   }
-
   async syncUsersWithDB() {
     let conn;
     try {
@@ -405,7 +404,7 @@ class GoogleSheetsManager {
       });
       const users = response.data.values || [];
 
-      // 2. 사용자 테이블이 없는 경우 생성
+      // 2. 사용자 테이블이 없는 경우 생성 (commission_rate 필드 추가)
       await conn.query(`
         CREATE TABLE IF NOT EXISTS users (
           id VARCHAR(50) PRIMARY KEY,
@@ -417,34 +416,22 @@ class GoogleSheetsManager {
           phone VARCHAR(20),
           address TEXT,
           is_active BOOLEAN,
+          commission_rate DECIMAL(5,2) NULL,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         )
       `);
 
-      // 구글 시트에서 모든 사용자 ID 가져오기
-      const sheetUserIds = users.map((user) => user[1]); // C열이 ID (배열 인덱스는 0부터 시작하므로 C열은 1)
+      // 3. DB에서 현재 사용자 정보 가져오기
+      const [dbUsers] = await conn.query("SELECT * FROM users");
+      const dbUserMap = {};
 
-      // DB에서 모든 사용자 ID 가져오기
-      const [dbUsers] = await conn.query("SELECT id FROM users");
-      const dbUserIds = dbUsers.map((user) => user.id);
+      // DB 사용자 정보를 맵으로 변환하여 빠른 조회 가능하게 함
+      dbUsers.forEach((user) => {
+        dbUserMap[user.id] = user;
+      });
 
-      // 삭제할 사용자 찾기 (DB에는 있지만 시트에는 없는 사용자)
-      const userIdsToDelete = dbUserIds.filter(
-        (id) => !sheetUserIds.includes(id)
-      );
-
-      // 시트에 없는 사용자 삭제
-      if (userIdsToDelete.length > 0) {
-        await conn.query("DELETE FROM users WHERE id IN (?)", [
-          userIdsToDelete,
-        ]);
-        console.log(
-          `삭제된 사용자(시트에 없음): ${userIdsToDelete.join(", ")}`
-        );
-      }
-
-      // 3. 각 사용자 동기화
+      // 4. 각 사용자 동기화 (DB 정보 우선)
       for (const user of users) {
         // 시트 컬럼 매핑 (B열부터 시작)
         const [
@@ -462,6 +449,22 @@ class GoogleSheetsManager {
           isActive, // M열: 활성화
         ] = user;
 
+        // 필수 필드 확인 (userId는 반드시 있어야 함)
+        if (!userId) continue;
+
+        // DB에 이미 존재하는 사용자인지 확인
+        const existingUser = dbUserMap[userId];
+
+        // 사용자가 DB에 이미 존재하면 스킵 (DB 정보 우선)
+        if (existingUser) {
+          console.log(
+            `사용자 ${userId}는 이미 DB에 존재합니다. 스프레드시트 데이터로 업데이트하지 않습니다.`
+          );
+          continue;
+        }
+
+        // 새 사용자인 경우에만 스프레드시트 데이터를 DB에 추가
+
         // 가입일 형식 변환 - 정규 표현식을 사용한 향상된 처리
         let registrationDate = formatDateString(registrationDateStr);
 
@@ -477,7 +480,7 @@ class GoogleSheetsManager {
         // 비밀번호 해싱
         const hashedPassword = password ? hashPassword(password) : null;
 
-        // 사용자 삽입 또는 업데이트
+        // 새 사용자 삽입
         await conn.query(
           `
           INSERT INTO users (
@@ -485,15 +488,6 @@ class GoogleSheetsManager {
             business_number, company_name, phone, address, is_active
           ) 
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-          ON DUPLICATE KEY UPDATE 
-            registration_date = ?,
-            password = ?,
-            email = ?,
-            business_number = ?,
-            company_name = ?,
-            phone = ?,
-            address = ?,
-            is_active = ?
           `,
           [
             userId,
@@ -505,21 +499,18 @@ class GoogleSheetsManager {
             phone,
             address,
             isActive === "TRUE" || isActive === true,
-            // 중복 키 업데이트를 위한 값들
-            registrationDate,
-            hashedPassword,
-            email,
-            businessNumber,
-            companyName,
-            phone,
-            address,
-            isActive === "TRUE" || isActive === true,
           ]
+        );
+
+        console.log(
+          `새 사용자 ${userId}가 스프레드시트에서 DB로 추가되었습니다.`
         );
       }
 
       await conn.commit();
-      console.log("사용자가 DB와 성공적으로 동기화되었습니다");
+      console.log(
+        "동기화 완료: 스프레드시트의 새 사용자만 DB에 추가되었습니다."
+      );
     } catch (error) {
       if (conn) await conn.rollback();
       console.error("사용자를 DB와 동기화하는 중 오류 발생:", error);

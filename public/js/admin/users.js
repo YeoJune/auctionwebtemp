@@ -54,26 +54,29 @@ function renderUsers(users) {
       : "-";
 
     row.innerHTML = `
-        <td>${user.id}</td>
-        <td>${registrationDate}</td>
-        <td>${user.company_name || "-"}</td>
-        <td>${user.phone || "-"}</td>
-        <td>${user.email || "-"}</td>
-        <td title="${user.address || ""}">${user.address}</td>
-        <td>
-          <span class="status-badge ${user.is_active ? "active" : "inactive"}">
-            ${user.is_active ? "활성" : "비활성"}
-          </span>
-        </td>
-        <td>
-          <button class="btn btn-action edit-btn" data-id="${
-            user.id
-          }">수정</button>
-          <button class="btn btn-action delete-btn" data-id="${
-            user.id
-          }">삭제</button>
-        </td>
-      `;
+      <td>${user.id}</td>
+      <td>${registrationDate}</td>
+      <td>${user.company_name || "-"}</td>
+      <td>${user.phone || "-"}</td>
+      <td>${user.email || "-"}</td>
+      <td title="${user.address || ""}">${user.address || "-"}</td>
+      <td>${
+        user.commission_rate !== null ? user.commission_rate + "%" : "-"
+      }</td>
+      <td>
+        <span class="status-badge ${user.is_active ? "active" : "inactive"}">
+          ${user.is_active ? "활성" : "비활성"}
+        </span>
+      </td>
+      <td>
+        <button class="btn btn-action edit-btn" data-id="${
+          user.id
+        }">수정</button>
+        <button class="btn btn-action delete-btn" data-id="${
+          user.id
+        }">삭제</button>
+      </td>
+    `;
 
     tableBody.appendChild(row);
   });
@@ -174,6 +177,7 @@ function openUserForm(user = null) {
   const phone = document.getElementById("phone");
   const userEmail = document.getElementById("userEmail");
   const address = document.getElementById("address");
+  const commissionRate = document.getElementById("commissionRate"); // 추가된 부분
 
   // 수정 모드 설정
   if (user) {
@@ -191,6 +195,8 @@ function openUserForm(user = null) {
     phone.value = user.phone || "";
     userEmail.value = user.email || "";
     address.value = user.address || "";
+    commissionRate.value =
+      user.commission_rate !== null ? user.commission_rate : ""; // 추가된 부분
 
     // 상태 설정
     document.querySelector(
@@ -205,6 +211,7 @@ function openUserForm(user = null) {
     document.getElementById("userFormTitle").textContent = "새 회원 등록";
     userId.readOnly = false;
     userId.value = "";
+    commissionRate.value = ""; // 추가된 부분
 
     // 비밀번호 필드
     userPassword.placeholder = "비밀번호 입력";
@@ -226,6 +233,7 @@ async function saveUser() {
     const phone = document.getElementById("phone").value;
     const email = document.getElementById("userEmail").value;
     const address = document.getElementById("address").value;
+    const commissionRateValue = document.getElementById("commissionRate").value; // 추가된 부분
     const isActive =
       document.querySelector('input[name="userStatus"]:checked').value ===
       "true";
@@ -249,6 +257,9 @@ async function saveUser() {
       phone: phone || null,
       address: address || null,
       is_active: isActive,
+      commission_rate: commissionRateValue
+        ? parseFloat(commissionRateValue)
+        : null, // 추가된 부분
     };
 
     // 비밀번호가 입력된 경우에만 포함

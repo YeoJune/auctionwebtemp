@@ -153,7 +153,7 @@ function cleanupInactiveUsers() {
   }
 
   if (inactiveUsersRemoved > 0) {
-    console.log(`${inactiveUsersRemoved}명의 비활성 사용자를 제거했습니다.`);
+    // console.log(`${inactiveUsersRemoved}명의 비활성 사용자를 제거했습니다.`);
   }
 }
 
