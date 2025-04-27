@@ -84,7 +84,7 @@ async function crawlAll() {
         allItems.map((item) => item.item_id),
         "crawled_items"
       );
-      await DBManager.cleanupUnusedImages();
+      // await DBManager.cleanupUnusedImages();
       await initializeFilterSettings();
     } catch (error) {
       throw error;
@@ -121,15 +121,9 @@ async function crawlAllValues() {
 
       isValueCrawling = true;
 
-      let ecoAucItems = await ecoAucValueCrawler.crawlAllItems(
-        existingEcoAucIds
-      );
-      let brandAucItems = await brandAucValueCrawler.crawlAllItems(
-        existingBrandAuctionIds
-      );
-      let starAucItems = await starAucValueCrawler.crawlAllItems(
-        existingStarAucIds
-      );
+      let ecoAucItems = await ecoAucValueCrawler.crawlAllItems();
+      let brandAucItems = await brandAucValueCrawler.crawlAllItems();
+      let starAucItems = await starAucValueCrawler.crawlAllItems();
 
       if (!ecoAucItems) ecoAucItems = [];
       if (!brandAucItems) brandAucItems = [];
@@ -137,7 +131,8 @@ async function crawlAllValues() {
 
       const allItems = [...ecoAucItems, ...brandAucItems, ...starAucItems];
       await DBManager.saveItems(allItems, "values_items");
-      await DBManager.cleanupUnusedImages();
+      await DBManager.cleanupOldValueItems(90);
+      // await DBManager.cleanupUnusedImages();
     } catch (error) {
       throw error;
     } finally {
