@@ -295,7 +295,7 @@ class DatabaseManager {
         `
         SELECT item_id, image, additional_images 
         FROM values_items 
-        WHERE scheduled_date < DATE_SUB(CURDATE(), INTERVAL ? DAY)
+        WHERE scheduled_date < DATE_SUB(NOW(), INTERVAL ? DAY)
       `,
         [daysThreshold]
       );
@@ -511,5 +511,7 @@ class DatabaseManager {
 }
 
 const DBManager = new DatabaseManager(pool);
+
+DBManager.cleanupOldValueItems(90);
 
 module.exports = DBManager;
