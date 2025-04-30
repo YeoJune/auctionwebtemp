@@ -600,6 +600,90 @@ class StarAucCrawler extends AxiosCrawler {
       return [];
     }
   }
+
+  async crawlInvoices() {
+    try {
+      console.log("Starting to crawl Star Auction invoices...");
+
+      // 로그인 확인
+      await this.login();
+
+      // 청구서 페이지 요청
+      const url = "https://www.starbuyers-global-auction.com/purchase_report";
+      const response = await this.client.get(url);
+      const $ = cheerio.load(response.data);
+
+      // 아이템 컨테이너 찾기
+      const invoiceElements = $(".p-item-list__body");
+      console.log(`Found ${invoiceElements.length} invoice records`);
+
+      if (invoiceElements.length === 0) {
+        console.log("No invoice records found");
+        return [];
+      }
+
+      const invoices = [];
+
+      // 각 청구서 항목 처리
+      invoiceElements.each((index, element) => {
+        const $element = $(element);
+
+        // 날짜 추출 (발행일)
+        const issueDateText = $element
+          .find('[data-head="Issue date"]')
+          .text()
+          .trim();
+        const date = this.extractDate(issueDateText);
+
+        // 청구 카테고리 확인 (경매인지 확인)
+        const billingCategory = $element
+          .find('[data-head="Billing category"]')
+          .text()
+          .trim();
+
+        // 금액 추출
+        const amountText = $element
+          .find(
+            '[data-head="Successful bid total price / Amount"] p:first-child'
+          )
+          .text()
+          .trim();
+        const amount = this.currencyToInt(amountText);
+
+        // 상태는 별도로 표시되지 않아 기본값으로 설정
+        // 실제 상태는 별도 API나 상세 페이지에서 확인이 필요할 수 있음
+        const status = "unpaid";
+
+        // 카테고리 정보
+        const category = $element.find('[data-head="Category"]').text().trim();
+
+        // 상세 링크 추출 (필요시 사용)
+        const detailLink = $element
+          .find("a.p-text-link, a.p-button-small")
+          .attr("href");
+        const reportId = detailLink ? detailLink.split("/").pop() : null;
+
+        // auc_num은 3으로 고정 (StarAuc의 식별자)
+        const auc_num = "3";
+
+        // 결과 객체 생성
+        invoices.push({
+          date,
+          auc_num,
+          status,
+          amount,
+          category,
+          report_id: reportId,
+        });
+      });
+
+      console.log(`Successfully processed ${invoices.length} invoices`);
+      return invoices;
+    } catch (error) {
+      console.error("Error crawling Star Auction invoices:", error);
+      return [];
+    }
+  }
 }
 
 class StarAucValueCrawler extends AxiosCrawler {

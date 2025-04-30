@@ -728,6 +728,90 @@ class BrandAucCrawler extends AxiosCrawler {
       };
     }
   }
+
+  async crawlInvoices() {
+    try {
+      console.log("Starting to crawl brand auction invoices...");
+
+      // 로그인 확인
+      await this.login();
+
+      // 청구서 페이지 요청
+      const url = "https://u.brand-auc.com/api/v1/auction/cal/calList";
+      const response = await this.client.get(url, {
+        params: {
+          sort: "",
+          pageNumber: 0,
+          page: 0,
+          size: 20,
+          kaisaiYmdFrom: "",
+          kaisaiYmdTo: "",
+          pdfKbn: "",
+        },
+        headers: {
+          Accept: "application/json, text/plain, */*",
+          Referer: "https://u.brand-auc.com/",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+      });
+
+      // 응답 데이터 확인
+      if (!response.data || !response.data.content) {
+        console.log("No invoice data found");
+        return [];
+      }
+
+      console.log(`Found ${response.data.content.length} invoice records`);
+
+      const invoices = [];
+
+      // 각 항목에서 필요한 정보 추출
+      for (const item of response.data.content) {
+        // 날짜 추출
+        const date = this.extractDate(item.kaisaiYmd);
+
+        // 경매 번호는 2로 고정 (BrandAuc의 식별자)
+        const auc_num = "2";
+
+        // 상태 추출
+        let status = "unpaid";
+        if (item.nyukinJyokyoKbn === 2 || item.nyukinJyokyoEn === "Paid") {
+          status = "paid";
+        } else if (
+          item.nyukinJyokyoKbn === 1 ||
+          item.nyukinJyokyoEn === "Partialy Paid"
+        ) {
+          status = "partial";
+        }
+
+        // 파일 이름에서 경매 회차 추출 (참고용)
+        let auctionRound = null;
+        if (item.fileName) {
+          const roundMatch = item.fileName.match(
+            /(\d+)(?:st|nd|rd|th)_Invoice/
+          );
+          if (roundMatch) {
+            auctionRound = roundMatch[1];
+          }
+        }
+
+        // amount는 응답에 없으므로 비워둠
+        invoices.push({
+          date,
+          auc_num,
+          status,
+          amount: null,
+          auction_round: auctionRound,
+        });
+      }
+
+      console.log(`Successfully processed ${invoices.length} invoices`);
+      return invoices;
+    } catch (error) {
+      console.error("Error crawling brand auction invoices:", error);
+      return [];
+    }
+  }
 }
 
 class BrandAucValueCrawler extends AxiosCrawler {

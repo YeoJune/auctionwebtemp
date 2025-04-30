@@ -33,14 +33,45 @@
           </div>
         </div>
 
-        <!-- 필터 탭 -->
-        <div class="filter-tabs">
-          <div class="filter-tab active" data-status="">전체</div>
-          <div class="filter-tab" data-status="pending">대기 중</div>
-          <div class="filter-tab" data-status="processing">처리 중</div>
-          <div class="filter-tab" data-status="confirmed">확인</div>
-          <div class="filter-tab" data-status="completed">완료</div>
-          <div class="filter-tab" data-status="cancelled">취소</div>
+        <!-- 인보이스 크롤링 버튼 -->
+        <div class="action-buttons mb-3">
+          <button id="crawlInvoicesBtn" class="btn">인보이스 크롤링</button>
+        </div>
+
+        <!-- 필터 영역 -->
+        <div class="filters-container mb-3">
+          <!-- 필터 탭 -->
+          <div class="filter-tabs">
+            <div class="filter-tab active" data-status="">전체</div>
+            <div class="filter-tab" data-status="paid">결제 완료</div>
+            <div class="filter-tab" data-status="unpaid">미결제</div>
+            <div class="filter-tab" data-status="partial">부분 결제</div>
+          </div>
+
+          <!-- 추가 필터 옵션 -->
+          <div class="filter-options mt-2">
+            <div class="filter-group">
+              <label for="auc-filter">경매사:</label>
+              <select id="auc-filter" class="form-control">
+                <option value="">전체</option>
+                <option value="1">EcoAuc</option>
+                <option value="2">BrandAuc</option>
+                <option value="3">StarAuc</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label for="date-from">기간:</label>
+              <input type="date" id="date-from" class="form-control" />
+              <span>~</span>
+              <input type="date" id="date-to" class="form-control" />
+            </div>
+
+            <button id="apply-filters" class="btn btn-sm">적용</button>
+            <button id="reset-filters" class="btn btn-sm btn-secondary">
+              초기화
+            </button>
+          </div>
         </div>
 
         <!-- 인보이스 목록 테이블 -->
@@ -48,94 +79,26 @@
           <table class="data-table" id="invoicesTable">
             <thead>
               <tr>
-                <th>인보이스 ID</th>
-                <th>고객 정보</th>
-                <th>총액</th>
-                <th>항목 수</th>
+                <th>ID</th>
+                <th>날짜</th>
+                <th>경매사</th>
                 <th>상태</th>
-                <th>생성일</th>
-                <th>작업</th>
+                <th>금액</th>
               </tr>
             </thead>
             <tbody id="invoicesTableBody">
               <tr>
-                <td colspan="7" class="text-center">
+                <td colspan="5" class="text-center">
                   데이터를 불러오는 중입니다...
                 </td>
               </tr>
             </tbody>
           </table>
-        </div>
-      </div>
-    </div>
 
-    <!-- 인보이스 상세 모달 -->
-    <div class="modal-overlay" id="invoiceDetailModal">
-      <div class="modal-dialog">
-        <div class="modal-header">
-          <h3 class="modal-title">인보이스 상세 정보</h3>
-          <button class="close-modal">&times;</button>
-        </div>
-        <div class="modal-body">
-          <div id="invoiceDetail">
-            <div class="invoice-header mb-3">
-              <div>
-                <strong>인보이스 번호:</strong> <span id="invoiceId"></span>
-              </div>
-              <div>
-                <strong>고객:</strong> <span id="invoiceCustomer"></span>
-              </div>
-              <div><strong>날짜:</strong> <span id="invoiceDate"></span></div>
-              <div><strong>상태:</strong> <span id="invoiceStatus"></span></div>
-            </div>
-
-            <h4>인보이스 항목</h4>
-            <table class="data-table" id="invoiceItemsTable">
-              <thead>
-                <tr>
-                  <th>상품</th>
-                  <th>구매가</th>
-                  <th>수수료</th>
-                  <th>합계</th>
-                </tr>
-              </thead>
-              <tbody id="invoiceItemsTableBody"></tbody>
-              <tfoot>
-                <tr>
-                  <td colspan="2"></td>
-                  <td><strong>총계:</strong></td>
-                  <td id="invoiceTotal"></td>
-                </tr>
-              </tfoot>
-            </table>
-
-            <div class="form-group mt-3">
-              <label class="form-label" for="invoiceNotes">메모</label>
-              <textarea
-                id="invoiceNotes"
-                class="form-control"
-                rows="3"></textarea>
-            </div>
-
-            <div class="status-change-section mt-3">
-              <div class="form-group">
-                <label class="form-label" for="invoiceStatusChange"
-                  >상태 변경</label
-                >
-                <select id="invoiceStatusChange" class="form-control">
-                  <option value="pending">대기 중</option>
-                  <option value="processing">처리 중</option>
-                  <option value="confirmed">확인</option>
-                  <option value="completed">완료</option>
-                  <option value="cancelled">취소</option>
-                </select>
-              </div>
-            </div>
+          <!-- 페이지네이션 -->
+          <div class="pagination-container" id="pagination">
+            <!-- 페이지네이션 버튼이 여기에 동적으로 추가됩니다 -->
           </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary close-modal">닫기</button>
-          <button class="btn" id="submitStatusChange">상태 변경</button>
         </div>
       </div>
     </div>

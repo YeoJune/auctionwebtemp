@@ -277,6 +277,47 @@ async function crawlAllUpdates() {
   }
 }
 
+// 인보이스 크롤링 함수
+async function crawlAllInvoices() {
+  try {
+    console.log(`Starting invoice crawl at ${new Date().toISOString()}`);
+    const startTime = Date.now();
+
+    // 세 크롤러에서 청구서 정보 크롤링
+    const ecoInvoices = await ecoAucCrawler.crawlInvoices();
+    const brandInvoices = await brandAucCrawler.crawlInvoices();
+    const starInvoices = await starAucCrawler.crawlInvoices();
+
+    // 결과 합치기
+    const allInvoices = [
+      ...(ecoInvoices || []),
+      ...(brandInvoices || []),
+      ...(starInvoices || []),
+    ];
+
+    // DB에 저장
+    await DBManager.saveItems(allInvoices, "invoices");
+
+    const endTime = Date.now();
+    const executionTime = endTime - startTime;
+
+    console.log(
+      `Invoice crawl completed in ${formatExecutionTime(executionTime)}`
+    );
+
+    return {
+      ecoAucCount: ecoInvoices?.length || 0,
+      brandAucCount: brandInvoices?.length || 0,
+      starAucCount: starInvoices?.length || 0,
+      totalCount: allInvoices.length,
+      executionTime: formatExecutionTime(executionTime),
+    };
+  } catch (error) {
+    console.error("Invoice crawl failed:", error);
+    throw error;
+  }
+}
+
 // 실행 시간 포맷팅 함수
 function formatExecutionTime(milliseconds) {
   const seconds = Math.floor(milliseconds / 1000);
@@ -361,6 +402,24 @@ router.get("/crawl-status", isAdmin, (req, res) => {
   } catch (error) {
     console.error("Crawling status error:", error);
     res.status(500).json({ message: "Error getting crawling status" });
+  }
+});
+
+// 인보이스 크롤링 라우팅 추가
+router.get("/crawl-invoices", isAdmin, async (req, res) => {
+  try {
+    const result = await crawlAllInvoices();
+
+    res.json({
+      message: "Invoice crawling completed successfully",
+      stats: result,
+    });
+  } catch (error) {
+    console.error("Invoice crawling error:", error);
+    res.status(500).json({
+      message: "Error during invoice crawling",
+      error: error.message,
+    });
   }
 });
 

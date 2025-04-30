@@ -791,6 +791,90 @@ class EcoAucCrawler extends AxiosCrawler {
       };
     }
   }
+
+  async crawlInvoices() {
+    try {
+      console.log("Starting to crawl invoices...");
+
+      // 로그인 확인
+      await this.login();
+
+      // 청구서 페이지 요청
+      const url = "https://www.ecoauc.com/client/bids/bidwin";
+      const response = await this.client.get(url);
+      const $ = cheerio.load(response.data);
+
+      // 테이블 행 추출
+      const rows = $("table.table-striped tbody tr");
+      console.log(`Found ${rows.length} invoice records`);
+
+      if (rows.length === 0) {
+        console.log("No invoice records found");
+        return [];
+      }
+
+      const invoices = [];
+
+      // 각 행에서 필요한 정보 추출
+      rows.each((index, element) => {
+        const $row = $(element);
+
+        // 날짜 추출
+        const dateText = $row.find("td:nth-child(1)").text().trim();
+        const date = this.extractDate(dateText);
+
+        // auc_num을 1로 고정 (크롤러 간의 식별자)
+        const auc_num = "1";
+
+        // 상태 추출
+        const statusText = $row.find("td:nth-child(6)").text().trim();
+        const status = statusText.includes("Paid") ? "paid" : "unpaid";
+
+        // 금액 추출
+        const amountText = $row.find("td:nth-child(5)").text().trim();
+        const amount = this.currencyToInt(amountText);
+
+        // 경매 ID 추출 (추가 정보로 유용할 수 있음)
+        const auctionIdMatch = $row
+          .find("[data-auction-id]")
+          .attr("data-auction-id");
+        const auction_id = auctionIdMatch || "";
+
+        // 링크 정보 추출 (추가 정보로 유용할 수 있음)
+        const invoiceLink = $row
+          .find('a[href*="/invoice-download/"]')
+          .attr("href");
+        const csvLink = $row
+          .find('a[href*="/invoice-download/"][href$="/csv"]')
+          .attr("href");
+
+        // 낙찰 항목 수 추출
+        const winCountText = $row.find("td:nth-child(3) a").text().trim();
+        const winCountMatch = winCountText.match(/(\d+)\s+items/);
+        const win_count = winCountMatch ? parseInt(winCountMatch[1], 10) : 0;
+
+        // 판매 항목 수 추출
+        const sellCountText = $row.find("td:nth-child(4) a").text().trim();
+        const sellCountMatch = sellCountText.match(/(\d+)\s+items/);
+        const sell_count = sellCountMatch ? parseInt(sellCountMatch[1], 10) : 0;
+
+        // 필수 필드만 포함한 객체 생성 (date, auc_num, status, amount)
+        invoices.push({
+          date,
+          auc_num,
+          status,
+          amount,
+          auction_id, // auction_id는 참조용으로 유지
+        });
+      });
+
+      console.log(`Successfully crawled ${invoices.length} invoices`);
+      return invoices;
+    } catch (error) {
+      console.error("Error crawling invoices:", error);
+      return [];
+    }
+  }
 }
 
 class EcoAucValueCrawler extends AxiosCrawler {

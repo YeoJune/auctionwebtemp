@@ -71,6 +71,7 @@ class DatabaseManager {
         "kaijoCd",
         "kaisaiKaisu",
       ],
+      invoices: ["date", "auc_num", "status", "amount"],
       // 필요한 다른 테이블들의 컬럼 정의를 여기에 추가할 수 있습니다
     };
 

@@ -420,4 +420,115 @@ router.put("/values/:itemId/price", isAdmin, async (req, res) => {
   }
 });
 
+// 인보이스 목록 조회
+router.get("/invoices", isAdmin, async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 20,
+      auc_num,
+      status,
+      startDate,
+      endDate,
+    } = req.query;
+
+    // 페이지와 제한 검증
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const offset = (pageNum - 1) * limitNum;
+
+    // 쿼리 매개변수
+    const queryParams = [];
+
+    // 기본 쿼리 구성
+    let query = `
+      SELECT 
+        id, 
+        date, 
+        auc_num, 
+        status, 
+        amount
+      FROM invoices
+      WHERE 1=1
+    `;
+
+    // 경매사 필터
+    if (auc_num) {
+      query += ` AND auc_num = ?`;
+      queryParams.push(auc_num);
+    }
+
+    // 상태 필터
+    if (status) {
+      query += ` AND status = ?`;
+      queryParams.push(status);
+    }
+
+    // 날짜 범위 필터
+    if (startDate) {
+      query += ` AND date >= ?`;
+      queryParams.push(startDate);
+    }
+
+    if (endDate) {
+      query += ` AND date <= ?`;
+      queryParams.push(endDate);
+    }
+
+    // 날짜순 정렬 (최신순)
+    query += ` ORDER BY date DESC`;
+
+    // 페이지네이션 추가
+    query += ` LIMIT ? OFFSET ?`;
+    queryParams.push(limitNum, offset);
+
+    // 총 레코드 수 쿼리
+    let countQuery = `
+      SELECT COUNT(*) as total
+      FROM invoices
+      WHERE 1=1
+    `;
+
+    // 동일한 필터 조건 적용
+    if (auc_num) {
+      countQuery += ` AND auc_num = ?`;
+    }
+    if (status) {
+      countQuery += ` AND status = ?`;
+    }
+    if (startDate) {
+      countQuery += ` AND date >= ?`;
+    }
+    if (endDate) {
+      countQuery += ` AND date <= ?`;
+    }
+
+    // 카운트 쿼리에 사용할 파라미터 (LIMIT, OFFSET 제외)
+    const countParams = queryParams.slice(0, queryParams.length - 2);
+
+    // DB 연결 및 쿼리 실행
+    const pool = require("../utils/DB");
+    const [rows] = await pool.query(query, queryParams);
+    const [countResult] = await pool.query(countQuery, countParams);
+
+    const total = countResult[0].total;
+    const totalPages = Math.ceil(total / limitNum);
+
+    res.json({
+      invoices: rows,
+      pagination: {
+        total,
+        totalPages,
+        currentPage: pageNum,
+        limit: limitNum,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching invoices:", error);
+    res
+      .status(500)
+      .json({ message: "인보이스 목록을 불러오는 중 오류가 발생했습니다." });
+  }
+});
+
 module.exports = router;

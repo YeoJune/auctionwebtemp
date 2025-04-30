@@ -416,6 +416,27 @@ async function syncUsers() {
   });
 }
 
+// 인보이스 목록 조회
+async function fetchInvoices(page = 1, limit = 20, filters = {}) {
+  const params = new URLSearchParams({
+    page,
+    limit,
+  });
+
+  // 필터 추가
+  if (filters.auc_num) params.append("auc_num", filters.auc_num);
+  if (filters.status) params.append("status", filters.status);
+  if (filters.startDate) params.append("startDate", filters.startDate);
+  if (filters.endDate) params.append("endDate", filters.endDate);
+
+  return fetchAPI(`/admin/invoices?${params.toString()}`);
+}
+
+// 인보이스 크롤링 실행
+async function crawlInvoices() {
+  return fetchAPI("/crawler/crawl-invoices", { method: "GET" });
+}
+
 // ---- 유틸리티 함수 ----
 
 // 통화 포맷 함수
