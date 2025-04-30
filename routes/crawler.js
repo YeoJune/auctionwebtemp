@@ -95,14 +95,39 @@ async function crawlAll() {
   }
 }
 
-async function crawlAllValues() {
+async function crawlAllValues(options = {}) {
+  const { aucNums = [], months = [] } = options;
+
+  // 선택된 크롤러가 없으면 모두 실행
+  const runAll = aucNums.length === 0;
+
+  // 각 크롤러 실행 여부 결정
+  const runEcoAuc = runAll || aucNums.includes(1);
+  const runBrandAuc = runAll || aucNums.includes(2);
+  const runStarAuc = runAll || aucNums.includes(3);
+
+  // 각 크롤러별 개월 수 매핑 (기본값: 3개월)
+  const monthsMap = {
+    1: 3, // EcoAuc
+    2: 3, // BrandAuc
+    3: 3, // StarAuc
+  };
+
+  // 입력받은 months 배열이 있으면, aucNums와 매핑하여 설정
+  if (aucNums.length > 0 && months.length > 0) {
+    for (let i = 0; i < Math.min(aucNums.length, months.length); i++) {
+      monthsMap[aucNums[i]] = months[i];
+    }
+  }
+
   if (isValueCrawling) {
-    throw new Error("already crawling");
+    throw new Error("Value crawling already in progress");
   } else {
     try {
       const [existingItems] = await pool.query(
         "SELECT item_id, auc_num FROM values_items"
       );
+
       const existingEcoAucIds = new Set(
         existingItems
           .filter((item) => item.auc_num == 1)
@@ -120,26 +145,87 @@ async function crawlAllValues() {
       );
 
       isValueCrawling = true;
+      console.log("Starting value crawling with options:", {
+        aucNums: aucNums.length > 0 ? aucNums : "all",
+        months: monthsMap,
+        runEcoAuc,
+        runBrandAuc,
+        runStarAuc,
+      });
 
-      let ecoAucItems = await ecoAucValueCrawler.crawlAllItems(
-        existingEcoAucIds
-      );
-      let brandAucItems = await brandAucValueCrawler.crawlAllItems(
-        existingBrandAuctionIds
-      );
-      let starAucItems = await starAucValueCrawler.crawlAllItems(
-        existingStarAucIds
+      // 병렬 처리를 위한 프로미스 배열
+      const crawlPromises = [];
+      const crawlResults = {
+        ecoAucItems: [],
+        brandAucItems: [],
+        starAucItems: [],
+      };
+
+      // 각 크롤러 조건부 실행
+      if (runEcoAuc) {
+        console.log(`Running EcoAuc value crawler for ${monthsMap[1]} months`);
+        const ecoPromise = ecoAucValueCrawler
+          .crawlAllItems(existingEcoAucIds, monthsMap[1])
+          .then((items) => {
+            crawlResults.ecoAucItems = items || [];
+          });
+        crawlPromises.push(ecoPromise);
+      }
+
+      if (runBrandAuc) {
+        console.log(
+          `Running BrandAuc value crawler for ${monthsMap[2]} months`
+        );
+        const brandPromise = brandAucValueCrawler
+          .crawlAllItems(existingBrandAuctionIds, monthsMap[2])
+          .then((items) => {
+            crawlResults.brandAucItems = items || [];
+          });
+        crawlPromises.push(brandPromise);
+      }
+
+      if (runStarAuc) {
+        console.log(`Running StarAuc value crawler for ${monthsMap[3]} months`);
+        const starPromise = starAucValueCrawler
+          .crawlAllItems(existingStarAucIds, monthsMap[3])
+          .then((items) => {
+            crawlResults.starAucItems = items || [];
+          });
+        crawlPromises.push(starPromise);
+      }
+
+      // 모든 크롤링 병렬 실행 및 완료 대기
+      await Promise.all(crawlPromises);
+
+      // 결과 집계
+      const allItems = [
+        ...crawlResults.ecoAucItems,
+        ...crawlResults.brandAucItems,
+        ...crawlResults.starAucItems,
+      ];
+
+      console.log(
+        `Value crawling completed. Total items found: ${allItems.length}`
       );
 
-      if (!ecoAucItems) ecoAucItems = [];
-      if (!brandAucItems) brandAucItems = [];
-      if (!starAucItems) starAucItems = [];
-
-      const allItems = [...ecoAucItems, ...brandAucItems, ...starAucItems];
+      // DB에 저장
       await DBManager.saveItems(allItems, "values_items");
-      await DBManager.cleanupOldValueItems(90);
-      // await DBManager.cleanupUnusedImages();
+      await DBManager.cleanupOldValueItems(365);
+
+      return {
+        settings: {
+          aucNums: aucNums.length > 0 ? aucNums : [1, 2, 3],
+          months: monthsMap,
+        },
+        results: {
+          ecoAucCount: crawlResults.ecoAucItems.length,
+          brandAucCount: crawlResults.brandAucItems.length,
+          starAucCount: crawlResults.starAucItems.length,
+          totalCount: allItems.length,
+        },
+      };
     } catch (error) {
+      console.error("Value crawling failed:", error);
       throw error;
     } finally {
       isValueCrawling = false;
@@ -236,14 +322,31 @@ router.get("/crawl", isAdmin, async (req, res) => {
 
 router.get("/crawl-values", isAdmin, async (req, res) => {
   try {
-    await crawlAllValues();
+    // auc_num 파라미터 파싱 (auc_num=1,2,3 형태로 받음)
+    const aucNums = req.query.auc_num
+      ? req.query.auc_num.split(",").map((num) => parseInt(num.trim()))
+      : [];
+
+    // months 파라미터 파싱 (months=3,6,12 형태로 받음)
+    const monthsInput = req.query.months
+      ? req.query.months.split(",").map((m) => parseInt(m.trim()))
+      : [];
+
+    // 결과 및 실행 정보
+    const result = await crawlAllValues({
+      aucNums,
+      months: monthsInput,
+    });
 
     res.json({
-      message: "Crawling and image processing completed successfully",
+      message: "Value crawling completed successfully",
+      result,
     });
   } catch (error) {
-    console.error("Crawling error:", error);
-    res.status(500).json({ message: "Error during crawling" });
+    console.error("Value crawling error:", error);
+    res
+      .status(500)
+      .json({ message: "Error during value crawling", error: error.message });
   }
 });
 

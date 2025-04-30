@@ -100,14 +100,14 @@ const starAucValueConfig = {
     accessories: ".p-def-list dt:contains('Accessories') + dd",
     scriptData: "script:contains(window.item_data)",
   },
-  searchParams: (categoryId, page) => {
-    // 현재 날짜에서 1년 전 날짜 계산
+  searchParams: (categoryId, page, months = 3) => {
+    // 현재 날짜 기준으로 지정된 개월 수 만큼 이전 날짜 계산
     const today = new Date();
-    const oneYearAgo = new Date();
-    oneYearAgo.setFullYear(today.getFullYear() - 1);
+    const pastDate = new Date();
+    pastDate.setMonth(today.getMonth() - months);
 
     // YYYY-MM-DD 형식으로 변환
-    const fromDate = oneYearAgo.toISOString().split("T")[0];
+    const fromDate = pastDate.toISOString().split("T")[0];
 
     return `?sort=exhibit_date&direction=desc&limit=100&item_category=${categoryId}&page=${page}&exhibit_date_from=${fromDate}`;
   },
@@ -760,10 +760,10 @@ class StarAucValueCrawler extends AxiosCrawler {
     return null;
   }
 
-  async getTotalPages(categoryId) {
+  async getTotalPages(categoryId, months = 3) {
     return this.retryOperation(async () => {
       const url =
-        this.config.searchUrl + this.config.searchParams(categoryId, 1);
+        this.config.searchUrl + this.config.searchParams(categoryId, 1, months);
 
       const response = await this.client.get(url);
       const $ = cheerio.load(response.data);
@@ -789,11 +789,12 @@ class StarAucValueCrawler extends AxiosCrawler {
     });
   }
 
-  async crawlPage(categoryId, page, existingIds = new Set()) {
+  async crawlPage(categoryId, page, existingIds = new Set(), months = 3) {
     return this.retryOperation(async () => {
       console.log(`Crawling page ${page} in category ${categoryId}...`);
       const url =
-        this.config.searchUrl + this.config.searchParams(categoryId, page);
+        this.config.searchUrl +
+        this.config.searchParams(categoryId, page, months);
 
       const response = await this.client.get(url);
       const $ = cheerio.load(response.data);
@@ -976,10 +977,11 @@ class StarAucValueCrawler extends AxiosCrawler {
     });
   }
 
-  async crawlAllItems(existingIds = new Set()) {
+  async crawlAllItems(existingIds = new Set(), months = 3) {
     try {
       const startTime = Date.now();
       console.log(`Starting StarAucValue crawl at ${new Date().toISOString()}`);
+      console.log(`Crawling data for the last ${months} months`);
 
       // 로그인
       await this.login();
@@ -993,12 +995,17 @@ class StarAucValueCrawler extends AxiosCrawler {
         console.log(`Starting crawl for category ${categoryId}`);
         this.config.currentCategoryId = categoryId;
 
-        const totalPages = await this.getTotalPages(categoryId);
+        const totalPages = await this.getTotalPages(categoryId, months);
         console.log(`Total pages in category ${categoryId}: ${totalPages}`);
 
         // 모든 페이지 크롤링
         for (let page = 1; page <= totalPages; page++) {
-          const pageItems = await this.crawlPage(categoryId, page, existingIds);
+          const pageItems = await this.crawlPage(
+            categoryId,
+            page,
+            existingIds,
+            months
+          );
           categoryItems.push(...pageItems);
         }
 

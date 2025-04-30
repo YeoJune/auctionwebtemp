@@ -112,6 +112,88 @@
               <button id="productCrawlBtn" class="btn">상품 크롤링</button>
               <button id="valueCrawlBtn" class="btn">시세표 크롤링</button>
             </div>
+
+            <!-- 시세표 크롤링 옵션 UI -->
+            <div
+              class="value-crawl-options mt-3"
+              style="display: none"
+              id="valueCrawlOptions">
+              <div class="form-group">
+                <label>크롤링할 경매 선택:</label>
+                <div class="checkbox-group">
+                  <label class="checkbox-label">
+                    <input
+                      type="checkbox"
+                      value="1"
+                      class="auc-checkbox"
+                      checked />
+                    EcoAuc
+                  </label>
+                  <label class="checkbox-label">
+                    <input
+                      type="checkbox"
+                      value="2"
+                      class="auc-checkbox"
+                      checked />
+                    BrandAuc
+                  </label>
+                  <label class="checkbox-label">
+                    <input
+                      type="checkbox"
+                      value="3"
+                      class="auc-checkbox"
+                      checked />
+                    StarAuc
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-group mt-2">
+                <label>크롤링 기간 (개월):</label>
+                <div class="months-input-group">
+                  <div class="month-input">
+                    <label>EcoAuc:</label>
+                    <input
+                      type="number"
+                      id="ecoAucMonths"
+                      min="1"
+                      max="24"
+                      value="3"
+                      class="form-control" />
+                  </div>
+                  <div class="month-input">
+                    <label>BrandAuc:</label>
+                    <input
+                      type="number"
+                      id="brandAucMonths"
+                      min="1"
+                      max="24"
+                      value="3"
+                      class="form-control" />
+                  </div>
+                  <div class="month-input">
+                    <label>StarAuc:</label>
+                    <input
+                      type="number"
+                      id="starAucMonths"
+                      min="1"
+                      max="24"
+                      value="3"
+                      class="form-control" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-2">
+                <button id="startValueCrawlBtn" class="btn btn-primary">
+                  시세표 크롤링 시작
+                </button>
+                <button id="cancelValueCrawlBtn" class="btn btn-secondary">
+                  취소
+                </button>
+              </div>
+            </div>
+
             <div class="status-text" id="crawlStatus"></div>
           </div>
         </div>

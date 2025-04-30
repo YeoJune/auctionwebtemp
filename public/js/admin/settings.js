@@ -33,7 +33,7 @@ document.addEventListener("DOMContentLoaded", function () {
     .addEventListener("click", startProductCrawl);
   document
     .getElementById("valueCrawlBtn")
-    .addEventListener("click", startValueCrawl);
+    .addEventListener("click", showValueCrawlOptions); // modified: now shows value crawl options
   document
     .getElementById("uploadLogoBtn")
     .addEventListener("click", uploadLogo);
@@ -60,6 +60,9 @@ document.addEventListener("DOMContentLoaded", function () {
   document
     .getElementById("removeImageBtn")
     .addEventListener("click", removeImage);
+
+  // 시세표 크롤링 UI 관련 이벤트 리스너 추가
+  setupValueCrawlUI();
 });
 
 // ----- 메트릭스 관리 -----
@@ -221,17 +224,47 @@ async function startProductCrawl() {
   }
 }
 
-// 시세표 크롤링 시작
+// Show the UI for value crawl options.
+function showValueCrawlOptions() {
+  document.getElementById("valueCrawlOptions").style.display = "block";
+}
+
+// Hide the UI for value crawl options.
+function hideValueCrawlOptions() {
+  document.getElementById("valueCrawlOptions").style.display = "none";
+}
+
+// Modified startValueCrawl: collects selected auctions and months.
 async function startValueCrawl() {
   if (isCrawlingProduct || isCrawlingValue) return;
+
+  const selectedAucNums = [];
+  const selectedMonths = [];
+
+  document.querySelectorAll(".auc-checkbox:checked").forEach((checkbox) => {
+    const aucId = checkbox.value;
+    selectedAucNums.push(parseInt(aucId));
+
+    const monthsInput = document.getElementById(getMonthsInputId(aucId));
+    selectedMonths.push(parseInt(monthsInput.value) || 3);
+  });
+
+  if (selectedAucNums.length === 0) {
+    showAlert("크롤링할 경매를 하나 이상 선택해주세요.");
+    return;
+  }
 
   try {
     isCrawlingValue = true;
     updateCrawlingUI();
+    hideValueCrawlOptions();
 
-    await startValueCrawling(); // API 함수 호출
+    // Construct URL parameters with selected auction ids and months.
+    const params = new URLSearchParams();
+    params.append("auc_num", selectedAucNums.join(","));
+    params.append("months", selectedMonths.join(","));
 
-    // 크롤링이 시작되면 주기적으로 상태 체크
+    await startValueCrawling(params.toString()); // API 함수 호출 with params
     startStatusCheck();
   } catch (error) {
     console.error("시세표 크롤링 시작 중 오류:", error);

@@ -811,10 +811,11 @@ class BrandAucValueCrawler extends AxiosCrawler {
     return this.loginPromise;
   }
 
-  async crawlAllItems(existingIds = new Set()) {
+  async crawlAllItems(existingIds = new Set(), months = 3) {
     try {
       const startTime = Date.now();
       console.log(`Starting value crawl at ${new Date().toISOString()}`);
+      console.log(`Crawling data for the last ${months} months`);
 
       // 로그인
       await this.login();
@@ -822,17 +823,49 @@ class BrandAucValueCrawler extends AxiosCrawler {
       const allCrawledItems = [];
       const size = 1000; // 한 페이지당 항목 수 (API 제한에 따라 조정)
 
-      // 최근 경매 회차 설정
-      const kaisaiKaisuFrom = 0; // 지난 10회 경매 데이터
-      const kaisaiKaisuTo = 808; // 현재 경매 회차
+      // 최근 경매 회차 정보 가져오기
+      const auctionInfoResponse = await this.client.get(
+        "https://e-auc.brand-auc.com/api/v1/marketprice/marketpriceItems/searchHeaders/kakoKaisaiInfo",
+        {
+          headers: {
+            Accept: "application/json, text/plain, */*",
+            Referer: "https://e-auc.brand-auc.com/",
+            "X-Requested-With": "XMLHttpRequest",
+          },
+        }
+      );
+
+      const auctionInfoList = auctionInfoResponse.data || [];
+
+      if (auctionInfoList.length === 0) {
+        throw new Error("Failed to get auction info");
+      }
+
+      // 최신 회차 (맨 위에 있는 항목)
+      const latestAuction = auctionInfoList[0];
+      const latestKaisaiKaisu = latestAuction.kaisaiKaisu;
+
+      // month를 회차로 변환 (1달 = 약 4회차, 7일 * 4 = 28일)
+      const kaisaiCountForMonths = Math.ceil(months * 4);
+
+      // months 개월 전의 회차 계산
+      const kaisaiKaisuFrom = Math.max(
+        latestKaisaiKaisu - kaisaiCountForMonths,
+        0
+      );
+      const kaisaiKaisuTo = latestKaisaiKaisu;
+
+      console.log(
+        `Crawling auction rounds from ${kaisaiKaisuFrom} to ${kaisaiKaisuTo}`
+      );
 
       // 첫 페이지 요청으로 총 페이지 수 확인
       const firstPageResponse = await this.client.get(
         this.config.marketPriceApiUrl,
         {
           params: {
-            // kaisaiKaisuFrom: kaisaiKaisuFrom,
-            // kaisaiKaisuTo: kaisaiKaisuTo,
+            kaisaiKaisuFrom: kaisaiKaisuFrom,
+            kaisaiKaisuTo: kaisaiKaisuTo,
             pageNumber: 0,
             page: 0,
             size: size,
@@ -856,18 +889,14 @@ class BrandAucValueCrawler extends AxiosCrawler {
       );
       allCrawledItems.push(...firstPageItems);
 
-      let isEnd = false;
-
-      console.log(allCrawledItems[0]);
-
       // 나머지 페이지 순차적으로 처리
       for (let page = 1; page < totalPages; page++) {
         console.log(`Crawling value page ${page + 1} of ${totalPages}`);
 
         const response = await this.client.get(this.config.marketPriceApiUrl, {
           params: {
-            // kaisaiKaisuFrom: kaisaiKaisuFrom,
-            // kaisaiKaisuTo: kaisaiKaisuTo,
+            kaisaiKaisuFrom: kaisaiKaisuFrom,
+            kaisaiKaisuTo: kaisaiKaisuTo,
             page: page,
             size: size,
             getKbn: 3,
@@ -887,24 +916,11 @@ class BrandAucValueCrawler extends AxiosCrawler {
             existingIds
           );
 
-          // 영어 제목이 없는 아이템이 있으면 더 이상 크롤링 안함
-          // for (const item of pageItems) {
-          //   if (item.item_id && !item.title) {
-          //     isEnd = true;
-          //     break;
-          //   }
-          // }
-
           allCrawledItems.push(...pageItems);
 
           console.log(
             `Processed ${pageItems.length} value items from page ${page + 1}`
           );
-
-          if (isEnd) {
-            console.log("Found items without English titles, stopping crawl");
-            break;
-          }
         }
       }
 

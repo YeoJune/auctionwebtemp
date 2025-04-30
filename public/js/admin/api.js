@@ -294,8 +294,11 @@ async function startProductCrawling() {
 }
 
 // 시세표 크롤링 시작
-async function startValueCrawling() {
-  return fetchAPI("/crawler/crawl-values", { method: "GET" });
+async function startValueCrawling(queryParams = "") {
+  return fetchAPI(
+    `/crawler/crawl-values${queryParams ? "?" + queryParams : ""}`,
+    { method: "GET" }
+  );
 }
 
 // 크롤링 스케줄 설정

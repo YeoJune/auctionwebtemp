@@ -103,10 +103,15 @@ const ecoAucValueConfig = {
     description: ".item-info.view-form",
     binder: ".col-md-8.col-lg-7 .dl-horizontal",
   },
-  searchParams: (categoryId, page) => {
-    const date = new Date();
-    return `?limit=200&sortKey=1&tableType=grid&master_item_categories[0]=${categoryId}&page=${page}&target_start_year=2024&target_start_month=1&target_end_year=${date.getFullYear()}&target_end_month=${
-      date.getMonth() + 1
+  searchParams: (categoryId, page, months = 3) => {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - months);
+
+    return `?limit=200&sortKey=1&tableType=grid&master_item_categories[0]=${categoryId}&page=${page}&target_start_year=${startDate.getFullYear()}&target_start_month=${
+      startDate.getMonth() + 1
+    }&target_end_year=${endDate.getFullYear()}&target_end_month=${
+      endDate.getMonth() + 1
     }&`;
   },
   detailUrl: (itemId) =>
@@ -865,11 +870,11 @@ class EcoAucValueCrawler extends AxiosCrawler {
     return this.loginPromise;
   }
 
-  async getTotalPages(categoryId) {
+  async getTotalPages(categoryId, months = 3) {
     return this.retryOperation(async () => {
       console.log(`Getting total pages for category ${categoryId}...`);
       const url =
-        this.config.searchUrl + this.config.searchParams(categoryId, 1);
+        this.config.searchUrl + this.config.searchParams(categoryId, 1, months);
 
       const response = await this.client.get(url);
       const $ = cheerio.load(response.data);
@@ -893,10 +898,11 @@ class EcoAucValueCrawler extends AxiosCrawler {
     });
   }
 
-  async crawlAllItems(existingIds = new Set()) {
+  async crawlAllItems(existingIds = new Set(), months = 3) {
     try {
       const startTime = Date.now();
       console.log(`Starting value crawl at ${new Date().toISOString()}`);
+      console.log(`Crawling data for the last ${months} months`);
 
       // 로그인
       await this.login();
@@ -910,13 +916,18 @@ class EcoAucValueCrawler extends AxiosCrawler {
         console.log(`Starting crawl for category ${categoryId}`);
         this.config.currentCategoryId = categoryId;
 
-        const totalPages = await this.getTotalPages(categoryId);
+        const totalPages = await this.getTotalPages(categoryId, months);
         console.log(`Total pages in category ${categoryId}: ${totalPages}`);
 
         let isEnd = false;
         // 모든 페이지 크롤링
         for (let page = 1; page <= totalPages; page++) {
-          const pageItems = await this.crawlPage(categoryId, page, existingIds);
+          const pageItems = await this.crawlPage(
+            categoryId,
+            page,
+            existingIds,
+            months
+          );
 
           categoryItems.push(...pageItems);
           if (isEnd) break;
@@ -954,11 +965,12 @@ class EcoAucValueCrawler extends AxiosCrawler {
     }
   }
 
-  async crawlPage(categoryId, page, existingIds = new Set()) {
+  async crawlPage(categoryId, page, existingIds = new Set(), months = 3) {
     return this.retryOperation(async () => {
       console.log(`Crawling page ${page} in category ${categoryId}...`);
       const url =
-        this.config.searchUrl + this.config.searchParams(categoryId, page);
+        this.config.searchUrl +
+        this.config.searchParams(categoryId, page, months);
 
       const response = await this.client.get(url);
       const $ = cheerio.load(response.data);
