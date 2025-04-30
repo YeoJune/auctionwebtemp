@@ -381,6 +381,63 @@
         .commission-table tr:last-child td {
             border-bottom: none;
         }
+        /* 추가된 스타일 */
+        
+        .auction-type-box {
+            background: #F0F9FF;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+            border-left: 4px solid #0EA5E9;
+        }
+        
+        .color-indicator {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        
+        .color-blue {
+            background-color: #1E40AF;
+        }
+        
+        .color-green {
+            background-color: #10B981;
+        }
+        
+        .steps-container {
+            margin: 16px 0;
+            padding: 16px;
+            background: #F8FAFC;
+            border-radius: 8px;
+        }
+        
+        .step-item {
+            display: flex;
+            margin-bottom: 16px;
+            align-items: flex-start;
+        }
+        
+        .step-number {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #1E3A8A;
+            color: white;
+            font-weight: bold;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+        
+        .step-content {
+            flex: 1;
+        }
         /* 이미지 모달 스타일 추가 */
         
         .modal {
@@ -546,72 +603,72 @@
 <body>
     
     <div class="container">
-    <header class="main-header">
-        <div class="header-content">
-          <div class="logo-container">
-            <img
-              src="images/logo.png"
-              alt="Logo"
-              onclick="location.href = '/productPage'" />
-          </div>
-          <button class="mobile-menu-toggle">
-            <i class="fas fa-bars"></i>
-          </button>
-          <div class="nav-container">
-            <button
-              class="nav-button"
-              id="productListBtn"
-              onclick="location.href = '/productPage'">
-              <i class="fas fa-list"></i>
-              <span>상품 리스트</span>
-            </button>
-            <button
-              class="nav-button"
-              id="bidProductsBtn"
-              onclick="window.location.href = '/bidProductsPage'">
-              <i class="fas fa-gavel"></i>
-              <span>입찰 항목</span>
-            </button>
-            <button
-              class="nav-button"
-              id="bidResultsBtn"
-              onclick="window.location.href = '/bidResultsPage'">
-              <i class="fas fa-clipboard-check"></i>
-              <span>입찰 결과</span>
-            </button>
-            <button
-              class="nav-button"
-              onclick="window.location.href = '/valuesPage'">
-              <i class="fas fa-chart-line"></i>
-              <span>낙찰 시세표</span>
-            </button>
-            <button
-              class="nav-button"
-              onclick="window.open('http://pf.kakao.com/_xcCxoqn/chat', '_blank')">
-              <i class="fas fa-comments"></i>
-              <span>실시간 문의</span>
-            </button>
-            <button
-              class="nav-button "
-              onclick="window.location.href = '/inquiryPage'">
-              <i class="fas fa-user-plus"></i>
-              <span>입점신청</span>
-            </button>
-            <button
-              class="nav-button active"
-              onclick="window.location.href = '/guidePage'">
-              <i class="fas fa-book"></i>
-              <span>이용가이드</span>
-            </button>
-          </div>
-          <div class="auth-container">
-            <button id="signinBtn" class="auth-button">로그인</button>
-            <button id="signoutBtn" class="auth-button" style="display: none">
-              로그아웃
-            </button>
-          </div>
-        </div>
-      </header>
+        <header class="main-header">
+            <div class="header-content">
+              <div class="logo-container">
+                <img
+                  src="images/logo.png"
+                  alt="Logo"
+                  onclick="location.href = '/productPage'" />
+              </div>
+              <button class="mobile-menu-toggle">
+                <i class="fas fa-bars"></i>
+              </button>
+              <div class="nav-container">
+                <button
+                  class="nav-button"
+                  id="productListBtn"
+                  onclick="location.href = '/productPage'">
+                  <i class="fas fa-list"></i>
+                  <span>상품 리스트</span>
+                </button>
+                <button
+                  class="nav-button"
+                  id="bidProductsBtn"
+                  onclick="window.location.href = '/bidProductsPage'">
+                  <i class="fas fa-gavel"></i>
+                  <span>입찰 항목</span>
+                </button>
+                <button
+                  class="nav-button"
+                  id="bidResultsBtn"
+                  onclick="window.location.href = '/bidResultsPage'">
+                  <i class="fas fa-clipboard-check"></i>
+                  <span>입찰 결과</span>
+                </button>
+                <button
+                  class="nav-button"
+                  onclick="window.location.href = '/valuesPage'">
+                  <i class="fas fa-chart-line"></i>
+                  <span>낙찰 시세표</span>
+                </button>
+                <button
+                  class="nav-button"
+                  onclick="window.open('http://pf.kakao.com/_xcCxoqn/chat', '_blank')">
+                  <i class="fas fa-comments"></i>
+                  <span>실시간 문의</span>
+                </button>
+                <button
+                  class="nav-button "
+                  onclick="window.location.href = '/inquiryPage'">
+                  <i class="fas fa-user-plus"></i>
+                  <span>입점신청</span>
+                </button>
+                <button
+                  class="nav-button active"
+                  onclick="window.location.href = '/guidePage'">
+                  <i class="fas fa-book"></i>
+                  <span>이용가이드</span>
+                </button>
+              </div>
+              <div class="auth-container">
+                <button id="signinBtn" class="auth-button">로그인</button>
+                <button id="signoutBtn" class="auth-button" style="display: none">
+                  로그아웃
+                </button>
+              </div>
+            </div>
+          </header>
     <!-- 이용 가이드 섹션 -->
     <section class="section" id="guide">
         <div class="section-container">
@@ -761,23 +818,63 @@
                                 <li>
                                     <strong>까사트레이드는 두 가지 경매 방식을 제공합니다.<br>경매는 보증금 한도 내에서 입찰 가능합니다.</strong>
 
-                                    <div class="pricing-grid" style="margin-top: 20px;">
-                                        <div class="pricing-card">
-                                            <h3 class="pricing-title">현장경매 (협상 경매)</h3>
-                                            <p style="text-align: center; margin-bottom: 16px;">전문 경매사가 현지에서 대신 입찰하는 방식</p>
-                                            <ul class="service-list">
-                                                <li>전문 경매사와 협상 후 진행</li>
-                                                <li>3단계 입찰 과정</li>
-                                                <li>경매사가 다음날 현장경매 참여</li>
-                                            </ul>
-                                            <div class="image-container">
-                                                <img src="https://i.ibb.co/LW7zzyN/image.jpg" alt="현장경매 절차">
-                                                <p>현장경매 절차</p>
-                                            </div>
-                                        </div>
+                                    <div class="auction-type-box">
+                                        <h4 style="margin-bottom: 12px; font-size: 18px;">경매 유형 구분 방법</h4>
+                                        <p style="margin-bottom: 10px;"><span class="color-indicator color-green"></span> <strong>초록색</strong> - 직접경매 (마감 경매)</p>
+                                        <p><span class="color-indicator color-blue"></span> <strong>파란색</strong> - 현장경매 (협상 경매)</p>
+                                    </div>
 
-                                        <div class="pricing-card">
-                                            <h3 class="pricing-title">직접경매 (마감 경매)</h3>
+                                    <style>
+                                        .details-toggle {
+                                            background-color: #10B981;
+                                            color: white;
+                                            border: none;
+                                            padding: 8px 16px;
+                                            border-radius: 6px;
+                                            cursor: pointer;
+                                            font-weight: 500;
+                                            margin-top: 15px;
+                                            display: inline-block;
+                                            transition: all 0.3s ease;
+                                        }
+                                        
+                                        .details-toggle:hover {
+                                            background-color: #059669;
+                                        }
+                                        
+                                        .details-toggle.blue {
+                                            background-color: #1E3A8A;
+                                        }
+                                        
+                                        .details-toggle.blue:hover {
+                                            background-color: #2563EB;
+                                        }
+                                        
+                                        .auction-details {
+                                            display: none;
+                                            margin-top: 20px;
+                                            padding-top: 10px;
+                                            border-top: 1px dashed #E5E7EB;
+                                        }
+                                        
+                                        .auction-details.show {
+                                            display: block;
+                                            animation: fadeIn 0.5s;
+                                        }
+                                        
+                                        @keyframes fadeIn {
+                                            from {
+                                                opacity: 0;
+                                            }
+                                            to {
+                                                opacity: 1;
+                                            }
+                                        }
+                                    </style>
+
+                                    <div class="pricing-grid" style="margin-top: 20px;">
+                                        <div class="pricing-card" style="border-left: 4px solid #10B981;">
+                                            <h3 class="pricing-title" style="color: #10B981;">직접경매 (마감 경매)</h3>
                                             <p style="text-align: center; margin-bottom: 16px;">회원님이 온라인으로 직접 참여하는 방식</p>
                                             <ul class="service-list">
                                                 <li>표기된 마감시간까지 입찰가능</li>
@@ -785,15 +882,91 @@
                                                 <li>최고 입찰자가 낙찰자로 결정</li>
                                                 <li>실시간 금액 확인하며 추가 입찰가능</li>
                                             </ul>
-                                            <div class="image-container">
-                                                <img src="https://i.ibb.co/WNrxxyJx/image.jpg" alt="마감 경매 절차">
-                                                <p>마감 경매 절차</p>
+
+                                            <button class="details-toggle" onclick="toggleDetails('direct-details')">자세히 보기</button>
+
+                                            <div id="direct-details" class="auction-details">
+                                                <h4 style="margin-bottom: 16px; color: #10B981;">직접경매 상세 안내</h4>
+
+                                                <div class="step-item">
+                                                    <div class="step-number">1</div>
+                                                    <div class="step-content">
+                                                        <p>직접경매 마감 시간: 보통 오후 6~7시에 마감됩니다.</p>
+                                                    </div>
+                                                </div>
+
+                                                <div class="step-item">
+                                                    <div class="step-number">2</div>
+                                                    <div class="step-content">
+                                                        <p>직접경매 요일: 월, 수, 금요일에 가장 많이 진행됩니다.</p>
+                                                    </div>
+                                                </div>
+
+                                                <div class="step-item">
+                                                    <div class="step-number">3</div>
+                                                    <div class="step-content">
+                                                        <p>마감 시간과 날짜는 각 제품 상세 페이지 상단에서 확인할 수 있습니다.</p>
+                                                    </div>
+                                                </div>
+
+                                                <div class="step-item">
+                                                    <div class="step-number">4</div>
+                                                    <div class="step-content">
+                                                        <p>하루 전부터 경매 상품 목록이 업데이트되므로, 관심 있는 상품은 미리 즐겨찾기에 추가해두시는 것이 좋습니다.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="pricing-card" style="border-left: 4px solid #1E3A8A;">
+                                            <h3 class="pricing-title" style="color: #1E3A8A;">현장경매 (협상 경매)</h3>
+                                            <p style="text-align: center; margin-bottom: 16px;">전문 경매사가 현지에서 대신 입찰하는 방식</p>
+                                            <ul class="service-list">
+                                                <li>전문 경매사와 협상 후 진행</li>
+                                                <li>3단계 입찰 과정</li>
+                                                <li>경매사가 다음날 현장경매 참여</li>
+                                            </ul>
+
+                                            <button class="details-toggle blue" onclick="toggleDetails('onsite-details')">자세히 보기</button>
+
+                                            <div id="onsite-details" class="auction-details">
+                                                <h4 style="margin-bottom: 16px; color: #1E3A8A;">현장경매 상세 입찰 과정</h4>
+
+                                                <div class="step-item">
+                                                    <div class="step-number">1</div>
+                                                    <div class="step-content">
+                                                        <p>회원님이 시스템을 통해 1차 입찰가를 제시합니다.</p>
+                                                    </div>
+                                                </div>
+
+                                                <div class="step-item">
+                                                    <div class="step-number">2</div>
+                                                    <div class="step-content">
+                                                        <p>경매사가 2차 제안가를 알려드립니다. (카카오톡 채널에 2차 제안가 요청 시 영업시간 10시~18시 내 1~2시간 안에 처리)</p>
+                                                    </div>
+                                                </div>
+
+                                                <div class="step-item">
+                                                    <div class="step-number">3</div>
+                                                    <div class="step-content">
+                                                        <p>회원님이 3차로 최종 입찰가를 결정하면 경매사가 다음날 현장에서 대리 입찰합니다.</p>
+                                                    </div>
+                                                </div>
+
+                                                <div class="step-item">
+                                                    <div class="step-number">4</div>
+                                                    <div class="step-content">
+                                                        <p>낙찰 방식: 경매사는 한 단계씩 올라가며 입찰합니다. (예: 최종 입찰가를 100,000엔으로 결정하셨고 다른 입찰자의 최고가가 80,000엔이라면, 경매사는 81,000엔으로 입찰하여 낙찰받습니다)</p>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </li>
                             </ul>
                             <div class="guide-tip">
+                                <div class="tip-icon">💡</div>
+                                <p>TIP: 경매에 참여하기 전 경매 유형을 반드시 확인하세요. 초록색은 직접경매, 파란색은 현장경매를 의미합니다.</p>
                             </div>
                         </div>
                     </div>
@@ -960,6 +1133,26 @@
                         <p>제품이 가품으로 판명될 경우 전액 환불 가능합니다. 보증금은 계약 종료 후 추가 배송비 청구 후 14일 이내에 환불됩니다.</p>
                     </div>
                 </div>
+
+                <div class="faq-item">
+                    <button class="faq-question">
+                        <h3>직접경매와 현장경매는 어떻게 구분하나요?</h3>
+                        <span class="toggle-icon">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>제품 표시 색상으로 구분할 수 있습니다. 파란색은 현장경매(협상 경매), 초록색은 직접경매(마감 경매)를 의미합니다. 각 제품 상단에 "현장" 또는 "직접"이라는 표시도 함께 확인하실 수 있습니다.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item">
+                    <button class="faq-question">
+                        <h3>직접경매는 언제 마감되나요?</h3>
+                        <span class="toggle-icon">+</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>직접경매는 제품 상단에 표시된 마감시간까지 진행됩니다. 일반적으로 오후 6~7시에 마감되며, 주로 월요일, 수요일, 금요일에 많이 진행됩니다. 정확한 마감시간은 각 제품 페이지에서 확인하실 수 있습니다.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -970,7 +1163,6 @@
             <button class="close-button" onclick="closeModal()">&times;</button>
             <img id="modalImage" class="modal-image" src="" alt="확대된 이미지">
         </div>
-    </div>
     </div>
 
     <script>
@@ -1082,6 +1274,20 @@
                         behavior: 'smooth'
                     });
                 }
+            }
+        }
+
+        // 자세히 보기 토글 기능
+        function toggleDetails(detailsId) {
+            const detailsElement = document.getElementById(detailsId);
+            const button = event.target;
+
+            if (detailsElement.classList.contains('show')) {
+                detailsElement.classList.remove('show');
+                button.textContent = '자세히 보기';
+            } else {
+                detailsElement.classList.add('show');
+                button.textContent = '접기';
             }
         }
     </script>
