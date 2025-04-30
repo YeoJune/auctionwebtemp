@@ -121,9 +121,15 @@ async function crawlAllValues() {
 
       isValueCrawling = true;
 
-      let ecoAucItems = await ecoAucValueCrawler.crawlAllItems();
-      let brandAucItems = await brandAucValueCrawler.crawlAllItems();
-      let starAucItems = await starAucValueCrawler.crawlAllItems();
+      let ecoAucItems = await ecoAucValueCrawler.crawlAllItems(
+        existingEcoAucIds
+      );
+      let brandAucItems = await brandAucValueCrawler.crawlAllItems(
+        existingBrandAuctionIds
+      );
+      let starAucItems = await starAucValueCrawler.crawlAllItems(
+        existingStarAucIds
+      );
 
       if (!ecoAucItems) ecoAucItems = [];
       if (!brandAucItems) brandAucItems = [];

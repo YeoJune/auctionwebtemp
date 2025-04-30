@@ -512,6 +512,4 @@ class DatabaseManager {
 
 const DBManager = new DatabaseManager(pool);
 
-DBManager.cleanupOldValueItems(90);
-
 module.exports = DBManager;
