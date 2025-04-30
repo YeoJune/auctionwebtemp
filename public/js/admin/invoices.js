@@ -178,7 +178,7 @@ function renderInvoicesTable(invoices) {
     html += `
         <tr>
           <td>${invoice.id || "-"}</td>
-          <td>${formatDate(invoice.date) || "-"}</td>
+          <td>${invoice.date.split("T")[0] || "-"}</td>
           <td>${aucNames[invoice.auc_num] || invoice.auc_num || "-"}</td>
           <td><span class="status-badge status-${
             invoice.status || "unknown"
