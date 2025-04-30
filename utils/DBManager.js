@@ -426,7 +426,10 @@ class DatabaseManager {
         await conn.beginTransaction();
 
         // Filter out items without title for insertion/update
-        const validItems = items.filter((item) => item.title);
+        const validItems =
+          tableName === "invoices"
+            ? items.filter((item) => item.date && item.auc_num) // 인보이스는 date와 auc_num 기준으로 필터링
+            : items.filter((item) => item.title);
         if (validItems.length) {
           // 테이블별 정의된 컬럼 사용
           const tableSpecificColumns =
