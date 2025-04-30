@@ -435,8 +435,22 @@ const scheduleCrawling = async () => {
       async () => {
         console.log("Running scheduled crawling task");
         try {
+          // 기본 상품 크롤링 실행
           await crawlAll();
-          //await crawlAllValues();
+
+          // 현재 요일 확인 (0: 일요일, 1: 월요일, ...)
+          const currentDay = new Date().getDay();
+
+          // 일요일이면 시세표 크롤링도 실행
+          if (currentDay === 0) {
+            console.log("Sunday detected - running value crawling as well");
+            await crawlAllValues();
+          }
+
+          // 매일 인보이스 크롤링도 실행
+          console.log("Running invoice crawling");
+          await crawlAllInvoices();
+
           console.log("Scheduled crawling completed successfully");
         } catch (error) {
           console.error("Scheduled crawling error:", error);
