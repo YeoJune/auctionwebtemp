@@ -33,7 +33,7 @@ document.addEventListener("DOMContentLoaded", function () {
     .addEventListener("click", startProductCrawl);
   document
     .getElementById("valueCrawlBtn")
-    .addEventListener("click", showValueCrawlOptions); // modified: now shows value crawl options
+    .addEventListener("click", showValueCrawlOptions); // 수정됨
   document
     .getElementById("uploadLogoBtn")
     .addEventListener("click", uploadLogo);
@@ -64,6 +64,95 @@ document.addEventListener("DOMContentLoaded", function () {
   // 시세표 크롤링 UI 관련 이벤트 리스너 추가
   setupValueCrawlUI();
 });
+
+// 시세표 크롤링 UI 관련 이벤트 리스너 설정
+function setupValueCrawlUI() {
+  // 시세표 크롤링 시작 버튼
+  document
+    .getElementById("startValueCrawlBtn")
+    .addEventListener("click", startValueCrawl);
+
+  // 취소 버튼
+  document
+    .getElementById("cancelValueCrawlBtn")
+    .addEventListener("click", hideValueCrawlOptions);
+
+  // 체크박스 상태에 따라 개월 수 입력 활성화/비활성화
+  document.querySelectorAll(".auc-checkbox").forEach((checkbox) => {
+    checkbox.addEventListener("change", function () {
+      const aucId = this.value;
+      const monthsInput = document.getElementById(getMonthsInputId(aucId));
+      monthsInput.disabled = !this.checked;
+    });
+  });
+}
+
+// 경매 ID로 개월 입력 필드 ID 구하기
+function getMonthsInputId(aucId) {
+  switch (aucId) {
+    case "1":
+      return "ecoAucMonths";
+    case "2":
+      return "brandAucMonths";
+    case "3":
+      return "starAucMonths";
+    default:
+      return "";
+  }
+}
+
+// 시세표 크롤링 옵션 UI 표시
+function showValueCrawlOptions() {
+  document.getElementById("valueCrawlOptions").style.display = "block";
+}
+
+// 시세표 크롤링 옵션 UI 숨기기
+function hideValueCrawlOptions() {
+  document.getElementById("valueCrawlOptions").style.display = "none";
+}
+
+// 시세표 크롤링 시작 함수 수정
+async function startValueCrawl() {
+  if (isCrawlingProduct || isCrawlingValue) return;
+
+  // 선택된 경매 플랫폼 확인
+  const selectedAucNums = [];
+  const selectedMonths = [];
+
+  document.querySelectorAll(".auc-checkbox:checked").forEach((checkbox) => {
+    const aucId = checkbox.value;
+    selectedAucNums.push(parseInt(aucId));
+
+    // 해당 경매의 개월 수 가져오기
+    const monthsInput = document.getElementById(getMonthsInputId(aucId));
+    selectedMonths.push(parseInt(monthsInput.value) || 3);
+  });
+
+  if (selectedAucNums.length === 0) {
+    showAlert("크롤링할 경매를 하나 이상 선택해주세요.");
+    return;
+  }
+
+  try {
+    isCrawlingValue = true;
+    updateCrawlingUI();
+    hideValueCrawlOptions();
+
+    // API 호출 시 선택된 경매와 개월 수 전달
+    const params = new URLSearchParams();
+    params.append("auc_num", selectedAucNums.join(","));
+    params.append("months", selectedMonths.join(","));
+
+    await startValueCrawling(params.toString()); // API 함수 호출
+    // 크롤링이 시작되면 주기적으로 상태 체크
+    startStatusCheck();
+  } catch (error) {
+    console.error("시세표 크롤링 시작 중 오류:", error);
+    isCrawlingValue = false;
+    updateCrawlingUI();
+    showAlert("시세표 크롤링 시작 중 오류가 발생했습니다.");
+  }
+}
 
 // ----- 메트릭스 관리 -----
 
@@ -221,56 +310,6 @@ async function startProductCrawl() {
     isCrawlingProduct = false;
     updateCrawlingUI();
     showAlert("상품 크롤링 시작 중 오류가 발생했습니다.");
-  }
-}
-
-// Show the UI for value crawl options.
-function showValueCrawlOptions() {
-  document.getElementById("valueCrawlOptions").style.display = "block";
-}
-
-// Hide the UI for value crawl options.
-function hideValueCrawlOptions() {
-  document.getElementById("valueCrawlOptions").style.display = "none";
-}
-
-// Modified startValueCrawl: collects selected auctions and months.
-async function startValueCrawl() {
-  if (isCrawlingProduct || isCrawlingValue) return;
-
-  const selectedAucNums = [];
-  const selectedMonths = [];
-
-  document.querySelectorAll(".auc-checkbox:checked").forEach((checkbox) => {
-    const aucId = checkbox.value;
-    selectedAucNums.push(parseInt(aucId));
-
-    const monthsInput = document.getElementById(getMonthsInputId(aucId));
-    selectedMonths.push(parseInt(monthsInput.value) || 3);
-  });
-
-  if (selectedAucNums.length === 0) {
-    showAlert("크롤링할 경매를 하나 이상 선택해주세요.");
-    return;
-  }
-
-  try {
-    isCrawlingValue = true;
-    updateCrawlingUI();
-    hideValueCrawlOptions();
-
-    // Construct URL parameters with selected auction ids and months.
-    const params = new URLSearchParams();
-    params.append("auc_num", selectedAucNums.join(","));
-    params.append("months", selectedMonths.join(","));
-
-    await startValueCrawling(params.toString()); // API 함수 호출 with params
-    startStatusCheck();
-  } catch (error) {
-    console.error("시세표 크롤링 시작 중 오류:", error);
-    isCrawlingValue = false;
-    updateCrawlingUI();
-    showAlert("시세표 크롤링 시작 중 오류가 발생했습니다.");
   }
 }
 
