@@ -295,7 +295,7 @@ class DatabaseManager {
         `
         SELECT item_id, image, additional_images 
         FROM values_items 
-        WHERE scheduled_date < DATE_SUB(NOW(), INTERVAL ? DAY)
+        WHERE scheduled_date < DATE_SUB(NOW(), INTERVAL ? DAY) OR scheduled_date IS NULL
       `,
         [daysThreshold]
       );
