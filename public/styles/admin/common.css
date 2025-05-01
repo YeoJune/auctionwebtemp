@@ -167,6 +167,34 @@ body {
   color: white;
 }
 
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-paid {
+  background-color: #28a745;
+  color: white;
+}
+
+.status-unpaid {
+  background-color: #dc3545;
+  color: white;
+}
+
+.status-partial {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.status-unknown {
+  background-color: #6c757d;
+  color: white;
+}
+
 /* 필터 탭 */
 .filter-tabs {
   display: flex;

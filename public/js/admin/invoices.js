@@ -185,7 +185,7 @@ function renderInvoicesTable(invoices) {
 
   invoices.forEach((invoice) => {
     // 날짜에서 시간 제거 (YYYY-MM-DD 형식만 사용)
-    const dateStr = invoice.date ? invoice.date.split("T")[0] : "-";
+    const dateStr = formatDate(invoice.date, true);
 
     html += `
           <tr>

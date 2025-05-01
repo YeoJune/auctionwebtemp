@@ -49,16 +49,16 @@ async function logout() {
 }
 
 // 날짜 포맷 함수 (YYYY-MM-DD HH:MM)
-function formatDate(dateString) {
+function formatDate(dateString, isUTC2KST = false) {
+  if (!dateString) return "-";
   const date = new Date(dateString);
 
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
+  let targetDate = date;
+  if (isUTC2KST) {
+    targetDate = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+  }
 
-  return `${year}-${month}-${day} ${hours}:${minutes}`;
+  return targetDate.toISOString().split("T")[0];
 }
 
 // 화폐 포맷 함수
