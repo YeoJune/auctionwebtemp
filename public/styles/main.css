@@ -556,6 +556,7 @@ select {
   pointer-events: none;
   font-weight: normal;
   line-height: 1.4;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
 .timer-info-icon[title]:hover::before {
