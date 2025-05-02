@@ -585,7 +585,7 @@ select {
   text-align: left;
 }
 
-.bid-timer .remaining-time {
+[data-bid-type="direct"] .bid-timer .remaining-time {
   margin-right: 20px; /* 물음표 아이콘을 위한 공간 확보 */
   text-align: right;
 }

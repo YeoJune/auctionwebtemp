@@ -261,8 +261,8 @@ function handleIconHover(e) {
     // 툴팁 내용 설정
     tooltipContainer.textContent = `마감 전 5분 입찰 발생 시
 5분씩 자동 연장
-추가 입찰 없을 시
 
+추가 입찰 없을 시
 마지막 입찰 금액 낙찰`;
 
     // 아이콘 위치 계산
