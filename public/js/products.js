@@ -277,7 +277,14 @@ function getDirectCardHTML(item, bidInfo, favoriteNumber) {
     <div class="bid-timer ${isNearEnd ? "near-end" : ""}">
       <span class="scheduled-date">${formattedDateTime} 마감</span>
       <span class="remaining-time">[${timerText}]</span>
-      <span class="timer-info-icon" title="마감 전 5분 입찰 발생 시&#10;5분씩 자동 연장&#10;추가 입찰 없을 시&#10;&#10;마지막 입찰 금액 낙찰"><i class="fas fa-question-circle"></i></span>
+      <span class="timer-info-icon">
+        <i class="fas fa-question-circle"></i>
+        <span class="tooltip-text">마감 전 5분 입찰 발생 시
+5분씩 자동 연장
+추가 입찰 없을 시
+
+마지막 입찰 금액 낙찰</span>
+      </span>
     </div>
     <div class="product-image-container">
       <img src="${API.validateImageUrl(item.image)}" alt="${
