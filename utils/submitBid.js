@@ -80,6 +80,25 @@ async function submitBid(bidData) {
     `Item found: ${item.item_id} from auction platform: ${item.auc_num}`
   );
 
+  // scheduled_date 지났는지 확인
+  if (item.scheduled_date) {
+    const currentDate = new Date();
+    const scheduledDate = new Date(item.scheduled_date);
+
+    if (currentDate > scheduledDate) {
+      console.log(
+        `Scheduled date ${item.scheduled_date} has already passed. Current date: ${currentDate}`
+      );
+      await connection.rollback();
+      connection.release();
+      return {
+        success: false,
+        message: "Cannot submit bid: item's scheduled date has already passed",
+        statusCode: 400,
+      };
+    }
+  }
+
   // 3. 플랫폼에 입찰 제출
   let bidResult;
 
