@@ -328,10 +328,7 @@ function getDirectCardHTML(item, bidInfo, favoriteNumber) {
     </div>
     <div class="bid-timer ${isNearEnd ? "near-end" : ""}">
       <span class="scheduled-date">${formattedDateTime} 마감</span>
-      <span class="remaining-time">[${timerText}]</span>
-      <span class="timer-info-icon">
-        <i class="fas fa-question-circle"></i>
-      </span>
+      <span class="remaining-time">[${timerText}]<span class="timer-info-icon"><i class="fas fa-question-circle"></i></span></span>
     </div>
     <div class="product-image-container">
       <img src="${API.validateImageUrl(item.image)}" alt="${

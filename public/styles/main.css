@@ -522,11 +522,18 @@ select {
 /* 타이머 정보 아이콘 스타일 */
 .timer-info-icon {
   display: inline-flex;
-  margin-left: 5px;
+  align-items: center; /* 수직 가운데 정렬 */
+  margin-left: 2px; /* 간격 줄임 */
   cursor: help;
-  color: #999;
+  color: #777;
   font-size: 0.9em;
   position: relative;
+  height: 100%; /* 높이를 부모 요소만큼 설정 */
+  vertical-align: middle; /* 텍스트와 수직 정렬 */
+}
+
+.timer-info-icon i {
+  line-height: 1; /* 아이콘의 라인 높이 조정 */
 }
 
 .timer-info-icon:hover {
@@ -543,7 +550,7 @@ select {
   max-width: 200px;
   background-color: rgba(0, 0, 0, 0.8);
   color: white;
-  padding: 8px;
+  padding: 8px 10px;
   border-radius: 4px;
   font-size: 12px;
   text-align: center;
@@ -563,6 +570,20 @@ select {
   border-width: 5px;
   border-style: solid;
   border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
+}
+
+/* bid-timer 내부의 요소 정렬 개선 */
+.bid-timer {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 8px;
+  align-items: center; /* 수직 중앙 정렬 추가 */
+}
+
+.bid-timer .scheduled-date,
+.bid-timer .remaining-time {
+  display: inline-flex;
+  align-items: center;
 }
 
 /* Product Details */
