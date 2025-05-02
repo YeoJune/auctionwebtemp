@@ -401,7 +401,10 @@ class BrandAucCrawler extends AxiosCrawler {
     }
 
     // 필터링된 아이템에 대해 추가 처리 (이미지 처리 등)
-    const processedItems = await processImagesInChunks(filteredItems);
+    const processedItems = await processImagesInChunks(
+      filteredItems,
+      "products"
+    );
 
     return processedItems;
   }
@@ -1041,7 +1044,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
     }
 
     // 이미지 처리 등 추가 로직
-    const processedItems = await processImagesInChunks(filteredItems);
+    const processedItems = await processImagesInChunks(filteredItems, "values");
 
     return processedItems;
   }

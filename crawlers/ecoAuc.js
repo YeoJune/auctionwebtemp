@@ -318,7 +318,7 @@ class EcoAucCrawler extends AxiosCrawler {
         if (item) pageItems.push(item);
       }
 
-      const processedItems = await processImagesInChunks(pageItems);
+      const processedItems = await processImagesInChunks(pageItems, "products");
 
       console.log(`Crawled ${processedItems.length} items from page ${page}`);
       return [...processedItems, ...remainItems];
@@ -1077,7 +1077,7 @@ class EcoAucValueCrawler extends AxiosCrawler {
         }
       });
 
-      const processedItems = await processImagesInChunks(pageItems);
+      const processedItems = await processImagesInChunks(pageItems, "values");
       console.log(`Crawled ${processedItems.length} items from page ${page}`);
 
       return processedItems;

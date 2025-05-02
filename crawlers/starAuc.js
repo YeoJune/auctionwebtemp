@@ -407,7 +407,7 @@ class StarAucCrawler extends AxiosCrawler {
 
       console.log(`${pageItems.length}개 아이템 추출 완료, 페이지 ${page}`);
 
-      const processedItems = await processImagesInChunks(pageItems);
+      const processedItems = await processImagesInChunks(pageItems, "products");
 
       return [...processedItems, ...remainItems];
     });
@@ -903,7 +903,7 @@ class StarAucValueCrawler extends AxiosCrawler {
       console.log(`Extracted ${pageItems.length} items from page ${page}`);
 
       // 이미지 처리
-      const processedItems = await processImagesInChunks(pageItems);
+      const processedItems = await processImagesInChunks(pageItems, "values");
 
       return processedItems;
     });

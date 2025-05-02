@@ -84,7 +84,7 @@ async function crawlAll() {
         allItems.map((item) => item.item_id),
         "crawled_items"
       );
-      // await DBManager.cleanupUnusedImages();
+      await DBManager.cleanupUnusedImages("products");
       await initializeFilterSettings();
     } catch (error) {
       throw error;

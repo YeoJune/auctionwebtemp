@@ -2,90 +2,146 @@ const axios = require("axios");
 const { v4: uuidv4 } = require("uuid");
 const sharp = require("sharp");
 const path = require("path");
+const fs = require("fs");
 
 let pLimit;
 (async () => {
   pLimit = (await import("p-limit")).default;
 })();
 
-const IMAGE_DIR = path.join(__dirname, "..", "public", "images", "products");
-
-// 이미지 크기 제한
+// 설정
 const MAX_WIDTH = 600;
 const MAX_HEIGHT = 600;
-// 동시 다운로드 최대 수
-const CONCURRENT_DOWNLOADS = 200; // 서버 및 네트워크 환경에 맞게 조정
+const CONCURRENT_DOWNLOADS = 20;
+const MAX_RETRIES = 5;
+const INITIAL_DELAY = 500;
 
-// 청크 분할 함수
-const chunk = (arr, size) =>
-  Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
-    arr.slice(i * size, i * size + size)
-  );
+// 이미지 처리 큐 및 상태
+const queue = [];
+let isProcessing = false;
+let currentDelay = INITIAL_DELAY;
+let consecutiveFailures = 0;
+let processingPaused = false;
 
-// 공통 Axios 인스턴스 생성
-const axiosInstance = axios.create({
-  timeout: 10000, // 10초 타임아웃
-  responseType: "arraybuffer",
-});
+// 이미지 다운로드 및 저장
+async function downloadAndSaveImage(url, folderName = "products") {
+  const IMAGE_DIR = path.join(__dirname, "..", "public", "images", folderName);
 
-async function downloadAndSaveImage(url, retries = 3, delay = 500) {
+  // 폴더가 없으면 생성
+  if (!fs.existsSync(IMAGE_DIR)) {
+    fs.mkdirSync(IMAGE_DIR, { recursive: true });
+  }
+
   const dateString = new Date()
     .toISOString()
     .replaceAll(":", "-")
     .split(".")[0];
 
-  for (let attempt = 0; attempt < retries; attempt++) {
-    try {
-      // 타이머 설정으로 너무 오래 걸리는 요청 방지
-      const response = await axiosInstance.get(url);
+  try {
+    const response = await axios
+      .create({
+        timeout: 10000,
+        responseType: "arraybuffer",
+      })
+      .get(url);
 
-      const fileName = `${dateString}_${uuidv4()}.webp`;
-      const filePath = path.join(IMAGE_DIR, fileName);
+    const fileName = `${dateString}_${uuidv4()}.webp`;
+    const filePath = path.join(IMAGE_DIR, fileName);
 
-      // 이미지 처리 파이프라인 최적화
-      const metadata = await sharp(response.data).metadata();
+    const metadata = await sharp(response.data).metadata();
+    let processedImage = sharp(response.data);
 
-      let processedImage = sharp(response.data);
+    if (metadata.width > MAX_WIDTH || metadata.height > MAX_HEIGHT) {
+      processedImage = processedImage.resize({
+        width: Math.min(metadata.width, MAX_WIDTH),
+        height: Math.min(metadata.height, MAX_HEIGHT),
+        fit: "inside",
+        withoutEnlargement: true,
+      });
+    }
 
-      // 필요한 경우만 리사이징 수행
-      if (metadata.width > MAX_WIDTH || metadata.height > MAX_HEIGHT) {
-        processedImage = processedImage.resize({
-          width: Math.min(metadata.width, MAX_WIDTH),
-          height: Math.min(metadata.height, MAX_HEIGHT),
-          fit: "inside",
-          withoutEnlargement: true,
-        });
-      }
+    await processedImage.webp({ quality: 80 }).toFile(filePath);
+    consecutiveFailures = 0;
+    return `/images/${folderName}/${fileName}`;
+  } catch (error) {
+    console.error(`이미지 처리 오류: ${url}`, error.message);
+    consecutiveFailures++;
 
-      // 이미지 저장 - 비동기 처리 유지
-      await processedImage.webp({ quality: 70 }).toFile(filePath);
-
-      return `/images/products/${fileName}`;
-    } catch (error) {
-      console.error(
-        `이미지 처리 오류 (시도 ${attempt + 1}/${retries}): ${url}`,
-        error.message
+    if (consecutiveFailures >= 3) {
+      currentDelay = Math.min(currentDelay * 2, 60000);
+      processingPaused = true;
+      console.log(
+        `연속 실패 감지! 처리 일시 중지, 딜레이 ${currentDelay}ms로 증가`
       );
 
-      if (attempt < retries - 1) {
-        // 403 에러 시 더 긴 대기 시간 적용, 그 외에는 짧은 지연
-        const waitTime =
-          error.response && error.response.status === 403
-            ? 30 * 1000 // 30초로 감소 (기존 2분)
-            : delay * (attempt + 1); // 재시도마다 지연 시간 증가
-
-        await new Promise((resolve) => setTimeout(resolve, waitTime));
-      } else {
-        return null;
-      }
+      setTimeout(() => {
+        processingPaused = false;
+        processQueue(folderName);
+      }, currentDelay);
     }
+
+    return null;
   }
-  return null;
 }
 
-async function processImagesInChunks(items, chunkSize = 200) {
-  // 청크 크기 증가
-  // 이미지가 있는 항목과 없는 항목 분리
+// 큐 프로세서
+async function processQueue(folderName) {
+  if (isProcessing || processingPaused || queue.length === 0) return;
+
+  isProcessing = true;
+
+  try {
+    const limit = pLimit(CONCURRENT_DOWNLOADS);
+    const batch = queue.splice(0, CONCURRENT_DOWNLOADS);
+    const tasks = batch.map((task) =>
+      limit(() => processQueueItem(task, folderName))
+    );
+
+    await Promise.all(tasks);
+  } catch (error) {
+    console.error("큐 처리 오류:", error);
+  } finally {
+    isProcessing = false;
+
+    if (queue.length > 0 && !processingPaused) {
+      setTimeout(() => processQueue(folderName), 100);
+    }
+  }
+}
+
+// 개별 큐 항목 처리
+async function processQueueItem(task, folderName) {
+  const { url, resolve, attempt = 0 } = task;
+
+  if (attempt >= MAX_RETRIES) {
+    resolve(null);
+    return;
+  }
+
+  const result = await downloadAndSaveImage(url, folderName);
+
+  if (result) {
+    resolve(result);
+  } else if (attempt < MAX_RETRIES - 1) {
+    queue.push({ url, resolve, attempt: attempt + 1 });
+  } else {
+    resolve(null);
+  }
+}
+
+// 큐에 항목 추가
+function enqueueImage(url, folderName) {
+  return new Promise((resolve) => {
+    queue.push({ url, resolve });
+
+    if (!isProcessing && !processingPaused) {
+      processQueue(folderName);
+    }
+  });
+}
+
+// 공개 인터페이스
+async function processImagesInChunks(items, folderName = "products") {
   const itemsWithImages = [];
   const itemsWithoutImages = [];
 
@@ -100,19 +156,15 @@ async function processImagesInChunks(items, chunkSize = 200) {
     }
   });
 
-  // p-limit을 사용하여 동시 다운로드 제한
-  const limit = pLimit(CONCURRENT_DOWNLOADS);
-
+  // 큐 기반 처리
   const processItem = async (item) => {
-    const downloadTasks = [];
+    const tasks = [];
 
     if (item.image) {
-      downloadTasks.push(
-        limit(() =>
-          downloadAndSaveImage(item.image).then((savedPath) => {
-            if (savedPath) item.image = savedPath;
-          })
-        )
+      tasks.push(
+        enqueueImage(item.image, folderName).then((savedPath) => {
+          if (savedPath) item.image = savedPath;
+        })
       );
     }
 
@@ -121,55 +173,66 @@ async function processImagesInChunks(items, chunkSize = 200) {
         const additionalImages = JSON.parse(item.additional_images);
         const savedImages = [];
 
-        // 각 추가 이미지에 대한 다운로드 작업 생성
         additionalImages.forEach((imgUrl) => {
-          downloadTasks.push(
-            limit(() =>
-              downloadAndSaveImage(imgUrl).then((savedPath) => {
-                if (savedPath) savedImages.push(savedPath);
-              })
-            )
+          tasks.push(
+            enqueueImage(imgUrl, folderName).then((savedPath) => {
+              if (savedPath) savedImages.push(savedPath);
+            })
           );
         });
 
-        await Promise.all(downloadTasks);
+        await Promise.all(tasks);
         item.additional_images = JSON.stringify(savedImages);
       } catch (err) {
         console.error("추가 이미지 처리 오류:", err);
-        // 기존 값 유지
       }
     } else {
-      await Promise.all(downloadTasks);
+      await Promise.all(tasks);
     }
 
     return item;
   };
 
-  // 모든 항목을 병렬로 처리 (p-limit이 동시성 제한)
-  const promises = itemsWithImages.map(processItem);
-
   // 진행 상황 모니터링
   let completed = 0;
-  const total = promises.length;
+  const total = itemsWithImages.length;
   const logInterval = setInterval(() => {
     console.log(
       `다운로드 진행률: ${completed} / ${total} (${Math.round(
         (completed / total) * 100
-      )}%)`
+      )}%), 큐 길이: ${queue.length}, 폴더: ${folderName}`
     );
-  }, 5000); // 5초마다 로그 출력
+  }, 5000);
 
-  // Promise.allSettled를 사용하여 일부 실패해도 계속 진행
-  const results = await Promise.allSettled(promises);
+  // 모든 항목 처리
+  const results = await Promise.allSettled(
+    itemsWithImages.map(async (item) => {
+      const result = await processItem(item);
+      completed++;
+      return result;
+    })
+  );
+
   clearInterval(logInterval);
 
   const processedItems = results
     .filter((r) => r.status === "fulfilled")
     .map((r) => r.value);
 
-  console.log(`이미지 처리 완료: ${processedItems.length} 항목 성공`);
+  console.log(
+    `이미지 처리 완료: ${processedItems.length} 항목 성공, 폴더: ${folderName}`
+  );
 
   return [...processedItems, ...itemsWithoutImages];
 }
 
-module.exports = { processImagesInChunks };
+// 큐 상태 초기화 함수
+function resetQueue() {
+  queue.length = 0;
+  isProcessing = false;
+  currentDelay = INITIAL_DELAY;
+  consecutiveFailures = 0;
+  processingPaused = false;
+}
+
+module.exports = { processImagesInChunks, resetQueue };

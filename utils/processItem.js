@@ -31,6 +31,9 @@ async function processItem(
 ) {
   try {
     const tableName = isValue ? "values_items" : "crawled_items";
+    // 테이블에 따라 이미지 저장 폴더 결정
+    const imageFolder = isValue ? "values" : "products";
+
     const [items] = await pool.query(
       `SELECT * FROM ${tableName} WHERE item_id = ?`,
       [itemId]
@@ -123,8 +126,9 @@ async function processItem(
         crawledDetails &&
         (crawledDetails.description || crawledDetails.images?.length > 0)
       ) {
+        // 여기서 imageFolder 파라미터를 전달하여 적절한 폴더에 저장
         const processedDetails = (
-          await processImagesInChunks([crawledDetails])
+          await processImagesInChunks([crawledDetails], imageFolder)
         )[0];
 
         if (processedDetails) {

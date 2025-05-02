@@ -186,73 +186,101 @@ class DatabaseManager {
     }
   }
 
-  async cleanupUnusedImages(batchSize = 100) {
+  async cleanupUnusedImages(folderName = "products", batchSize = 100) {
     let conn;
     const activeImagePaths = new Set();
 
     try {
+      // 이미지 디렉토리 경로 동적 설정
+      const IMAGE_DIR = path.join(
+        __dirname,
+        "..",
+        "public",
+        "images",
+        folderName
+      );
+
       conn = await this.pool.getConnection();
 
       // 데이터베이스 쿼리 병렬 실행
-      const [activeImagesPromise, activeValueImagesPromise, bidItemsPromise] =
-        await Promise.all([
-          conn.query(`
+      // 폴더명에 따라 쿼리 선택
+      let activeImagesPromise, activeValueImagesPromise;
+
+      if (folderName === "products") {
+        activeImagesPromise = conn.query(`
           SELECT image, additional_images
-          FROM crawled_items`),
-          conn.query(`
-          SELECT image, additional_images
-          FROM values_items`),
-          conn.query(`
+          FROM crawled_items`);
+
+        // 입찰이 있는 아이템 이미지 (products 폴더에만 해당)
+        const bidItemsPromise = conn.query(`
           SELECT ci.image, ci.additional_images 
           FROM crawled_items ci
           JOIN (
             SELECT DISTINCT item_id FROM direct_bids
             UNION
             SELECT DISTINCT item_id FROM live_bids
-          ) b ON ci.item_id = b.item_id`),
-        ]);
+          ) b ON ci.item_id = b.item_id`);
 
-      const [activeImages] = activeImagesPromise;
-      const [activeValueImages] = activeValueImagesPromise;
-      const [bidItemImages] = bidItemsPromise;
+        const [activeImages] = await activeImagesPromise;
+        const [bidItemImages] = await bidItemsPromise;
 
-      // 활성 이미지 경로 처리
-      activeImages.forEach((item) => {
-        if (item.image) activeImagePaths.add(item.image);
-        if (item.additional_images) {
-          JSON.parse(item.additional_images).forEach((img) =>
-            activeImagePaths.add(img)
-          );
-        }
-      });
+        // 활성 이미지 경로 처리
+        activeImages.forEach((item) => {
+          if (item.image) activeImagePaths.add(item.image);
+          if (item.additional_images) {
+            try {
+              JSON.parse(item.additional_images).forEach((img) =>
+                activeImagePaths.add(img)
+              );
+            } catch (error) {
+              console.error(`Error parsing additional_images:`, error);
+            }
+          }
+        });
 
-      activeValueImages.forEach((item) => {
-        if (item.image) activeImagePaths.add(item.image);
-        if (item.additional_images) {
-          JSON.parse(item.additional_images).forEach((img) =>
-            activeImagePaths.add(img)
-          );
-        }
-      });
+        bidItemImages.forEach((item) => {
+          if (item.image) activeImagePaths.add(item.image);
+          if (item.additional_images) {
+            try {
+              JSON.parse(item.additional_images).forEach((img) =>
+                activeImagePaths.add(img)
+              );
+            } catch (error) {
+              console.error(`Error parsing additional_images:`, error);
+            }
+          }
+        });
+      } else if (folderName === "values") {
+        activeValueImagesPromise = conn.query(`
+          SELECT image, additional_images
+          FROM values_items`);
 
-      bidItemImages.forEach((item) => {
-        if (item.image) activeImagePaths.add(item.image);
-        if (item.additional_images) {
-          JSON.parse(item.additional_images).forEach((img) =>
-            activeImagePaths.add(img)
-          );
-        }
-      });
+        const [activeValueImages] = await activeValueImagesPromise;
+
+        // 활성 이미지 경로 처리
+        activeValueImages.forEach((item) => {
+          if (item.image) activeImagePaths.add(item.image);
+          if (item.additional_images) {
+            try {
+              JSON.parse(item.additional_images).forEach((img) =>
+                activeImagePaths.add(img)
+              );
+            } catch (error) {
+              console.error(`Error parsing additional_images:`, error);
+            }
+          }
+        });
+      }
 
       // 파일 시스템에서 이미지 정리
-      const files = await fs.readdir(this.IMAGE_DIR);
+      const files = await fs.readdir(IMAGE_DIR);
 
       // 배치 처리 함수
       const processBatch = async (batch) => {
         await Promise.all(
           batch.map(async (file) => {
-            const filePath = path.join(this.IMAGE_DIR, file);
-            const relativePath = `/images/products/${file}`;
+            const filePath = path.join(IMAGE_DIR, file);
+            const relativePath = `/images/${folderName}/${file}`;
             if (!activeImagePaths.has(relativePath)) {
               try {
                 await fs.unlink(filePath);
@@ -271,9 +299,14 @@ class DatabaseManager {
         await processBatch(batch);
       }
 
-      console.log("Complete to cleaning up unused images");
+      console.log(
+        `Complete to cleaning up unused images in '${folderName}' folder`
+      );
     } catch (error) {
-      console.error("Error cleaning up unused images:", error);
+      console.error(
+        `Error cleaning up unused images in '${folderName}' folder:`,
+        error
+      );
     } finally {
       if (conn) {
         try {
@@ -294,7 +327,7 @@ class DatabaseManager {
       // Get items to be deleted
       const [oldItems] = await conn.query(
         `
-        SELECT item_id, image, additional_images 
+        SELECT item_id
         FROM values_items 
         WHERE scheduled_date < DATE_SUB(NOW(), INTERVAL ? DAY) OR scheduled_date IS NULL
       `,
@@ -305,24 +338,6 @@ class DatabaseManager {
         console.log("No old items to clean up");
         return;
       }
-
-      // Collect all image paths to be deleted
-      const imagesToDelete = new Set();
-      oldItems.forEach((item) => {
-        if (item.image) imagesToDelete.add(item.image);
-        if (item.additional_images) {
-          try {
-            JSON.parse(item.additional_images).forEach((img) =>
-              imagesToDelete.add(img)
-            );
-          } catch (error) {
-            console.error(
-              `Error parsing additional_images for item ${item.item_id}:`,
-              error
-            );
-          }
-        }
-      });
 
       // Delete items in batches
       const itemIds = oldItems.map((item) => item.item_id);
@@ -337,23 +352,11 @@ class DatabaseManager {
         );
       }
 
-      // Delete associated images
-      for (const imagePath of imagesToDelete) {
-        try {
-          const fullPath = path.join(__dirname, "..", "public", imagePath);
-          await fs.access(fullPath); // Check if file exists
-          await fs.unlink(fullPath);
-        } catch (error) {
-          if (error.code !== "ENOENT") {
-            // Ignore if file doesn't exist
-            console.error(`Error deleting image ${imagePath}:`, error);
-          }
-        }
-      }
+      console.log(`Deleted ${oldItems.length} old value items from database`);
 
-      console.log(
-        `Cleaned up ${oldItems.length} items and their associated images`
-      );
+      // 데이터베이스 삭제 후 사용되지 않는 이미지 정리
+      // values 폴더의 이미지만 정리
+      await this.cleanupUnusedImages("values");
     } catch (error) {
       console.error("Error cleaning up old value items:", error);
       throw error;
