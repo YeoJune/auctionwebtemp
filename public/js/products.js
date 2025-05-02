@@ -233,6 +233,58 @@ function getBidInputHTML(bidInfo, item, bidType) {
   return BidManager.getBidInputHTML(bidInfo, item, bidType);
 }
 
+// 전역 변수로 툴팁 컨테이너 추가
+let tooltipContainer;
+
+// 페이지 로드 시 툴팁 컨테이너 생성
+document.addEventListener("DOMContentLoaded", function () {
+  // 툴팁 컨테이너가 없으면 생성
+  if (!document.querySelector(".tooltip-container")) {
+    tooltipContainer = document.createElement("div");
+    tooltipContainer.className = "tooltip-container";
+    document.body.appendChild(tooltipContainer);
+  } else {
+    tooltipContainer = document.querySelector(".tooltip-container");
+  }
+
+  // 모든 타이머 정보 아이콘에 이벤트 리스너 추가
+  document.addEventListener("mouseover", handleIconHover);
+  document.addEventListener("mouseout", hideTooltip);
+});
+
+// 아이콘 호버 이벤트 핸들러
+function handleIconHover(e) {
+  // 타이머 정보 아이콘에 마우스를 올렸을 때
+  if (e.target.closest(".timer-info-icon")) {
+    const icon = e.target.closest(".timer-info-icon");
+
+    // 툴팁 내용 설정
+    tooltipContainer.textContent = `마감 전 5분 입찰 발생 시
+5분씩 자동 연장
+추가 입찰 없을 시
+
+마지막 입찰 금액 낙찰`;
+
+    // 아이콘 위치 계산
+    const iconRect = icon.getBoundingClientRect();
+
+    // 툴팁 위치 설정 (아이콘 위)
+    tooltipContainer.style.left = iconRect.left + iconRect.width / 2 + "px";
+    tooltipContainer.style.top = iconRect.top - 10 + "px";
+    tooltipContainer.style.transform = "translate(-50%, -100%)";
+
+    // 툴팁 표시
+    tooltipContainer.style.display = "block";
+  }
+}
+
+// 툴팁 숨기기
+function hideTooltip(e) {
+  if (!e.target.closest(".timer-info-icon")) {
+    tooltipContainer.style.display = "none";
+  }
+}
+
 // 직접 경매 카드 HTML
 function getDirectCardHTML(item, bidInfo, favoriteNumber) {
   // 타이머 정보
@@ -279,11 +331,6 @@ function getDirectCardHTML(item, bidInfo, favoriteNumber) {
       <span class="remaining-time">[${timerText}]</span>
       <span class="timer-info-icon">
         <i class="fas fa-question-circle"></i>
-        <span class="tooltip-text">마감 전 5분 입찰 발생 시
-5분씩 자동 연장
-추가 입찰 없을 시
-
-마지막 입찰 금액 낙찰</span>
       </span>
     </div>
     <div class="product-image-container">
