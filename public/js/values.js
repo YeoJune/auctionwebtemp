@@ -272,9 +272,6 @@ function displayCategoryFilters(categories) {
   categoryCheckboxes.innerHTML = "";
   if (allCheckbox) categoryCheckboxes.appendChild(allCheckbox);
 
-  // 카테고리 정렬
-  categories.sort();
-
   // 전체 선택 체크박스 이벤트 설정
   const categoryAllCheckbox = document.getElementById("category-all");
   if (categoryAllCheckbox) {
@@ -436,9 +433,6 @@ function displayAucNumFilters(aucNums) {
   if (!aucNumFilters) return;
 
   aucNumFilters.innerHTML = "";
-
-  // 출품사 정렬
-  aucNums.sort((a, b) => a.auc_num - b.auc_num);
 
   aucNums.forEach((item) => {
     const filterItem = document.createElement("div");
