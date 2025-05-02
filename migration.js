@@ -13,8 +13,8 @@ let pLimit;
 })();
 
 // 설정
-const MAX_CONCURRENT_OPERATIONS = 50; // 동시 작업 수 (서버와 디스크 성능에 맞게 조정)
-const BATCH_SIZE = 200; // 배치 크기
+const MAX_CONCURRENT_OPERATIONS = 50; // 동시 작업 수
+const BATCH_SIZE = 500; // 배치 크기
 
 // 경로 설정
 const PUBLIC_DIR = path.join(__dirname, "public");
@@ -37,21 +37,30 @@ async function ensureDirectories() {
 // 이미지 파일 이동 함수
 async function moveFile(sourcePath, targetPath) {
   try {
+    // 파일 전체 경로 계산
+    const sourceFullPath = path.join(PUBLIC_DIR, sourcePath);
+    const targetFullPath = path.join(PUBLIC_DIR, targetPath);
+
     // 소스 파일이 존재하는지 확인
-    await fs.access(path.join(PUBLIC_DIR, sourcePath));
+    await fs.access(sourceFullPath);
 
-    // 타겟 경로 생성
-    const fullTargetPath = path.join(PUBLIC_DIR, targetPath);
+    // 동일한 파일이 아닐 경우만 복사
+    if (sourceFullPath !== targetFullPath) {
+      // 타겟 디렉토리 확인
+      const targetDir = path.dirname(targetFullPath);
+      await fs.mkdir(targetDir, { recursive: true });
 
-    // 파일 복사 (스트림 사용)
-    await pipeline(
-      createReadStream(path.join(PUBLIC_DIR, sourcePath)),
-      createWriteStream(fullTargetPath)
-    );
+      // 파일 복사 (스트림 사용)
+      await pipeline(
+        createReadStream(sourceFullPath),
+        createWriteStream(targetFullPath)
+      );
+    }
 
     return true;
   } catch (error) {
     if (error.code === "ENOENT") {
+      // console.log(`파일 없음: ${sourcePath}`);
       return false; // 파일이 존재하지 않음
     }
     console.error(`파일 이동 오류 (${sourcePath} -> ${targetPath}):`, error);
@@ -59,106 +68,14 @@ async function moveFile(sourcePath, targetPath) {
   }
 }
 
-// 아이템 처리 함수
-async function processItem(item, tableName, conn, limitFn) {
-  let mainImageExists = true;
-  let updatedPaths = [];
-
-  const folderName = tableName === "crawled_items" ? "products" : "values";
-
-  // 메인 이미지 처리
-  if (item.image) {
-    const oldPath = item.image;
-    const fileName = path.basename(oldPath);
-    const newPath = `/images/${folderName}/${fileName}`;
-
-    if (oldPath !== newPath) {
-      // 경로가 다른 경우만 이동
-      const success = await limitFn(() => moveFile(oldPath, newPath));
-
-      if (success) {
-        updatedPaths.push(`image = '${newPath}'`);
-      } else {
-        mainImageExists = false;
-      }
-    }
+// 파일 존재 여부 확인 함수
+async function fileExists(filePath) {
+  try {
+    await fs.access(path.join(PUBLIC_DIR, filePath));
+    return true;
+  } catch (error) {
+    return false;
   }
-
-  // 추가 이미지 처리
-  if (item.additional_images) {
-    try {
-      const additionalImages = JSON.parse(item.additional_images);
-      const newAdditionalImages = [];
-
-      // 추가 이미지 병렬 처리
-      const movePromises = additionalImages.map(async (oldPath) => {
-        const fileName = path.basename(oldPath);
-        const newPath = `/images/${folderName}/${fileName}`;
-
-        if (oldPath !== newPath) {
-          // 경로가 다른 경우만 이동
-          await limitFn(() => moveFile(oldPath, newPath));
-        }
-
-        return newPath;
-      });
-
-      const results = await Promise.all(movePromises);
-      newAdditionalImages.push(...results);
-
-      updatedPaths.push(
-        `additional_images = '${JSON.stringify(newAdditionalImages)}'`
-      );
-    } catch (error) {
-      console.error(`추가 이미지 처리 오류 (item_id: ${item.item_id}):`, error);
-    }
-  }
-
-  // DB 업데이트 또는 삭제
-  if (!mainImageExists) {
-    // 메인 이미지가 없으면 항목 삭제
-    await conn.query(`DELETE FROM ${tableName} WHERE item_id = ?`, [
-      item.item_id,
-    ]);
-    return "deleted";
-  } else if (updatedPaths.length > 0) {
-    // 경로 업데이트
-    await conn.query(
-      `
-      UPDATE ${tableName} 
-      SET ${updatedPaths.join(", ")} 
-      WHERE item_id = ?
-    `,
-      [item.item_id]
-    );
-    return "updated";
-  } else {
-    // 변경 없음
-    return "unchanged";
-  }
-}
-
-// 배치 처리 함수
-async function processBatch(items, tableName, conn, limit) {
-  const results = {
-    updated: 0,
-    unchanged: 0,
-    deleted: 0,
-    failed: 0,
-  };
-
-  const processPromises = items.map(async (item) => {
-    try {
-      const result = await processItem(item, tableName, conn, limit);
-      results[result]++;
-    } catch (error) {
-      console.error(`아이템 처리 오류 (item_id: ${item.item_id}):`, error);
-      results.failed++;
-    }
-  });
-
-  await Promise.all(processPromises);
-  return results;
 }
 
 // crawled_items 마이그레이션
@@ -170,74 +87,153 @@ async function migrateCrawledItems() {
     // 동시 작업 제한기 생성
     const limit = pLimit(MAX_CONCURRENT_OPERATIONS);
 
-    // 레코드 총 개수 확인
-    const [countResult] = await conn.query(
-      `SELECT COUNT(*) as total FROM crawled_items`
-    );
-    const totalItems = countResult[0].total;
-    console.log(`총 ${totalItems}개의 crawled_items 처리 예정`);
+    // 모든 crawled_items 가져오기
+    const [items] = await conn.query(`
+      SELECT item_id, image, additional_images
+      FROM crawled_items
+    `);
 
-    // 배치 처리를 위한 오프셋과 결과 초기화
-    let offset = 0;
-    const totalResults = {
-      updated: 0,
-      unchanged: 0,
-      deleted: 0,
-      failed: 0,
-    };
+    console.log(`${items.length}개의 crawled_items 처리 중...`);
 
-    while (offset < totalItems) {
-      // 배치 데이터 가져오기
-      const [batchItems] = await conn.query(
+    // 모든 항목에서 이미지 경로 수집 및 존재 여부 확인
+    const itemUpdates = [];
+    const itemsToDelete = [];
+    const fileChecks = [];
+
+    // 각 이미지 파일의 존재 여부 확인 및 이동 작업 준비
+    for (const item of items) {
+      const update = {
+        item_id: item.item_id,
+        updates: [],
+      };
+
+      // 메인 이미지 확인
+      if (item.image) {
+        const oldPath = item.image;
+        const fileName = path.basename(oldPath);
+        const newPath = `/images/products/${fileName}`;
+
+        // 이미지 존재 여부 확인 작업 추가
+        fileChecks.push(
+          limit(async () => {
+            const exists = await fileExists(oldPath);
+            if (exists) {
+              // 존재하면 이동 작업 추가
+              if (oldPath !== newPath) {
+                await moveFile(oldPath, newPath);
+                update.updates.push(`image = '${newPath}'`);
+              }
+              return true;
+            } else {
+              // 이미지가 없으면 삭제 목록에 추가
+              itemsToDelete.push(item.item_id);
+              return false;
+            }
+          })
+        );
+      }
+
+      // 추가 이미지 처리
+      if (item.additional_images) {
+        try {
+          const additionalImages = JSON.parse(item.additional_images);
+          if (additionalImages && additionalImages.length > 0) {
+            const newAdditionalImages = [];
+
+            for (const oldPath of additionalImages) {
+              const fileName = path.basename(oldPath);
+              const newPath = `/images/products/${fileName}`;
+
+              // 이동 작업 추가
+              fileChecks.push(
+                limit(async () => {
+                  if (oldPath !== newPath) {
+                    await moveFile(oldPath, newPath);
+                  }
+                  newAdditionalImages.push(newPath);
+                  return true;
+                })
+              );
+            }
+
+            update.newAdditionalImages = newAdditionalImages;
+          }
+        } catch (error) {
+          console.error(
+            `추가 이미지 처리 오류 (item_id: ${item.item_id}):`,
+            error
+          );
+        }
+      }
+
+      itemUpdates.push(update);
+    }
+
+    // 모든 파일 확인 및 이동 작업 완료 대기
+    await Promise.all(fileChecks);
+
+    // 데이터베이스 일괄 업데이트 수행
+    if (itemUpdates.length > 0) {
+      // 배치 처리
+      for (let i = 0; i < itemUpdates.length; i += BATCH_SIZE) {
+        const batch = itemUpdates.slice(i, i + BATCH_SIZE);
+
+        // 배치 내 각 항목에 대한 업데이트 쿼리 준비
+        const updatePromises = batch.map(async (update) => {
+          if (update.updates && update.updates.length > 0) {
+            await conn.query(
+              `
+              UPDATE crawled_items 
+              SET ${update.updates.join(", ")} 
+              WHERE item_id = ?
+            `,
+              [update.item_id]
+            );
+          }
+
+          if (update.newAdditionalImages) {
+            await conn.query(
+              `
+              UPDATE crawled_items 
+              SET additional_images = ? 
+              WHERE item_id = ?
+            `,
+              [JSON.stringify(update.newAdditionalImages), update.item_id]
+            );
+          }
+        });
+
+        await Promise.all(updatePromises);
+        console.log(
+          `crawled_items 배치 업데이트 완료: ${i + 1} ~ ${Math.min(
+            i + BATCH_SIZE,
+            itemUpdates.length
+          )} / ${itemUpdates.length}`
+        );
+      }
+    }
+
+    // 삭제할 항목이 있으면 일괄 삭제
+    if (itemsToDelete.length > 0) {
+      // 한 번에 모든 항목 삭제
+      await conn.query(
         `
-        SELECT item_id, image, additional_images
-        FROM crawled_items
-        LIMIT ? OFFSET ?
+        DELETE FROM crawled_items 
+        WHERE item_id IN (?)
       `,
-        [BATCH_SIZE, offset]
+        [itemsToDelete]
       );
 
-      console.log(
-        `crawled_items 배치 처리 중: ${offset + 1} - ${Math.min(
-          offset + BATCH_SIZE,
-          totalItems
-        )} / ${totalItems}`
-      );
-
-      // 배치 처리 및 결과 누적
-      const batchResults = await processBatch(
-        batchItems,
-        "crawled_items",
-        conn,
-        limit
-      );
-
-      Object.keys(batchResults).forEach((key) => {
-        totalResults[key] += batchResults[key];
-      });
-
-      // 진행 상황 출력
-      const percentComplete = Math.round(
-        ((offset + BATCH_SIZE) / totalItems) * 100
-      );
-      console.log(
-        `진행률: ${Math.min(percentComplete, 100)}%, 완료: ${
-          totalResults.updated + totalResults.unchanged
-        }개, 삭제: ${totalResults.deleted}개, 실패: ${totalResults.failed}개`
-      );
-
-      // 오프셋 증가
-      offset += BATCH_SIZE;
+      console.log(`이미지 없는 항목 ${itemsToDelete.length}개 삭제됨`);
     }
 
     console.log(
-      `crawled_items 마이그레이션 완료: ${totalResults.updated}개 업데이트, ${totalResults.unchanged}개 변경없음, ${totalResults.deleted}개 삭제, ${totalResults.failed}개 실패`
+      `crawled_items 마이그레이션 완료: ${
+        itemUpdates.length - itemsToDelete.length
+      }개 성공, ${itemsToDelete.length}개 삭제`
     );
-
-    return totalResults;
   } catch (error) {
     console.error("crawled_items 마이그레이션 오류:", error);
-    throw error;
   } finally {
     if (conn) conn.release();
   }
@@ -252,74 +248,140 @@ async function migrateValuesItems() {
     // 동시 작업 제한기 생성
     const limit = pLimit(MAX_CONCURRENT_OPERATIONS);
 
-    // 레코드 총 개수 확인
-    const [countResult] = await conn.query(
-      `SELECT COUNT(*) as total FROM values_items`
-    );
-    const totalItems = countResult[0].total;
-    console.log(`총 ${totalItems}개의 values_items 처리 예정`);
+    // 모든 values_items 가져오기
+    const [items] = await conn.query(`
+      SELECT item_id, image, additional_images
+      FROM values_items
+    `);
 
-    // 배치 처리를 위한 오프셋과 결과 초기화
-    let offset = 0;
-    const totalResults = {
-      updated: 0,
-      unchanged: 0,
-      deleted: 0,
-      failed: 0,
-    };
+    console.log(`${items.length}개의 values_items 처리 중...`);
 
-    while (offset < totalItems) {
-      // 배치 데이터 가져오기
-      const [batchItems] = await conn.query(
-        `
-        SELECT item_id, image, additional_images
-        FROM values_items
-        LIMIT ? OFFSET ?
-      `,
-        [BATCH_SIZE, offset]
-      );
+    // 모든 항목에서 이미지 경로 수집 및 존재 여부 확인
+    const itemUpdates = [];
+    const itemsToDelete = [];
+    const fileChecks = [];
 
-      console.log(
-        `values_items 배치 처리 중: ${offset + 1} - ${Math.min(
-          offset + BATCH_SIZE,
-          totalItems
-        )} / ${totalItems}`
-      );
+    // 각 이미지 파일의 존재 여부 확인 및 이동 작업 준비
+    for (const item of items) {
+      const update = {
+        item_id: item.item_id,
+        updates: [],
+      };
 
-      // 배치 처리 및 결과 누적
-      const batchResults = await processBatch(
-        batchItems,
-        "values_items",
-        conn,
-        limit
-      );
+      // 메인 이미지 확인
+      if (item.image) {
+        const oldPath = item.image;
+        const fileName = path.basename(oldPath);
+        const newPath = `/images/values/${fileName}`;
 
-      Object.keys(batchResults).forEach((key) => {
-        totalResults[key] += batchResults[key];
-      });
+        // 이미지 존재 여부 확인 작업 추가
+        fileChecks.push(
+          limit(async () => {
+            const exists = await fileExists(oldPath);
+            if (exists) {
+              // 존재하면 이동 작업 추가
+              if (oldPath !== newPath) {
+                await moveFile(oldPath, newPath);
+                update.updates.push(`image = '${newPath}'`);
+              }
+              return true;
+            } else {
+              // 이미지가 없으면 삭제 목록에 추가 - values는 이미지가 없어도 삭제하지 않도록 수정
+              // 기존 경로 유지
+              console.log(
+                `경고: values_items에서 이미지가 없는 항목 발견: ${item.item_id}, ${oldPath}`
+              );
+              return false;
+            }
+          })
+        );
+      }
 
-      // 진행 상황 출력
-      const percentComplete = Math.round(
-        ((offset + BATCH_SIZE) / totalItems) * 100
-      );
-      console.log(
-        `진행률: ${Math.min(percentComplete, 100)}%, 완료: ${
-          totalResults.updated + totalResults.unchanged
-        }개, 삭제: ${totalResults.deleted}개, 실패: ${totalResults.failed}개`
-      );
+      // 추가 이미지 처리
+      if (item.additional_images) {
+        try {
+          const additionalImages = JSON.parse(item.additional_images);
+          if (additionalImages && additionalImages.length > 0) {
+            const newAdditionalImages = [];
 
-      // 오프셋 증가
-      offset += BATCH_SIZE;
+            for (const oldPath of additionalImages) {
+              const fileName = path.basename(oldPath);
+              const newPath = `/images/values/${fileName}`;
+
+              // 이동 작업 추가
+              fileChecks.push(
+                limit(async () => {
+                  if (oldPath !== newPath) {
+                    await moveFile(oldPath, newPath);
+                  }
+                  newAdditionalImages.push(newPath);
+                  return true;
+                })
+              );
+            }
+
+            update.newAdditionalImages = newAdditionalImages;
+          }
+        } catch (error) {
+          console.error(
+            `추가 이미지 처리 오류 (item_id: ${item.item_id}):`,
+            error
+          );
+        }
+      }
+
+      itemUpdates.push(update);
+    }
+
+    // 모든 파일 확인 및 이동 작업 완료 대기
+    await Promise.all(fileChecks);
+
+    // 데이터베이스 일괄 업데이트 수행
+    if (itemUpdates.length > 0) {
+      // 배치 처리
+      for (let i = 0; i < itemUpdates.length; i += BATCH_SIZE) {
+        const batch = itemUpdates.slice(i, i + BATCH_SIZE);
+
+        // 배치 내 각 항목에 대한 업데이트 쿼리 준비
+        const updatePromises = batch.map(async (update) => {
+          if (update.updates && update.updates.length > 0) {
+            await conn.query(
+              `
+              UPDATE values_items 
+              SET ${update.updates.join(", ")} 
+              WHERE item_id = ?
+            `,
+              [update.item_id]
+            );
+          }
+
+          if (update.newAdditionalImages) {
+            await conn.query(
+              `
+              UPDATE values_items 
+              SET additional_images = ? 
+              WHERE item_id = ?
+            `,
+              [JSON.stringify(update.newAdditionalImages), update.item_id]
+            );
+          }
+        });
+
+        await Promise.all(updatePromises);
+        console.log(
+          `values_items 배치 업데이트 완료: ${i + 1} ~ ${Math.min(
+            i + BATCH_SIZE,
+            itemUpdates.length
+          )} / ${itemUpdates.length}`
+        );
+      }
     }
 
     console.log(
-      `values_items 마이그레이션 완료: ${totalResults.updated}개 업데이트, ${totalResults.unchanged}개 변경없음, ${totalResults.deleted}개 삭제, ${totalResults.failed}개 실패`
+      `values_items 마이그레이션 완료: ${itemUpdates.length}개 처리됨`
     );
-
-    return totalResults;
   } catch (error) {
     console.error("values_items 마이그레이션 오류:", error);
-    throw error;
   } finally {
     if (conn) conn.release();
   }
