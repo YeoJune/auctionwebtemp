@@ -528,8 +528,8 @@ select {
   color: #777;
   font-size: 0.9em;
   position: relative;
-  height: 100%; /* 높이를 부모 요소만큼 설정 */
   vertical-align: middle; /* 텍스트와 수직 정렬 */
+  line-height: 1;
 }
 
 .timer-info-icon i {
@@ -576,14 +576,25 @@ select {
 .bid-timer {
   display: flex;
   justify-content: space-between;
-  padding: 4px 8px;
   align-items: center; /* 수직 중앙 정렬 추가 */
+  position: relative; /* 상대적 위치 설정 */
 }
 
-.bid-timer .scheduled-date,
+.bid-timer .scheduled-date {
+  flex: 1;
+  text-align: left;
+}
+
 .bid-timer .remaining-time {
-  display: inline-flex;
-  align-items: center;
+  margin-right: 20px; /* 물음표 아이콘을 위한 공간 확보 */
+  text-align: right;
+}
+
+.bid-timer .timer-info-icon {
+  position: absolute;
+  right: 8px; /* 오른쪽 여백 */
+  top: 50%;
+  transform: translateY(-50%); /* 수직 중앙 정렬 */
 }
 
 /* Product Details */
