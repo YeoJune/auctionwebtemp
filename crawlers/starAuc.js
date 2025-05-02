@@ -652,7 +652,7 @@ class StarAucCrawler extends AxiosCrawler {
 
         // 상태는 별도로 표시되지 않아 기본값으로 설정
         // 실제 상태는 별도 API나 상세 페이지에서 확인이 필요할 수 있음
-        const status = "unpaid";
+        const status = "paid";
 
         // 카테고리 정보
         const category = $element.find('[data-head="Category"]').text().trim();

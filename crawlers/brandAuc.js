@@ -778,7 +778,7 @@ class BrandAucCrawler extends AxiosCrawler {
 
         // 상태 추출
         let status = "unpaid";
-        if (item.nyukinJyokyoKbn === 2 || item.nyukinJyokyoEn === "Paid") {
+        if (item.nyukinJyokyoKbn === 9 || item.nyukinJyokyoEn === "Paid") {
           status = "paid";
         } else if (
           item.nyukinJyokyoKbn === 1 ||
