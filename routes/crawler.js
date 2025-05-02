@@ -153,49 +153,42 @@ async function crawlAllValues(options = {}) {
         runStarAuc,
       });
 
-      // 병렬 처리를 위한 프로미스 배열
-      const crawlPromises = [];
+      // 직렬 처리를 위한 결과 객체
       const crawlResults = {
         ecoAucItems: [],
         brandAucItems: [],
         starAucItems: [],
       };
 
-      // 각 크롤러 조건부 실행
+      // 각 크롤러 순차적 실행
       if (runEcoAuc) {
         console.log(`Running EcoAuc value crawler for ${monthsMap[1]} months`);
-        const ecoPromise = ecoAucValueCrawler
-          .crawlAllItems(existingEcoAucIds, monthsMap[1])
-          .then((items) => {
-            crawlResults.ecoAucItems = items || [];
-          });
-        crawlPromises.push(ecoPromise);
+        crawlResults.ecoAucItems =
+          (await ecoAucValueCrawler.crawlAllItems(
+            existingEcoAucIds,
+            monthsMap[1]
+          )) || [];
       }
 
       if (runBrandAuc) {
         console.log(
           `Running BrandAuc value crawler for ${monthsMap[2]} months`
         );
-        const brandPromise = brandAucValueCrawler
-          .crawlAllItems(existingBrandAuctionIds, monthsMap[2])
-          .then((items) => {
-            crawlResults.brandAucItems = items || [];
-          });
-        crawlPromises.push(brandPromise);
+        crawlResults.brandAucItems =
+          (await brandAucValueCrawler.crawlAllItems(
+            existingBrandAuctionIds,
+            monthsMap[2]
+          )) || [];
       }
 
       if (runStarAuc) {
         console.log(`Running StarAuc value crawler for ${monthsMap[3]} months`);
-        const starPromise = starAucValueCrawler
-          .crawlAllItems(existingStarAucIds, monthsMap[3])
-          .then((items) => {
-            crawlResults.starAucItems = items || [];
-          });
-        crawlPromises.push(starPromise);
+        crawlResults.starAucItems =
+          (await starAucValueCrawler.crawlAllItems(
+            existingStarAucIds,
+            monthsMap[3]
+          )) || [];
       }
-
-      // 모든 크롤링 병렬 실행 및 완료 대기
-      await Promise.all(crawlPromises);
 
       // 결과 집계
       const allItems = [
