@@ -61,23 +61,38 @@ async function downloadAndSaveImage(url, folderName = "products") {
     }
 
     await processedImage.webp({ quality: 80 }).toFile(filePath);
+
+    // 성공 시 연속 실패 카운터 초기화
     consecutiveFailures = 0;
+
+    // 성공 시 딜레이를 점진적으로 감소
+    if (currentDelay > INITIAL_DELAY) {
+      currentDelay = Math.max(INITIAL_DELAY, currentDelay * 0.9); // 10%씩 감소
+    }
+
     return `/images/${folderName}/${fileName}`;
   } catch (error) {
     console.error(`이미지 처리 오류: ${url}`, error.message);
+
+    // 연속 실패 카운터 증가
     consecutiveFailures++;
 
-    if (consecutiveFailures >= 3) {
-      currentDelay = Math.min(currentDelay * 2, 60000);
+    if (consecutiveFailures >= 2) {
       processingPaused = true;
-      console.log(
-        `연속 실패 감지! 처리 일시 중지, 딜레이 ${currentDelay}ms로 증가`
-      );
+      console.log(`연속 실패 감지! 처리 일시 중지, 딜레이 ${currentDelay}ms`);
 
       setTimeout(() => {
         processingPaused = false;
         processQueue(folderName);
       }, currentDelay);
+
+      // 딜레이 증가 (최대 1분)
+      currentDelay = Math.min(currentDelay * 2, 60000);
+    }
+
+    // 404인 경우 특수 코드 반환
+    if (error.response && error.response.status === 404) {
+      return 404;
     }
 
     return null;
@@ -113,19 +128,33 @@ async function processQueue(folderName) {
 async function processQueueItem(task, folderName) {
   const { url, resolve, attempt = 0 } = task;
 
+  // 최대 재시도 횟수에 도달했으면 종료
   if (attempt >= MAX_RETRIES) {
     resolve(null);
     return;
   }
 
+  // 이미지 다운로드 시도
   const result = await downloadAndSaveImage(url, folderName);
 
-  if (result) {
+  // 결과 처리
+  if (typeof result === "string") {
+    // 성공적으로 이미지 다운로드
     resolve(result);
-  } else if (attempt < MAX_RETRIES - 1) {
-    queue.push({ url, resolve, attempt: attempt + 1 });
+  } else if (result === 404) {
+    // 404 오류는 딱 한 번만 재시도
+    if (attempt === 0) {
+      queue.push({ url, resolve, attempt: 1 });
+    } else {
+      resolve(null);
+    }
   } else {
-    resolve(null);
+    // 그 외 오류는 계속 재시도
+    if (attempt < MAX_RETRIES - 1) {
+      queue.push({ url, resolve, attempt: attempt + 1 });
+    } else {
+      resolve(null);
+    }
   }
 }
 
