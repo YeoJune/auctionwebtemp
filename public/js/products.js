@@ -234,6 +234,7 @@ function getBidInputHTML(bidInfo, item, bidType) {
 }
 
 // 직접 경매 카드 HTML
+// 직접 경매 카드 HTML
 function getDirectCardHTML(item, bidInfo, favoriteNumber) {
   // 타이머 정보
   const timer = BidManager.getRemainingTime(item.scheduled_date);
@@ -277,6 +278,7 @@ function getDirectCardHTML(item, bidInfo, favoriteNumber) {
     <div class="bid-timer ${isNearEnd ? "near-end" : ""}">
       <span class="scheduled-date">${formattedDateTime} 마감</span>
       <span class="remaining-time">[${timerText}]</span>
+      <span class="timer-info-icon" title="마감 전 5분 입찰 발생 시&#10;5분씩 자동 연장&#10;&#10;추가 입찰 없을 시&#10;마지막 입찰 금액 낙찰"><i class="fas fa-question-circle"></i></span>
     </div>
     <div class="product-image-container">
       <img src="${API.validateImageUrl(item.image)}" alt="${
@@ -581,7 +583,6 @@ async function handleSignout() {
 }
 
 // 상세 정보 표시
-// 상세 정보 표시 함수 수정
 async function showDetails(itemId) {
   const modalManager = setupModal("detailModal");
   if (!modalManager) return;

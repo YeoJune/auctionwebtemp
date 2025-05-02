@@ -183,13 +183,6 @@ function displayBrandFilters(brands) {
   brandCheckboxes.innerHTML = "";
   if (allCheckbox) brandCheckboxes.appendChild(allCheckbox);
 
-  // 브랜드 정렬
-  brands.sort((a, b) => {
-    if (a.brand > b.brand) return 1;
-    if (a.brand < b.brand) return -1;
-    return 0;
-  });
-
   // 전체 선택 체크박스 이벤트 설정
   const brandAllCheckbox = document.getElementById("brand-all");
   if (brandAllCheckbox) {
