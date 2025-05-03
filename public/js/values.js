@@ -500,15 +500,16 @@ async function fetchData() {
     state.totalItems = data.totalItems;
     state.totalPages = data.totalPages;
 
-    // 데이터에 description이 null인 항목이 있는지 확인
-    const hasNullDescriptions = data.data.some(
-      (item) => item.description === null
-    );
+    // ---------------- 성능을 위해 주석 처리 --------------------
+    // // 데이터에 description이 null인 항목이 있는지 확인
+    // const hasNullDescriptions = data.data.some(
+    //   (item) => item.description === null
+    // );
 
-    // 상세 정보가 필요한 항목이 있으면 withDetails=true로 추가 요청
-    if (hasNullDescriptions) {
-      fetchDetailedData(params);
-    }
+    // // 상세 정보가 필요한 항목이 있으면 withDetails=true로 추가 요청
+    // if (hasNullDescriptions) {
+    //   fetchDetailedData(params);
+    // }
 
     displayData(data.data);
     createPagination(state.currentPage, state.totalPages, handlePageChange);
