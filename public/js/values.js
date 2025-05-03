@@ -478,6 +478,7 @@ function displayFilters(brands, categories, ranks, aucNums) {
 }
 
 // 데이터 가져오기
+// 데이터 가져오기
 async function fetchData() {
   toggleLoading(true);
   try {
@@ -499,6 +500,16 @@ async function fetchData() {
     state.totalItems = data.totalItems;
     state.totalPages = data.totalPages;
 
+    // 데이터에 description이 null인 항목이 있는지 확인
+    const hasNullDescriptions = data.data.some(
+      (item) => item.description === null
+    );
+
+    // 상세 정보가 필요한 항목이 있으면 withDetails=true로 추가 요청
+    if (hasNullDescriptions) {
+      fetchDetailedData(params);
+    }
+
     displayData(data.data);
     createPagination(state.currentPage, state.totalPages, handlePageChange);
   } catch (error) {
@@ -506,6 +517,30 @@ async function fetchData() {
     alert("데이터를 불러오는 데 실패했습니다.");
   } finally {
     toggleLoading(false);
+  }
+}
+
+// 상세 정보 사전 로드 함수
+async function fetchDetailedData(params) {
+  try {
+    // 기존 파라미터에 withDetails=true 추가
+    const detailedParams = {
+      ...params,
+      withDetails: "true",
+    };
+
+    const queryString = API.createURLParams(detailedParams);
+
+    // 결과를 기다리지 않고 비동기적으로 요청만 보냄
+    API.fetchAPI(`/values?${queryString}`).catch((error) => {
+      console.log("상세 정보 사전 로드 중 오류:", error);
+      // 사용자에게 알리지 않음 (백그라운드 작업)
+    });
+
+    console.log("상세 정보 사전 로드 요청 전송됨");
+  } catch (error) {
+    console.log("상세 정보 사전 로드 중 오류:", error);
+    // 사용자에게 알리지 않음 (백그라운드 작업)
   }
 }
 

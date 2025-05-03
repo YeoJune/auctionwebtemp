@@ -763,7 +763,10 @@ async function showDetails(itemId) {
 
     // 추가 이미지가 있다면 업데이트
     if (updatedItem.additional_images) {
-      initializeImages(JSON.parse(updatedItem.additional_images));
+      initializeImages([
+        updatedItem.image,
+        ...JSON.parse(updatedItem.additional_images),
+      ]);
       // 이미지가 업데이트된 후 네비게이션 리스너 재설정
       setupImageNavigation();
     }
