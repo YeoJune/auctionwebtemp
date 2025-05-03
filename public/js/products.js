@@ -26,6 +26,23 @@ window.state = {
   showBidItemsOnly: false, // 입찰 항목만 표시 여부
 };
 
+// 자동 새로고침 타이머 변수
+let autoRefreshTimer = null;
+
+// 자동 새로고침 설정 함수
+function setupAutoRefresh() {
+  // 이미 타이머가 설정되어 있다면 제거
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+  }
+
+  // 30초마다 데이터 새로고침
+  autoRefreshTimer = setInterval(() => {
+    // 자동 새로고침 시에는 로딩 표시하지 않음
+    fetchData(false);
+  }, 30000); // 30초 = 30000ms
+}
+
 // 데이터 표시 함수
 function displayData(data) {
   const dataBody = document.getElementById("dataBody");
@@ -519,8 +536,10 @@ async function toggleWishlist(itemId, favoriteNumber) {
 }
 
 // 데이터 가져오기
-async function fetchData() {
-  toggleLoading(true);
+async function fetchData(showLoading = true) {
+  if (showLoading) {
+    toggleLoading(true);
+  }
   try {
     const params = {
       page: state.currentPage,
@@ -575,6 +594,16 @@ async function fetchData() {
       }
     });
 
+    const hasNullDescriptions = data.data.some(
+      (item) => item.description === null
+    );
+
+    // description이 null인 아이템이 하나라도 있으면 상세 정보 사전 로드 요청
+    if (hasNullDescriptions) {
+      // 비동기적으로 상세 정보 요청 (결과를 기다리지 않음)
+      fetchDetailedData();
+    }
+
     // BidManager에 입찰 데이터 전달
     BidManager.updateBidData(state.liveBidData, state.directBidData);
 
@@ -582,9 +611,57 @@ async function fetchData() {
     createPagination(state.currentPage, state.totalPages, handlePageChange);
   } catch (error) {
     console.error("데이터를 불러오는 데 실패했습니다:", error);
-    alert("데이터를 불러오는 데 실패했습니다.");
+    // 자동 새로고침에서는 에러 알림 표시하지 않음
+    if (showLoading) {
+      alert("데이터를 불러오는 데 실패했습니다.");
+    }
   } finally {
-    toggleLoading(false);
+    if (showLoading) {
+      toggleLoading(false);
+    }
+  }
+}
+
+async function fetchDetailedData() {
+  try {
+    // 현재 필터 상태와 동일하게 파라미터 구성하되, withDetails=true로 설정
+    const params = {
+      page: state.currentPage,
+      limit: state.itemsPerPage,
+      brands: state.selectedBrands,
+      categories: state.selectedCategories,
+      scheduledDates: state.selectedDates.map((date) =>
+        date === "NO_DATE" ? "null" : date
+      ),
+      search: state.searchTerm,
+      ranks: state.selectedRanks,
+      favoriteNumbers:
+        state.selectedFavoriteNumbers.length > 0
+          ? state.selectedFavoriteNumbers.join(",")
+          : undefined,
+      auctionTypes:
+        state.selectedAuctionTypes.length > 0
+          ? state.selectedAuctionTypes.join(",")
+          : undefined,
+      aucNums: state.selectedAucNums.join(","),
+      withDetails: "true", // 상세 정보 요청
+      bidsOnly: state.showBidItemsOnly,
+      sortBy: state.sortBy,
+      sortOrder: state.sortOrder,
+    };
+
+    const queryString = API.createURLParams(params);
+
+    // 결과를 기다리지 않고 비동기적으로 요청만 보냄
+    API.fetchAPI(`/data?${queryString}`).catch((error) => {
+      console.log("상세 정보 사전 로드 중 오류:", error);
+      // 사용자에게 알리지 않음 (백그라운드 작업)
+    });
+
+    console.log("상세 정보 사전 로드 요청 전송됨");
+  } catch (error) {
+    console.log("상세 정보 사전 로드 중 오류:", error);
+    // 사용자에게 알리지 않음 (백그라운드 작업)
   }
 }
 
@@ -1303,6 +1380,9 @@ function initialize() {
             if (itemId) {
               showDetails(itemId);
             }
+
+            // 자동 새로고침 설정
+            setupAutoRefresh();
           });
         }
       )
@@ -1312,6 +1392,13 @@ function initialize() {
       });
   });
 }
+
+// 페이지를 나갈 때 타이머 정리
+window.addEventListener("beforeunload", function () {
+  if (autoRefreshTimer) {
+    clearInterval(autoRefreshTimer);
+  }
+});
 
 // 페이지 로드 시 초기화 실행
 initialize();
