@@ -244,7 +244,7 @@ router.get("/", async (req, res) => {
 
     if (withDetails === "true") {
       // p-limit 적용하여 5개씩 처리하도록 수정
-      const limit = pLimit(5); // 최대 5개의 동시 요청만 허용
+      const limit = pLimit(10); // 최대 5개의 동시 요청만 허용
 
       // 아이템을 5개씩 처리하는 함수
       const processItemsInBatches = async (items) => {
