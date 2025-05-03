@@ -4,6 +4,7 @@ node_modules
 service-account-key.json
 test.js
 public/images/products/**
+public/images/values/**
 userData
 temp**
 utils/data
