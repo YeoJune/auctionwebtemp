@@ -4,6 +4,11 @@ const router = express.Router();
 const pool = require("../utils/DB");
 const { processItem } = require("../utils/processItem");
 
+let pLimit;
+(async () => {
+  pLimit = (await import("p-limit")).default;
+})();
+
 // ===== 캐싱 관련 설정 =====
 // 기본 캐시 만료 시간: 1시간
 const CACHE_DURATION = 60 * 60 * 1000;
@@ -238,10 +243,24 @@ router.get("/", async (req, res) => {
     const totalPages = Math.ceil(totalItems / limit);
 
     if (withDetails === "true") {
-      const processPromises = items.map((item) =>
-        processItem(item.item_id, true, null, true)
-      );
-      const detailedItems = await Promise.all(processPromises);
+      // p-limit 적용하여 5개씩 처리하도록 수정
+      const limit = pLimit(5); // 최대 5개의 동시 요청만 허용
+
+      // 아이템을 5개씩 처리하는 함수
+      const processItemsInBatches = async (items) => {
+        // Promise.all 대신 p-limit으로 제한된 요청 생성
+        const promises = items.map((item) =>
+          limit(() => processItem(item.item_id, true, null, true))
+        );
+
+        // 모든 처리가 완료될 때까지 기다림
+        const processedItems = await Promise.all(promises);
+
+        // null이 아닌 아이템만 필터링
+        return processedItems.filter((item) => item !== null);
+      };
+
+      const detailedItems = await processItemsInBatches(items);
 
       res.json({
         data: detailedItems.filter((item) => item !== null),

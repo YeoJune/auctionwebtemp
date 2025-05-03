@@ -6,6 +6,11 @@ const axios = require("axios");
 const pool = require("../utils/DB");
 const { processItem } = require("../utils/processItem");
 
+let pLimit;
+(async () => {
+  pLimit = (await import("p-limit")).default;
+})();
+
 const apiUrl = `https://api.currencyfreaks.com/v2.0/rates/latest?apikey=${process.env.CURRENCY_API_KEY}`;
 
 dotenv.config();
@@ -468,14 +473,29 @@ router.get("/", async (req, res) => {
     }
 
     if (withDetails === "true") {
-      const processPromises = items.map((item) =>
-        processItem(item.item_id, false, null, true)
-      );
-      const detailedItems = await Promise.all(processPromises);
-      const filteredItems = detailedItems.filter((item) => item !== null);
+      // p-limit 적용하여 5개씩 처리하도록 수정
+      const limit = pLimit(5); // 최대 5개의 동시 요청만 허용
+
+      // 아이템을 5개씩 처리하는 함수
+      const processItemsInBatches = async (items) => {
+        const results = [];
+
+        // Promise.all 대신 p-limit으로 제한된 요청 생성
+        const promises = items.map((item) =>
+          limit(() => processItem(item.item_id, false, null, true))
+        );
+
+        // 모든 처리가 완료될 때까지 기다림
+        const processedItems = await Promise.all(promises);
+
+        // null이 아닌 아이템만 필터링
+        return processedItems.filter((item) => item !== null);
+      };
+
+      const detailedItems = await processItemsInBatches(items);
 
       // 각 아이템에 bid 정보 추가
-      const itemsWithBids = filteredItems.map((item) => {
+      const itemsWithBids = detailedItems.map((item) => {
         const itemBids = itemBidMap[item.item_id] || {};
         return {
           ...item,
