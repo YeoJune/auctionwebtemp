@@ -594,15 +594,15 @@ async function fetchData(showLoading = true) {
       }
     });
 
-    const hasNullDescriptions = data.data.some(
-      (item) => item.description === null
-    );
+    // const hasNullDescriptions = data.data.some(
+    //   (item) => item.description === null
+    // );
 
-    // description이 null인 아이템이 하나라도 있으면 상세 정보 사전 로드 요청
-    if (hasNullDescriptions) {
-      // 비동기적으로 상세 정보 요청 (결과를 기다리지 않음)
-      fetchDetailedData();
-    }
+    // // description이 null인 아이템이 하나라도 있으면 상세 정보 사전 로드 요청
+    // if (hasNullDescriptions) {
+    //   // 비동기적으로 상세 정보 요청 (결과를 기다리지 않음)
+    //   fetchDetailedData();
+    // }
 
     // BidManager에 입찰 데이터 전달
     BidManager.updateBidData(state.liveBidData, state.directBidData);
