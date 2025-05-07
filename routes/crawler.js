@@ -468,7 +468,7 @@ const scheduleUpdateCrawling = () => {
   setInterval(async () => {
     console.log("Running scheduled update crawling task");
     try {
-      if (!isUpdateCrawling && !isCrawling && !isValueCrawling) {
+      if (!isUpdateCrawling) {
         const result = await crawlAllUpdates();
         console.log("Scheduled update crawling completed successfully", {
           ecoAucCount: result.ecoAucCount,

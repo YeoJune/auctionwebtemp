@@ -27,7 +27,8 @@ async function processItem(
   isValue,
   res,
   returnData = false,
-  userId = null
+  userId = null,
+  priority = 2
 ) {
   try {
     const tableName = isValue ? "values_items" : "crawled_items";
@@ -128,7 +129,7 @@ async function processItem(
       ) {
         // 여기서 imageFolder 파라미터를 전달하여 적절한 폴더에 저장
         const processedDetails = (
-          await processImagesInChunks([crawledDetails], imageFolder)
+          await processImagesInChunks([crawledDetails], imageFolder, priority)
         )[0];
 
         if (processedDetails) {

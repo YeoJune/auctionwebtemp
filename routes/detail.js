@@ -13,7 +13,7 @@ router.post("/item-details/:itemId", async (req, res) => {
 
     // processItem 호출 시 userId 전달
     // processItem 내부에서 응답을 처리하므로 await만 사용
-    await processItem(itemId, false, res, false, userId);
+    await processItem(itemId, false, res, false, userId, 1);
   } catch (error) {
     // 혹시 processItem 호출 전에 에러가 발생할 경우 대비
     console.error("Error in /item-details/:itemId route:", error);
@@ -35,7 +35,7 @@ router.post("/value-details/:itemId", async (req, res) => {
     const userId = req.session?.user?.id; // 옵셔널 체이닝 사용
 
     // processItem 호출 시 userId 전달
-    await processItem(itemId, true, res, false, userId);
+    await processItem(itemId, true, res, false, userId, 1);
   } catch (error) {
     console.error("Error in /value-details/:itemId route:", error);
     if (!res.headersSent) {
