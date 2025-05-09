@@ -271,12 +271,12 @@ async function crawlAllUpdates() {
       // 변경된 아이템이 있으면 DB 업데이트 비동기로 실행
       if (changedItems.length > 0) {
         // await 제거하여 비동기로 DB 업데이트 처리
-        DBManager.updateItems(changedItems, "crawled_items");
-
-        // 가격 변경된 아이템에 대한 입찰 취소 처리
-        processChangedBids(changedItems);
-
-        notifyClientsOfChanges(changedItems);
+        DBManager.updateItems(changedItems, "crawled_items").then(() => {
+          // 가격 변경된 아이템에 대한 입찰 취소 처리
+          processChangedBids(changedItems).then(() => {
+            notifyClientsOfChanges(changedItems);
+          });
+        });
       }
 
       const endTime = Date.now();
