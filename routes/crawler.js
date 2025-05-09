@@ -235,7 +235,7 @@ async function crawlAllUpdates() {
     console.log(`Starting update crawl at ${new Date().toISOString()}`);
 
     try {
-      // EcoAuc와 BrandAuc의 direct 타입 경매만 업데이트 크롤링
+      // 웹에서 데이터 크롤링 (기존과 동일)
       let ecoAucUpdates = await ecoAucCrawler.crawlUpdates();
       let brandAucUpdates = await brandAucCrawler.crawlUpdates();
 
@@ -244,8 +244,33 @@ async function crawlAllUpdates() {
 
       const allUpdates = [...ecoAucUpdates, ...brandAucUpdates];
 
-      // 업데이트 정보를 DB에 저장
-      await DBManager.updateItems(allUpdates, "crawled_items");
+      // DB에서 기존 데이터 가져오기
+      const itemIds = allUpdates.map((item) => item.item_id);
+      const [existingItems] = await pool.query(
+        "SELECT item_id, scheduled_date, starting_price FROM crawled_items WHERE item_id IN (?) AND bid_type = 'direct'",
+        [itemIds]
+      );
+
+      // 변경된 항목만 필터링 (scheduled_date 또는 starting_price가 변경된 것)
+      const changedItems = allUpdates.filter((newItem) => {
+        const existingItem = existingItems.find(
+          (item) => item.item_id === newItem.item_id
+        );
+        if (!existingItem) return true; // 새 아이템이면 포함
+
+        // scheduled_date 또는 starting_price가 변경되었는지 확인
+        return (
+          (newItem.scheduled_date &&
+            newItem.scheduled_date !== existingItem.scheduled_date) ||
+          (newItem.starting_price &&
+            newItem.starting_price !== existingItem.starting_price)
+        );
+      });
+
+      // 변경된 아이템만 업데이트
+      if (changedItems.length > 0) {
+        await DBManager.updateItems(changedItems, "crawled_items");
+      }
 
       const endTime = Date.now();
       const executionTime = endTime - startTime;
@@ -258,7 +283,7 @@ async function crawlAllUpdates() {
       return {
         ecoAucCount: ecoAucUpdates.length,
         brandAucCount: brandAucUpdates.length,
-        totalCount: allUpdates.length,
+        changedItemsCount: changedItems.length,
         executionTime: formatExecutionTime(executionTime),
       };
     } catch (error) {
