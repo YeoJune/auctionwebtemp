@@ -376,6 +376,7 @@ async function processExpiredBids() {
         "WHERE ci.scheduled_date < NOW() " +
         "AND ci.bid_type = 'direct' " +
         "AND db.status = 'active' " +
+        "AND db.submitted_to_platform = 1 " +
         "ORDER BY db.item_id, db.current_price DESC"
     );
 

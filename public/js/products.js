@@ -40,7 +40,7 @@ function setupAutoRefresh() {
   autoRefreshTimer = setInterval(() => {
     // 자동 새로고침 시에는 로딩 표시하지 않음
     fetchData(false);
-  }, 10 * 1000); // 10초 = 10000ms
+  }, 20 * 1000); // 20초
 }
 
 // 데이터 표시 함수
