@@ -68,11 +68,9 @@ async function crawlAll() {
       );
 
       isCrawling = true;
-      let ecoAucItems = await ecoAucCrawler.crawlAllItems(existingEcoAucIds);
-      let brandAucItems = await brandAucCrawler.crawlAllItems(
-        existingBrandAuctionIds
-      );
-      let starAucItems = await starAucCrawler.crawlAllItems(existingStarAucIds);
+      let ecoAucItems = await ecoAucCrawler.crawlAllItems();
+      let brandAucItems = await brandAucCrawler.crawlAllItems();
+      let starAucItems = await starAucCrawler.crawlAllItems();
 
       if (!ecoAucItems) ecoAucItems = [];
       if (!brandAucItems) brandAucItems = [];
@@ -227,7 +225,7 @@ async function crawlAllValues(options = {}) {
 }
 
 async function crawlAllUpdates() {
-  if (isUpdateCrawling) {
+  if (isUpdateCrawling || isCrawling) {
     throw new Error("update crawling already in progress");
   } else {
     isUpdateCrawling = true;
@@ -468,7 +466,7 @@ const scheduleUpdateCrawling = () => {
   setInterval(async () => {
     console.log("Running scheduled update crawling task");
     try {
-      if (!isUpdateCrawling) {
+      if (!isCrawling && !isUpdateCrawling) {
         const result = await crawlAllUpdates();
         console.log("Scheduled update crawling completed successfully", {
           ecoAucCount: result.ecoAucCount,
