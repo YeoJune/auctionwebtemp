@@ -339,6 +339,8 @@ async function processChangedBids(allUpdates) {
       bidsByItem[bid.item_id].push(bid);
     });
 
+    console.log(bidsByItem);
+
     // 각 아이템별 처리
     allUpdates.forEach((item) => {
       const itemBids = bidsByItem[item.item_id] || [];
