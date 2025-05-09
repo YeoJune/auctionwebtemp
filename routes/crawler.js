@@ -369,19 +369,15 @@ async function processExpiredBids() {
   try {
     await conn.beginTransaction();
 
-    // 현재 날짜
-    const currentDate = new Date().toISOString().split("T")[0]; // YYYY-MM-DD 형식
-
     // JOIN을 사용하여 만료된 아이템과 관련 입찰을 함께 조회
     const [expiredItemBids] = await conn.query(
       "SELECT db.id, db.item_id, db.current_price, ci.starting_price " +
         "FROM crawled_items ci " +
         "JOIN direct_bids db ON ci.item_id = db.item_id " +
-        "WHERE ci.scheduled_date < ? " +
+        "WHERE ci.scheduled_date < NOW() " +
         "AND ci.bid_type = 'direct' " +
         "AND db.status = 'active' " +
-        "ORDER BY db.item_id, db.current_price DESC",
-      [currentDate]
+        "ORDER BY db.item_id, db.current_price DESC"
     );
 
     if (expiredItemBids.length === 0) {
