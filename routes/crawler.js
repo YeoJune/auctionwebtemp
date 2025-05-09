@@ -311,16 +311,12 @@ async function processChangedBids(allUpdates) {
   try {
     await conn.beginTransaction();
 
-    // 모든 아이템 ID 추출
-    const allItemIds = allUpdates.map((item) => item.item_id);
-
     // 관련된 모든 active 입찰 한 번에 조회
     const [activeBids] = await conn.query(
       "SELECT db.id, db.item_id, db.current_price, ci.starting_price " +
         "FROM direct_bids db " +
         "JOIN crawled_items ci ON db.item_id = ci.item_id " +
-        "WHERE db.item_id IN (?) AND db.status = 'active'",
-      [allItemIds]
+        "WHERE db.status = 'active'"
     );
 
     // 현재 시간
