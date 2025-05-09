@@ -3,7 +3,7 @@
 // 상태 관리
 window.state = {
   bidType: "all", // 경매 타입: all, live, direct
-  status: "active", // 상태: all, active(진행 중), completed, cancelled
+  status: "all", // 상태: all, active(진행 중), completed, cancelled
   dateRange: 30, // 날짜 범위(일)
   currentPage: 1, // 현재 페이지
   itemsPerPage: 10, // 페이지당 아이템 수
@@ -555,7 +555,7 @@ function updateSortButtonsUI() {
 // 필터 초기화
 function resetFilters() {
   state.bidType = "all";
-  state.status = "active";
+  state.status = "all";
   state.dateRange = 30;
   state.keyword = "";
   state.currentPage = 1;
