@@ -166,7 +166,7 @@ function updateURL() {
   const params = new URLSearchParams();
 
   if (state.bidType !== "all") params.append("bidType", state.bidType);
-  if (state.status !== "active") params.append("status", state.status);
+  if (state.status !== "all") params.append("status", state.status);
   if (state.dateRange !== 30) params.append("dateRange", state.dateRange);
   if (state.currentPage !== 1) params.append("page", state.currentPage);
   if (state.sortBy !== "updated_at") params.append("sortBy", state.sortBy);
