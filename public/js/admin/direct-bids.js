@@ -2,7 +2,7 @@
 
 // 현재 선택된 필터 상태
 let currentStatus = "";
-let highestOnly = true;
+let highestOnly = false;
 let currentPage = 1;
 let itemsPerPage = 10;
 let totalPages = 1;
