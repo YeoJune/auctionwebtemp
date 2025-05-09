@@ -362,21 +362,36 @@ router.post("/", async (req, res) => {
       );
     }
 
-    // 7. scheduled_date를 5분 연장
-    if (item.scheduled_date) {
-      // 현재 scheduled_date 파싱
-      let scheduledDate = new Date(item.scheduled_date);
+    // 7. scheduled_date 연장 (auc_num=1이고 마감 시간이 5분 미만일 때만)
+    if (item.scheduled_date && (item.auc_num == 1 || item.auc_num == 3)) {
+      // 현재 시간
+      const now = new Date();
 
-      // 5분 추가
-      scheduledDate.setMinutes(scheduledDate.getMinutes() + 5);
+      // 아이템의 scheduled_date
+      const scheduledDate = new Date(item.scheduled_date);
 
-      // 업데이트
-      await connection.query(
-        "UPDATE crawled_items SET scheduled_date = ? WHERE item_id = ?",
-        [scheduledDate.toISOString().slice(0, 19).replace("T", " "), itemId]
-      );
+      // 현재부터 마감까지 남은 시간(분)
+      const minutesRemaining = (scheduledDate - now) / (1000 * 60);
 
-      console.log(`Extended scheduled_date by 5 minutes for item ${itemId}`);
+      // 남은 시간이 5분 미만이면 연장
+      if (minutesRemaining < 5 && minutesRemaining > 0) {
+        // 새로운 마감시간 (현재 시간 + 5분)
+        const newScheduledDate = new Date(now);
+        newScheduledDate.setMinutes(now.getMinutes() + 5);
+
+        // 업데이트
+        await connection.query(
+          "UPDATE crawled_items SET scheduled_date = ? WHERE item_id = ?",
+          [
+            newScheduledDate.toISOString().slice(0, 19).replace("T", " "),
+            itemId,
+          ]
+        );
+
+        console.log(
+          `Extended scheduled_date to 5 minutes from now for item ${itemId} (auc_num=1)`
+        );
+      }
     }
 
     await connection.commit();
