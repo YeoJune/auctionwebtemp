@@ -421,6 +421,11 @@ async function processExpiredBids() {
         itemBids.slice(1).forEach((bid) => {
           bidsToCancel.push(bid.id);
         });
+      } else {
+        // 최고가 입찰이 starting_price보다 낮으면 모두 취소 처리
+        itemBids.forEach((bid) => {
+          bidsToCancel.push(bid.id);
+        });
       }
     });
 
