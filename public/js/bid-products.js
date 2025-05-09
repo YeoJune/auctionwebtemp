@@ -74,6 +74,7 @@ const STATUS_CLASSES = {
   [STATUS_TYPES.FINAL]: "status-final",
   [STATUS_TYPES.COMPLETED]: "status-completed",
   [STATUS_TYPES.CANCELLED]: "status-cancelled",
+  "status-expired": "status-expired",
 };
 
 // 초기화 함수
@@ -253,7 +254,6 @@ async function handleSignout() {
   }
 }
 
-// 상품 데이터 가져오기
 // 상품 데이터 가져오기
 async function fetchProducts() {
   if (!state.isAuthenticated) {
@@ -570,12 +570,44 @@ function resetFilters() {
 }
 
 // 상태에 맞는 표시 텍스트 반환
-function getStatusDisplay(status) {
+function getStatusDisplay(status, scheduledDate) {
+  // 현재 시간과 예정 시간 비교
+  const now = new Date();
+  const scheduled = new Date(scheduledDate);
+
+  // 액티브 상태이지만 예정 시간이 지난 경우
+  if (
+    (status === STATUS_TYPES.ACTIVE ||
+      status === STATUS_TYPES.FIRST ||
+      status === STATUS_TYPES.SECOND ||
+      status === STATUS_TYPES.FINAL) &&
+    scheduled < now
+  ) {
+    return "마감됨";
+  }
+
+  // 기존 상태 표시 반환
   return STATUS_DISPLAY[status] || "알 수 없음";
 }
 
 // 상태에 맞는 CSS 클래스 반환
-function getStatusClass(status) {
+function getStatusClass(status, scheduledDate) {
+  // 현재 시간과 예정 시간 비교
+  const now = new Date();
+  const scheduled = new Date(scheduledDate);
+
+  // 액티브 상태이지만 예정 시간이 지난 경우
+  if (
+    (status === STATUS_TYPES.ACTIVE ||
+      status === STATUS_TYPES.FIRST ||
+      status === STATUS_TYPES.SECOND ||
+      status === STATUS_TYPES.FINAL) &&
+    scheduled < now
+  ) {
+    return "status-expired"; // 새로운 클래스 추가 필요
+  }
+
+  // 기존 클래스 반환
   return STATUS_CLASSES[status] || "status-default";
 }
 
@@ -625,16 +657,28 @@ function displayProducts() {
       `;
 
     const timer = BidManager.getRemainingTime(item.scheduled_date);
+    const now = new Date();
+    const scheduled = new Date(item.scheduled_date);
+    const isScheduledPassed = scheduled < now;
+
     const isActiveBid =
       (product.displayStatus === "active" ||
         product.displayStatus === "first" ||
-        product.displayStatus === "second") &&
-      timer;
+        product.displayStatus === "second" ||
+        product.displayStatus === "final") &&
+      timer &&
+      !isScheduledPassed;
 
     const statusSection = document.createElement("div");
     statusSection.className = "result-status";
-    const statusClass = getStatusClass(product.displayStatus);
-    const statusText = getStatusDisplay(product.displayStatus);
+    const statusClass = getStatusClass(
+      product.displayStatus,
+      item.scheduled_date
+    );
+    const statusText = getStatusDisplay(
+      product.displayStatus,
+      item.scheduled_date
+    );
 
     statusSection.innerHTML = `
           <div class="bid-type ${
@@ -961,9 +1005,15 @@ function displayBidInfoInModal(product, item) {
   // 남은 시간 확인
   const timer = BidManager.getRemainingTime(item.scheduled_date);
 
+  // 현재 시간과 예정 시간 비교 추가
+  const now = new Date();
+  const scheduled = new Date(item.scheduled_date);
+  const isScheduledPassed = scheduled < now;
+
   // 마감되었거나 완료/취소 상태인 경우 읽기 전용 표시
   if (
     !timer ||
+    isScheduledPassed ||
     product.displayStatus === "completed" ||
     product.displayStatus === "cancelled"
   ) {
@@ -998,8 +1048,14 @@ function displayBidInfoInModal(product, item) {
 // 읽기 전용 입찰 정보 표시
 function displayReadOnlyBidInfo(product, item, container) {
   // 상태에 따라 다른 표시와 클래스 적용 - 실제 상태 사용
-  const statusClass = getStatusClass(product.displayStatus);
-  const statusText = getStatusDisplay(product.displayStatus);
+  const statusClass = getStatusClass(
+    product.displayStatus,
+    item.scheduled_date
+  );
+  const statusText = getStatusDisplay(
+    product.displayStatus,
+    item.scheduled_date
+  );
 
   // 원화 가격 계산
   const auctionId = item.auc_num || 1;

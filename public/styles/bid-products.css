@@ -443,6 +443,11 @@
   color: #c62828;
 }
 
+.status-expired {
+  background-color: #888;
+  color: white;
+}
+
 /* bid-timer 관련 CSS 스타일 */
 .bid-timer {
   font-size: 0.85rem;
