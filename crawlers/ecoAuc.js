@@ -556,9 +556,11 @@ class EcoAucCrawler extends AxiosCrawler {
     // 원본과 동일하게 객체 병합
     return item;
   }
-
   async crawlUpdates() {
     try {
+      const pLimit = require("p-limit");
+      const limit = pLimit(5); // 최대 5개의 페이지를 병렬로 처리
+
       const startTime = Date.now();
       console.log(`Starting updates crawl at ${new Date().toISOString()}`);
 
@@ -579,7 +581,7 @@ class EcoAucCrawler extends AxiosCrawler {
       this.config.searchUrl = urlConfig.url;
       this.currentBidType = urlConfig.type;
 
-      // 모든 카테고리 순회
+      // 카테고리는 순차적으로 처리
       for (const categoryId of this.config.categoryIds) {
         const categoryItems = [];
 
@@ -591,13 +593,32 @@ class EcoAucCrawler extends AxiosCrawler {
         const totalPages = await this.getTotalPages(categoryId);
         console.log(`Total pages in category ${categoryId}: ${totalPages}`);
 
-        // 모든 페이지 크롤링
-        for (let page = 1; page <= totalPages; page++) {
-          const pageItems = await this.crawlUpdatePage(categoryId, page);
-          categoryItems.push(...pageItems);
+        if (totalPages > 0) {
+          // 페이지 병렬 처리
+          const pagePromises = [];
+          for (let page = 1; page <= totalPages; page++) {
+            pagePromises.push(
+              limit(async () => {
+                console.log(
+                  `Crawling page ${page} of ${totalPages} for category ${categoryId}`
+                );
+                return await this.crawlUpdatePage(categoryId, page);
+              })
+            );
+          }
+
+          // 모든 페이지 결과 기다리기
+          const pageResults = await Promise.all(pagePromises);
+
+          // 페이지 결과를 카테고리 아이템에 추가
+          pageResults.forEach((pageItems) => {
+            if (pageItems && pageItems.length > 0) {
+              categoryItems.push(...pageItems);
+            }
+          });
         }
 
-        if (categoryItems && categoryItems.length > 0) {
+        if (categoryItems.length > 0) {
           allCrawledItems.push(...categoryItems);
           console.log(
             `Completed update crawl for category ${categoryId}, bid type ${urlConfig.type}. Items found: ${categoryItems.length}`

@@ -535,9 +535,11 @@ class BrandAucCrawler extends AxiosCrawler {
       };
     }
   }
-
   async crawlUpdates() {
     try {
+      const pLimit = require("p-limit");
+      const limit = pLimit(5); // 최대 5개의 병렬 요청을 허용
+
       const startTime = Date.now();
       console.log(`Starting updates crawl at ${new Date().toISOString()}`);
 
@@ -599,40 +601,58 @@ class BrandAucCrawler extends AxiosCrawler {
       );
       allCrawledItems.push(...firstPageItems);
 
-      // 나머지 페이지 순차적으로 처리
+      // 나머지 페이지를 5개씩 그룹으로 병렬 처리
+      const pageGroups = [];
       for (let page = 1; page < totalPages; page++) {
-        console.log(`Crawling update page ${page + 1} of ${totalPages}`);
-
-        const response = await this.client.get(
-          "https://bid.brand-auc.com/api/v1/brand-bid/items/list",
-          {
-            params: {
-              page: page,
-              size: size,
-              viewType: 1,
-              status: 1,
-              gamenId: "B201-01",
-            },
-            headers: {
-              Accept: "application/json",
-              Referer: "https://bid.brand-auc.com/",
-              "X-Requested-With": "XMLHttpRequest",
-            },
-          }
-        );
-
-        if (response.data && response.data.content) {
-          const pageItems = await this.processUpdateItemsPage(
-            response.data.content,
-            "direct"
-          );
-          allCrawledItems.push(...pageItems);
-
-          console.log(
-            `Processed ${pageItems.length} update items from page ${page + 1}`
-          );
-        }
+        pageGroups.push(page);
       }
+
+      const results = await Promise.all(
+        pageGroups.map((page) =>
+          limit(async () => {
+            console.log(`Crawling update page ${page + 1} of ${totalPages}`);
+
+            const response = await this.client.get(
+              "https://bid.brand-auc.com/api/v1/brand-bid/items/list",
+              {
+                params: {
+                  page: page,
+                  size: size,
+                  viewType: 1,
+                  status: 1,
+                  gamenId: "B201-01",
+                },
+                headers: {
+                  Accept: "application/json",
+                  Referer: "https://bid.brand-auc.com/",
+                  "X-Requested-With": "XMLHttpRequest",
+                },
+              }
+            );
+
+            if (response.data && response.data.content) {
+              const pageItems = await this.processUpdateItemsPage(
+                response.data.content,
+                "direct"
+              );
+
+              console.log(
+                `Processed ${pageItems.length} update items from page ${
+                  page + 1
+                }`
+              );
+
+              return pageItems;
+            }
+            return [];
+          })
+        )
+      );
+
+      // 결과를 모두 allCrawledItems에 추가
+      results.forEach((pageItems) => {
+        allCrawledItems.push(...pageItems);
+      });
 
       console.log(`Total update items processed: ${allCrawledItems.length}`);
 
