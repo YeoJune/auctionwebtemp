@@ -15,6 +15,7 @@ const cron = require("node-cron");
 const { getAdminSettings } = require("../utils/adminDB");
 const { initializeFilterSettings } = require("../utils/filterDB");
 const dotenv = require("dotenv");
+const socketIO = require("socket.io");
 
 dotenv.config();
 
@@ -274,10 +275,9 @@ async function crawlAllUpdates() {
 
         // 가격 변경된 아이템에 대한 입찰 취소 처리
         processChangedBids(changedItems);
-      }
 
-      // 만료된 일정에 대한 입찰 처리는 별도로 처리
-      processExpiredBids();
+        notifyClientsOfChanges(changedItems);
+      }
 
       const endTime = Date.now();
       const executionTime = endTime - startTime;
@@ -693,13 +693,62 @@ const scheduleUpdateCrawling = () => {
   }, updateInterval * 1000);
 };
 
+const scheduleExpiredBidsProcessing = () => {
+  const expiredBidInterval = 10 * 60; // 10분
+
+  console.log(
+    `Scheduling expired bids processing to run every ${expiredBidInterval} seconds`
+  );
+
+  setInterval(async () => {
+    console.log("Running scheduled expired bids processing task");
+    try {
+      await processExpiredBids();
+      console.log("Scheduled expired bids processing completed successfully");
+    } catch (error) {
+      console.error("Scheduled expired bids processing error:", error);
+    }
+  }, expiredBidInterval * 1000);
+};
+
+// Socket.IO 초기화 (server.js에서 불러옴)
+function initializeSocket(server) {
+  const io = socketIO(server);
+
+  // 클라이언트 연결 이벤트
+  io.on("connection", (socket) => {
+    console.log("Client connected:", socket.id);
+
+    socket.on("disconnect", () => {
+      console.log("Client disconnected:", socket.id);
+    });
+  });
+
+  return io;
+}
+
+// 서버에서 데이터 변경 감지 시 알림 전송
+async function notifyClientsOfChanges(changedItems) {
+  if (!global.io || changedItems.length === 0) return;
+
+  // 변경된 아이템 ID만 전송
+  const changedItemIds = changedItems.map((item) => item.item_id);
+  global.io.emit("data-updated", {
+    itemIds: changedItemIds,
+    timestamp: new Date().toISOString(),
+  });
+
+  console.log(`Notified clients about ${changedItemIds.length} updated items`);
+}
+
 if (process.env.ENV === "development") {
   console.log("development env");
 } else {
   console.log("product env");
   scheduleCrawling();
   scheduleUpdateCrawling();
+  scheduleExpiredBidsProcessing();
   loginAll();
 }
 
-module.exports = router;
+module.exports = { router, initializeSocket };

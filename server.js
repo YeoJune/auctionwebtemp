@@ -9,7 +9,7 @@ const bodyParser = require("body-parser");
 const authRoutes = require("./routes/auth");
 const wishlistRoutes = require("./routes/wishlist");
 const dataRoutes = require("./routes/data");
-const crawlerRoutes = require("./routes/crawler");
+const { router: crawlerRouter, initializeSocket } = require("./routes/crawler");
 const bidRoutes = require("./routes/bid");
 const adminRoutes = require("./routes/admin");
 const valuesRoutes = require("./routes/values");
@@ -23,6 +23,8 @@ const dashboardRoutes = require("./routes/dashboard");
 
 const app = express();
 const server = http.createServer(app);
+
+global.io = initializeSocket(server);
 
 // 프록시 설정
 app.set("trust proxy", 1);

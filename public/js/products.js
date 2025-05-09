@@ -26,21 +26,52 @@ window.state = {
   showBidItemsOnly: false, // 입찰 항목만 표시 여부
 };
 
-// 자동 새로고침 타이머 변수
-let autoRefreshTimer = null;
+let fetchDataDebounceTimer = null;
+function debouncedFetchData(showLoading = false) {
+  if (fetchDataDebounceTimer) clearTimeout(fetchDataDebounceTimer);
+  fetchDataDebounceTimer = setTimeout(() => {
+    fetchData(showLoading);
+  }, 300); // 300ms 내에 추가 요청은 무시
+}
 
-// 자동 새로고침 설정 함수
-function setupAutoRefresh() {
-  // 이미 타이머가 설정되어 있다면 제거
-  if (autoRefreshTimer) {
-    clearInterval(autoRefreshTimer);
-  }
+function initializeSocket() {
+  const socket = io({
+    reconnectionAttempts: 5,
+    timeout: 10000,
+  });
 
-  // 30초마다 데이터 새로고침
-  autoRefreshTimer = setInterval(() => {
-    // 자동 새로고침 시에는 로딩 표시하지 않음
-    fetchData(false);
-  }, 20 * 1000); // 20초
+  socket.on("connect_error", (error) => {
+    console.error("Socket connection error:", error);
+    // 폴백 방식으로 일정 주기 폴링 활성화
+    setupFallbackPolling();
+  });
+
+  // 데이터 업데이트 이벤트 수신
+  socket.on("data-updated", (data) => {
+    console.log(
+      `Received update notification for ${data.itemIds.length} items`
+    );
+
+    // 현재 화면에 표시된 아이템과 업데이트된 아이템 비교
+    const visibleItemIds = state.currentData.map((item) => item.item_id);
+    const itemsToUpdate = data.itemIds.filter((id) =>
+      visibleItemIds.includes(id)
+    );
+
+    if (itemsToUpdate.length > 0) {
+      debouncedFetchData(false);
+    }
+  });
+
+  socket.on("connect", () => {
+    console.log("Connected to server");
+  });
+
+  socket.on("disconnect", () => {
+    console.log("Disconnected from server");
+  });
+
+  return socket;
 }
 
 // 데이터 표시 함수
@@ -1305,6 +1336,7 @@ function initialize() {
   });
 
   window.addEventListener("load", function () {
+    const socket = initializeSocket();
     // 기존 초기화 함수 호출
     API.initialize()
       .then(() => checkAuthStatus())
@@ -1383,9 +1415,6 @@ function initialize() {
             if (itemId) {
               showDetails(itemId);
             }
-
-            // 자동 새로고침 설정
-            setupAutoRefresh();
           });
         }
       )
