@@ -227,7 +227,7 @@ async function crawlAllValues(options = {}) {
 }
 
 async function crawlAllUpdates() {
-  if (isUpdateCrawling || isCrawling) {
+  if (isUpdateCrawling || isCrawling || isValueCrawling) {
     throw new Error("update crawling already in progress");
   } else {
     isUpdateCrawling = true;
@@ -468,7 +468,7 @@ const scheduleUpdateCrawling = () => {
   setInterval(async () => {
     console.log("Running scheduled update crawling task");
     try {
-      if (!isCrawling && !isUpdateCrawling) {
+      if (!isCrawling && !isUpdateCrawling && !isValueCrawling) {
         const result = await crawlAllUpdates();
         console.log("Scheduled update crawling completed successfully", {
           ecoAucCount: result.ecoAucCount,
