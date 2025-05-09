@@ -363,7 +363,6 @@ async function processChangedBids(changedItems) {
   }
 }
 
-// 만료된 일정에 대한 입찰 취소/완료 처리
 async function processExpiredBids() {
   const conn = await pool.getConnection();
   try {
@@ -372,8 +371,8 @@ async function processExpiredBids() {
     // JOIN을 사용하여 만료된 아이템과 관련 입찰을 함께 조회
     const [expiredItemBids] = await conn.query(
       "SELECT db.id, db.item_id, db.current_price, ci.starting_price " +
-        "FROM crawled_items ci " +
-        "JOIN direct_bids db ON ci.item_id = db.item_id " +
+        "FROM direct_bids db " +
+        "JOIN crawled_items ci ON ci.item_id = db.item_id " +
         "WHERE ci.scheduled_date < NOW() " +
         "AND ci.bid_type = 'direct' " +
         "AND db.status = 'active' " +
