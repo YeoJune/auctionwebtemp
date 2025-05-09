@@ -290,7 +290,7 @@ async function crawlAllUpdates() {
       return {
         ecoAucCount: ecoAucUpdates.length,
         brandAucCount: brandAucUpdates.length,
-        changedItemsCount: changedItems.length,
+        totalCount: allUpdates.length,
         executionTime: formatExecutionTime(executionTime),
       };
     } catch (error) {
