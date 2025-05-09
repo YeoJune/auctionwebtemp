@@ -405,6 +405,8 @@ async function processExpiredBids() {
       bidsByItem[bid.item_id].push(bid);
     });
 
+    console.log(bidsByItem);
+
     const bidsToComplete = [];
     const bidsToCancel = [];
 
