@@ -267,9 +267,16 @@ async function crawlAllUpdates() {
         );
       });
 
-      // 변경된 아이템만 업데이트
+      // 변경된 아이템이 있으면 DB 업데이트 비동기로 실행
       if (changedItems.length > 0) {
-        await DBManager.updateItems(changedItems, "crawled_items");
+        // await 제거하여 비동기로 DB 업데이트 처리
+        DBManager.updateItems(changedItems, "crawled_items");
+      }
+
+      // 입찰 상태 처리 - 변경 여부와 관계없이 allUpdates 기반으로 처리
+      if (allUpdates.length > 0) {
+        // await 없이 비동기로 호출
+        processChangedBids(allUpdates);
       }
 
       const endTime = Date.now();
@@ -292,6 +299,139 @@ async function crawlAllUpdates() {
     } finally {
       isUpdateCrawling = false;
     }
+  }
+}
+
+// 파라미터를 allUpdates만 받도록 수정
+async function processChangedBids(allUpdates) {
+  // 처리할 것이 없으면 빠르게 종료
+  if (!allUpdates || allUpdates.length === 0) return;
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // 모든 아이템 ID 추출
+    const allItemIds = allUpdates.map((item) => item.item_id);
+
+    // 관련된 모든 active 입찰 한 번에 조회
+    const [activeBids] = await conn.query(
+      "SELECT db.id, db.item_id, db.current_price, ci.starting_price " +
+        "FROM direct_bids db " +
+        "JOIN crawled_items ci ON db.item_id = ci.item_id " +
+        "WHERE db.item_id IN (?) AND db.status = 'active'",
+      [allItemIds]
+    );
+
+    // 현재 시간
+    const currentDate = new Date();
+
+    // 취소 및 완료 처리할 입찰 ID 배열
+    const bidsToCancel = [];
+    const bidsToComplete = [];
+
+    // 아이템별로 그룹화
+    const bidsByItem = {};
+    activeBids.forEach((bid) => {
+      if (!bidsByItem[bid.item_id]) {
+        bidsByItem[bid.item_id] = [];
+      }
+      bidsByItem[bid.item_id].push(bid);
+    });
+
+    // 각 아이템별 처리
+    allUpdates.forEach((item) => {
+      const itemBids = bidsByItem[item.item_id] || [];
+      if (itemBids.length === 0) return;
+
+      // 가격 비교를 위해 아이템 정렬 (내림차순)
+      itemBids.sort(
+        (a, b) => parseFloat(b.current_price) - parseFloat(a.current_price)
+      );
+
+      // 최고가 입찰 선택
+      const highestBid = itemBids[0];
+
+      // 1. 먼저 가격이 starting_price보다 낮은 입찰 처리 (취소)
+      itemBids.forEach((bid) => {
+        if (parseFloat(bid.current_price) < parseFloat(item.starting_price)) {
+          if (!bidsToCancel.includes(bid.id)) {
+            bidsToCancel.push(bid.id);
+          }
+        }
+      });
+
+      // 2. scheduled_date가 지났는지 확인
+      if (item.scheduled_date) {
+        const scheduledDate = new Date(item.scheduled_date);
+        if (scheduledDate < currentDate) {
+          // scheduled_date가 지났고, 최고가가 starting_price와 같으면 완료 처리
+          if (
+            parseFloat(highestBid.current_price) ===
+            parseFloat(item.starting_price)
+          ) {
+            // 최고가 입찰은 완료 처리 (이미 완료 대상이 아닌 경우만)
+            if (!bidsToComplete.includes(highestBid.id)) {
+              bidsToComplete.push(highestBid.id);
+            }
+
+            // 나머지 입찰들은 취소 처리 (이미 취소 대상이 아닌 경우만)
+            itemBids.slice(1).forEach((bid) => {
+              if (
+                !bidsToCancel.includes(bid.id) &&
+                !bidsToComplete.includes(bid.id)
+              ) {
+                bidsToCancel.push(bid.id);
+              }
+            });
+          }
+        }
+      }
+    });
+
+    // 취소 처리 - 100개씩 배치 처리
+    for (let i = 0; i < bidsToCancel.length; i += 100) {
+      const batch = bidsToCancel.slice(i, i + 100);
+      if (batch.length > 0) {
+        await conn.query(
+          "UPDATE direct_bids SET status = 'cancelled' WHERE id IN (?) AND status = 'active'",
+          [batch]
+        );
+
+        console.log(
+          `Cancelled batch ${Math.floor(i / 100) + 1}: ${batch.length} bids`
+        );
+      }
+    }
+
+    // 완료 처리 - 100개씩 배치 처리
+    for (let i = 0; i < bidsToComplete.length; i += 100) {
+      const batch = bidsToComplete.slice(i, i + 100);
+      if (batch.length > 0) {
+        await conn.query(
+          "UPDATE direct_bids SET status = 'completed' WHERE id IN (?) AND status = 'active'",
+          [batch]
+        );
+
+        console.log(
+          `Completed batch ${Math.floor(i / 100) + 1}: ${batch.length} bids`
+        );
+      }
+    }
+
+    console.log(
+      `Total processed: ${bidsToCancel.length + bidsToComplete.length} bids (${
+        bidsToCancel.length
+      } cancelled, ${bidsToComplete.length} completed)`
+    );
+
+    await conn.commit();
+    console.log(`Successfully processed all bid status changes`);
+  } catch (error) {
+    await conn.rollback();
+    console.error("Error processing bid status changes:", error);
+  } finally {
+    conn.release();
   }
 }
 
