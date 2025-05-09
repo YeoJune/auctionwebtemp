@@ -362,9 +362,26 @@ router.post("/", async (req, res) => {
       );
     }
 
+    // 7. scheduled_date를 5분 연장
+    if (item.scheduled_date) {
+      // 현재 scheduled_date 파싱
+      let scheduledDate = new Date(item.scheduled_date);
+
+      // 5분 추가
+      scheduledDate.setMinutes(scheduledDate.getMinutes() + 5);
+
+      // 업데이트
+      await connection.query(
+        "UPDATE crawled_items SET scheduled_date = ? WHERE item_id = ?",
+        [scheduledDate.toISOString().slice(0, 19).replace("T", " "), itemId]
+      );
+
+      console.log(`Extended scheduled_date by 5 minutes for item ${itemId}`);
+    }
+
     await connection.commit();
 
-    // 7. autoSubmit이 true인 경우 자동으로 입찰 제출
+    // 8. autoSubmit이 true인 경우 자동으로 입찰 제출
     let submissionResult = null;
     if (autoSubmit) {
       submissionResult = await submitBid({
