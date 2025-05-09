@@ -61,6 +61,8 @@ const ecoAucConfig = {
       return `https://www.ecoauc.com/client/auction-items/view/${itemId}/Auctions/inspect`;
     }
   },
+  searchParamsAllCategories: (page) =>
+    `?limit=200&sortKey=1&tableType=grid&page=${page}`,
 };
 
 const ecoAucValueConfig = {
@@ -561,6 +563,7 @@ class EcoAucCrawler extends AxiosCrawler {
     // 원본과 동일하게 객체 병합
     return item;
   }
+
   async crawlUpdates() {
     try {
       const limit = pLimit(5); // 최대 5개의 페이지를 병렬로 처리
@@ -570,8 +573,6 @@ class EcoAucCrawler extends AxiosCrawler {
 
       // 로그인
       await this.login();
-
-      const allCrawledItems = [];
 
       // Direct 경매 URL만 사용
       const urlConfig = {
@@ -585,53 +586,40 @@ class EcoAucCrawler extends AxiosCrawler {
       this.config.searchUrl = urlConfig.url;
       this.currentBidType = urlConfig.type;
 
-      // 카테고리는 순차적으로 처리
-      for (const categoryId of this.config.categoryIds) {
-        const categoryItems = [];
+      // 카테고리 구분 없이 전체 페이지 처리
+      console.log(
+        `Starting update crawl with bid type ${urlConfig.type} for all categories`
+      );
 
-        console.log(
-          `Starting update crawl for category ${categoryId} with bid type ${urlConfig.type}`
-        );
-        this.config.currentCategoryId = categoryId;
+      // 전체 페이지 수 가져오기 - 카테고리 없이 호출
+      const totalPages = await this.getTotalPagesForAllCategories();
+      console.log(`Total pages for all categories: ${totalPages}`);
 
-        const totalPages = await this.getTotalPages(categoryId);
-        console.log(`Total pages in category ${categoryId}: ${totalPages}`);
+      const allCrawledItems = [];
 
-        if (totalPages > 0) {
-          // 페이지 병렬 처리
-          const pagePromises = [];
-          for (let page = 1; page <= totalPages; page++) {
-            pagePromises.push(
-              limit(async () => {
-                console.log(
-                  `Crawling page ${page} of ${totalPages} for category ${categoryId}`
-                );
-                return await this.crawlUpdatePage(categoryId, page);
-              })
-            );
+      if (totalPages > 0) {
+        // 페이지 병렬 처리
+        const pagePromises = [];
+        for (let page = 1; page <= totalPages; page++) {
+          pagePromises.push(
+            limit(async () => {
+              console.log(
+                `Crawling page ${page} of ${totalPages} for all categories`
+              );
+              return await this.crawlUpdatePage(page);
+            })
+          );
+        }
+
+        // 모든 페이지 결과 기다리기
+        const pageResults = await Promise.all(pagePromises);
+
+        // 페이지 결과를 아이템에 추가
+        pageResults.forEach((pageItems) => {
+          if (pageItems && pageItems.length > 0) {
+            allCrawledItems.push(...pageItems);
           }
-
-          // 모든 페이지 결과 기다리기
-          const pageResults = await Promise.all(pagePromises);
-
-          // 페이지 결과를 카테고리 아이템에 추가
-          pageResults.forEach((pageItems) => {
-            if (pageItems && pageItems.length > 0) {
-              categoryItems.push(...pageItems);
-            }
-          });
-        }
-
-        if (categoryItems.length > 0) {
-          allCrawledItems.push(...categoryItems);
-          console.log(
-            `Completed update crawl for category ${categoryId}, bid type ${urlConfig.type}. Items found: ${categoryItems.length}`
-          );
-        } else {
-          console.log(
-            `No update items found for category ${categoryId}, bid type ${urlConfig.type}`
-          );
-        }
+        });
       }
 
       if (allCrawledItems.length === 0) {
@@ -658,11 +646,39 @@ class EcoAucCrawler extends AxiosCrawler {
     }
   }
 
-  async crawlUpdatePage(categoryId, page) {
+  async getTotalPagesForAllCategories() {
     return this.retryOperation(async () => {
-      console.log(`Crawling update page ${page} in category ${categoryId}...`);
+      console.log(`Getting total pages for all categories...`);
       const url =
-        this.config.searchUrl + this.config.searchParams(categoryId, page);
+        this.config.searchUrl + this.config.searchParamsAllCategories(1);
+
+      const response = await this.client.get(url);
+      const $ = cheerio.load(response.data);
+
+      const paginationExists =
+        $(this.config.crawlSelectors.paginationLast).length > 0;
+
+      if (paginationExists) {
+        const href = $(this.config.crawlSelectors.paginationLast).attr("href");
+        const match = href.match(/page=(\d+)/);
+        if (match) {
+          return parseInt(match[1], 10);
+        }
+      } else {
+        const itemExists =
+          $(this.config.crawlSelectors.itemContainer).length > 0;
+        return itemExists ? 1 : 0;
+      }
+
+      throw new Error("Unable to determine total pages");
+    });
+  }
+
+  async crawlUpdatePage(page) {
+    return this.retryOperation(async () => {
+      console.log(`Crawling update page ${page} for all categories...`);
+      const url =
+        this.config.searchUrl + this.config.searchParamsAllCategories(page);
 
       const response = await this.client.get(url);
       const $ = cheerio.load(response.data);
@@ -728,6 +744,10 @@ class EcoAucCrawler extends AxiosCrawler {
         $startingPrice.length > 0 ? $startingPrice.text().trim() : null;
       const startingPrice = this.currencyToInt(startingPriceText);
 
+      // 카테고리 추출 - 없을 경우 null로 설정
+      let category = null;
+      // 카테고리를 DOM 구조나 URL에서 추출 로직 추가 (필요 시)
+
       // 경매 날짜가 유효하지 않으면 null 반환
       if (!this.isCollectionDay(scheduledDate)) {
         return null;
@@ -738,6 +758,7 @@ class EcoAucCrawler extends AxiosCrawler {
         scheduled_date: scheduledDate,
         starting_price: startingPrice,
         bid_type: this.currentBidType,
+        category: category, // 카테고리 정보는 null 또는 추출된 값으로 설정
       };
     } catch (error) {
       console.error("Error extracting update item info:", error);
