@@ -2,6 +2,11 @@ const cheerio = require("cheerio");
 const { AxiosCrawler } = require("./baseCrawler");
 const { processImagesInChunks } = require("../utils/processImage");
 
+let pLimit;
+(async () => {
+  pLimit = (await import("p-limit")).default;
+})();
+
 const starAucConfig = {
   name: "StarAuc",
   baseUrl: "https://www.starbuyers-global-auction.com",

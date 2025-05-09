@@ -3,6 +3,11 @@ const cheerio = require("cheerio");
 const { AxiosCrawler, Crawler } = require("./baseCrawler");
 const { processImagesInChunks } = require("../utils/processImage");
 
+let pLimit;
+(async () => {
+  pLimit = (await import("p-limit")).default;
+})();
+
 const ecoAucConfig = {
   name: "EcoAuc",
   baseUrl: "https://www.ecoauc.com",
@@ -558,7 +563,6 @@ class EcoAucCrawler extends AxiosCrawler {
   }
   async crawlUpdates() {
     try {
-      const pLimit = require("p-limit");
       const limit = pLimit(5); // 최대 5개의 페이지를 병렬로 처리
 
       const startTime = Date.now();

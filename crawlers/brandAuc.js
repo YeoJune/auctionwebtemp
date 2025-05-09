@@ -3,6 +3,11 @@ const cheerio = require("cheerio");
 const { AxiosCrawler } = require("./baseCrawler");
 const { processImagesInChunks } = require("../utils/processImage");
 
+let pLimit;
+(async () => {
+  pLimit = (await import("p-limit")).default;
+})();
+
 const brandAucConfig = {
   name: "BrandAuc",
   baseUrl: "https://member.brand-auc.com",
@@ -537,7 +542,6 @@ class BrandAucCrawler extends AxiosCrawler {
   }
   async crawlUpdates() {
     try {
-      const pLimit = require("p-limit");
       const limit = pLimit(5); // 최대 5개의 병렬 요청을 허용
 
       const startTime = Date.now();
