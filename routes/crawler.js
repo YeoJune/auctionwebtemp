@@ -372,47 +372,43 @@ async function processExpiredBids() {
     // 현재 날짜
     const currentDate = new Date().toISOString().split("T")[0]; // YYYY-MM-DD 형식
 
-    // 만료된 일정을 가진 아이템 조회
-    const [expiredItems] = await conn.query(
-      "SELECT item_id, starting_price FROM crawled_items " +
-        "WHERE scheduled_date < ? AND bid_type = 'direct'",
+    // JOIN을 사용하여 만료된 아이템과 관련 입찰을 함께 조회
+    const [expiredItemBids] = await conn.query(
+      "SELECT db.id, db.item_id, db.current_price, ci.starting_price " +
+        "FROM crawled_items ci " +
+        "JOIN direct_bids db ON ci.item_id = db.item_id " +
+        "WHERE ci.scheduled_date < ? " +
+        "AND ci.bid_type = 'direct' " +
+        "AND db.status = 'active' " +
+        "ORDER BY db.item_id, db.current_price DESC",
       [currentDate]
     );
 
-    if (expiredItems.length === 0) {
-      console.log("No expired scheduled items found");
+    if (expiredItemBids.length === 0) {
+      console.log("No expired scheduled items with active bids found");
       return;
     }
 
-    // 만료된 아이템 ID 추출
-    const expiredItemIds = expiredItems.map((item) => item.item_id);
-
-    // 만료된 아이템의 active 입찰 조회
-    const [expiredItemBids] = await conn.query(
-      "SELECT db.id, db.item_id, db.current_price " +
-        "FROM direct_bids db " +
-        "WHERE db.item_id IN (?) AND db.status = 'active' " +
-        "ORDER BY db.item_id, db.current_price DESC",
-      [expiredItemIds]
-    );
-
     // 아이템별로 그룹화
     const bidsByItem = {};
+    const uniqueItemIds = new Set();
+
     expiredItemBids.forEach((bid) => {
       if (!bidsByItem[bid.item_id]) {
         bidsByItem[bid.item_id] = [];
+        uniqueItemIds.add(bid.item_id);
       }
       bidsByItem[bid.item_id].push(bid);
     });
 
-    console.log(bidsByItem);
+    console.log(`Found ${uniqueItemIds.size} expired items with active bids`);
 
     const bidsToComplete = [];
     const bidsToCancel = [];
 
     // 각 만료된 아이템별로 처리
-    expiredItems.forEach((item) => {
-      const itemBids = bidsByItem[item.item_id] || [];
+    Object.keys(bidsByItem).forEach((itemId) => {
+      const itemBids = bidsByItem[itemId];
       if (itemBids.length === 0) return;
 
       // 최고가 입찰
@@ -420,7 +416,8 @@ async function processExpiredBids() {
 
       // starting_price와 일치하는지 확인
       if (
-        parseFloat(highestBid.current_price) === parseFloat(item.starting_price)
+        parseFloat(highestBid.current_price) ===
+        parseFloat(highestBid.starting_price)
       ) {
         // 최고가 입찰은 완료 처리
         bidsToComplete.push(highestBid.id);
@@ -468,7 +465,7 @@ async function processExpiredBids() {
 
     await conn.commit();
     console.log(
-      `Expired items processed: ${expiredItems.length}, completed: ${bidsToComplete.length}, cancelled: ${bidsToCancel.length}`
+      `Expired items processed: ${uniqueItemIds.size}, completed: ${bidsToComplete.length}, cancelled: ${bidsToCancel.length}`
     );
   } catch (error) {
     await conn.rollback();
