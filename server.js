@@ -6,6 +6,8 @@ const cors = require("cors");
 const session = require("express-session");
 const MySQLStore = require("express-mysql-session")(session);
 const bodyParser = require("body-parser");
+
+// routes
 const authRoutes = require("./routes/auth");
 const wishlistRoutes = require("./routes/wishlist");
 const dataRoutes = require("./routes/data");
@@ -17,10 +19,15 @@ const detailRoutes = require("./routes/detail");
 const liveBidsRoutes = require("./routes/live-bids");
 const directBidsRoutes = require("./routes/direct-bids");
 const userRoutes = require("./routes/users");
+const certificateRoutes = require("./routes/certificate");
+const restorationRoutes = require("./routes/restoration");
+
+// utils
 const pool = require("./utils/DB");
 const metricsModule = require("./utils/metrics");
 const dashboardRoutes = require("./routes/dashboard");
 
+// init
 const app = express();
 const server = http.createServer(app);
 
@@ -101,6 +108,8 @@ app.use("/api/live-bids", liveBidsRoutes);
 app.use("/api/direct-bids", directBidsRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/certificate", certificateRoutes);
+app.use("/api/restoration", restorationRoutes);
 
 // 정적 파일 서빙
 app.use(express.static("public"));
@@ -182,6 +191,31 @@ app.get("/admin/users", (req, res) => {
   } else {
     res.redirect("/signinPage");
   }
+});
+
+// 감정 시스템 관련 페이지 라우트
+app.get("/cert", (req, res) => {
+  res.sendFile(__dirname + "/pages/cert/index.html");
+});
+
+app.get("/cert/request", (req, res) => {
+  res.sendFile(__dirname + "/pages/cert/request.html");
+});
+
+app.get("/cert/result", (req, res) => {
+  res.sendFile(__dirname + "/pages/cert/result.html");
+});
+
+app.get("/cert/result/:certificateNumber", (req, res) => {
+  res.sendFile(__dirname + "/pages/cert/result-detail.html");
+});
+
+app.get("/cert/repair", (req, res) => {
+  res.sendFile(__dirname + "/pages/cert/repair.html");
+});
+
+app.get("/cert/authenticity", (req, res) => {
+  res.sendFile(__dirname + "/pages/cert/authenticity.html");
 });
 
 // 에러 핸들링 미들웨어
