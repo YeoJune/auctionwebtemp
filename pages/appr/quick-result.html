@@ -1,0 +1,922 @@
+<!-- pages/appr/quick-result.html -->
+<!-- 퀵링크 감정 결과 페이지 -->
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CAS 명품감정시스템 - 퀵링크감정 결과</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Montserrat:wght@500;600;700&display=swap"
+      rel="stylesheet" />
+    <style>
+      /* 기본 리셋 및 폰트 설정 */
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue",
+          sans-serif;
+      }
+
+      body {
+        color: #1a2a3a;
+        line-height: 1.6;
+        background-color: #f8fafc;
+      }
+
+      .container {
+        max-width: 1000px; /* 너비 조정 */
+        margin: 0 auto;
+        padding: 0 20px;
+      }
+
+      .btn-primary {
+        background-color: #1a2a3a;
+        color: #fff;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-decoration: none;
+      }
+
+      .btn-primary:hover {
+        background-color: #2d4263;
+      }
+      .btn-primary:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+      }
+
+      .btn-outline {
+        background-color: transparent;
+        color: #1a2a3a;
+        padding: 12px 24px;
+        border: 1px solid #1a2a3a;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-decoration: none;
+      }
+
+      .btn-outline:hover {
+        background-color: rgba(26, 42, 58, 0.05);
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: repeat(1, 1fr);
+        gap: 30px;
+      }
+
+      @media (min-width: 768px) {
+        .grid-2 {
+          grid-template-columns: repeat(2, 1fr) !important;
+        }
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 5px 12px;
+        border-radius: 50px;
+        font-size: 0.85rem;
+        font-weight: 600;
+      }
+
+      .badge-success {
+        background-color: #d1fae5;
+        color: #059669;
+      }
+
+      .badge-warning {
+        /* 감정불가/자료부족 */
+        background-color: #fef3c7;
+        color: #d97706;
+      }
+
+      .badge-error {
+        /* 가품 */
+        background-color: #fee2e2;
+        color: #dc2626;
+      }
+      .badge-pending {
+        /* 감정 대기중 */
+        background-color: #e0e7ff; /* 연한 파랑/보라 계열 */
+        color: #4338ca; /* 진한 파랑/보라 계열 */
+      }
+
+      .popup {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s;
+      }
+
+      .popup.show {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .popup-content {
+        background-color: white;
+        border-radius: 12px;
+        max-width: 90%;
+        width: 600px;
+        max-height: 90vh;
+        overflow-y: auto;
+        padding: 30px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        position: relative;
+      }
+
+      .popup-close {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #64748b;
+      }
+
+      .popup-close:hover {
+        color: #1a2a3a;
+      }
+
+      .popup-content::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .popup-content::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+      }
+
+      .popup-content::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+      }
+
+      .popup-content::-webkit-scrollbar-thumb:hover {
+        background: #a1a1a1;
+      }
+
+      .result-section {
+        display: none; /* 기본적으로 모든 결과 섹션 숨김 */
+      }
+      .result-section.active {
+        display: block; /* JS로 active 클래스 추가 시 보이도록 */
+      }
+      #loading-message {
+        text-align: center;
+        padding: 40px 20px;
+        font-size: 1.2rem;
+        color: #4a5568;
+      }
+      .image-gallery-main {
+        border-radius: 8px;
+        overflow: hidden;
+        width: 100%;
+        height: 0;
+        padding-bottom: 100%; /* 1:1 비율 */
+        position: relative;
+        background-color: #f3f4f6; /* 이미지 로딩 전 배경 */
+      }
+      .image-gallery-main img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .image-gallery-thumbnails {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+        overflow-x: auto; /* 썸네일 많을 경우 스크롤 */
+        padding-bottom: 5px;
+      }
+      .image-gallery-thumb {
+        border-radius: 8px;
+        overflow: hidden;
+        min-width: 80px; /* 최소 너비 보장 */
+        width: 80px;
+        height: 80px;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: border-color 0.2s;
+      }
+      .image-gallery-thumb.active,
+      .image-gallery-thumb:hover {
+        border-color: #1a2a3a;
+      }
+      .image-gallery-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+    </style>
+  </head>
+
+  <body>
+    <main>
+      <section style="padding: 50px 0">
+        <div class="container">
+          <a
+            href="#"
+            onclick="goBack(); return false;"
+            style="
+              display: inline-flex;
+              align-items: center;
+              color: #64748b;
+              margin-bottom: 30px;
+              text-decoration: none;
+            ">
+            <span style="margin-right: 8px">←</span>
+            <span>뒤로가기</span>
+          </a>
+
+          <div id="loading-message">감정 결과를 불러오는 중입니다...</div>
+
+          <!-- 감정 결과 헤더 (공통) -->
+          <div
+            id="result-header"
+            style="
+              display: none;
+              justify-content: space-between;
+              align-items: flex-start;
+              margin-bottom: 30px;
+              flex-wrap: wrap;
+              gap: 20px;
+            ">
+            <div>
+              <h1
+                id="product-name"
+                style="font-size: 2rem; font-weight: 700; margin-bottom: 15px">
+                상품명
+              </h1>
+              <div
+                style="display: flex; align-items: center; margin-bottom: 10px">
+                <span id="result-badge" class="badge">결과</span>
+              </div>
+              <p id="appraisal-date" style="color: #64748b; font-size: 0.95rem">
+                감정일: -
+              </p>
+            </div>
+            <div style="display: flex; gap: 10px">
+              <button
+                id="issue-certificate-btn"
+                class="btn-primary"
+                onclick="navigateToIssuePage()">
+                감정서 발급받기
+              </button>
+            </div>
+          </div>
+
+          <!-- 1. 정품일 경우 섹션 -->
+          <div id="result-authentic" class="result-section">
+            <div
+              style="
+                background-color: white;
+                border-radius: 8px;
+                padding: 30px;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                margin-bottom: 30px;
+              ">
+              <div class="grid-2">
+                <div>
+                  <div class="image-gallery-main">
+                    <img
+                      id="authentic-main-image"
+                      src="https://via.placeholder.com/500/f0fdf4/15803d?text=Loading..."
+                      alt="상품 이미지" />
+                  </div>
+                  <div
+                    id="authentic-thumbnails"
+                    class="image-gallery-thumbnails">
+                    <!-- 썸네일 동적 추가 -->
+                  </div>
+                </div>
+                <div>
+                  <h3
+                    style="
+                      font-size: 1.3rem;
+                      font-weight: 700;
+                      margin-bottom: 20px;
+                    ">
+                    퀵링크감정 결과
+                  </h3>
+                  <div
+                    style="
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      padding: 20px;
+                      background-color: #f0fdf4;
+                      border-radius: 8px;
+                      margin-bottom: 20px;
+                    ">
+                    <div
+                      style="
+                        display: flex;
+                        align-items: center;
+                        font-size: 1.5rem;
+                        font-weight: 700;
+                        color: #15803d;
+                      ">
+                      <span style="margin-right: 10px; font-size: 1.8rem"
+                        >✓</span
+                      >
+                      <span>정품입니다</span>
+                    </div>
+                  </div>
+                  <p
+                    id="authentic-notes"
+                    style="
+                      color: #334155;
+                      font-size: 0.95rem;
+                      line-height: 1.7;
+                      margin-bottom: 20px;
+                    ">
+                    업로드하신 이미지 분석 결과, 해당 제품은
+                    <strong>정품</strong>으로 확인되었습니다.
+                  </p>
+                  <div
+                    style="
+                      background-color: #f8fafc;
+                      padding: 15px;
+                      border-radius: 8px;
+                      margin-bottom: 20px;
+                    ">
+                    <p
+                      style="
+                        color: #64748b;
+                        font-size: 0.9rem;
+                        line-height: 1.5;
+                      ">
+                      <strong>참고사항:</strong> 퀵링크감정은 업로드된 이미지를
+                      기반으로 진행되며, 더 정확한 결과를 원하시면 오프라인 실물
+                      감정을 이용해 주세요.
+                    </p>
+                  </div>
+                  <div style="display: flex; gap: 10px">
+                    <a
+                      href="/appr/request?tab=offline"
+                      class="btn-primary"
+                      style="flex: 1; text-align: center"
+                      >오프라인 실물 감정 신청</a
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. 가품일 경우 섹션 -->
+          <div id="result-fake" class="result-section">
+            <div
+              style="
+                background-color: white;
+                border-radius: 8px;
+                padding: 30px;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                margin-bottom: 30px;
+              ">
+              <div class="grid-2">
+                <div>
+                  <div class="image-gallery-main">
+                    <img
+                      id="fake-main-image"
+                      src="https://via.placeholder.com/500/fee2e2/dc2626?text=Loading..."
+                      alt="상품 이미지" />
+                  </div>
+                  <div id="fake-thumbnails" class="image-gallery-thumbnails">
+                    <!-- 썸네일 동적 추가 -->
+                  </div>
+                </div>
+                <div>
+                  <h3
+                    style="
+                      font-size: 1.3rem;
+                      font-weight: 700;
+                      margin-bottom: 20px;
+                    ">
+                    퀵링크감정 결과
+                  </h3>
+                  <div
+                    style="
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      padding: 20px;
+                      background-color: #fee2e2;
+                      border-radius: 8px;
+                      margin-bottom: 20px;
+                    ">
+                    <div
+                      style="
+                        display: flex;
+                        align-items: center;
+                        font-size: 1.5rem;
+                        font-weight: 700;
+                        color: #dc2626;
+                      ">
+                      <span style="margin-right: 10px; font-size: 1.8rem"
+                        >✗</span
+                      >
+                      <span>가품입니다</span>
+                    </div>
+                  </div>
+                  <p
+                    id="fake-notes"
+                    style="
+                      color: #334155;
+                      font-size: 0.95rem;
+                      line-height: 1.7;
+                      margin-bottom: 20px;
+                    ">
+                    업로드하신 이미지 분석 결과, 해당 제품은
+                    <strong>가품</strong>으로 확인되었습니다.
+                  </p>
+                  <div
+                    style="
+                      background-color: #f8fafc;
+                      padding: 15px;
+                      border-radius: 8px;
+                      margin-bottom: 20px;
+                    ">
+                    <p
+                      style="
+                        color: #64748b;
+                        font-size: 0.9rem;
+                        line-height: 1.5;
+                      ">
+                      <strong>참고사항:</strong> 퀵링크감정은 업로드된 이미지를
+                      기반으로 진행되며, 더 정확한 결과를 원하시면 오프라인 실물
+                      감정을 이용해 주세요.
+                    </p>
+                  </div>
+                  <div style="display: flex; gap: 10px">
+                    <a
+                      href="/appr/request?tab=offline"
+                      class="btn-primary"
+                      style="flex: 1; text-align: center"
+                      >오프라인 실물 감정 신청</a
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. 자료부족 (감정불가) 또는 감정 대기중 섹션 -->
+          <div id="result-uncertain" class="result-section">
+            <div
+              style="
+                background-color: white;
+                border-radius: 8px;
+                padding: 30px;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                margin-bottom: 30px;
+              ">
+              <div id="uncertain-content-wrapper">
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 20px;
+                    background-color: #fef3c7;
+                    border-radius: 8px;
+                    margin-bottom: 25px;
+                  ">
+                  <div
+                    style="
+                      display: flex;
+                      align-items: center;
+                      font-size: 1.5rem;
+                      font-weight: 700;
+                      color: #d97706;
+                    ">
+                    <span
+                      id="uncertain-icon"
+                      style="margin-right: 10px; font-size: 1.8rem"
+                      >!</span
+                    >
+                    <span id="uncertain-title">자료부족 / 판단불가</span>
+                  </div>
+                </div>
+                <p
+                  id="uncertain-message"
+                  style="
+                    color: #334155;
+                    font-size: 1rem;
+                    line-height: 1.7;
+                    margin-bottom: 25px;
+                    text-align: center;
+                  ">
+                  제공된 이미지만으로는 정품 여부를 판단하기 어렵습니다.<br />
+                  판매자에게 추가 사진을 요청하거나 오프라인 실물 감정을
+                  신청해주세요.
+                </p>
+                <div
+                  id="uncertain-additional-photos-needed"
+                  style="
+                    background-color: #f8fafc;
+                    padding: 20px;
+                    border-radius: 8px;
+                    margin-bottom: 25px;
+                    display: none;
+                  ">
+                  <h4
+                    style="
+                      font-size: 1.1rem;
+                      font-weight: 600;
+                      margin-bottom: 15px;
+                    ">
+                    추가로 필요한 사진 정보
+                  </h4>
+                  <ul
+                    id="uncertain-photo-list"
+                    style="
+                      color: #334155;
+                      padding-left: 20px;
+                      margin-bottom: 0;
+                    ">
+                    <!-- 필요한 사진 목록이 여기에 동적으로 추가될 수 있음 -->
+                    <li>제품 내부의 시리얼 코드/날짜 코드 부분</li>
+                    <li>메탈 부속품 클로즈업</li>
+                    <li>스티치(봉제) 부분 클로즈업</li>
+                    <li>전체 패턴이 보이는 정면 사진</li>
+                  </ul>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 15px">
+                  <!-- 추가 자료 업로드 기능은 API에 없으므로, 일단 주석 처리 또는 안내 문구로 대체 -->
+                  <!-- <a href="#" class="btn-primary" style="text-align: center;">추가 자료 업로드</a> -->
+                  <p
+                    style="
+                      font-size: 0.9rem;
+                      text-align: center;
+                      color: #64748b;
+                    ">
+                    (추가 자료 업로드 기능은 현재 지원되지 않습니다. 오프라인
+                    감정을 이용해주세요.)
+                  </p>
+                  <a
+                    href="/appr/request?tab=offline"
+                    class="btn-outline"
+                    style="text-align: center"
+                    >오프라인 실물 감정 신청</a
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- 감정서 발급 안내 팝업 (실제 발급은 issue.html에서) -->
+    <div id="certificate-info-popup" class="popup">
+      <div class="popup-content">
+        <span
+          class="popup-close"
+          onclick="togglePopup('certificate-info-popup')"
+          >✕</span
+        >
+        <h3 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 20px">
+          감정서 발급 안내
+        </h3>
+        <p style="color: #334155; margin-bottom: 20px; line-height: 1.7">
+          공식 감정서 발급은 '감정서 발급 신청' 페이지에서 진행하실 수 있습니다.
+          퀵링크 감정 결과에 대한 감정서 또는 오프라인 실물 감정 후 발급되는
+          정식 감정서를 신청하세요.
+        </p>
+        <div
+          style="
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+          ">
+          <h4 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 15px">
+            발급 대상 정보
+          </h4>
+          <table style="width: 100%; border-collapse: collapse">
+            <tr>
+              <td
+                style="
+                  padding: 10px 0;
+                  border-bottom: 1px solid #e2e8f0;
+                  color: #64748b;
+                  width: 120px;
+                ">
+                상품명
+              </td>
+              <td
+                id="popup-product-name"
+                style="
+                  padding: 10px 0;
+                  border-bottom: 1px solid #e2e8f0;
+                  font-weight: 500;
+                ">
+                -
+              </td>
+            </tr>
+            <tr>
+              <td
+                style="
+                  padding: 10px 0;
+                  border-bottom: 1px solid #e2e8f0;
+                  color: #64748b;
+                ">
+                감정 결과
+              </td>
+              <td
+                id="popup-appraisal-result"
+                style="
+                  padding: 10px 0;
+                  border-bottom: 1px solid #e2e8f0;
+                  font-weight: 500;
+                ">
+                -
+              </td>
+            </tr>
+          </table>
+        </div>
+        <div style="display: flex; gap: 10px">
+          <button
+            id="popup-go-to-issue-btn"
+            class="btn-primary"
+            style="flex: 1">
+            감정서 발급 신청 페이지로 이동
+          </button>
+          <button
+            class="btn-outline"
+            onclick="togglePopup('certificate-info-popup')">
+            닫기
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let currentAppraisalId = null; // 현재 페이지의 감정 ID 저장
+
+      function goBack() {
+        window.history.back();
+      }
+
+      function togglePopup(popupId) {
+        const popup = document.getElementById(popupId);
+        if (popup) {
+          popup.classList.toggle("show");
+          document.body.style.overflow = popup.classList.contains("show")
+            ? "hidden"
+            : "";
+        }
+      }
+
+      function navigateToIssuePage() {
+        if (currentAppraisalId) {
+          window.location.href = `/appr/issue/${currentAppraisalId}`;
+        } else {
+          alert("감정 ID를 찾을 수 없습니다.");
+        }
+      }
+
+      function displayImages(imageUrls, mainImageElId, thumbnailsElId) {
+        const mainImageEl = document.getElementById(mainImageElId);
+        const thumbnailsEl = document.getElementById(thumbnailsElId);
+
+        if (!mainImageEl || !thumbnailsEl) return;
+        thumbnailsEl.innerHTML = ""; // 기존 썸네일 초기화
+
+        if (imageUrls && imageUrls.length > 0) {
+          mainImageEl.src = imageUrls[0]; // 첫 번째 이미지를 메인으로
+          imageUrls.forEach((url, index) => {
+            const thumbDiv = document.createElement("div");
+            thumbDiv.className = "image-gallery-thumb";
+            if (index === 0) thumbDiv.classList.add("active");
+
+            const thumbImg = document.createElement("img");
+            thumbImg.src = url;
+            thumbImg.alt = `상세 이미지 ${index + 1}`;
+
+            thumbDiv.appendChild(thumbImg);
+            thumbDiv.addEventListener("click", () => {
+              mainImageEl.src = url;
+              thumbnailsEl
+                .querySelectorAll(".image-gallery-thumb")
+                .forEach((t) => t.classList.remove("active"));
+              thumbDiv.classList.add("active");
+            });
+            thumbnailsEl.appendChild(thumbDiv);
+          });
+        } else {
+          mainImageEl.src =
+            "https://via.placeholder.com/500/cccccc/969696?text=No+Image";
+          mainImageEl.alt = "이미지 없음";
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        const loadingMessageEl = document.getElementById("loading-message");
+        const resultHeaderEl = document.getElementById("result-header");
+
+        const productNameEl = document.getElementById("product-name");
+        const resultBadgeEl = document.getElementById("result-badge");
+        const appraisalDateEl = document.getElementById("appraisal-date");
+        const issueCertificateBtn = document.getElementById(
+          "issue-certificate-btn"
+        );
+
+        // 팝업 내 요소
+        const popupProductNameEl =
+          document.getElementById("popup-product-name");
+        const popupAppraisalResultEl = document.getElementById(
+          "popup-appraisal-result"
+        );
+        const popupGoToIssueBtn = document.getElementById(
+          "popup-go-to-issue-btn"
+        );
+
+        const pathParts = window.location.pathname.split("/");
+        const requestId = pathParts[pathParts.length - 1];
+        currentAppraisalId = requestId; // 감정 ID 저장
+
+        if (!requestId) {
+          loadingMessageEl.textContent =
+            "잘못된 접근입니다. 감정 요청 ID가 필요합니다.";
+          loadingMessageEl.style.color = "#dc2626";
+          return;
+        }
+
+        if (popupGoToIssueBtn) {
+          popupGoToIssueBtn.addEventListener("click", navigateToIssuePage);
+        }
+
+        fetch(`/api/appraisals/${requestId}`)
+          .then((response) => response.json())
+          .then((data) => {
+            loadingMessageEl.style.display = "none";
+            if (data.success && data.appraisal) {
+              const appraisal = data.appraisal;
+              resultHeaderEl.style.display = "flex";
+
+              productNameEl.textContent = `${
+                appraisal.brand || "브랜드 정보 없음"
+              } ${appraisal.model_name || "모델명 정보 없음"}`;
+              appraisalDateEl.textContent = `감정일: ${new Date(
+                appraisal.appraised_at || appraisal.created_at
+              ).toLocaleDateString("ko-KR")}`;
+
+              // 팝업 정보 업데이트
+              if (popupProductNameEl)
+                popupProductNameEl.textContent = productNameEl.textContent;
+
+              let activeResultSectionId = "";
+              let resultText = "";
+              let badgeClass = "";
+              let notes = appraisal.result_notes || "";
+              let images = appraisal.images || [];
+              if (appraisal.images && typeof appraisal.images === "string") {
+                try {
+                  images = JSON.parse(appraisal.images);
+                } catch (e) {
+                  images = [];
+                }
+              }
+
+              switch (appraisal.result) {
+                case "authentic":
+                  activeResultSectionId = "result-authentic";
+                  resultText = "정품";
+                  badgeClass = "badge-success";
+                  document.getElementById(
+                    "authentic-notes"
+                  ).innerHTML = `업로드하신 이미지 분석 결과, 해당 제품은 <strong>정품</strong>으로 확인되었습니다. ${
+                    notes
+                      ? "<br><br><strong>감정사 소견:</strong> " + notes
+                      : ""
+                  }`;
+                  displayImages(
+                    images,
+                    "authentic-main-image",
+                    "authentic-thumbnails"
+                  );
+                  break;
+                case "fake":
+                  activeResultSectionId = "result-fake";
+                  resultText = "가품";
+                  badgeClass = "badge-error";
+                  document.getElementById(
+                    "fake-notes"
+                  ).innerHTML = `업로드하신 이미지 분석 결과, 해당 제품은 <strong>가품</strong>으로 확인되었습니다. ${
+                    notes
+                      ? "<br><br><strong>감정사 소견:</strong> " + notes
+                      : ""
+                  }`;
+                  displayImages(images, "fake-main-image", "fake-thumbnails");
+                  break;
+                case "uncertain":
+                  activeResultSectionId = "result-uncertain";
+                  resultText = "판단 불가";
+                  badgeClass = "badge-warning";
+                  document.getElementById("uncertain-title").textContent =
+                    "판단 불가";
+                  document.getElementById("uncertain-icon").textContent = "!";
+                  document.getElementById(
+                    "uncertain-message"
+                  ).innerHTML = `제공된 정보만으로는 정품 여부를 판단하기 어렵습니다. ${
+                    notes ? "<br>" + notes + "<br><br>" : "<br><br>"
+                  }오프라인 실물 감정을 신청해주세요.`;
+                  document.getElementById(
+                    "uncertain-additional-photos-needed"
+                  ).style.display = "none"; // 자료부족 시에만 보이도록 처리 가능
+                  break;
+                case "pending": // 감정 대기중 (API 문서에는 없지만, 추가될 수 있음)
+                  activeResultSectionId = "result-uncertain"; // 자료부족 UI 재활용
+                  resultText = "감정 대기중";
+                  badgeClass = "badge-pending";
+                  document.getElementById("uncertain-title").textContent =
+                    "감정 대기중";
+                  document.getElementById("uncertain-icon").textContent = "⏳";
+                  document.getElementById("uncertain-message").textContent =
+                    "현재 감정이 진행 중입니다. 완료 후 결과를 확인해주세요.";
+                  document.getElementById(
+                    "uncertain-additional-photos-needed"
+                  ).style.display = "none";
+                  if (issueCertificateBtn) issueCertificateBtn.disabled = true; // 대기중에는 발급 버튼 비활성화
+                  break;
+                default: // 기타 상태 (예: cancelled 등)
+                  activeResultSectionId = "result-uncertain"; // 자료부족 UI 재활용
+                  resultText = appraisal.result || "알 수 없음";
+                  badgeClass = "badge-warning";
+                  document.getElementById(
+                    "uncertain-title"
+                  ).textContent = `상태: ${resultText}`;
+                  document.getElementById("uncertain-icon").textContent = "ℹ️";
+                  document.getElementById(
+                    "uncertain-message"
+                  ).textContent = `현재 감정 요청 상태는 '${resultText}' 입니다. ${
+                    notes || ""
+                  }`;
+                  document.getElementById(
+                    "uncertain-additional-photos-needed"
+                  ).style.display = "none";
+                  if (issueCertificateBtn) issueCertificateBtn.disabled = true; // 특정 상태에서 발급 버튼 비활성화
+              }
+
+              resultBadgeEl.textContent = resultText;
+              resultBadgeEl.className = `badge ${badgeClass}`;
+              if (popupAppraisalResultEl) {
+                popupAppraisalResultEl.textContent = resultText;
+                popupAppraisalResultEl.className = `badge ${badgeClass}`;
+              }
+
+              if (activeResultSectionId) {
+                document
+                  .getElementById(activeResultSectionId)
+                  .classList.add("active");
+              }
+
+              // 정품 또는 가품이 아닐 경우 감정서 발급 버튼 비활성화 (퀵링크 감정 결과에 대한 감정서이므로)
+              if (
+                appraisal.result !== "authentic" &&
+                appraisal.result !== "fake"
+              ) {
+                if (issueCertificateBtn) issueCertificateBtn.disabled = true;
+              }
+            } else {
+              document.getElementById("loading-message").textContent =
+                data.message || "감정 결과를 불러오는데 실패했습니다.";
+              document.getElementById("loading-message").style.color =
+                "#dc2626";
+            }
+          })
+          .catch((error) => {
+            console.error("Error fetching appraisal result:", error);
+            document.getElementById("loading-message").textContent =
+              "감정 결과 로드 중 오류가 발생했습니다.";
+            document.getElementById("loading-message").style.color = "#dc2626";
+          });
+      });
+    </script>
+  </body>
+</html>

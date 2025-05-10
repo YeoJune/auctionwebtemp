@@ -1,0 +1,547 @@
+<!-- pages/appr/result.html -->
+<!-- 감정번호 조회 페이지 -->
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>감정번호조회 - CAS 명품감정시스템</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Montserrat:wght@500;600;700&display=swap"
+      rel="stylesheet" />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Noto Sans KR", sans-serif;
+        color: #333;
+        line-height: 1.6;
+        background-color: #fff; /* 배경색 흰색으로 통일 */
+      }
+
+      .container {
+        width: 100%;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+      }
+
+      @media (min-width: 768px) {
+        .nav-desktop {
+          display: flex !important;
+        }
+        .mobile-menu-btn {
+          display: none !important;
+        }
+        .grid-3 {
+          /* 푸터용 */
+          grid-template-columns: repeat(3, 1fr) !important;
+        }
+      }
+
+      .btn-modern {
+        padding: 14px 28px;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        text-decoration: none;
+      }
+
+      .btn-modern:before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 0;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.1);
+        transition: all 0.3s ease;
+        z-index: -1;
+      }
+
+      .btn-modern:hover:before {
+        width: 100%;
+      }
+      .btn-modern:disabled {
+        background-color: #ccc !important;
+        color: #666 !important;
+        cursor: not-allowed;
+      }
+      .btn-modern:disabled:before {
+        width: 0;
+      }
+
+      .input-modern {
+        border: 1px solid #e2e8f0;
+        background-color: #fff;
+        border-radius: 8px;
+        padding: 16px;
+        font-size: 1rem;
+        box-shadow: none;
+        transition: all 0.3s;
+        width: 100%;
+      }
+
+      .input-modern:focus {
+        outline: none;
+        border-color: #1a2a3a;
+        box-shadow: 0 0 0 2px rgba(26, 42, 58, 0.1);
+      }
+      #search-result-message {
+        margin-top: 20px;
+        padding: 10px;
+        border-radius: 4px;
+        text-align: center;
+        font-size: 0.9rem;
+      }
+      #search-result-message.error {
+        background-color: #fee2e2;
+        color: #b91c1c;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- 헤더 -->
+    <header
+      style="
+        background-color: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+      ">
+      <div class="container">
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 0;
+          ">
+          <a
+            href="/appr"
+            class="logo"
+            style="
+              font-size: 1.6rem;
+              font-weight: 700;
+              color: #1a2a3a;
+              text-decoration: none;
+              letter-spacing: -0.5px;
+            ">
+            <span
+              style="
+                background: linear-gradient(135deg, #1a2a3a 0%, #2d4263 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+              "
+              >CAS</span
+            >
+            명품감정시스템
+          </a>
+
+          <nav class="nav-desktop" style="display: none">
+            <a
+              href="/appr"
+              class="btn-modern"
+              style="margin-left: 30px; color: #4a5568"
+              >홈</a
+            >
+            <a
+              href="/appr/request"
+              class="btn-modern"
+              style="margin-left: 30px; color: #4a5568"
+              >감정신청</a
+            >
+            <a
+              href="/appr/result"
+              class="btn-modern"
+              style="margin-left: 30px; color: #4a5568"
+              >감정번호조회</a
+            >
+            <a
+              href="#"
+              class="btn-modern"
+              style="margin-left: 30px; color: #4a5568"
+              >마이페이지</a
+            >
+            <a
+              href="/appr/repair"
+              class="btn-modern"
+              style="margin-left: 30px; color: #4a5568"
+              >까사복원시스템</a
+            >
+            <a
+              href="/appr/authenticity"
+              class="btn-modern"
+              style="margin-left: 30px; color: #4a5568"
+              >정가품구별법</a
+            >
+            <a
+              href="/signinPage"
+              class="btn-modern"
+              style="margin-left: 30px; color: #4a5568"
+              >로그인</a
+            >
+          </nav>
+          <button
+            class="mobile-menu-btn"
+            id="menu-icon"
+            onclick="toggleMobileMenu()"
+            style="
+              background: none;
+              border: none;
+              font-size: 1.5rem;
+              cursor: pointer;
+              display: block;
+            ">
+            ☰
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div
+      class="mobile-menu"
+      id="mobile-menu"
+      style="
+        display: none;
+        position: fixed;
+        top: 70px;
+        left: 0;
+        right: 0;
+        background-color: #fff;
+        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+        z-index: 999;
+      ">
+      <a
+        href="/appr"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >홈</a
+      >
+      <a
+        href="/appr/request"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >감정신청</a
+      >
+      <a
+        href="/appr/result"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >감정번호조회</a
+      >
+      <a
+        href="#"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >마이페이지</a
+      >
+      <a
+        href="/appr/repair"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >까사복원시스템</a
+      >
+      <a
+        href="/appr/authenticity"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >정가품구별법</a
+      >
+      <a
+        href="/signinPage"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+        "
+        >로그인</a
+      >
+    </div>
+
+    <!-- 메인 콘텐츠 영역 -->
+    <main>
+      <section style="padding: 60px 0; background-color: #f8fafc">
+        <div class="container" style="max-width: 600px; margin: 0 auto">
+          <!-- 너비 조정 -->
+          <div style="text-align: center; margin-bottom: 40px">
+            <h1
+              style="
+                font-size: 2.25rem;
+                font-weight: 700;
+                color: #1a2a3a;
+                margin-bottom: 15px;
+              ">
+              감정번호 조회
+            </h1>
+            <p style="color: #4a5568; font-size: 1.1rem; line-height: 1.7">
+              발급받은 감정번호를 입력하여 감정 결과를 확인하세요.
+            </p>
+          </div>
+
+          <div
+            style="
+              background-color: #fff;
+              padding: 40px;
+              border-radius: 12px;
+              box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            ">
+            <form id="result-search-form">
+              <div style="margin-bottom: 20px">
+                <label
+                  for="certificate-id-input"
+                  style="
+                    display: block;
+                    font-weight: 500;
+                    color: #4a5568;
+                    margin-bottom: 8px;
+                  ">
+                  감정번호
+                </label>
+                <input
+                  type="text"
+                  id="certificate-id-input"
+                  class="input-modern"
+                  placeholder="예: CAS-L24-0001 또는 감정요청ID"
+                  required />
+              </div>
+              <button
+                type="submit"
+                class="btn-modern"
+                style="
+                  background-color: #1a2a3a;
+                  color: #fff;
+                  border: none;
+                  cursor: pointer;
+                  width: 100%;
+                  padding: 16px; /* 버튼 패딩 조정 */
+                  font-size: 1.05rem; /* 버튼 폰트 크기 조정 */
+                ">
+                조회하기
+              </button>
+            </form>
+            <div id="search-result-message" style="display: none"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- 푸터 -->
+    <footer
+      style="background-color: #1a2a3a; color: #fff; padding: 40px 0 20px">
+      <div class="container">
+        <div
+          style="
+            display: grid;
+            grid-template-columns: repeat(1, 1fr);
+            gap: 30px;
+            margin-bottom: 30px;
+          "
+          class="grid-3">
+          <div>
+            <h3
+              style="font-size: 1.25rem; font-weight: 700; margin-bottom: 15px">
+              <span style="font-size: 0.9rem; vertical-align: top">ⓒ</span> CAS
+              명품감정시스템
+            </h3>
+            <p style="color: #cbd5e0; margin-bottom: 20px">
+              최고의 전문가들이 함께하는<br />국내 최고 명품 감정 서비스
+            </p>
+          </div>
+          <div>
+            <h3
+              style="font-size: 1.1rem; font-weight: 700; margin-bottom: 15px">
+              서비스
+            </h3>
+            <ul style="list-style: none; padding: 0; margin: 0">
+              <li style="margin-bottom: 10px">
+                <a
+                  href="/appr/request"
+                  style="color: #cbd5e0; text-decoration: none"
+                  >감정 신청</a
+                >
+              </li>
+              <li style="margin-bottom: 10px">
+                <a
+                  href="/appr/result"
+                  style="color: #cbd5e0; text-decoration: none"
+                  >감정서 조회</a
+                >
+              </li>
+              <li style="margin-bottom: 10px">
+                <a
+                  href="/appr/repair"
+                  style="color: #cbd5e0; text-decoration: none"
+                  >까사복원시스템</a
+                >
+              </li>
+              <li style="margin-bottom: 10px">
+                <a
+                  href="/appr/authenticity"
+                  style="color: #cbd5e0; text-decoration: none"
+                  >정가품구별법</a
+                >
+              </li>
+              <li>
+                <a href="#" style="color: #cbd5e0; text-decoration: none"
+                  >마이페이지</a
+                >
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h3
+              style="font-size: 1.1rem; font-weight: 700; margin-bottom: 15px">
+              정보
+            </h3>
+            <ul style="list-style: none; padding: 0; margin: 0">
+              <li style="margin-bottom: 10px">
+                <a href="#" style="color: #cbd5e0; text-decoration: none"
+                  >회사 소개</a
+                >
+              </li>
+              <li style="margin-bottom: 10px">
+                <a href="#" style="color: #cbd5e0; text-decoration: none"
+                  >이용약관</a
+                >
+              </li>
+              <li>
+                <a href="#" style="color: #cbd5e0; text-decoration: none"
+                  >개인정보처리방침</a
+                >
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div
+          style="
+            border-top: 1px solid #2d3748;
+            padding-top: 20px;
+            text-align: center;
+            color: #a0aec0;
+            font-size: 0.875rem;
+          ">
+          <p>© 2025 CAS 명품감정시스템. All rights reserved.</p>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      function toggleMobileMenu() {
+        const mobileMenu = document.getElementById("mobile-menu");
+        const menuIcon = document.getElementById("menu-icon");
+        if (mobileMenu.style.display === "block") {
+          mobileMenu.style.display = "none";
+          if (menuIcon) menuIcon.textContent = "☰";
+        } else {
+          mobileMenu.style.display = "block";
+          if (menuIcon) menuIcon.textContent = "✕";
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        const mobileMenuButton = document.querySelector(".mobile-menu-btn");
+        const navDesktop = document.querySelector(".nav-desktop");
+
+        function handleResponsiveLayout() {
+          const isDesktop = window.innerWidth >= 768;
+          if (navDesktop)
+            navDesktop.style.display = isDesktop ? "flex" : "none";
+          if (mobileMenuButton)
+            mobileMenuButton.style.display = isDesktop ? "none" : "block";
+
+          const gridColumns = isDesktop ? "repeat(3, 1fr)" : "repeat(1, 1fr)";
+          document
+            .querySelectorAll(".grid-3")
+            .forEach((el) => (el.style.gridTemplateColumns = gridColumns));
+        }
+        handleResponsiveLayout();
+        window.addEventListener("resize", handleResponsiveLayout);
+
+        const searchForm = document.getElementById("result-search-form");
+        const certificateIdInput = document.getElementById(
+          "certificate-id-input"
+        );
+        const searchResultMessageEl = document.getElementById(
+          "search-result-message"
+        );
+
+        // URL에서 certificateNumber 파라미터가 있으면 입력 필드에 채우기
+        const urlParams = new URLSearchParams(window.location.search);
+        const certNumFromUrl = urlParams.get("certificateNumber"); // index.html에서 넘어올 수 있는 파라미터
+        const requestIdFromUrl = urlParams.get("requestId"); // quick-result.html에서 넘어올 수 있는 파라미터
+
+        if (certNumFromUrl) {
+          certificateIdInput.value = certNumFromUrl;
+        } else if (requestIdFromUrl) {
+          // requestId는 감정서 번호가 아닐 수 있으므로, 사용자에게 직접 입력 유도.
+          // 혹은 requestId로 감정서 번호를 조회하는 API가 있다면 사용 가능.
+          // 여기서는 일단 비워둠.
+        }
+
+        if (searchForm) {
+          searchForm.addEventListener("submit", function (e) {
+            e.preventDefault();
+            const certificateId = certificateIdInput.value.trim();
+            searchResultMessageEl.style.display = "none"; // 이전 메시지 숨김
+
+            if (!certificateId) {
+              searchResultMessageEl.textContent = "감정번호를 입력해주세요.";
+              searchResultMessageEl.className = "error";
+              searchResultMessageEl.style.display = "block";
+              certificateIdInput.focus();
+              return;
+            }
+
+            // 입력된 ID를 감정서 번호로 간주하고 상세 페이지로 이동
+            // 실제로는 이 ID가 감정서 번호인지, 감정 요청 ID인지 서버에서 확인하는 로직이 필요할 수 있음
+            // 여기서는 result-detail.html이 감정서 번호를 받는다고 가정
+            window.location.href = `/appr/result-detail/${encodeURIComponent(
+              certificateId
+            )}`;
+          });
+        }
+      });
+    </script>
+  </body>
+</html>

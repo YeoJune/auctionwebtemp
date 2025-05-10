@@ -19,8 +19,9 @@ const detailRoutes = require("./routes/detail");
 const liveBidsRoutes = require("./routes/live-bids");
 const directBidsRoutes = require("./routes/direct-bids");
 const userRoutes = require("./routes/users");
-const certificateRoutes = require("./routes/certificate");
-const restorationRoutes = require("./routes/restoration");
+const appraisalRoutes = require("./routes/appraisal"); // 실제 파일은 appraisal.js 일 수 있음
+const certificateRoutes = require("./routes/certificate"); // 실제 파일은 certificate.js 일 수 있음
+const restorationRoutes = require("./routes/restoration"); // 실제 파일은 restoration.js 일 수 있음
 
 // utils
 const pool = require("./utils/DB");
@@ -108,7 +109,8 @@ app.use("/api/live-bids", liveBidsRoutes);
 app.use("/api/direct-bids", directBidsRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/dashboard", dashboardRoutes);
-app.use("/api/certificate", certificateRoutes);
+app.use("/api/appraisals", appraisalRoutes);
+app.use("/api/certificates", certificateRoutes);
 app.use("/api/restoration", restorationRoutes);
 
 // 정적 파일 서빙
@@ -194,28 +196,36 @@ app.get("/admin/users", (req, res) => {
 });
 
 // 감정 시스템 관련 페이지 라우트
-app.get("/cert", (req, res) => {
-  res.sendFile(__dirname + "/pages/cert/index.html");
+app.get("/appr", (req, res) => {
+  res.sendFile(__dirname + "/pages/appr/index.html");
 });
 
-app.get("/cert/request", (req, res) => {
-  res.sendFile(__dirname + "/pages/cert/request.html");
+app.get("/appr/request", (req, res) => {
+  res.sendFile(__dirname + "/pages/appr/request.html");
 });
 
-app.get("/cert/result", (req, res) => {
-  res.sendFile(__dirname + "/pages/cert/result.html");
+app.get("/appr/result", (req, res) => {
+  res.sendFile(__dirname + "/pages/appr/result.html");
 });
 
-app.get("/cert/result/:certificateNumber", (req, res) => {
-  res.sendFile(__dirname + "/pages/cert/result-detail.html");
+app.get("/appr/result-detail/:certificateNumber", (req, res) => {
+  res.sendFile(__dirname + "/pages/appr/result-detail.html");
 });
 
-app.get("/cert/repair", (req, res) => {
-  res.sendFile(__dirname + "/pages/cert/repair.html");
+app.get("/appr/quick-result/:requestId", (req, res) => {
+  res.sendFile(__dirname + "/pages/appr/quick-result.html");
 });
 
-app.get("/cert/authenticity", (req, res) => {
-  res.sendFile(__dirname + "/pages/cert/authenticity.html");
+app.get("/appr/repair", (req, res) => {
+  res.sendFile(__dirname + "/pages/appr/repair.html");
+});
+
+app.get("/appr/authenticity", (req, res) => {
+  res.sendFile(__dirname + "/pages/appr/authenticity.html");
+});
+
+app.get("/appr/issue/:certificateNumber", (req, res) => {
+  res.sendFile(__dirname + "/pages/appr/issue.html");
 });
 
 // 에러 핸들링 미들웨어

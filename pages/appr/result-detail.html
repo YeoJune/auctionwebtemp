@@ -1,0 +1,1107 @@
+<!-- pages/appr/result-detail.html -->
+<!-- 감정 결과 상세 페이지 -->
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CAS 명품감정시스템 - 감정결과 상세</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Montserrat:wght@500;600;700&display=swap"
+      rel="stylesheet" />
+    <style>
+      /* (기존 스타일 유지) */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue",
+          sans-serif;
+      }
+
+      body {
+        color: #1a2a3a;
+        line-height: 1.6;
+        background-color: #f8fafc;
+      }
+
+      .container {
+        max-width: 1000px; /* 너비 조정 */
+        margin: 0 auto;
+        padding: 0 20px;
+      }
+
+      .btn-primary {
+        background-color: #1a2a3a;
+        color: #fff;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-decoration: none;
+      }
+
+      .btn-primary:hover {
+        background-color: #2d4263;
+      }
+      .btn-primary:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+      }
+
+      .btn-outline {
+        background-color: transparent;
+        color: #1a2a3a;
+        padding: 12px 24px;
+        border: 1px solid #1a2a3a;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-decoration: none;
+      }
+
+      .btn-outline:hover {
+        background-color: rgba(26, 42, 58, 0.05);
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: repeat(1, 1fr);
+        gap: 30px;
+      }
+
+      @media (min-width: 768px) {
+        .grid-2 {
+          grid-template-columns: repeat(2, 1fr) !important;
+        }
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 5px 12px;
+        border-radius: 50px;
+        font-size: 0.85rem;
+        font-weight: 600;
+      }
+
+      .badge-success {
+        /* 정품 */
+        background-color: #d1fae5;
+        color: #059669;
+      }
+      .badge-error {
+        /* 가품 */
+        background-color: #fee2e2;
+        color: #dc2626;
+      }
+      .badge-warning {
+        /* 판단불가/자료부족 */
+        background-color: #fef3c7;
+        color: #d97706;
+      }
+      .badge-pending {
+        /* 감정 대기중 / 감정서 발급 대기 등 */
+        background-color: #e0e7ff;
+        color: #4338ca;
+      }
+
+      .tabs {
+        display: flex;
+        border-bottom: 1px solid #e2e8f0;
+        margin-bottom: 30px;
+      }
+
+      .tab {
+        padding: 15px 20px;
+        font-weight: 500;
+        cursor: pointer;
+        position: relative;
+        transition: all 0.3s;
+        color: #64748b;
+      }
+
+      .tab.active {
+        color: #1a2a3a;
+        font-weight: 700;
+      }
+
+      .tab.active::after {
+        content: "";
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background-color: #1a2a3a;
+      }
+
+      .tab-content {
+        display: none;
+      }
+
+      .tab-content.active {
+        display: block;
+      }
+      .image-gallery-main {
+        border-radius: 8px;
+        overflow: hidden;
+        width: 100%;
+        height: 0;
+        padding-bottom: 100%; /* 1:1 비율 */
+        position: relative;
+        background-color: #f3f4f6; /* 이미지 로딩 전 배경 */
+      }
+      .image-gallery-main img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .image-gallery-thumbnails {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+        overflow-x: auto; /* 썸네일 많을 경우 스크롤 */
+        padding-bottom: 5px;
+      }
+      .image-gallery-thumb {
+        border-radius: 8px;
+        overflow: hidden;
+        min-width: 80px; /* 최소 너비 보장 */
+        width: 80px;
+        height: 80px;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: border-color 0.2s;
+      }
+      .image-gallery-thumb.active,
+      .image-gallery-thumb:hover {
+        border-color: #1a2a3a;
+      }
+      .image-gallery-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      .comparison-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 20px;
+        margin: 20px 0;
+      }
+
+      @media (min-width: 768px) {
+        .comparison-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      .comparison-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        overflow: hidden;
+        background-color: white;
+      }
+
+      .comparison-card-header {
+        padding: 12px 15px;
+        font-weight: 600;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+      }
+
+      .comparison-card-header.authentic {
+        background-color: #f0fdf4;
+        color: #15803d;
+      }
+
+      .comparison-card-header.fake {
+        background-color: #fef2f2;
+        color: #b91c1c;
+      }
+
+      .comparison-card-header.authentic::before {
+        content: "✓";
+        margin-right: 8px;
+      }
+
+      .comparison-card-header.fake::before {
+        content: "✗";
+        margin-right: 8px;
+      }
+
+      .comparison-card-body {
+        padding: 15px;
+      }
+
+      .comparison-image {
+        width: 100%;
+        aspect-ratio: 1;
+        object-fit: cover;
+        border-radius: 4px;
+        margin-bottom: 10px;
+      }
+
+      .comparison-description {
+        font-size: 0.9rem;
+        color: #334155;
+        line-height: 1.5;
+      }
+
+      .timeline {
+        position: relative;
+        padding-left: 30px;
+        margin: 30px 0;
+      }
+
+      .timeline::before {
+        content: "";
+        position: absolute;
+        top: 10px;
+        bottom: 10px;
+        left: 10px;
+        width: 2px;
+        background-color: #e2e8f0;
+      }
+
+      .timeline-item {
+        position: relative;
+        margin-bottom: 20px;
+      }
+
+      .timeline-item::before {
+        content: "";
+        position: absolute;
+        top: 5px;
+        left: -30px; /* 아이콘 위치 조정 */
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: #fff;
+        border: 2px solid #1a2a3a;
+        z-index: 1;
+      }
+
+      .timeline-item.active::before {
+        /* 현재 상태 표시 */
+        background-color: #1a2a3a;
+        border-color: #1a2a3a;
+      }
+      .timeline-item.completed::before {
+        /* 완료된 상태 표시 */
+        background-color: #6ee7b7; /* 연한 초록 */
+        border-color: #059669; /* 진한 초록 */
+      }
+
+      .timeline-date {
+        font-size: 0.85rem;
+        color: #64748b;
+        margin-bottom: 5px;
+      }
+
+      .timeline-title {
+        font-weight: 600;
+        margin-bottom: 5px;
+      }
+
+      .timeline-content {
+        font-size: 0.95rem;
+        color: #334155;
+      }
+
+      .popup {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s;
+      }
+      .popup.show {
+        opacity: 1;
+        visibility: visible;
+      }
+      .popup-content {
+        background-color: white;
+        border-radius: 12px;
+        max-width: 90%;
+        width: 600px;
+        max-height: 90vh;
+        overflow-y: auto;
+        padding: 30px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        position: relative;
+      }
+      .popup-close {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #64748b;
+      }
+      .popup-close:hover {
+        color: #1a2a3a;
+      }
+      .popup-content::-webkit-scrollbar {
+        width: 6px;
+      }
+      .popup-content::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+      }
+      .popup-content::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+      }
+      .popup-content::-webkit-scrollbar-thumb:hover {
+        background: #a1a1a1;
+      }
+
+      #loading-message,
+      #error-message {
+        text-align: center;
+        padding: 40px 20px;
+        font-size: 1.2rem;
+        color: #4a5568;
+      }
+      #error-message {
+        color: #dc2626;
+      }
+      #qr-code-container img {
+        display: block;
+        margin: 20px auto;
+        border: 1px solid #e2e8f0;
+        padding: 10px;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <main>
+      <section style="padding: 50px 0">
+        <div class="container">
+          <a
+            href="#"
+            onclick="goBack(); return false;"
+            style="
+              display: inline-flex;
+              align-items: center;
+              color: #64748b;
+              margin-bottom: 30px;
+              text-decoration: none;
+            ">
+            <span style="margin-right: 8px">←</span>
+            <span>뒤로가기</span>
+          </a>
+
+          <div id="loading-message">감정서 정보를 불러오는 중입니다...</div>
+          <div id="error-message" style="display: none"></div>
+
+          <div id="content-wrapper" style="display: none">
+            <!-- 감정 결과 헤더 -->
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                margin-bottom: 30px;
+                flex-wrap: wrap;
+                gap: 20px;
+              ">
+              <div>
+                <h1
+                  id="product-name"
+                  style="
+                    font-size: 2rem;
+                    font-weight: 700;
+                    margin-bottom: 15px;
+                  ">
+                  상품명
+                </h1>
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    margin-bottom: 10px;
+                  ">
+                  <span id="result-badge" class="badge">결과</span>
+                  <span
+                    style="
+                      display: inline-block;
+                      width: 1px;
+                      height: 12px;
+                      background-color: #e2e8f0;
+                      margin: 0 10px;
+                    "></span>
+                  <span
+                    id="certificate-number-display"
+                    style="color: #64748b; font-size: 0.95rem"
+                    >감정서번호: <strong>-</strong></span
+                  >
+                </div>
+                <p
+                  id="appraisal-date"
+                  style="color: #64748b; font-size: 0.95rem">
+                  감정일(발급일): -
+                </p>
+              </div>
+              <div style="display: flex; gap: 10px">
+                <button id="download-pdf-btn" class="btn-primary">
+                  PDF 감정서 다운로드
+                </button>
+                <!-- <button class="btn-outline" onclick="saveAsImage()">결과 이미지로 저장</button> -->
+              </div>
+            </div>
+
+            <!-- 탭 메뉴 -->
+            <div class="tabs">
+              <div class="tab active" onclick="changeTab('result-details')">
+                감정 결과
+              </div>
+              <div class="tab" onclick="changeTab('repair-proposal')">
+                복원 제안
+              </div>
+              <div class="tab" onclick="changeTab('appraisal-history')">
+                감정 이력
+              </div>
+            </div>
+
+            <!-- 감정 결과 탭 콘텐츠 -->
+            <div id="result-details" class="tab-content active">
+              <div class="grid-2">
+                <div>
+                  <div class="image-gallery-main">
+                    <img
+                      id="main-product-image"
+                      src="https://via.placeholder.com/500/f0f0f0/969696?text=Loading..."
+                      alt="상품 대표 이미지" />
+                  </div>
+                  <div id="thumbnail-images" class="image-gallery-thumbnails">
+                    <!-- 썸네일 동적 추가 -->
+                  </div>
+                  <div
+                    id="qr-code-container"
+                    style="margin-top: 20px; text-align: center">
+                    <h4
+                      style="
+                        font-size: 1rem;
+                        font-weight: 600;
+                        margin-bottom: 10px;
+                      ">
+                      감정서 QR 코드
+                    </h4>
+                    <img
+                      id="certificate-qr-code"
+                      src="https://via.placeholder.com/150/f0f0f0/969696?text=QR"
+                      alt="감정서 QR 코드" />
+                    <p style="font-size: 0.85rem; color: #64748b">
+                      QR 코드를 스캔하여 감정서의 진위를 확인하세요.
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <div
+                    style="
+                      background-color: white;
+                      border-radius: 8px;
+                      padding: 20px;
+                      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                    ">
+                    <h3
+                      style="
+                        font-size: 1.2rem;
+                        font-weight: 700;
+                        margin-bottom: 20px;
+                      ">
+                      감정 결과 요약
+                    </h3>
+                    <div
+                      id="result-summary-box"
+                      style="
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        padding: 20px;
+                        border-radius: 8px;
+                        margin-bottom: 15px;
+                      ">
+                      <div
+                        style="
+                          display: flex;
+                          align-items: center;
+                          font-size: 1.5rem;
+                          font-weight: 700;
+                        ">
+                        <span
+                          id="result-summary-icon"
+                          style="margin-right: 10px; font-size: 1.8rem"></span>
+                        <span id="result-summary-text"></span>
+                      </div>
+                    </div>
+                    <p
+                      id="result-notes"
+                      style="
+                        color: #334155;
+                        font-size: 0.95rem;
+                        line-height: 1.7;
+                      ">
+                      감정사 소견이 여기에 표시됩니다.
+                    </p>
+
+                    <div style="margin-top: 30px; margin-bottom: 20px">
+                      <h4
+                        style="
+                          font-size: 1rem;
+                          font-weight: 600;
+                          margin-bottom: 15px;
+                        ">
+                        상품 기본 정보
+                      </h4>
+                      <table
+                        id="product-info-table"
+                        style="width: 100%; border-collapse: collapse">
+                        <!-- 상품 정보가 여기에 동적으로 채워집니다. -->
+                      </table>
+                    </div>
+                    <button
+                      id="go-to-repair-btn"
+                      class="btn-outline"
+                      style="width: 100%; display: none"
+                      onclick="changeTab('repair-proposal')">
+                      상태 개선을 위한 복원 서비스 알아보기 →
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div
+                id="authentication-points-section"
+                style="margin-top: 50px; display: none">
+                <h3
+                  style="
+                    font-size: 1.3rem;
+                    font-weight: 700;
+                    margin-bottom: 20px;
+                  ">
+                  주요 판별 포인트
+                </h3>
+                <div class="comparison-grid" id="auth-points-grid">
+                  <!-- 정가품 판별 포인트가 여기에 동적으로 추가될 수 있음 -->
+                  <p style="color: #64748b">
+                    상세 판별 포인트 정보가 준비 중입니다.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- 복원 제안 탭 콘텐츠 -->
+            <div id="repair-proposal" class="tab-content">
+              <div
+                style="
+                  background-color: white;
+                  border-radius: 8px;
+                  padding: 30px;
+                  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                  margin-bottom: 30px;
+                ">
+                <h3
+                  style="
+                    font-size: 1.3rem;
+                    font-weight: 700;
+                    margin-bottom: 20px;
+                  ">
+                  CAS 복원시스템 제안
+                </h3>
+                <p
+                  id="repair-proposal-intro"
+                  style="color: #334155; margin-bottom: 20px; line-height: 1.7">
+                  감정 결과, 해당 제품의 현재 상태에 따라 다음과 같은 복원
+                  서비스를 제안합니다. CAS 협력 전문 복원팀이 제품의 가치를
+                  되살려 드립니다.
+                </p>
+                <div
+                  id="repair-needed-parts"
+                  style="
+                    background-color: #f8fafc;
+                    padding: 20px;
+                    border-radius: 8px;
+                    margin-bottom: 20px;
+                    display: none;
+                  ">
+                  <h4
+                    style="
+                      font-size: 1.1rem;
+                      font-weight: 600;
+                      margin-bottom: 15px;
+                    ">
+                    복원이 권장되는 부분
+                  </h4>
+                  <ul
+                    id="repair-items-list"
+                    style="
+                      color: #334155;
+                      list-style-type: none;
+                      padding-left: 0;
+                    "></ul>
+                </div>
+                <p
+                  id="repair-empty-message"
+                  style="
+                    color: #4caf50;
+                    margin-bottom: 30px;
+                    line-height: 1.7;
+                    text-align: center;
+                    font-weight: 500;
+                    display: none;
+                  ">
+                  현재 제품 상태가 매우 양호하여 특별히 추천드릴 복원 항목이
+                  없습니다.
+                </p>
+                <div style="display: flex; flex-direction: column; gap: 15px">
+                  <a
+                    id="repair-consult-link"
+                    href="#"
+                    class="btn-primary"
+                    style="text-align: center"
+                    >복원 서비스 상세 상담 및 신청</a
+                  >
+                  <a
+                    href="/appr/repair"
+                    class="btn-outline"
+                    style="text-align: center"
+                    >다른 복원 서비스 전체 보기</a
+                  >
+                </div>
+              </div>
+            </div>
+
+            <!-- 감정 이력 탭 콘텐츠 -->
+            <div id="appraisal-history" class="tab-content">
+              <div
+                style="
+                  background-color: white;
+                  border-radius: 8px;
+                  padding: 30px;
+                  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                ">
+                <h3
+                  style="
+                    font-size: 1.3rem;
+                    font-weight: 700;
+                    margin-bottom: 20px;
+                  ">
+                  감정 진행 이력
+                </h3>
+                <div id="timeline-container" class="timeline">
+                  <!-- 감정 이력이 여기에 동적으로 추가됩니다. -->
+                  <p>감정 이력 정보가 없습니다.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- content-wrapper 끝 -->
+        </div>
+      </section>
+    </main>
+
+    <script>
+      let currentCertificateNumber = null;
+      let currentAppraisalId = null;
+
+      function goBack() {
+        window.history.back();
+      }
+
+      function changeTab(tabId) {
+        document
+          .querySelectorAll(".tab")
+          .forEach((tab) => tab.classList.remove("active"));
+        document
+          .querySelectorAll(".tab-content")
+          .forEach((content) => content.classList.remove("active"));
+        const activeTabButton = Array.from(
+          document.querySelectorAll(".tab")
+        ).find((tab) => tab.getAttribute("onclick").includes(tabId));
+        if (activeTabButton) activeTabButton.classList.add("active");
+        document.getElementById(tabId).classList.add("active");
+      }
+
+      function displayCertImages(imageUrls, mainImageEl, thumbnailsEl) {
+        if (!mainImageEl || !thumbnailsEl) return;
+        thumbnailsEl.innerHTML = "";
+
+        if (imageUrls && imageUrls.length > 0) {
+          mainImageEl.src = imageUrls[0];
+          imageUrls.forEach((url, index) => {
+            const thumbDiv = document.createElement("div");
+            thumbDiv.className = "image-gallery-thumb";
+            if (index === 0) thumbDiv.classList.add("active");
+
+            const thumbImg = document.createElement("img");
+            thumbImg.src = url;
+            thumbImg.alt = `감정 이미지 ${index + 1}`;
+
+            thumbDiv.appendChild(thumbImg);
+            thumbDiv.addEventListener("click", () => {
+              mainImageEl.src = url;
+              thumbnailsEl
+                .querySelectorAll(".image-gallery-thumb")
+                .forEach((t) => t.classList.remove("active"));
+              thumbDiv.classList.add("active");
+            });
+            thumbnailsEl.appendChild(thumbDiv);
+          });
+        } else {
+          mainImageEl.src =
+            "https://via.placeholder.com/500/cccccc/969696?text=No+Image+Available";
+          mainImageEl.alt = "이미지 없음";
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        const loadingEl = document.getElementById("loading-message");
+        const errorEl = document.getElementById("error-message");
+        const contentWrapperEl = document.getElementById("content-wrapper");
+
+        const productNameEl = document.getElementById("product-name");
+        const resultBadgeEl = document.getElementById("result-badge");
+        const certNumDisplayEl = document
+          .getElementById("certificate-number-display")
+          .querySelector("strong");
+        const appraisalDateEl = document.getElementById("appraisal-date");
+        const downloadPdfBtn = document.getElementById("download-pdf-btn");
+
+        const mainProductImageEl =
+          document.getElementById("main-product-image");
+        const thumbnailImagesEl = document.getElementById("thumbnail-images");
+        const qrCodeImgEl = document.getElementById("certificate-qr-code");
+
+        const resultSummaryBoxEl =
+          document.getElementById("result-summary-box");
+        const resultSummaryIconEl = document.getElementById(
+          "result-summary-icon"
+        );
+        const resultSummaryTextEl = document.getElementById(
+          "result-summary-text"
+        );
+        const resultNotesEl = document.getElementById("result-notes");
+        const productInfoTableEl =
+          document.getElementById("product-info-table");
+        const goToRepairBtn = document.getElementById("go-to-repair-btn");
+        const authPointsSection = document.getElementById(
+          "authentication-points-section"
+        );
+
+        // 복원 제안 탭
+        const repairProposalIntroEl = document.getElementById(
+          "repair-proposal-intro"
+        );
+        const repairNeededPartsEl = document.getElementById(
+          "repair-needed-parts"
+        );
+        const repairItemsListEl = document.getElementById("repair-items-list");
+        const repairEmptyMessageEl = document.getElementById(
+          "repair-empty-message"
+        );
+        const repairConsultLinkEl = document.getElementById(
+          "repair-consult-link"
+        );
+
+        // 감정 이력 탭
+        const timelineContainerEl =
+          document.getElementById("timeline-container");
+
+        const pathParts = window.location.pathname.split("/");
+        currentCertificateNumber = pathParts[pathParts.length - 1];
+
+        if (!currentCertificateNumber) {
+          loadingEl.style.display = "none";
+          errorEl.textContent = "잘못된 접근입니다. 감정서 번호가 필요합니다.";
+          errorEl.style.display = "block";
+          return;
+        }
+
+        if (downloadPdfBtn) {
+          downloadPdfBtn.addEventListener("click", () => {
+            if (currentCertificateNumber) {
+              window.location.href = `/api/certificates/${currentCertificateNumber}/download`;
+            } else {
+              alert("감정서 번호를 찾을 수 없습니다.");
+            }
+          });
+        }
+
+        if (qrCodeImgEl) {
+          qrCodeImgEl.src = `/api/certificates/${currentCertificateNumber}/qrcode`;
+        }
+
+        fetch(`/api/certificates/${currentCertificateNumber}`)
+          .then((response) => {
+            if (!response.ok) {
+              return response.json().then((err) => {
+                throw err;
+              });
+            }
+            return response.json();
+          })
+          .then((data) => {
+            loadingEl.style.display = "none";
+            if (
+              data.success &&
+              data.certificate &&
+              data.certificate.appraisal
+            ) {
+              contentWrapperEl.style.display = "block";
+              const certificate = data.certificate;
+              const appraisal = certificate.appraisal;
+              currentAppraisalId = appraisal.appraisal_id;
+
+              productNameEl.textContent =
+                `${appraisal.brand || ""} ${
+                  appraisal.model_name || ""
+                }`.trim() || "정보 없음";
+              certNumDisplayEl.textContent =
+                certificate.certificate_number || "-";
+              appraisalDateEl.textContent = `발급일: ${
+                certificate.issued_date
+                  ? new Date(certificate.issued_date).toLocaleDateString(
+                      "ko-KR"
+                    )
+                  : appraisal.appraised_at
+                  ? new Date(appraisal.appraised_at).toLocaleDateString("ko-KR")
+                  : "-"
+              }`;
+
+              let resultText = "정보 없음";
+              let badgeClass = "badge-pending";
+              let resultIcon = "ℹ️";
+              let summaryBgColor = "#e0e7ff";
+              let summaryColor = "#4338ca";
+
+              if (appraisal.result === "authentic") {
+                resultText = "정품";
+                badgeClass = "badge-success";
+                resultIcon = "✓";
+                summaryBgColor = "#f0fdf4";
+                summaryColor = "#15803d";
+                if (goToRepairBtn) goToRepairBtn.style.display = "block"; // 정품일 때 복원 버튼 보이기
+                if (authPointsSection)
+                  authPointsSection.style.display = "block"; // 정품일 때 판별 포인트 보이기
+              } else if (appraisal.result === "fake") {
+                resultText = "가품";
+                badgeClass = "badge-error";
+                resultIcon = "✗";
+                summaryBgColor = "#fef2f2";
+                summaryColor = "#b91c1c";
+                if (authPointsSection)
+                  authPointsSection.style.display = "block"; // 가품일 때 판별 포인트 보이기
+              } else if (appraisal.result === "uncertain") {
+                resultText = "판단 불가";
+                badgeClass = "badge-warning";
+                resultIcon = "!";
+                summaryBgColor = "#fef3c7";
+                summaryColor = "#d97706";
+              }
+              resultBadgeEl.textContent = resultText;
+              resultBadgeEl.className = `badge ${badgeClass}`;
+
+              resultSummaryBoxEl.style.backgroundColor = summaryBgColor;
+              resultSummaryIconEl.textContent = resultIcon;
+              resultSummaryIconEl.style.color = summaryColor;
+              resultSummaryTextEl.textContent = resultText;
+              resultSummaryTextEl.style.color = summaryColor;
+
+              resultNotesEl.innerHTML = appraisal.result_notes
+                ? appraisal.result_notes.replace(/\n/g, "<br>")
+                : "상세 감정 소견이 없습니다.";
+
+              // 상품 정보 테이블 채우기
+              const productInfo = [
+                { label: "브랜드", value: appraisal.brand || "-" },
+                { label: "모델명", value: appraisal.model_name || "-" },
+                { label: "카테고리", value: appraisal.category || "-" },
+                {
+                  label: "감정 방식",
+                  value: appraisal.appraisal_type
+                    ? appraisal.appraisal_type
+                        .replace("_", " ")
+                        .replace("photo", "사진")
+                        .replace("physical", "실물")
+                    : "-",
+                },
+                // 필요시 추가 정보 (예: 시리얼, 소재, 상태 등)
+              ];
+              productInfoTableEl.innerHTML = productInfo
+                .map(
+                  (item) => `
+                            <tr>
+                                <td style="padding: 8px 0; color: #64748b; width: 100px;">${item.label}</td>
+                                <td style="padding: 8px 0; font-weight: 500;">${item.value}</td>
+                            </tr>`
+                )
+                .join("");
+
+              let imagesToDisplay = appraisal.images;
+              if (imagesToDisplay && typeof imagesToDisplay === "string") {
+                try {
+                  imagesToDisplay = JSON.parse(imagesToDisplay);
+                } catch (e) {
+                  imagesToDisplay = [];
+                }
+              }
+              displayCertImages(
+                imagesToDisplay || [],
+                mainProductImageEl,
+                thumbnailImagesEl
+              );
+
+              // 복원 제안 탭 내용 (임시 - 실제로는 appraisal_id로 복원 제안 목록을 가져와야 함)
+              if (
+                appraisal.result === "authentic" &&
+                ((appraisal.result_notes &&
+                  appraisal.result_notes.toLowerCase().includes("수선")) ||
+                  (appraisal.result_notes &&
+                    appraisal.result_notes.toLowerCase().includes("복원")))
+              ) {
+                // 임시 조건
+                repairNeededPartsEl.style.display = "block";
+                repairItemsListEl.innerHTML = `<li><span style="color: #eab308; margin-right: 10px;">●</span> ${appraisal.result_notes} (상세 내용은 전문가 상담 필요)</li>`; // 예시
+                repairEmptyMessageEl.style.display = "none";
+              } else if (appraisal.result === "authentic") {
+                repairNeededPartsEl.style.display = "none";
+                repairEmptyMessageEl.style.display = "block";
+              } else {
+                repairProposalIntroEl.textContent =
+                  "가품 또는 판단 불가 상품에 대해서는 복원 서비스를 제공하지 않습니다.";
+                repairNeededPartsEl.style.display = "none";
+                repairEmptyMessageEl.style.display = "none";
+                if (repairConsultLinkEl)
+                  repairConsultLinkEl.style.display = "none";
+              }
+              if (repairConsultLinkEl && currentAppraisalId)
+                repairConsultLinkEl.href = `/appr/request-repair?appraisal_id=${currentAppraisalId}`; // 복원 신청 페이지 (새로 만들어야 함)
+
+              // 감정 이력 (임시 - 실제로는 appraisal_id로 이력 API 호출)
+              // API 문서에 감정 이력 관련 API가 없으므로, 생성/수정일 기반으로 단순화
+              timelineContainerEl.innerHTML = `
+                            ${
+                              appraisal.created_at
+                                ? `
+                            <div class="timeline-item">
+                                <div class="timeline-date">${new Date(
+                                  appraisal.created_at
+                                ).toLocaleString("ko-KR")}</div>
+                                <div class="timeline-title">감정 신청 접수</div>
+                                <div class="timeline-content">시스템에 감정 요청이 등록되었습니다.</div>
+                            </div>`
+                                : ""
+                            }
+                            ${
+                              appraisal.appraised_at
+                                ? `
+                            <div class="timeline-item completed">
+                                <div class="timeline-date">${new Date(
+                                  appraisal.appraised_at
+                                ).toLocaleString("ko-KR")}</div>
+                                <div class="timeline-title">감정 완료</div>
+                                <div class="timeline-content">전문가 감정이 완료되었습니다.</div>
+                            </div>`
+                                : ""
+                            }
+                            ${
+                              certificate.issued_date
+                                ? `
+                            <div class="timeline-item active">
+                                <div class="timeline-date">${new Date(
+                                  certificate.issued_date
+                                ).toLocaleString("ko-KR")}</div>
+                                <div class="timeline-title">감정서 발급</div>
+                                <div class="timeline-content">공식 감정서가 발급되었습니다. (번호: ${
+                                  certificate.certificate_number
+                                })</div>
+                            </div>`
+                                : ""
+                            }
+                        `;
+              // 감정서 발급 상태에 따라 마지막 아이템에 active 클래스 추가
+              const timelineItems =
+                timelineContainerEl.querySelectorAll(".timeline-item");
+              if (timelineItems.length > 0) {
+                if (
+                  certificate.status === "issued" ||
+                  certificate.status === "delivered" ||
+                  certificate.status === "shipped"
+                ) {
+                  timelineItems.forEach((item) =>
+                    item.classList.remove("active")
+                  ); // 모든 active 제거
+                  if (
+                    timelineItems[
+                      timelineItems.length - 1
+                    ].textContent.includes("감정서 발급")
+                  ) {
+                    timelineItems[timelineItems.length - 1].classList.add(
+                      "active"
+                    );
+                  } else if (
+                    timelineItems[
+                      timelineItems.length - 1
+                    ].textContent.includes("감정 완료") &&
+                    !certificate.issued_date
+                  ) {
+                    timelineItems[timelineItems.length - 1].classList.add(
+                      "active"
+                    );
+                  }
+                } else if (
+                  appraisal.status === "completed" &&
+                  !certificate.issued_date
+                ) {
+                  timelineItems.forEach((item) =>
+                    item.classList.remove("active")
+                  );
+                  if (
+                    timelineItems[
+                      timelineItems.length - 1
+                    ].textContent.includes("감정 완료")
+                  ) {
+                    timelineItems[timelineItems.length - 1].classList.add(
+                      "active"
+                    );
+                  }
+                }
+              }
+            } else {
+              errorEl.textContent =
+                data.message || "감정서 정보를 불러오는데 실패했습니다.";
+              errorEl.style.display = "block";
+            }
+          })
+          .catch((error) => {
+            console.error("Error fetching certificate details:", error);
+            loadingEl.style.display = "none";
+            errorEl.textContent =
+              "감정서 정보 로드 중 오류가 발생했습니다. 감정서 번호를 확인해주세요. (" +
+              (error.message || "") +
+              ")";
+            errorEl.style.display = "block";
+          });
+      });
+    </script>
+  </body>
+</html>
