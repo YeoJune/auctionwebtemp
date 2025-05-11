@@ -747,7 +747,7 @@ if (process.env.ENV === "development") {
   console.log("product env");
   scheduleCrawling();
   scheduleUpdateCrawling();
-  scheduleExpiredBidsProcessing();
+  // scheduleExpiredBidsProcessing();
   loginAll();
 }
 
