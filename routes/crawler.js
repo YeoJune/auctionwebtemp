@@ -694,7 +694,7 @@ const scheduleUpdateCrawling = () => {
 };
 
 const scheduleExpiredBidsProcessing = () => {
-  const expiredBidInterval = 10 * 60; // 10분
+  const expiredBidInterval = 10 * 60 + 7; // 10분 7초
 
   console.log(
     `Scheduling expired bids processing to run every ${expiredBidInterval} seconds`
@@ -747,7 +747,7 @@ if (process.env.ENV === "development") {
   console.log("product env");
   scheduleCrawling();
   scheduleUpdateCrawling();
-  scheduleExpiredBidsProcessing();
+  // scheduleExpiredBidsProcessing();
   loginAll();
 }
 
