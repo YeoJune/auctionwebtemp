@@ -1,0 +1,134 @@
+<!-- pages/appr/signin.html -->
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CAS 명품감정시스템 - 로그인</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <style>
+      /* 추가적으로 appr/signin.html에만 적용될 스타일이 있다면 여기에 작성 */
+      /* 예시: .container h2 { color: #1a2a3a; } */
+      .preview-login .preview-button {
+        /* 미리보기 버튼 스타일 조정 */
+        background-color: #6c757d; /* 회색 계열 */
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 0.9em;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: background-color 0.2s;
+      }
+      .preview-login .preview-button:hover {
+        background-color: #5a6268;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>CAS 명품감정시스템 로그인</h2>
+      <div id="error-message" class="error-message" style="display: none"></div>
+      <!-- 초기에는 숨김 -->
+
+      <div
+        class="preview-login"
+        style="margin-bottom: 20px; text-align: center">
+        <button id="previewLoginBtn" class="preview-button">
+          <i class="fas fa-eye"></i> CAS 시스템 미리보기 (로그인 없이)
+        </button>
+      </div>
+
+      <form id="signin-form">
+        <div class="form-group">
+          <label for="id">아이디</label>
+          <input
+            type="text"
+            id="id"
+            name="id"
+            autocomplete="username"
+            required />
+        </div>
+        <div class="form-group">
+          <label for="password">비밀번호</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            autocomplete="current-password"
+            required />
+        </div>
+        <button type="submit" class="btn btn-primary">로그인</button>
+      </form>
+
+      <p class="text-center" style="margin-top: 20px">
+        계정 관련 문의:
+        <a
+          href="https://pf.kakao.com/_xcCxoqn/chat"
+          target="_blank"
+          class="kakao-link"
+          style="color: #007bff; text-decoration: none">
+          <i class="fas fa-comments"></i> 카카오톡 채널 상담
+        </a>
+      </p>
+    </div>
+
+    <script>
+      const signinForm = document.getElementById("signin-form");
+      const errorMessageDiv = document.getElementById("error-message");
+
+      if (signinForm) {
+        signinForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const id = document.getElementById("id").value;
+          const password = document.getElementById("password").value;
+
+          errorMessageDiv.textContent = ""; // 이전 에러 메시지 초기화
+          errorMessageDiv.style.display = "none";
+
+          try {
+            const response = await fetch("/api/auth/login", {
+              // API 엔드포인트는 동일
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ id, password }),
+              credentials: "include", // 세션 쿠키를 위해 필요
+            });
+
+            const data = await response.json(); // 응답을 먼저 json으로 파싱
+
+            if (response.ok) {
+              // 로그인 성공 시 /appr (CAS 홈)으로 리다이렉트
+              window.location.href = "/appr";
+            } else {
+              errorMessageDiv.textContent =
+                data.message ||
+                "로그인에 실패했습니다. 아이디 또는 비밀번호를 확인해주세요.";
+              errorMessageDiv.style.display = "block";
+            }
+          } catch (error) {
+            console.error("로그인 요청 중 오류 발생:", error);
+            errorMessageDiv.textContent =
+              "로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+            errorMessageDiv.style.display = "block";
+          }
+        });
+      }
+
+      const previewLoginButton = document.getElementById("previewLoginBtn");
+      if (previewLoginButton) {
+        previewLoginButton.addEventListener("click", () => {
+          // 미리보기 버튼 클릭 시 /appr (CAS 홈)으로 이동
+          window.location.href = "/appr";
+        });
+      }
+    </script>
+  </body>
+</html>

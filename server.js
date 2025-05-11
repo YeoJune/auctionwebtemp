@@ -200,6 +200,14 @@ app.get("/appr", (req, res) => {
   res.sendFile(__dirname + "/pages/appr/index.html");
 });
 
+app.get("/appr/signin", (req, res) => {
+  if (req.session.user) {
+    res.redirect("/appr");
+  } else {
+    res.sendFile(__dirname + "/pages/appr/signin.html");
+  }
+});
+
 app.get("/appr/request", (req, res) => {
   res.sendFile(__dirname + "/pages/appr/request.html");
 });
