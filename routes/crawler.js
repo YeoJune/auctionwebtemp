@@ -679,7 +679,7 @@ const scheduleUpdateCrawling = () => {
         console.log("Scheduled update crawling completed successfully", {
           ecoAucCount: result.ecoAucCount,
           brandAucCount: result.brandAucCount,
-          totalCount: result.totalCount,
+          changedItemsCount: result.changedItemsCount,
           executionTime: result.executionTime,
         });
       } else {
@@ -747,7 +747,7 @@ if (process.env.ENV === "development") {
   console.log("product env");
   scheduleCrawling();
   scheduleUpdateCrawling();
-  // scheduleExpiredBidsProcessing();
+  scheduleExpiredBidsProcessing();
   loginAll();
 }
 
