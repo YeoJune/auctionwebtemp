@@ -29,6 +29,34 @@
         margin: 0 auto;
         padding: 0 20px;
       }
+
+      /* 헤더 & 푸터 공통 스타일 (다른 appr 페이지에서 가져옴) */
+      header {
+        background-color: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+      }
+      .header-inner {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 18px 0;
+      }
+      .logo {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #1a2a3a;
+        text-decoration: none;
+        letter-spacing: -0.5px;
+      }
+      .logo .cas-highlight {
+        background: linear-gradient(135deg, #1a2a3a 0%, #2d4263 100%);
+        -background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
       /* 반응형 그리드 설정 */
 
       @media (min-width: 768px) {
