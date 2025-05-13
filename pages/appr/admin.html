@@ -5,46 +5,61 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CAS 관리자 페이지</title>
     <link
-      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap"
       rel="stylesheet" />
     <style>
       body {
         font-family: "Noto Sans KR", sans-serif;
-        margin: 20px;
+        margin: 0;
+        padding: 20px;
         background-color: #f4f6f9;
+        color: #333;
       }
       .admin-container {
-        max-width: 1200px;
+        max-width: 1400px;
         margin: auto;
         background-color: #fff;
         padding: 20px;
         border-radius: 8px;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
       }
-      h1,
+      h1 {
+        text-align: center;
+        color: #1a2a3a;
+        margin-bottom: 30px;
+      }
       h2 {
         color: #17a2b8;
+        border-bottom: 2px solid #17a2b8;
+        padding-bottom: 10px;
+        margin-top: 30px;
+        margin-bottom: 20px;
+        font-size: 1.5em;
       }
       .tab-nav {
         margin-bottom: 20px;
-        border-bottom: 2px solid #dee2e6;
+        border-bottom: 1px solid #dee2e6;
+        display: flex;
       }
       .tab-nav button {
         background-color: transparent;
         border: none;
-        padding: 10px 15px;
+        padding: 12px 18px;
         cursor: pointer;
         font-size: 1em;
         font-weight: 500;
         margin-right: 5px;
-        border-bottom: 2px solid transparent;
+        border-bottom: 3px solid transparent;
+        transition: border-color 0.3s, color 0.3s;
       }
       .tab-nav button.active {
         border-bottom-color: #17a2b8;
         color: #17a2b8;
+        font-weight: 700;
       }
       .tab-content {
         display: none;
+        padding-top: 20px;
       }
       .tab-content.active {
         display: block;
@@ -53,53 +68,93 @@
         width: 100%;
         border-collapse: collapse;
         margin-top: 15px;
+        font-size: 0.9em;
       }
       th,
       td {
         border: 1px solid #ddd;
-        padding: 8px;
+        padding: 10px;
         text-align: left;
       }
       th {
         background-color: #e9ecef;
+        font-weight: 500;
+      }
+      tr:nth-child(even) {
+        background-color: #f8f9fa;
       }
       .form-section {
-        margin-bottom: 30px;
-        padding: 20px;
+        margin-bottom: 20px;
+        padding: 15px;
         border: 1px solid #eee;
         border-radius: 5px;
+        background-color: #fdfdfd;
+      }
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+      }
+      .form-group {
+        margin-bottom: 15px;
       }
       label {
         display: block;
-        margin-bottom: 5px;
-        font-weight: bold;
+        margin-bottom: 6px;
+        font-weight: 500;
+        color: #495057;
       }
       input[type="text"],
       input[type="url"],
       input[type="number"],
       select,
       textarea {
-        width: calc(100% - 22px);
+        width: 100%;
         padding: 10px;
-        margin-bottom: 10px;
-        border: 1px solid #ccc;
+        border: 1px solid #ced4da;
         border-radius: 4px;
+        box-sizing: border-box;
+        font-size: 0.95em;
       }
-      button {
+      input[type="file"] {
+        padding: 7px;
+      }
+      textarea {
+        min-height: 80px;
+        resize: vertical;
+      }
+      button,
+      .btn {
         background-color: #007bff;
         color: white;
         padding: 10px 15px;
         border: none;
         border-radius: 4px;
         cursor: pointer;
+        font-size: 0.95em;
+        transition: background-color 0.2s;
       }
-      button:hover {
+      button:hover,
+      .btn:hover {
         background-color: #0056b3;
       }
+      button.btn-secondary {
+        background-color: #6c757d;
+      }
+      button.btn-secondary:hover {
+        background-color: #5a6268;
+      }
+      button:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+      }
       #admin-message {
-        margin-top: 15px;
-        padding: 10px;
+        margin-bottom: 20px;
+        padding: 12px;
         border-radius: 4px;
+        text-align: center;
+        font-weight: 500;
+        display: none;
       }
       .msg-success {
         background-color: #d4edda;
@@ -111,11 +166,72 @@
         color: #721c24;
         border: 1px solid #f5c6cb;
       }
+      .pagination {
+        display: flex;
+        justify-content: center;
+        margin-top: 20px;
+        gap: 5px;
+      }
+      .pagination button {
+        background-color: #fff;
+        border: 1px solid #dee2e6;
+        color: #007bff;
+      }
+      .pagination button.active {
+        background-color: #007bff;
+        color: #fff;
+      }
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1002;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.4);
+      }
+      .modal-content {
+        background-color: #fefefe;
+        margin: 10% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+        max-width: 600px;
+        border-radius: 8px;
+        position: relative;
+      }
+      .close-btn {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+      }
+      .close-btn:hover,
+      .close-btn:focus {
+        color: black;
+        text-decoration: none;
+      }
+      .filter-controls {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .filter-controls input,
+      .filter-controls select {
+        width: auto;
+        min-width: 150px;
+        padding: 8px;
+      }
     </style>
   </head>
   <body>
     <div class="admin-container">
-      <h1>CAS 명품감정시스템 관리자</h1>
+      <h1>CAS 명품감정시스템 관리</h1>
       <div class="tab-nav">
         <button class="tab-button active" data-tab="homepage">
           홈페이지 설정
@@ -130,87 +246,108 @@
       <div id="tab-homepage" class="tab-content active">
         <h2>홈페이지 배너/통계 설정</h2>
         <form id="homepage-settings-form" class="form-section">
-          <div>
-            <label for="hp-banner-title">배너 제목:</label
-            ><input
-              type="text"
-              id="hp-banner-title"
-              name="homepage_banner_title" />
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="hp-banner-title">배너 제목:</label>
+              <input
+                type="text"
+                id="hp-banner-title"
+                name="homepage_banner_title" />
+            </div>
+            <div class="form-group">
+              <label for="hp-banner-subtitle">배너 부제목:</label>
+              <input
+                type="text"
+                id="hp-banner-subtitle"
+                name="homepage_banner_subtitle" />
+            </div>
+            <div class="form-group">
+              <label for="hp-banner-image-file"
+                >배너 이미지 (현재:
+                <a id="current-banner-url" href="#" target="_blank"></a
+                >):</label
+              >
+              <input
+                type="file"
+                id="hp-banner-image-file"
+                name="homepage_banner_image_file"
+                accept="image/*" />
+              <img
+                id="hp-banner-preview"
+                src="#"
+                alt="배너 미리보기"
+                style="
+                  max-width: 300px;
+                  max-height: 100px;
+                  margin-top: 10px;
+                  display: none;
+                  border: 1px solid #ddd;
+                " />
+            </div>
+            <div class="form-group">
+              <label for="hp-btn1-text">버튼1 텍스트:</label>
+              <input
+                type="text"
+                id="hp-btn1-text"
+                name="homepage_banner_button1_text" />
+            </div>
+            <div class="form-group">
+              <label for="hp-btn1-url">버튼1 URL:</label>
+              <input
+                type="url"
+                id="hp-btn1-url"
+                name="homepage_banner_button1_url"
+                placeholder="예: /appr/request" />
+            </div>
+            <div class="form-group">
+              <label for="hp-btn2-text">버튼2 텍스트:</label>
+              <input
+                type="text"
+                id="hp-btn2-text"
+                name="homepage_banner_button2_text" />
+            </div>
+            <div class="form-group">
+              <label for="hp-btn2-url">버튼2 URL:</label>
+              <input
+                type="url"
+                id="hp-btn2-url"
+                name="homepage_banner_button2_url"
+                placeholder="예: /appr/result" />
+            </div>
+            <div class="form-group">
+              <label for="hp-show-stats">홈페이지 감정 통계 표시:</label>
+              <select id="hp-show-stats" name="homepage_show_stats">
+                <option value="true">표시</option>
+                <option value="false">숨김</option>
+              </select>
+            </div>
           </div>
-          <div>
-            <label for="hp-banner-subtitle">배너 부제목:</label
-            ><input
-              type="text"
-              id="hp-banner-subtitle"
-              name="homepage_banner_subtitle" />
-          </div>
-          <div>
-            <label for="hp-banner-image-file"
-              >배너 이미지 (현재: <span id="current-banner-url"></span>):</label
-            ><input
-              type="file"
-              id="hp-banner-image-file"
-              name="homepage_banner_image_file"
-              accept="image/*" /><img
-              id="hp-banner-preview"
-              src="#"
-              alt="미리보기"
-              style="max-width: 200px; display: none; margin-top: 5px" />
-          </div>
-          <div>
-            <label for="hp-btn1-text">버튼1 텍스트:</label
-            ><input
-              type="text"
-              id="hp-btn1-text"
-              name="homepage_banner_button1_text" />
-          </div>
-          <div>
-            <label for="hp-btn1-url">버튼1 URL:</label
-            ><input
-              type="url"
-              id="hp-btn1-url"
-              name="homepage_banner_button1_url" />
-          </div>
-          <div>
-            <label for="hp-btn2-text">버튼2 텍스트:</label
-            ><input
-              type="text"
-              id="hp-btn2-text"
-              name="homepage_banner_button2_text" />
-          </div>
-          <div>
-            <label for="hp-btn2-url">버튼2 URL:</label
-            ><input
-              type="url"
-              id="hp-btn2-url"
-              name="homepage_banner_button2_url" />
-          </div>
-          <div>
-            <label for="hp-show-stats">통계 표시:</label
-            ><select id="hp-show-stats" name="homepage_show_stats">
-              <option value="true">표시</option>
-              <option value="false">숨김</option>
-            </select>
-          </div>
-          <button type="submit">홈페이지 설정 저장</button>
+          <button type="submit" style="margin-top: 15px">
+            홈페이지 설정 저장
+          </button>
         </form>
       </div>
 
       <!-- 회원 관리 탭 -->
       <div id="tab-users" class="tab-content">
         <h2>회원 관리</h2>
-        <div class="form-section">
+        <div class="filter-controls">
+          <select id="user-search-type">
+            <option value="id">아이디</option>
+            <option value="name">이름</option>
+            <option value="email">이메일</option>
+          </select>
           <input
             type="text"
             id="user-search-keyword"
-            placeholder="아이디 또는 이름으로 검색" />
+            placeholder="검색어 입력" />
           <select id="user-tier-filter">
             <option value="">등급 전체</option>
             <option value="일반회원">일반회원</option>
             <option value="제휴사 회원">제휴사 회원</option>
             <option value="까사트레이드 회원">까사트레이드 회원</option>
           </select>
-          <button onclick="loadUsers()">회원 검색</button>
+          <button onclick="loadUsers(1)">회원 검색</button>
         </div>
         <table id="users-table">
           <thead>
@@ -221,37 +358,55 @@
               <th>등급</th>
               <th>잔여퀵링크</th>
               <th>활성</th>
+              <th>가입일</th>
               <th>작업</th>
             </tr>
           </thead>
-          <tbody></tbody>
+          <tbody>
+            <tr>
+              <td colspan="8" class="loading">회원 목록 로딩 중...</td>
+            </tr>
+          </tbody>
         </table>
-        <!-- 회원 수정 모달/폼 필요 -->
+        <div class="pagination" id="users-pagination"></div>
       </div>
 
       <!-- 감정 관리 탭 -->
       <div id="tab-appraisals" class="tab-content">
         <h2>감정 관리</h2>
-        <div class="form-section">
+        <div class="filter-controls">
+          <select id="appraisal-search-field">
+            <option value="appraisal_id">감정ID</option>
+            <option value="user_id_display">사용자ID</option>
+            <option value="user_name">사용자명</option>
+            <option value="brand_model">브랜드/모델</option>
+          </select>
           <input
             type="text"
             id="appraisal-search-keyword"
-            placeholder="감정ID 또는 사용자명 검색" />
+            placeholder="검색어 입력" />
           <select id="appraisal-status-filter">
             <option value="">상태 전체</option>
+            <option value="pending_payment">결제대기</option>
             <option value="pending_review">검토대기</option>
             <option value="in_review">검토중</option>
             <option value="completed">완료</option>
+            <option value="cancelled">취소</option>
           </select>
-          <button onclick="loadAppraisals()">감정 검색</button>
+          <select id="appraisal-type-filter">
+            <option value="">유형 전체</option>
+            <option value="quicklink">퀵링크</option>
+            <option value="online_photo">온라인사진</option>
+            <option value="offline_physical">오프라인실물</option>
+          </select>
+          <button onclick="loadAppraisals(1)">감정 검색</button>
         </div>
         <table id="appraisals-table">
           <thead>
             <tr>
-              <th>감정ID</th>
+              <th>ID</th>
               <th>사용자</th>
-              <th>브랜드</th>
-              <th>모델명</th>
+              <th>브랜드/모델</th>
               <th>유형</th>
               <th>상태</th>
               <th>결과</th>
@@ -259,22 +414,114 @@
               <th>작업</th>
             </tr>
           </thead>
-          <tbody></tbody>
+          <tbody>
+            <tr>
+              <td colspan="8" class="loading">감정 목록 로딩 중...</td>
+            </tr>
+          </tbody>
         </table>
-        <!-- 감정 결과 입력 모달/폼 필요 -->
+        <div class="pagination" id="appraisals-pagination"></div>
+      </div>
+    </div>
+
+    <!-- 회원 수정 모달 -->
+    <div id="edit-user-modal" class="modal">
+      <div class="modal-content">
+        <span class="close-btn" onclick="closeModal('edit-user-modal')">×</span>
+        <h2>회원 정보 수정</h2>
+        <form id="edit-user-form">
+          <input type="hidden" id="edit-user-id" name="userId" />
+          <div class="form-group">
+            <label for="edit-user-tier">회원 등급:</label>
+            <select id="edit-user-tier" name="tier">
+              <option value="일반회원">일반회원</option>
+              <option value="제휴사 회원">제휴사 회원</option>
+              <option value="까사트레이드 회원">까사트레이드 회원</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="edit-user-credit"
+              >퀵링크 크레딧 조정 (현재:
+              <span id="current-user-credit">0</span>회):</label
+            >
+            <input
+              type="number"
+              id="edit-user-credit-adjustment"
+              name="quick_link_allowance_adjustment"
+              placeholder="예: 5 또는 -2" />
+          </div>
+          <div class="form-group">
+            <label for="edit-user-active">계정 활성 상태:</label>
+            <select id="edit-user-active" name="is_active">
+              <option value="true">활성</option>
+              <option value="false">비활성</option>
+            </select>
+          </div>
+          <button type="submit">회원 정보 저장</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- 감정 결과 입력 모달 -->
+    <div id="edit-appraisal-modal" class="modal">
+      <div class="modal-content">
+        <span class="close-btn" onclick="closeModal('edit-appraisal-modal')"
+          >×</span
+        >
+        <h2>감정 결과 입력</h2>
+        <form id="edit-appraisal-form">
+          <input type="hidden" id="edit-appraisal-id" name="appraisalId" />
+          <p>
+            <strong>감정 ID:</strong>
+            <span id="modal-appraisal-id-display"></span>
+          </p>
+          <p>
+            <strong>상품:</strong>
+            <span id="modal-appraisal-product-display"></span>
+          </p>
+          <div class="form-group">
+            <label for="edit-appraisal-status">감정 상태:</label>
+            <select id="edit-appraisal-status" name="status">
+              <option value="pending_review">검토대기</option>
+              <option value="in_review">검토중</option>
+              <option value="completed">완료</option>
+              <option value="cancelled">취소</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="edit-appraisal-result">감정 결과 (완료 시):</label>
+            <select id="edit-appraisal-result" name="result">
+              <option value="pending">선택안함 (진행중)</option>
+              <option value="authentic">정품</option>
+              <option value="fake">가품</option>
+              <option value="uncertain">판단불가</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="edit-appraisal-notes">감정사 소견 (완료 시):</label>
+            <textarea
+              id="edit-appraisal-notes"
+              name="result_notes"
+              rows="4"></textarea>
+          </div>
+          <button type="submit">결과 저장</button>
+        </form>
       </div>
     </div>
 
     <script>
       const adminMessageDiv = document.getElementById("admin-message");
-
-      function showAdminMessage(message, type = "error") {
+      function showAdminMessage(message, type = "error", duration = 3000) {
         adminMessageDiv.textContent = message;
         adminMessageDiv.className =
           type === "success" ? "msg-success" : "msg-error";
+        adminMessageDiv.style.display = "block";
+        setTimeout(() => {
+          adminMessageDiv.style.display = "none";
+        }, duration);
       }
 
-      // 탭 기능
+      // --- 탭 기능 ---
       const tabButtons = document.querySelectorAll(".tab-button");
       const tabContents = document.querySelectorAll(".tab-content");
       tabButtons.forEach((button) => {
@@ -288,41 +535,55 @@
         });
       });
 
-      // 홈페이지 설정
+      // --- 모달 기능 ---
+      function openModal(modalId) {
+        document.getElementById(modalId).style.display = "flex";
+      }
+      function closeModal(modalId) {
+        document.getElementById(modalId).style.display = "none";
+      }
+      window.onclick = function (event) {
+        if (event.target.classList.contains("modal"))
+          closeModal(event.target.id);
+      };
+
+      // --- 홈페이지 설정 ---
       const hpForm = document.getElementById("homepage-settings-form");
-      const currentBannerUrlSpan =
+      const currentBannerUrlLink =
         document.getElementById("current-banner-url");
       const bannerPreviewImg = document.getElementById("hp-banner-preview");
-
       async function loadHomepageSettings() {
         try {
-          const res = await fetch("/api/appr-admin/settings/homepage");
+          const res = await fetch("/api/appr/admin/settings/homepage");
           const data = await res.json();
-          if (data.success) {
+          if (data.success && data.settings) {
+            const s = data.settings;
             document.getElementById("hp-banner-title").value =
-              data.settings.homepage_banner_title || "";
+              s.homepage_banner_title || "";
             document.getElementById("hp-banner-subtitle").value =
-              data.settings.homepage_banner_subtitle || "";
-            currentBannerUrlSpan.textContent =
-              data.settings.homepage_banner_image_url || "없음";
-            if (data.settings.homepage_banner_image_url)
-              bannerPreviewImg.src = data.settings.homepage_banner_image_url;
-            bannerPreviewImg.style.display = data.settings
-              .homepage_banner_image_url
+              s.homepage_banner_subtitle || "";
+            currentBannerUrlLink.textContent = s.homepage_banner_image_url
+              ? s.homepage_banner_image_url.split("/").pop()
+              : "없음";
+            currentBannerUrlLink.href = s.homepage_banner_image_url || "#";
+            bannerPreviewImg.src = s.homepage_banner_image_url || "#";
+            bannerPreviewImg.style.display = s.homepage_banner_image_url
               ? "block"
               : "none";
             document.getElementById("hp-btn1-text").value =
-              data.settings.homepage_banner_button1_text || "";
+              s.homepage_banner_button1_text || "";
             document.getElementById("hp-btn1-url").value =
-              data.settings.homepage_banner_button1_url || "";
+              s.homepage_banner_button1_url || "";
             document.getElementById("hp-btn2-text").value =
-              data.settings.homepage_banner_button2_text || "";
+              s.homepage_banner_button2_text || "";
             document.getElementById("hp-btn2-url").value =
-              data.settings.homepage_banner_button2_url || "";
+              s.homepage_banner_button2_url || "";
             document.getElementById("hp-show-stats").value =
-              data.settings.homepage_show_stats || "true";
+              s.homepage_show_stats || "true";
           } else {
-            showAdminMessage("설정 로드 실패: " + data.message);
+            showAdminMessage(
+              "설정 로드 실패: " + (data.message || "알 수 없음")
+            );
           }
         } catch (err) {
           showAdminMessage("설정 로드 오류: " + err.message);
@@ -338,9 +599,17 @@
       hpForm.addEventListener("submit", async (e) => {
         e.preventDefault();
         const formData = new FormData(hpForm);
+        // 파일 필드 이름 확인
+        if (document.getElementById("hp-banner-image-file").files.length > 0) {
+          formData.set(
+            "homepage_banner_image_file",
+            document.getElementById("hp-banner-image-file").files[0]
+          );
+        }
+
         showAdminMessage("저장 중...", "success");
         try {
-          const res = await fetch("/api/appr-admin/settings/homepage", {
+          const res = await fetch("/api/appr/admin/settings/homepage", {
             method: "POST",
             body: formData,
           });
@@ -348,149 +617,272 @@
           if (result.success) {
             showAdminMessage("홈페이지 설정 저장 완료.", "success");
             if (result.newImageUrl) {
-              // 새 이미지 업로드 시 미리보기 업데이트
-              currentBannerUrlSpan.textContent = result.newImageUrl;
+              currentBannerUrlLink.textContent = result.newImageUrl
+                .split("/")
+                .pop();
+              currentBannerUrlLink.href = result.newImageUrl;
               bannerPreviewImg.src = result.newImageUrl;
+              bannerPreviewImg.style.display = "block";
             }
           } else {
-            showAdminMessage("저장 실패: " + result.message);
+            showAdminMessage("저장 실패: " + (result.message || "알 수 없음"));
           }
         } catch (err) {
           showAdminMessage("저장 오류: " + err.message);
         }
       });
 
-      // 회원 관리 (목록 로드, 수정 기능 등은 유사한 방식으로 API 호출하여 구현)
-      async function loadUsers() {
+      // --- 회원 관리 ---
+      let usersCurrentPage = 1;
+      const usersLimit = 10;
+      async function loadUsers(page = 1) {
+        usersCurrentPage = page;
+        const searchType = document.getElementById("user-search-type").value;
         const keyword = document.getElementById("user-search-keyword").value;
         const tier = document.getElementById("user-tier-filter").value;
         const usersTableBody = document.querySelector("#users-table tbody");
-        usersTableBody.innerHTML =
-          '<tr><td colspan="7">회원 목록 로딩 중...</td></tr>';
+        usersTableBody.innerHTML = `<tr><td colspan="8" class="loading">회원 목록 로딩 중...</td></tr>`;
         try {
           const res = await fetch(
-            `/api/appr-admin/users?search_keyword=${keyword}&tier_filter=${tier}`
-          ); // 페이지네이션 추가 필요
+            `/api/appr/admin/users?page=${page}&limit=${usersLimit}&search_type=${searchType}&search_keyword=${encodeURIComponent(
+              keyword
+            )}&tier_filter=${tier}`
+          );
           const data = await res.json();
           usersTableBody.innerHTML = "";
           if (data.success && data.users) {
             if (data.users.length === 0)
               usersTableBody.innerHTML =
-                '<tr><td colspan="7">검색된 회원이 없습니다.</td></tr>';
+                '<tr><td colspan="8" style="text-align:center;">검색된 회원이 없습니다.</td></tr>';
             data.users.forEach((user) => {
               const row = usersTableBody.insertRow();
-              row.innerHTML = `<td>${user.id}</td><td>${user.name}</td><td>${
-                user.email
-              }</td><td>${user.tier || "일반회원"}</td><td>${
-                user.quick_link_allowance || 0
+              row.innerHTML = `<td>${user.id}</td><td>${
+                user.name || "-"
+              }</td><td>${user.email || "-"}</td><td>${
+                user.tier || "일반회원"
+              }</td><td>${
+                user.quick_link_allowance !== null
+                  ? user.quick_link_allowance
+                  : "-"
               }</td><td>${
                 user.is_active ? "활성" : "비활성"
-              }</td><td><button onclick="editUser('${
+              }</td><td>${new Date(
+                user.join_date
+              ).toLocaleDateString()}</td><td><button class="btn-secondary" onclick="openEditUserModal('${
                 user.id
-              }')">수정</button></td>`;
+              }', '${user.tier || "일반회원"}', ${
+                user.quick_link_allowance !== null
+                  ? user.quick_link_allowance
+                  : 0
+              }, ${user.is_active})">수정</button></td>`;
             });
+            renderAdminPagination(
+              "users-pagination",
+              data.pagination,
+              loadUsers
+            );
           } else {
-            showAdminMessage("회원 목록 로드 실패: " + data.message);
+            showAdminMessage(
+              "회원 목록 로드 실패: " + (data.message || "알 수 없음")
+            );
           }
         } catch (err) {
           showAdminMessage("회원 목록 로드 오류: " + err.message);
-          usersTableBody.innerHTML = `<tr><td colspan="7" style="color:red;">${err.message}</td></tr>`;
+          usersTableBody.innerHTML = `<tr><td colspan="8" class="loading" style="color:red;">${err.message}</td></tr>`;
         }
       }
-      function editUser(userId) {
-        alert(
-          `사용자 ID: ${userId} 수정 기능 구현 필요`
-        ); /* 수정 모달/폼 표시 및 API 호출 */
+      function openEditUserModal(userId, tier, currentCredit, isActive) {
+        document.getElementById("edit-user-id").value = userId;
+        document.getElementById("edit-user-tier").value = tier;
+        document.getElementById("current-user-credit").textContent =
+          currentCredit;
+        document.getElementById("edit-user-credit-adjustment").value = "";
+        document.getElementById("edit-user-active").value = String(isActive);
+        openModal("edit-user-modal");
       }
+      document
+        .getElementById("edit-user-form")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const userId = document.getElementById("edit-user-id").value;
+          const formData = new FormData(e.target);
+          const dataToSubmit = {
+            tier: formData.get("tier"),
+            is_active: formData.get("is_active") === "true",
+          };
+          const creditAdjustment = formData.get(
+            "quick_link_allowance_adjustment"
+          );
+          if (creditAdjustment && !isNaN(parseInt(creditAdjustment))) {
+            dataToSubmit.quick_link_allowance_adjustment =
+              parseInt(creditAdjustment);
+          }
+          try {
+            const res = await fetch(`/api/appr/admin/users/${userId}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(dataToSubmit),
+            });
+            const result = await res.json();
+            if (result.success) {
+              showAdminMessage(
+                "회원 정보가 성공적으로 업데이트되었습니다.",
+                "success"
+              );
+              closeModal("edit-user-modal");
+              loadUsers(usersCurrentPage);
+            } else {
+              showAdminMessage(
+                "회원 정보 업데이트 실패: " + (result.message || "알 수 없음")
+              );
+            }
+          } catch (err) {
+            showAdminMessage("회원 정보 업데이트 오류: " + err.message);
+          }
+        });
 
-      // 감정 관리 (목록 로드, 결과 입력 기능 등은 유사한 방식으로 API 호출하여 구현)
-      async function loadAppraisals() {
+      // --- 감정 관리 ---
+      let appraisalsCurrentPage = 1;
+      const appraisalsLimit = 10;
+      async function loadAppraisals(page = 1) {
+        appraisalsCurrentPage = page;
+        const searchField = document.getElementById(
+          "appraisal-search-field"
+        ).value;
         const keyword = document.getElementById(
           "appraisal-search-keyword"
         ).value;
         const status = document.getElementById("appraisal-status-filter").value;
+        const type = document.getElementById("appraisal-type-filter").value;
         const appraisalsTableBody = document.querySelector(
           "#appraisals-table tbody"
         );
-        appraisalsTableBody.innerHTML =
-          '<tr><td colspan="9">감정 목록 로딩 중...</td></tr>';
+        appraisalsTableBody.innerHTML = `<tr><td colspan="8" class="loading">감정 목록 로딩 중...</td></tr>`;
         try {
           const res = await fetch(
-            `/api/appr-admin/appraisals?search_keyword=${keyword}&status=${status}`
-          ); // 페이지네이션 추가 필요
+            `/api/appr/admin/appraisals?page=${page}&limit=${appraisalsLimit}&search_field=${searchField}&search_keyword=${encodeURIComponent(
+              keyword
+            )}&status=${status}&appraisal_type=${type}`
+          );
           const data = await res.json();
           appraisalsTableBody.innerHTML = "";
           if (data.success && data.appraisals) {
             if (data.appraisals.length === 0)
               appraisalsTableBody.innerHTML =
-                '<tr><td colspan="9">검색된 감정 내역이 없습니다.</td></tr>';
+                '<tr><td colspan="8" style="text-align:center;">검색된 감정 내역이 없습니다.</td></tr>';
             data.appraisals.forEach((appr) => {
               const row = appraisalsTableBody.insertRow();
-              row.innerHTML = `<td>${appr.id.slice(0, 8)}...</td><td>${
-                appr.user_name
-              }(${appr.user_id_display})</td><td>${appr.brand}</td><td>${
+              row.innerHTML = `<td>${appr.id.slice(-8)}</td><td>${
+                appr.user_name || "-"
+              }(${appr.user_id_display})</td><td>${appr.brand}/${
                 appr.model_name
               }</td><td>${appr.appraisal_type}</td><td>${appr.status}</td><td>${
                 appr.result || "-"
               }</td><td>${new Date(
                 appr.created_at
-              ).toLocaleDateString()}</td><td><button onclick="editAppraisalResult('${
+              ).toLocaleDateString()}</td><td><button class="btn-secondary" onclick="openEditAppraisalModal('${
                 appr.id
-              }')">결과입력</button></td>`;
+              }', '${appr.brand} ${appr.model_name}', '${appr.status}', '${
+                appr.result || "pending"
+              }', \`${appr.result_notes || ""}\`)">결과입력</button></td>`;
             });
+            renderAdminPagination(
+              "appraisals-pagination",
+              data.pagination,
+              loadAppraisals
+            );
           } else {
-            showAdminMessage("감정 목록 로드 실패: " + data.message);
+            showAdminMessage(
+              "감정 목록 로드 실패: " + (data.message || "알 수 없음")
+            );
           }
         } catch (err) {
           showAdminMessage("감정 목록 로드 오류: " + err.message);
-          appraisalsTableBody.innerHTML = `<tr><td colspan="9" style="color:red;">${err.message}</td></tr>`;
+          appraisalsTableBody.innerHTML = `<tr><td colspan="8" class="loading" style="color:red;">${err.message}</td></tr>`;
         }
       }
-      async function editAppraisalResult(appraisalId) {
-        // 상세 정보 조회 API 호출 (선택적)
-        // const appraisalDetail = await (await fetch(`/api/appr/appraisals/${appraisalId}`)).json(); // 관리자도 상세조회 가능해야 함
-        // console.log(appraisalDetail);
+      function openEditAppraisalModal(
+        appraisalId,
+        productName,
+        currentStatus,
+        currentResult,
+        currentNotes
+      ) {
+        document.getElementById("edit-appraisal-id").value = appraisalId;
+        document.getElementById("modal-appraisal-id-display").textContent =
+          appraisalId;
+        document.getElementById("modal-appraisal-product-display").textContent =
+          productName;
+        document.getElementById("edit-appraisal-status").value = currentStatus;
+        document.getElementById("edit-appraisal-result").value =
+          currentResult === "null" ? "pending" : currentResult; // DB null을 'pending'으로
+        document.getElementById("edit-appraisal-notes").value =
+          currentNotes === "null" ? "" : currentNotes;
+        openModal("edit-appraisal-modal");
+      }
+      document
+        .getElementById("edit-appraisal-form")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const appraisalId =
+            document.getElementById("edit-appraisal-id").value;
+          const dataToSubmit = {
+            status: document.getElementById("edit-appraisal-status").value,
+            result: document.getElementById("edit-appraisal-result").value,
+            result_notes: document.getElementById("edit-appraisal-notes").value,
+            appraiser_id: "admin", // 실제 로그인된 관리자 ID 사용 필요
+          };
+          // 'pending' 값은 null로 서버에 전달하거나 서버에서 처리
+          if (dataToSubmit.result === "pending") dataToSubmit.result = null;
 
-        const result = prompt(
-          "감정 결과를 입력하세요 (authentic, fake, uncertain):"
-        );
-        const notes = prompt("감정사 소견을 입력하세요:");
-        if (result && notes) {
           try {
             const res = await fetch(
-              `/api/appr-admin/appraisals/${appraisalId}/result`,
+              `/api/appr/admin/appraisals/${appraisalId}/result`,
               {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  status: "completed",
-                  result: result,
-                  result_notes: notes,
-                  appraiser_id: "admin",
-                }),
+                body: JSON.stringify(dataToSubmit),
               }
             );
-            const data = await res.json();
-            if (data.success) {
+            const result = await res.json();
+            if (result.success) {
               showAdminMessage(
                 "감정 결과가 성공적으로 업데이트되었습니다.",
                 "success"
               );
-              loadAppraisals(); // 목록 새로고침
+              closeModal("edit-appraisal-modal");
+              loadAppraisals(appraisalsCurrentPage); // 현재 페이지 목록 새로고침
+              loadUsers(usersCurrentPage); // 크레딧 변경 가능성 있으므로 회원 목록도 갱신
             } else {
-              showAdminMessage("결과 업데이트 실패: " + data.message);
+              showAdminMessage(
+                "결과 업데이트 실패: " + (result.message || "알 수 없음")
+              );
             }
           } catch (err) {
             showAdminMessage("결과 업데이트 오류: " + err.message);
           }
+        });
+
+      // --- 공통 페이지네이션 렌더링 함수 ---
+      function renderAdminPagination(elementId, paginationData, callback) {
+        const paginationDiv = document.getElementById(elementId);
+        paginationDiv.innerHTML = "";
+        if (!paginationData || paginationData.totalPages <= 1) return;
+        for (let i = 1; i <= paginationData.totalPages; i++) {
+          const pageButton = document.createElement("button");
+          pageButton.textContent = i;
+          if (i === paginationData.currentPage)
+            pageButton.classList.add("active");
+          pageButton.onclick = () => callback(i);
+          paginationDiv.appendChild(pageButton);
         }
       }
 
-      // 초기 로드
+      // --- 초기 로드 ---
       document.addEventListener("DOMContentLoaded", () => {
         loadHomepageSettings();
-        loadUsers();
-        loadAppraisals();
+        loadUsers(1);
+        loadAppraisals(1);
       });
     </script>
   </body>
