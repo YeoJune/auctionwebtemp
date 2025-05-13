@@ -111,7 +111,7 @@ app.use("/api/appr/appraisals", appraisalApprRoutes);
 app.use("/api/appr/certificates", certificateApprRoutes);
 app.use("/api/appr/restoration", restorationApprRoutes);
 app.use("/api/appr/payments", paymentApprRoutes);
-app.use("/api/appr-admin", adminApiApprRoutes);
+app.use("/api/appr/admin", adminApiApprRoutes);
 
 // --- 정적 파일 및 HTML 페이지 서빙 ---
 const publicPath = path.join(__dirname, "public");
