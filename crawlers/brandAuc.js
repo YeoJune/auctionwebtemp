@@ -376,7 +376,7 @@ class BrandAucCrawler extends AxiosCrawler {
 
       return allCrawledItems;
     } catch (error) {
-      console.error("Crawl failed:", error);
+      console.error("Crawl failed:", error.message);
       return [];
     }
   }
@@ -670,7 +670,7 @@ class BrandAucCrawler extends AxiosCrawler {
 
       return allCrawledItems;
     } catch (error) {
-      console.error("Update crawl failed:", error);
+      console.error("Update crawl failed:", error.message);
       return [];
     }
   }
@@ -836,7 +836,7 @@ class BrandAucCrawler extends AxiosCrawler {
       console.log(`Successfully processed ${invoices.length} invoices`);
       return invoices;
     } catch (error) {
-      console.error("Error crawling brand auction invoices:", error);
+      console.error("Error crawling brand auction invoices:", error.message);
       return [];
     }
   }
@@ -1048,7 +1048,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
 
       return allCrawledItems;
     } catch (error) {
-      console.error("Value crawl failed:", error);
+      console.error("Value crawl failed:", error.message);
       return [];
     }
   }
