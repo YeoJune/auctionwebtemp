@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>결제 처리 중 - CAS 명품감정시스템</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR&display=swap"
+      rel="stylesheet" />
+    <style>
+      body {
+        font-family: "Noto Sans KR", sans-serif;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background-color: #f0f2f5;
+        margin: 0;
+        text-align: center;
+      }
+      .message-box {
+        background-color: #fff;
+        padding: 40px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+      .message-box h1 {
+        margin-top: 0;
+        color: #333;
+      }
+      .message-box p {
+        color: #555;
+        font-size: 1.1em;
+      }
+      .loader {
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #1a2a3a;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+        margin: 20px auto;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      .btn-action {
+        display: inline-block;
+        margin-top: 20px;
+        padding: 10px 20px;
+        background-color: #1a2a3a;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+        font-weight: 500;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="message-box">
+      <div id="processing-indicator">
+        <h1>결제 정보 확인 중...</h1>
+        <div class="loader"></div>
+        <p>잠시만 기다려 주십시오.</p>
+      </div>
+      <div id="result-indicator" style="display: none">
+        <h1 id="result-title"></h1>
+        <p id="result-text"></p>
+        <a href="/appr/mypage" id="btn-next-action" class="btn-action"
+          >마이페이지로 돌아가기</a
+        >
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", async () => {
+        const processingIndicator = document.getElementById(
+          "processing-indicator"
+        );
+        const resultIndicator = document.getElementById("result-indicator");
+        const resultTitle = document.getElementById("result-title");
+        const resultText = document.getElementById("result-text");
+        const nextActionButton = document.getElementById("btn-next-action");
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get("orderId");
+        const status = urlParams.get("status");
+        const msg = urlParams.get("msg");
+        const code = urlParams.get("code");
+
+        function displayFinalResult(
+          title,
+          text,
+          nextPageText = "마이페이지로 돌아가기",
+          nextPageUrl = "/appr/mypage"
+        ) {
+          processingIndicator.style.display = "none";
+          resultTitle.textContent = title;
+          resultText.textContent = text;
+          nextActionButton.textContent = nextPageText;
+          nextActionButton.href = nextPageUrl;
+          resultIndicator.style.display = "block";
+        }
+
+        if (!orderId) {
+          displayFinalResult(
+            "오류",
+            "잘못된 접근입니다. 주문 정보를 확인할 수 없습니다.",
+            "홈으로 가기",
+            "/appr"
+          );
+          return;
+        }
+
+        if (status === "auth_success") {
+          // 서버에 저장된 인증 정보 가져오기
+          try {
+            const authInfoResponse = await fetch(
+              `/api/appr/payments/nicepay/get-auth-info/${orderId}`
+            );
+            if (!authInfoResponse.ok) {
+              const errorData = await authInfoResponse
+                .json()
+                .catch(() => ({ message: "인증 정보 조회 실패" }));
+              throw new Error(
+                errorData.message ||
+                  `인증 정보 조회에 실패했습니다. (상태: ${authInfoResponse.status})`
+              );
+            }
+            const authInfoData = await authInfoResponse.json();
+
+            if (authInfoData.success && authInfoData.authInfo) {
+              processingIndicator.querySelector("h1").textContent =
+                "최종 결제 승인 요청 중...";
+              // 최종 승인 요청
+              const approvalResponse = await fetch(
+                "/api/appr/payments/nicepay/request-approval",
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ orderId: orderId }), // 서버는 세션에서 나머지 tid, amount 등을 가져옴
+                }
+              );
+              const approvalResult = await approvalResponse.json();
+
+              if (approvalResult.success) {
+                displayFinalResult(
+                  "결제 성공",
+                  approvalResult.message || "결제가 성공적으로 완료되었습니다."
+                );
+              } else {
+                displayFinalResult(
+                  "결제 실패",
+                  approvalResult.message || "결제 처리 중 오류가 발생했습니다."
+                );
+              }
+            } else {
+              throw new Error(
+                authInfoData.message ||
+                  "서버에서 인증 정보를 가져오지 못했습니다."
+              );
+            }
+          } catch (error) {
+            console.error("최종 승인 처리 중 오류:", error);
+            displayFinalResult(
+              "결제 처리 오류",
+              `결제 처리 중 오류가 발생했습니다: ${error.message}`
+            );
+          }
+        } else if (status === "auth_fail") {
+          displayFinalResult(
+            "결제 인증 실패",
+            `오류 코드 [${code}]: ${msg || "알 수 없는 인증 오류입니다."}`
+          );
+        } else if (status === "auth_signature_error") {
+          displayFinalResult(
+            "결제 인증 오류",
+            msg || "결제 정보 인증에 실패했습니다. (서명 오류)"
+          );
+        } else {
+          displayFinalResult(
+            "알 수 없는 상태",
+            "결제 상태를 확인할 수 없습니다.",
+            "홈으로 가기",
+            "/appr"
+          );
+        }
+      });
+    </script>
+  </body>
+</html>

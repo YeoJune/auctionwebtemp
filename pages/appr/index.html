@@ -844,7 +844,7 @@
           document.getElementById("loading-appraisals");
 
         // 1. 감정 통계 불러오기
-        fetch("/api/appraisals/stats")
+        fetch("/api/appr/appraisals/stats/all")
           .then((response) => response.json())
           .then((data) => {
             if (data.success && data.stats) {
@@ -865,7 +865,7 @@
           });
 
         // 2. 최근 감정 목록 불러오기 (최대 10개)
-        fetch("/api/appraisals?limit=10&page=1") // API 문서에 따르면 최신순 정렬은 백엔드에서 기본으로 할 수 있음
+        fetch("/api/appr/appraisals?limit=10&page=1") // API 문서에 따르면 최신순 정렬은 백엔드에서 기본으로 할 수 있음
           .then((response) => response.json())
           .then((data) => {
             if (loadingAppraisalsEl) loadingAppraisalsEl.style.display = "none";
@@ -1001,20 +1001,19 @@
 
         const certificateSearchForm = document.getElementById(
           "certificate-search-form"
-        );
+        ); // 폼 ID가 이것이라고 가정
         if (certificateSearchForm) {
           certificateSearchForm.addEventListener("submit", function (event) {
             event.preventDefault();
             const certificateNumberInput =
-              document.getElementById("certificate-number");
-            if (certificateNumberInput && certificateNumberInput.value) {
+              document.getElementById("certificate-number"); // 입력 필드 ID
+            if (certificateNumberInput && certificateNumberInput.value.trim()) {
               window.location.href = `/appr/result-detail/${encodeURIComponent(
-                certificateNumberInput.value
+                certificateNumberInput.value.trim()
               )}`;
             } else {
               alert("감정번호를 입력해주세요.");
             }
-            return false;
           });
         }
       });
