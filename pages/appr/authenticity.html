@@ -29,8 +29,8 @@
         margin: 0 auto;
         padding: 0 20px;
       }
-
       /* 헤더 & 푸터 공통 스타일 (다른 appr 페이지에서 가져옴) */
+
       header {
         background-color: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(10px);
@@ -39,22 +39,35 @@
         top: 0;
         z-index: 1000;
       }
+
       .header-inner {
         display: flex;
         justify-content: space-between;
         align-items: center;
         padding: 18px 0;
+        max-width: 1200px;
+        margin: 0 auto;
       }
+
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 40px;
+      }
+
       .logo {
         font-size: 1.6rem;
         font-weight: 700;
         color: #1a2a3a;
         text-decoration: none;
         letter-spacing: -0.5px;
+        display: flex;
+        align-items: center;
       }
+
       .logo .cas-highlight {
         background: linear-gradient(135deg, #1a2a3a 0%, #2d4263 100%);
-        -background-clip: text;
+        background-clip: text;
         -webkit-text-fill-color: transparent;
       }
       /* 반응형 그리드 설정 */
@@ -126,111 +139,104 @@
       }
 
       .accordion-content.active {
-        max-height: 1000px; /* 충분한 값으로 설정 */
+        max-height: 1000px;
+        /* 충분한 값으로 설정 */
       }
 
       .accordion-content-inner {
         padding: 20px;
+      }
+
+      .nav-desktop {
+        display: none;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: nowrap;
+        justify-content: flex-end;
+      }
+
+      .nav-desktop a {
+        color: #333;
+        text-decoration: none;
+        font-weight: 500;
+        white-space: nowrap;
+        padding: 8px 12px;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        font-size: 0.95rem;
+      }
+
+      .nav-desktop a:hover {
+        color: #666;
+        background-color: rgba(0, 0, 0, 0.05);
+      }
+
+      .mobile-menu-btn {
+        display: block;
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+      }
+
+      .mobile-menu {
+        display: none;
+        position: fixed;
+        top: 70px;
+        left: 0;
+        right: 0;
+        background-color: #fff;
+        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+        z-index: 999;
+      }
+
+      .mobile-menu a {
+        display: block;
+        padding: 15px 20px;
+        color: #4a5568;
+        text-decoration: none;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      @media (max-width: 768px) {
+        .nav-desktop {
+          display: none;
+        }
+        .mobile-menu-btn {
+          display: block;
+        }
       }
     </style>
   </head>
 
   <body>
     <!-- 헤더 -->
-    <header
-      style="
-        background-color: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-        position: sticky;
-        top: 0;
-        z-index: 1000;
-      ">
+    <header>
       <div class="container">
-        <div
-          style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 18px 0;
-          ">
-          <a
-            href="/appr"
-            class="logo"
-            style="
-              font-size: 1.6rem;
-              font-weight: 700;
-              color: #1a2a3a;
-              text-decoration: none;
-              letter-spacing: -0.5px;
-            ">
-            <span
-              style="
-                background: linear-gradient(135deg, #1a2a3a 0%, #2d4263 100%);
-                -background-clip: text;
-                -webkit-text-fill-color: transparent;
-              "
-              >CAS</span
-            >
-            명품감정시스템
-          </a>
+        <div class="header-inner">
+          <div class="header-left">
+            <a href="/appr" class="logo">
+              <img
+                src="https://i.ibb.co/FqJhVh0T/image.png"
+                alt="CAS 명품감정시스템"
+                style="height: 40px" />
+            </a>
 
-          <nav class="nav-desktop" style="display: none">
-            <a
-              href="/appr"
-              class="btn-modern"
-              style="margin-left: 30px; color: #4a5568; text-decoration: none"
-              >홈</a
-            >
-            <a
-              href="/appr/request"
-              class="btn-modern"
-              style="margin-left: 30px; color: #4a5568; text-decoration: none"
-              >감정신청</a
-            >
-            <a
-              href="/appr/result"
-              class="btn-modern"
-              style="margin-left: 30px; color: #4a5568; text-decoration: none"
-              >감정번호조회</a
-            >
-            <a
-              href="#"
-              class="btn-modern"
-              style="margin-left: 30px; color: #4a5568; text-decoration: none"
-              >마이페이지</a
-            >
-            <a
-              href="/appr/repair"
-              class="btn-modern"
-              style="margin-left: 30px; color: #4a5568; text-decoration: none"
-              >까사복원시스템</a
-            >
-            <a
-              href="/appr/authenticity"
-              class="btn-modern"
-              style="margin-left: 30px; color: #4a5568; text-decoration: none"
-              >정가품구별법</a
-            >
-            <a
-              href="/appr/signin"
-              class="btn-modern"
-              style="margin-left: 30px; color: #4a5568; text-decoration: none"
-              >로그인</a
-            >
-          </nav>
-          <!-- 모바일 메뉴 버튼 (동작을 위해 JS 필요) -->
+            <nav class="nav-desktop">
+              <a href="/appr" class="btn-modern">홈</a>
+              <a href="/appr/request" class="btn-modern">감정신청</a>
+              <a href="/appr/result" class="btn-modern">감정번호조회</a>
+              <a href="#" class="btn-modern">마이페이지</a>
+              <a href="/appr/repair" class="btn-modern">까사복원시스템</a>
+              <a href="/appr/authenticity" class="btn-modern">정가품구별법</a>
+              <a href="/appr/signin" class="btn-modern">로그인</a>
+            </nav>
+          </div>
+
           <button
             class="mobile-menu-btn"
             id="menu-icon"
-            onclick="toggleMobileMenu()"
-            style="
-              background: none;
-              border: none;
-              font-size: 1.5rem;
-              cursor: pointer;
-              display: block; /* 모바일에서 보이도록 JS로 제어 필요 */
-            ">
+            onclick="toggleMobileMenu()">
             ☰
           </button>
         </div>
@@ -241,14 +247,14 @@
       class="mobile-menu"
       id="mobile-menu"
       style="
-        display: none; /* JS로 제어 */
-        position: fixed; /* 헤더와 함께 고정되도록 fixed 또는 absolute + top 조정 */
-        top: 70px; /* 헤더 높이에 따라 조정 */
+        display: none;
+        position: fixed;
+        top: 70px;
         left: 0;
         right: 0;
         background-color: #fff;
         box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
-        z-index: 999; /* 헤더보다 낮게 */
+        z-index: 999;
       ">
       <a
         href="/appr"

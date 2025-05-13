@@ -236,6 +236,14 @@ app.get("/appr/issue/:certificateNumber", (req, res) => {
   res.sendFile(__dirname + "/pages/appr/issue.html");
 });
 
+app.get("/appr/mypage", (req, res) => {
+  if (req.session.user) {
+    res.sendFile(__dirname + "/pages/appr/mypage.html");
+  } else {
+    res.redirect("/appr/signin");
+  }
+});
+
 // 에러 핸들링 미들웨어
 app.use((err, req, res, next) => {
   console.error(err.stack);

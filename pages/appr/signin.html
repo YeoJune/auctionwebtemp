@@ -14,17 +14,20 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
     <style>
       /* 기존 appr 페이지들과 유사한 기본 스타일 */
+
       * {
         margin: 0;
         padding: 0;
         box-sizing: border-box;
       }
+
       body {
         font-family: "Noto Sans KR", sans-serif;
         color: #333;
         line-height: 1.6;
-        background-color: #f8fafc; /* appr 페이지들 배경색 */
+        background-color: #fff;
       }
+
       .container {
         width: 100%;
         max-width: 1200px;
@@ -32,6 +35,7 @@
         padding: 0 20px;
       }
       /* 헤더 & 푸터 공통 스타일 (다른 appr 페이지에서 가져옴) */
+
       header {
         background-color: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(10px);
@@ -40,90 +44,128 @@
         top: 0;
         z-index: 1000;
       }
+
       .header-inner {
         display: flex;
         justify-content: space-between;
         align-items: center;
         padding: 18px 0;
+        max-width: 1200px;
+        margin: 0 auto;
       }
+
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 40px;
+      }
+
       .logo {
         font-size: 1.6rem;
         font-weight: 700;
         color: #1a2a3a;
         text-decoration: none;
         letter-spacing: -0.5px;
+        display: flex;
+        align-items: center;
       }
+
       .logo .cas-highlight {
         background: linear-gradient(135deg, #1a2a3a 0%, #2d4263 100%);
-        -background-clip: text;
+        background-clip: text;
         -webkit-text-fill-color: transparent;
       }
+
       .nav-desktop {
         display: none;
-      } /* 모바일 우선, 데스크탑에서 JS로 flex 처리 */
-      .nav-desktop a,
-      .mobile-menu a {
-        padding: 10px 15px; /* 버튼 패딩 통일 */
-        border-radius: 8px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        color: #4a5568;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: nowrap;
+        justify-content: flex-end;
+      }
+      /* 모바일 우선, 데스크탑에서 JS로 flex 처리 */
+
+      .nav-desktop a {
+        color: #333;
         text-decoration: none;
-        margin-left: 10px; /* 간격 조정 */
+        font-weight: 500;
+        white-space: nowrap;
+        padding: 8px 12px;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        font-size: 0.95rem;
       }
-      .nav-desktop a:hover,
-      .mobile-menu a:hover {
-        background-color: rgba(26, 42, 58, 0.05);
+
+      .nav-desktop a:hover {
+        color: #666;
+        background-color: rgba(0, 0, 0, 0.05);
       }
+
       .mobile-menu-btn {
+        display: block;
         background: none;
         border: none;
         font-size: 1.5rem;
         cursor: pointer;
-        display: block;
       }
+
       .mobile-menu {
         display: none;
         position: fixed;
-        top: 70px; /* 헤더 높이에 따라 조정 */
+        top: 70px;
+        /* 헤더 높이에 따라 조정 */
         left: 0;
         right: 0;
         background-color: #fff;
         box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
         z-index: 999;
       }
+
       .mobile-menu a {
         display: block;
+        padding: 15px 20px;
+        color: #4a5568;
+        text-decoration: none;
         border-bottom: 1px solid #e2e8f0;
-        margin-left: 0;
       }
+
+      .mobile-menu a:last-child {
+        border-bottom: none;
+      }
+
       footer {
         background-color: #1a2a3a;
         color: #fff;
         padding: 40px 0 20px;
       }
+
       footer .grid-3 {
         display: grid;
         gap: 30px;
         margin-bottom: 30px;
       }
+
       footer h3 {
         font-size: 1.1rem;
         font-weight: 700;
         margin-bottom: 15px;
       }
+
       footer ul {
         list-style: none;
         padding: 0;
         margin: 0;
       }
+
       footer li {
         margin-bottom: 10px;
       }
+
       footer a {
         color: #cbd5e0;
         text-decoration: none;
       }
+
       footer .footer-bottom {
         border-top: 1px solid #2d3748;
         padding-top: 20px;
@@ -131,22 +173,27 @@
         color: #a0aec0;
         font-size: 0.875rem;
       }
-
       /* 로그인 폼 전용 스타일 */
+
       .signin-container {
-        max-width: 450px; /* 폼 너비 조정 */
-        margin: 80px auto; /* 상하 여백 추가 */
+        max-width: 450px;
+        /* 폼 너비 조정 */
+        margin: 80px auto;
+        /* 상하 여백 추가 */
         padding: 40px;
         background-color: #fff;
         border-radius: 12px;
         box-shadow: 0 5px 25px rgba(0, 0, 0, 0.1);
       }
+
       .signin-container h2 {
         text-align: center;
-        font-size: 2rem; /* 제목 크기 조정 */
+        font-size: 2rem;
+        /* 제목 크기 조정 */
         color: #1a2a3a;
         margin-bottom: 30px;
       }
+
       .error-message {
         background-color: #fee2e2;
         color: #b91c1c;
@@ -157,15 +204,18 @@
         font-size: 0.9rem;
         text-align: center;
       }
+
       .form-group {
         margin-bottom: 20px;
       }
+
       .form-group label {
         display: block;
         font-weight: 500;
         color: #334155;
         margin-bottom: 8px;
       }
+
       .form-group input[type="text"],
       .form-group input[type="password"] {
         width: 100%;
@@ -175,12 +225,14 @@
         font-size: 1rem;
         transition: border-color 0.3s, box-shadow 0.3s;
       }
+
       .form-group input[type="text"]:focus,
       .form-group input[type="password"]:focus {
         outline: none;
         border-color: #1a2a3a;
         box-shadow: 0 0 0 3px rgba(26, 42, 58, 0.1);
       }
+
       .btn-primary {
         /* 로그인 버튼 스타일 */
         width: 100%;
@@ -194,29 +246,37 @@
         cursor: pointer;
         transition: background-color 0.3s;
       }
+
       .btn-primary:hover {
         background-color: #2d4263;
       }
+
       .text-center {
         text-align: center;
       }
+
       .kakao-link {
-        color: #334155; /* 카카오톡 링크 색상 */
+        color: #334155;
+        /* 카카오톡 링크 색상 */
         text-decoration: none;
         font-weight: 500;
       }
+
       .kakao-link i {
-        color: #ffeb00; /* 카카오 아이콘 색상 */
-        background-color: #3c1e1e; /* 카카오 아이콘 배경 (선택적) */
+        color: #ffeb00;
+        /* 카카오 아이콘 색상 */
+        background-color: #3c1e1e;
+        /* 카카오 아이콘 배경 (선택적) */
         padding: 3px 4px;
         border-radius: 3px;
         margin-right: 5px;
       }
-
       /* 반응형 그리드 설정 (푸터용) */
+
       @media (min-width: 768px) {
         .nav-desktop {
           display: flex !important;
+          gap: 8px;
         }
         .mobile-menu-btn {
           display: none !important;
@@ -225,26 +285,43 @@
           grid-template-columns: repeat(3, 1fr) !important;
         }
       }
+
+      @media (min-width: 1024px) {
+        .nav-desktop {
+          gap: 12px;
+        }
+        .nav-desktop a {
+          padding: 8px 16px;
+          font-size: 1rem;
+        }
+      }
     </style>
   </head>
+
   <body>
     <!-- 헤더 -->
     <header>
       <div class="container">
         <div class="header-inner">
-          <a href="/appr" class="logo">
-            <span class="cas-highlight">CAS</span> 명품감정시스템
-          </a>
-          <nav class="nav-desktop">
-            <a href="/appr">홈</a>
-            <a href="/appr/request">감정신청</a>
-            <a href="/appr/result">감정번호조회</a>
-            <a href="#">마이페이지</a>
-            <a href="/appr/repair">까사복원시스템</a>
-            <a href="/appr/authenticity">정가품구별법</a>
-            <!-- 로그인 페이지에서는 로그인 링크를 현재 페이지로 하거나, 회원가입 등으로 대체 -->
-            <!-- <a href="/appr/signin">로그인</a> -->
-          </nav>
+          <div class="header-left">
+            <a href="/appr" class="logo">
+              <img
+                src="https://i.ibb.co/FqJhVh0T/image.png"
+                alt="CAS 명품감정시스템"
+                style="height: 40px" />
+            </a>
+
+            <nav class="nav-desktop">
+              <a href="/appr" class="btn-modern">홈</a>
+              <a href="/appr/request" class="btn-modern">감정신청</a>
+              <a href="/appr/result" class="btn-modern">감정번호조회</a>
+              <a href="#" class="btn-modern">마이페이지</a>
+              <a href="/appr/repair" class="btn-modern">까사복원시스템</a>
+              <a href="/appr/authenticity" class="btn-modern">정가품구별법</a>
+              <a href="/appr/signin" class="btn-modern">로그인</a>
+            </nav>
+          </div>
+
           <button
             class="mobile-menu-btn"
             id="menu-icon"
@@ -255,14 +332,95 @@
       </div>
     </header>
 
-    <div class="mobile-menu" id="mobile-menu">
-      <a href="/appr">홈</a>
-      <a href="/appr/request">감정신청</a>
-      <a href="/appr/result">감정번호조회</a>
-      <a href="#">마이페이지</a>
-      <a href="/appr/repair">까사복원시스템</a>
-      <a href="/appr/authenticity">정가품구별법</a>
-      <!-- <a href="/appr/signin">로그인</a> -->
+    <div
+      class="mobile-menu"
+      id="mobile-menu"
+      style="
+        display: none;
+        position: fixed;
+        top: 70px;
+        left: 0;
+        right: 0;
+        background-color: #fff;
+        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+        z-index: 999;
+      ">
+      <a
+        href="/appr"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >홈</a
+      >
+      <a
+        href="/appr/request"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >감정신청</a
+      >
+      <a
+        href="/appr/result"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >감정번호조회</a
+      >
+      <a
+        href="#"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >마이페이지</a
+      >
+      <a
+        href="/appr/repair"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >까사복원시스템</a
+      >
+      <a
+        href="/appr/authenticity"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >정가품구별법</a
+      >
+      <a
+        href="/appr/signin"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+        "
+        >로그인</a
+      >
     </div>
 
     <!-- 메인 콘텐츠: 로그인 폼 -->
@@ -364,17 +522,15 @@
         const navDesktop = document.querySelector(".nav-desktop");
 
         function handleResponsiveLayout() {
-          const isDesktop = window.innerWidth >= 768;
-          if (navDesktop)
-            navDesktop.style.display = isDesktop ? "flex" : "none";
-          if (mobileMenuButton)
-            mobileMenuButton.style.display = isDesktop ? "none" : "block";
-
-          const gridColumns = isDesktop ? "repeat(3, 1fr)" : "repeat(1, 1fr)";
-          // 푸터의 grid-3 클래스에만 적용 (메인 컨텐츠에는 grid-3 없음)
-          document
-            .querySelectorAll("footer .grid-3")
-            .forEach((el) => (el.style.gridTemplateColumns = gridColumns));
+          if (window.innerWidth >= 768) {
+            if (navDesktop) navDesktop.style.display = "flex";
+            if (mobileMenuButton) mobileMenuButton.style.display = "none";
+            const mobileMenu = document.getElementById("mobile-menu");
+            if (mobileMenu) mobileMenu.style.display = "none";
+          } else {
+            if (navDesktop) navDesktop.style.display = "none";
+            if (mobileMenuButton) mobileMenuButton.style.display = "block";
+          }
         }
         handleResponsiveLayout();
         window.addEventListener("resize", handleResponsiveLayout);
@@ -400,8 +556,13 @@
             try {
               const response = await fetch("/api/auth/login", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id, password }),
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  id,
+                  password,
+                }),
                 credentials: "include",
               });
 

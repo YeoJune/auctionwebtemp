@@ -2,402 +2,445 @@
 <!-- 감정 신청 페이지 -->
 <!DOCTYPE html>
 <html lang="ko">
-  <head>
+
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>감정신청 - CAS 명품감정시스템</title>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Montserrat:wght@500;600;700&display=swap"
-      rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Montserrat:wght@500;600;700&display=swap" rel="stylesheet" />
     <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-
-      body {
-        font-family: "Noto Sans KR", sans-serif;
-        color: #333;
-        line-height: 1.6;
-        background-color: #fff; /* 배경색 흰색으로 통일 */
-      }
-
-      .container {
-        width: 100%;
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 0 20px;
-      }
-
-      /* 헤더 & 푸터 공통 스타일 (다른 appr 페이지에서 가져옴) */
-      header {
-        background-color: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-        position: sticky;
-        top: 0;
-        z-index: 1000;
-      }
-      .header-inner {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 18px 0;
-      }
-      .logo {
-        font-size: 1.6rem;
-        font-weight: 700;
-        color: #1a2a3a;
-        text-decoration: none;
-        letter-spacing: -0.5px;
-      }
-      .logo .cas-highlight {
-        background: linear-gradient(135deg, #1a2a3a 0%, #2d4263 100%);
-        -background-clip: text;
-        -webkit-text-fill-color: transparent;
-      }
-
-      @media (min-width: 768px) {
-        .nav-desktop {
-          display: flex !important;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        .mobile-menu-btn {
-          display: none !important;
+        
+        body {
+            font-family: "Noto Sans KR", sans-serif;
+            color: #333;
+            line-height: 1.6;
+            background-color: #fff;
+            /* 배경색 흰색으로 통일 */
         }
-        .grid-2 {
-          grid-template-columns: repeat(2, 1fr) !important;
+        
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
         }
-        .grid-3 {
-          grid-template-columns: repeat(3, 1fr) !important;
+        /* 헤더 & 푸터 공통 스타일 (다른 appr 페이지에서 가져옴) */
+        
+        header {
+            background-color: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
         }
-        .grid-4 {
-          grid-template-columns: repeat(4, 1fr) !important;
-        }
-      }
-
-      .btn-modern {
-        padding: 14px 28px;
-        border-radius: 8px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
-        text-decoration: none;
-      }
-
-      .btn-modern:before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 0;
-        height: 100%;
-        background: rgba(255, 255, 255, 0.1);
-        transition: all 0.3s ease;
-        z-index: -1;
-      }
-
-      .btn-modern:hover:before {
-        width: 100%;
-      }
-      .btn-modern:disabled {
-        background-color: #ccc !important;
-        color: #666 !important;
-        cursor: not-allowed;
-      }
-      .btn-modern:disabled:before {
-        width: 0;
-      }
-
-      .input-modern {
-        border: 1px solid #e2e8f0; /* 테두리 추가 */
-        background-color: #fff; /* 배경색 변경 */
-        border-radius: 8px;
-        padding: 14px; /* 패딩 조정 */
-        font-size: 1rem;
-        box-shadow: none; /* 기본 그림자 제거 */
-        transition: all 0.3s;
-        width: 100%;
-      }
-
-      .input-modern:focus {
-        outline: none;
-        border-color: #1a2a3a; /* 포커스 시 테두리 색상 변경 */
-        box-shadow: 0 0 0 2px rgba(26, 42, 58, 0.1); /* 포커스 시 외부 그림자 */
-      }
-      textarea.input-modern {
-        min-height: 120px;
-        resize: vertical;
-      }
-
-      /* 감정 방식 선택 탭 */
-      .appraisal-tabs-container {
-        margin-bottom: 20px;
-        border-bottom: 1px solid #e2e8f0;
-        padding-bottom: -1px; /* 아래 선과 겹치도록 */
-      }
-      .appraisal-tab {
-        display: inline-block;
-        padding: 12px 25px; /* 패딩 증가 */
-        margin-right: 5px; /* 탭간 간격 감소 */
-        background-color: transparent; /* 기본 배경 투명 */
-        color: #64748b;
-        border: 1px solid transparent; /* 기본 테두리 투명 */
-        border-bottom: none; /* 아래 테두리 없음 */
-        border-radius: 8px 8px 0 0;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.3s;
-        position: relative;
-        bottom: -1px; /* 아래 선과 겹치도록 */
-      }
-
-      .appraisal-tab.active {
-        background-color: #fff;
-        color: #1a2a3a;
-        font-weight: 600;
-        border-color: #e2e8f0; /* 활성 탭 테두리 */
-        border-bottom-color: #fff; /* 아래 테두리 흰색으로 덮기 */
-      }
-
-      .appraisal-form-container {
-        display: none;
-        background-color: #fff;
-        padding: 30px; /* 패딩 증가 */
-        border-radius: 0 8px 8px 8px; /* 탭 아래쪽 둥글게 */
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03); /* 약간의 그림자 */
-        border: 1px solid #e2e8f0; /* 전체 테두리 */
-        border-top: none; /* 탭과 연결되는 위쪽 테두리 제거 */
-      }
-
-      .appraisal-form-container.active {
-        display: block;
-      }
-
-      .price-info {
-        background-color: #f8fafc;
-        border-radius: 8px;
-        padding: 20px; /* 패딩 증가 */
-        margin-bottom: 30px; /* 간격 증가 */
-        border-left: 4px solid #1a2a3a;
-      }
-      .price-info h3 {
-        font-size: 1.15rem; /* 제목 크기 조정 */
-        margin-bottom: 8px; /* 제목-내용 간격 */
-      }
-      .price-info p {
-        font-size: 0.9rem;
-      }
-
-      .file-upload-btn {
-        display: inline-block;
-        background-color: #1a2a3a;
-        color: #fff;
-        padding: 10px 20px;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: all 0.3s;
-      }
-
-      .file-upload-btn:hover {
-        background-color: #2d4263;
-      }
-
-      input[type="file"] {
-        display: none;
-      }
-      .form-section-title {
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: #1a2a3a;
-        margin-bottom: 25px;
-        padding-bottom: 15px;
-        border-bottom: 1px solid #e2e8f0; /* 구분선 스타일 변경 */
-      }
-      .form-field-label {
-        display: block;
-        font-weight: 500;
-        color: #334155; /* 라벨 색상 변경 */
-        margin-bottom: 8px;
-      }
-      .form-field-label .required-star {
-        color: #e53e3e;
-        margin-left: 2px;
-      }
-      .checkbox-group label {
-        margin-right: 15px;
-        font-size: 0.95rem;
-        color: #4a5568;
-      }
-      .checkbox-group input[type="checkbox"] {
-        margin-right: 5px;
-        vertical-align: middle;
-      }
-      .file-drop-zone {
-        border: 2px dashed #cbd5e0; /* 테두리 스타일 변경 */
-        border-radius: 8px;
-        padding: 30px;
-        text-align: center;
-        background-color: #fdfdfe; /* 배경색 약간 추가 */
-        cursor: pointer;
-        transition: background-color 0.3s;
-      }
-      .file-drop-zone:hover {
-        background-color: #f8fafc;
-        border-color: #a0aec0;
-      }
-      .file-list-item {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 5px;
-        padding: 8px 10px; /* 패딩 조정 */
-        background-color: #f8fafc;
-        border-radius: 4px;
-        font-size: 0.9rem;
-      }
-      .file-list-item .file-name {
-        color: #4a5568;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        margin-right: 10px;
-      }
-      .file-list-item .file-size {
-        color: #718096;
-        font-size: 0.8rem;
-        white-space: nowrap;
-      }
-      .submit-button-container {
-        text-align: center;
-        margin-top: 30px; /* 상단 간격 추가 */
-      }
-      .alert-message {
-        padding: 15px;
-        margin-bottom: 20px;
-        border-radius: 6px;
-        font-size: 0.95rem;
-      }
-      .alert-success {
-        background-color: #d1fae5;
-        color: #065f46;
-        border: 1px solid #6ee7b7;
-      }
-      .alert-error {
-        background-color: #fee2e2;
-        color: #991b1b;
-        border: 1px solid #fca5a5;
-      }
-    </style>
-  </head>
-
-  <body>
-    <!-- 헤더 -->
-    <header
-      style="
-        background-color: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-        position: sticky;
-        top: 0;
-        z-index: 1000;
-      ">
-      <div class="container">
-        <div
-          style="
+        
+        .header-inner {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 18px 0;
-          ">
-          <a
-            href="/appr"
-            class="logo"
-            style="
-              font-size: 1.6rem;
-              font-weight: 700;
-              color: #1a2a3a;
-              text-decoration: none;
-              letter-spacing: -0.5px;
-            ">
-            <span
-              style="
-                background: linear-gradient(135deg, #1a2a3a 0%, #2d4263 100%);
-                -background-clip: text;
-                -webkit-text-fill-color: transparent;
-              "
-              >CAS</span
-            >
-            명품감정시스템
-          </a>
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 40px;
+        }
+        
+        .logo {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #1a2a3a;
+            text-decoration: none;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo .cas-highlight {
+            background: linear-gradient(135deg, #1a2a3a 0%, #2d4263 100%);
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .nav-desktop {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: nowrap;
+            justify-content: flex-end;
+        }
+        
+        .nav-desktop a {
+            color: #333;
+            text-decoration: none;
+            font-weight: 500;
+            white-space: nowrap;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            font-size: 0.95rem;
+        }
+        
+        .nav-desktop a:hover {
+            color: #666;
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+        
+        .mobile-menu-btn {
+            display: block;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        .mobile-menu {
+            display: none;
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            background-color: #fff;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+            z-index: 999;
+        }
+        
+        .mobile-menu a {
+            display: block;
+            padding: 15px 20px;
+            color: #4a5568;
+            text-decoration: none;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .mobile-menu a:last-child {
+            border-bottom: none;
+        }
+        
+        @media (min-width: 768px) {
+            .nav-desktop {
+                display: flex !important;
+                gap: 8px;
+            }
+            .mobile-menu-btn {
+                display: none !important;
+            }
+        }
+        
+        @media (min-width: 1024px) {
+            .nav-desktop {
+                gap: 12px;
+            }
+            .nav-desktop a {
+                padding: 8px 16px;
+                font-size: 1rem;
+            }
+        }
+        
+        .btn-modern {
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            text-decoration: none;
+        }
+        
+        .btn-modern:before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 0;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            z-index: -1;
+        }
+        
+        .btn-modern:hover:before {
+            width: 100%;
+        }
+        
+        .btn-modern:disabled {
+            background-color: #ccc !important;
+            color: #666 !important;
+            cursor: not-allowed;
+        }
+        
+        .btn-modern:disabled:before {
+            width: 0;
+        }
+        
+        .input-modern {
+            border: 1px solid #e2e8f0;
+            /* 테두리 추가 */
+            background-color: #fff;
+            /* 배경색 변경 */
+            border-radius: 8px;
+            padding: 14px;
+            /* 패딩 조정 */
+            font-size: 1rem;
+            box-shadow: none;
+            /* 기본 그림자 제거 */
+            transition: all 0.3s;
+            width: 100%;
+        }
+        
+        .input-modern:focus {
+            outline: none;
+            border-color: #1a2a3a;
+            /* 포커스 시 테두리 색상 변경 */
+            box-shadow: 0 0 0 2px rgba(26, 42, 58, 0.1);
+            /* 포커스 시 외부 그림자 */
+        }
+        
+        textarea.input-modern {
+            min-height: 120px;
+            resize: vertical;
+        }
+        /* 감정 방식 선택 탭 */
+        
+        .appraisal-tabs-container {
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: -1px;
+            /* 아래 선과 겹치도록 */
+        }
+        
+        .appraisal-tab {
+            display: inline-block;
+            padding: 12px 25px;
+            /* 패딩 증가 */
+            margin-right: 5px;
+            /* 탭간 간격 감소 */
+            background-color: transparent;
+            /* 기본 배경 투명 */
+            color: #64748b;
+            border: 1px solid transparent;
+            /* 기본 테두리 투명 */
+            border-bottom: none;
+            /* 아래 테두리 없음 */
+            border-radius: 8px 8px 0 0;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            bottom: -1px;
+            /* 아래 선과 겹치도록 */
+        }
+        
+        .appraisal-tab.active {
+            background-color: #fff;
+            color: #1a2a3a;
+            font-weight: 600;
+            border-color: #e2e8f0;
+            /* 활성 탭 테두리 */
+            border-bottom-color: #fff;
+            /* 아래 테두리 흰색으로 덮기 */
+        }
+        
+        .appraisal-form-container {
+            display: none;
+            background-color: #fff;
+            padding: 30px;
+            /* 패딩 증가 */
+            border-radius: 0 8px 8px 8px;
+            /* 탭 아래쪽 둥글게 */
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+            /* 약간의 그림자 */
+            border: 1px solid #e2e8f0;
+            /* 전체 테두리 */
+            border-top: none;
+            /* 탭과 연결되는 위쪽 테두리 제거 */
+        }
+        
+        .appraisal-form-container.active {
+            display: block;
+        }
+        
+        .price-info {
+            background-color: #f8fafc;
+            border-radius: 8px;
+            padding: 20px;
+            /* 패딩 증가 */
+            margin-bottom: 30px;
+            /* 간격 증가 */
+            border-left: 4px solid #1a2a3a;
+        }
+        
+        .price-info h3 {
+            font-size: 1.15rem;
+            /* 제목 크기 조정 */
+            margin-bottom: 8px;
+            /* 제목-내용 간격 */
+        }
+        
+        .price-info p {
+            font-size: 0.9rem;
+        }
+        
+        .file-upload-btn {
+            display: inline-block;
+            background-color: #1a2a3a;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .file-upload-btn:hover {
+            background-color: #2d4263;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+        
+        .form-section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1a2a3a;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e2e8f0;
+            /* 구분선 스타일 변경 */
+        }
+        
+        .form-field-label {
+            display: block;
+            font-weight: 500;
+            color: #334155;
+            /* 라벨 색상 변경 */
+            margin-bottom: 8px;
+        }
+        
+        .form-field-label .required-star {
+            color: #e53e3e;
+            margin-left: 2px;
+        }
+        
+        .checkbox-group label {
+            margin-right: 15px;
+            font-size: 0.95rem;
+            color: #4a5568;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+        
+        .file-drop-zone {
+            border: 2px dashed #cbd5e0;
+            /* 테두리 스타일 변경 */
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            background-color: #fdfdfe;
+            /* 배경색 약간 추가 */
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .file-drop-zone:hover {
+            background-color: #f8fafc;
+            border-color: #a0aec0;
+        }
+        
+        .file-list-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            padding: 8px 10px;
+            /* 패딩 조정 */
+            background-color: #f8fafc;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        .file-list-item .file-name {
+            color: #4a5568;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-right: 10px;
+        }
+        
+        .file-list-item .file-size {
+            color: #718096;
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+        
+        .submit-button-container {
+            text-align: center;
+            margin-top: 30px;
+            /* 상단 간격 추가 */
+        }
+        
+        .alert-message {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+        }
+        
+        .alert-success {
+            background-color: #d1fae5;
+            color: #065f46;
+            border: 1px solid #6ee7b7;
+        }
+        
+        .alert-error {
+            background-color: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+    </style>
+</head>
 
-          <nav class="nav-desktop" style="display: none">
-            <a
-              href="/appr"
-              class="btn-modern"
-              style="margin-left: 30px; color: #4a5568"
-              >홈</a
-            >
-            <a
-              href="/appr/request"
-              class="btn-modern"
-              style="margin-left: 30px; color: #4a5568"
-              >감정신청</a
-            >
-            <a
-              href="/appr/result"
-              class="btn-modern"
-              style="margin-left: 30px; color: #4a5568"
-              >감정번호조회</a
-            >
-            <a
-              href="#"
-              class="btn-modern"
-              style="margin-left: 30px; color: #4a5568"
-              >마이페이지</a
-            >
-            <a
-              href="/appr/repair"
-              class="btn-modern"
-              style="margin-left: 30px; color: #4a5568"
-              >까사복원시스템</a
-            >
-            <a
-              href="/appr/authenticity"
-              class="btn-modern"
-              style="margin-left: 30px; color: #4a5568"
-              >정가품구별법</a
-            >
-            <a
-              href="/appr/signin"
-              class="btn-modern"
-              style="margin-left: 30px; color: #4a5568"
-              >로그인</a
-            >
-          </nav>
+<body>
+    <!-- 헤더 -->
+    <header>
+        <div class="container">
+            <div class="header-inner">
+                <div class="header-left">
+                    <a href="/appr" class="logo">
+                        <img src="https://i.ibb.co/FqJhVh0T/image.png" alt="CAS 명품감정시스템" style="height: 40px;">
+                    </a>
 
-          <button
-            class="mobile-menu-btn"
-            id="menu-icon"
-            onclick="toggleMobileMenu()"
-            style="
-              background: none;
-              border: none;
-              font-size: 1.5rem;
-              cursor: pointer;
-              display: block;
-            ">
-            ☰
-          </button>
+                    <nav class="nav-desktop">
+                        <a href="/appr" class="btn-modern">홈</a>
+                        <a href="/appr/request" class="btn-modern">감정신청</a>
+                        <a href="/appr/result" class="btn-modern">감정번호조회</a>
+                        <a href="#" class="btn-modern">마이페이지</a>
+                        <a href="/appr/repair" class="btn-modern">까사복원시스템</a>
+                        <a href="/appr/authenticity" class="btn-modern">정가품구별법</a>
+                        <a href="/appr/signin" class="btn-modern">로그인</a>
+                    </nav>
+                </div>
+
+                <button class="mobile-menu-btn" id="menu-icon" onclick="toggleMobileMenu()">
+                    ☰
+                </button>
+            </div>
         </div>
-      </div>
     </header>
 
-    <div
-      class="mobile-menu"
-      id="mobile-menu"
-      style="
+    <div class="mobile-menu" id="mobile-menu" style="
         display: none;
         position: fixed;
         top: 70px;
@@ -406,573 +449,271 @@
         background-color: #fff;
         box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
         z-index: 999;
-      ">
-      <a
-        href="/appr"
-        style="
-          display: block;
-          padding: 15px 20px;
-          color: #4a5568;
-          text-decoration: none;
-          border-bottom: 1px solid #e2e8f0;
-        "
-        >홈</a
-      >
-      <a
-        href="/appr/request"
-        style="
-          display: block;
-          padding: 15px 20px;
-          color: #4a5568;
-          text-decoration: none;
-          border-bottom: 1px solid #e2e8f0;
-        "
-        >감정신청</a
-      >
-      <a
-        href="/appr/result"
-        style="
-          display: block;
-          padding: 15px 20px;
-          color: #4a5568;
-          text-decoration: none;
-          border-bottom: 1px solid #e2e8f0;
-        "
-        >감정번호조회</a
-      >
-      <a
-        href="#"
-        style="
-          display: block;
-          padding: 15px 20px;
-          color: #4a5568;
-          text-decoration: none;
-          border-bottom: 1px solid #e2e8f0;
-        "
-        >마이페이지</a
-      >
-      <a
-        href="/appr/repair"
-        style="
-          display: block;
-          padding: 15px 20px;
-          color: #4a5568;
-          text-decoration: none;
-          border-bottom: 1px solid #e2e8f0;
-        "
-        >까사복원시스템</a
-      >
-      <a
-        href="/appr/authenticity"
-        style="
-          display: block;
-          padding: 15px 20px;
-          color: #4a5568;
-          text-decoration: none;
-          border-bottom: 1px solid #e2e8f0;
-        "
-        >정가품구별법</a
-      >
-      <a
-        href="/appr/signin"
-        style="
-          display: block;
-          padding: 15px 20px;
-          color: #4a5568;
-          text-decoration: none;
-        "
-        >로그인</a
-      >
+    ">
+        <a href="/appr" style="display: block; padding: 15px 20px; color: #4a5568; text-decoration: none; border-bottom: 1px solid #e2e8f0;">홈</a>
+        <a href="/appr/request" style="display: block; padding: 15px 20px; color: #4a5568; text-decoration: none; border-bottom: 1px solid #e2e8f0;">감정신청</a>
+        <a href="/appr/result" style="display: block; padding: 15px 20px; color: #4a5568; text-decoration: none; border-bottom: 1px solid #e2e8f0;">감정번호조회</a>
+        <a href="#" style="display: block; padding: 15px 20px; color: #4a5568; text-decoration: none; border-bottom: 1px solid #e2e8f0;">마이페이지</a>
+        <a href="/appr/repair" style="display: block; padding: 15px 20px; color: #4a5568; text-decoration: none; border-bottom: 1px solid #e2e8f0;">까사복원시스템</a>
+        <a href="/appr/authenticity" style="display: block; padding: 15px 20px; color: #4a5568; text-decoration: none; border-bottom: 1px solid #e2e8f0;">정가품구별법</a>
+        <a href="/appr/signin" style="display: block; padding: 15px 20px; color: #4a5568; text-decoration: none;">로그인</a>
     </div>
 
     <!-- 메인 콘텐츠 영역 -->
     <main>
-      <section style="padding: 60px 0; background-color: #f8fafc">
-        <div class="container" style="max-width: 800px; margin: 0 auto">
-          <div style="text-align: center; margin-bottom: 40px">
-            <h1
-              style="
+        <section style="padding: 60px 0; background-color: #f8fafc">
+            <div class="container" style="max-width: 800px; margin: 0 auto">
+                <div style="text-align: center; margin-bottom: 40px">
+                    <h1 style="
                 font-size: 2.25rem;
                 font-weight: 700;
                 color: #1a2a3a;
                 margin-bottom: 15px;
               ">
-              감정 신청
-            </h1>
-            <p style="color: #4a5568; font-size: 1.1rem; line-height: 1.7">
-              원하시는 감정 방식을 선택하고 필요한 정보를 입력해 주세요
-            </p>
-          </div>
-
-          <div id="alert-box" style="display: none"></div>
-
-          <!-- 감정 방식 선택 탭 -->
-          <div class="appraisal-tabs-container">
-            <div
-              class="appraisal-tab active"
-              onclick="changeTab('quicklink')"
-              id="tab-quicklink">
-              퀵링크 감정
-            </div>
-            <div
-              class="appraisal-tab"
-              onclick="changeTab('online')"
-              id="tab-online">
-              온라인 사진 감정
-            </div>
-            <div
-              class="appraisal-tab"
-              onclick="changeTab('offline')"
-              id="tab-offline">
-              오프라인 실물 감정
-            </div>
-          </div>
-
-          <!-- 퀵링크 감정 폼 -->
-          <div id="form-quicklink" class="appraisal-form-container active">
-            <form id="quicklink-form">
-              <input type="hidden" name="appraisal_type" value="quicklink" />
-              <div class="price-info">
-                <h3>퀵링크 감정 비용</h3>
-                <p>
-                  신청 건당
-                  <strong style="color: #1a2a3a">10,000원</strong> (VAT 포함)
-                </p>
-                <p style="margin-top: 5px; color: #64748b">
-                  당근마켓, 번개장터 등 중고거래 플랫폼의 상품 링크로 빠르게
-                  감정받을 수 있습니다.
-                </p>
-              </div>
-
-              <h2 class="form-section-title">신청자 정보 (선택)</h2>
-              <div style="margin-bottom: 20px">
-                <label for="ql-name" class="form-field-label">이름</label>
-                <input
-                  type="text"
-                  id="ql-name"
-                  name="name"
-                  class="input-modern" />
-              </div>
-              <div style="margin-bottom: 20px">
-                <label for="ql-phone" class="form-field-label">연락처</label>
-                <input
-                  type="tel"
-                  id="ql-phone"
-                  name="phone"
-                  class="input-modern" />
-              </div>
-              <div style="margin-bottom: 30px">
-                <label for="ql-email" class="form-field-label">이메일</label>
-                <input
-                  type="email"
-                  id="ql-email"
-                  name="email"
-                  class="input-modern" />
-              </div>
-
-              <h2 class="form-section-title">상품 정보</h2>
-              <div style="margin-bottom: 20px">
-                <label for="ql-brand" class="form-field-label"
-                  >브랜드 <span class="required-star">*</span></label
-                >
-                <input
-                  type="text"
-                  id="ql-brand"
-                  name="brand"
-                  class="input-modern"
-                  required />
-              </div>
-              <div style="margin-bottom: 20px">
-                <label for="ql-model_name" class="form-field-label"
-                  >모델명 <span class="required-star">*</span></label
-                >
-                <input
-                  type="text"
-                  id="ql-model_name"
-                  name="model_name"
-                  class="input-modern"
-                  required />
-              </div>
-              <div style="margin-bottom: 20px">
-                <label for="ql-category" class="form-field-label"
-                  >카테고리 <span class="required-star">*</span></label
-                >
-                <input
-                  type="text"
-                  id="ql-category"
-                  name="category"
-                  class="input-modern"
-                  placeholder="예: 가방, 지갑, 시계"
-                  required />
-              </div>
-              <div style="margin-bottom: 20px">
-                <label for="ql-product-link" class="form-field-label"
-                  >상품 링크 <span class="required-star">*</span></label
-                >
-                <input
-                  type="url"
-                  id="ql-product-link"
-                  name="product_link"
-                  class="input-modern"
-                  placeholder="https://..."
-                  required />
-                <p style="font-size: 0.85rem; color: #718096; margin-top: 5px">
-                  정확한 URL을 입력해주세요.
-                </p>
-              </div>
-              <div style="margin-bottom: 20px">
-                <label for="ql-platform" class="form-field-label"
-                  >거래 플랫폼</label
-                >
-                <select id="ql-platform" name="platform" class="input-modern">
-                  <option value="">선택하세요</option>
-                  <option value="당근마켓">당근마켓</option>
-                  <option value="번개장터">번개장터</option>
-                  <option value="중고나라">중고나라</option>
-                  <option value="기타">기타</option>
-                </select>
-              </div>
-              <div style="margin-bottom: 30px">
-                <label for="ql-remarks" class="form-field-label"
-                  >추가 문의사항</label
-                >
-                <textarea
-                  id="ql-remarks"
-                  name="remarks"
-                  class="input-modern"
-                  placeholder="추가로 문의하실 내용이 있다면 자유롭게 작성해주세요."></textarea>
-              </div>
-
-              <div style="margin-bottom: 30px">
-                <label
-                  style="display: flex; align-items: center; cursor: pointer">
-                  <input
-                    type="checkbox"
-                    id="ql-privacy-agree"
-                    name="privacy_agree"
-                    required
-                    style="margin-right: 10px; width: 18px; height: 18px" />
-                  <span style="font-size: 0.95rem; color: #4a5568"
-                    >개인정보 수집 및 이용에 동의합니다.
-                    <span class="required-star">*</span></span
-                  >
-                </label>
-              </div>
-
-              <div class="submit-button-container">
-                <button
-                  type="submit"
-                  class="btn-modern"
-                  style="
-                    background-color: #1a2a3a;
-                    color: #fff;
-                    border: none;
-                    padding: 16px 40px;
-                    font-size: 1.1rem;
-                  ">
-                  감정 신청하기
-                </button>
-              </div>
-            </form>
-          </div>
-
-          <!-- 온라인 사진 감정 폼 -->
-          <div id="form-online" class="appraisal-form-container">
-            <form id="online-form">
-              <input type="hidden" name="appraisal_type" value="online_photo" />
-              <div class="price-info">
-                <h3>온라인 사진 감정 비용</h3>
-                <p>
-                  기본 <strong style="color: #1a2a3a">15,000원</strong> 부터
-                  (브랜드 및 제품에 따라 상이)
-                </p>
-                <p style="margin-top: 5px; color: #64748b">
-                  상품 사진을 통해 전문가가 정밀하게 감정해 드립니다.
-                </p>
-              </div>
-
-              <h2 class="form-section-title">신청자 정보 (선택)</h2>
-              <div style="margin-bottom: 20px">
-                <label for="ol-name" class="form-field-label">이름</label>
-                <input
-                  type="text"
-                  id="ol-name"
-                  name="name"
-                  class="input-modern" />
-              </div>
-              <div style="margin-bottom: 20px">
-                <label for="ol-phone" class="form-field-label">연락처</label>
-                <input
-                  type="tel"
-                  id="ol-phone"
-                  name="phone"
-                  class="input-modern" />
-              </div>
-              <div style="margin-bottom: 30px">
-                <label for="ol-email" class="form-field-label">이메일</label>
-                <input
-                  type="email"
-                  id="ol-email"
-                  name="email"
-                  class="input-modern" />
-              </div>
-
-              <h2 class="form-section-title">상품 정보</h2>
-              <div style="margin-bottom: 20px">
-                <label for="ol-brand" class="form-field-label"
-                  >브랜드 <span class="required-star">*</span></label
-                >
-                <input
-                  type="text"
-                  id="ol-brand"
-                  name="brand"
-                  class="input-modern"
-                  required />
-              </div>
-              <div style="margin-bottom: 20px">
-                <label for="ol-model_name" class="form-field-label"
-                  >모델명 <span class="required-star">*</span></label
-                >
-                <input
-                  type="text"
-                  id="ol-model_name"
-                  name="model_name"
-                  class="input-modern"
-                  required />
-              </div>
-              <div style="margin-bottom: 20px">
-                <label for="ol-category" class="form-field-label"
-                  >카테고리 <span class="required-star">*</span></label
-                >
-                <input
-                  type="text"
-                  id="ol-category"
-                  name="category"
-                  class="input-modern"
-                  placeholder="예: 가방, 지갑, 시계"
-                  required />
-              </div>
-              <div style="margin-bottom: 20px">
-                <label for="ol-purchase-year" class="form-field-label"
-                  >구매 연도</label
-                >
-                <input
-                  type="text"
-                  id="ol-purchase-year"
-                  name="purchase_year"
-                  class="input-modern"
-                  placeholder="예: 2020" />
-              </div>
-              <div style="margin-bottom: 30px">
-                <label class="form-field-label">보유 구성품</label>
-                <div class="checkbox-group">
-                  <label
-                    ><input
-                      type="checkbox"
-                      name="components_included"
-                      value="box" />
-                    박스</label
-                  >
-                  <label
-                    ><input
-                      type="checkbox"
-                      name="components_included"
-                      value="dustbag" />
-                    더스트백</label
-                  >
-                  <label
-                    ><input
-                      type="checkbox"
-                      name="components_included"
-                      value="guarantee-card" />
-                    보증카드</label
-                  >
-                  <label
-                    ><input
-                      type="checkbox"
-                      name="components_included"
-                      value="receipt" />
-                    영수증</label
-                  >
-                  <label
-                    ><input
-                      type="checkbox"
-                      name="components_included"
-                      value="tag" />
-                    택</label
-                  >
+                        감정 신청
+                    </h1>
+                    <p style="color: #4a5568; font-size: 1.1rem; line-height: 1.7">
+                        원하시는 감정 방식을 선택하고 필요한 정보를 입력해 주세요
+                    </p>
                 </div>
-              </div>
 
-              <h2 class="form-section-title">사진 업로드</h2>
-              <div style="margin-bottom: 30px">
-                <label for="ol-product-photos" class="form-field-label"
-                  >상품 사진 <span class="required-star">*</span> (최소
-                  1장)</label
-                >
-                <div class="file-drop-zone" id="ol-file-drop-zone">
-                  <p
-                    style="
-                      color: #4a5568;
-                      margin-bottom: 15px;
-                      font-weight: 500;
-                    ">
-                    클릭하거나 파일을 여기로 드래그하세요.
-                  </p>
-                  <p
-                    style="
-                      color: #718096;
-                      font-size: 0.9rem;
-                      margin-bottom: 20px;
-                    ">
-                    필수: 앞면, 뒷면, 내부, 로고, 제조번호 등 선명한 사진 (최대
-                    10개, 각 10MB 이하)
-                  </p>
-                  <label for="ol-product-photos-input" class="file-upload-btn"
-                    >사진 선택하기</label
-                  >
-                  <input
-                    type="file"
-                    id="ol-product-photos-input"
-                    name="images"
-                    multiple
-                    accept="image/*" />
+                <div id="alert-box" style="display: none"></div>
+
+                <!-- 감정 방식 선택 탭 -->
+                <div class="appraisal-tabs-container">
+                    <div class="appraisal-tab active" onclick="changeTab('quicklink')" id="tab-quicklink">
+                        퀵링크 감정
+                    </div>
+                    <div class="appraisal-tab" onclick="changeTab('offline')" id="tab-offline">
+                        오프라인 실물 감정
+                    </div>
                 </div>
-                <div
-                  id="ol-file-list"
-                  style="margin-top: 15px; text-align: left"></div>
-              </div>
 
-              <div style="margin-bottom: 30px">
-                <label for="ol-remarks" class="form-field-label"
-                  >특이사항 또는 추가 문의</label
-                >
-                <textarea
-                  id="ol-remarks"
-                  name="remarks"
-                  class="input-modern"
-                  placeholder="상품의 특이사항이나 추가 설명이 있다면 입력해 주세요"></textarea>
-              </div>
+                <!-- 퀵링크 감정 폼 -->
+                <div id="form-quicklink" class="appraisal-form-container active">
+                    <form id="quicklink-form">
+                        <input type="hidden" name="appraisal_type" value="quicklink" />
+                        <div class="price-info">
+                            <h3>퀵링크 감정 비용</h3>
+                            <p>
+                                신청 건당
+                                <strong style="color: #1a2a3a">일시적 무료
+                            </p>
+                            <p style="margin-top: 5px; color: #64748b">
+                              당근마켓, 번개장터 등 중고거래 플랫폼의 상품 링크로 빠르게
+                              감정받을 수 있습니다.
+                            </p>
+                            <p id="quicklink-subscription-info" style="margin-top: 10px; font-size: 0.9rem; color: #4a5568; display: none;">
+                              <span id="quicklink-credit-info">이번 달 남은 크레딧: <strong>10회</strong></span>
+                              <br>
+                              <span id="membership-info">일반회원: 월 29,000원 구독 필요 (10회 제한)</span>
+                            </p>
+                          </div>
 
-              <div style="margin-bottom: 30px">
-                <label
-                  style="display: flex; align-items: center; cursor: pointer">
-                  <input
-                    type="checkbox"
-                    id="ol-privacy-agree"
-                    name="privacy_agree"
-                    required
-                    style="margin-right: 10px; width: 18px; height: 18px" />
-                  <span style="font-size: 0.95rem; color: #4a5568"
-                    >개인정보 수집 및 이용에 동의합니다.
-                    <span class="required-star">*</span></span
-                  >
-                </label>
-              </div>
+                          <h2 class="form-section-title">신청자 정보 (선택)</h2>
+                          <div style="margin-bottom: 20px">
+                            <label for="ql-name" class="form-field-label">이름</label>
+                            <input
+                              type="text"
+                              id="ql-name"
+                              name="name"
+                              class="input-modern" />
+                          </div>
+                          <div style="margin-bottom: 20px">
+                            <label for="ql-phone" class="form-field-label">연락처</label>
+                            <input
+                              type="tel"
+                              id="ql-phone"
+                              name="phone"
+                              class="input-modern" />
+                          </div>
+                          <div style="margin-bottom: 30px">
+                            <label for="ql-email" class="form-field-label">이메일</label>
+                            <input
+                              type="email"
+                              id="ql-email"
+                              name="email"
+                              class="input-modern" />
+                          </div>
 
-              <div class="submit-button-container">
-                <button
-                  type="submit"
-                  class="btn-modern"
-                  style="
-                    background-color: #1a2a3a;
-                    color: #fff;
-                    border: none;
-                    padding: 16px 40px;
-                    font-size: 1.1rem;
-                  ">
-                  감정 신청하기
-                </button>
-              </div>
-            </form>
-          </div>
+                          <h2 class="form-section-title">상품 정보</h2>
+                          <div style="margin-bottom: 20px">
+                            <label for="ql-brand" class="form-field-label"
+                              >브랜드 <span class="required-star">*</span></label>
+                              <input type="text" id="ql-brand" name="brand" class="input-modern" required />
+                          </div>
+                          <div style="margin-bottom: 20px">
+                              <label for="ql-model_name" class="form-field-label">모델명 <span class="required-star">*</span></label
+                              >
+                              <input
+                                type="text"
+                                id="ql-model_name"
+                                name="model_name"
+                                class="input-modern"
+                                required />
+                            </div>
+                            <div style="margin-bottom: 20px">
+                              <label for="ql-category" class="form-field-label"
+                                >카테고리 <span class="required-star">*</span></label
+                              >
+                              <input
+                                type="text"
+                                id="ql-category"
+                                name="category"
+                                class="input-modern"
+                                placeholder="예: 가방, 지갑, 시계"
+                                required />
+                            </div>
+                            <div style="margin-bottom: 20px">
+                              <label for="ql-product-link" class="form-field-label"
+                                >상품 링크 <span class="required-star">*</span></label
+                              >
+                              <input
+                                type="url"
+                                id="ql-product-link"
+                                name="product_link"
+                                class="input-modern"
+                                placeholder="https://..."
+                                required />
+                              <p style="font-size: 0.85rem; color: #718096; margin-top: 5px">
+                                정확한 URL을 입력해주세요.
+                              </p>
+                            </div>
+                            <div style="margin-bottom: 20px">
+                              <label for="ql-platform" class="form-field-label"
+                                >거래 플랫폼</label
+                              >
+                              <select id="ql-platform" name="platform" class="input-modern">
+                                <option value="">선택하세요</option>
+                                <option value="당근마켓">당근마켓</option>
+                                <option value="번개장터">번개장터</option>
+                                <option value="중고나라">중고나라</option>
+                                <option value="기타">기타</option>
+                              </select>
+                            </div>
+                            <div style="margin-bottom: 30px">
+                              <label for="ql-remarks" class="form-field-label"
+                                >추가 문의사항</label
+                              >
+                              <textarea
+                                id="ql-remarks"
+                                name="remarks"
+                                class="input-modern"
+                                placeholder="추가로 문의하실 내용이 있다면 자유롭게 작성해주세요."></textarea>
+                            </div>
 
-          <!-- 오프라인 실물 감정 폼 -->
-          <div id="form-offline" class="appraisal-form-container">
-            <form id="offline-form">
-              <input
-                type="hidden"
-                name="appraisal_type"
-                value="offline_physical" />
-              <div class="price-info">
-                <h3>오프라인 실물 감정 비용</h3>
-                <p>
-                  기본 <strong style="color: #1a2a3a">38,000원</strong> 부터
-                  (브랜드 및 제품에 따라 상이, 왕복 택배비 포함)
-                </p>
-                <p style="margin-top: 5px; color: #64748b">
-                  전문가가 직접 실물을 확인하는 가장 정확한 감정 방식입니다.
-                </p>
-              </div>
+                            <div style="margin-bottom: 30px">
+                              <label
+                                style="display: flex; align-items: center; cursor: pointer">
+                                <input
+                                  type="checkbox"
+                                  id="ql-privacy-agree"
+                                  name="privacy_agree"
+                                  required
+                                  style="margin-right: 10px; width: 18px; height: 18px" />
+                                <span style="font-size: 0.95rem; color: #4a5568"
+                                  >개인정보 수집 및 이용에 동의합니다.
+                                  <span class="required-star">*</span></span
+                                >
+                              </label>
+                          </div>
 
-              <div
-                style="
-                  background-color: #ebf4ff;
-                  border-radius: 8px;
-                  padding: 20px;
-                  margin-bottom: 30px;
-                ">
-                <h3
-                  style="
-                    font-size: 1.1rem;
-                    font-weight: 600;
-                    margin-bottom: 10px;
-                    color: #1a4ea3;
-                  ">
-                  오프라인 실물 감정 안내
-                </h3>
-                <div
-                  style="
-                    background-color: white;
-                    padding: 15px;
-                    border-radius: 6px;
-                    margin-bottom: 15px;
-                  ">
-                  <p
-                    style="
-                      font-weight: 600;
-                      color: #1a2a3a;
-                      margin-bottom: 5px;
-                    ">
-                    발송지 주소 (CAS 감정센터)
-                  </p>
-                  <p
-                    style="
-                      color: #4a5568;
-                      line-height: 1.6;
-                      font-size: 0.95rem;
-                    ">
-                    서울특별시 강남구 테헤란로 123, CAS빌딩 5층 (우: 06133)<br />
-                    연락처: 02-1234-5678
-                  </p>
-                </div>
-                <ul
-                  style="
-                    list-style-type: none;
-                    padding-left: 0;
-                    margin-bottom: 0;
-                    font-size: 0.9rem;
-                    color: #334155;
-                  ">
-                  <li style="margin-bottom: 5px">
-                    • 신청 후 상품을 위 주소로 택배 발송해주세요. (선불 발송
-                    권장)
-                  </li>
-                  <li style="margin-bottom: 5px">
-                    • 발송 후 운송장 번호를 카카오톡 채널 또는 문자로 알려주시면
-                    빠른 처리가 가능합니다.
-                  </li>
-                  <li>
-                    • 감정 완료 후 제품은 안전하게 반송해 드립니다. (반송
-                    택배비는 감정 비용에 포함)
-                  </li>
-                </ul>
-              </div>
+                          <div class="submit-button-container">
+                              <button type="submit" class="btn-modern" style="
+                                  background-color: #1a2a3a;
+                                  color: #fff;
+                                  border: none;
+                                  padding: 16px 40px;
+                                  font-size: 1.1rem;
+                                ">
+                                감정 신청하기
+                              </button>
+                          </div>
+                        </form>
+                    </div>
 
-              <h2 class="form-section-title">신청자 정보</h2>
-              <div style="margin-bottom: 20px">
-                <label for="of-name" class="form-field-label"
-                  >이름 <span class="required-star">*</span></label
+                    <!-- 오프라인 실물 감정 폼 -->
+                    <div id="form-offline" class="appraisal-form-container">
+                        <form id="offline-form">
+                            <input type="hidden" name="appraisal_type" value="offline" />
+                            <div class="price-info">
+                                <h3>오프라인 실물 감정 비용</h3>
+                                <p>
+                                    신청 건당
+                                    <strong id="offline-price" style="color: #1a2a3a">38,000원</strong>
+                                    <span id="offline-discount" style="display: none; font-size: 0.9rem; color: #059669;">(회원 할인 적용)</span>
+                                </p>
+                                <p style="margin-top: 5px; color: #64748b">
+                                    전문가가 직접 실물을 확인하는 가장 정확한 감정 방식입니다.
+                                </p>
+                                <p id="offline-membership-info" style="margin-top: 10px; font-size: 0.9rem; color: #4a5568;">
+                                  <span id="casatrade-info" style="display: none;">까사트레이드 회원: <strong>12,000원</strong> (할인 적용)</span>
+                                  <span id="partner-info" style="display: none;">제휴사 회원: <strong>20,000원</strong> (할인 적용)</span>
+                                </p>
+                            </div>
+
+                            <div style="
+                              background-color: #ebf4ff;
+                              border-radius: 8px;
+                              padding: 20px;
+                              margin-bottom: 30px;
+                            ">
+                                <h3 style="
+                            font-size: 1.1rem;
+                            font-weight: 600;
+                            margin-bottom: 10px;
+                            color: #1a4ea3;
+                          ">
+                            오프라인 실물 감정 안내
+                        </h3>
+                        <div style="
+                          background-color: white;
+                          padding: 15px;
+                          border-radius: 6px;
+                          margin-bottom: 15px;
+                        ">
+                            <p style="
+                          font-weight: 600;
+                          color: #1a2a3a;
+                          margin-bottom: 5px;
+                        ">
+                            상품 보내실 주소
+                        </p>
+                        <p style="
+                          color: #4a5568;
+                          line-height: 1.6;
+                          font-size: 0.95rem;
+                        ">
+                            까사트레이드 (02-2659-9640)<br />
+                            서울 은평구 갈현동 409-2 우측문 2층
+                        </p>
+                    </div>
+                    <ul style="
+                        list-style-type: none;
+                        padding-left: 0;
+                        margin-bottom: 0;
+                        font-size: 0.9rem;
+                        color: #334155;
+                      ">
+                        <li style="margin-bottom: 5px">
+                          • 신청 후 상품을 위 주소로 택배 발송해주세요. (선불 발송 권장)
+                        </li>
+                        <li style="margin-bottom: 5px">
+                          • 발송 후 운송장 번호를 카카오톡 채널 또는 문자로 알려주시면 빠른 처리가 가능합니다.
+                        </li>
+                        <li>
+                          • 감정 완료 후 제품은 안전하게 반송해 드립니다. (반송 택배비는 감정 비용에 포함)
+                        </li>
+                    </ul>
+                    </div>
+
+                    <h2 class="form-section-title">신청자 정보</h2>
+                    <div style="margin-bottom: 20px; display: flex; align-items: center;">
+                        <input type="checkbox" id="use-member-info" name="use-member-info" style="margin-right: 10px;">
+                        <label for="use-member-info" style="cursor: pointer; color: #1a4ea3; font-weight: 500;">회원 정보 그대로 사용하기</label>
+                    </div>
+                    <div style="margin-bottom: 20px">
+                        <label for="of-name" class="form-field-label">이름 <span class="required-star">*</span></label
                 >
                 <input
                   type="text"
@@ -994,17 +735,16 @@
               </div>
               <div style="margin-bottom: 30px">
                 <label for="of-email" class="form-field-label">이메일</label>
-                <input
-                  type="email"
-                  id="of-email"
-                  name="email"
-                  class="input-modern" />
-              </div>
+                            <input type="email" id="of-email" name="email" class="input-modern" />
+                        </div>
 
-              <h2 class="form-section-title">상품 반송 정보</h2>
-              <div style="margin-bottom: 20px">
-                <label for="of-zipcode" class="form-field-label"
-                  >우편번호 <span class="required-star">*</span></label
+                        <h2 class="form-section-title">상품 반송 정보</h2>
+                        <div style="margin-bottom: 20px; display: flex; align-items: center;">
+                                <input type="checkbox" id="use-member-address" name="use-member-address" style="margin-right: 10px;">
+                                <label for="use-member-address" style="cursor: pointer; color: #1a4ea3; font-weight: 500;">회원 주소 그대로 사용하기</label>
+                        </div>
+                        <div style="margin-bottom: 20px">
+                            <label for="of-zipcode" class="form-field-label">우편번호 <span class="required-star">*</span></label
                 >
                 <div style="display: flex; gap: 10px">
                   <input
@@ -1102,9 +842,8 @@
               </div>
               <div style="margin-bottom: 30px">
                 <label class="form-field-label">보유 구성품</label>
-                <div class="checkbox-group">
-                  <label
-                    ><input
+                            <div class="checkbox-group">
+                                <label><input
                       type="checkbox"
                       name="components_included"
                       value="box" />
@@ -1166,13 +905,10 @@
                     <span class="required-star">*</span></span
                   >
                 </label>
-              </div>
+                            </div>
 
-              <div class="submit-button-container">
-                <button
-                  type="submit"
-                  class="btn-modern"
-                  style="
+                            <div class="submit-button-container">
+                                <button type="submit" class="btn-modern" style="
                     background-color: #1a2a3a;
                     color: #fff;
                     border: none;
@@ -1181,46 +917,37 @@
                   ">
                   감정 신청하기
                 </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </section>
+                            </div>
+                    </form>
+                    </div>
+                </div>
+        </section>
     </main>
 
     <!-- 푸터 -->
-    <footer
-      style="background-color: #1a2a3a; color: #fff; padding: 40px 0 20px">
-      <div class="container">
-        <div
-          style="
+    <footer style="background-color: #1a2a3a; color: #fff; padding: 40px 0 20px">
+        <div class="container">
+            <div style="
             display: grid;
             grid-template-columns: repeat(1, 1fr);
             gap: 30px;
             margin-bottom: 30px;
-          "
-          class="grid-3">
-          <div>
-            <h3
-              style="font-size: 1.25rem; font-weight: 700; margin-bottom: 15px">
-              <span style="font-size: 0.9rem; vertical-align: top">ⓒ</span> CAS
-              명품감정시스템
-            </h3>
-            <p style="color: #cbd5e0; margin-bottom: 20px">
-              최고의 전문가들이 함께하는<br />국내 최고 명품 감정 서비스
-            </p>
-          </div>
-          <div>
-            <h3
-              style="font-size: 1.1rem; font-weight: 700; margin-bottom: 15px">
-              서비스
-            </h3>
-            <ul style="list-style: none; padding: 0; margin: 0">
-              <li style="margin-bottom: 10px">
-                <a
-                  href="/appr/request"
-                  style="color: #cbd5e0; text-decoration: none"
-                  >감정 신청</a
+          " class="grid-3">
+                <div>
+                    <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 15px">
+                        <span style="font-size: 0.9rem; vertical-align: top">ⓒ</span> CAS 명품감정시스템
+                    </h3>
+                    <p style="color: #cbd5e0; margin-bottom: 20px">
+                        최고의 전문가들이 함께하는<br />국내 최고 명품 감정 서비스
+                    </p>
+                </div>
+                <div>
+                    <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 15px">
+                        서비스
+                    </h3>
+                    <ul style="list-style: none; padding: 0; margin: 0">
+                        <li style="margin-bottom: 10px">
+                            <a href="/appr/request" style="color: #cbd5e0; text-decoration: none">감정 신청</a
                 >
               </li>
               <li style="margin-bottom: 10px">
@@ -1288,6 +1015,7 @@
       </div>
     </footer>
 
+    <!-- Daum 우편번호 서비스 스크립트 -->
     <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
     <script>
       function toggleMobileMenu() {
@@ -1376,15 +1104,15 @@
         const navDesktop = document.querySelector(".nav-desktop");
 
         function handleResponsiveLayout() {
-          const isDesktop = window.innerWidth >= 768;
-          if (navDesktop)
-            navDesktop.style.display = isDesktop ? "flex" : "none";
-          if (mobileMenuButton)
-            mobileMenuButton.style.display = isDesktop ? "none" : "block";
-          const gridColumns = isDesktop ? "repeat(3, 1fr)" : "repeat(1, 1fr)";
-          document
-            .querySelectorAll(".grid-3")
-            .forEach((el) => (el.style.gridTemplateColumns = gridColumns));
+          if (window.innerWidth >= 768) {
+            if (navDesktop) navDesktop.style.display = "flex";
+            if (mobileMenuButton) mobileMenuButton.style.display = "none";
+            const mobileMenu = document.getElementById("mobile-menu");
+            if (mobileMenu) mobileMenu.style.display = "none";
+          } else {
+            if (navDesktop) navDesktop.style.display = "none";
+            if (mobileMenuButton) mobileMenuButton.style.display = "block";
+          }
         }
         handleResponsiveLayout();
         window.addEventListener("resize", handleResponsiveLayout);
@@ -1393,69 +1121,16 @@
         const initialTab = urlParams.get("tab");
         if (
           initialTab &&
-          ["quicklink", "online", "offline"].includes(initialTab)
+          ["quicklink", "offline"].includes(initialTab)
         ) {
           changeTab(initialTab);
         } else {
           changeTab("quicklink"); // 기본 탭
         }
 
-        // 온라인 사진 감정 파일 업로드 처리
-        const onlinePhotoInput = document.getElementById(
-          "ol-product-photos-input"
-        );
-        const onlineFileListDiv = document.getElementById("ol-file-list");
-        const onlineFileDropZone = document.getElementById("ol-file-drop-zone");
-
-        if (onlinePhotoInput && onlineFileListDiv && onlineFileDropZone) {
-          onlinePhotoInput.addEventListener("change", () =>
-            displaySelectedFiles(onlinePhotoInput, onlineFileListDiv)
-          );
-
-          ["dragenter", "dragover", "dragleave", "drop"].forEach(
-            (eventName) => {
-              onlineFileDropZone.addEventListener(
-                eventName,
-                preventDefaults,
-                false
-              );
-            }
-          );
-          function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
-          }
-          ["dragenter", "dragover"].forEach((eventName) => {
-            onlineFileDropZone.addEventListener(
-              eventName,
-              () => (onlineFileDropZone.style.backgroundColor = "#eef2f8"),
-              false
-            );
-          });
-          ["dragleave", "drop"].forEach((eventName) => {
-            onlineFileDropZone.addEventListener(
-              eventName,
-              () => (onlineFileDropZone.style.backgroundColor = "#fdfdfe"),
-              false
-            );
-          });
-          onlineFileDropZone.addEventListener("drop", handleDrop, false);
-          onlineFileDropZone.addEventListener("click", () =>
-            onlinePhotoInput.click()
-          ); // 드롭존 클릭 시 파일 선택창
-
-          function handleDrop(e) {
-            let dt = e.dataTransfer;
-            let files = dt.files;
-            onlinePhotoInput.files = files; // 드롭된 파일들을 input에 할당
-            displaySelectedFiles(onlinePhotoInput, onlineFileListDiv);
-          }
-        }
-
         // 폼 제출 공통 로직
         const forms = {
           "quicklink-form": document.getElementById("quicklink-form"),
-          "online-form": document.getElementById("online-form"),
           "offline-form": document.getElementById("offline-form"),
         };
 
@@ -1477,7 +1152,7 @@
               // 공통 필드 및 각 폼의 고유 필드 처리
               requestData.appraisal_type = formData.get("appraisal_type");
 
-              // 퀵링크, 온라인, 오프라인에 따라 필요한 필드 선택적 추가
+              // 퀵링크, 오프라인에 따라 필요한 필드 선택적 추가
               if (requestData.appraisal_type === "quicklink") {
                 requestData.brand = formData.get("brand");
                 requestData.model_name = formData.get("model_name");
@@ -1485,35 +1160,6 @@
                 requestData.product_link = formData.get("product_link");
                 if (formData.get("platform"))
                   requestData.platform = formData.get("platform");
-              } else if (requestData.appraisal_type === "online_photo") {
-                requestData.brand = formData.get("brand");
-                requestData.model_name = formData.get("model_name");
-                requestData.category = formData.get("category");
-                if (formData.get("purchase_year"))
-                  requestData.purchase_year = formData.get("purchase_year");
-
-                const components = [];
-                formElement
-                  .querySelectorAll('input[name="components_included"]:checked')
-                  .forEach((cb) => components.push(cb.value));
-                if (components.length > 0)
-                  requestData.components_included = components;
-
-                // 이미지 파일 처리 - 여기서는 파일 이름을 배열로 전송한다고 가정 (실제로는 업로드 API 필요)
-                const imageFiles = onlinePhotoInput.files;
-                if (imageFiles.length === 0) {
-                  showAlert(
-                    "온라인 사진 감정에는 최소 1장의 사진이 필요합니다."
-                  );
-                  submitButton.disabled = false;
-                  submitButton.textContent = "감정 신청하기";
-                  return;
-                }
-                // API는 이미지 경로 배열을 기대하므로, 실제로는 업로드 후 경로를 받아야 함
-                // 여기서는 임시로 파일 이름 배열을 보냄 (서버에서 이 부분을 어떻게 처리할지 명확해야 함)
-                requestData.images = Array.from(imageFiles).map(
-                  (file) => file.name
-                );
               } else if (requestData.appraisal_type === "offline_physical") {
                 requestData.brand = formData.get("brand");
                 requestData.model_name = formData.get("model_name");
@@ -1550,8 +1196,6 @@
               // (임시) 결제 정보 추가 (API 문서에 따라)
               let amount = 0;
               if (requestData.appraisal_type === "quicklink") amount = 10000;
-              else if (requestData.appraisal_type === "online_photo")
-                amount = 15000;
               else if (requestData.appraisal_type === "offline_physical")
                 amount = 38000;
 
@@ -1581,12 +1225,6 @@
                     "success"
                   );
                   formElement.reset();
-                  if (
-                    onlineFileListDiv &&
-                    requestData.appraisal_type === "online_photo"
-                  ) {
-                    onlineFileListDiv.innerHTML = ""; // 파일 목록 초기화
-                  }
                 } else {
                   showAlert(
                     result.message ||
@@ -1605,6 +1243,167 @@
             });
           }
         }
+
+        // 회원 정보 로드 및 가격 업데이트
+        loadMembershipInfo();
+        
+        // 탭 전환 처리
+        const tabQuicklink = document.getElementById('tab-quicklink');
+        const tabOffline = document.getElementById('tab-offline');
+        const formQuicklink = document.getElementById('form-quicklink');
+        const formOffline = document.getElementById('form-offline');
+        
+        tabQuicklink.addEventListener('click', function() {
+            tabQuicklink.classList.add('active');
+            tabOffline.classList.remove('active');
+            formQuicklink.classList.add('active');
+            formOffline.classList.remove('active');
+        });
+        
+        tabOffline.addEventListener('click', function() {
+            tabOffline.classList.add('active');
+            tabQuicklink.classList.remove('active');
+            formOffline.classList.add('active');
+            formQuicklink.classList.remove('active');
+        });
+        
+        // 회원 정보 로드 및 가격 정보 업데이트 함수
+        function loadMembershipInfo() {
+            // 실제 구현에서는 API 호출
+            fetch('/api/user/membership-info', {
+                credentials: 'include'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.success) {
+                    updatePriceInfo(data.membershipType, data.isSubscribed, data.creditRemaining, data.creditLimit);
+                } else {
+                    console.error("회원 정보 로드 실패:", data.message);
+                    // 기본 정보로 표시 (비로그인 사용자 또는 일반 회원 가정)
+                    updatePriceInfo('regular', false, 0, 10);
+                }
+            })
+            .catch(error => {
+                console.error("회원 정보 로드 중 오류 발생:", error);
+                // 기본 정보로 표시
+                updatePriceInfo('regular', false, 0, 10);
+            });
+            
+            // 실제 API 구현 전 테스트를 위한 임시 코드 (실제 코드에서는 삭제)
+            // 아래 membershipType을 'regular', 'casatrade', 'partner' 중 하나로 변경하여 테스트
+            const testMembershipType = 'regular';
+            const testIsSubscribed = false;
+            const testCreditRemaining = 5;
+            const testCreditLimit = 10;
+            updatePriceInfo(testMembershipType, testIsSubscribed, testCreditRemaining, testCreditLimit);
+        }
+        
+        // 회원 등급에 따른 가격 정보 업데이트
+        function updatePriceInfo(membershipType, isSubscribed, creditRemaining, creditLimit) {
+            // 퀵링크 감정 정보 업데이트
+            const quicklinkSubInfo = document.getElementById('quicklink-subscription-info');
+            const quicklinkCreditInfo = document.getElementById('quicklink-credit-info');
+            const membershipInfo = document.getElementById('membership-info');
+            
+            // 오프라인 감정 정보 업데이트
+            const offlinePrice = document.getElementById('offline-price');
+            const offlineDiscount = document.getElementById('offline-discount');
+            const casatradeInfo = document.getElementById('casatrade-info');
+            const partnerInfo = document.getElementById('partner-info');
+            
+            // 회원 등급에 따른 정보 표시
+            if (membershipType === 'casatrade') {
+                // 까사트레이드 회원
+                quicklinkSubInfo.style.display = 'block';
+                quicklinkCreditInfo.innerHTML = `이번 달 남은 크레딧: <strong>${creditRemaining}회</strong> / 10회`;
+                membershipInfo.innerHTML = `까사트레이드 회원: <strong>무료 구독</strong> (10회 제한)`;
+                
+                // 오프라인 감정 가격
+                offlinePrice.textContent = '12,000원';
+                offlineDiscount.style.display = 'inline';
+                casatradeInfo.style.display = 'block';
+                partnerInfo.style.display = 'none';
+            } else if (membershipType === 'partner') {
+                // 제휴사 회원
+                quicklinkSubInfo.style.display = 'block';
+                quicklinkCreditInfo.innerHTML = `이번 달 남은 크레딧: <strong>${creditRemaining}회</strong> / 5회`;
+                membershipInfo.innerHTML = `제휴사 회원: <strong>무료 구독</strong> (5회 제한)`;
+                
+                // 오프라인 감정 가격
+                offlinePrice.textContent = '20,000원';
+                offlineDiscount.style.display = 'inline';
+                casatradeInfo.style.display = 'none';
+                partnerInfo.style.display = 'block';
+            } else {
+                // 일반 회원
+                quicklinkSubInfo.style.display = 'block';
+                
+                if (isSubscribed) {
+                    quicklinkCreditInfo.innerHTML = `이번 달 남은 크레딧: <strong>${creditRemaining}회</strong> / 10회`;
+                    membershipInfo.innerHTML = `일반회원: <strong>구독중</strong> (월 29,000원, 10회 제한)`;
+                } else {
+                    quicklinkCreditInfo.innerHTML = `크레딧 없음`;
+                    membershipInfo.innerHTML = `일반회원: 월 29,000원 구독 필요 (10회 제한)`;
+                }
+                
+                // 오프라인 감정 기본 가격
+                offlinePrice.textContent = '38,000원';
+                offlineDiscount.style.display = 'none';
+                casatradeInfo.style.display = 'none';
+                partnerInfo.style.display = 'none';
+            }
+        }
+
+        // 회원 정보 자동 채우기 기능
+        document.addEventListener('DOMContentLoaded', function() {
+            // 회원 정보 그대로 사용하기 체크박스
+            const useMemberInfoCheckbox = document.getElementById('use-member-info');
+            if (useMemberInfoCheckbox) {
+                useMemberInfoCheckbox.addEventListener('change', function() {
+                    if (this.checked) {
+                        // 로그인한 회원 정보 가져오기 (여기서는 예시로 사용)
+                        // 실제로는 서버에서 현재 로그인한 회원 정보를 가져와야 함
+                        const memberName = localStorage.getItem('memberName') || '';
+                        const memberPhone = localStorage.getItem('memberPhone') || '';
+                        const memberEmail = localStorage.getItem('memberEmail') || '';
+                        
+                        // 폼에 회원 정보 채우기
+                        document.getElementById('of-name').value = memberName;
+                        document.getElementById('of-phone').value = memberPhone;
+                        document.getElementById('of-email').value = memberEmail;
+                    } else {
+                        // 체크 해제 시 필드 초기화
+                        document.getElementById('of-name').value = '';
+                        document.getElementById('of-phone').value = '';
+                        document.getElementById('of-email').value = '';
+                    }
+                });
+            }
+            
+            // 회원 주소 그대로 사용하기 체크박스
+            const useMemberAddressCheckbox = document.getElementById('use-member-address');
+            if (useMemberAddressCheckbox) {
+                useMemberAddressCheckbox.addEventListener('change', function() {
+                    if (this.checked) {
+                        // 로그인한 회원 주소 정보 가져오기 (여기서는 예시로 사용)
+                        // 실제로는 서버에서 현재 로그인한 회원 주소 정보를 가져와야 함
+                        const memberZipcode = localStorage.getItem('memberZipcode') || '';
+                        const memberAddress1 = localStorage.getItem('memberAddress1') || '';
+                        const memberAddress2 = localStorage.getItem('memberAddress2') || '';
+                        
+                        // 폼에 회원 주소 정보 채우기
+                        document.getElementById('of-zipcode').value = memberZipcode;
+                        document.getElementById('of-address1').value = memberAddress1;
+                        document.getElementById('of-address2').value = memberAddress2;
+                    } else {
+                        // 체크 해제 시 필드 초기화
+                        document.getElementById('of-zipcode').value = '';
+                        document.getElementById('of-address1').value = '';
+                        document.getElementById('of-address2').value = '';
+                    }
+                });
+            }
+        });
       });
     </script>
   </body>

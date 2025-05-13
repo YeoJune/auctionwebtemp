@@ -1,11 +1,11 @@
 <!-- pages/appr/issue.html -->
-<!-- 감정서 발급 신청 페이지 -->
+<!-- 오프라인 감정 및 감정서 신청 페이지 -->
 <!DOCTYPE html>
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CAS 명품감정시스템 - 감정서 발급 신청</title>
+    <title>오프라인 감정 및 감정서 신청 - CAS 명품감정시스템</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Montserrat:wght@500;600;700&display=swap"
       rel="stylesheet" />
@@ -28,7 +28,8 @@
       }
 
       .container {
-        max-width: 1000px; /* 너비 조정 */
+        max-width: 1000px;
+        /* 너비 조정 */
         margin: 0 auto;
         padding: 0 20px;
       }
@@ -47,6 +48,7 @@
       .btn-primary:hover {
         background-color: #2d4263;
       }
+
       .btn-primary:disabled {
         background-color: #ccc;
         cursor: not-allowed;
@@ -106,6 +108,7 @@
         border-radius: 6px;
         font-size: 0.95rem;
       }
+
       .form-input:read-only {
         background-color: #f3f4f6;
         cursor: not-allowed;
@@ -160,19 +163,26 @@
       }
 
       .notice-box {
-        background-color: #fef3c7; /* 노란색 계열 */
-        border-left: 4px solid #f59e0b; /* 진한 노란색 */
+        background-color: #fef3c7;
+        /* 노란색 계열 */
+        border-left: 4px solid #f59e0b;
+        /* 진한 노란색 */
         padding: 15px;
         border-radius: 6px;
         margin-bottom: 20px;
       }
+
       .notice-box.error {
-        background-color: #fee2e2; /* 빨간색 계열 */
-        border-left-color: #ef4444; /* 진한 빨간색 */
+        background-color: #fee2e2;
+        /* 빨간색 계열 */
+        border-left-color: #ef4444;
+        /* 진한 빨간색 */
       }
+
       .notice-box.error h4 {
         color: #ef4444;
       }
+
       .notice-box.error p {
         color: #b91c1c;
       }
@@ -188,6 +198,7 @@
         font-size: 0.9rem;
         margin: 0;
       }
+
       .price-table {
         width: 100%;
         border-collapse: collapse;
@@ -208,16 +219,234 @@
       .price-table tr:last-child td {
         border-bottom: none;
       }
+
       #loading-message {
         text-align: center;
         padding: 20px;
         font-size: 1.1rem;
         color: #4a5568;
       }
+      /* 헤더 & 푸터 공통 스타일 */
+
+      header {
+        background-color: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+      }
+
+      .header-inner {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 18px 0;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 40px;
+      }
+
+      .logo {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #1a2a3a;
+        text-decoration: none;
+        letter-spacing: -0.5px;
+        display: flex;
+        align-items: center;
+      }
+
+      .logo .cas-highlight {
+        background: linear-gradient(135deg, #1a2a3a 0%, #2d4263 100%);
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .nav-desktop {
+        display: none;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: nowrap;
+        justify-content: flex-end;
+      }
+
+      .nav-desktop a {
+        color: #333;
+        text-decoration: none;
+        font-weight: 500;
+        white-space: nowrap;
+        padding: 8px 12px;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        font-size: 0.95rem;
+      }
+
+      .nav-desktop a:hover {
+        color: #666;
+        background-color: rgba(0, 0, 0, 0.05);
+      }
+
+      .mobile-menu-btn {
+        display: block;
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+      }
+
+      @media (min-width: 768px) {
+        .nav-desktop {
+          display: flex !important;
+          gap: 8px;
+        }
+        .mobile-menu-btn {
+          display: none !important;
+        }
+      }
+
+      @media (min-width: 1024px) {
+        .nav-desktop {
+          gap: 12px;
+        }
+        .nav-desktop a {
+          padding: 8px 16px;
+          font-size: 1rem;
+        }
+      }
     </style>
   </head>
 
   <body>
+    <!-- 헤더 -->
+    <header>
+      <div class="container">
+        <div class="header-inner">
+          <div class="header-left">
+            <a href="/appr" class="logo">
+              <img
+                src="https://i.ibb.co/FqJhVh0T/image.png"
+                alt="CAS 명품감정시스템"
+                style="height: 40px" />
+            </a>
+
+            <nav class="nav-desktop">
+              <a href="/appr" class="btn-modern">홈</a>
+              <a href="/appr/request" class="btn-modern">감정신청</a>
+              <a href="/appr/result" class="btn-modern">감정번호조회</a>
+              <a href="#" class="btn-modern">마이페이지</a>
+              <a href="/appr/repair" class="btn-modern">까사복원시스템</a>
+              <a href="/appr/authenticity" class="btn-modern">정가품구별법</a>
+              <a href="/appr/signin" class="btn-modern">로그인</a>
+            </nav>
+          </div>
+
+          <button
+            class="mobile-menu-btn"
+            id="menu-icon"
+            onclick="toggleMobileMenu()">
+            ☰
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div
+      class="mobile-menu"
+      id="mobile-menu"
+      style="
+        display: none;
+        position: fixed;
+        top: 70px;
+        left: 0;
+        right: 0;
+        background-color: #fff;
+        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+        z-index: 999;
+      ">
+      <a
+        href="/appr"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >홈</a
+      >
+      <a
+        href="/appr/request"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >감정신청</a
+      >
+      <a
+        href="/appr/result"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >감정번호조회</a
+      >
+      <a
+        href="#"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >마이페이지</a
+      >
+      <a
+        href="/appr/repair"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >까사복원시스템</a
+      >
+      <a
+        href="/appr/authenticity"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >정가품구별법</a
+      >
+      <a
+        href="/appr/signin"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+        "
+        >로그인</a
+      >
+    </div>
+
     <main>
       <section style="padding: 50px 0">
         <div class="container">
@@ -236,13 +465,27 @@
           </a>
 
           <h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 10px">
-            감정서 발급 신청
+            오프라인 감정 및 감정서 신청
           </h1>
           <p
             id="appraisal-id-display"
-            style="color: #64748b; margin-bottom: 30px; font-size: 0.9rem">
+            style="color: #64748b; margin-bottom: 10px; font-size: 0.9rem">
             감정ID: 불러오는 중...
           </p>
+
+          <div
+            class="notice-box"
+            style="
+              display: block;
+              margin-bottom: 30px;
+              background-color: #f1f5f9;
+              border-left-color: #64748b;
+            ">
+            <p style="color: #334155; font-size: 0.95rem">
+              퀵링크 감정은 이미지 기반 예비 감정으로, 정확한 감정과 공식 감정서
+              발급을 위해서는 오프라인 실물감정이 필요합니다.
+            </p>
+          </div>
 
           <div id="loading-message">감정 정보를 불러오는 중입니다...</div>
           <div id="content-wrapper" style="display: none">
@@ -252,7 +495,7 @@
             </div>
 
             <div class="grid-2">
-              <!-- 좌측: 감정서 미리보기 및 정보 -->
+              <!-- 좌측: 감정 정보 -->
               <div>
                 <div
                   style="
@@ -300,10 +543,10 @@
                             border-bottom: 1px solid #e2e8f0;
                             color: #64748b;
                           ">
-                          감정 종류
+                          상품 링크
                         </td>
                         <td
-                          id="info-appraisal-type"
+                          id="info-product-link"
                           style="
                             padding: 10px 0;
                             border-bottom: 1px solid #e2e8f0;
@@ -319,7 +562,7 @@
                             border-bottom: 1px solid #e2e8f0;
                             color: #64748b;
                           ">
-                          감정 결과
+                          퀵링크 감정결과
                         </td>
                         <td
                           id="info-appraisal-result"
@@ -352,45 +595,10 @@
                       </tr>
                     </table>
                   </div>
-
-                  <h4
-                    style="
-                      font-size: 1.1rem;
-                      font-weight: 600;
-                      margin-bottom: 15px;
-                    ">
-                    감정서 미리보기 (예시)
-                  </h4>
-                  <div class="certificate-preview">
-                    <img
-                      src="https://i.ibb.co/LDJvBQQg/Kakao-Talk-Photo-2025-05-08-20-44-34.png"
-                      alt="감정서 미리보기" />
-                  </div>
-
-                  <div class="certificate-features">
-                    <h4
-                      style="
-                        font-size: 1rem;
-                        font-weight: 600;
-                        margin-bottom: 10px;
-                      ">
-                      실물 감정서 특징
-                    </h4>
-                    <ul>
-                      <li>고품질 프리미엄 용지에 인쇄됩니다.</li>
-                      <li>QR 코드를 통해 온라인 인증이 가능합니다.</li>
-                      <li>위변조 방지 홀로그램 씰이 부착됩니다.</li>
-                      <li>감정사의 직인이 포함됩니다.</li>
-                      <li>
-                        특수 워터마크와 UV 반응 잉크를 사용하여 보안이
-                        강화됩니다.
-                      </li>
-                    </ul>
-                  </div>
                 </div>
               </div>
 
-              <!-- 우측: 발급 신청 양식 -->
+              <!-- 우측: 오프라인 감정 및 감정서 신청 양식 -->
               <div>
                 <div
                   style="
@@ -406,37 +614,111 @@
                       font-weight: 700;
                       margin-bottom: 20px;
                     ">
-                    감정서 발급 신청서
+                    오프라인 감정 및 감정서 신청
                   </h3>
 
+                  <!-- 주소 안내 추가 -->
+                  <div
+                    class="notice-box"
+                    style="
+                      background-color: #f1f5f9;
+                      border-left-color: #64748b;
+                      margin-bottom: 20px;
+                    ">
+                    <h4 style="color: #334155; font-size: 1rem">
+                      상품을 보내실 주소
+                    </h4>
+                    <p
+                      style="
+                        color: #334155;
+                        font-size: 0.95rem;
+                        font-weight: 500;
+                      ">
+                      까사트레이드 (02-2659-9640)<br />
+                      서울특별시 은평구 갈현동 409-2 우측문 2층
+                    </p>
+                  </div>
+
                   <form id="issue-certificate-form">
-                    <div class="form-group">
-                      <label for="certificate_type" class="form-label"
-                        >감정서 유형
-                        <span style="color: #e53e3e">*</span></label
+                    <!-- 고객 정보 -->
+                    <div
+                      style="
+                        margin-bottom: 20px;
+                        display: flex;
+                        align-items: center;
+                      ">
+                      <input
+                        type="checkbox"
+                        id="use-member-info"
+                        name="use-member-info"
+                        style="margin-right: 10px" />
+                      <label
+                        for="use-member-info"
+                        style="
+                          cursor: pointer;
+                          color: #1a4ea3;
+                          font-weight: 500;
+                        "
+                        >회원 정보 그대로 사용하기</label
                       >
-                      <select
-                        id="certificate_type"
-                        name="certificate_type"
-                        class="form-select"
-                        required>
-                        <option value="">선택하세요</option>
-                        <option value="pdf">디지털 PDF 감정서 (5,000원)</option>
-                        <option value="physical">
-                          실물 감정서 (10,000원, 배송비 별도)
-                        </option>
-                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label for="customer_name" class="form-label">
+                        이름 <span style="color: #e53e3e">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        id="customer_name"
+                        name="customer_name"
+                        class="form-input"
+                        placeholder="이름을 입력해주세요"
+                        required />
                     </div>
 
-                    <div id="delivery-info-section" style="display: none">
+                    <div class="form-group">
+                      <label for="customer_phone" class="form-label">
+                        연락처 <span style="color: #e53e3e">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        id="customer_phone"
+                        name="customer_phone"
+                        class="form-input"
+                        placeholder="연락처를 입력해주세요"
+                        required />
+                    </div>
+
+                    <!-- 감정서 수령 주소 -->
+                    <div id="delivery-info-section">
                       <h4
                         style="
                           font-size: 1.1rem;
                           font-weight: 600;
-                          margin: 20px 0 15px;
+                          margin: 30px 0 15px;
                         ">
-                        실물 감정서 수령 주소
+                        감정서 수령 주소
                       </h4>
+                      <div
+                        style="
+                          margin-bottom: 20px;
+                          display: flex;
+                          align-items: center;
+                        ">
+                        <input
+                          type="checkbox"
+                          id="use-member-address"
+                          name="use-member-address"
+                          style="margin-right: 10px" />
+                        <label
+                          for="use-member-address"
+                          style="
+                            cursor: pointer;
+                            color: #1a4ea3;
+                            font-weight: 500;
+                          "
+                          >회원 주소 그대로 사용하기</label
+                        >
+                      </div>
                       <div class="form-group">
                         <label for="recipient_name" class="form-label"
                           >받는 사람
@@ -447,7 +729,8 @@
                           id="recipient_name"
                           name="recipient_name"
                           class="form-input"
-                          placeholder="받는 사람 이름을 입력해주세요" />
+                          placeholder="받는 사람 이름을 입력해주세요"
+                          required />
                       </div>
 
                       <div class="form-group">
@@ -459,7 +742,8 @@
                           id="recipient_phone"
                           name="recipient_phone"
                           class="form-input"
-                          placeholder="연락처를 입력해주세요" />
+                          placeholder="연락처를 입력해주세요"
+                          required />
                       </div>
 
                       <div class="form-group">
@@ -473,7 +757,8 @@
                             name="zipcode"
                             class="form-input"
                             placeholder="우편번호"
-                            style="flex: 1" />
+                            style="flex: 1"
+                            required />
                           <button
                             type="button"
                             class="btn-outline"
@@ -494,7 +779,8 @@
                           id="address1"
                           name="address1"
                           class="form-input"
-                          placeholder="기본 주소" />
+                          placeholder="기본 주소"
+                          required />
                       </div>
 
                       <div class="form-group">
@@ -533,19 +819,15 @@
                       </h4>
                       <table class="price-table">
                         <tr>
-                          <th>감정서 발급비</th>
-                          <td id="certificate-fee">0원</td>
-                        </tr>
-                        <tr id="delivery-fee-row" style="display: none">
-                          <th>배송비</th>
-                          <td id="delivery-fee">3,000원</td>
+                          <th>오프라인 감정 및 감정서 발급비</th>
+                          <td id="certificate-fee">38,000원</td>
                         </tr>
                         <tr>
                           <th style="font-weight: 700">총 결제금액</th>
                           <td
                             id="total-payment"
                             style="font-weight: 700; color: #dc2626">
-                            0원
+                            38,000원
                           </td>
                         </tr>
                       </table>
@@ -582,9 +864,8 @@
                       type="submit"
                       id="submit-button"
                       class="btn-primary"
-                      style="width: 100%"
-                      disabled>
-                      결제 및 발급 신청
+                      style="width: 100%">
+                      결제하기
                     </button>
                   </form>
                 </div>
@@ -621,27 +902,13 @@
         );
 
         const infoProductName = document.getElementById("info-product-name");
-        const infoAppraisalType = document.getElementById(
-          "info-appraisal-type"
-        );
+        const infoProductLink = document.getElementById("info-product-link");
         const infoAppraisalResult = document.getElementById(
           "info-appraisal-result"
         );
         const infoRequestDate = document.getElementById("info-request-date");
 
-        const certificateTypeSelect =
-          document.getElementById("certificate_type");
-        const deliveryInfoSection = document.getElementById(
-          "delivery-info-section"
-        );
-        const recipientNameInput = document.getElementById("recipient_name");
-        const recipientPhoneInput = document.getElementById("recipient_phone");
-        const zipcode = document.getElementById("zipcode");
-        const address1 = document.getElementById("address1");
-
         const certificateFeeEl = document.getElementById("certificate-fee");
-        const deliveryFeeRow = document.getElementById("delivery-fee-row");
-        const deliveryFeeEl = document.getElementById("delivery-fee");
         const totalPaymentEl = document.getElementById("total-payment");
         const submitButton = document.getElementById("submit-button");
 
@@ -654,8 +921,6 @@
         );
 
         // URL에서 appraisalId (또는 certificateNumber) 추출
-        // server.js의 라우트는 /appr/issue/:certificateNumber 이지만, API는 appraisal_id를 요구.
-        // 여기서는 URL 파라미터를 appraisalId로 가정. 만약 certificateNumber라면, 백엔드에서 appraisalId를 조회하는 API가 추가로 필요.
         const pathParts = window.location.pathname.split("/");
         const appraisalIdFromUrl = pathParts[pathParts.length - 1]; // 마지막 부분이 ID라고 가정
 
@@ -681,20 +946,21 @@
 
             if (data.success && data.appraisal) {
               const appraisal = data.appraisal;
+
+              // 상품명 표시
               infoProductName.textContent =
                 `${appraisal.brand || ""} ${
                   appraisal.model_name || ""
                 }`.trim() || "-";
 
-              let typeText = "-";
-              if (appraisal.appraisal_type === "quicklink")
-                typeText = "퀵링크 감정";
-              else if (appraisal.appraisal_type === "online_photo")
-                typeText = "온라인 사진 감정";
-              else if (appraisal.appraisal_type === "offline_physical")
-                typeText = "오프라인 실물 감정";
-              infoAppraisalType.textContent = typeText;
+              // 상품 링크 표시 (product_url이 있다고 가정)
+              if (appraisal.product_url) {
+                infoProductLink.innerHTML = `<a href="${appraisal.product_url}" target="_blank" style="color: #3182ce; text-decoration: underline;">상품 링크 보기</a>`;
+              } else {
+                infoProductLink.textContent = "-";
+              }
 
+              // 퀵링크 감정 결과 표시
               let resultText = "-";
               let resultColor = "#1a2a3a";
               if (appraisal.result === "authentic") {
@@ -713,26 +979,10 @@
               infoAppraisalResult.textContent = resultText;
               infoAppraisalResult.style.color = resultColor;
 
+              // 신청일자 표시
               infoRequestDate.textContent = new Date(
                 appraisal.created_at
               ).toLocaleDateString("ko-KR");
-
-              // 감정 결과에 따라 감정서 발급 가능 여부 확인
-              if (
-                appraisal.result !== "authentic" &&
-                appraisal.result !== "fake"
-              ) {
-                appraisalNotice.style.display = "block";
-                appraisalNotice.classList.add("error");
-                appraisalNoticeTitle.textContent = "감정서 발급 불가";
-                appraisalNoticeMessage.textContent = `현재 감정 결과('${resultText}')로는 공식 감정서를 발급할 수 없습니다. 확정된 감정 결과(정품 또는 가품)가 나온 후에 신청 가능합니다.`;
-                submitButton.disabled = true;
-                certificateTypeSelect.disabled = true;
-              } else {
-                // 감정서 유형 선택에 따른 UI 변경 및 가격 계산 로직 활성화
-                submitButton.disabled = false; // 일단 활성화, 유형 선택 시 조건부 비활성화
-                certificateTypeSelect.disabled = false;
-              }
             } else {
               appraisalNotice.style.display = "block";
               appraisalNotice.classList.add("error");
@@ -754,63 +1004,6 @@
             submitButton.disabled = true;
           });
 
-        // 감정서 유형 선택 시 UI 및 가격 업데이트
-        certificateTypeSelect.addEventListener("change", function () {
-          const selectedType = this.value;
-          let certFee = 0;
-          let delFee = 0;
-          let total = 0;
-
-          if (selectedType === "pdf") {
-            certFee = 5000;
-            deliveryInfoSection.style.display = "none";
-            deliveryFeeRow.style.display = "none";
-            // PDF 선택 시 배송 정보 필드들의 required 속성 제거
-            [
-              recipientNameInput,
-              recipientPhoneInput,
-              zipcode,
-              address1,
-            ].forEach((input) => (input.required = false));
-          } else if (selectedType === "physical") {
-            certFee = 10000;
-            delFee = 3000; // 기본 배송비
-            deliveryInfoSection.style.display = "block";
-            deliveryFeeRow.style.display = "table-row";
-            // 실물 선택 시 배송 정보 필드들의 required 속성 추가
-            [
-              recipientNameInput,
-              recipientPhoneInput,
-              zipcode,
-              address1,
-            ].forEach((input) => (input.required = true));
-          } else {
-            deliveryInfoSection.style.display = "none";
-            deliveryFeeRow.style.display = "none";
-            [
-              recipientNameInput,
-              recipientPhoneInput,
-              zipcode,
-              address1,
-            ].forEach((input) => (input.required = false));
-          }
-          total = certFee + delFee;
-
-          certificateFeeEl.textContent = `${certFee.toLocaleString()}원`;
-          if (deliveryFeeRow.style.display !== "none")
-            deliveryFeeEl.textContent = `${delFee.toLocaleString()}원`;
-          totalPaymentEl.textContent = `${total.toLocaleString()}원`;
-
-          // 제출 버튼 활성화 조건 (감정서 발급 가능한 상태일 때만)
-          if (
-            !submitButton.disabled ||
-            appraisalNotice.style.display === "none" ||
-            !appraisalNotice.classList.contains("error")
-          ) {
-            submitButton.disabled = !selectedType; // 유형을 선택해야 버튼 활성화
-          }
-        });
-
         // 폼 제출 처리
         const form = document.getElementById("issue-certificate-form");
         form.addEventListener("submit", function (event) {
@@ -821,29 +1014,26 @@
           const formData = new FormData(form);
           const data = {
             appraisal_id: appraisalIdFromUrl,
-            type: formData.get("certificate_type"),
-            // 결제 정보는 실제 결제 모듈 연동 후 추가
-            payment_info: {
-              method: "card", // 예시
-              amount: parseInt(
-                totalPaymentEl.textContent.replace(/[^0-9]/g, "")
-              ), // 계산된 총액
-              transaction_id: "temp_tx_" + Date.now(), // 임시 거래 ID
+            customer_info: {
+              name: formData.get("customer_name"),
+              phone: formData.get("customer_phone"),
             },
-          };
-
-          if (data.type === "physical") {
-            data.delivery_info = {
+            delivery_info: {
               name: formData.get("recipient_name"),
               phone: formData.get("recipient_phone"),
               zipcode: formData.get("zipcode"),
               address1: formData.get("address1"),
               address2: formData.get("address2") || "",
               memo: formData.get("delivery_memo") || "",
-            };
-          }
+            },
+            payment_info: {
+              method: "card", // 예시
+              amount: 38000, // 고정 금액
+              transaction_id: "temp_tx_" + Date.now(), // 임시 거래 ID
+            },
+          };
 
-          fetch("/api/certificates/issue", {
+          fetch("/api/offline_appraisal/request", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -857,38 +1047,119 @@
               if (result.success) {
                 appraisalNoticeTitle.textContent = "신청 완료";
                 appraisalNoticeMessage.textContent =
-                  result.message || "감정서 발급 신청이 완료되었습니다.";
+                  result.message ||
+                  "오프라인 감정 및 감정서 신청이 완료되었습니다.";
                 form.reset(); // 폼 초기화
-                certificateTypeSelect.dispatchEvent(new Event("change")); // 가격 초기화
               } else {
                 appraisalNotice.classList.add("error");
                 appraisalNoticeTitle.textContent = "신청 실패";
                 appraisalNoticeMessage.textContent =
-                  result.message || "감정서 발급 신청에 실패했습니다.";
+                  result.message ||
+                  "오프라인 감정 및 감정서 신청에 실패했습니다.";
               }
             })
             .catch((error) => {
-              console.error("Error issuing certificate:", error);
+              console.error("Error requesting offline appraisal:", error);
               appraisalNotice.style.display = "block";
               appraisalNotice.classList.add("error");
               appraisalNoticeTitle.textContent = "네트워크 오류";
               appraisalNoticeMessage.textContent =
-                "감정서 발급 신청 중 오류가 발생했습니다.";
+                "오프라인 감정 신청 중 오류가 발생했습니다.";
             })
             .finally(() => {
-              // 현재 감정 상태에 따라 제출 버튼 재활성화 결정
-              const currentAppraisalResult = infoAppraisalResult.textContent;
-              if (
-                currentAppraisalResult !== "정품" &&
-                currentAppraisalResult !== "가품"
-              ) {
-                submitButton.disabled = true;
-              } else {
-                submitButton.disabled = !certificateTypeSelect.value; // 유형 선택 시만 활성화
-              }
-              submitButton.textContent = "결제 및 발급 신청";
+              submitButton.disabled = false;
+              submitButton.textContent = "결제하기";
             });
         });
+      });
+
+      function toggleMobileMenu() {
+        const mobileMenu = document.getElementById("mobile-menu");
+        const menuIcon = document.getElementById("menu-icon");
+        if (mobileMenu.style.display === "block") {
+          mobileMenu.style.display = "none";
+          if (menuIcon) menuIcon.textContent = "☰";
+        } else {
+          mobileMenu.style.display = "block";
+          if (menuIcon) menuIcon.textContent = "✕";
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        const mobileMenuButton = document.querySelector(".mobile-menu-btn");
+        const navDesktop = document.querySelector(".nav-desktop");
+
+        function handleResponsiveLayout() {
+          if (window.innerWidth >= 768) {
+            if (navDesktop) navDesktop.style.display = "flex";
+            if (mobileMenuButton) mobileMenuButton.style.display = "none";
+            const mobileMenu = document.getElementById("mobile-menu");
+            if (mobileMenu) mobileMenu.style.display = "none";
+          } else {
+            if (navDesktop) navDesktop.style.display = "none";
+            if (mobileMenuButton) mobileMenuButton.style.display = "block";
+          }
+        }
+        handleResponsiveLayout();
+        window.addEventListener("resize", handleResponsiveLayout);
+      });
+
+      // 회원 정보 자동 채우기 기능
+      document.addEventListener("DOMContentLoaded", function () {
+        // 회원 정보 그대로 사용하기 체크박스
+        const useMemberInfoCheckbox =
+          document.getElementById("use-member-info");
+        if (useMemberInfoCheckbox) {
+          useMemberInfoCheckbox.addEventListener("change", function () {
+            if (this.checked) {
+              // 로그인한 회원 정보 가져오기 (여기서는 예시로 사용)
+              // 실제로는 서버에서 현재 로그인한 회원 정보를 가져와야 함
+              const memberName = localStorage.getItem("memberName") || "";
+              const memberPhone = localStorage.getItem("memberPhone") || "";
+
+              // 폼에 회원 정보 채우기
+              document.getElementById("customer_name").value = memberName;
+              document.getElementById("customer_phone").value = memberPhone;
+            } else {
+              // 체크 해제 시 필드 초기화
+              document.getElementById("customer_name").value = "";
+              document.getElementById("customer_phone").value = "";
+            }
+          });
+        }
+
+        // 회원 주소 그대로 사용하기 체크박스
+        const useMemberAddressCheckbox =
+          document.getElementById("use-member-address");
+        if (useMemberAddressCheckbox) {
+          useMemberAddressCheckbox.addEventListener("change", function () {
+            if (this.checked) {
+              // 로그인한 회원 정보 가져오기 (여기서는 예시로 사용)
+              // 실제로는 서버에서 현재 로그인한 회원 정보를 가져와야 함
+              const memberName = localStorage.getItem("memberName") || "";
+              const memberPhone = localStorage.getItem("memberPhone") || "";
+              const memberZipcode = localStorage.getItem("memberZipcode") || "";
+              const memberAddress1 =
+                localStorage.getItem("memberAddress1") || "";
+              const memberAddress2 =
+                localStorage.getItem("memberAddress2") || "";
+
+              // 폼에 회원 주소 정보 채우기
+              document.getElementById("recipient_name").value = memberName;
+              document.getElementById("recipient_phone").value = memberPhone;
+              document.getElementById("zipcode").value = memberZipcode;
+              document.getElementById("address1").value = memberAddress1;
+              document.getElementById("address2").value = memberAddress2;
+            } else {
+              // 체크 해제 시 필드 초기화
+              document.getElementById("recipient_name").value = "";
+              document.getElementById("recipient_phone").value = "";
+              document.getElementById("zipcode").value = "";
+              document.getElementById("address1").value = "";
+              document.getElementById("address2").value = "";
+            }
+          });
+        }
       });
     </script>
   </body>

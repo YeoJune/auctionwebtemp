@@ -5,7 +5,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CAS 명품감정시스템 - 퀵링크감정 결과</title>
+    <title>빠른 감정결과 - CAS 명품감정시스템</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Montserrat:wght@500;600;700&display=swap"
       rel="stylesheet" />
@@ -28,7 +28,8 @@
       }
 
       .container {
-        max-width: 1000px; /* 너비 조정 */
+        max-width: 1000px;
+        /* 너비 조정 */
         margin: 0 auto;
         padding: 0 20px;
       }
@@ -48,6 +49,7 @@
       .btn-primary:hover {
         background-color: #2d4263;
       }
+
       .btn-primary:disabled {
         background-color: #ccc;
         cursor: not-allowed;
@@ -105,10 +107,13 @@
         background-color: #fee2e2;
         color: #dc2626;
       }
+
       .badge-pending {
         /* 감정 대기중 */
-        background-color: #e0e7ff; /* 연한 파랑/보라 계열 */
-        color: #4338ca; /* 진한 파랑/보라 계열 */
+        background-color: #e0e7ff;
+        /* 연한 파랑/보라 계열 */
+        color: #4338ca;
+        /* 진한 파랑/보라 계열 */
       }
 
       .popup {
@@ -176,26 +181,34 @@
       }
 
       .result-section {
-        display: none; /* 기본적으로 모든 결과 섹션 숨김 */
+        display: none;
+        /* 기본적으로 모든 결과 섹션 숨김 */
       }
+
       .result-section.active {
-        display: block; /* JS로 active 클래스 추가 시 보이도록 */
+        display: block;
+        /* JS로 active 클래스 추가 시 보이도록 */
       }
+
       #loading-message {
         text-align: center;
         padding: 40px 20px;
         font-size: 1.2rem;
         color: #4a5568;
       }
+
       .image-gallery-main {
         border-radius: 8px;
         overflow: hidden;
         width: 100%;
         height: 0;
-        padding-bottom: 100%; /* 1:1 비율 */
+        padding-bottom: 100%;
+        /* 1:1 비율 */
         position: relative;
-        background-color: #f3f4f6; /* 이미지 로딩 전 배경 */
+        background-color: #f3f4f6;
+        /* 이미지 로딩 전 배경 */
       }
+
       .image-gallery-main img {
         position: absolute;
         top: 0;
@@ -204,36 +217,281 @@
         height: 100%;
         object-fit: cover;
       }
+
       .image-gallery-thumbnails {
         display: flex;
         gap: 10px;
         margin-top: 10px;
-        overflow-x: auto; /* 썸네일 많을 경우 스크롤 */
+        overflow-x: auto;
+        /* 썸네일 많을 경우 스크롤 */
         padding-bottom: 5px;
       }
+
       .image-gallery-thumb {
         border-radius: 8px;
         overflow: hidden;
-        min-width: 80px; /* 최소 너비 보장 */
+        min-width: 80px;
+        /* 최소 너비 보장 */
         width: 80px;
         height: 80px;
         cursor: pointer;
         border: 2px solid transparent;
         transition: border-color 0.2s;
       }
+
       .image-gallery-thumb.active,
       .image-gallery-thumb:hover {
         border-color: #1a2a3a;
       }
+
       .image-gallery-thumb img {
         width: 100%;
         height: 100%;
         object-fit: cover;
       }
+
+      header {
+        background-color: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+      }
+
+      .header-inner {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 18px 0;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 40px;
+      }
+
+      .logo {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #1a2a3a;
+        text-decoration: none;
+        letter-spacing: -0.5px;
+        display: flex;
+        align-items: center;
+      }
+
+      .logo .cas-highlight {
+        background: linear-gradient(135deg, #1a2a3a 0%, #2d4263 100%);
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .nav-desktop {
+        display: none;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: nowrap;
+        justify-content: flex-end;
+      }
+
+      .nav-desktop a {
+        color: #333;
+        text-decoration: none;
+        font-weight: 500;
+        white-space: nowrap;
+        padding: 8px 12px;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        font-size: 0.95rem;
+      }
+
+      .nav-desktop a:hover {
+        color: #666;
+        background-color: rgba(0, 0, 0, 0.05);
+      }
+
+      .mobile-menu-btn {
+        display: block;
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+      }
+
+      .mobile-menu {
+        display: none;
+        position: fixed;
+        top: 70px;
+        left: 0;
+        right: 0;
+        background-color: #fff;
+        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+        z-index: 999;
+      }
+
+      .mobile-menu a {
+        display: block;
+        padding: 15px 20px;
+        color: #4a5568;
+        text-decoration: none;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .mobile-menu a:last-child {
+        border-bottom: none;
+      }
+
+      @media (min-width: 768px) {
+        .nav-desktop {
+          display: flex !important;
+          gap: 8px;
+        }
+        .mobile-menu-btn {
+          display: none !important;
+        }
+      }
+
+      @media (min-width: 1024px) {
+        .nav-desktop {
+          gap: 12px;
+        }
+        .nav-desktop a {
+          padding: 8px 16px;
+          font-size: 1rem;
+        }
+      }
     </style>
   </head>
 
   <body>
+    <!-- 헤더 -->
+    <header>
+      <div class="container">
+        <div class="header-inner">
+          <div class="header-left">
+            <a href="/appr" class="logo">
+              <img
+                src="https://i.ibb.co/FqJhVh0T/image.png"
+                alt="CAS 명품감정시스템"
+                style="height: 40px" />
+            </a>
+
+            <nav class="nav-desktop">
+              <a href="/appr" class="btn-modern">홈</a>
+              <a href="/appr/request" class="btn-modern">감정신청</a>
+              <a href="/appr/result" class="btn-modern">감정번호조회</a>
+              <a href="#" class="btn-modern">마이페이지</a>
+              <a href="/appr/repair" class="btn-modern">까사복원시스템</a>
+              <a href="/appr/authenticity" class="btn-modern">정가품구별법</a>
+              <a href="/appr/signin" class="btn-modern">로그인</a>
+            </nav>
+          </div>
+
+          <button
+            class="mobile-menu-btn"
+            id="menu-icon"
+            onclick="toggleMobileMenu()">
+            ☰
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div
+      class="mobile-menu"
+      id="mobile-menu"
+      style="
+        display: none;
+        position: fixed;
+        top: 70px;
+        left: 0;
+        right: 0;
+        background-color: #fff;
+        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+        z-index: 999;
+      ">
+      <a
+        href="/appr"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >홈</a
+      >
+      <a
+        href="/appr/request"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >감정신청</a
+      >
+      <a
+        href="/appr/result"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >감정번호조회</a
+      >
+      <a
+        href="#"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >마이페이지</a
+      >
+      <a
+        href="/appr/repair"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >까사복원시스템</a
+      >
+      <a
+        href="/appr/authenticity"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >정가품구별법</a
+      >
+      <a
+        href="/appr/signin"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+        "
+        >로그인</a
+      >
+    </div>
+
     <main>
       <section style="padding: 50px 0">
         <div class="container">
@@ -272,6 +530,19 @@
               </h1>
               <div
                 style="display: flex; align-items: center; margin-bottom: 10px">
+                <span
+                  style="
+                    display: inline-block;
+                    margin-right: 10px;
+                    background-color: #e0e7ff;
+                    color: #4338ca;
+                    padding: 5px 12px;
+                    border-radius: 50px;
+                    font-size: 0.85rem;
+                    font-weight: 600;
+                  "
+                  >퀵링크 감정</span
+                >
                 <span id="result-badge" class="badge">결과</span>
               </div>
               <p id="appraisal-date" style="color: #64748b; font-size: 0.95rem">
@@ -353,8 +624,10 @@
                       line-height: 1.7;
                       margin-bottom: 20px;
                     ">
-                    업로드하신 이미지 분석 결과, 해당 제품은
-                    <strong>정품</strong>으로 확인되었습니다.
+                    고객님이 제공하신 링크의 상품 사진상으로는
+                    <strong>정품</strong>으로 판단됩니다. 실물이 아닌
+                    사진만으로는 완벽한 감정이 어려우므로, 더 정확한 판정을
+                    원하시면 실물 감정 서비스를 이용해보시길 권장드립니다.
                   </p>
                   <div
                     style="
@@ -370,8 +643,9 @@
                         line-height: 1.5;
                       ">
                       <strong>참고사항:</strong> 퀵링크감정은 업로드된 이미지를
-                      기반으로 진행되며, 더 정확한 결과를 원하시면 오프라인 실물
-                      감정을 이용해 주세요.
+                      기반으로 진행되며, 실물이 아닌 사진상으로만 감정한
+                      결과입니다. 정확한 감정과 감정서 발급을 원하시면 오프라인
+                      실물 감정을 이용해 주세요.
                     </p>
                   </div>
                   <div style="display: flex; gap: 10px">
@@ -379,7 +653,7 @@
                       href="/appr/request?tab=offline"
                       class="btn-primary"
                       style="flex: 1; text-align: center"
-                      >오프라인 실물 감정 신청</a
+                      >오프라인 감정 및 감정서 신청</a
                     >
                   </div>
                 </div>
@@ -450,8 +724,10 @@
                       line-height: 1.7;
                       margin-bottom: 20px;
                     ">
-                    업로드하신 이미지 분석 결과, 해당 제품은
-                    <strong>가품</strong>으로 확인되었습니다.
+                    고객님이 제공하신 링크의 상품 사진상으로는
+                    <strong>가품</strong>으로 판단됩니다. 실물이 아닌
+                    사진만으로는 완벽한 감정이 어려우므로, 더 정확한 판정을
+                    원하시면 실물 감정 서비스를 이용해보시길 권장드립니다.
                   </p>
                   <div
                     style="
@@ -467,8 +743,9 @@
                         line-height: 1.5;
                       ">
                       <strong>참고사항:</strong> 퀵링크감정은 업로드된 이미지를
-                      기반으로 진행되며, 더 정확한 결과를 원하시면 오프라인 실물
-                      감정을 이용해 주세요.
+                      기반으로 진행되며, 실물이 아닌 사진상으로만 감정한
+                      결과입니다. 정확한 감정과 감정서 발급을 위해서는 오프라인
+                      실물 감정이 필요합니다.
                     </p>
                   </div>
                   <div style="display: flex; gap: 10px">
@@ -530,9 +807,10 @@
                     margin-bottom: 25px;
                     text-align: center;
                   ">
-                  제공된 이미지만으로는 정품 여부를 판단하기 어렵습니다.<br />
-                  판매자에게 추가 사진을 요청하거나 오프라인 실물 감정을
-                  신청해주세요.
+                  고객님이 제공하신 링크의 상품 사진상으로는 정품 여부를
+                  판단하기 어렵습니다. ${ notes ? "<br />" + notes + "<br /><br />"
+                  : "<br /><br />" }추가 자료를 업로드하거나 정확한 판정을 위해
+                  오프라인 실물 감정을 신청해주세요.
                 </p>
                 <div
                   id="uncertain-additional-photos-needed"
@@ -566,23 +844,19 @@
                   </ul>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 15px">
-                  <!-- 추가 자료 업로드 기능은 API에 없으므로, 일단 주석 처리 또는 안내 문구로 대체 -->
-                  <!-- <a href="#" class="btn-primary" style="text-align: center;">추가 자료 업로드</a> -->
+                  <a href="#" class="btn-primary" style="text-align: center"
+                    >추가 자료 업로드</a
+                  >
                   <p
                     style="
                       font-size: 0.9rem;
                       text-align: center;
                       color: #64748b;
                     ">
-                    (추가 자료 업로드 기능은 현재 지원되지 않습니다. 오프라인
-                    감정을 이용해주세요.)
+                    퀵링크 감정은 이미지 기반 예비 감정으로, 실물이 아닌
+                    사진상으로만 감정한 결과입니다. 정확한 감정과 공식 감정서
+                    발급을 위해서는 오프라인 실물감정이 필요합니다.
                   </p>
-                  <a
-                    href="/appr/request?tab=offline"
-                    class="btn-outline"
-                    style="text-align: center"
-                    >오프라인 실물 감정 신청</a
-                  >
                 </div>
               </div>
             </div>
@@ -700,6 +974,87 @@
         }
       }
 
+      // 퀵링크 크레딧 차감 함수
+      function deductQuicklinkCredit() {
+        // 이미 차감되었는지 확인 (중복 차감 방지)
+        if (localStorage.getItem(`credited_${currentAppraisalId}`)) {
+          console.log("이미 차감된 크레딧입니다.");
+          return;
+        }
+
+        // 실제 구현에서는 서버 API 호출
+        fetch("/api/user/deduct-credit", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            appraisalId: currentAppraisalId,
+          }),
+          credentials: "include",
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              console.log("크레딧이 성공적으로 차감되었습니다.");
+              localStorage.setItem(`credited_${currentAppraisalId}`, "true");
+
+              // 크레딧 차감 알림 표시 (옵션)
+              showCreditNotification(data.remaining);
+            } else {
+              console.error("크레딧 차감 실패:", data.message);
+            }
+          })
+          .catch((error) => {
+            console.error("크레딧 차감 중 오류 발생:", error);
+          });
+      }
+
+      // 크레딧 차감 알림 표시 함수
+      function showCreditNotification(remaining) {
+        // 알림 요소 생성
+        const notification = document.createElement("div");
+        notification.style.position = "fixed";
+        notification.style.bottom = "20px";
+        notification.style.right = "20px";
+        notification.style.backgroundColor = "#1a2a3a";
+        notification.style.color = "white";
+        notification.style.padding = "12px 20px";
+        notification.style.borderRadius = "8px";
+        notification.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
+        notification.style.zIndex = "9999";
+        notification.style.transition = "all 0.3s ease";
+        notification.style.transform = "translateY(100px)";
+        notification.style.opacity = "0";
+
+        // 알림 내용 설정
+        notification.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="font-size: 1.2rem;">📊</div>
+            <div>
+              <div style="font-weight: 600; margin-bottom: 5px;">퀵링크 크레딧 차감</div>
+              <div style="font-size: 0.9rem; opacity: 0.9;">남은 크레딧: ${remaining}회</div>
+            </div>
+          </div>
+        `;
+
+        // 알림 표시
+        document.body.appendChild(notification);
+        setTimeout(() => {
+          notification.style.transform = "translateY(0)";
+          notification.style.opacity = "1";
+        }, 100);
+
+        // 5초 후 알림 제거
+        setTimeout(() => {
+          notification.style.transform = "translateY(100px)";
+          notification.style.opacity = "0";
+          setTimeout(() => {
+            document.body.removeChild(notification);
+          }, 300);
+        }, 5000);
+      }
+
       function displayImages(imageUrls, mainImageElId, thumbnailsElId) {
         const mainImageEl = document.getElementById(mainImageElId);
         const thumbnailsEl = document.getElementById(thumbnailsElId);
@@ -734,6 +1089,65 @@
           mainImageEl.alt = "이미지 없음";
         }
       }
+
+      // 페이지 로드 시 회원 정보 로드
+      document.addEventListener("DOMContentLoaded", function () {
+        loadUserMembershipInfo();
+
+        // 여기서 아래에 기존 DOMContentLoaded 내용을 유지
+      });
+
+      // 회원 정보 로드 함수 (API 연동 시 구현)
+      function loadUserMembershipInfo() {
+        // 실제 구현에서는 서버 API 호출
+        // 여기서는 마이페이지와 동일한 로직을 가정
+        fetch("/api/user/membership-info", {
+          credentials: "include",
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              console.log("회원 정보 로드 성공:", data);
+              // 실제 구현에서 필요한 추가 로직
+            } else {
+              console.error("회원 정보 로드 실패:", data.message);
+            }
+          })
+          .catch((error) => {
+            console.error("회원 정보 로드 중 오류 발생:", error);
+          });
+      }
+
+      function toggleMobileMenu() {
+        const mobileMenu = document.getElementById("mobile-menu");
+        const menuIcon = document.getElementById("menu-icon");
+        if (mobileMenu.style.display === "block") {
+          mobileMenu.style.display = "none";
+          if (menuIcon) menuIcon.textContent = "☰";
+        } else {
+          mobileMenu.style.display = "block";
+          if (menuIcon) menuIcon.textContent = "✕";
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        const mobileMenuButton = document.querySelector(".mobile-menu-btn");
+        const navDesktop = document.querySelector(".nav-desktop");
+
+        function handleResponsiveLayout() {
+          if (window.innerWidth >= 768) {
+            if (navDesktop) navDesktop.style.display = "flex";
+            if (mobileMenuButton) mobileMenuButton.style.display = "none";
+            const mobileMenu = document.getElementById("mobile-menu");
+            if (mobileMenu) mobileMenu.style.display = "none";
+          } else {
+            if (navDesktop) navDesktop.style.display = "none";
+            if (mobileMenuButton) mobileMenuButton.style.display = "block";
+          }
+        }
+        handleResponsiveLayout();
+        window.addEventListener("resize", handleResponsiveLayout);
+      });
 
       document.addEventListener("DOMContentLoaded", function () {
         const loadingMessageEl = document.getElementById("loading-message");
@@ -790,7 +1204,7 @@
               if (popupProductNameEl)
                 popupProductNameEl.textContent = productNameEl.textContent;
 
-              let activeResultSectionId = "";
+              let activeResultSectionId = null;
               let resultText = "";
               let badgeClass = "";
               let notes = appraisal.result_notes || "";
@@ -803,6 +1217,9 @@
                 }
               }
 
+              // 감정 결과에 따라 크레딧 차감 처리
+              let shouldDeductCredit = false;
+
               switch (appraisal.result) {
                 case "authentic":
                   activeResultSectionId = "result-authentic";
@@ -810,7 +1227,7 @@
                   badgeClass = "badge-success";
                   document.getElementById(
                     "authentic-notes"
-                  ).innerHTML = `업로드하신 이미지 분석 결과, 해당 제품은 <strong>정품</strong>으로 확인되었습니다. ${
+                  ).innerHTML = `고객님이 제공하신 링크의 상품 사진상으로는 <strong>정품</strong>으로 판단됩니다. 실물이 아닌 사진만으로는 완벽한 감정이 어려우므로, 더 정확한 판정을 원하시면 실물 감정 서비스를 이용해보시길 권장드립니다. ${
                     notes
                       ? "<br><br><strong>감정사 소견:</strong> " + notes
                       : ""
@@ -820,6 +1237,7 @@
                     "authentic-main-image",
                     "authentic-thumbnails"
                   );
+                  shouldDeductCredit = true; // 정품인 경우 크레딧 차감
                   break;
                 case "fake":
                   activeResultSectionId = "result-fake";
@@ -827,12 +1245,16 @@
                   badgeClass = "badge-error";
                   document.getElementById(
                     "fake-notes"
-                  ).innerHTML = `업로드하신 이미지 분석 결과, 해당 제품은 <strong>가품</strong>으로 확인되었습니다. ${
+                  ).innerHTML = `고객님이 제공하신 링크의 상품 사진상으로는 <strong>가품</strong>으로 판단됩니다. 실물이 아닌 사진만으로는 완벽한 감정이 어려우므로, 더 정확한 판정을 원하시면 실물 감정 서비스를 이용해보시길 권장드립니다. ${
                     notes
                       ? "<br><br><strong>감정사 소견:</strong> " + notes
                       : ""
                   }`;
                   displayImages(images, "fake-main-image", "fake-thumbnails");
+                  // 가품일 경우 감정서 발급받기 버튼 숨기기
+                  if (issueCertificateBtn)
+                    issueCertificateBtn.style.display = "none";
+                  shouldDeductCredit = true; // 가품인 경우 크레딧 차감
                   break;
                 case "uncertain":
                   activeResultSectionId = "result-uncertain";
@@ -843,12 +1265,16 @@
                   document.getElementById("uncertain-icon").textContent = "!";
                   document.getElementById(
                     "uncertain-message"
-                  ).innerHTML = `제공된 정보만으로는 정품 여부를 판단하기 어렵습니다. ${
+                  ).innerHTML = `고객님이 제공하신 링크의 상품 사진상으로는 정품 여부를 판단하기 어렵습니다. ${
                     notes ? "<br>" + notes + "<br><br>" : "<br><br>"
-                  }오프라인 실물 감정을 신청해주세요.`;
+                  }추가 자료를 업로드하거나 정확한 판정을 위해 오프라인 실물 감정을 신청해주세요.`;
                   document.getElementById(
                     "uncertain-additional-photos-needed"
-                  ).style.display = "none"; // 자료부족 시에만 보이도록 처리 가능
+                  ).style.display = "block"; // 자료부족 시에 보이도록 변경
+                  // 자료부족일 경우 감정서 발급받기 버튼 숨기기
+                  if (issueCertificateBtn)
+                    issueCertificateBtn.style.display = "none";
+                  shouldDeductCredit = false; // 자료부족인 경우 크레딧 차감하지 않음
                   break;
                 case "pending": // 감정 대기중 (API 문서에는 없지만, 추가될 수 있음)
                   activeResultSectionId = "result-uncertain"; // 자료부족 UI 재활용
@@ -881,6 +1307,11 @@
                     "uncertain-additional-photos-needed"
                   ).style.display = "none";
                   if (issueCertificateBtn) issueCertificateBtn.disabled = true; // 특정 상태에서 발급 버튼 비활성화
+              }
+
+              // 크레딧 차감 처리
+              if (shouldDeductCredit) {
+                deductQuicklinkCredit();
               }
 
               resultBadgeEl.textContent = resultText;

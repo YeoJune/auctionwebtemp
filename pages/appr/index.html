@@ -29,8 +29,8 @@
         margin: 0 auto;
         padding: 0 20px;
       }
-
       /* 헤더 & 푸터 공통 스타일 (다른 appr 페이지에서 가져옴) */
+
       header {
         background-color: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(10px);
@@ -39,19 +39,32 @@
         top: 0;
         z-index: 1000;
       }
+
       .header-inner {
         display: flex;
         justify-content: space-between;
         align-items: center;
         padding: 18px 0;
+        max-width: 1200px;
+        margin: 0 auto;
       }
+
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 40px;
+      }
+
       .logo {
         font-size: 1.6rem;
         font-weight: 700;
         color: #1a2a3a;
         text-decoration: none;
         letter-spacing: -0.5px;
+        display: flex;
+        align-items: center;
       }
+
       .logo .cas-highlight {
         background: linear-gradient(135deg, #1a2a3a 0%, #2d4263 100%);
         -background-clip: text;
@@ -81,6 +94,7 @@
       @media (min-width: 768px) {
         .nav-desktop {
           display: flex !important;
+          gap: 8px;
         }
         .mobile-menu-btn {
           display: none !important;
@@ -96,6 +110,16 @@
         }
         .process-line {
           display: block !important;
+        }
+      }
+
+      @media (min-width: 1024px) {
+        .nav-desktop {
+          gap: 12px;
+        }
+        .nav-desktop a {
+          padding: 8px 16px;
+          font-size: 1rem;
         }
       }
       /* 모던 디자인 요소 */
@@ -175,6 +199,38 @@
         transform: translateY(-5px);
         box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
       }
+
+      .nav-desktop {
+        display: none;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: nowrap;
+        justify-content: flex-end;
+      }
+
+      .nav-desktop a {
+        color: #333;
+        text-decoration: none;
+        font-weight: 500;
+        white-space: nowrap;
+        padding: 8px 12px;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        font-size: 0.95rem;
+      }
+
+      .nav-desktop a:hover {
+        color: #666;
+        background-color: rgba(0, 0, 0, 0.05);
+      }
+
+      .mobile-menu-btn {
+        display: block;
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+      }
     </style>
   </head>
 
@@ -190,90 +246,30 @@
         z-index: 1000;
       ">
       <div class="container">
-        <div
-          style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 18px 0;
-          ">
-          <a
-            href="/appr"
-            class="logo"
-            style="
-              font-size: 1.6rem;
-              font-weight: 700;
-              color: #1a2a3a;
-              text-decoration: none;
-              letter-spacing: -0.5px;
-            ">
-            <span
-              style="
-                background: linear-gradient(135deg, #1a2a3a 0%, #2d4263 100%);
-                -background-clip: text;
-                -webkit-text-fill-color: transparent;
-              "
-              >CAS</span
-            >
-            명품감정시스템
-          </a>
+        <div class="header-inner">
+          <div class="header-left">
+            <a href="/appr" class="logo">
+              <img
+                src="https://i.ibb.co/FqJhVh0T/image.png"
+                alt="CAS 명품감정시스템"
+                style="height: 40px" />
+            </a>
 
-          <nav class="nav-desktop" style="display: none">
-            <a
-              href="/appr"
-              class="btn-modern"
-              style="margin-left: 30px; color: #4a5568; text-decoration: none"
-              >홈</a
-            >
-            <a
-              href="/appr/request"
-              class="btn-modern"
-              style="margin-left: 30px; color: #4a5568; text-decoration: none"
-              >감정신청</a
-            >
-            <a
-              href="/appr/result"
-              class="btn-modern"
-              style="margin-left: 30px; color: #4a5568; text-decoration: none"
-              >감정번호조회</a
-            >
-            <a
-              href="#"
-              class="btn-modern"
-              style="margin-left: 30px; color: #4a5568; text-decoration: none"
-              >마이페이지</a
-            >
-            <a
-              href="/appr/repair"
-              class="btn-modern"
-              style="margin-left: 30px; color: #4a5568; text-decoration: none"
-              >까사복원시스템</a
-            >
-            <a
-              href="/appr/authenticity"
-              class="btn-modern"
-              style="margin-left: 30px; color: #4a5568; text-decoration: none"
-              >정가품구별법</a
-            >
-            <a
-              href="/appr/signin"
-              class="btn-modern"
-              style="margin-left: 30px; color: #4a5568; text-decoration: none"
-              >로그인</a
-            >
-          </nav>
+            <nav class="nav-desktop">
+              <a href="/appr" class="btn-modern">홈</a>
+              <a href="/appr/request" class="btn-modern">감정신청</a>
+              <a href="/appr/result" class="btn-modern">감정번호조회</a>
+              <a href="#" class="btn-modern">마이페이지</a>
+              <a href="/appr/repair" class="btn-modern">까사복원시스템</a>
+              <a href="/appr/authenticity" class="btn-modern">정가품구별법</a>
+              <a href="/appr/signin" class="btn-modern">로그인</a>
+            </nav>
+          </div>
 
           <button
             class="mobile-menu-btn"
             id="menu-icon"
-            onclick="toggleMobileMenu()"
-            style="
-              background: none;
-              border: none;
-              font-size: 1.5rem;
-              cursor: pointer;
-              display: block;
-            ">
+            onclick="toggleMobileMenu()">
             ☰
           </button>
         </div>
@@ -493,10 +489,8 @@
             <div style="margin-bottom: 20px">
               <p style="color: #4a5568; font-size: 1.1rem">
                 명품감정 전체
-                <strong id="total-appraisals-count">0</strong>
-                건 | 오늘
-                <strong id="today-appraisals-count">0</strong>
-                건
+                <strong id="total-appraisals-count">0</strong> 건 | 오늘
+                <strong id="today-appraisals-count">0</strong> 건
               </p>
             </div>
             <div
@@ -571,7 +565,7 @@
                     border-radius: 12px;
                     margin-bottom: 25px;
                   ">
-                  <span style="font-size: 1.75rem">👜</span>
+                  <span style="font-size: 1.75rem">🔗</span>
                 </div>
                 <h3
                   style="
@@ -580,11 +574,11 @@
                     color: #1a2a3a;
                     margin-bottom: 15px;
                   ">
-                  온라인 사진 감정
+                  퀵링크 감정
                 </h3>
                 <p style="color: #4a5568; line-height: 1.7">
-                  가방, 시계, 의류 등 다양한 명품의 정품 여부를 확인해 드립니다.
-                  여러 각도에서 촬영한 사진만으로 정확한 감정이 가능합니다.
+                  간편한 링크 공유로 빠른 감정 서비스를 제공합니다. 판매자와
+                  구매자 모두가 신뢰할 수 있는 중립적인 감정 결과를 확인하세요.
                 </p>
               </div>
 
@@ -661,202 +655,6 @@
                   불가능하며 언제든지 진위 확인이 가능합니다.
                 </p>
               </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- 감정 절차 안내 -->
-        <section style="padding: 80px 0; background-color: #fff">
-          <div
-            class="container"
-            style="max-width: 1200px; margin: 0 auto; padding: 0 20px">
-            <div
-              style="
-                text-align: center;
-                max-width: 800px;
-                margin: 0 auto 60px auto;
-              ">
-              <h2
-                style="
-                  font-size: 2.25rem;
-                  font-weight: 700;
-                  color: #1a2a3a;
-                  margin-bottom: 20px;
-                ">
-                감정 절차
-              </h2>
-              <p style="color: #4a5568; font-size: 1.1rem; line-height: 1.7">
-                간편한 4단계로 명품의 진품 여부를 확인하세요
-              </p>
-            </div>
-
-            <div
-              class="process-steps"
-              style="
-                display: grid;
-                grid-template-columns: repeat(1, 1fr);
-                gap: 30px;
-                position: relative;
-              "
-              class="grid-4">
-              <div
-                class="process-line"
-                style="
-                  display: none;
-                  position: absolute;
-                  top: 40px;
-                  left: 110px;
-                  right: 110px;
-                  height: 2px;
-                  background-color: #e2e8f0;
-                  z-index: 1;
-                "></div>
-
-              <div class="process-step" style="position: relative; z-index: 2">
-                <div
-                  style="
-                    width: 80px;
-                    height: 80px;
-                    background-color: #1a2a3a;
-                    color: #fff;
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    margin: 0 auto 25px auto;
-                    font-size: 1.5rem;
-                    font-weight: 700;
-                  ">
-                  1
-                </div>
-                <h3
-                  style="
-                    font-size: 1.2rem;
-                    font-weight: 700;
-                    color: #1a2a3a;
-                    margin-bottom: 12px;
-                    text-align: center;
-                  ">
-                  온라인 신청
-                </h3>
-                <p style="color: #4a5568; text-align: center; line-height: 1.7">
-                  홈페이지에서 간편하게 감정 신청을 작성합니다
-                </p>
-              </div>
-
-              <div class="process-step" style="position: relative; z-index: 2">
-                <div
-                  style="
-                    width: 80px;
-                    height: 80px;
-                    background-color: #1a2a3a;
-                    color: #fff;
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    margin: 0 auto 25px auto;
-                    font-size: 1.5rem;
-                    font-weight: 700;
-                  ">
-                  2
-                </div>
-                <h3
-                  style="
-                    font-size: 1.2rem;
-                    font-weight: 700;
-                    color: #1a2a3a;
-                    margin-bottom: 12px;
-                    text-align: center;
-                  ">
-                  상품 사진 촬영
-                </h3>
-                <p style="color: #4a5568; text-align: center; line-height: 1.7">
-                  필요한 각도에서 명품의 사진을 촬영해 업로드합니다
-                </p>
-              </div>
-
-              <div class="process-step" style="position: relative; z-index: 2">
-                <div
-                  style="
-                    width: 80px;
-                    height: 80px;
-                    background-color: #1a2a3a;
-                    color: #fff;
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    margin: 0 auto 25px auto;
-                    font-size: 1.5rem;
-                    font-weight: 700;
-                  ">
-                  3
-                </div>
-                <h3
-                  style="
-                    font-size: 1.2rem;
-                    font-weight: 700;
-                    color: #1a2a3a;
-                    margin-bottom: 12px;
-                    text-align: center;
-                  ">
-                  전문가 감정
-                </h3>
-                <p style="color: #4a5568; text-align: center; line-height: 1.7">
-                  명품 전문가가 정밀하게 감정을 진행합니다
-                </p>
-              </div>
-
-              <div class="process-step" style="position: relative; z-index: 2">
-                <div
-                  style="
-                    width: 80px;
-                    height: 80px;
-                    background-color: #1a2a3a;
-                    color: #fff;
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    margin: 0 auto 25px auto;
-                    font-size: 1.5rem;
-                    font-weight: 700;
-                  ">
-                  4
-                </div>
-                <h3
-                  style="
-                    font-size: 1.2rem;
-                    font-weight: 700;
-                    color: #1a2a3a;
-                    margin-bottom: 12px;
-                    text-align: center;
-                  ">
-                  감정서 발급
-                </h3>
-                <p style="color: #4a5568; text-align: center; line-height: 1.7">
-                  공식 감정서를 발급받고 결과를 확인합니다
-                </p>
-              </div>
-            </div>
-
-            <div style="text-align: center; margin-top: 50px">
-              <a
-                href="/appr/request"
-                style="
-                  display: inline-flex;
-                  align-items: center;
-                  color: #1a2a3a;
-                  font-weight: 600;
-                  text-decoration: none;
-                  border-bottom: 2px solid #1a2a3a;
-                  padding-bottom: 5px;
-                  transition: all 0.3s;
-                ">
-                <span>감정 신청하기</span>
-                <span style="margin-left: 8px">→</span>
-              </a>
             </div>
           </div>
         </section>
@@ -1002,35 +800,14 @@
 
         function handleResponsiveLayout() {
           if (window.innerWidth >= 768) {
+            // 768px 이상에서는 데스크톱 메뉴 표시
             if (navDesktop) navDesktop.style.display = "flex";
             if (mobileMenuButton) mobileMenuButton.style.display = "none";
-            document
-              .querySelectorAll(".grid-2")
-              .forEach(
-                (el) => (el.style.gridTemplateColumns = "repeat(2, 1fr)")
-              );
-            document
-              .querySelectorAll(".grid-3")
-              .forEach(
-                (el) => (el.style.gridTemplateColumns = "repeat(3, 1fr)")
-              );
-            document
-              .querySelectorAll(".grid-4")
-              .forEach(
-                (el) => (el.style.gridTemplateColumns = "repeat(4, 1fr)")
-              );
-            const processLine = document.querySelector(".process-line");
-            if (processLine) processLine.style.display = "block";
+            const mobileMenu = document.getElementById("mobile-menu");
+            if (mobileMenu) mobileMenu.style.display = "none";
           } else {
             if (navDesktop) navDesktop.style.display = "none";
             if (mobileMenuButton) mobileMenuButton.style.display = "block";
-            document
-              .querySelectorAll(".grid-2, .grid-3, .grid-4")
-              .forEach(
-                (el) => (el.style.gridTemplateColumns = "repeat(1, 1fr)")
-              );
-            const processLine = document.querySelector(".process-line");
-            if (processLine) processLine.style.display = "none";
           }
         }
         handleResponsiveLayout();

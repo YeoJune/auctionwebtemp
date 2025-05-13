@@ -5,12 +5,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CAS 명품감정시스템 - 감정결과 상세</title>
+    <title>감정결과 상세 - CAS 명품감정시스템</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Montserrat:wght@500;600;700&display=swap"
       rel="stylesheet" />
     <style>
-      /* (기존 스타일 유지) */
+      /* 기본 리셋 및 폰트 설정 */
+
       * {
         margin: 0;
         padding: 0;
@@ -27,9 +28,102 @@
       }
 
       .container {
-        max-width: 1000px; /* 너비 조정 */
+        max-width: 1000px;
         margin: 0 auto;
         padding: 0 20px;
+      }
+      /* 헤더 & 푸터 공통 스타일 */
+
+      header {
+        background-color: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+      }
+
+      .header-inner {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 18px 0;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 40px;
+      }
+
+      .logo {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #1a2a3a;
+        text-decoration: none;
+        letter-spacing: -0.5px;
+        display: flex;
+        align-items: center;
+      }
+
+      .logo .cas-highlight {
+        background: linear-gradient(135deg, #1a2a3a 0%, #2d4263 100%);
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .nav-desktop {
+        display: none;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: nowrap;
+        justify-content: flex-end;
+      }
+
+      .nav-desktop a {
+        color: #333;
+        text-decoration: none;
+        font-weight: 500;
+        white-space: nowrap;
+        padding: 8px 12px;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        font-size: 0.95rem;
+      }
+
+      .nav-desktop a:hover {
+        color: #666;
+        background-color: rgba(0, 0, 0, 0.05);
+      }
+
+      .mobile-menu-btn {
+        display: block;
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+      }
+
+      @media (min-width: 768px) {
+        .nav-desktop {
+          display: flex !important;
+          gap: 8px;
+        }
+        .mobile-menu-btn {
+          display: none !important;
+        }
+      }
+
+      @media (min-width: 1024px) {
+        .nav-desktop {
+          gap: 12px;
+        }
+        .nav-desktop a {
+          padding: 8px 16px;
+          font-size: 1rem;
+        }
       }
 
       .btn-primary {
@@ -47,6 +141,7 @@
       .btn-primary:hover {
         background-color: #2d4263;
       }
+
       .btn-primary:disabled {
         background-color: #ccc;
         cursor: not-allowed;
@@ -93,16 +188,19 @@
         background-color: #d1fae5;
         color: #059669;
       }
+
       .badge-error {
         /* 가품 */
         background-color: #fee2e2;
         color: #dc2626;
       }
+
       .badge-warning {
         /* 판단불가/자료부족 */
         background-color: #fef3c7;
         color: #d97706;
       }
+
       .badge-pending {
         /* 감정 대기중 / 감정서 발급 대기 등 */
         background-color: #e0e7ff;
@@ -146,15 +244,19 @@
       .tab-content.active {
         display: block;
       }
+
       .image-gallery-main {
         border-radius: 8px;
         overflow: hidden;
         width: 100%;
         height: 0;
-        padding-bottom: 100%; /* 1:1 비율 */
+        padding-bottom: 100%;
+        /* 1:1 비율 */
         position: relative;
-        background-color: #f3f4f6; /* 이미지 로딩 전 배경 */
+        background-color: #f3f4f6;
+        /* 이미지 로딩 전 배경 */
       }
+
       .image-gallery-main img {
         position: absolute;
         top: 0;
@@ -163,32 +265,39 @@
         height: 100%;
         object-fit: cover;
       }
+
       .image-gallery-thumbnails {
         display: flex;
         gap: 10px;
         margin-top: 10px;
-        overflow-x: auto; /* 썸네일 많을 경우 스크롤 */
+        overflow-x: auto;
+        /* 썸네일 많을 경우 스크롤 */
         padding-bottom: 5px;
       }
+
       .image-gallery-thumb {
         border-radius: 8px;
         overflow: hidden;
-        min-width: 80px; /* 최소 너비 보장 */
+        min-width: 80px;
+        /* 최소 너비 보장 */
         width: 80px;
         height: 80px;
         cursor: pointer;
         border: 2px solid transparent;
         transition: border-color 0.2s;
       }
+
       .image-gallery-thumb.active,
       .image-gallery-thumb:hover {
         border-color: #1a2a3a;
       }
+
       .image-gallery-thumb img {
         width: 100%;
         height: 100%;
         object-fit: cover;
       }
+
       .comparison-grid {
         display: grid;
         grid-template-columns: 1fr;
@@ -280,7 +389,8 @@
         content: "";
         position: absolute;
         top: 5px;
-        left: -30px; /* 아이콘 위치 조정 */
+        left: -30px;
+        /* 아이콘 위치 조정 */
         width: 20px;
         height: 20px;
         border-radius: 50%;
@@ -294,10 +404,13 @@
         background-color: #1a2a3a;
         border-color: #1a2a3a;
       }
+
       .timeline-item.completed::before {
         /* 완료된 상태 표시 */
-        background-color: #6ee7b7; /* 연한 초록 */
-        border-color: #059669; /* 진한 초록 */
+        background-color: #6ee7b7;
+        /* 연한 초록 */
+        border-color: #059669;
+        /* 진한 초록 */
       }
 
       .timeline-date {
@@ -331,10 +444,12 @@
         visibility: hidden;
         transition: all 0.3s;
       }
+
       .popup.show {
         opacity: 1;
         visibility: visible;
       }
+
       .popup-content {
         background-color: white;
         border-radius: 12px;
@@ -346,6 +461,7 @@
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
         position: relative;
       }
+
       .popup-close {
         position: absolute;
         top: 15px;
@@ -354,20 +470,25 @@
         cursor: pointer;
         color: #64748b;
       }
+
       .popup-close:hover {
         color: #1a2a3a;
       }
+
       .popup-content::-webkit-scrollbar {
         width: 6px;
       }
+
       .popup-content::-webkit-scrollbar-track {
         background: #f1f1f1;
         border-radius: 3px;
       }
+
       .popup-content::-webkit-scrollbar-thumb {
         background: #c1c1c1;
         border-radius: 3px;
       }
+
       .popup-content::-webkit-scrollbar-thumb:hover {
         background: #a1a1a1;
       }
@@ -379,9 +500,11 @@
         font-size: 1.2rem;
         color: #4a5568;
       }
+
       #error-message {
         color: #dc2626;
       }
+
       #qr-code-container img {
         display: block;
         margin: 20px auto;
@@ -393,6 +516,130 @@
   </head>
 
   <body>
+    <!-- 헤더 -->
+    <header>
+      <div class="container">
+        <div class="header-inner">
+          <div class="header-left">
+            <a href="/appr" class="logo">
+              <img
+                src="https://i.ibb.co/FqJhVh0T/image.png"
+                alt="CAS 명품감정시스템"
+                style="height: 40px" />
+            </a>
+
+            <nav class="nav-desktop">
+              <a href="/appr" class="btn-modern">홈</a>
+              <a href="/appr/request" class="btn-modern">감정신청</a>
+              <a href="/appr/result" class="btn-modern">감정번호조회</a>
+              <a href="#" class="btn-modern">마이페이지</a>
+              <a href="/appr/repair" class="btn-modern">까사복원시스템</a>
+              <a href="/appr/authenticity" class="btn-modern">정가품구별법</a>
+              <a href="/appr/signin" class="btn-modern">로그인</a>
+            </nav>
+          </div>
+
+          <button
+            class="mobile-menu-btn"
+            id="menu-icon"
+            onclick="toggleMobileMenu()">
+            ☰
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div
+      class="mobile-menu"
+      id="mobile-menu"
+      style="
+        display: none;
+        position: fixed;
+        top: 70px;
+        left: 0;
+        right: 0;
+        background-color: #fff;
+        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+        z-index: 999;
+      ">
+      <a
+        href="/appr"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >홈</a
+      >
+      <a
+        href="/appr/request"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >감정신청</a
+      >
+      <a
+        href="/appr/result"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >감정번호조회</a
+      >
+      <a
+        href="#"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >마이페이지</a
+      >
+      <a
+        href="/appr/repair"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >까사복원시스템</a
+      >
+      <a
+        href="/appr/authenticity"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+          border-bottom: 1px solid #e2e8f0;
+        "
+        >정가품구별법</a
+      >
+      <a
+        href="/appr/signin"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+        "
+        >로그인</a
+      >
+    </div>
+
     <main>
       <section style="padding: 50px 0">
         <div class="container">
@@ -440,6 +687,20 @@
                     align-items: center;
                     margin-bottom: 10px;
                   ">
+                  <span
+                    id="appraisal-type"
+                    style="
+                      display: inline-block;
+                      margin-right: 10px;
+                      background-color: #e0e7ff;
+                      color: #4338ca;
+                      padding: 5px 12px;
+                      border-radius: 50px;
+                      font-size: 0.85rem;
+                      font-weight: 600;
+                    "
+                    >감정 유형</span
+                  >
                   <span id="result-badge" class="badge">결과</span>
                   <span
                     style="
@@ -785,6 +1046,7 @@
           .querySelector("strong");
         const appraisalDateEl = document.getElementById("appraisal-date");
         const downloadPdfBtn = document.getElementById("download-pdf-btn");
+        const appraisalTypeEl = document.getElementById("appraisal-type");
 
         const mainProductImageEl =
           document.getElementById("main-product-image");
@@ -886,6 +1148,15 @@
                   ? new Date(appraisal.appraised_at).toLocaleDateString("ko-KR")
                   : "-"
               }`;
+
+              // 감정 유형 설정
+              if (appraisal.appraisal_type === "online_photo") {
+                appraisalTypeEl.textContent = "퀵링크 감정";
+              } else if (appraisal.appraisal_type === "offline_physical") {
+                appraisalTypeEl.textContent = "오프라인 실물 감정";
+              } else {
+                appraisalTypeEl.textContent = "감정 유형";
+              }
 
               let resultText = "정보 없음";
               let badgeClass = "badge-pending";
@@ -1101,6 +1372,37 @@
               ")";
             errorEl.style.display = "block";
           });
+      });
+
+      function toggleMobileMenu() {
+        const mobileMenu = document.getElementById("mobile-menu");
+        const menuIcon = document.getElementById("menu-icon");
+        if (mobileMenu.style.display === "block") {
+          mobileMenu.style.display = "none";
+          if (menuIcon) menuIcon.textContent = "☰";
+        } else {
+          mobileMenu.style.display = "block";
+          if (menuIcon) menuIcon.textContent = "✕";
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        const mobileMenuButton = document.querySelector(".mobile-menu-btn");
+        const navDesktop = document.querySelector(".nav-desktop");
+
+        function handleResponsiveLayout() {
+          if (window.innerWidth >= 768) {
+            if (navDesktop) navDesktop.style.display = "flex";
+            if (mobileMenuButton) mobileMenuButton.style.display = "none";
+            const mobileMenu = document.getElementById("mobile-menu");
+            if (mobileMenu) mobileMenu.style.display = "none";
+          } else {
+            if (navDesktop) navDesktop.style.display = "none";
+            if (mobileMenuButton) mobileMenuButton.style.display = "block";
+          }
+        }
+        handleResponsiveLayout();
+        window.addEventListener("resize", handleResponsiveLayout);
       });
     </script>
   </body>
