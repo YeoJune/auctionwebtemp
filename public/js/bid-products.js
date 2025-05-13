@@ -286,13 +286,12 @@ async function fetchProducts() {
     const dateLimit = new Date();
     dateLimit.setDate(dateLimit.getDate() - state.dateRange);
     const fromDate = formatDate(dateLimit);
-    const toDate = formatDate(now);
 
     // API 파라미터
     const params = {
       status: statusParam,
       fromDate: fromDate,
-      toDate: toDate,
+      // toDate: toDate,
       page: state.currentPage,
       limit: state.itemsPerPage,
       sortBy: state.sortBy,
