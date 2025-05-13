@@ -568,7 +568,7 @@
 
               const data = await response.json();
 
-              if (response.ok) {
+              if (response.ok && data.message === "로그인 성공") {
                 window.location.href = "/appr"; // CAS 홈으로 리다이렉트
               } else {
                 errorMessageDiv.textContent =

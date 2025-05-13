@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Montserrat:wght@500;600;700&display=swap"
       rel="stylesheet" />
     <style>
-      /* 기본 리셋 및 폰트 설정 */
+      /* 기본 리셋 및 폰트 설정 (제공해주신 원본 CSS 유지) */
       * {
         margin: 0;
         padding: 0;
@@ -32,7 +32,7 @@
         padding: 0 20px;
       }
 
-      /* 헤더 & 푸터 공통 스타일 */
+      /* 헤더 & 푸터 공통 스타일 (제공해주신 원본 CSS 유지) */
       header {
         background-color: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(10px);
@@ -180,7 +180,7 @@
         background-color: rgba(26, 42, 58, 0.05);
       }
 
-      /* 탭 메뉴 스타일 */
+      /* 탭 메뉴 스타일 (제공해주신 원본 CSS 유지) */
       .tabs {
         display: flex;
         gap: 2px;
@@ -206,7 +206,7 @@
         border-bottom-color: #1a2a3a;
       }
 
-      /* 마이페이지 스타일 */
+      /* 마이페이지 스타일 (제공해주신 원본 CSS 유지) */
       .user-profile {
         display: flex;
         align-items: center;
@@ -348,765 +348,457 @@
         margin-left: 8px;
       }
 
-      .badge-success {
-        background-color: #d1fae5;
-        color: #059669;
-      }
+      .badge-success { background-color: #d1fae5; color: #059669; }
+      .badge-error { background-color: #fee2e2; color: #dc2626; }
+      .badge-warning { background-color: #fef3c7; color: #d97706; }
+      .badge-pending { background-color: #e0e7ff; color: #4338ca; }
 
-      .badge-error {
-        background-color: #fee2e2;
-        color: #dc2626;
-      }
-
-      .badge-warning {
-        background-color: #fef3c7;
-        color: #d97706;
-      }
-
-      .badge-pending {
-        background-color: #e0e7ff;
-        color: #4338ca;
-      }
-
-      .pagination {
-        display: flex;
-        justify-content: center;
-        margin-top: 20px;
-        gap: 8px;
-      }
-
-      .pagination-item {
-        width: 36px;
-        height: 36px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: all 0.3s;
-        color: #64748b;
-      }
-
-      .pagination-item:hover {
-        background-color: #e2e8f0;
-      }
-
-      .pagination-item.active {
-        background-color: #1a2a3a;
-        color: white;
-      }
-
-      .empty-state {
-        text-align: center;
-        padding: 40px 20px;
-      }
-
-      .empty-state-icon {
-        font-size: 3rem;
-        color: #cbd5e1;
-        margin-bottom: 15px;
-      }
-
-      .empty-state-message {
-        color: #64748b;
-        font-size: 1.1rem;
-        margin-bottom: 20px;
-      }
+      .pagination { display: flex; justify-content: center; margin-top: 20px; gap: 8px; }
+      .pagination-item { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 4px; cursor: pointer; transition: all 0.3s; color: #64748b; }
+      .pagination-item:hover { background-color: #e2e8f0; }
+      .pagination-item.active { background-color: #1a2a3a; color: white; }
+      .empty-state { text-align: center; padding: 40px 20px; }
+      .empty-state-icon { font-size: 3rem; color: #cbd5e1; margin-bottom: 15px; }
+      .empty-state-message { color: #64748b; font-size: 1.1rem; margin-bottom: 20px; }
+      /* 로딩 스피너 (필요시 추가) */
+      .loading { text-align:center; padding:20px; font-style: italic; color: #64748b;}
+      /* 팝업 스타일 (제공해주신 원본 CSS 유지) */
+      .popup { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); display:none; /* 기본 숨김 */ align-items: center; justify-content: center; z-index:1001; opacity:0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s; }
+      .popup.show { display:flex; opacity:1; visibility: visible;}
+      .popup-content { background-color:white; padding:30px; border-radius:12px; max-width:90%; width:600px; max-height:90vh; overflow-y:auto; box-shadow: 0 10px 25px rgba(0,0,0,0.1); position:relative; }
+      .popup-close { position:absolute; top:15px; right:15px; font-size:1.5rem; cursor:pointer; color:#aaa; }
+      .popup-close:hover { color: #333; }
     </style>
-  </head>
-
-  <body>
-    <!-- 헤더 -->
+</head>
+<body>
     <header>
-      <div class="container">
-        <div class="header-inner">
-          <div class="header-left">
-            <a href="/appr" class="logo">
-              <img
-                src="https://i.ibb.co/FqJhVh0T/image.png"
-                alt="CAS 명품감정시스템"
-                style="height: 40px" />
-            </a>
-
-            <nav class="nav-desktop">
-              <a href="/appr" class="btn-modern">홈</a>
-              <a href="/appr/request" class="btn-modern">감정신청</a>
-              <a href="/appr/result" class="btn-modern">감정번호조회</a>
-              <a href="/appr/mypage" class="btn-modern">마이페이지</a>
-              <a href="/appr/repair" class="btn-modern">까사복원시스템</a>
-              <a href="/appr/authenticity" class="btn-modern">정가품구별법</a>
-              <a href="/appr/signin" class="btn-modern">로그인</a>
-            </nav>
-          </div>
-
-          <button
-            class="mobile-menu-btn"
-            id="menu-icon"
-            onclick="toggleMobileMenu()">
-            ☰
-          </button>
+        <div class="container">
+            <div class="header-inner">
+                <div class="header-left">
+                    <a href="/appr" class="logo">
+                        <img src="https://i.ibb.co/FqJhVh0T/image.png" alt="CAS 명품감정시스템" style="height: 40px;" />
+                    </a>
+                    <nav class="nav-desktop">
+                        <a href="/appr">홈</a>
+                        <a href="/appr/request">감정신청</a>
+                        <a href="/appr/result">감정번호조회</a>
+                        <a href="/appr/mypage">마이페이지</a>
+                        <a href="/appr/repair">까사복원시스템</a>
+                        <a href="/appr/authenticity">정가품구별법</a>
+                        <a href="/appr/signin">로그인</a>
+                    </nav>
+                </div>
+                <button class="mobile-menu-btn" id="menu-icon" onclick="toggleMobileMenu()">☰</button>
+            </div>
         </div>
-      </div>
     </header>
 
-    <div class="mobile-menu" id="mobile-menu" style="display: none">
-      <a href="/appr">홈</a>
-      <a href="/appr/request">감정신청</a>
-      <a href="/appr/result">감정번호조회</a>
-      <a href="/appr/mypage">마이페이지</a>
-      <a href="/appr/repair">까사복원시스템</a>
-      <a href="/appr/authenticity">정가품구별법</a>
-      <a href="/appr/signin">로그인</a>
+    <div class="mobile-menu" id="mobile-menu">
+        <a href="/appr">홈</a>
+        <a href="/appr/request">감정신청</a>
+        <a href="/appr/result">감정번호조회</a>
+        <a href="/appr/mypage">마이페이지</a>
+        <a href="/appr/repair">까사복원시스템</a>
+        <a href="/appr/authenticity">정가품구별법</a>
+        <a href="/appr/signin">로그인</a>
     </div>
 
     <main>
-      <section style="padding: 50px 0">
-        <div class="container">
-          <!-- 사용자 프로필 -->
-          <div class="user-profile">
-            <div class="user-avatar">👤</div>
-            <div class="user-info">
-              <h2 id="user-name">떙떙떙님</h2>
-              <p>가입일: <span id="join-date">2023년 6월 15일</span></p>
-            </div>
-          </div>
+        <section style="padding: 50px 0;">
+            <div class="container">
+                <div class="user-profile">
+                    <div class="user-avatar" id="user-avatar-initial"></div>
+                    <div class="user-info">
+                        <h2 id="user-name-display">로딩 중...</h2>
+                        <p>가입일: <span id="join-date-display">-</span></p>
+                    </div>
+                </div>
 
-          <!-- 회원등급 및 크레딧 정보 -->
-          <div
-            style="
-              background-color: #f8fafc;
-              border-radius: 8px;
-              padding: 20px;
-              margin-bottom: 30px;
-              border: 1px solid #e2e8f0;
-            ">
-            <div
-              style="
-                display: flex;
-                flex-wrap: wrap;
-                gap: 30px;
-                margin-bottom: 10px;
-              ">
-              <div>
-                <h3
-                  style="
-                    font-size: 1.1rem;
-                    font-weight: 600;
-                    margin-bottom: 10px;
-                    color: #334155;
-                  ">
-                  회원등급
-                </h3>
-                <div style="display: flex; align-items: center">
-                  <span
-                    id="membership-badge"
-                    style="
-                      display: inline-block;
-                      padding: 5px 12px;
-                      border-radius: 50px;
-                      font-size: 0.85rem;
-                      font-weight: 600;
-                      background-color: #e0e7ff;
-                      color: #4338ca;
-                      margin-right: 10px;
-                    "
-                    >일반회원</span
-                  >
-                  <a
-                    href="#"
-                    onclick="showMembershipInfo(); return false;"
-                    style="
-                      font-size: 0.85rem;
-                      color: #64748b;
-                      text-decoration: underline;
-                    "
-                    >등급 혜택 보기</a
-                  >
+                <div style="background-color: #fff; border-radius: 8px; padding: 25px; margin-bottom: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                    <div style="display: flex; flex-wrap: wrap; gap: 30px; align-items: flex-end;">
+                        <div style="flex:1; min-width:200px;">
+                            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 10px; color: #334155;">회원등급</h3>
+                            <div style="display: flex; align-items: center;">
+                                <span id="membership-badge" class="badge badge-pending" style="margin-right: 10px;">정보 없음</span>
+                                <a href="#" onclick="showMembershipInfo(); return false;" style="font-size: 0.85rem; color: #64748b; text-decoration: underline;">등급 혜택 보기</a>
+                            </div>
+                        </div>
+                        <div style="flex:1; min-width:200px;">
+                            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 10px; color: #334155;">퀵링크 감정 크레딧</h3>
+                            <div style="display: flex; align-items: center;">
+                                <span id="quicklink-credit" style="font-size: 1.25rem; font-weight: 700; color: #1a2a3a; margin-right: 5px;">0회</span>
+                                <span id="quicklink-limit" style="color: #64748b; font-size: 0.9rem;">/ 월 0회</span>
+                            </div>
+                        </div>
+                        <div style="flex:1; min-width:200px;">
+                            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 10px; color: #334155;">구독 상태</h3>
+                            <div style="display: flex; align-items: center;">
+                                <span id="subscription-status" class="badge badge-error" style="margin-right:10px;">미구독</span>
+                                <button id="btn-manage-subscription" class="btn-primary" style="padding: 6px 10px; font-size:0.8rem;" onclick="handleSubscriptionAction()">구독 신청하기</button>
+                            </div>
+                        </div>
+                    </div>
+                    <p style="font-size: 0.9rem; color: #64748b; margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top:15px;">
+                        * 퀵링크 감정 크레딧은 매월 1일에 초기화됩니다.<br />
+                        * 정품 또는 가품으로 판정된 경우에만 크레딧이 차감되며, 자료부족으로 판정된 경우는 차감되지 않습니다.
+                    </p>
                 </div>
-              </div>
-              <div>
-                <h3
-                  style="
-                    font-size: 1.1rem;
-                    font-weight: 600;
-                    margin-bottom: 10px;
-                    color: #334155;
-                  ">
-                  퀵링크 감정 크레딧
-                </h3>
-                <div style="display: flex; align-items: center">
-                  <span
-                    id="quicklink-credit"
-                    style="
-                      font-size: 1.25rem;
-                      font-weight: 700;
-                      color: #1a2a3a;
-                      margin-right: 15px;
-                    "
-                    >5회</span
-                  >
-                  <span style="color: #64748b; font-size: 0.9rem"
-                    >남은 횟수 / 이번 달 10회</span
-                  >
-                </div>
-              </div>
-              <div>
-                <h3
-                  style="
-                    font-size: 1.1rem;
-                    font-weight: 600;
-                    margin-bottom: 10px;
-                    color: #334155;
-                  ">
-                  구독 상태
-                </h3>
-                <div style="display: flex; align-items: center">
-                  <span
-                    id="subscription-status"
-                    style="
-                      display: inline-block;
-                      padding: 5px 12px;
-                      border-radius: 50px;
-                      font-size: 0.85rem;
-                      font-weight: 600;
-                      background-color: #fee2e2;
-                      color: #dc2626;
-                    "
-                    >미구독</span
-                  >
-                  <a
-                    href="#"
-                    onclick="showSubscriptionOptions(); return false;"
-                    style="
-                      font-size: 0.85rem;
-                      color: #64748b;
-                      text-decoration: underline;
-                      margin-left: 10px;
-                    "
-                    >구독 신청하기</a
-                  >
-                </div>
-              </div>
-            </div>
-            <p style="font-size: 0.9rem; color: #64748b; margin-top: 15px">
-              * 퀵링크 감정 크레딧은 매월 1일에 초기화됩니다.<br />
-              * 정품 또는 가품으로 판정된 경우에만 크레딧이 차감되며,
-              자료부족으로 판정된 경우는 차감되지 않습니다.
-            </p>
-          </div>
 
-          <!-- 통계 -->
-          <div class="stats">
-            <div class="stat-card active" onclick="filterAppraisals('all')">
-              <h3>명품감정</h3>
-              <div class="number">5건</div>
-            </div>
-            <div class="stat-card" onclick="filterAppraisals('pending')">
-              <h3>감정중</h3>
-              <div class="number">1건</div>
-            </div>
-            <div class="stat-card" onclick="filterAppraisals('completed')">
-              <h3>감정완료</h3>
-              <div class="number">4건</div>
-            </div>
-          </div>
+                <div class="stats">
+                    <div class="stat-card active" onclick="filterAppraisals('all', this)">
+                        <h3>총 감정요청</h3>
+                        <div class="number" id="stat-total-appraisals">0</div>
+                    </div>
+                    <div class="stat-card" onclick="filterAppraisals('pending_review,in_review', this)">
+                        <h3>감정중</h3>
+                        <div class="number" id="stat-pending-appraisals">0</div>
+                    </div>
+                    <div class="stat-card" onclick="filterAppraisals('completed', this)">
+                        <h3>감정완료</h3>
+                        <div class="number" id="stat-completed-appraisals">0</div>
+                    </div>
+                </div>
 
-          <!-- 감정 목록 -->
-          <div class="appraisal-list">
-            <div class="appraisal-item">
-              <div class="appraisal-item-image">
-                <img src="https://via.placeholder.com/60" alt="상품 이미지" />
-              </div>
-              <div class="appraisal-item-content">
-                <div class="appraisal-item-title">
-                  퀵링크 감정: 루이비통 에센셜 V 목걸이
+                <div class="appraisal-list">
+                    <div id="appraisal-list-items">
+                        <div class="loading">감정 내역을 불러오는 중...</div>
+                    </div>
+                    <div class="pagination" id="appraisal-pagination"></div>
                 </div>
-                <div class="appraisal-item-details">
-                  신청일: 2023.11.15<span class="badge badge-success"
-                    >감정완료</span
-                  >
-                </div>
-              </div>
-              <a href="/appr/quick-result/123" class="appraisal-item-action"
-                >감정결과 보기</a
-              >
             </div>
-
-            <div class="appraisal-item">
-              <div class="appraisal-item-image">
-                <img src="https://via.placeholder.com/60" alt="상품 이미지" />
-              </div>
-              <div class="appraisal-item-content">
-                <div class="appraisal-item-title">
-                  오프라인 실물 감정: 샤넬 클래식 플랩백
-                </div>
-                <div class="appraisal-item-details">
-                  신청일: 2023.10.28<span class="badge badge-success"
-                    >감정완료</span
-                  >
-                </div>
-              </div>
-              <a href="/appr/result-detail/456" class="appraisal-item-action"
-                >감정결과 보기</a
-              >
-            </div>
-
-            <div class="appraisal-item">
-              <div class="appraisal-item-image">
-                <img src="https://via.placeholder.com/60" alt="상품 이미지" />
-              </div>
-              <div class="appraisal-item-content">
-                <div class="appraisal-item-title">
-                  퀵링크 감정: 구찌 마몬트 지갑
-                </div>
-                <div class="appraisal-item-details">
-                  신청일: 2023.09.05<span class="badge badge-warning"
-                    >자료부족</span
-                  >
-                </div>
-              </div>
-              <a href="/appr/quick-result/789" class="appraisal-item-action"
-                >감정결과 보기</a
-              >
-            </div>
-
-            <div class="appraisal-item">
-              <div class="appraisal-item-image">
-                <img src="https://via.placeholder.com/60" alt="상품 이미지" />
-              </div>
-              <div class="appraisal-item-content">
-                <div class="appraisal-item-title">
-                  퀵링크 감정: 프라다 리에디션 2005
-                </div>
-                <div class="appraisal-item-details">
-                  신청일: 2023.08.20<span class="badge badge-error">가품</span>
-                </div>
-              </div>
-              <a href="/appr/quick-result/101" class="appraisal-item-action"
-                >감정결과 보기</a
-              >
-            </div>
-
-            <div class="appraisal-item">
-              <div class="appraisal-item-image">
-                <img src="https://via.placeholder.com/60" alt="상품 이미지" />
-              </div>
-              <div class="appraisal-item-content">
-                <div class="appraisal-item-title">
-                  퀵링크 감정: 에르메스 켈리 백
-                </div>
-                <div class="appraisal-item-details">
-                  신청일: 2023.11.20<span class="badge badge-pending"
-                    >감정중</span
-                  >
-                </div>
-              </div>
-              <span
-                class="appraisal-item-action"
-                style="cursor: default; opacity: 0.7"
-                >진행중</span
-              >
-            </div>
-          </div>
-
-          <!-- 페이지네이션 -->
-          <div class="pagination">
-            <div class="pagination-item active">1</div>
-            <div class="pagination-item">2</div>
-            <div class="pagination-item">3</div>
-            <div class="pagination-item">...</div>
-            <div class="pagination-item">10</div>
-          </div>
-
-          <!-- 감정 내역 없을 때 표시 (display: none으로 숨김 처리) -->
-          <div class="empty-state" style="display: none">
-            <div class="empty-state-icon">📋</div>
-            <div class="empty-state-message">감정 내역이 없습니다.</div>
-            <a href="/appr/request" class="btn-primary">감정 신청하기</a>
-          </div>
-        </div>
-      </section>
+        </section>
     </main>
 
-    <!-- 등급 혜택 팝업 -->
-    <div
-      id="membership-info-popup"
-      style="
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-        opacity: 0;
-        visibility: hidden;
-        transition: all 0.3s;
-      ">
-      <div
-        style="
-          background-color: white;
-          border-radius: 12px;
-          max-width: 90%;
-          width: 600px;
-          max-height: 90vh;
-          overflow-y: auto;
-          padding: 30px;
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-          position: relative;
-        ">
-        <span
-          onclick="closePopup('membership-info-popup')"
-          style="
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: #64748b;
-          "
-          >✕</span
-        >
-        <h3 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 20px">
-          회원등급 혜택 안내
-        </h3>
-
-        <div
-          style="
-            margin-bottom: 25px;
-            border-bottom: 1px solid #e2e8f0;
-            padding-bottom: 20px;
-          ">
-          <h4
-            style="
-              font-size: 1.1rem;
-              font-weight: 600;
-              margin-bottom: 10px;
-              color: #4338ca;
-            ">
-            까사트레이드 회원
-          </h4>
+    <!-- 등급 혜택 팝업 (제공해주신 원본 HTML 구조 유지) -->
+    <div id="membership-info-popup" class="popup">
+      <div class="popup-content">
+        <span class="popup-close" onclick="closePopup('membership-info-popup')">✕</span>
+        <h3 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 20px">회원등급 혜택 안내</h3>
+        <div style="margin-bottom: 25px; border-bottom: 1px solid #e2e8f0; padding-bottom: 20px;">
+          <h4 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 10px; color: #4338ca;">까사트레이드 회원</h4>
           <ul style="padding-left: 20px; margin-bottom: 0; color: #334155">
-            <li>퀵링크 감정 구독 무료</li>
-            <li>월 10회 퀵링크 감정 제한</li>
-            <li>오프라인 실물감정 38,000원 → <strong>12,000원</strong></li>
+            <li>퀵링크 감정 구독 무료</li> <li>월 10회 퀵링크 감정 제한</li> <li>오프라인 실물감정 38,000원 → <strong>12,000원</strong></li>
           </ul>
         </div>
-
-        <div
-          style="
-            margin-bottom: 25px;
-            border-bottom: 1px solid #e2e8f0;
-            padding-bottom: 20px;
-          ">
-          <h4
-            style="
-              font-size: 1.1rem;
-              font-weight: 600;
-              margin-bottom: 10px;
-              color: #4338ca;
-            ">
-            제휴사 회원
-          </h4>
+        <div style="margin-bottom: 25px; border-bottom: 1px solid #e2e8f0; padding-bottom: 20px;">
+          <h4 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 10px; color: #4338ca;">제휴사 회원</h4>
           <ul style="padding-left: 20px; margin-bottom: 0; color: #334155">
-            <li>퀵링크 감정 구독 무료</li>
-            <li>월 5회 퀵링크 감정 제한</li>
-            <li>오프라인 실물감정 38,000원 → <strong>20,000원</strong></li>
+            <li>퀵링크 감정 구독 무료</li> <li>월 5회 퀵링크 감정 제한</li> <li>오프라인 실물감정 38,000원 → <strong>20,000원</strong></li>
           </ul>
         </div>
-
         <div style="margin-bottom: 15px">
-          <h4
-            style="
-              font-size: 1.1rem;
-              font-weight: 600;
-              margin-bottom: 10px;
-              color: #4338ca;
-            ">
-            일반회원
-          </h4>
+          <h4 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 10px; color: #4338ca;">일반회원</h4>
           <ul style="padding-left: 20px; margin-bottom: 0; color: #334155">
-            <li>퀵링크 감정 구독 월 29,000원</li>
-            <li>월 10회 퀵링크 감정 제한</li>
-            <li>오프라인 실물감정 38,000원</li>
+            <li>퀵링크 감정 구독 월 29,000원</li> <li>월 10회 퀵링크 감정 제한</li> <li>오프라인 실물감정 38,000원</li>
           </ul>
         </div>
       </div>
     </div>
 
-    <!-- 구독 신청 팝업 -->
-    <div
-      id="subscription-popup"
-      style="
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-        opacity: 0;
-        visibility: hidden;
-        transition: all 0.3s;
-      ">
-      <div
-        style="
-          background-color: white;
-          border-radius: 12px;
-          max-width: 90%;
-          width: 500px;
-          max-height: 90vh;
-          overflow-y: auto;
-          padding: 30px;
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-          position: relative;
-        ">
-        <span
-          onclick="closePopup('subscription-popup')"
-          style="
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: #64748b;
-          "
-          >✕</span
-        >
-        <h3 style="font-size: 1.3rem; font-weight: 700; margin-bottom: 20px">
-          퀵링크 감정 구독 신청
-        </h3>
-
-        <div
-          style="
-            border: 1px solid #e0e7ff;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            background-color: #f5f7ff;
-          ">
-          <h4
-            style="
-              font-size: 1.1rem;
-              font-weight: 600;
-              margin-bottom: 10px;
-              color: #4338ca;
-            ">
-            월간 구독
-          </h4>
-          <p style="color: #334155; margin-bottom: 15px">
-            월 29,000원으로 매월 10회의 퀵링크 감정 서비스를 이용하실 수
-            있습니다.
-          </p>
-          <ul style="padding-left: 20px; margin-bottom: 20px; color: #334155">
-            <li>10회 퀵링크 감정 (매월 1일 초기화)</li>
-            <li>정품/가품 판정 시에만 크레딧 차감</li>
-            <li>언제든지 구독 취소 가능</li>
-          </ul>
-          <button
-            onclick="subscribeService()"
-            style="
-              background-color: #4338ca;
-              color: white;
-              border: none;
-              border-radius: 6px;
-              padding: 12px 20px;
-              font-weight: 600;
-              cursor: pointer;
-              width: 100%;
-            ">
-            구독 신청하기
-          </button>
-        </div>
-
-        <p style="font-size: 0.9rem; color: #64748b; text-align: center">
-          * 구독은 신청일로부터 30일간 유지되며, 자동으로 갱신됩니다.<br />
-          * 결제 정보는 결제 페이지에서 입력하실 수 있습니다.
-        </p>
-      </div>
-    </div>
+    <!-- 나이스페이 JS SDK (실제 결제 시 HEAD나 BODY 끝에 추가) -->
+    <!-- <script src="https://pay.nicepay.co.kr/v1/js/"></script> -->
 
     <script>
-      // 모바일 메뉴 토글
-      function toggleMobileMenu() {
-        const mobileMenu = document.getElementById("mobile-menu");
-        const menuIcon = document.getElementById("menu-icon");
-        if (mobileMenu.style.display === "block") {
-          mobileMenu.style.display = "none";
-          menuIcon.textContent = "☰";
-        } else {
-          mobileMenu.style.display = "block";
-          menuIcon.textContent = "✕";
+        function toggleMobileMenu() {
+            const mobileMenu = document.getElementById("mobile-menu");
+            const menuIcon = document.getElementById("menu-icon");
+            if (mobileMenu.style.display === "block") {
+                mobileMenu.style.display = "none";
+                if(menuIcon) menuIcon.textContent = "☰";
+            } else {
+                mobileMenu.style.display = "block";
+                if(menuIcon) menuIcon.textContent = "✕";
+            }
         }
-      }
 
-      // 감정 필터링
-      function filterAppraisals(type) {
-        // 통계 카드 스타일 변경
-        document.querySelectorAll(".stat-card").forEach((card) => {
-          card.classList.remove("active");
+        function showMembershipInfo() {
+            document.getElementById('membership-info-popup').classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closePopup(popupId) {
+            document.getElementById(popupId).classList.remove('show');
+            document.body.style.overflow = '';
+        }
+
+        let currentAppraisalPage = 1;
+        const appraisalsPerPage = 5; // 한 페이지에 표시할 감정 내역 수
+        let currentStatusFilter = 'all'; // 현재 선택된 감정 상태 필터
+
+        async function fetchMyPageData(page = 1, statusFilter = 'all') {
+            const appraisalListLoadingEl = document.getElementById('appraisal-list-loading');
+            if(appraisalListLoadingEl) appraisalListLoadingEl.style.display = 'block';
+
+            try {
+                let apiUrl = `/api/appr/appraisals/my?page=${page}&limit=${appraisalsPerPage}`;
+                // '/my' API는 현재 status 필터링을 지원하지 않으므로,
+                // 만약 상태별 필터링된 목록이 필요하면 '/api/appr/appraisals'를 사용하고,
+                // 사용자 정보와 멤버십 정보는 별도로 가져오거나, '/my' API를 수정해야 합니다.
+                // 여기서는 '/my' API가 모든 정보를 다 준다고 가정하고, 클라이언트에서 필터링합니다.
+                // 또는, filterAppraisals 함수에서 직접 /api/appr/appraisals?status=XXX 를 호출하도록 변경합니다.
+                // 현재는 /my 에서 받은 전체 목록을 기준으로 클라이언트 필터링합니다.
+
+                const response = await fetch(apiUrl, { credentials: 'include' });
+                if (!response.ok) {
+                    if (response.status === 401) window.location.href = '/signinPage';
+                    throw new Error('마이페이지 정보 로드 실패: ' + response.statusText);
+                }
+                const data = await response.json();
+
+                if (data.success) {
+                    // 사용자 프로필 정보 업데이트
+                    if (data.user_info) {
+                        document.getElementById('user-name-display').textContent = `${data.user_info.name || '고객'}님`;
+                        document.getElementById('user-id-display').textContent = data.user_info.id;
+                        document.getElementById('join-date-display').textContent = data.user_info.created_at ? new Date(data.user_info.created_at).toLocaleDateString() : '-'; // API에 created_at 추가 가정
+                        if (data.user_info.name) {
+                             document.getElementById('user-avatar-initial').textContent = data.user_info.name.charAt(0);
+                        } else {
+                             document.getElementById('user-avatar-initial').textContent = '👤';
+                        }
+                    }
+
+                    // 멤버십 및 크레딧 정보 업데이트
+                    if (data.membership_info) {
+                        const tierBadge = document.getElementById('membership-tier-badge');
+                        const creditValue = document.getElementById('quicklink-credit-value');
+                        const creditLimitText = document.getElementById('quicklink-limit-text');
+                        const subscriptionBadge = document.getElementById('subscription-status-badge');
+                        const subscriptionButton = document.getElementById('btn-manage-subscription');
+
+                        tierBadge.textContent = data.membership_info.tier;
+                        if (data.membership_info.tier === '까사트레이드 회원') tierBadge.className = 'membership-badge badge-casatrade';
+                        else if (data.membership_info.tier === '제휴사 회원') tierBadge.className = 'membership-badge badge-partner';
+                        else tierBadge.className = 'membership-badge badge-regular';
+
+                        creditValue.textContent = `${data.membership_info.quick_link_credits_remaining_this_month}회`;
+                        creditLimitText.textContent = ` / 월 ${data.membership_info.quick_link_credits_monthly_limit}회`;
+
+                        if (data.membership_info.tier === '일반회원') {
+                            if (data.membership_info.subscription_expires_at && new Date(data.membership_info.subscription_expires_at) > new Date()) {
+                                subscriptionBadge.textContent = '구독중';
+                                subscriptionBadge.className = 'membership-badge badge-subscribed';
+                                subscriptionButton.textContent = '구독 관리';
+                                subscriptionButton.onclick = () => { alert('구독 관리 기능은 준비 중입니다.'); };
+                            } else {
+                                subscriptionBadge.textContent = '미구독';
+                                subscriptionBadge.className = 'membership-badge badge-unsubscribed';
+                                subscriptionButton.textContent = '구독 신청하기';
+                                subscriptionButton.onclick = handleSubscriptionAction;
+                            }
+                            subscriptionButton.style.display = 'inline-block';
+                        } else {
+                            subscriptionBadge.textContent = '혜택 적용중';
+                            subscriptionBadge.className = 'membership-badge badge-subscribed';
+                            subscriptionButton.style.display = 'none';
+                        }
+                    }
+
+                    // 감정 내역 및 통계 업데이트
+                    const allAppraisals = data.recent_appraisals.appraisals || [];
+                    updateAppraisalStats(allAppraisals); // 전체 목록 기준으로 통계 계산
+                    filterAndRenderAppraisals(statusFilter, allAppraisals, page, data.recent_appraisals.pagination);
+                } else {
+                    throw new Error(data.message || '데이터 로드 실패');
+                }
+            } catch (error) {
+                console.error(error);
+                document.getElementById('user-name-display').textContent = '오류';
+                document.getElementById('appraisal-list-items').innerHTML = `<p style="color:red;">${error.message}</p>`;
+            } finally {
+                if(appraisalListLoadingEl) appraisalListLoadingEl.style.display = 'none';
+            }
+        }
+
+        function updateAppraisalStats(appraisals) {
+            let total = 0;
+            let pending = 0;
+            let completed = 0;
+
+            // `/my` API가 페이지네이션된 최근 목록만 주므로, 정확한 전체 통계는 별도 API 필요.
+            // 여기서는 일단 로드된 목록 기준으로만 카운트.
+            // 또는 백엔드에서 전체 통계를 같이 내려주도록 수정.
+            // 임시로, 백엔드에서 전체 totalItems를 내려준다고 가정하고 사용.
+            fetch(`/api/appr/appraisals?limit=1`, {credentials: 'include'}) // 전체 개수 파악용
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.pagination) {
+                        document.getElementById('stat-total-appraisals').textContent = data.pagination.totalItems || 0;
+                    }
+                });
+
+            // 상태별 카운트는 클라이언트에서 필터링 할 때 계산하거나, 백엔드가 제공해야 함.
+            // 지금은 로드된 목록 기준으로만 계산 (정확하지 않을 수 있음)
+            appraisals.forEach(appr => {
+                if (appr.status === 'pending_review' || appr.status === 'in_review') pending++;
+                if (appr.status === 'completed') completed++;
+            });
+            document.getElementById('stat-pending-appraisals').textContent = pending;
+            document.getElementById('stat-completed-appraisals').textContent = completed;
+        }
+
+
+        function filterAndRenderAppraisals(statusFilter, allAppraisals, currentPage, paginationData) {
+            let filteredAppraisals = allAppraisals;
+            if (statusFilter !== 'all') {
+                const filterStates = statusFilter.split(',');
+                filteredAppraisals = allAppraisals.filter(appr => filterStates.includes(appr.status));
+            }
+            // 클라이언트 사이드 필터링 시, 페이지네이션은 전체 목록 기준으로 다시 계산하거나,
+            // 서버 사이드 필터링을 사용해야 정확합니다.
+            // 현재는 `/my` API가 필터링을 지원하지 않으므로, 클라이언트에서 필터링된 목록만 보여줍니다.
+            // 페이지네이션은 서버에서 받은 그대로 사용합니다. (필터 시 페이지네이션이 정확하지 않을 수 있음)
+            renderAppraisalList(filteredAppraisals);
+            renderPagination(paginationData, statusFilter); // 필터 상태 전달
+        }
+
+
+        function renderAppraisalList(appraisals) {
+            const listDiv = document.getElementById('appraisal-list-items');
+            listDiv.innerHTML = '';
+            if (appraisals && appraisals.length > 0) {
+                appraisals.forEach(appr => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'appraisal-item';
+                    let resultText = appr.status;
+                    let resultBadgeClass = 'badge-pending';
+                    if (appr.status === 'completed') {
+                        if (appr.result === 'authentic') { resultText = '정품'; resultBadgeClass = 'badge-success';}
+                        else if (appr.result === 'fake') { resultText = '가품'; resultBadgeClass = 'badge-error';}
+                        else { resultText = '판단불가'; resultBadgeClass = 'badge-warning';}
+                    } else if (appr.status === 'pending_review' || appr.status === 'in_review') {
+                        resultText = '감정중';
+                    } else if (appr.status === 'cancelled') {
+                        resultText = '취소됨'; resultBadgeClass = 'badge-error';
+                    }
+
+                    let detailPageUrl = `/appr/quick-result/${appr.id}`;
+                    // API 응답에 certificate_number가 포함되어 있다면 아래 주석 해제
+                    // if (appr.certificate_number) {
+                    //     detailPageUrl = `/appr/result-detail/${appr.certificate_number}`;
+                    // }
+
+                    itemDiv.innerHTML = `
+                        <div class="appraisal-item-image">
+                            <img src="${appr.representative_image || 'https://via.placeholder.com/60x60/eee/ccc?text=NoImg'}" alt="상품 이미지">
+                        </div>
+                        <div class="appraisal-item-content">
+                            <div class="appraisal-item-title">${appr.brand} ${appr.model_name}</div>
+                            <div class="appraisal-item-details">
+                                신청일: ${new Date(appr.created_at).toLocaleDateString()}
+                                <span class="badge ${resultBadgeClass}">${resultText.toUpperCase()}</span>
+                            </div>
+                        </div>
+                        ${appr.status === 'completed' || appr.status === 'cancelled' ?
+                            `<a href="${detailPageUrl}" class="appraisal-item-action">결과 보기</a>` :
+                            `<span class="appraisal-item-action" style="cursor:default; background-color:#f1f5f9; color:#64748b;">진행중</span>`
+                        }
+                    `;
+                    listDiv.appendChild(itemDiv);
+                });
+            } else {
+                listDiv.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><p>해당 조건의 감정 내역이 없습니다.</p></div>';
+            }
+        }
+
+        function renderPagination(pagination, statusFilterForNextPage) {
+            const paginationDiv = document.getElementById('appraisal-pagination');
+            paginationDiv.innerHTML = '';
+            if (!pagination || pagination.totalPages <= 1) return;
+
+            for (let i = 1; i <= pagination.totalPages; i++) {
+                const pageButton = document.createElement('button');
+                pageButton.textContent = i;
+                if (i === pagination.currentPage) pageButton.classList.add('active');
+                pageButton.onclick = () => {
+                    currentAppraisalPage = i;
+                    fetchMyPageData(currentAppraisalPage); // 필터된 목록이 아닌 전체 목록의 페이지를 다시 가져옴
+                                                        // 또는 filterAndLoadAppraisals(statusFilterForNextPage, i) 호출
+                };
+                paginationDiv.appendChild(pageButton);
+            }
+        }
+
+        document.querySelectorAll('.stat-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+                currentAppraisalPage = 1;
+                currentStatusFilter = e.currentTarget.dataset.statusFilter;
+                fetchMyPageData(currentAppraisalPage); // 필터링은 fetchMyPageData 내부에서 처리하거나, 별도 API 호출
+                                                    // 현재는 fetchMyPageData 호출 후 클라이언트에서 필터링
+            });
         });
-        if (type === "all") {
-          document.querySelectorAll(".stat-card")[0].classList.add("active");
-        } else if (type === "pending") {
-          document.querySelectorAll(".stat-card")[1].classList.add("active");
-        } else if (type === "completed") {
-          document.querySelectorAll(".stat-card")[2].classList.add("active");
+
+        async function handleSubscriptionAction() {
+            const button = document.getElementById('btn-manage-subscription');
+            if (button.textContent === '구독 관리') {
+                alert('구독 관리 기능은 준비 중입니다.');
+                return;
+            }
+
+            // '구독 신청하기' 로직
+            const productInfo = {
+                product_type: "quicklink_subscription_monthly",
+                product_name: "일반회원 퀵링크 월간 구독 (10회)",
+                amount: 29000
+            };
+            try {
+                button.textContent = "처리중...";
+                button.disabled = true;
+                const prepResponse = await fetch('/api/appr/payments/nicepay/prepare-payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(productInfo),
+                    credentials: 'include'
+                });
+                const prepData = await prepResponse.json();
+                if (prepData.success && prepData.paramsForNicePaySDK) {
+                    if (typeof AUTHNICE !== 'undefined' && typeof AUTHNICE.requestPay === 'function') {
+                        AUTHNICE.requestPay({
+                            ...prepData.paramsForNicePaySDK,
+                            fnError: function(result) {
+                                alert('결제창 오류 또는 사용자 취소: ' + result.errorMsg);
+                                button.textContent = "구독 신청하기";
+                                button.disabled = false;
+                            }
+                        });
+                    } else {
+                        alert('나이스페이 결제 모듈(AUTHNICE)을 로드할 수 없습니다.');
+                        button.textContent = "구독 신청하기";
+                        button.disabled = false;
+                    }
+                } else {
+                    alert('결제 준비 실패: ' + (prepData.message || '알 수 없는 오류'));
+                    button.textContent = "구독 신청하기";
+                    button.disabled = false;
+                }
+            } catch (err) {
+                alert('결제 준비 중 오류: ' + err.message);
+                button.textContent = "구독 신청하기";
+                button.disabled = false;
+            }
         }
 
-        // 여기에 실제 필터링 로직 추가
-        // 예시: 감정중인 항목만 표시 또는 감정완료된 항목만 표시
-        // 실제 구현을 위해서는 API 연동이 필요함
-      }
-
-      document.addEventListener("DOMContentLoaded", function () {
-        // 반응형 처리
-        function handleResponsiveLayout() {
-          if (window.innerWidth >= 768) {
-            const navDesktop = document.querySelector(".nav-desktop");
-            const mobileMenuBtn = document.querySelector(".mobile-menu-btn");
-            if (navDesktop) navDesktop.style.display = "flex";
-            if (mobileMenuBtn) mobileMenuBtn.style.display = "none";
-            document.getElementById("mobile-menu").style.display = "none";
-          } else {
-            const navDesktop = document.querySelector(".nav-desktop");
-            const mobileMenuBtn = document.querySelector(".mobile-menu-btn");
-            if (navDesktop) navDesktop.style.display = "none";
-            if (mobileMenuBtn) mobileMenuBtn.style.display = "block";
-          }
-        }
-        handleResponsiveLayout();
-        window.addEventListener("resize", handleResponsiveLayout);
-
-        // 페이지 초기화 시 필요한 데이터 로드
-        loadUserData();
-      });
-
-      function loadUserData() {
-        // 실제로는 API를 통해 사용자 정보 및 감정 내역 데이터를 가져와야 함
-        // 예시 데이터만 표시
-        document.getElementById("user-name").textContent = "떙떙떙님";
-        document.getElementById("join-date").textContent = "2023년 6월 15일";
-      }
-
-      // 회원등급 정보 팝업 표시
-      function showMembershipInfo() {
-        const popup = document.getElementById("membership-info-popup");
-        popup.style.opacity = "1";
-        popup.style.visibility = "visible";
-        document.body.style.overflow = "hidden";
-      }
-
-      // 구독 옵션 팝업 표시
-      function showSubscriptionOptions() {
-        const popup = document.getElementById("subscription-popup");
-        popup.style.opacity = "1";
-        popup.style.visibility = "visible";
-        document.body.style.overflow = "hidden";
-      }
-
-      // 팝업 닫기
-      function closePopup(popupId) {
-        const popup = document.getElementById(popupId);
-        popup.style.opacity = "0";
-        popup.style.visibility = "hidden";
-        document.body.style.overflow = "";
-      }
-
-      // 구독 서비스 신청 처리
-      function subscribeService() {
-        // 실제 구현에서는 결제 페이지로 이동하거나 API 호출
-        alert("구독 신청이 접수되었습니다. 결제 페이지로 이동합니다.");
-        // window.location.href = '/appr/payment'; // 결제 페이지로 이동
-
-        // 임시로 상태 변경 (실제로는 서버에서 처리)
-        document.getElementById("subscription-status").style.backgroundColor =
-          "#d1fae5";
-        document.getElementById("subscription-status").style.color = "#059669";
-        document.getElementById("subscription-status").textContent = "구독중";
-
-        closePopup("subscription-popup");
-      }
-
-      // 회원 정보 로드 함수 (API 연동 시 구현)
-      function loadUserMembershipInfo() {
-        // 예시 데이터 (실제로는 API에서 가져옴)
-        const membershipType = "regular"; // regular, casatrade, partner 중 하나
-        const creditRemaining = 5;
-        const creditLimit = 10;
-        const isSubscribed = false;
-
-        // 회원 등급에 따른 UI 업데이트
-        const membershipBadge = document.getElementById("membership-badge");
-        const quicklinkCredit = document.getElementById("quicklink-credit");
-        const subscriptionStatus = document.getElementById(
-          "subscription-status"
-        );
-
-        if (membershipType === "casatrade") {
-          membershipBadge.textContent = "까사트레이드 회원";
-          membershipBadge.style.backgroundColor = "#d1fae5";
-          membershipBadge.style.color = "#059669";
-
-          // 크레딧 정보 업데이트
-          quicklinkCredit.textContent = `${creditRemaining}회`;
-          quicklinkCredit.nextElementSibling.textContent = `남은 횟수 / 이번 달 ${creditLimit}회`;
-
-          // 구독 상태 업데이트 (까사트레이드 회원은 항상 구독중)
-          subscriptionStatus.style.backgroundColor = "#d1fae5";
-          subscriptionStatus.style.color = "#059669";
-          subscriptionStatus.textContent = "구독중";
-          subscriptionStatus.nextElementSibling.style.display = "none"; // 구독 신청 링크 숨김
-        } else if (membershipType === "partner") {
-          membershipBadge.textContent = "제휴사 회원";
-          membershipBadge.style.backgroundColor = "#e0e7ff";
-          membershipBadge.style.color = "#4338ca";
-
-          // 크레딧 정보 업데이트
-          quicklinkCredit.textContent = `${creditRemaining}회`;
-          quicklinkCredit.nextElementSibling.textContent = `남은 횟수 / 이번 달 5회`;
-
-          // 구독 상태 업데이트 (제휴사 회원은 항상 구독중)
-          subscriptionStatus.style.backgroundColor = "#d1fae5";
-          subscriptionStatus.style.color = "#059669";
-          subscriptionStatus.textContent = "구독중";
-          subscriptionStatus.nextElementSibling.style.display = "none"; // 구독 신청 링크 숨김
-        } else {
-          // 일반회원
-          membershipBadge.textContent = "일반회원";
-
-          // 크레딧 정보 업데이트
-          quicklinkCredit.textContent = isSubscribed
-            ? `${creditRemaining}회`
-            : "0회";
-          quicklinkCredit.nextElementSibling.textContent = `남은 횟수 / 이번 달 ${creditLimit}회`;
-
-          // 구독 상태 업데이트
-          if (isSubscribed) {
-            subscriptionStatus.style.backgroundColor = "#d1fae5";
-            subscriptionStatus.style.color = "#059669";
-            subscriptionStatus.textContent = "구독중";
-            subscriptionStatus.nextElementSibling.textContent = "구독 관리";
-          } else {
-            subscriptionStatus.style.backgroundColor = "#fee2e2";
-            subscriptionStatus.style.color = "#dc2626";
-            subscriptionStatus.textContent = "미구독";
-          }
-        }
-      }
-
-      // 페이지 로드 시 회원 정보 로드
-      document.addEventListener("DOMContentLoaded", function () {
-        loadUserMembershipInfo();
-
-        // 여기서 아래에 기존 DOMContentLoaded 내용을 유지
-      });
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchMyPageData(currentAppraisalPage);
+            function handleResponsiveLayout() {
+                const navDesktop = document.querySelector(".nav-desktop");
+                const mobileMenuBtn = document.querySelector(".mobile-menu-btn");
+                if (window.innerWidth >= 768) {
+                    if (navDesktop) navDesktop.style.display = "flex";
+                    if (mobileMenuBtn) mobileMenuBtn.style.display = "none";
+                    if(document.getElementById("mobile-menu")) document.getElementById("mobile-menu").style.display = "none";
+                } else {
+                    if (navDesktop) navDesktop.style.display = "none";
+                    if (mobileMenuBtn) mobileMenuBtn.style.display = "block";
+                }
+            }
+            handleResponsiveLayout();
+            window.addEventListener("resize", handleResponsiveLayout);
+        });
     </script>
-  </body>
+    <!-- 나이스페이 JS SDK는 공통 레이아웃에 한 번만 포함하거나, 필요시 여기에 추가 -->
+    <script src="https://pay.nicepay.co.kr/v1/js/"></script>
+</body>
 </html>

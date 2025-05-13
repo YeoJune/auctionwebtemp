@@ -1210,7 +1210,7 @@
               };
 
               try {
-                const response = await fetch("/api/appraisals/request", {
+                const response = await fetch("/api/appr/appraisals/request", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify(requestData),
@@ -1270,89 +1270,68 @@
         // 회원 정보 로드 및 가격 정보 업데이트 함수
         function loadMembershipInfo() {
             // 실제 구현에서는 API 호출
-            fetch('/api/user/membership-info', {
-                credentials: 'include'
-            })
-            .then(response => response.json())
-            .then(data => {
+            fetch('/api/appr/appraisals/my', { credentials: 'include' })
+              .then(response => response.json())
+              .then(data => {
                 if(data.success) {
-                    updatePriceInfo(data.membershipType, data.isSubscribed, data.creditRemaining, data.creditLimit);
+                  // user_info, membership_info를 사용하여 UI 업데이트
+                  if (data.user_info) { // 정보 자동 채우기
+                    if (document.getElementById('ql-name')) document.getElementById('ql-name').value = data.user_info.name || '';
+                    if (document.getElementById('ql-phone')) document.getElementById('ql-phone').value = data.user_info.phone || '';
+                    if (document.getElementById('ql-email')) document.getElementById('ql-email').value = data.user_info.email || '';
+                    if (document.getElementById('of-name')) document.getElementById('of-name').value = data.user_info.name || '';
+                    if (document.getElementById('of-phone')) document.getElementById('of-phone').value = data.user_info.phone || '';
+                    if (document.getElementById('of-email')) document.getElementById('of-email').value = data.user_info.email || '';
+                  }
+                  if (data.membership_info) { // 가격 및 크레딧 정보 표시
+                    updatePriceDisplay(data.membership_info);
+                  }
                 } else {
-                    console.error("회원 정보 로드 실패:", data.message);
-                    // 기본 정보로 표시 (비로그인 사용자 또는 일반 회원 가정)
-                    updatePriceInfo('regular', false, 0, 10);
+                  // 로그인 안 되어 있거나 에러 시 기본값으로 표시
+                  updatePriceDisplay({ tier: '일반회원', quick_link_credits_remaining_this_month: 0, quick_link_credits_monthly_limit: 0, offline_appraisal_fee: 38000});
                 }
-            })
-            .catch(error => {
-                console.error("회원 정보 로드 중 오류 발생:", error);
-                // 기본 정보로 표시
-                updatePriceInfo('regular', false, 0, 10);
-            });
-            
-            // 실제 API 구현 전 테스트를 위한 임시 코드 (실제 코드에서는 삭제)
-            // 아래 membershipType을 'regular', 'casatrade', 'partner' 중 하나로 변경하여 테스트
-            const testMembershipType = 'regular';
-            const testIsSubscribed = false;
-            const testCreditRemaining = 5;
-            const testCreditLimit = 10;
-            updatePriceInfo(testMembershipType, testIsSubscribed, testCreditRemaining, testCreditLimit);
-        }
-        
-        // 회원 등급에 따른 가격 정보 업데이트
-        function updatePriceInfo(membershipType, isSubscribed, creditRemaining, creditLimit) {
-            // 퀵링크 감정 정보 업데이트
-            const quicklinkSubInfo = document.getElementById('quicklink-subscription-info');
-            const quicklinkCreditInfo = document.getElementById('quicklink-credit-info');
-            const membershipInfo = document.getElementById('membership-info');
-            
-            // 오프라인 감정 정보 업데이트
-            const offlinePrice = document.getElementById('offline-price');
-            const offlineDiscount = document.getElementById('offline-discount');
-            const casatradeInfo = document.getElementById('casatrade-info');
-            const partnerInfo = document.getElementById('partner-info');
-            
-            // 회원 등급에 따른 정보 표시
-            if (membershipType === 'casatrade') {
-                // 까사트레이드 회원
-                quicklinkSubInfo.style.display = 'block';
-                quicklinkCreditInfo.innerHTML = `이번 달 남은 크레딧: <strong>${creditRemaining}회</strong> / 10회`;
-                membershipInfo.innerHTML = `까사트레이드 회원: <strong>무료 구독</strong> (10회 제한)`;
-                
-                // 오프라인 감정 가격
-                offlinePrice.textContent = '12,000원';
-                offlineDiscount.style.display = 'inline';
-                casatradeInfo.style.display = 'block';
-                partnerInfo.style.display = 'none';
-            } else if (membershipType === 'partner') {
-                // 제휴사 회원
-                quicklinkSubInfo.style.display = 'block';
-                quicklinkCreditInfo.innerHTML = `이번 달 남은 크레딧: <strong>${creditRemaining}회</strong> / 5회`;
-                membershipInfo.innerHTML = `제휴사 회원: <strong>무료 구독</strong> (5회 제한)`;
-                
-                // 오프라인 감정 가격
-                offlinePrice.textContent = '20,000원';
-                offlineDiscount.style.display = 'inline';
-                casatradeInfo.style.display = 'none';
-                partnerInfo.style.display = 'block';
-            } else {
-                // 일반 회원
-                quicklinkSubInfo.style.display = 'block';
-                
-                if (isSubscribed) {
-                    quicklinkCreditInfo.innerHTML = `이번 달 남은 크레딧: <strong>${creditRemaining}회</strong> / 10회`;
-                    membershipInfo.innerHTML = `일반회원: <strong>구독중</strong> (월 29,000원, 10회 제한)`;
-                } else {
-                    quicklinkCreditInfo.innerHTML = `크레딧 없음`;
-                    membershipInfo.innerHTML = `일반회원: 월 29,000원 구독 필요 (10회 제한)`;
-                }
-                
-                // 오프라인 감정 기본 가격
-                offlinePrice.textContent = '38,000원';
-                offlineDiscount.style.display = 'none';
-                casatradeInfo.style.display = 'none';
-                partnerInfo.style.display = 'none';
+              })
+              .catch(error => {
+                console.error("회원/멤버십 정보 로드 오류:", error);
+                updatePriceDisplay({ tier: '일반회원', quick_link_credits_remaining_this_month: 0, quick_link_credits_monthly_limit: 0, offline_appraisal_fee: 38000});
+              });
+          }
+          
+          function updatePriceDisplay(membership) {
+            // 퀵링크 탭 가격/크레딧 정보
+            const qlCreditInfoEl = document.getElementById('quicklink-credit-info');
+            const qlMembershipInfoEl = document.getElementById('membership-info');
+            if (qlCreditInfoEl && qlMembershipInfoEl) {
+              document.getElementById('quicklink-subscription-info').style.display = 'block';
+              qlCreditInfoEl.innerHTML = `이번 달 남은 크레딧: <strong>${membership.quick_link_credits_remaining_this_month}회</strong> / ${membership.quick_link_credits_monthly_limit}회`;
+              if (membership.tier === '일반회원' && membership.quick_link_credits_monthly_limit === 0) { // 구독 안 한 일반 회원
+                qlMembershipInfoEl.textContent = '일반회원: 월 29,000원 구독 필요 (10회 제한)';
+              } else {
+                qlMembershipInfoEl.textContent = `${membership.tier}: ${membership.tier !== '일반회원' ? '무료 구독' : '구독 중' } (${membership.quick_link_credits_monthly_limit}회 제한)`;
+              }
             }
-        }
+            
+            // 오프라인 탭 가격 정보
+            const offlinePriceEl = document.getElementById('offline-price');
+            const offlineDiscountEl = document.getElementById('offline-discount');
+            const casatradeInfoEl = document.getElementById('casatrade-info');
+            const partnerInfoEl = document.getElementById('partner-info');
+
+            if (offlinePriceEl && offlineDiscountEl && casatradeInfoEl && partnerInfoEl) {
+              let price = 38000;
+              let showDiscount = false;
+              casatradeInfoEl.style.display = 'none';
+              partnerInfoEl.style.display = 'none';
+
+              if (membership.tier === '까사트레이드 회원') {
+                price = 12000; showDiscount = true; casatradeInfoEl.style.display = 'block';
+              } else if (membership.tier === '제휴사 회원') {
+                price = 20000; showDiscount = true; partnerInfoEl.style.display = 'block';
+              }
+              offlinePriceEl.textContent = `${price.toLocaleString()}원`;
+              offlineDiscountEl.style.display = showDiscount ? 'inline' : 'none';
+            }
+          }
 
         // 회원 정보 자동 채우기 기능
         document.addEventListener('DOMContentLoaded', function() {
