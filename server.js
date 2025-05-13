@@ -8,6 +8,7 @@ const MySQLStore = require("express-mysql-session")(session);
 const bodyParser = require("body-parser");
 const path = require("path");
 const pool = require("./utils/DB"); // DB 연결 풀
+const { isAuthenticated } = require("./utils/auth"); // 인증 미들웨어
 
 // --- 기존 서비스 라우트 ---
 const authRoutes = require("./routes/auth");
