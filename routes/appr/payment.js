@@ -5,7 +5,7 @@ const pool = require("../../utils/DB");
 const { v4: uuidv4 } = require("uuid");
 const axios = require("axios");
 const crypto = require("crypto");
-const { isAuthenticated } = require("./middleware"); // 현재 폴더의 middleware.js 사용
+const { isAuthenticated } = require("../../utils/middleware"); // 현재 폴더의 middleware.js 사용
 
 const NICEPAY_CLIENT_KEY = process.env.NICEPAY_CLIENT_KEY;
 const NICEPAY_SECRET_KEY = process.env.NICEPAY_SECRET_KEY;
@@ -163,12 +163,10 @@ router.get("/nicepay/get-auth-info/:orderId", isAuthenticated, (req, res) => {
     // delete req.session.paymentAuthInfo[orderId];
     res.json({ success: true, authInfo });
   } else {
-    res
-      .status(404)
-      .json({
-        success: false,
-        message: "저장된 인증 정보를 찾을 수 없거나 만료되었습니다.",
-      });
+    res.status(404).json({
+      success: false,
+      message: "저장된 인증 정보를 찾을 수 없거나 만료되었습니다.",
+    });
   }
 });
 
