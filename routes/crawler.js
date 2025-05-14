@@ -22,6 +22,7 @@ dotenv.config();
 let isCrawling = false;
 let isValueCrawling = false;
 let isUpdateCrawling = false;
+let isUpdateCrawlingWithId = false;
 
 const isAdmin = (req, res, next) => {
   if (req.session.user && req.session.user.id === "admin") {
@@ -303,10 +304,10 @@ async function crawlAllUpdates() {
 }
 
 async function crawlAllUpdatesWithId() {
-  if (isUpdateCrawling || isCrawling || isValueCrawling) {
+  if (isUpdateCrawlingWithId) {
     throw new Error("update crawling already in progress");
   } else {
-    isUpdateCrawling = true;
+    isUpdateCrawlingWithId = true;
     const startTime = Date.now();
     console.log(`Starting update crawl with ID at ${new Date().toISOString()}`);
 
@@ -453,7 +454,7 @@ async function crawlAllUpdatesWithId() {
       console.error("Update crawl with ID failed:", error);
       throw error;
     } finally {
-      isUpdateCrawling = false;
+      isUpdateCrawlingWithId = false;
     }
   }
 }
@@ -861,7 +862,7 @@ const scheduleUpdateCrawlingWithId = () => {
   setInterval(async () => {
     console.log("Running scheduled update crawling with ID task");
     try {
-      if (!isCrawling && !isUpdateCrawling && !isValueCrawling) {
+      if (!isUpdateCrawlingWithId) {
         const result = await crawlAllUpdatesWithId();
         console.log(
           "Scheduled update crawling with ID completed successfully",

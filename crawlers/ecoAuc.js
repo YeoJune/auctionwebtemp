@@ -1316,6 +1316,4 @@ class EcoAucValueCrawler extends AxiosCrawler {
 const ecoAucCrawler = new EcoAucCrawler(ecoAucConfig);
 const ecoAucValueCrawler = new EcoAucValueCrawler(ecoAucValueConfig);
 
-ecoAucCrawler.crawlUpdateWithId(7028221).then((data) => console.log(data));
-
 module.exports = { ecoAucCrawler, ecoAucValueCrawler };
