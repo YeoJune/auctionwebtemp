@@ -357,7 +357,9 @@ router.post("/", async (req, res) => {
           // 날짜 업데이트 확인
           if (latestItemInfo.scheduled_date) {
             // 날짜가 다르면 업데이트
-            if (latestItemInfo.scheduled_date !== item.scheduled_date) {
+            if (
+              new Date(latestItemInfo.scheduled_date) !== item.scheduled_date
+            ) {
               console.log(
                 `Scheduled date changed for item ${itemId}: ${item.scheduled_date} -> ${latestItemInfo.scheduled_date}`
               );
