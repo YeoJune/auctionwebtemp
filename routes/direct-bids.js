@@ -329,7 +329,7 @@ router.post("/", async (req, res) => {
         console.log(
           `Checking latest price for item ${itemId} (auc_num=${item.auc_num})`
         );
-        latestItemInfo = await crawler.crawlUpdateWithId(itemId);
+        latestItemInfo = await crawler.crawlUpdateWithId(itemId, item);
 
         // 최신 정보가 있고 가격이나 날짜가 다르면 DB 업데이트
         if (latestItemInfo) {
@@ -377,7 +377,7 @@ router.post("/", async (req, res) => {
           // DB 업데이트가 필요하면 실행
           if (needsUpdate) {
             updateValues.push(itemId);
-            await connection.query(
+            pool.query(
               `UPDATE crawled_items SET ${updates.join(
                 ", "
               )} WHERE item_id = ?`,
@@ -439,8 +439,8 @@ router.post("/", async (req, res) => {
       bidId = result.insertId;
     }
 
-    // 6. 가격이 낮은 다른 입찰들을 취소
-    await connection.query(
+    // 6. 가격이 낮은 다른 입찰들을 취소 (비동기)
+    pool.query(
       "UPDATE direct_bids SET status = 'cancelled' WHERE item_id = ? AND current_price < ? AND status = 'active'",
       [itemId, currentPrice]
     );
