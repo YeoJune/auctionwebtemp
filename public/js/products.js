@@ -1319,6 +1319,26 @@ function setupDropdownMenus() {
   console.log("드롭다운 메뉴 설정 완료");
 }
 
+window.bidLoadingUI = {
+  showBidLoading: function (buttonElement) {
+    // 기존 버튼 텍스트 저장
+    buttonElement.dataset.originalText = buttonElement.textContent;
+
+    // 로딩 아이콘 추가
+    buttonElement.innerHTML = '<span class="spinner"></span> 처리 중...';
+    buttonElement.disabled = true;
+    buttonElement.classList.add("loading");
+  },
+
+  hideBidLoading: function (buttonElement) {
+    // 원래 텍스트로 복원
+    buttonElement.textContent =
+      buttonElement.dataset.originalText || "입찰하기";
+    buttonElement.disabled = false;
+    buttonElement.classList.remove("loading");
+  },
+};
+
 // 초기화 함수
 function initialize() {
   state.itemsPerPage = 20; // 기본 20개씩 표시

@@ -264,6 +264,21 @@ window.BidManager = (function () {
       return;
     }
 
+    // 입찰 버튼 찾기
+    const buttonElement =
+      event?.target ||
+      document
+        .querySelector(
+          `.bid-input[data-item-id="${itemId}"][data-bid-type="live"]`
+        )
+        ?.closest(".bid-input-group")
+        ?.querySelector(".bid-button");
+
+    // 전역 로딩 UI 사용
+    if (window.bidLoadingUI && buttonElement) {
+      window.bidLoadingUI.showBidLoading(buttonElement);
+    }
+
     const numericValue = parseFloat(value) * 1000; // 1000 곱하기
     const item = _state.currentData.find((item) => item.item_id === itemId);
     const bidInfo = _state.liveBidData.find((bid) => bid.item_id === itemId);
@@ -304,6 +319,11 @@ window.BidManager = (function () {
       }
     } catch (error) {
       alert(`입찰 신청 중 오류가 발생했습니다: ${error.message}`);
+    } finally {
+      // 로딩 UI 숨기기
+      if (window.bidLoadingUI && buttonElement) {
+        window.bidLoadingUI.hideBidLoading(buttonElement);
+      }
     }
   }
 
@@ -322,6 +342,21 @@ window.BidManager = (function () {
     if (!value) {
       alert("입찰 금액을 입력해주세요.");
       return;
+    }
+
+    // 입찰 버튼 찾기
+    const buttonElement =
+      event?.target ||
+      document
+        .querySelector(
+          `.bid-input[data-item-id="${itemId}"][data-bid-type="direct"]`
+        )
+        ?.closest(".bid-input-group")
+        ?.querySelector(".bid-button");
+
+    // 전역 로딩 UI 사용
+    if (window.bidLoadingUI && buttonElement) {
+      window.bidLoadingUI.showBidLoading(buttonElement);
     }
 
     const numericValue = parseFloat(value) * 1000; // 1000 곱하기
@@ -346,9 +381,13 @@ window.BidManager = (function () {
       }
     } catch (error) {
       alert(`입찰 신청 중 오류가 발생했습니다: ${error.message}`);
+    } finally {
+      // 로딩 UI 숨기기
+      if (window.bidLoadingUI && buttonElement) {
+        window.bidLoadingUI.hideBidLoading(buttonElement);
+      }
     }
   }
-
   /**
    * 빠른 입찰 금액 추가
    * @param {string} itemId - 상품 ID

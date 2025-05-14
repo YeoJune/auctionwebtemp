@@ -1295,6 +1295,27 @@ function setupMobileFilters() {
   }
 }
 
+// bid-products.js에 추가할 코드 (products.js와 동일)
+window.bidLoadingUI = {
+  showBidLoading: function (buttonElement) {
+    // 기존 버튼 텍스트 저장
+    buttonElement.dataset.originalText = buttonElement.textContent;
+
+    // 로딩 아이콘 추가
+    buttonElement.innerHTML = '<span class="spinner"></span> 처리 중...';
+    buttonElement.disabled = true;
+    buttonElement.classList.add("loading");
+  },
+
+  hideBidLoading: function (buttonElement) {
+    // 원래 텍스트로 복원
+    buttonElement.textContent =
+      buttonElement.dataset.originalText || "입찰하기";
+    buttonElement.disabled = false;
+    buttonElement.classList.remove("loading");
+  },
+};
+
 // DOM 완료 시 실행
 document.addEventListener("DOMContentLoaded", function () {
   initialize();
