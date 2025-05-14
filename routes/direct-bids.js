@@ -358,7 +358,7 @@ router.post("/", async (req, res) => {
           if (latestItemInfo.scheduled_date) {
             // 날짜가 다르면 업데이트
             if (
-              new Date(latestItemInfo.scheduled_date + "GMT+0900") !==
+              new Date(latestItemInfo.scheduled_date) !=
               new Date(item.scheduled_date)
             ) {
               console.log(
