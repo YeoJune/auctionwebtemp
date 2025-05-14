@@ -1390,7 +1390,7 @@ function initialize() {
           document
             .getElementById("signinBtn")
             ?.addEventListener("click", () => {
-              window.location.href = "./pages/signin.html";
+              window.location.href = "/signinPage";
             });
 
           document
