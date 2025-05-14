@@ -577,7 +577,7 @@ async function processExpiredBids() {
 
       // starting_price와 일치하는지 확인
       if (
-        parseFloat(highestBid.current_price) >=
+        parseFloat(highestBid.current_price) ===
         parseFloat(highestBid.starting_price)
       ) {
         // 최고가 입찰은 완료 처리
