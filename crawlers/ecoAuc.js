@@ -693,8 +693,8 @@ class EcoAucCrawler extends AxiosCrawler {
 
       // 배열로 변환하여 처리
       const pageItems = [];
-      itemElements.each((index, element) => {
-        const item = this.extractUpdateItemInfo($, $(element));
+      itemElements.each(async (index, element) => {
+        const item = await this.extractUpdateItemInfo($, $(element));
         if (item) {
           // null이 아닌 유효한 항목만 추가
           pageItems.push(item);
@@ -706,7 +706,7 @@ class EcoAucCrawler extends AxiosCrawler {
     });
   }
 
-  extractUpdateItemInfo($, element) {
+  async extractUpdateItemInfo($, element) {
     try {
       // 아이템 ID 추출
       const $id = element.find(this.config.crawlSelectors.id);
@@ -726,6 +726,20 @@ class EcoAucCrawler extends AxiosCrawler {
 
       if (!itemId) {
         return null;
+      }
+
+      // 날짜 추출
+      const $scheduledDate = element.find(
+        this.config.crawlSelectors.scheduledDate
+      );
+      const scheduledDateText =
+        $scheduledDate.length > 0 ? $scheduledDate.text().trim() : null;
+      const scheduledDate = this.extractDate(scheduledDateText);
+
+      // 날짜가 지났다면 crawlUpdateWithId로 따로 추출
+      const now = new Date();
+      if (scheduledDate && new Date(scheduledDate) < now) {
+        return await this.crawlUpdateWithId(itemId);
       }
 
       // 시작가 추출
