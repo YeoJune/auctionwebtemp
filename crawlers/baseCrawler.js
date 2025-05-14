@@ -368,6 +368,11 @@ class AxiosCrawler {
     // 로그인 중복 방지를 위한 변수들 추가
     this.loginInProgress = false;
     this.loginPromise = null;
+
+    // 로그인 체크 캐싱을 위한 변수 추가
+    this.lastLoginCheck = null;
+    this.lastLoginCheckResult = false;
+    this.loginCheckInterval = 1000 * 60 * 5; // 5분
   }
 
   isSessionValid() {
@@ -377,14 +382,31 @@ class AxiosCrawler {
 
   // 로그인 체크 기본 메서드 (각 크롤러에서 오버라이드)
   async loginCheck() {
-    // loginCheckUrl에서 200을 받으면 성공
+    // 마지막 로그인 체크 시간이 5분 이내면 캐시된 결과 반환
+    if (
+      this.lastLoginCheck &&
+      Date.now() - this.lastLoginCheck < this.loginCheckInterval
+    ) {
+      console.log("Using cached login check result");
+      return this.lastLoginCheckResult;
+    }
+
+    // 5분이 지났거나 처음 체크하는 경우, 실제 체크 수행
     return this.retryOperation(async () => {
-      const response = await this.client.get(
-        this.config.loginCheckUrl || this.config.accountUrl
-      );
-      if (response.status === 200) {
-        return true;
-      } else {
+      try {
+        const response = await this.client.get(
+          this.config.loginCheckUrl || this.config.accountUrl
+        );
+
+        // 결과 캐싱
+        this.lastLoginCheck = Date.now();
+        this.lastLoginCheckResult = response.status === 200;
+
+        return this.lastLoginCheckResult;
+      } catch (error) {
+        // 에러 발생시 캐싱 업데이트
+        this.lastLoginCheck = Date.now();
+        this.lastLoginCheckResult = false;
         return false;
       }
     });

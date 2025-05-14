@@ -831,7 +831,7 @@ const scheduleUpdateCrawling = () => {
   setInterval(async () => {
     console.log("Running scheduled update crawling task");
     try {
-      if (!isCrawling && !isUpdateCrawling && !isValueCrawling) {
+      if (!isCrawling && !isValueCrawling && !isUpdateCrawling) {
         const result = await crawlAllUpdates();
         console.log("Scheduled update crawling completed successfully", {
           ecoAucCount: result.ecoAucCount,
@@ -862,7 +862,7 @@ const scheduleUpdateCrawlingWithId = () => {
   setInterval(async () => {
     console.log("Running scheduled update crawling with ID task");
     try {
-      if (!isUpdateCrawlingWithId) {
+      if (!isCrawling && !isValueCrawling && !isUpdateCrawlingWithId) {
         const result = await crawlAllUpdatesWithId();
         console.log(
           "Scheduled update crawling with ID completed successfully",
