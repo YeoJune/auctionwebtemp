@@ -356,11 +356,12 @@ router.post("/", async (req, res) => {
 
           // 날짜 업데이트 확인
           if (latestItemInfo.scheduled_date) {
-            // 날짜가 다르면 업데이트
-            if (
-              new Date(latestItemInfo.scheduled_date) !=
-              new Date(item.scheduled_date)
-            ) {
+            // 날짜를 Date 객체로 변환하여 비교
+            const latestDate = new Date(latestItemInfo.scheduled_date);
+            const currentDate = new Date(item.scheduled_date);
+
+            // 시간 값(timestamp)으로 비교
+            if (latestDate.getTime() !== currentDate.getTime()) {
               console.log(
                 `Scheduled date changed for item ${itemId}: ${item.scheduled_date} -> ${latestItemInfo.scheduled_date}`
               );
