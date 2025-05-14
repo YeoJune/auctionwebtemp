@@ -410,38 +410,19 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // 2. 아이템에 대한 현재 사용자의 액티브 입찰 찾기
+    // 2. 아이템에 대한 현재 사용자의 입찰 찾기
     const [userBids] = await connection.query(
-      "SELECT * FROM direct_bids WHERE item_id = ? AND user_id = ? AND status = 'active'",
+      "SELECT * FROM direct_bids WHERE item_id = ? AND user_id = ?",
       [itemId, userId]
     );
 
-    // 3. 아이템에 대한 최고 입찰가 찾기
-    const [highestBids] = await connection.query(
-      "SELECT * FROM direct_bids WHERE item_id = ? AND status = 'active' ORDER BY current_price DESC LIMIT 1",
-      [itemId]
-    );
-
-    const highestBid = highestBids.length > 0 ? highestBids[0] : null;
-
-    // 4. 최고 입찰가 확인 및 검증
-    if (
-      highestBid &&
-      parseFloat(currentPrice) <= parseFloat(highestBid.current_price)
-    ) {
-      await connection.rollback();
-      return res.status(400).json({
-        message: `Your bid must be higher than the current highest bid (${highestBid.current_price})`,
-      });
-    }
-
     let bidId;
 
-    // 5. 사용자의 기존 입찰이 있으면 업데이트, 없으면 생성
+    // 3. 사용자의 기존 입찰이 있으면 업데이트, 없으면 생성
     if (userBids.length > 0) {
       // 5a. 기존 입찰 업데이트
       await connection.query(
-        "UPDATE direct_bids SET current_price = ? WHERE id = ?",
+        "UPDATE direct_bids SET current_price = ?, status = 'active' WHERE id = ?",
         [currentPrice, userBids[0].id]
       );
       bidId = userBids[0].id;
@@ -455,12 +436,10 @@ router.post("/", async (req, res) => {
     }
 
     // 6. 가격이 낮은 다른 입찰들을 취소
-    if (highestBid && highestBid.user_id !== userId) {
-      await connection.query(
-        "UPDATE direct_bids SET status = 'cancelled' WHERE item_id = ? AND current_price < ? AND status = 'active'",
-        [itemId, currentPrice]
-      );
-    }
+    await connection.query(
+      "UPDATE direct_bids SET status = 'cancelled' WHERE item_id = ? AND current_price < ? AND status = 'active'",
+      [itemId, currentPrice]
+    );
 
     // 7. scheduled_date 연장 (auc_num=1이고 마감 시간이 5분 미만일 때만)
     if (item.scheduled_date && (item.auc_num == 1 || item.auc_num == 3)) {
@@ -499,10 +478,13 @@ router.post("/", async (req, res) => {
     // 8. autoSubmit이 true인 경우 자동으로 입찰 제출
     let submissionResult = null;
     if (autoSubmit) {
-      submissionResult = await submitBid({
-        bid_id: bidId,
-        price: currentPrice,
-      });
+      submissionResult = await submitBid(
+        {
+          bid_id: bidId,
+          price: currentPrice,
+        },
+        item
+      );
 
       if (submissionResult && !submissionResult.success) {
         // 입찰 제출 실패해도 입찰 생성/업데이트는 성공적으로 이루어짐
@@ -671,11 +653,25 @@ router.post("/:id/submit", isAdmin, async (req, res) => {
         });
       }
 
+      const [items] = await connection.query(
+        "SELECT * FROM crawled_items WHERE item_id = ?",
+        [bid.item_id]
+      );
+
+      if (items.length === 0) {
+        return res.status(404).json({ message: "Item not found" });
+      }
+
+      const item = items[0];
+
       // submitBid 함수 호출
-      const result = await submitBid({
-        bid_id: id,
-        price: bid.current_price,
-      });
+      const result = await submitBid(
+        {
+          bid_id: id,
+          price: bid.current_price,
+        },
+        item
+      );
 
       if (result.success) {
         return res.status(200).json({

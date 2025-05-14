@@ -7,7 +7,7 @@ const { ecoAucCrawler, brandAucCrawler } = require("../crawlers/index");
  * @param {Object} bidData - The bid data containing bid_id and price
  * @returns {Promise<Object>} The result of the bid submission
  */
-async function submitBid(bidData) {
+async function submitBid(bidData, item) {
   const { bid_id, price } = bidData;
 
   console.log(
@@ -33,71 +33,8 @@ async function submitBid(bidData) {
     };
   }
 
-  // 입찰 정보 확인
   const connection = await pool.getConnection();
   await connection.beginTransaction();
-
-  console.log(`Retrieving bid information for bid ID: ${bid_id}`);
-  // 1. 입찰 정보 조회
-  const [bids] = await connection.query(
-    "SELECT * FROM direct_bids WHERE id = ?",
-    [bid_id]
-  );
-
-  if (bids.length === 0) {
-    console.log(`Bid not found with ID: ${bid_id}`);
-    await connection.rollback();
-    connection.release();
-    return {
-      success: false,
-      message: "Bid not found",
-      statusCode: 404,
-    };
-  }
-
-  const bid = bids[0];
-
-  console.log(`Retrieving item information for item ID: ${bid.item_id}`);
-  // 2. 아이템 정보 조회
-  const [items] = await connection.query(
-    "SELECT * FROM crawled_items WHERE item_id = ?",
-    [bid.item_id]
-  );
-
-  if (items.length === 0) {
-    console.log(`Item not found with ID: ${bid.item_id}`);
-    await connection.rollback();
-    connection.release();
-    return {
-      success: false,
-      message: "Item not found",
-      statusCode: 404,
-    };
-  }
-
-  const item = items[0];
-  console.log(
-    `Item found: ${item.item_id} from auction platform: ${item.auc_num}`
-  );
-
-  // scheduled_date 지났는지 확인
-  if (item.scheduled_date) {
-    const currentDate = new Date();
-    const scheduledDate = new Date(item.scheduled_date);
-
-    if (currentDate > scheduledDate) {
-      console.log(
-        `Scheduled date ${item.scheduled_date} has already passed. Current date: ${currentDate}`
-      );
-      await connection.rollback();
-      connection.release();
-      return {
-        success: false,
-        message: "Cannot submit bid: item's scheduled date has already passed",
-        statusCode: 400,
-      };
-    }
-  }
 
   // 3. 플랫폼에 입찰 제출
   let bidResult;
