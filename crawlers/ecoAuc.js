@@ -736,11 +736,6 @@ class EcoAucCrawler extends AxiosCrawler {
         $startingPrice.length > 0 ? $startingPrice.text().trim() : null;
       const startingPrice = this.currencyToInt(startingPriceText);
 
-      // 경매 날짜가 유효하지 않으면 null 반환
-      if (!this.isCollectionDay(scheduledDate)) {
-        return null;
-      }
-
       return {
         item_id: itemId,
         starting_price: startingPrice,
@@ -933,15 +928,6 @@ class EcoAucCrawler extends AxiosCrawler {
         .text()
         .trim();
       let scheduledDate = this.extractDate(scheduledDateText);
-
-      // is_end 판단 - #add-time-limit-bid 요소가 존재하면 false
-      const is_end = $("#add-time-limit-bid").length === 0;
-
-      // 날짜가 지났는데 is_end = false이면 2분 30초 추가
-      const now = new Date();
-      if (!is_end && scheduledDate < now) {
-        scheduledDate = new Date(scheduledDate.getTime() + 2.5 * 60 * 1000);
-      }
 
       return {
         item_id: itemId,
