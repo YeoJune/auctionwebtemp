@@ -331,42 +331,83 @@ router.post("/", async (req, res) => {
         );
         latestItemInfo = await crawler.crawlUpdateWithId(itemId);
 
-        // 최신 정보가 있고 가격이 다르면 DB 업데이트
-        if (latestItemInfo && latestItemInfo.starting_price !== undefined) {
+        // 최신 정보가 있고 가격이나 날짜가 다르면 DB 업데이트
+        if (latestItemInfo) {
+          let needsUpdate = false;
+          const updates = [];
+          const updateValues = [];
+
+          // 가격 업데이트 확인
           if (
+            latestItemInfo.starting_price !== undefined &&
             parseFloat(latestItemInfo.starting_price) !==
-            parseFloat(item.starting_price)
+              parseFloat(item.starting_price)
           ) {
             console.log(
               `Price changed for item ${itemId}: ${item.starting_price} -> ${latestItemInfo.starting_price}`
             );
-
-            // DB 업데이트
-            await connection.query(
-              "UPDATE crawled_items SET starting_price = ? WHERE item_id = ?",
-              [latestItemInfo.starting_price, itemId]
-            );
-
-            // 현재 가격이 최신 가격보다 낮은 경우
-            if (
-              parseFloat(currentPrice) <
-              parseFloat(latestItemInfo.starting_price)
-            ) {
-              await connection.rollback();
-              return res.status(400).json({
-                message: `Your bid (${currentPrice}) must be higher than the current item price (${latestItemInfo.starting_price})`,
-                latestPrice: latestItemInfo.starting_price,
-              });
-            }
+            updates.push("starting_price = ?");
+            updateValues.push(latestItemInfo.starting_price);
+            needsUpdate = true;
 
             // item 객체 업데이트
             item.starting_price = latestItemInfo.starting_price;
+          }
+
+          // 날짜 업데이트 확인
+          if (latestItemInfo.scheduled_date) {
+            // 날짜가 다르면 업데이트
+            if (latestItemInfo.scheduled_date !== item.scheduled_date) {
+              console.log(
+                `Scheduled date changed for item ${itemId}: ${item.scheduled_date} -> ${latestItemInfo.scheduled_date}`
+              );
+              updates.push("scheduled_date = ?");
+              updateValues.push(latestItemInfo.scheduled_date);
+              needsUpdate = true;
+
+              // item 객체 업데이트
+              item.scheduled_date = latestItemInfo.scheduled_date;
+            }
+          }
+
+          // DB 업데이트가 필요하면 실행
+          if (needsUpdate) {
+            updateValues.push(itemId);
+            await connection.query(
+              `UPDATE crawled_items SET ${updates.join(
+                ", "
+              )} WHERE item_id = ?`,
+              updateValues
+            );
+            console.log(`Updated item ${itemId} in database with latest info`);
           }
         }
       }
     } catch (error) {
       // 크롤링에 실패해도 기존 가격으로 진행
       console.error(`Error checking latest price for item ${itemId}:`, error);
+    }
+
+    // 1-2. 정보 업데이트 후 경매가 종료되었는지 확인 (scheduled_date가 지났는지)
+    const now = new Date();
+    const scheduledDate = new Date(item.scheduled_date);
+
+    if (scheduledDate < now) {
+      await connection.rollback();
+      return res.status(400).json({
+        message: "Auction has already ended. The scheduled date has passed.",
+        scheduled_date: item.scheduled_date,
+        current_time: now.toISOString(),
+      });
+    }
+
+    // 1-3. 현재 가격이 최신 가격보다 낮은 경우
+    if (parseFloat(currentPrice) < parseFloat(item.starting_price)) {
+      await connection.rollback();
+      return res.status(400).json({
+        message: `Your bid (${currentPrice}) must be higher than the current item price (${item.starting_price})`,
+        latestPrice: item.starting_price,
+      });
     }
 
     // 2. 아이템에 대한 현재 사용자의 액티브 입찰 찾기
@@ -391,14 +432,6 @@ router.post("/", async (req, res) => {
       await connection.rollback();
       return res.status(400).json({
         message: `Your bid must be higher than the current highest bid (${highestBid.current_price})`,
-      });
-    }
-
-    // 4-1. 시작가 검증
-    if (parseFloat(currentPrice) < parseFloat(item.starting_price)) {
-      await connection.rollback();
-      return res.status(400).json({
-        message: `Your bid must be higher than the starting price (${item.starting_price})`,
       });
     }
 
