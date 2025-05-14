@@ -3,6 +3,11 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../utils/DB");
 const submitBid = require("../utils/submitBid");
+const {
+  ecoAucCrawler,
+  brandAucCrawler,
+  starAucCrawler,
+} = require("../crawlers/index");
 
 const isAdmin = (req, res, next) => {
   if (req.session.user && req.session.user.id === "admin") {
@@ -310,6 +315,60 @@ router.post("/", async (req, res) => {
 
     const item = items[0];
 
+    // 1-1. crawlUpdateWithId로 최신 가격 확인
+    // 아이템의 auc_num에 따라 적절한 크롤러 선택
+    let latestItemInfo;
+    try {
+      const crawler = {
+        1: ecoAucCrawler,
+        2: brandAucCrawler,
+        3: starAucCrawler,
+      }[item.auc_num];
+
+      if (crawler && crawler.crawlUpdateWithId) {
+        console.log(
+          `Checking latest price for item ${itemId} (auc_num=${item.auc_num})`
+        );
+        latestItemInfo = await crawler.crawlUpdateWithId(itemId);
+
+        // 최신 정보가 있고 가격이 다르면 DB 업데이트
+        if (latestItemInfo && latestItemInfo.starting_price !== undefined) {
+          if (
+            parseFloat(latestItemInfo.starting_price) !==
+            parseFloat(item.starting_price)
+          ) {
+            console.log(
+              `Price changed for item ${itemId}: ${item.starting_price} -> ${latestItemInfo.starting_price}`
+            );
+
+            // DB 업데이트
+            await connection.query(
+              "UPDATE crawled_items SET starting_price = ? WHERE item_id = ?",
+              [latestItemInfo.starting_price, itemId]
+            );
+
+            // 현재 가격이 최신 가격보다 낮은 경우
+            if (
+              parseFloat(currentPrice) <
+              parseFloat(latestItemInfo.starting_price)
+            ) {
+              await connection.rollback();
+              return res.status(400).json({
+                message: `Your bid (${currentPrice}) must be higher than the current item price (${latestItemInfo.starting_price})`,
+                latestPrice: latestItemInfo.starting_price,
+              });
+            }
+
+            // item 객체 업데이트
+            item.starting_price = latestItemInfo.starting_price;
+          }
+        }
+      }
+    } catch (error) {
+      // 크롤링에 실패해도 기존 가격으로 진행
+      console.error(`Error checking latest price for item ${itemId}:`, error);
+    }
+
     // 2. 아이템에 대한 현재 사용자의 액티브 입찰 찾기
     const [userBids] = await connection.query(
       "SELECT * FROM direct_bids WHERE item_id = ? AND user_id = ? AND status = 'active'",
@@ -332,6 +391,14 @@ router.post("/", async (req, res) => {
       await connection.rollback();
       return res.status(400).json({
         message: `Your bid must be higher than the current highest bid (${highestBid.current_price})`,
+      });
+    }
+
+    // 4-1. 시작가 검증
+    if (parseFloat(currentPrice) < parseFloat(item.starting_price)) {
+      await connection.rollback();
+      return res.status(400).json({
+        message: `Your bid must be higher than the starting price (${item.starting_price})`,
       });
     }
 
@@ -389,7 +456,7 @@ router.post("/", async (req, res) => {
         );
 
         console.log(
-          `Extended scheduled_date to 5 minutes from now for item ${itemId} (auc_num=1)`
+          `Extended scheduled_date to 5 minutes from now for item ${itemId} (auc_num=${item.auc_num})`
         );
       }
     }
