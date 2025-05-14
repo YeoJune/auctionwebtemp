@@ -689,25 +689,17 @@ class BrandAucCrawler extends AxiosCrawler {
       }
 
       // 필터링된 아이템들에 대해 간소화된 정보 추출
-      const processedItem = this.extractUpdateItemInfo(item, bidType);
+      const processedItem = this.extractUpdateItemInfo(item);
       if (processedItem) updateItems.push(processedItem);
     }
 
     return updateItems;
   }
 
-  extractUpdateItemInfo(item, bidType = "live") {
-    // API 응답에서 필요한 최소한의 정보만 추출
-    const original_scheduled_date =
-      bidType === "direct"
-        ? this.extractDate(this.convertToKST(this.auctionDate))
-        : this.extractDate(this.convertToKST(item.kaisaiYmd));
-
+  extractUpdateItemInfo(item) {
     return {
       item_id: item.uketsukeBng,
-      scheduled_date: original_scheduled_date || null,
       starting_price: item.genzaiKng || item.startKng || 0,
-      bid_type: this.currentBidType,
     };
   }
 

@@ -302,6 +302,162 @@ async function crawlAllUpdates() {
   }
 }
 
+async function crawlAllUpdatesWithId() {
+  if (isUpdateCrawling || isCrawling || isValueCrawling) {
+    throw new Error("update crawling already in progress");
+  } else {
+    isUpdateCrawling = true;
+    const startTime = Date.now();
+    console.log(`Starting update crawl with ID at ${new Date().toISOString()}`);
+
+    try {
+      // DB에서 direct_bids와 crawled_items를 JOIN하여 active 상태 아이템 조회
+      const [activeBids] = await pool.query(
+        `SELECT DISTINCT db.item_id, ci.auc_num 
+         FROM direct_bids db
+         JOIN crawled_items ci ON db.item_id = ci.item_id
+         WHERE db.status = 'active' AND ci.bid_type = 'direct'`
+      );
+
+      if (activeBids.length === 0) {
+        console.log("No active bids found to update");
+        return {
+          ecoAucCount: 0,
+          brandAucCount: 0,
+          changedItemsCount: 0,
+          executionTime: "0h 0m 0s",
+        };
+      }
+
+      // 크롤러 맵핑
+      const crawlerMap = {
+        1: ecoAucCrawler,
+        2: brandAucCrawler,
+        3: starAucCrawler,
+      };
+
+      // 경매사별로 아이템 ID 그룹화
+      const itemsByAuction = {
+        1: [], // EcoAuc
+        2: [], // BrandAuc
+        3: [], // StarAuc
+      };
+
+      activeBids.forEach((bid) => {
+        if (itemsByAuction[bid.auc_num]) {
+          itemsByAuction[bid.auc_num].push(bid.item_id);
+        }
+      });
+
+      // 각 경매사별로 아이템 업데이트 요청
+      const updateResults = {
+        ecoAucUpdates: [],
+        brandAucUpdates: [],
+        starAucUpdates: [],
+      };
+
+      // 각 경매사별 업데이트 수행
+      if (itemsByAuction[1].length > 0) {
+        console.log(`Updating ${itemsByAuction[1].length} EcoAuc items`);
+        updateResults.ecoAucUpdates = await ecoAucCrawler.crawlUpdateWithIds(
+          itemsByAuction[1]
+        );
+      }
+
+      if (itemsByAuction[2].length > 0) {
+        console.log(`Updating ${itemsByAuction[2].length} BrandAuc items`);
+        updateResults.brandAucUpdates =
+          await brandAucCrawler.crawlUpdateWithIds(itemsByAuction[2]);
+      }
+
+      if (itemsByAuction[3].length > 0) {
+        console.log(`Updating ${itemsByAuction[3].length} StarAuc items`);
+        updateResults.starAucUpdates = await starAucCrawler.crawlUpdateWithIds(
+          itemsByAuction[3]
+        );
+      }
+
+      // 모든 업데이트 결과 합치기
+      const allUpdates = [
+        ...updateResults.ecoAucUpdates,
+        ...updateResults.brandAucUpdates,
+        ...updateResults.starAucUpdates,
+      ];
+
+      // DB에서 기존 데이터 가져오기
+      const itemIds = allUpdates.map((item) => item.item_id);
+
+      if (itemIds.length === 0) {
+        console.log("No items found to update");
+        return {
+          ecoAucCount: 0,
+          brandAucCount: 0,
+          changedItemsCount: 0,
+          executionTime: formatExecutionTime(Date.now() - startTime),
+        };
+      }
+
+      const [existingItems] = await pool.query(
+        "SELECT item_id, scheduled_date, starting_price FROM crawled_items WHERE item_id IN (?) AND bid_type = 'direct'",
+        [itemIds]
+      );
+
+      // 변경된 항목만 필터링 (scheduled_date 또는 starting_price가 변경된 것)
+      const changedItems = allUpdates.filter((newItem) => {
+        const existingItem = existingItems.find(
+          (item) => item.item_id === newItem.item_id
+        );
+        if (!existingItem) return false; // DB에 없는 아이템은 제외
+
+        // scheduled_date 또는 starting_price가 변경되었는지 확인
+        return (
+          (newItem.scheduled_date &&
+            new Date(newItem.scheduled_date).getTime() !==
+              new Date(existingItem.scheduled_date).getTime()) ||
+          (newItem.starting_price &&
+            parseFloat(newItem.starting_price) !==
+              parseFloat(existingItem.starting_price))
+        );
+      });
+
+      // 변경된 아이템이 있으면 DB 업데이트 비동기로 실행
+      if (changedItems.length > 0) {
+        console.log(`Found ${changedItems.length} changed items to update`);
+        // 비동기로 DB 업데이트 처리
+        DBManager.updateItems(changedItems, "crawled_items").then(() => {
+          // 가격 변경된 아이템에 대한 입찰 취소 처리
+          processChangedBids(changedItems).then(() => {
+            notifyClientsOfChanges(changedItems);
+          });
+        });
+      } else {
+        console.log("No items have changed");
+      }
+
+      const endTime = Date.now();
+      const executionTime = endTime - startTime;
+      console.log(
+        `Update crawl with ID operation completed in ${formatExecutionTime(
+          executionTime
+        )}`
+      );
+
+      return {
+        ecoAucCount: updateResults.ecoAucUpdates.length,
+        brandAucCount: updateResults.brandAucUpdates.length,
+        starAucCount: updateResults.starAucUpdates.length,
+        changedItemsCount: changedItems.length,
+        executionTime: formatExecutionTime(executionTime),
+      };
+    } catch (error) {
+      console.error("Update crawl with ID failed:", error);
+      throw error;
+    } finally {
+      isUpdateCrawling = false;
+    }
+  }
+}
+
 // 가격 변경에 따른 입찰 취소 처리
 async function processChangedBids(changedItems) {
   // 처리할 것이 없으면 빠르게 종료
@@ -693,6 +849,41 @@ const scheduleUpdateCrawling = () => {
   }, updateInterval * 1000);
 };
 
+// UPDATE_INTERVAL_ID 기반 스케줄링 추가
+const scheduleUpdateCrawlingWithId = () => {
+  const updateIntervalId = parseInt(process.env.UPDATE_INTERVAL_ID, 10) || 1800; // 기본값은 30분(1800초)
+
+  console.log(
+    `Scheduling update crawling with ID to run every ${updateIntervalId} seconds`
+  );
+
+  // 밀리초 단위로 변환하여 setInterval 설정
+  setInterval(async () => {
+    console.log("Running scheduled update crawling with ID task");
+    try {
+      if (!isCrawling && !isUpdateCrawling && !isValueCrawling) {
+        const result = await crawlAllUpdatesWithId();
+        console.log(
+          "Scheduled update crawling with ID completed successfully",
+          {
+            ecoAucCount: result.ecoAucCount,
+            brandAucCount: result.brandAucCount,
+            starAucCount: result.starAucCount,
+            changedItemsCount: result.changedItemsCount,
+            executionTime: result.executionTime,
+          }
+        );
+      } else {
+        console.log(
+          "Skipping scheduled update crawling with ID - another crawling process is active"
+        );
+      }
+    } catch (error) {
+      console.error("Scheduled update crawling with ID error:", error);
+    }
+  }, updateIntervalId * 1000);
+};
+
 const scheduleExpiredBidsProcessing = () => {
   const expiredBidInterval = 10 * 60 + 7; // 10분 7초
 
@@ -741,12 +932,14 @@ async function notifyClientsOfChanges(changedItems) {
   console.log(`Notified clients about ${changedItemIds.length} updated items`);
 }
 
+// product 환경에서 실행되도록 추가
 if (process.env.ENV === "development") {
   console.log("development env");
 } else {
   console.log("product env");
   scheduleCrawling();
   scheduleUpdateCrawling();
+  scheduleUpdateCrawlingWithId(); // 추가
   // scheduleExpiredBidsProcessing();
   loginAll();
 }

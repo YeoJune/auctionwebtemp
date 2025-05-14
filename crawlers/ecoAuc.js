@@ -728,14 +728,6 @@ class EcoAucCrawler extends AxiosCrawler {
         return null;
       }
 
-      // 날짜 추출
-      const $scheduledDate = element.find(
-        this.config.crawlSelectors.scheduledDate
-      );
-      const scheduledDateText =
-        $scheduledDate.length > 0 ? $scheduledDate.text().trim() : null;
-      const scheduledDate = this.extractDate(scheduledDateText);
-
       // 시작가 추출
       const $startingPrice = element.find(
         this.config.crawlSelectors.startingPrice
@@ -744,10 +736,6 @@ class EcoAucCrawler extends AxiosCrawler {
         $startingPrice.length > 0 ? $startingPrice.text().trim() : null;
       const startingPrice = this.currencyToInt(startingPriceText);
 
-      // 카테고리 추출 - 없을 경우 null로 설정
-      let category = null;
-      // 카테고리를 DOM 구조나 URL에서 추출 로직 추가 (필요 시)
-
       // 경매 날짜가 유효하지 않으면 null 반환
       if (!this.isCollectionDay(scheduledDate)) {
         return null;
@@ -755,10 +743,7 @@ class EcoAucCrawler extends AxiosCrawler {
 
       return {
         item_id: itemId,
-        scheduled_date: scheduledDate,
         starting_price: startingPrice,
-        bid_type: this.currentBidType,
-        category: category, // 카테고리 정보는 null 또는 추출된 값으로 설정
       };
     } catch (error) {
       console.error("Error extracting update item info:", error);
@@ -922,6 +907,83 @@ class EcoAucCrawler extends AxiosCrawler {
       return invoices;
     } catch (error) {
       console.error("Error crawling invoices:", error);
+      return [];
+    }
+  }
+
+  async crawlUpdateWithId(itemId) {
+    return this.retryOperation(async () => {
+      console.log(`Crawling update info for item ${itemId}...`);
+      await this.login();
+
+      const bidType = "direct";
+      const url = this.config.detailUrl(itemId, bidType);
+
+      const response = await this.client.get(url);
+      const $ = cheerio.load(response.data);
+
+      // Price 추출
+      const priceText = $("dt:contains('Price') + dd big.canopy-large-value")
+        .text()
+        .trim();
+      const price = this.currencyToInt(priceText);
+
+      // End scheduled date 추출
+      const scheduledDateText = $("dt:contains('End scheduled date') + dd")
+        .text()
+        .trim();
+      let scheduledDate = this.extractDate(scheduledDateText);
+
+      // is_end 판단 - #add-time-limit-bid 요소가 존재하면 false
+      const is_end = $("#add-time-limit-bid").length === 0;
+
+      // 날짜가 지났는데 is_end = false이면 2분 30초 추가
+      const now = new Date();
+      if (!is_end && scheduledDate < now) {
+        scheduledDate = new Date(scheduledDate.getTime() + 2.5 * 60 * 1000);
+      }
+
+      return {
+        item_id: itemId,
+        starting_price: price,
+        scheduled_date: scheduledDate,
+      };
+    });
+  }
+
+  async crawlUpdateWithIds(itemIds) {
+    try {
+      console.log(`Starting update crawl for ${itemIds.length} items...`);
+
+      // 로그인
+      await this.login();
+
+      const results = [];
+      const limit = pLimit(5); // 병렬 처리를 위한 제한 설정
+
+      // 병렬 처리
+      const promises = itemIds.map((itemId) =>
+        limit(async () => {
+          try {
+            const result = await this.crawlUpdateWithId(itemId);
+            if (result) {
+              results.push(result);
+            }
+            return result;
+          } catch (error) {
+            console.error(`Error crawling update for item ${itemId}:`, error);
+            return null;
+          }
+        })
+      );
+
+      // 모든 결과 기다리기
+      await Promise.all(promises);
+
+      console.log(`Update crawl completed for ${results.length} items`);
+      return results;
+    } catch (error) {
+      console.error("Update crawl with IDs failed:", error);
       return [];
     }
   }
@@ -1253,5 +1315,7 @@ class EcoAucValueCrawler extends AxiosCrawler {
 
 const ecoAucCrawler = new EcoAucCrawler(ecoAucConfig);
 const ecoAucValueCrawler = new EcoAucValueCrawler(ecoAucValueConfig);
+
+ecoAucCrawler.crawlUpdateWithId(7028221).then((data) => console.log(data));
 
 module.exports = { ecoAucCrawler, ecoAucValueCrawler };

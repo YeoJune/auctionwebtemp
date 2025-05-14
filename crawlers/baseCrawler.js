@@ -463,70 +463,115 @@ class AxiosCrawler {
   extractDate(text) {
     if (!text) return null;
 
-    // 기존 YYYY-MM-DD 또는 YYYY/MM/DD 형식 (시간 포함 가능)
-    const regex1 = /(\d{4}).?(\d{2}).?(\d{2})/;
-    const match1 = text.match(regex1);
-    const regex2 = /(\d{4}).?(\d{2}).?(\d{2}).*?(\d{2})\s*?[：:]\s*(\d{2})/;
-    const match2 = text.match(regex2);
-
-    // 영문 월 형식 (ex: Feb,25,2025 또는 February 25, 2025)
+    // 월 이름과 숫자 매핑
     const monthNames = {
-      Jan: "01",
-      Feb: "02",
-      Mar: "03",
-      Apr: "04",
-      May: "05",
-      Jun: "06",
-      Jul: "07",
-      Aug: "08",
-      Sep: "09",
-      Oct: "10",
-      Nov: "11",
-      Dec: "12",
-      January: "01",
-      February: "02",
-      March: "03",
-      April: "04",
-      May: "05",
-      June: "06",
-      July: "07",
-      August: "08",
-      September: "09",
-      October: "10",
-      November: "11",
-      December: "12",
+      jan: "01",
+      january: "01",
+      feb: "02",
+      february: "02",
+      mar: "03",
+      march: "03",
+      apr: "04",
+      april: "04",
+      may: "05",
+      jun: "06",
+      june: "06",
+      jul: "07",
+      july: "07",
+      aug: "08",
+      august: "08",
+      sep: "09",
+      september: "09",
+      oct: "10",
+      october: "10",
+      nov: "11",
+      november: "11",
+      dec: "12",
+      december: "12",
     };
 
-    const regex3 =
-      /(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)[,\s.-]*(\d{1,2})[,\s.-]*(\d{4})/i;
-    const match3 = text.match(regex3);
+    // 텍스트 전처리: 모든 문자를 소문자로 변환
+    const lowerText = text.toLowerCase();
 
-    // 날짜 형식 MM/DD/YYYY 또는 DD/MM/YYYY (미국식 또는 유럽식)
-    const regex4 = /(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/;
-    const match4 = text.match(regex4);
+    // 패턴 1: 영문 월 + 일 + 연도 + 시간 (예: May 14, 2025 18:00)
+    const pattern1 =
+      /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|june|july|august|september|october|november|december)[,\s.-]*(\d{1,2})[,\s.-]*(\d{4}).*?(\d{1,2})[：:\s]*(\d{2})/i;
+    const match1 = lowerText.match(pattern1);
+
+    if (match1) {
+      const month = monthNames[match1[1]];
+      const day = match1[2].padStart(2, "0");
+      const year = match1[3];
+      const hour = match1[4].padStart(2, "0");
+      const minute = match1[5].padStart(2, "0");
+      return `${year}-${month}-${day} ${hour}:${minute}:00`;
+    }
+
+    // 패턴 2: 영문 월 + 일 + 연도 (시간 없음) (예: May 14, 2025)
+    const pattern2 =
+      /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|june|july|august|september|october|november|december)[,\s.-]*(\d{1,2})[,\s.-]*(\d{4})/i;
+    const match2 = lowerText.match(pattern2);
 
     if (match2) {
-      return `${match2[1]}-${match2[2]}-${match2[3]} ${match2[4]}:${match2[5]}:00`;
-    } else if (match1) {
-      return `${match1[1]}-${match1[2]}-${match1[3]} 00:00:00`;
-    } else if (match3) {
-      const month =
-        monthNames[
-          match3[1].charAt(0).toUpperCase() + match3[1].slice(1).toLowerCase()
-        ];
-      const day = match3[2].padStart(2, "0");
-      const year = match3[3];
+      const month = monthNames[match2[1]];
+      const day = match2[2].padStart(2, "0");
+      const year = match2[3];
       return `${year}-${month}-${day} 00:00:00`;
-    } else if (match4) {
-      // 여기서는 미국식(MM/DD/YYYY)으로 가정합니다
-      // 만약 유럽식(DD/MM/YYYY)을 원하면 아래 코드를 수정해야 합니다
-      const month = match4[1].padStart(2, "0");
-      const day = match4[2].padStart(2, "0");
-      const year = match4[3];
-      return `${year}-${month}-${day} 00:00:00`;
-    } else {
-      return null;
     }
+
+    // 패턴 3: YYYY-MM-DD HH:MM 형식 (예: 2025-05-14 18:00)
+    const pattern3 =
+      /(\d{4})[-./](\d{1,2})[-./](\d{1,2}).*?(\d{1,2})[：:\s]*(\d{2})/;
+    const match3 = text.match(pattern3);
+
+    if (match3) {
+      const year = match3[1];
+      const month = match3[2].padStart(2, "0");
+      const day = match3[3].padStart(2, "0");
+      const hour = match3[4].padStart(2, "0");
+      const minute = match3[5].padStart(2, "0");
+      return `${year}-${month}-${day} ${hour}:${minute}:00`;
+    }
+
+    // 패턴 4: YYYY-MM-DD 형식 (시간 없음) (예: 2025-05-14)
+    const pattern4 = /(\d{4})[-./](\d{1,2})[-./](\d{1,2})/;
+    const match4 = text.match(pattern4);
+
+    if (match4) {
+      const year = match4[1];
+      const month = match4[2].padStart(2, "0");
+      const day = match4[3].padStart(2, "0");
+      return `${year}-${month}-${day} 00:00:00`;
+    }
+
+    // 패턴 5: MM/DD/YYYY HH:MM 형식 (미국식) (예: 05/14/2025 18:00)
+    const pattern5 =
+      /(\d{1,2})[-./](\d{1,2})[-./](\d{4}).*?(\d{1,2})[：:\s]*(\d{2})/;
+    const match5 = text.match(pattern5);
+
+    if (match5) {
+      // 미국식(MM/DD/YYYY)으로 가정
+      const month = match5[1].padStart(2, "0");
+      const day = match5[2].padStart(2, "0");
+      const year = match5[3];
+      const hour = match5[4].padStart(2, "0");
+      const minute = match5[5].padStart(2, "0");
+      return `${year}-${month}-${day} ${hour}:${minute}:00`;
+    }
+
+    // 패턴 6: MM/DD/YYYY 형식 (시간 없음) (예: 05/14/2025)
+    const pattern6 = /(\d{1,2})[-./](\d{1,2})[-./](\d{4})/;
+    const match6 = text.match(pattern6);
+
+    if (match6) {
+      // 미국식(MM/DD/YYYY)으로 가정
+      const month = match6[1].padStart(2, "0");
+      const day = match6[2].padStart(2, "0");
+      const year = match6[3];
+      return `${year}-${month}-${day} 00:00:00`;
+    }
+
+    return null;
   }
 
   isCollectionDay(date) {
