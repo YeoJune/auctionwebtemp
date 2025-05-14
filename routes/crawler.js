@@ -304,17 +304,23 @@ async function crawlAllUpdates() {
 }
 
 async function crawlAllUpdatesWithId() {
-  if (isUpdateCrawlingWithId) {
-    throw new Error("update crawling already in progress");
+  if (
+    isUpdateCrawlingWithId ||
+    isCrawling ||
+    isValueCrawling ||
+    isUpdateCrawling
+  ) {
+    throw new Error("Another crawling process is already in progress");
   } else {
     isUpdateCrawlingWithId = true;
     const startTime = Date.now();
     console.log(`Starting update crawl with ID at ${new Date().toISOString()}`);
 
     try {
-      // DB에서 direct_bids와 crawled_items를 JOIN하여 active 상태 아이템 조회
+      // DB에서 direct_bids와 crawled_items를 JOIN하여 active 상태 아이템과 필요한 정보 조회
       const [activeBids] = await pool.query(
-        `SELECT DISTINCT db.item_id, ci.auc_num 
+        `SELECT DISTINCT db.item_id, ci.auc_num, ci.kaisaiKaisu, ci.kaijoCd, 
+          ci.scheduled_date, ci.starting_price
          FROM direct_bids db
          JOIN crawled_items ci ON db.item_id = ci.item_id
          WHERE db.status = 'active' AND ci.bid_type = 'direct'`
@@ -325,99 +331,101 @@ async function crawlAllUpdatesWithId() {
         return {
           ecoAucCount: 0,
           brandAucCount: 0,
+          starAucCount: 0,
           changedItemsCount: 0,
           executionTime: "0h 0m 0s",
         };
       }
 
-      // 크롤러 맵핑
-      const crawlerMap = {
-        1: ecoAucCrawler,
-        2: brandAucCrawler,
-        3: starAucCrawler,
-      };
-
-      // 경매사별로 아이템 ID 그룹화
+      // 경매사별로 아이템 ID와 정보 그룹화
       const itemsByAuction = {
         1: [], // EcoAuc
         2: [], // BrandAuc
         3: [], // StarAuc
       };
 
+      // 각 경매사별 아이템 정보 맵 생성
+      const itemInfoMaps = {
+        1: {}, // EcoAuc
+        2: {}, // BrandAuc
+        3: {}, // StarAuc
+      };
+
+      // 아이템을 경매사별로 분류하고 정보 맵 생성
       activeBids.forEach((bid) => {
-        if (itemsByAuction[bid.auc_num]) {
-          itemsByAuction[bid.auc_num].push(bid.item_id);
+        const auc_num = bid.auc_num;
+        if (itemsByAuction[auc_num]) {
+          // 아이템 ID 추가
+          itemsByAuction[auc_num].push(bid.item_id);
+
+          // 아이템 정보 맵에 저장
+          itemInfoMaps[auc_num][bid.item_id] = {
+            item_id: bid.item_id,
+            kaisaiKaisu: bid.kaisaiKaisu,
+            kaijoCd: bid.kaijoCd || 1,
+            scheduled_date: bid.scheduled_date,
+            starting_price: bid.starting_price,
+          };
         }
       });
 
       // 각 경매사별로 아이템 업데이트 요청
-      const updateResults = {
-        ecoAucUpdates: [],
-        brandAucUpdates: [],
-        starAucUpdates: [],
+      const updateResults = {};
+      const crawlers = {
+        1: ecoAucCrawler,
+        2: brandAucCrawler,
+        3: starAucCrawler,
+      };
+      const crawlerNames = {
+        1: "EcoAuc",
+        2: "BrandAuc",
+        3: "StarAuc",
       };
 
       // 각 경매사별 업데이트 수행
-      if (itemsByAuction[1].length > 0) {
-        console.log(`Updating ${itemsByAuction[1].length} EcoAuc items`);
-        updateResults.ecoAucUpdates = await ecoAucCrawler.crawlUpdateWithIds(
-          itemsByAuction[1]
-        );
-      }
+      for (const aucNum in itemsByAuction) {
+        const itemIds = itemsByAuction[aucNum];
+        if (itemIds.length > 0) {
+          const crawlerName = crawlerNames[aucNum];
+          const resultsKey = `${crawlerName.toLowerCase()}Updates`;
 
-      if (itemsByAuction[2].length > 0) {
-        console.log(`Updating ${itemsByAuction[2].length} BrandAuc items`);
-        updateResults.brandAucUpdates =
-          await brandAucCrawler.crawlUpdateWithIds(itemsByAuction[2]);
-      }
+          console.log(`Updating ${itemIds.length} ${crawlerName} items`);
 
-      if (itemsByAuction[3].length > 0) {
-        console.log(`Updating ${itemsByAuction[3].length} StarAuc items`);
-        updateResults.starAucUpdates = await starAucCrawler.crawlUpdateWithIds(
-          itemsByAuction[3]
-        );
+          // 크롤러 호출 (BrandAuc의 경우 아이템 정보 맵도 전달)
+          const crawler = crawlers[aucNum];
+          updateResults[resultsKey] = await crawler.crawlUpdateWithIds(
+            itemIds,
+            aucNum === "2" ? itemInfoMaps[aucNum] : undefined
+          );
+        } else {
+          updateResults[`${crawlerNames[aucNum].toLowerCase()}Updates`] = [];
+        }
       }
 
       // 모든 업데이트 결과 합치기
       const allUpdates = [
-        ...updateResults.ecoAucUpdates,
-        ...updateResults.brandAucUpdates,
-        ...updateResults.starAucUpdates,
+        ...(updateResults.ecoAucUpdates || []),
+        ...(updateResults.brandAucUpdates || []),
+        ...(updateResults.starAucUpdates || []),
       ];
 
-      // DB에서 기존 데이터 가져오기
-      const itemIds = allUpdates.map((item) => item.item_id);
-
-      if (itemIds.length === 0) {
-        console.log("No items found to update");
-        return {
-          ecoAucCount: 0,
-          brandAucCount: 0,
-          changedItemsCount: 0,
-          executionTime: formatExecutionTime(Date.now() - startTime),
-        };
-      }
-
-      const [existingItems] = await pool.query(
-        "SELECT item_id, scheduled_date, starting_price FROM crawled_items WHERE item_id IN (?) AND bid_type = 'direct'",
-        [itemIds]
-      );
-
-      // 변경된 항목만 필터링 (scheduled_date 또는 starting_price가 변경된 것)
+      // 변경된 항목 필터링
       const changedItems = allUpdates.filter((newItem) => {
-        const existingItem = existingItems.find(
-          (item) => item.item_id === newItem.item_id
-        );
-        if (!existingItem) return false; // DB에 없는 아이템은 제외
+        const originalItem =
+          itemInfoMaps[1][newItem.item_id] ||
+          itemInfoMaps[2][newItem.item_id] ||
+          itemInfoMaps[3][newItem.item_id];
 
-        // scheduled_date 또는 starting_price가 변경되었는지 확인
+        if (!originalItem) return false;
+
+        // 가격 또는 날짜 변경 확인
         return (
           (newItem.scheduled_date &&
             new Date(newItem.scheduled_date).getTime() !==
-              new Date(existingItem.scheduled_date).getTime()) ||
+              new Date(originalItem.scheduled_date).getTime()) ||
           (newItem.starting_price &&
             parseFloat(newItem.starting_price) !==
-              parseFloat(existingItem.starting_price))
+              parseFloat(originalItem.starting_price))
         );
       });
 
@@ -444,9 +452,9 @@ async function crawlAllUpdatesWithId() {
       );
 
       return {
-        ecoAucCount: updateResults.ecoAucUpdates.length,
-        brandAucCount: updateResults.brandAucUpdates.length,
-        starAucCount: updateResults.starAucUpdates.length,
+        ecoAucCount: updateResults.ecoAucUpdates?.length || 0,
+        brandAucCount: updateResults.brandAucUpdates?.length || 0,
+        starAucCount: updateResults.starAucUpdates?.length || 0,
         changedItemsCount: changedItems.length,
         executionTime: formatExecutionTime(executionTime),
       };

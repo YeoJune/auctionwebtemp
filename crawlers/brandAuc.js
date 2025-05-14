@@ -832,6 +832,100 @@ class BrandAucCrawler extends AxiosCrawler {
       return [];
     }
   }
+
+  async crawlUpdateWithId(itemId, item) {
+    return this.retryOperation(async () => {
+      console.log(`Crawling update info for item ${itemId}...`);
+      await this.login();
+
+      // item에서 kaisaiKaisu와 kaijoCd 가져오기
+      const kaisaiKaisu = item?.kaisaiKaisu;
+      const kaijoCd = item?.kaijoCd || 1;
+
+      if (!kaisaiKaisu) {
+        console.warn(
+          `Missing kaisaiKaisu for item ${itemId}, using fallback values`
+        );
+      }
+
+      // 상세 정보 URL 구성 (원본 아이템의 정보 사용)
+      const detailUrl = `https://bid.brand-auc.com/api/v1/brand-bid/items/${kaijoCd}/${kaisaiKaisu}/${itemId}`;
+
+      const response = await this.client.get(detailUrl, {
+        headers: {
+          Accept: "application/json, text/plain, */*",
+          "Accept-Language": "en-US,en;q=0.9",
+          Referer: "https://bid.brand-auc.com/",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+      });
+
+      // 응답 데이터 파싱
+      const detailData = response.data;
+
+      // 필요한 정보 추출 (id와 가격만)
+      const item_id = detailData.uketsukeBng;
+      const price = detailData.genzaiKng || detailData.startKng || 0;
+
+      return {
+        item_id: item_id,
+        starting_price: price,
+      };
+    });
+  }
+
+  async crawlUpdateWithIds(itemIds, itemsInfo = []) {
+    try {
+      console.log(`Starting update crawl for ${itemIds.length} items...`);
+
+      // 로그인
+      await this.login();
+
+      const results = [];
+      const limit = pLimit(5); // 병렬 처리를 위한 제한 설정
+
+      // itemsInfo가 배열이면 아이템 ID를 키로 하는 맵으로 변환
+      const itemInfoMap = {};
+      if (Array.isArray(itemsInfo)) {
+        itemsInfo.forEach((item) => {
+          if (item.item_id) {
+            itemInfoMap[item.item_id] = item;
+          }
+        });
+      } else {
+        // 이미 맵 형태로 전달된 경우
+        Object.assign(itemInfoMap, itemsInfo);
+      }
+
+      // 병렬 처리
+      const promises = itemIds.map((itemId) =>
+        limit(async () => {
+          try {
+            // 원본 아이템 정보 사용
+            const itemInfo = itemInfoMap[itemId] || {};
+
+            const result = await this.crawlUpdateWithId(itemId, itemInfo);
+            if (result) {
+              results.push(result);
+            }
+            return result;
+          } catch (error) {
+            console.error(`Error crawling update for item ${itemId}:`, error);
+            return null;
+          }
+        })
+      );
+
+      // 모든 결과 기다리기
+      await Promise.all(promises);
+
+      console.log(`Update crawl completed for ${results.length} items`);
+      return results;
+    } catch (error) {
+      console.error("Update crawl with IDs failed:", error);
+      return [];
+    }
+  }
 }
 
 class BrandAucValueCrawler extends AxiosCrawler {
