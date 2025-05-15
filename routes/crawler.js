@@ -304,12 +304,7 @@ async function crawlAllUpdates() {
 }
 
 async function crawlAllUpdatesWithId() {
-  if (
-    isUpdateCrawlingWithId ||
-    isCrawling ||
-    isValueCrawling ||
-    isUpdateCrawling
-  ) {
+  if (isUpdateCrawlingWithId || isCrawling || isValueCrawling) {
     throw new Error("Another crawling process is already in progress");
   } else {
     isUpdateCrawlingWithId = true;
@@ -337,32 +332,26 @@ async function crawlAllUpdatesWithId() {
         };
       }
 
-      // 경매사별로 아이템 ID와 정보 그룹화
+      // 경매사별로 아이템 ID 그룹화
       const itemsByAuction = {
         1: [], // EcoAuc
         2: [], // BrandAuc
         3: [], // StarAuc
       };
 
-      // 각 경매사별 아이템 정보 맵 생성
-      const itemInfoMaps = {
-        1: {}, // EcoAuc
-        2: {}, // BrandAuc
-        3: {}, // StarAuc
-      };
+      // 원래 아이템 정보 저장용 맵 (변경 사항 확인용)
+      const originalItems = {};
 
-      // 아이템을 경매사별로 분류하고 정보 맵 생성
+      // 아이템을 경매사별로 분류하고 원본 정보 저장
       activeBids.forEach((bid) => {
         const auc_num = bid.auc_num;
         if (itemsByAuction[auc_num]) {
           // 아이템 ID 추가
           itemsByAuction[auc_num].push(bid.item_id);
 
-          // 아이템 정보 맵에 저장
-          itemInfoMaps[auc_num][bid.item_id] = {
+          // 원본 아이템 정보 저장
+          originalItems[bid.item_id] = {
             item_id: bid.item_id,
-            kaisaiKaisu: bid.kaisaiKaisu,
-            kaijoCd: bid.kaijoCd || 1,
             scheduled_date: bid.scheduled_date,
             starting_price: bid.starting_price,
           };
@@ -391,12 +380,9 @@ async function crawlAllUpdatesWithId() {
 
           console.log(`Updating ${itemIds.length} ${crawlerName} items`);
 
-          // 크롤러 호출 (BrandAuc의 경우 아이템 정보 맵도 전달)
+          // 크롤러 호출 (itemInfoMaps 전달 없이)
           const crawler = crawlers[aucNum];
-          updateResults[resultsKey] = await crawler.crawlUpdateWithIds(
-            itemIds,
-            aucNum === "2" ? itemInfoMaps[aucNum] : undefined
-          );
+          updateResults[resultsKey] = await crawler.crawlUpdateWithIds(itemIds);
         } else {
           updateResults[`${crawlerNames[aucNum].toLowerCase()}Updates`] = [];
         }
@@ -411,11 +397,7 @@ async function crawlAllUpdatesWithId() {
 
       // 변경된 항목 필터링
       const changedItems = allUpdates.filter((newItem) => {
-        const originalItem =
-          itemInfoMaps[1][newItem.item_id] ||
-          itemInfoMaps[2][newItem.item_id] ||
-          itemInfoMaps[3][newItem.item_id];
-
+        const originalItem = originalItems[newItem.item_id];
         if (!originalItem) return false;
 
         // 가격 또는 날짜 변경 확인

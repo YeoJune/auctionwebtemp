@@ -833,20 +833,10 @@ class BrandAucCrawler extends AxiosCrawler {
     }
   }
 
-  async crawlUpdateWithId(itemId, item) {
+  async crawlUpdateWithId(itemId) {
     return this.retryOperation(async () => {
       console.log(`Crawling update info for item ${itemId}...`);
       await this.login();
-
-      // item에서 kaisaiKaisu와 kaijoCd 가져오기
-      const kaisaiKaisu = item?.kaisaiKaisu;
-      const kaijoCd = item?.kaijoCd || 1;
-
-      // if (!kaisaiKaisu) {
-      //   console.warn(
-      //     `Missing kaisaiKaisu for item ${itemId}, using fallback values`
-      //   );
-      // }
 
       // 상세 정보 URL 구성 (원본 아이템의 정보 사용)
       const detailUrl = `https://bid.brand-auc.com/api/v1/brand-bid/items/detail?uketsukeBng=${itemId}`;
@@ -878,7 +868,7 @@ class BrandAucCrawler extends AxiosCrawler {
     });
   }
 
-  async crawlUpdateWithIds(itemIds, itemsInfo = []) {
+  async crawlUpdateWithIds(itemIds) {
     try {
       console.log(`Starting update crawl for ${itemIds.length} items...`);
 
@@ -888,27 +878,11 @@ class BrandAucCrawler extends AxiosCrawler {
       const results = [];
       const limit = pLimit(5); // 병렬 처리를 위한 제한 설정
 
-      // itemsInfo가 배열이면 아이템 ID를 키로 하는 맵으로 변환
-      const itemInfoMap = {};
-      if (Array.isArray(itemsInfo)) {
-        itemsInfo.forEach((item) => {
-          if (item.item_id) {
-            itemInfoMap[item.item_id] = item;
-          }
-        });
-      } else {
-        // 이미 맵 형태로 전달된 경우
-        Object.assign(itemInfoMap, itemsInfo);
-      }
-
       // 병렬 처리
       const promises = itemIds.map((itemId) =>
         limit(async () => {
           try {
-            // 원본 아이템 정보 사용
-            const itemInfo = itemInfoMap[itemId] || {};
-
-            const result = await this.crawlUpdateWithId(itemId, itemInfo);
+            const result = await this.crawlUpdateWithId(itemId);
             if (result) {
               results.push(result);
             }
