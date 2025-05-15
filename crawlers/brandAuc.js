@@ -842,14 +842,14 @@ class BrandAucCrawler extends AxiosCrawler {
       const kaisaiKaisu = item?.kaisaiKaisu;
       const kaijoCd = item?.kaijoCd || 1;
 
-      if (!kaisaiKaisu) {
-        console.warn(
-          `Missing kaisaiKaisu for item ${itemId}, using fallback values`
-        );
-      }
+      // if (!kaisaiKaisu) {
+      //   console.warn(
+      //     `Missing kaisaiKaisu for item ${itemId}, using fallback values`
+      //   );
+      // }
 
       // 상세 정보 URL 구성 (원본 아이템의 정보 사용)
-      const detailUrl = `https://bid.brand-auc.com/api/v1/brand-bid/items/${kaijoCd}/${kaisaiKaisu}/${itemId}`;
+      const detailUrl = `https://bid.brand-auc.com/api/v1/brand-bid/items/detail?uketsukeBng=${itemId}`;
 
       const response = await this.client.get(detailUrl, {
         headers: {
@@ -861,14 +861,18 @@ class BrandAucCrawler extends AxiosCrawler {
       });
 
       // 응답 데이터 파싱
-      const detailData = response.data;
+      const detailDatas = response.data?.content;
+      if (!detailDatas || detailDatas.length === 0) {
+        console.warn(`No detail data found for item ${itemId}`);
+        return null;
+      }
+      const detailData = detailDatas[0];
 
       // 필요한 정보 추출 (id와 가격만)
-      const item_id = detailData.uketsukeBng;
       const price = detailData.genzaiKng || detailData.startKng || 0;
 
       return {
-        item_id: item_id,
+        item_id: itemId,
         starting_price: price,
       };
     });
