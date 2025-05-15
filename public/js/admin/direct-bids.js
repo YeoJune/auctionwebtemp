@@ -214,7 +214,8 @@ function renderDirectBidsTable(directBids) {
   // URL 매핑 함수
   const linkFunc = {
     1: (itemId) => `https://www.ecoauc.com/client/auction-items/view/${itemId}`,
-    2: (itemId) => itemId,
+    2: (itemId) =>
+      `https://bid.brand-auc.com/items/detail?uketsukeBng=${itemId}`, // BrandAuc 링크
     3: (itemId) => `https://www.starbuyers-global-auction.com/item/${itemId}`, // StarAuc 링크
   };
 
