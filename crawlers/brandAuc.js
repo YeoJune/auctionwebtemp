@@ -287,8 +287,14 @@ class BrandAucCrawler extends AxiosCrawler {
           );
 
           // 경매 날짜 정보 저장
-          this.auctionDate = auctionInfoResponse.data.kaisaiYmd;
+          const auctionDates = auctionInfoResponse.data.nyuShimeYmdList;
           this.auctionKaisu = auctionInfoResponse.data.kaisaiKaisu;
+
+          if (auctionDates.length === 0) {
+            throw new Error("Failed to get auction dates");
+          }
+
+          this.auctionDate = auctionDates[0];
 
           // Direct 아이템 가져오기
           const firstPageResponse = await this.client.get(
