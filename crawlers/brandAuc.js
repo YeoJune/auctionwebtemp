@@ -190,7 +190,7 @@ class BrandAucCrawler extends AxiosCrawler {
 
       // Live 경매와 Direct 경매 모두 수집
       const bidTypes = [
-        // { type: "live", otherCds: "1" }, // Live 경매는 기존 방식 유지
+        { type: "live", otherCds: "1" }, // Live 경매는 기존 방식 유지
         { type: "direct" }, // Direct 경매는 새로운 API 사용
       ];
 
@@ -564,8 +564,14 @@ class BrandAucCrawler extends AxiosCrawler {
       );
 
       // 경매 날짜 정보 저장
-      this.auctionDate = auctionInfoResponse.data.kaisaiYmd;
+      const auctionDates = auctionInfoResponse.data.nyuShimeYmdList;
       this.auctionKaisu = auctionInfoResponse.data.kaisaiKaisu;
+
+      if (auctionDates.length === 0) {
+        throw new Error("Failed to get auction dates");
+      }
+
+      this.auctionDate = auctionDates[0];
 
       console.log(`Starting update crawl for direct auctions`);
 
