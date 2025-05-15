@@ -130,9 +130,7 @@ class BrandAucCrawler extends AxiosCrawler {
         // 2. bid 로그인
         console.log("Logging in to bid.brand-auc.com system...");
 
-        // bid 로그인 페이지 가져오기
         const bidLoginUrl = "https://bid.brand-auc.com/loginPage";
-        const bidResponse = await this.client.get(bidLoginUrl);
 
         // bid Form 데이터 준비
         const bidFormData = new URLSearchParams();
@@ -151,12 +149,21 @@ class BrandAucCrawler extends AxiosCrawler {
               "Content-Type": "application/x-www-form-urlencoded",
               Referer: bidLoginUrl,
             },
-            maxRedirects: 5,
+            maxRedirects: 10,
             validateStatus: function (status) {
               return status >= 200 && status < 400;
             },
           }
         );
+
+        // console.log(bidLoginResponse.data);
+
+        // bid 로그인 페이지 가져오기
+        const bidResponse = await this.client.get(
+          "https://member.brand-auc.com/auth/success"
+        );
+
+        // console.log(bidResponse.data);
 
         // 로그인 후 검증
         if (await this.loginCheck()) {
@@ -700,12 +707,24 @@ class BrandAucCrawler extends AxiosCrawler {
       // 로그인 상태 확인
       await this.login();
 
-      // 입찰 API 호출
+      // XSRF 토큰 추출 (쿠키에서)
+      const cookies = await this.cookieJar.getCookies(
+        "https://bid.brand-auc.com"
+      );
+      const xsrfToken = cookies.find(
+        (cookie) => cookie.key === "XSRF-TOKEN"
+      )?.value;
+
+      if (!xsrfToken) {
+        throw new Error("XSRF token not found in cookies");
+      }
+
+      // 입찰 API 호출 (JSON 형식 유지)
       const response = await this.client.post(
-        "https://bid.brand-auc.com/api/v1/brand-bid/jizen-nyusatsu/",
+        "https://bid.brand-auc.com/api/v1/brand-bid/jizen-nyusatsu/", // 슬래시 유지
         {
           uketsukeBng: item_id,
-          kaijoKbn: 1, // 기본값 1 사용, 필요시 조정 가능
+          kaijoKbn: 1,
           nyusatsuKng: price,
         },
         {
@@ -713,6 +732,7 @@ class BrandAucCrawler extends AxiosCrawler {
             "Content-Type": "application/json",
             Referer: "https://bid.brand-auc.com/",
             "X-Requested-With": "XMLHttpRequest",
+            "X-XSRF-TOKEN": xsrfToken, // XSRF 토큰 추가
           },
         }
       );
