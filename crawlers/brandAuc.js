@@ -559,26 +559,6 @@ class BrandAucCrawler extends AxiosCrawler {
       const allCrawledItems = [];
       const size = 1000; // 한 페이지당 항목 수
 
-      // 경매 정보 가져오기
-      const auctionInfoResponse = await this.client.get(
-        "https://bid.brand-auc.com/api/v1/brand-bid/com/auction-info",
-        {
-          headers: {
-            Accept: "application/json, text/plain, */*",
-          },
-        }
-      );
-
-      // 경매 날짜 정보 저장
-      const auctionDates = auctionInfoResponse.data.nyuShimeYmdList;
-      this.auctionKaisu = auctionInfoResponse.data.kaisaiKaisu;
-
-      if (auctionDates.length === 0) {
-        throw new Error("Failed to get auction dates");
-      }
-
-      this.auctionDate = auctionDates[0];
-
       console.log(`Starting update crawl for direct auctions`);
 
       // 첫 페이지 요청
