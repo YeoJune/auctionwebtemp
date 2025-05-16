@@ -25,10 +25,10 @@ const userRoutes = require("./routes/users");
 const dashboardRoutes = require("./routes/dashboard");
 
 // --- 감정 시스템 관련 라우트 ---
-const appraisalApprRoutes = require("./routes/appr/appraisal");
-const certificateApprRoutes = require("./routes/appr/certificate");
-const restorationApprRoutes = require("./routes/appr/restoration");
-const paymentApprRoutes = require("./routes/appr/payment");
+const appraisalsApprRoutes = require("./routes/appr/appraisals");
+const restorationsApprRoutes = require("./routes/appr/restorations");
+const paymentsApprRoutes = require("./routes/appr/payments");
+const usersApprRoutes = require("./routes/appr/users");
 const adminApiApprRoutes = require("./routes/appr/admin"); // 감정 시스템 관리자용 API
 
 // utils
@@ -107,10 +107,10 @@ app.use("/api/dashboard", dashboardRoutes);
 app.get("/api/metrics", metricsModule.getMetrics);
 app.post("/api/metrics/reset", metricsModule.resetMetrics);
 
-app.use("/api/appr/appraisals", appraisalApprRoutes);
-app.use("/api/appr/certificates", certificateApprRoutes);
-app.use("/api/appr/restoration", restorationApprRoutes);
-app.use("/api/appr/payments", paymentApprRoutes);
+app.use("/api/appr/appraisals", appraisalsApprRoutes);
+app.use("/api/appr/restorations", restorationsApprRoutes);
+app.use("/api/appr/payments", paymentsApprRoutes);
+app.use("/api/appr/users", usersApprRoutes);
 app.use("/api/appr/admin", adminApiApprRoutes);
 
 // --- 정적 파일 및 HTML 페이지 서빙 ---
