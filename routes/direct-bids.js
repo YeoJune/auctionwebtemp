@@ -406,7 +406,7 @@ router.post("/", async (req, res) => {
     }
 
     // 1-3. 현재 가격이 최신 가격보다 낮은 경우
-    if (parseFloat(currentPrice) < parseFloat(item.starting_price)) {
+    if (parseFloat(currentPrice) <= parseFloat(item.starting_price)) {
       await connection.rollback();
       return res.status(400).json({
         message: `Your bid (${currentPrice}) must be higher than the current item price (${item.starting_price})`,
