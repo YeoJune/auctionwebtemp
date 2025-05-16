@@ -8,6 +8,7 @@ const {
   brandAucCrawler,
   starAucCrawler,
 } = require("../crawlers/index");
+const { notifyClientsOfChanges } = require("./crawler");
 
 const isAdmin = (req, res, next) => {
   if (req.session.user && req.session.user.id === "admin") {
@@ -384,6 +385,7 @@ router.post("/", async (req, res) => {
               updateValues
             );
             console.log(`Updated item ${itemId} in database with latest info`);
+            notifyClientsOfChanges([{ item_id: itemId }]);
           }
         }
       }

@@ -935,4 +935,4 @@ if (process.env.ENV === "development") {
   loginAll();
 }
 
-module.exports = { router, initializeSocket };
+module.exports = { router, initializeSocket, notifyClientsOfChanges };
