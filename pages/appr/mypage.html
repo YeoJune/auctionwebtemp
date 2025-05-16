@@ -782,8 +782,6 @@
               document.getElementById("user-name-display").textContent = `${
                 data.user_info.name || "고객"
               }님`;
-              document.getElementById("user-id-display")?.textContent =
-                data.user_info.id;
               document.getElementById("join-date-display").textContent = data
                 .user_info.created_at
                 ? new Date(data.user_info.created_at).toLocaleDateString()
