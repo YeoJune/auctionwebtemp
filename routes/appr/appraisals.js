@@ -226,54 +226,6 @@ router.get("/", isAuthenticated, async (req, res) => {
   }
 });
 
-// 감정 상세 조회 - GET /api/appr/appraisals/:id
-router.get("/:id", isAuthenticated, async (req, res) => {
-  let conn;
-  try {
-    const appraisal_id = req.params.id;
-    const user_id = req.session.user.id;
-
-    conn = await pool.getConnection();
-
-    const [rows] = await conn.query(
-      `SELECT * FROM appraisals WHERE id = ? AND user_id = ?`,
-      [appraisal_id, user_id]
-    );
-
-    if (rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "해당 감정 정보를 찾을 수 없습니다.",
-      });
-    }
-
-    // JSON 데이터 파싱
-    const appraisal = rows[0];
-    if (appraisal.components_included) {
-      appraisal.components_included = JSON.parse(appraisal.components_included);
-    }
-    if (appraisal.delivery_info) {
-      appraisal.delivery_info = JSON.parse(appraisal.delivery_info);
-    }
-    if (appraisal.images) {
-      appraisal.images = JSON.parse(appraisal.images);
-    }
-
-    res.json({
-      success: true,
-      appraisal,
-    });
-  } catch (err) {
-    console.error("감정 상세 조회 중 오류 발생:", err);
-    res.status(500).json({
-      success: false,
-      message: "감정 상세 조회 중 서버 오류가 발생했습니다.",
-    });
-  } finally {
-    if (conn) conn.release();
-  }
-});
-
 // 마이페이지 종합 정보 - GET /api/appr/appraisals/my
 router.get("/my", isAuthenticated, async (req, res) => {
   let conn;
@@ -364,6 +316,54 @@ router.get("/my", isAuthenticated, async (req, res) => {
     res.status(500).json({
       success: false,
       message: "마이페이지 정보 조회 중 서버 오류가 발생했습니다.",
+    });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
+// 감정 상세 조회 - GET /api/appr/appraisals/:id
+router.get("/:id", isAuthenticated, async (req, res) => {
+  let conn;
+  try {
+    const appraisal_id = req.params.id;
+    const user_id = req.session.user.id;
+
+    conn = await pool.getConnection();
+
+    const [rows] = await conn.query(
+      `SELECT * FROM appraisals WHERE id = ? AND user_id = ?`,
+      [appraisal_id, user_id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "해당 감정 정보를 찾을 수 없습니다.",
+      });
+    }
+
+    // JSON 데이터 파싱
+    const appraisal = rows[0];
+    if (appraisal.components_included) {
+      appraisal.components_included = JSON.parse(appraisal.components_included);
+    }
+    if (appraisal.delivery_info) {
+      appraisal.delivery_info = JSON.parse(appraisal.delivery_info);
+    }
+    if (appraisal.images) {
+      appraisal.images = JSON.parse(appraisal.images);
+    }
+
+    res.json({
+      success: true,
+      appraisal,
+    });
+  } catch (err) {
+    console.error("감정 상세 조회 중 오류 발생:", err);
+    res.status(500).json({
+      success: false,
+      message: "감정 상세 조회 중 서버 오류가 발생했습니다.",
     });
   } finally {
     if (conn) conn.release();
