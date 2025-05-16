@@ -938,7 +938,7 @@
         }
 
         // 감정 정보 가져오기
-        fetch(`/api/appraisals/${appraisalIdFromUrl}`)
+        fetch(`/api/appr/appraisals/${appraisalIdFromUrl}`)
           .then((response) => response.json())
           .then((data) => {
             loadingMessage.style.display = "none";
@@ -953,9 +953,9 @@
                   appraisal.model_name || ""
                 }`.trim() || "-";
 
-              // 상품 링크 표시 (product_url이 있다고 가정)
-              if (appraisal.product_url) {
-                infoProductLink.innerHTML = `<a href="${appraisal.product_url}" target="_blank" style="color: #3182ce; text-decoration: underline;">상품 링크 보기</a>`;
+              // 상품 링크 표시 (product_link이 있다고 가정)
+              if (appraisal.product_link) {
+                infoProductLink.innerHTML = `<a href="${appraisal.product_link}" target="_blank" style="color: #3182ce; text-decoration: underline;">상품 링크 보기</a>`;
               } else {
                 infoProductLink.textContent = "-";
               }
@@ -1033,29 +1033,29 @@
             },
           };
 
-          fetch("/api/offline_appraisal/request", {
+          fetch("/api/appr/payments/prepare", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify(data),
+            body: JSON.stringify({
+              product_type: "certificate_issue",
+              product_name: "오프라인 감정 및 감정서 발급",
+              amount: 38000,
+              related_resource_id: appraisalIdFromUrl,
+            }),
           })
             .then((response) => response.json())
-            .then((result) => {
-              appraisalNotice.style.display = "block";
-              appraisalNotice.classList.remove("error"); // 이전 오류 스타일 제거
-              if (result.success) {
-                appraisalNoticeTitle.textContent = "신청 완료";
-                appraisalNoticeMessage.textContent =
-                  result.message ||
-                  "오프라인 감정 및 감정서 신청이 완료되었습니다.";
-                form.reset(); // 폼 초기화
+            .then((paymentData) => {
+              if (paymentData.success) {
+                // 결제 준비 성공 시 결제 정보 페이지로 이동
+                window.location.href = `/appr/payment-processing.html?orderId=${paymentData.order_id}`;
               } else {
+                appraisalNotice.style.display = "block";
                 appraisalNotice.classList.add("error");
-                appraisalNoticeTitle.textContent = "신청 실패";
+                appraisalNoticeTitle.textContent = "결제 준비 실패";
                 appraisalNoticeMessage.textContent =
-                  result.message ||
-                  "오프라인 감정 및 감정서 신청에 실패했습니다.";
+                  paymentData.message || "결제 준비 중 오류가 발생했습니다.";
               }
             })
             .catch((error) => {

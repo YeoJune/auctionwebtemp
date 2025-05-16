@@ -122,7 +122,7 @@
           // 서버에 저장된 인증 정보 가져오기
           try {
             const authInfoResponse = await fetch(
-              `/api/appr/payments/nicepay/get-auth-info/${orderId}`
+              `/api/appr/payments/${orderId}`
             );
             if (!authInfoResponse.ok) {
               const errorData = await authInfoResponse
@@ -140,11 +140,11 @@
                 "최종 결제 승인 요청 중...";
               // 최종 승인 요청
               const approvalResponse = await fetch(
-                "/api/appr/payments/nicepay/request-approval",
+                "/api/appr/payments/approve",
                 {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ orderId: orderId }), // 서버는 세션에서 나머지 tid, amount 등을 가져옴
+                  body: JSON.stringify({ orderId: orderId }),
                 }
               );
               const approvalResult = await approvalResponse.json();

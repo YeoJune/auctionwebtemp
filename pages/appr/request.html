@@ -1160,7 +1160,7 @@
                 requestData.product_link = formData.get("product_link");
                 if (formData.get("platform"))
                   requestData.platform = formData.get("platform");
-              } else if (requestData.appraisal_type === "offline_physical") {
+              } else if (requestData.appraisal_type === "offline") {
                 requestData.brand = formData.get("brand");
                 requestData.model_name = formData.get("model_name");
                 requestData.category = formData.get("category");
@@ -1174,7 +1174,7 @@
                 if (components.length > 0)
                   requestData.components_included = components;
 
-                requestData.delivery_info_for_offline = {
+                requestData.delivery_info = {
                   name: formData.get("name"), // 신청자 이름을 반송받는 사람 이름으로 사용 (필요시 폼에 별도 필드 추가)
                   phone: formData.get("phone"), // 신청자 연락처
                   zipcode: formData.get("zipcode"),
@@ -1193,24 +1193,13 @@
               if (formData.get("email"))
                 requestData.applicant_email = formData.get("email");
 
-              // (임시) 결제 정보 추가 (API 문서에 따라)
-              let amount = 0;
-              if (requestData.appraisal_type === "quicklink") amount = 10000;
-              else if (requestData.appraisal_type === "offline_physical")
-                amount = 38000;
-
-              requestData.payment_info = {
-                method: "card_mock", // 실제 결제 모듈 연동 필요
-                amount: amount,
-                transaction_id:
-                  "mock_tx_" +
-                  Date.now() +
-                  "_" +
-                  Math.random().toString(36).substr(2, 9),
-              };
+                // 결제 정보는 별도 API(/api/appr/payments/prepare)로 처리되므로 여기서는 제외
+                // if (requestData.appraisal_type === "offline") {
+                //   // 오프라인 감정은 결제가 필요할 수 있으므로 결제 페이지로 리다이렉트 처리 예정
+                // }
 
               try {
-                const response = await fetch("/api/appr/appraisals/request", {
+                const response = await fetch("/api/appr/appraisals", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify(requestData),

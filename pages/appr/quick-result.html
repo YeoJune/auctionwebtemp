@@ -976,33 +976,23 @@
 
       // 퀵링크 크레딧 차감 함수
       async function deductQuicklinkCredit(appraisalIdForDeduct) {
-        // 이미 차감되었는지 클라이언트 사이드에서 간단히 확인 (서버에서 최종 확인)
-        if (localStorage.getItem(`credited_${appraisalIdForDeduct}`)) {
-          console.log(
-            "이미 차감된 크레딧으로 간주 (클라이언트 체크):",
-            appraisalIdForDeduct
-          );
-          return;
-        }
-
         try {
-          const response = await fetch(`/api/appr/appraisals/deduct-credit`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ appraisalId: appraisalIdForDeduct }),
+          // 크레딧 정보 확인만 호출
+          const response = await fetch(`/api/appr/users/profile`, {
             credentials: "include",
           });
 
           const data = await response.json();
           if (data.success) {
-            console.log("크레딧이 성공적으로 차감되었습니다.");
-            localStorage.setItem(`credited_${appraisalIdForDeduct}`, "true");
-            showCreditNotification(data.remainingCredits);
+            console.log("크레딧 정보 확인 성공");
+            const remainingCredits =
+              data.membership?.quick_link_credits_remaining || 0;
+            showCreditNotification(remainingCredits);
           } else {
-            console.error("크레딧 차감 실패:", data.message);
+            console.error("크레딧 정보 확인 실패:", data.message);
           }
         } catch (error) {
-          console.error("크레딧 차감 API 호출 오류:", error);
+          console.error("크레딧 정보 확인 API 호출 오류:", error);
         }
       }
 
@@ -1093,11 +1083,8 @@
         // 여기서 아래에 기존 DOMContentLoaded 내용을 유지
       });
 
-      // 회원 정보 로드 함수 (API 연동 시 구현)
       function loadUserMembershipInfo() {
-        // 실제 구현에서는 서버 API 호출
-        // 여기서는 마이페이지와 동일한 로직을 가정
-        fetch("/api/user/membership-info", {
+        fetch("/api/appr/users/profile", {
           credentials: "include",
         })
           .then((response) => response.json())

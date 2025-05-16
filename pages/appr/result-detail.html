@@ -1101,7 +1101,7 @@
         if (downloadPdfBtn) {
           downloadPdfBtn.addEventListener("click", () => {
             if (currentCertificateNumber) {
-              window.location.href = `/api/appr/certificates/${currentCertificateNumber}/download`;
+              window.location.href = `/api/appr/appraisals/certificates/${currentCertificateNumber}/download`;
             } else {
               alert("감정서 번호를 찾을 수 없습니다.");
             }
@@ -1109,10 +1109,10 @@
         }
 
         if (qrCodeImgEl) {
-          qrCodeImgEl.src = `/api/appr/certificates/${currentCertificateNumber}/qrcode`;
+          qrCodeImgEl.src = `/api/appr/appraisals/certificates/${currentCertificateNumber}/qrcode`;
         }
 
-        fetch(`/api/appr/certificates/${currentCertificateNumber}`)
+        fetch(`/api/appr/appraisals/certificate/${currentCertificateNumber}`)
           .then((response) => {
             if (!response.ok) {
               return response.json().then((err) => {
@@ -1122,16 +1122,11 @@
             return response.json();
           })
           .then((data) => {
-            loadingEl.style.display = "none";
-            if (
-              data.success &&
-              data.certificate &&
-              data.certificate.appraisal
-            ) {
+            if (data.success && data.certificate) {
               contentWrapperEl.style.display = "block";
               const certificate = data.certificate;
               const appraisal = certificate.appraisal;
-              currentAppraisalId = appraisal.appraisal_id;
+              currentAppraisalId = appraisal.id; // .appraisal_id 대신 .id 사용
 
               productNameEl.textContent =
                 `${appraisal.brand || ""} ${
@@ -1150,9 +1145,9 @@
               }`;
 
               // 감정 유형 설정
-              if (appraisal.appraisal_type === "online_photo") {
+              if (appraisal.appraisal_type === "quicklink") {
                 appraisalTypeEl.textContent = "퀵링크 감정";
-              } else if (appraisal.appraisal_type === "offline_physical") {
+              } else if (appraisal.appraisal_type === "offline") {
                 appraisalTypeEl.textContent = "오프라인 실물 감정";
               } else {
                 appraisalTypeEl.textContent = "감정 유형";

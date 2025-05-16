@@ -844,7 +844,7 @@
           document.getElementById("loading-appraisals");
 
         // 1. 감정 통계 불러오기
-        fetch("/api/appr/appraisals/stats/all")
+        fetch("/api/appr/appraisals/stats")
           .then((response) => response.json())
           .then((data) => {
             if (data.success && data.stats) {
@@ -873,12 +873,14 @@
               data.appraisals.forEach((appraisal) => {
                 const itemDiv = document.createElement("div");
                 itemDiv.className = "appraisal-item";
+                itemDiv.setAttribute("data-id", appraisal.id);
                 itemDiv.style.display = "grid";
                 itemDiv.style.gridTemplateColumns = "1fr auto";
                 itemDiv.style.gap = "15px";
                 itemDiv.style.padding = "15px";
                 itemDiv.style.borderBottom = "1px solid #e2e8f0";
                 itemDiv.style.alignItems = "center";
+                itemDiv.style.cursor = "pointer";
 
                 const infoDiv = document.createElement("div");
                 infoDiv.className = "appraisal-info";
@@ -901,7 +903,7 @@
                 let appraisalTypeText = "온라인 사진 명품 감정";
                 if (appraisal.appraisal_type === "quicklink") {
                   appraisalTypeText = "퀵링크 감정";
-                } else if (appraisal.appraisal_type === "offline_physical") {
+                } else if (appraisal.appraisal_type === "offline") {
                   appraisalTypeText = "오프라인 실물 명품 감정";
                 }
                 typeSpan.textContent = appraisalTypeText;
@@ -942,22 +944,22 @@
                 statusSpan.style.padding = "5px 10px";
                 statusSpan.style.borderRadius = "4px";
                 statusSpan.style.fontSize = "0.75rem";
-
-                if (
-                  appraisal.status === "completed" ||
-                  appraisal.status === "issued"
-                ) {
+                if (appraisal.status === "completed") {
                   statusSpan.textContent = "감정완료";
                   statusSpan.style.backgroundColor = "#d1fae5";
                   statusSpan.style.color = "#059669";
-                } else if (
-                  appraisal.status === "pending_review" ||
-                  appraisal.status === "in_review" ||
-                  appraisal.status === "pending_payment"
-                ) {
+                } else if (appraisal.status === "in_review") {
                   statusSpan.textContent = "감정중";
                   statusSpan.style.backgroundColor = "#e0f2fe";
                   statusSpan.style.color = "#0369a1";
+                } else if (appraisal.status === "pending") {
+                  statusSpan.textContent = "접수완료";
+                  statusSpan.style.backgroundColor = "#e0f2fe";
+                  statusSpan.style.color = "#0369a1";
+                } else if (appraisal.status === "cancelled") {
+                  statusSpan.textContent = "취소됨";
+                  statusSpan.style.backgroundColor = "#f1f5f9";
+                  statusSpan.style.color = "#334155";
                 } else {
                   statusSpan.textContent = appraisal.status; // 기타 상태 그대로 표시
                   statusSpan.style.backgroundColor = "#f1f5f9";
@@ -998,6 +1000,16 @@
             ).searchParams.get("tab");
             if (tabName) link.href = `/appr/request?tab=${tabName}`;
           });
+
+        // 상세 페이지 이동 핸들러 추가 (감정 결과 클릭시)
+        document.querySelectorAll(".appraisal-item").forEach((item) => {
+          item.addEventListener("click", function () {
+            const appraisalId = this.getAttribute("data-id");
+            if (appraisalId) {
+              window.location.href = `/appr/quick-result/${appraisalId}`;
+            }
+          });
+        });
 
         const certificateSearchForm = document.getElementById(
           "certificate-search-form"

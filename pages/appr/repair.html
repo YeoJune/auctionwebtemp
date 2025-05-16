@@ -576,7 +576,7 @@
         window.addEventListener("resize", handleResponsiveLayout);
 
         // 복원 서비스 목록 로드
-        fetch("/api/appr/restoration/services")
+        fetch("/api/appr/restorations/services")
           .then((response) => response.json())
           .then((data) => {
             if (loadingServicesEl) loadingServicesEl.style.display = "none";
