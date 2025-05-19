@@ -11,7 +11,10 @@ let pLimit;
 const brandAucConfig = {
   name: "BrandAuc",
   baseUrl: "https://member.brand-auc.com",
-  loginCheckUrl: "https://u.brand-auc.com/configuration",
+  loginCheckUrls: [
+    "https://u.brand-auc.com/api/v1/member/shop",
+    "https://member.brand-auc.com/auth/success",
+  ],
   loginPageUrl: "https://member.brand-auc.com/login",
   loginPostUrl: "https://member.brand-auc.com/login.php",
   previewItemsApiUrl:
@@ -38,7 +41,7 @@ const brandAucConfig = {
 const brandAucValueConfig = {
   name: "BrandAucValue",
   baseUrl: "https://e-auc.brand-auc.com",
-  loginCheckUrl: "https://e-auc.brand-auc.com/main",
+  loginCheckUrls: ["https://e-auc.brand-auc.com/main"],
   loginPageUrl: "https://member.brand-auc.com/loginEauc",
   loginPostUrl: "https://member.brand-auc.com/login",
   marketPriceApiUrl:
@@ -182,41 +185,6 @@ class BrandAucCrawler extends AxiosCrawler {
     });
 
     return this.loginPromise;
-  }
-
-  // 로그인 체크 기본 메서드 (각 크롤러에서 오버라이드)
-  async loginCheck() {
-    // 마지막 로그인 체크 시간이 5분 이내면 캐시된 결과 반환
-    if (
-      this.lastLoginCheck &&
-      Date.now() - this.lastLoginCheck < this.loginCheckInterval
-    ) {
-      console.log("Using cached login check result");
-      return this.lastLoginCheckResult;
-    }
-
-    // 5분이 지났거나 처음 체크하는 경우, 실제 체크 수행
-    return this.retryOperation(async () => {
-      try {
-        const loginCheckUrl1 = "https://u.brand-auc.com/api/v1/member/shop";
-        const loginCheckUrl2 = "https://member.brand-auc.com/auth/success";
-
-        const response1 = await this.client.get(loginCheckUrl1);
-        const response2 = await this.client.get(loginCheckUrl2);
-
-        // 결과 캐싱
-        this.lastLoginCheck = Date.now();
-        this.lastLoginCheckResult =
-          response1.status === 200 && response2.status === 200;
-
-        return this.lastLoginCheckResult;
-      } catch (error) {
-        // 에러 발생시 캐싱 업데이트
-        this.lastLoginCheck = Date.now();
-        this.lastLoginCheckResult = false;
-        return false;
-      }
-    });
   }
 
   async crawlAllItems(existingIds = new Set()) {
@@ -1324,5 +1292,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
 
 const brandAucCrawler = new BrandAucCrawler(brandAucConfig);
 const brandAucValueCrawler = new BrandAucValueCrawler(brandAucValueConfig);
+
+brandAucCrawler.login();
 
 module.exports = { brandAucCrawler, brandAucValueCrawler };

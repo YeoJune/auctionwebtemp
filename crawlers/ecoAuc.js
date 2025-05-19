@@ -11,7 +11,7 @@ let pLimit;
 const ecoAucConfig = {
   name: "EcoAuc",
   baseUrl: "https://www.ecoauc.com",
-  loginCheckUrl: "https://www.ecoauc.com/client/users",
+  loginCheckUrls: ["https://www.ecoauc.com/client/users"],
   loginPageUrl: "https://www.ecoauc.com/client/users/sign-in",
   loginPostUrl: "https://www.ecoauc.com/client/users/post-sign-in",
   searchUrl: "https://www.ecoauc.com/client/auctions/inspect",
@@ -68,7 +68,7 @@ const ecoAucConfig = {
 const ecoAucValueConfig = {
   name: "EcoAucValue",
   baseUrl: "https://www.ecoauc.com",
-  loginCheckUrl: "https://www.ecoauc.com/client/users",
+  loginCheckUrls: ["https://www.ecoauc.com/client/users"],
   accountUrl: "https://www.ecoauc.com/client/users",
   loginPageUrl: "https://www.ecoauc.com/client/users/sign-in",
   loginPostUrl: "https://www.ecoauc.com/client/users/post-sign-in",

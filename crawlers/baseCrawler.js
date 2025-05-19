@@ -385,7 +385,8 @@ class AxiosCrawler {
     // 마지막 로그인 체크 시간이 5분 이내면 캐시된 결과 반환
     if (
       this.lastLoginCheck &&
-      Date.now() - this.lastLoginCheck < this.loginCheckInterval
+      Date.now() - this.lastLoginCheck < this.loginCheckInterval &&
+      this.lastLoginCheckResult !== false
     ) {
       console.log("Using cached login check result");
       return this.lastLoginCheckResult;
@@ -394,13 +395,17 @@ class AxiosCrawler {
     // 5분이 지났거나 처음 체크하는 경우, 실제 체크 수행
     return this.retryOperation(async () => {
       try {
-        const response = await this.client.get(
-          this.config.loginCheckUrl || this.config.accountUrl
+        // this.config.loginCheckUrls에서 하나씩
+        const responses = await Promise.all(
+          this.config.loginCheckUrls.map((url) => this.client.get(url))
         );
 
         // 결과 캐싱
         this.lastLoginCheck = Date.now();
-        this.lastLoginCheckResult = response.status === 200;
+        // responses의 status가 모두 200일 때만 true
+        this.lastLoginCheckResult = responses.every(
+          (response) => response.status === 200
+        );
 
         return this.lastLoginCheckResult;
       } catch (error) {

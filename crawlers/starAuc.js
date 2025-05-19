@@ -10,7 +10,7 @@ let pLimit;
 const starAucConfig = {
   name: "StarAuc",
   baseUrl: "https://www.starbuyers-global-auction.com",
-  loginCheckUrl: "https://www.starbuyers-global-auction.com/home", // 로그인 체크 URL
+  loginCheckUrls: ["https://www.starbuyers-global-auction.com/home"], // 로그인 체크 URL
   loginPageUrl: "https://www.starbuyers-global-auction.com/login",
   loginPostUrl: "https://www.starbuyers-global-auction.com/login", // POST 요청 URL
   searchUrl: "https://www.starbuyers-global-auction.com/item",
@@ -60,7 +60,7 @@ const starAucConfig = {
 const starAucValueConfig = {
   name: "StarAucValue",
   baseUrl: "https://www.starbuyers-global-auction.com",
-  loginCheckUrl: "https://www.starbuyers-global-auction.com/home",
+  loginCheckUrls: ["https://www.starbuyers-global-auction.com/home"],
   loginPageUrl: "https://www.starbuyers-global-auction.com/login",
   loginPostUrl: "https://www.starbuyers-global-auction.com/login",
   searchUrl: "https://www.starbuyers-global-auction.com/market_price",
