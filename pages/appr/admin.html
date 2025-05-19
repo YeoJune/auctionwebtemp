@@ -3,887 +3,1152 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CAS 관리자 페이지</title>
+    <title>관리자 페이지 - CAS 명품감정시스템</title>
     <link
-      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap"
       rel="stylesheet" />
     <style>
-      body {
-        font-family: "Noto Sans KR", sans-serif;
+      * {
         margin: 0;
-        padding: 20px;
-        background-color: #f4f6f9;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Noto Sans KR", sans-serif;
+      }
+
+      body {
+        background-color: #f8fafc;
         color: #333;
+        line-height: 1.6;
       }
-      .admin-container {
-        max-width: 1400px;
-        margin: auto;
-        background-color: #fff;
-        padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-      }
-      h1 {
-        text-align: center;
-        color: #1a2a3a;
-        margin-bottom: 30px;
-      }
-      h2 {
-        color: #17a2b8;
-        border-bottom: 2px solid #17a2b8;
-        padding-bottom: 10px;
-        margin-top: 30px;
-        margin-bottom: 20px;
-        font-size: 1.5em;
-      }
-      .tab-nav {
-        margin-bottom: 20px;
-        border-bottom: 1px solid #dee2e6;
+
+      .container {
         display: flex;
+        min-height: 100vh;
       }
-      .tab-nav button {
-        background-color: transparent;
-        border: none;
-        padding: 12px 18px;
-        cursor: pointer;
-        font-size: 1em;
-        font-weight: 500;
-        margin-right: 5px;
-        border-bottom: 3px solid transparent;
-        transition: border-color 0.3s, color 0.3s;
+
+      .sidebar {
+        width: 250px;
+        background-color: #1a2a3a;
+        color: #fff;
+        padding: 20px 0;
       }
-      .tab-nav button.active {
-        border-bottom-color: #17a2b8;
-        color: #17a2b8;
+
+      .logo {
+        padding: 0 20px 20px;
+        margin-bottom: 20px;
+        border-bottom: 1px solid #2c3e50;
         font-weight: 700;
+        font-size: 1.3rem;
       }
+
+      .logo img {
+        max-width: 100%;
+        height: 40px;
+      }
+
+      .nav-tabs {
+        list-style: none;
+      }
+
+      .nav-tabs li {
+        padding: 0;
+        margin-bottom: 5px;
+      }
+
+      .nav-tabs li a {
+        display: block;
+        padding: 12px 20px;
+        color: #cbd5e0;
+        text-decoration: none;
+        transition: all 0.3s;
+      }
+
+      .nav-tabs li a:hover {
+        background-color: #2c3e50;
+        color: #fff;
+      }
+
+      .nav-tabs li a.active {
+        background-color: #2c3e50;
+        color: #fff;
+        border-left: 4px solid #60a5fa;
+        padding-left: 16px;
+      }
+
+      .main-content {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
       .tab-content {
         display: none;
-        padding-top: 20px;
       }
+
       .tab-content.active {
         display: block;
       }
+
+      .card {
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .card-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #1a2a3a;
+      }
+
       table {
         width: 100%;
         border-collapse: collapse;
-        margin-top: 15px;
-        font-size: 0.9em;
       }
-      th,
-      td {
-        border: 1px solid #ddd;
-        padding: 10px;
+
+      table th,
+      table td {
+        padding: 12px 15px;
         text-align: left;
+        border-bottom: 1px solid #e2e8f0;
       }
-      th {
-        background-color: #e9ecef;
+
+      table th {
+        background-color: #f8fafc;
         font-weight: 500;
+        color: #4a5568;
       }
-      tr:nth-child(even) {
-        background-color: #f8f9fa;
+
+      table tr:hover {
+        background-color: #f8fafc;
       }
-      .form-section {
+
+      .btn {
+        display: inline-block;
+        padding: 8px 15px;
+        border-radius: 6px;
+        background-color: #1a2a3a;
+        color: #fff;
+        border: none;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: all 0.3s;
+        text-decoration: none;
+      }
+
+      .btn:hover {
+        background-color: #2c3e50;
+      }
+
+      .btn-outline {
+        background-color: transparent;
+        border: 1px solid #1a2a3a;
+        color: #1a2a3a;
+      }
+
+      .btn-outline:hover {
+        background-color: #1a2a3a;
+        color: #fff;
+      }
+
+      .search-bar {
+        display: flex;
         margin-bottom: 20px;
-        padding: 15px;
-        border: 1px solid #eee;
-        border-radius: 5px;
-        background-color: #fdfdfd;
+        max-width: 600px;
       }
-      .form-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 20px;
+
+      .search-bar input {
+        flex: 1;
+        padding: 10px 15px;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px 0 0 6px;
       }
-      .form-group {
-        margin-bottom: 15px;
+
+      .search-bar button {
+        padding: 10px 15px;
+        background-color: #1a2a3a;
+        color: #fff;
+        border: none;
+        border-radius: 0 6px 6px 0;
+        cursor: pointer;
       }
-      label {
-        display: block;
-        margin-bottom: 6px;
-        font-weight: 500;
-        color: #495057;
-      }
-      input[type="text"],
-      input[type="url"],
-      input[type="number"],
-      select,
-      textarea {
+
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
         width: 100%;
-        padding: 10px;
-        border: 1px solid #ced4da;
-        border-radius: 4px;
-        box-sizing: border-box;
-        font-size: 0.95em;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
       }
-      input[type="file"] {
-        padding: 7px;
+
+      .modal-content {
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        padding: 25px;
+        width: 100%;
+        max-width: 600px;
+        max-height: 90vh;
+        overflow-y: auto;
       }
-      textarea {
-        min-height: 80px;
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .modal-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #1a2a3a;
+      }
+
+      .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #4a5568;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      .form-label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+      }
+
+      .form-input,
+      .form-select,
+      .form-textarea {
+        width: 100%;
+        padding: 10px 15px;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        font-size: 0.95rem;
+      }
+
+      .form-textarea {
+        min-height: 120px;
         resize: vertical;
       }
-      button,
-      .btn {
-        background-color: #007bff;
-        color: white;
-        padding: 10px 15px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 0.95em;
-        transition: background-color 0.2s;
+
+      .badge {
+        display: inline-block;
+        padding: 5px 10px;
+        border-radius: 50px;
+        font-size: 0.75rem;
+        font-weight: 600;
       }
-      button:hover,
-      .btn:hover {
-        background-color: #0056b3;
+
+      .badge-success {
+        background-color: #d1fae5;
+        color: #059669;
       }
-      button.btn-secondary {
-        background-color: #6c757d;
+
+      .badge-warning {
+        background-color: #fef3c7;
+        color: #d97706;
       }
-      button.btn-secondary:hover {
-        background-color: #5a6268;
+
+      .badge-error {
+        background-color: #fee2e2;
+        color: #dc2626;
       }
-      button:disabled {
-        background-color: #ccc;
-        cursor: not-allowed;
+
+      .badge-info {
+        background-color: #e0f2fe;
+        color: #0284c7;
       }
-      #admin-message {
-        margin-bottom: 20px;
-        padding: 12px;
-        border-radius: 4px;
-        text-align: center;
-        font-weight: 500;
-        display: none;
-      }
-      .msg-success {
-        background-color: #d4edda;
-        color: #155724;
-        border: 1px solid #c3e6cb;
-      }
-      .msg-error {
-        background-color: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
-      }
+
       .pagination {
         display: flex;
         justify-content: center;
         margin-top: 20px;
-        gap: 5px;
       }
-      .pagination button {
-        background-color: #fff;
-        border: 1px solid #dee2e6;
-        color: #007bff;
-      }
-      .pagination button.active {
-        background-color: #007bff;
-        color: #fff;
-      }
-      .modal {
-        display: none;
-        position: fixed;
-        z-index: 1002;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        overflow: auto;
-        background-color: rgba(0, 0, 0, 0.4);
-      }
-      .modal-content {
-        background-color: #fefefe;
-        margin: 10% auto;
-        padding: 20px;
-        border: 1px solid #888;
-        width: 80%;
-        max-width: 600px;
-        border-radius: 8px;
-        position: relative;
-      }
-      .close-btn {
-        color: #aaa;
-        float: right;
-        font-size: 28px;
-        font-weight: bold;
-        cursor: pointer;
-      }
-      .close-btn:hover,
-      .close-btn:focus {
-        color: black;
+
+      .pagination-item {
+        display: inline-block;
+        padding: 8px 12px;
+        margin: 0 5px;
+        border-radius: 4px;
+        color: #4a5568;
         text-decoration: none;
       }
-      .filter-controls {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 15px;
-        align-items: center;
-        flex-wrap: wrap;
+
+      .pagination-item:hover {
+        background-color: #e2e8f0;
       }
-      .filter-controls input,
-      .filter-controls select {
-        width: auto;
-        min-width: 150px;
-        padding: 8px;
+
+      .pagination-item.active {
+        background-color: #1a2a3a;
+        color: #fff;
+      }
+
+      .alert {
+        padding: 15px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+      }
+
+      .alert-success {
+        background-color: #d1fae5;
+        color: #059669;
+      }
+
+      .alert-error {
+        background-color: #fee2e2;
+        color: #dc2626;
       }
     </style>
   </head>
   <body>
-    <div class="admin-container">
-      <h1>CAS 명품감정시스템 관리</h1>
-      <div class="tab-nav">
-        <button class="tab-button active" data-tab="homepage">
-          홈페이지 설정
-        </button>
-        <button class="tab-button" data-tab="users">회원 관리</button>
-        <button class="tab-button" data-tab="appraisals">감정 관리</button>
+    <div class="container">
+      <div class="sidebar">
+        <div class="logo">
+          <img
+            src="https://i.ibb.co/FqJhVh0T/image.png"
+            alt="CAS 명품감정시스템" />
+        </div>
+        <ul class="nav-tabs">
+          <li>
+            <a href="#" class="active" data-tab="appraisals">감정 관리</a>
+          </li>
+          <li><a href="#" data-tab="restorations">복원 서비스 관리</a></li>
+          <li><a href="#" data-tab="requests">복원 요청 관리</a></li>
+          <li><a href="#" data-tab="users">회원 관리</a></li>
+          <li><a href="#" data-tab="payments">결제 관리</a></li>
+          <li><a href="/appr">메인 사이트로 이동</a></li>
+        </ul>
       </div>
 
-      <div id="admin-message"></div>
+      <div class="main-content">
+        <div class="header">
+          <h1 id="page-title">감정 관리</h1>
+          <div>
+            <span id="admin-name">관리자</span> 님
+            <a
+              href="/appr/signin"
+              class="btn btn-outline"
+              style="margin-left: 10px"
+              >로그아웃</a
+            >
+          </div>
+        </div>
 
-      <!-- 홈페이지 설정 탭 -->
-      <div id="tab-homepage" class="tab-content active">
-        <h2>홈페이지 배너/통계 설정</h2>
-        <form id="homepage-settings-form" class="form-section">
-          <div class="form-grid">
-            <div class="form-group">
-              <label for="hp-banner-title">배너 제목:</label>
+        <!-- 감정 관리 탭 -->
+        <div id="appraisals-tab" class="tab-content active">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">감정 목록</div>
+              <div>
+                <select
+                  id="appraisal-status-filter"
+                  class="form-select"
+                  style="
+                    width: auto;
+                    display: inline-block;
+                    margin-right: 10px;
+                  ">
+                  <option value="all">전체 상태</option>
+                  <option value="pending">접수완료</option>
+                  <option value="in_review">감정중</option>
+                  <option value="completed">완료</option>
+                  <option value="cancelled">취소</option>
+                </select>
+                <select
+                  id="appraisal-result-filter"
+                  class="form-select"
+                  style="width: auto; display: inline-block">
+                  <option value="all">전체 결과</option>
+                  <option value="authentic">정품</option>
+                  <option value="fake">가품</option>
+                  <option value="uncertain">판단불가</option>
+                  <option value="pending">감정대기</option>
+                </select>
+              </div>
+            </div>
+            <div class="search-bar">
               <input
                 type="text"
-                id="hp-banner-title"
-                name="homepage_banner_title" />
+                id="appraisal-search"
+                placeholder="ID, 브랜드, 모델명 검색" />
+              <button id="appraisal-search-btn">검색</button>
             </div>
-            <div class="form-group">
-              <label for="hp-banner-subtitle">배너 부제목:</label>
-              <input
-                type="text"
-                id="hp-banner-subtitle"
-                name="homepage_banner_subtitle" />
+            <div id="appraisals-table-container">
+              <table id="appraisals-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>유형</th>
+                    <th>브랜드/모델명</th>
+                    <th>신청자</th>
+                    <th>상태</th>
+                    <th>결과</th>
+                    <th>신청일</th>
+                    <th>관리</th>
+                  </tr>
+                </thead>
+                <tbody id="appraisals-list">
+                  <!-- 감정 데이터가 JS로 로드됩니다 -->
+                  <tr>
+                    <td colspan="8" style="text-align: center">
+                      감정 데이터를 불러오는 중...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-            <div class="form-group">
-              <label for="hp-banner-image-file"
-                >배너 이미지 (현재:
-                <a id="current-banner-url" href="#" target="_blank"></a
-                >):</label
-              >
-              <input
-                type="file"
-                id="hp-banner-image-file"
-                name="homepage_banner_image_file"
-                accept="image/*" />
-              <img
-                id="hp-banner-preview"
-                src="#"
-                alt="배너 미리보기"
-                style="
-                  max-width: 300px;
-                  max-height: 100px;
-                  margin-top: 10px;
-                  display: none;
-                  border: 1px solid #ddd;
-                " />
-            </div>
-            <div class="form-group">
-              <label for="hp-btn1-text">버튼1 텍스트:</label>
-              <input
-                type="text"
-                id="hp-btn1-text"
-                name="homepage_banner_button1_text" />
-            </div>
-            <div class="form-group">
-              <label for="hp-btn1-url">버튼1 URL:</label>
-              <input
-                type="url"
-                id="hp-btn1-url"
-                name="homepage_banner_button1_url"
-                placeholder="예: /appr/request" />
-            </div>
-            <div class="form-group">
-              <label for="hp-btn2-text">버튼2 텍스트:</label>
-              <input
-                type="text"
-                id="hp-btn2-text"
-                name="homepage_banner_button2_text" />
-            </div>
-            <div class="form-group">
-              <label for="hp-btn2-url">버튼2 URL:</label>
-              <input
-                type="url"
-                id="hp-btn2-url"
-                name="homepage_banner_button2_url"
-                placeholder="예: /appr/result" />
-            </div>
-            <div class="form-group">
-              <label for="hp-show-stats">홈페이지 감정 통계 표시:</label>
-              <select id="hp-show-stats" name="homepage_show_stats">
-                <option value="true">표시</option>
-                <option value="false">숨김</option>
-              </select>
+            <div id="appraisals-pagination" class="pagination">
+              <!-- 페이지네이션이 JS로 생성됩니다 -->
             </div>
           </div>
-          <button type="submit" style="margin-top: 15px">
-            홈페이지 설정 저장
-          </button>
-        </form>
-      </div>
-
-      <!-- 회원 관리 탭 -->
-      <div id="tab-users" class="tab-content">
-        <h2>회원 관리</h2>
-        <div class="filter-controls">
-          <select id="user-search-type">
-            <option value="id">아이디</option>
-            <option value="name">이름</option>
-            <option value="email">이메일</option>
-          </select>
-          <input
-            type="text"
-            id="user-search-keyword"
-            placeholder="검색어 입력" />
-          <select id="user-tier-filter">
-            <option value="">등급 전체</option>
-            <option value="일반회원">일반회원</option>
-            <option value="제휴사 회원">제휴사 회원</option>
-            <option value="까사트레이드 회원">까사트레이드 회원</option>
-          </select>
-          <button onclick="loadUsers(1)">회원 검색</button>
         </div>
-        <table id="users-table">
-          <thead>
-            <tr>
-              <th>아이디</th>
-              <th>이름</th>
-              <th>이메일</th>
-              <th>등급</th>
-              <th>잔여퀵링크</th>
-              <th>활성</th>
-              <th>가입일</th>
-              <th>작업</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td colspan="8" class="loading">회원 목록 로딩 중...</td>
-            </tr>
-          </tbody>
-        </table>
-        <div class="pagination" id="users-pagination"></div>
-      </div>
 
-      <!-- 감정 관리 탭 -->
-      <div id="tab-appraisals" class="tab-content">
-        <h2>감정 관리</h2>
-        <div class="filter-controls">
-          <select id="appraisal-search-field">
-            <option value="appraisal_id">감정ID</option>
-            <option value="user_id_display">사용자ID</option>
-            <option value="user_name">사용자명</option>
-            <option value="brand_model">브랜드/모델</option>
-          </select>
-          <input
-            type="text"
-            id="appraisal-search-keyword"
-            placeholder="검색어 입력" />
-          <select id="appraisal-status-filter">
-            <option value="">상태 전체</option>
-            <option value="pending_payment">결제대기</option>
-            <option value="pending_review">검토대기</option>
-            <option value="in_review">검토중</option>
-            <option value="completed">완료</option>
-            <option value="cancelled">취소</option>
-          </select>
-          <select id="appraisal-type-filter">
-            <option value="">유형 전체</option>
-            <option value="quicklink">퀵링크</option>
-            <option value="online_photo">온라인사진</option>
-            <option value="offline_physical">오프라인실물</option>
-          </select>
-          <button onclick="loadAppraisals(1)">감정 검색</button>
+        <!-- 복원 서비스 관리 탭 -->
+        <div id="restorations-tab" class="tab-content">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">복원 서비스 목록</div>
+              <button id="add-restoration-service-btn" class="btn">
+                신규 서비스 추가
+              </button>
+            </div>
+            <div id="restoration-services-table-container">
+              <table id="restoration-services-table">
+                <thead>
+                  <tr>
+                    <th>서비스명</th>
+                    <th>설명</th>
+                    <th>가격(원)</th>
+                    <th>소요기간(일)</th>
+                    <th>상태</th>
+                    <th>관리</th>
+                  </tr>
+                </thead>
+                <tbody id="restoration-services-list">
+                  <!-- 복원 서비스 데이터가 JS로 로드됩니다 -->
+                  <tr>
+                    <td colspan="6" style="text-align: center">
+                      서비스 데이터를 불러오는 중...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
-        <table id="appraisals-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>사용자</th>
-              <th>브랜드/모델</th>
-              <th>유형</th>
-              <th>상태</th>
-              <th>결과</th>
-              <th>신청일</th>
-              <th>작업</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td colspan="8" class="loading">감정 목록 로딩 중...</td>
-            </tr>
-          </tbody>
-        </table>
-        <div class="pagination" id="appraisals-pagination"></div>
+
+        <!-- 복원 요청 관리 탭 -->
+        <div id="requests-tab" class="tab-content">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">복원 요청 목록</div>
+              <select
+                id="restoration-request-status-filter"
+                class="form-select"
+                style="width: auto">
+                <option value="all">전체 상태</option>
+                <option value="pending">접수완료</option>
+                <option value="in_progress">진행중</option>
+                <option value="completed">완료</option>
+                <option value="cancelled">취소</option>
+              </select>
+            </div>
+            <div class="search-bar">
+              <input
+                type="text"
+                id="restoration-request-search"
+                placeholder="ID, 브랜드, 모델명 검색" />
+              <button id="restoration-request-search-btn">검색</button>
+            </div>
+            <div id="restoration-requests-table-container">
+              <table id="restoration-requests-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>감정 ID</th>
+                    <th>브랜드/모델명</th>
+                    <th>신청자</th>
+                    <th>서비스</th>
+                    <th>상태</th>
+                    <th>신청일</th>
+                    <th>예상완료일</th>
+                    <th>관리</th>
+                  </tr>
+                </thead>
+                <tbody id="restoration-requests-list">
+                  <!-- 복원 요청 데이터가 JS로 로드됩니다 -->
+                  <tr>
+                    <td colspan="9" style="text-align: center">
+                      복원 요청 데이터를 불러오는 중...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="restoration-requests-pagination" class="pagination">
+              <!-- 페이지네이션이 JS로 생성됩니다 -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 회원 관리 탭 -->
+        <div id="users-tab" class="tab-content">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">회원 목록</div>
+              <select
+                id="user-tier-filter"
+                class="form-select"
+                style="width: auto">
+                <option value="all">전체 등급</option>
+                <option value="까사트레이드 회원">까사트레이드 회원</option>
+                <option value="제휴사 회원">제휴사 회원</option>
+                <option value="일반회원">일반회원</option>
+              </select>
+            </div>
+            <div class="search-bar">
+              <input
+                type="text"
+                id="user-search"
+                placeholder="아이디, 이메일, 이름 검색" />
+              <button id="user-search-btn">검색</button>
+            </div>
+            <div id="users-table-container">
+              <table id="users-table">
+                <thead>
+                  <tr>
+                    <th>아이디</th>
+                    <th>이름/회사명</th>
+                    <th>이메일</th>
+                    <th>등급</th>
+                    <th>크레딧</th>
+                    <th>가입일</th>
+                    <th>관리</th>
+                  </tr>
+                </thead>
+                <tbody id="users-list">
+                  <!-- 회원 데이터가 JS로 로드됩니다 -->
+                  <tr>
+                    <td colspan="7" style="text-align: center">
+                      회원 데이터를 불러오는 중...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="users-pagination" class="pagination">
+              <!-- 페이지네이션이 JS로 생성됩니다 -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 결제 관리 탭 -->
+        <div id="payments-tab" class="tab-content">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">결제 내역</div>
+              <div>
+                <select
+                  id="payment-status-filter"
+                  class="form-select"
+                  style="
+                    width: auto;
+                    display: inline-block;
+                    margin-right: 10px;
+                  ">
+                  <option value="all">전체 상태</option>
+                  <option value="pending">처리중</option>
+                  <option value="completed">완료</option>
+                  <option value="failed">실패</option>
+                  <option value="cancelled">취소</option>
+                </select>
+                <select
+                  id="payment-type-filter"
+                  class="form-select"
+                  style="width: auto; display: inline-block">
+                  <option value="all">전체 유형</option>
+                  <option value="quicklink_subscription">퀵링크 구독</option>
+                  <option value="certificate_issue">감정서 발급</option>
+                  <option value="restoration_service">복원 서비스</option>
+                </select>
+              </div>
+            </div>
+            <div class="search-bar">
+              <input
+                type="text"
+                id="payment-search"
+                placeholder="주문번호, 회원 ID 검색" />
+              <button id="payment-search-btn">검색</button>
+            </div>
+            <div id="payments-table-container">
+              <table id="payments-table">
+                <thead>
+                  <tr>
+                    <th>주문번호</th>
+                    <th>회원ID</th>
+                    <th>상품유형</th>
+                    <th>상품명</th>
+                    <th>금액(원)</th>
+                    <th>상태</th>
+                    <th>결제일</th>
+                    <th>관리</th>
+                  </tr>
+                </thead>
+                <tbody id="payments-list">
+                  <!-- 결제 데이터가 JS로 로드됩니다 -->
+                  <tr>
+                    <td colspan="8" style="text-align: center">
+                      결제 데이터를 불러오는 중...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="payments-pagination" class="pagination">
+              <!-- 페이지네이션이 JS로 생성됩니다 -->
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- 회원 수정 모달 -->
-    <div id="edit-user-modal" class="modal">
+    <!-- 감정 상세/수정 모달 -->
+    <div id="appraisal-detail-modal" class="modal">
       <div class="modal-content">
-        <span class="close-btn" onclick="closeModal('edit-user-modal')">×</span>
-        <h2>회원 정보 수정</h2>
-        <form id="edit-user-form">
-          <input type="hidden" id="edit-user-id" name="userId" />
+        <div class="modal-header">
+          <h2 class="modal-title">감정 상세 정보</h2>
+          <button
+            class="modal-close"
+            onclick="closeModal('appraisal-detail-modal')">
+            &times;
+          </button>
+        </div>
+        <div id="appraisal-detail-content">
+          <!-- 감정 상세 정보와 수정 폼이 JS로 로드됩니다 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 복원 서비스 추가/수정 모달 -->
+    <div id="restoration-service-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title" id="restoration-service-modal-title">
+            복원 서비스 추가
+          </h2>
+          <button
+            class="modal-close"
+            onclick="closeModal('restoration-service-modal')">
+            &times;
+          </button>
+        </div>
+        <form id="restoration-service-form">
+          <input type="hidden" id="restoration-service-id" />
           <div class="form-group">
-            <label for="edit-user-tier">회원 등급:</label>
-            <select id="edit-user-tier" name="tier">
-              <option value="일반회원">일반회원</option>
-              <option value="제휴사 회원">제휴사 회원</option>
-              <option value="까사트레이드 회원">까사트레이드 회원</option>
-            </select>
+            <label for="restoration-service-name" class="form-label"
+              >서비스명</label
+            >
+            <input
+              type="text"
+              id="restoration-service-name"
+              class="form-input"
+              required />
           </div>
           <div class="form-group">
-            <label for="edit-user-credit"
-              >퀵링크 크레딧 조정 (현재:
-              <span id="current-user-credit">0</span>회):</label
+            <label for="restoration-service-description" class="form-label"
+              >서비스 설명</label
+            >
+            <textarea
+              id="restoration-service-description"
+              class="form-textarea"
+              required></textarea>
+          </div>
+          <div class="form-group">
+            <label for="restoration-service-price" class="form-label"
+              >가격(원)</label
             >
             <input
               type="number"
-              id="edit-user-credit-adjustment"
-              name="quick_link_allowance_adjustment"
-              placeholder="예: 5 또는 -2" />
+              id="restoration-service-price"
+              class="form-input"
+              required />
           </div>
           <div class="form-group">
-            <label for="edit-user-active">계정 활성 상태:</label>
-            <select id="edit-user-active" name="is_active">
-              <option value="true">활성</option>
-              <option value="false">비활성</option>
-            </select>
+            <label for="restoration-service-days" class="form-label"
+              >예상 소요일</label
+            >
+            <input
+              type="number"
+              id="restoration-service-days"
+              class="form-input"
+              required />
           </div>
-          <button type="submit">회원 정보 저장</button>
+          <div class="form-group">
+            <label for="restoration-service-before-image" class="form-label"
+              >복원 전 이미지</label
+            >
+            <input
+              type="file"
+              id="restoration-service-before-image"
+              accept="image/*" />
+            <div id="before-image-preview" style="margin-top: 10px"></div>
+          </div>
+          <div class="form-group">
+            <label for="restoration-service-after-image" class="form-label"
+              >복원 후 이미지</label
+            >
+            <input
+              type="file"
+              id="restoration-service-after-image"
+              accept="image/*" />
+            <div id="after-image-preview" style="margin-top: 10px"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">활성화 상태</label>
+            <label style="margin-right: 20px">
+              <input
+                type="radio"
+                name="restoration-service-active"
+                value="true"
+                checked />
+              활성화
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="restoration-service-active"
+                value="false" />
+              비활성화
+            </label>
+          </div>
+          <div style="margin-top: 20px; text-align: right">
+            <button
+              type="button"
+              class="btn btn-outline"
+              onclick="closeModal('restoration-service-modal')">
+              취소
+            </button>
+            <button type="submit" class="btn" style="margin-left: 10px">
+              저장
+            </button>
+          </div>
         </form>
       </div>
     </div>
 
-    <!-- 감정 결과 입력 모달 -->
-    <div id="edit-appraisal-modal" class="modal">
+    <!-- 복원 요청 상세/수정 모달 -->
+    <div id="restoration-request-detail-modal" class="modal">
       <div class="modal-content">
-        <span class="close-btn" onclick="closeModal('edit-appraisal-modal')"
-          >×</span
-        >
-        <h2>감정 결과 입력</h2>
-        <form id="edit-appraisal-form">
-          <input type="hidden" id="edit-appraisal-id" name="appraisalId" />
-          <p>
-            <strong>감정 ID:</strong>
-            <span id="modal-appraisal-id-display"></span>
-          </p>
-          <p>
-            <strong>상품:</strong>
-            <span id="modal-appraisal-product-display"></span>
-          </p>
+        <div class="modal-header">
+          <h2 class="modal-title">복원 요청 상세 정보</h2>
+          <button
+            class="modal-close"
+            onclick="closeModal('restoration-request-detail-modal')">
+            &times;
+          </button>
+        </div>
+        <div id="restoration-request-detail-content">
+          <!-- 복원 요청 상세 정보와 수정 폼이 JS로 로드됩니다 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 회원 정보 수정 모달 -->
+    <div id="user-edit-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">회원 정보 수정</h2>
+          <button class="modal-close" onclick="closeModal('user-edit-modal')">
+            &times;
+          </button>
+        </div>
+        <form id="user-edit-form">
+          <input type="hidden" id="user-edit-id" />
           <div class="form-group">
-            <label for="edit-appraisal-status">감정 상태:</label>
-            <select id="edit-appraisal-status" name="status">
-              <option value="pending_review">검토대기</option>
-              <option value="in_review">검토중</option>
-              <option value="completed">완료</option>
-              <option value="cancelled">취소</option>
+            <label for="user-edit-tier" class="form-label">회원 등급</label>
+            <select id="user-edit-tier" class="form-select" required>
+              <option value="일반회원">일반회원</option>
+              <option value="까사트레이드 회원">까사트레이드 회원</option>
+              <option value="제휴사 회원">제휴사 회원</option>
             </select>
           </div>
           <div class="form-group">
-            <label for="edit-appraisal-result">감정 결과 (완료 시):</label>
-            <select id="edit-appraisal-result" name="result">
-              <option value="pending">선택안함 (진행중)</option>
-              <option value="authentic">정품</option>
-              <option value="fake">가품</option>
-              <option value="uncertain">판단불가</option>
+            <label for="user-edit-credits" class="form-label"
+              >퀵링크 크레딧</label
+            >
+            <input
+              type="number"
+              id="user-edit-credits"
+              class="form-input"
+              required />
+          </div>
+          <div class="form-group">
+            <label for="user-edit-monthly-limit" class="form-label"
+              >월 이용 한도</label
+            >
+            <input
+              type="number"
+              id="user-edit-monthly-limit"
+              class="form-input"
+              required />
+          </div>
+          <div class="form-group">
+            <label for="user-edit-subscription-type" class="form-label"
+              >구독 유형</label
+            >
+            <select
+              id="user-edit-subscription-type"
+              class="form-select"
+              required>
+              <option value="free">무료</option>
+              <option value="paid">유료</option>
             </select>
           </div>
           <div class="form-group">
-            <label for="edit-appraisal-notes">감정사 소견 (완료 시):</label>
-            <textarea
-              id="edit-appraisal-notes"
-              name="result_notes"
-              rows="4"></textarea>
+            <label for="user-edit-expires-at" class="form-label"
+              >구독 만료일</label
+            >
+            <input type="date" id="user-edit-expires-at" class="form-input" />
           </div>
-          <button type="submit">결과 저장</button>
+          <div style="margin-top: 20px; text-align: right">
+            <button
+              type="button"
+              class="btn btn-outline"
+              onclick="closeModal('user-edit-modal')">
+              취소
+            </button>
+            <button type="submit" class="btn" style="margin-left: 10px">
+              저장
+            </button>
+          </div>
         </form>
       </div>
     </div>
+
+    <!-- 결제 상세 모달 -->
+    <div id="payment-detail-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">결제 상세 정보</h2>
+          <button
+            class="modal-close"
+            onclick="closeModal('payment-detail-modal')">
+            &times;
+          </button>
+        </div>
+        <div id="payment-detail-content">
+          <!-- 결제 상세 정보가 JS로 로드됩니다 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- JS 파일 로드 -->
+    <script src="/js/appr-admin/appraisals.js"></script>
+    <script src="/js/appr-admin/restorations.js"></script>
+    <script src="/js/appr-admin/requests.js"></script>
+    <script src="/js/appr-admin/users.js"></script>
+    <script src="/js/appr-admin/payments.js"></script>
 
     <script>
-      const adminMessageDiv = document.getElementById("admin-message");
-      function showAdminMessage(message, type = "error", duration = 3000) {
-        adminMessageDiv.textContent = message;
-        adminMessageDiv.className =
-          type === "success" ? "msg-success" : "msg-error";
-        adminMessageDiv.style.display = "block";
-        setTimeout(() => {
-          adminMessageDiv.style.display = "none";
-        }, duration);
-      }
+      // 기본 설정 및 전역 함수
+      document.addEventListener("DOMContentLoaded", function () {
+        // 페이지 로드 시 기본 탭(감정 관리) 활성화
+        loadAppraisalList();
 
-      // --- 탭 기능 ---
-      const tabButtons = document.querySelectorAll(".tab-button");
-      const tabContents = document.querySelectorAll(".tab-content");
-      tabButtons.forEach((button) => {
-        button.addEventListener("click", () => {
-          tabButtons.forEach((btn) => btn.classList.remove("active"));
-          tabContents.forEach((content) => content.classList.remove("active"));
-          button.classList.add("active");
-          document
-            .getElementById("tab-" + button.dataset.tab)
-            .classList.add("active");
+        // 관리자 정보 로드
+        loadAdminInfo();
+
+        // 탭 전환 이벤트 리스너 설정
+        document.querySelectorAll(".nav-tabs a").forEach((tab) => {
+          tab.addEventListener("click", function (e) {
+            e.preventDefault();
+            switchTab(this.getAttribute("data-tab"));
+          });
         });
       });
 
-      // --- 모달 기능 ---
+      // 관리자 정보 로드
+      function loadAdminInfo() {
+        fetch("/api/auth/user")
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.user) {
+              document.getElementById("admin-name").textContent = data.user.id;
+            }
+          })
+          .catch((error) => console.error("Error loading admin info:", error));
+      }
+
+      // 탭 전환 함수
+      function switchTab(tabId) {
+        // 모든 탭 비활성화
+        document.querySelectorAll(".nav-tabs a").forEach((tab) => {
+          tab.classList.remove("active");
+        });
+        document.querySelectorAll(".tab-content").forEach((content) => {
+          content.classList.remove("active");
+        });
+
+        // 선택한 탭 활성화
+        document
+          .querySelector(`.nav-tabs a[data-tab="${tabId}"]`)
+          .classList.add("active");
+        document.getElementById(`${tabId}-tab`).classList.add("active");
+
+        // 페이지 제목 업데이트
+        const titles = {
+          appraisals: "감정 관리",
+          restorations: "복원 서비스 관리",
+          requests: "복원 요청 관리",
+          users: "회원 관리",
+          payments: "결제 관리",
+        };
+        document.getElementById("page-title").textContent = titles[tabId];
+
+        // 탭에 해당하는 데이터 로드
+        switch (tabId) {
+          case "appraisals":
+            loadAppraisalList();
+            break;
+          case "restorations":
+            loadRestorationServiceList();
+            break;
+          case "requests":
+            loadRestorationRequestList();
+            break;
+          case "users":
+            loadUserList();
+            break;
+          case "payments":
+            loadPaymentList();
+            break;
+        }
+      }
+
+      // 모달 열기/닫기 함수
       function openModal(modalId) {
         document.getElementById(modalId).style.display = "flex";
       }
+
       function closeModal(modalId) {
         document.getElementById(modalId).style.display = "none";
       }
-      window.onclick = function (event) {
-        if (event.target.classList.contains("modal"))
-          closeModal(event.target.id);
-      };
 
-      // --- 홈페이지 설정 ---
-      const hpForm = document.getElementById("homepage-settings-form");
-      const currentBannerUrlLink =
-        document.getElementById("current-banner-url");
-      const bannerPreviewImg = document.getElementById("hp-banner-preview");
-      async function loadHomepageSettings() {
-        try {
-          const res = await fetch("/api/appr/admin/settings/homepage");
-          const data = await res.json();
-          if (data.success && data.settings) {
-            const s = data.settings;
-            document.getElementById("hp-banner-title").value =
-              s.homepage_banner_title || "";
-            document.getElementById("hp-banner-subtitle").value =
-              s.homepage_banner_subtitle || "";
-            currentBannerUrlLink.textContent = s.homepage_banner_image_url
-              ? s.homepage_banner_image_url.split("/").pop()
-              : "없음";
-            currentBannerUrlLink.href = s.homepage_banner_image_url || "#";
-            bannerPreviewImg.src = s.homepage_banner_image_url || "#";
-            bannerPreviewImg.style.display = s.homepage_banner_image_url
-              ? "block"
-              : "none";
-            document.getElementById("hp-btn1-text").value =
-              s.homepage_banner_button1_text || "";
-            document.getElementById("hp-btn1-url").value =
-              s.homepage_banner_button1_url || "";
-            document.getElementById("hp-btn2-text").value =
-              s.homepage_banner_button2_text || "";
-            document.getElementById("hp-btn2-url").value =
-              s.homepage_banner_button2_url || "";
-            document.getElementById("hp-show-stats").value =
-              s.homepage_show_stats || "true";
-          } else {
-            showAdminMessage(
-              "설정 로드 실패: " + (data.message || "알 수 없음")
-            );
-          }
-        } catch (err) {
-          showAdminMessage("설정 로드 오류: " + err.message);
-        }
+      // 날짜 포맷 유틸리티 함수
+      function formatDate(dateString) {
+        if (!dateString) return "-";
+        const date = new Date(dateString);
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+          2,
+          "0"
+        )}-${String(date.getDate()).padStart(2, "0")}`;
       }
-      document.getElementById("hp-banner-image-file").onchange = (evt) => {
-        const [file] = evt.target.files;
-        if (file) {
-          bannerPreviewImg.src = URL.createObjectURL(file);
-          bannerPreviewImg.style.display = "block";
-        }
-      };
-      hpForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const formData = new FormData(hpForm);
-        // 파일 필드 이름 확인
-        if (document.getElementById("hp-banner-image-file").files.length > 0) {
-          formData.set(
-            "homepage_banner_image_file",
-            document.getElementById("hp-banner-image-file").files[0]
-          );
-        }
 
-        showAdminMessage("저장 중...", "success");
-        try {
-          const res = await fetch("/api/appr/admin/settings/homepage", {
-            method: "POST",
-            body: formData,
-          });
-          const result = await res.json();
-          if (result.success) {
-            showAdminMessage("홈페이지 설정 저장 완료.", "success");
-            if (result.newImageUrl) {
-              currentBannerUrlLink.textContent = result.newImageUrl
-                .split("/")
-                .pop();
-              currentBannerUrlLink.href = result.newImageUrl;
-              bannerPreviewImg.src = result.newImageUrl;
-              bannerPreviewImg.style.display = "block";
-            }
-          } else {
-            showAdminMessage("저장 실패: " + (result.message || "알 수 없음"));
-          }
-        } catch (err) {
-          showAdminMessage("저장 오류: " + err.message);
-        }
-      });
+      // 상태 표시 배지 생성 유틸리티 함수
+      function getStatusBadge(status) {
+        const statusMap = {
+          pending: { class: "badge-info", text: "접수완료" },
+          in_review: { class: "badge-warning", text: "감정중" },
+          in_progress: { class: "badge-warning", text: "진행중" },
+          completed: { class: "badge-success", text: "완료" },
+          cancelled: { class: "badge-error", text: "취소" },
+          authentic: { class: "badge-success", text: "정품" },
+          fake: { class: "badge-error", text: "가품" },
+          uncertain: { class: "badge-warning", text: "판단불가" },
+        };
 
-      // --- 회원 관리 ---
-      let usersCurrentPage = 1;
-      const usersLimit = 10;
-      async function loadUsers(page = 1) {
-        usersCurrentPage = page;
-        const searchType = document.getElementById("user-search-type").value;
-        const keyword = document.getElementById("user-search-keyword").value;
-        const tier = document.getElementById("user-tier-filter").value;
-        const usersTableBody = document.querySelector("#users-table tbody");
-        usersTableBody.innerHTML = `<tr><td colspan="8" class="loading">회원 목록 로딩 중...</td></tr>`;
-        try {
-          const res = await fetch(
-            `/api/appr/admin/users?page=${page}&limit=${usersLimit}&search_type=${searchType}&search_keyword=${encodeURIComponent(
-              keyword
-            )}&tier_filter=${tier}`
-          );
-          const data = await res.json();
-          usersTableBody.innerHTML = "";
-          if (data.success && data.users) {
-            if (data.users.length === 0)
-              usersTableBody.innerHTML =
-                '<tr><td colspan="8" style="text-align:center;">검색된 회원이 없습니다.</td></tr>';
-            data.users.forEach((user) => {
-              const row = usersTableBody.insertRow();
-              row.innerHTML = `<td>${user.id}</td><td>${
-                user.name || "-"
-              }</td><td>${user.email || "-"}</td><td>${
-                user.tier || "일반회원"
-              }</td><td>${
-                user.quick_link_allowance !== null
-                  ? user.quick_link_allowance
-                  : "-"
-              }</td><td>${
-                user.is_active ? "활성" : "비활성"
-              }</td><td>${new Date(
-                user.join_date
-              ).toLocaleDateString()}</td><td><button class="btn-secondary" onclick="openEditUserModal('${
-                user.id
-              }', '${user.tier || "일반회원"}', ${
-                user.quick_link_allowance !== null
-                  ? user.quick_link_allowance
-                  : 0
-              }, ${user.is_active})">수정</button></td>`;
-            });
-            renderAdminPagination(
-              "users-pagination",
-              data.pagination,
-              loadUsers
-            );
-          } else {
-            showAdminMessage(
-              "회원 목록 로드 실패: " + (data.message || "알 수 없음")
-            );
-          }
-        } catch (err) {
-          showAdminMessage("회원 목록 로드 오류: " + err.message);
-          usersTableBody.innerHTML = `<tr><td colspan="8" class="loading" style="color:red;">${err.message}</td></tr>`;
-        }
+        const badgeInfo = statusMap[status] || {
+          class: "badge-info",
+          text: status,
+        };
+        return `<span class="badge ${badgeInfo.class}">${badgeInfo.text}</span>`;
       }
-      function openEditUserModal(userId, tier, currentCredit, isActive) {
-        document.getElementById("edit-user-id").value = userId;
-        document.getElementById("edit-user-tier").value = tier;
-        document.getElementById("current-user-credit").textContent =
-          currentCredit;
-        document.getElementById("edit-user-credit-adjustment").value = "";
-        document.getElementById("edit-user-active").value = String(isActive);
-        openModal("edit-user-modal");
-      }
-      document
-        .getElementById("edit-user-form")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
-          const userId = document.getElementById("edit-user-id").value;
-          const formData = new FormData(e.target);
-          const dataToSubmit = {
-            tier: formData.get("tier"),
-            is_active: formData.get("is_active") === "true",
-          };
-          const creditAdjustment = formData.get(
-            "quick_link_allowance_adjustment"
-          );
-          if (creditAdjustment && !isNaN(parseInt(creditAdjustment))) {
-            dataToSubmit.quick_link_allowance_adjustment =
-              parseInt(creditAdjustment);
-          }
-          try {
-            const res = await fetch(`/api/appr/admin/users/${userId}`, {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(dataToSubmit),
-            });
-            const result = await res.json();
-            if (result.success) {
-              showAdminMessage(
-                "회원 정보가 성공적으로 업데이트되었습니다.",
-                "success"
-              );
-              closeModal("edit-user-modal");
-              loadUsers(usersCurrentPage);
-            } else {
-              showAdminMessage(
-                "회원 정보 업데이트 실패: " + (result.message || "알 수 없음")
-              );
-            }
-          } catch (err) {
-            showAdminMessage("회원 정보 업데이트 오류: " + err.message);
-          }
-        });
 
-      // --- 감정 관리 ---
-      let appraisalsCurrentPage = 1;
-      const appraisalsLimit = 10;
-      async function loadAppraisals(page = 1) {
-        appraisalsCurrentPage = page;
-        const searchField = document.getElementById(
-          "appraisal-search-field"
-        ).value;
-        const keyword = document.getElementById(
-          "appraisal-search-keyword"
-        ).value;
-        const status = document.getElementById("appraisal-status-filter").value;
-        const type = document.getElementById("appraisal-type-filter").value;
-        const appraisalsTableBody = document.querySelector(
-          "#appraisals-table tbody"
-        );
-        appraisalsTableBody.innerHTML = `<tr><td colspan="8" class="loading">감정 목록 로딩 중...</td></tr>`;
-        try {
-          const res = await fetch(
-            `/api/appr/admin/appraisals?page=${page}&limit=${appraisalsLimit}&search_field=${searchField}&search_keyword=${encodeURIComponent(
-              keyword
-            )}&status=${status}&appraisal_type=${type}`
-          );
-          const data = await res.json();
-          appraisalsTableBody.innerHTML = "";
-          if (data.success && data.appraisals) {
-            if (data.appraisals.length === 0)
-              appraisalsTableBody.innerHTML =
-                '<tr><td colspan="8" style="text-align:center;">검색된 감정 내역이 없습니다.</td></tr>';
-            data.appraisals.forEach((appr) => {
-              const row = appraisalsTableBody.insertRow();
-              row.innerHTML = `<td>${appr.id.slice(-8)}</td><td>${
-                appr.user_name || "-"
-              }(${appr.user_id_display})</td><td>${appr.brand}/${
-                appr.model_name
-              }</td><td>${appr.appraisal_type}</td><td>${appr.status}</td><td>${
-                appr.result || "-"
-              }</td><td>${new Date(
-                appr.created_at
-              ).toLocaleDateString()}</td><td><button class="btn-secondary" onclick="openEditAppraisalModal('${
-                appr.id
-              }', '${appr.brand} ${appr.model_name}', '${appr.status}', '${
-                appr.result || "pending"
-              }', \`${appr.result_notes || ""}\`)">결과입력</button></td>`;
-            });
-            renderAdminPagination(
-              "appraisals-pagination",
-              data.pagination,
-              loadAppraisals
-            );
-          } else {
-            showAdminMessage(
-              "감정 목록 로드 실패: " + (data.message || "알 수 없음")
-            );
-          }
-        } catch (err) {
-          showAdminMessage("감정 목록 로드 오류: " + err.message);
-          appraisalsTableBody.innerHTML = `<tr><td colspan="8" class="loading" style="color:red;">${err.message}</td></tr>`;
-        }
-      }
-      function openEditAppraisalModal(
-        appraisalId,
-        productName,
-        currentStatus,
-        currentResult,
-        currentNotes
+      // 페이지네이션 생성 유틸리티 함수
+      function createPagination(
+        containerId,
+        currentPage,
+        totalPages,
+        callback
       ) {
-        document.getElementById("edit-appraisal-id").value = appraisalId;
-        document.getElementById("modal-appraisal-id-display").textContent =
-          appraisalId;
-        document.getElementById("modal-appraisal-product-display").textContent =
-          productName;
-        document.getElementById("edit-appraisal-status").value = currentStatus;
-        document.getElementById("edit-appraisal-result").value =
-          currentResult === "null" ? "pending" : currentResult; // DB null을 'pending'으로
-        document.getElementById("edit-appraisal-notes").value =
-          currentNotes === "null" ? "" : currentNotes;
-        openModal("edit-appraisal-modal");
-      }
-      document
-        .getElementById("edit-appraisal-form")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
-          const appraisalId =
-            document.getElementById("edit-appraisal-id").value;
-          const dataToSubmit = {
-            status: document.getElementById("edit-appraisal-status").value,
-            result: document.getElementById("edit-appraisal-result").value,
-            result_notes: document.getElementById("edit-appraisal-notes").value,
-            appraiser_id: "admin", // 실제 로그인된 관리자 ID 사용 필요
-          };
-          // 'pending' 값은 null로 서버에 전달하거나 서버에서 처리
-          if (dataToSubmit.result === "pending") dataToSubmit.result = null;
+        const container = document.getElementById(containerId);
+        container.innerHTML = "";
 
-          try {
-            const res = await fetch(
-              `/api/appr/admin/appraisals/${appraisalId}/result`,
-              {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(dataToSubmit),
-              }
-            );
-            const result = await res.json();
-            if (result.success) {
-              showAdminMessage(
-                "감정 결과가 성공적으로 업데이트되었습니다.",
-                "success"
-              );
-              closeModal("edit-appraisal-modal");
-              loadAppraisals(appraisalsCurrentPage); // 현재 페이지 목록 새로고침
-              loadUsers(usersCurrentPage); // 크레딧 변경 가능성 있으므로 회원 목록도 갱신
-            } else {
-              showAdminMessage(
-                "결과 업데이트 실패: " + (result.message || "알 수 없음")
-              );
-            }
-          } catch (err) {
-            showAdminMessage("결과 업데이트 오류: " + err.message);
+        if (totalPages <= 1) return;
+
+        // 처음 페이지
+        if (currentPage > 1) {
+          const firstLink = document.createElement("a");
+          firstLink.href = "#";
+          firstLink.classList.add("pagination-item");
+          firstLink.textContent = "«";
+          firstLink.addEventListener("click", () => callback(1));
+          container.appendChild(firstLink);
+        }
+
+        // 이전 페이지
+        if (currentPage > 1) {
+          const prevLink = document.createElement("a");
+          prevLink.href = "#";
+          prevLink.classList.add("pagination-item");
+          prevLink.textContent = "‹";
+          prevLink.addEventListener("click", () => callback(currentPage - 1));
+          container.appendChild(prevLink);
+        }
+
+        // 페이지 범위 계산 (최대 5개)
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, startPage + 4);
+
+        if (endPage - startPage < 4) {
+          startPage = Math.max(1, endPage - 4);
+        }
+
+        // 페이지 번호
+        for (let i = startPage; i <= endPage; i++) {
+          const pageLink = document.createElement("a");
+          pageLink.href = "#";
+          pageLink.classList.add("pagination-item");
+          if (i === currentPage) {
+            pageLink.classList.add("active");
           }
-        });
+          pageLink.textContent = i;
+          pageLink.addEventListener("click", () => callback(i));
+          container.appendChild(pageLink);
+        }
 
-      // --- 공통 페이지네이션 렌더링 함수 ---
-      function renderAdminPagination(elementId, paginationData, callback) {
-        const paginationDiv = document.getElementById(elementId);
-        paginationDiv.innerHTML = "";
-        if (!paginationData || paginationData.totalPages <= 1) return;
-        for (let i = 1; i <= paginationData.totalPages; i++) {
-          const pageButton = document.createElement("button");
-          pageButton.textContent = i;
-          if (i === paginationData.currentPage)
-            pageButton.classList.add("active");
-          pageButton.onclick = () => callback(i);
-          paginationDiv.appendChild(pageButton);
+        // 다음 페이지
+        if (currentPage < totalPages) {
+          const nextLink = document.createElement("a");
+          nextLink.href = "#";
+          nextLink.classList.add("pagination-item");
+          nextLink.textContent = "›";
+          nextLink.addEventListener("click", () => callback(currentPage + 1));
+          container.appendChild(nextLink);
+        }
+
+        // 마지막 페이지
+        if (currentPage < totalPages) {
+          const lastLink = document.createElement("a");
+          lastLink.href = "#";
+          lastLink.classList.add("pagination-item");
+          lastLink.textContent = "»";
+          lastLink.addEventListener("click", () => callback(totalPages));
+          container.appendChild(lastLink);
         }
       }
 
-      // --- 초기 로드 ---
-      document.addEventListener("DOMContentLoaded", () => {
-        loadHomepageSettings();
-        loadUsers(1);
-        loadAppraisals(1);
-      });
+      // 오류 처리 유틸리티 함수
+      function showError(message) {
+        alert(message || "오류가 발생했습니다. 다시 시도해주세요.");
+      }
+
+      // 이미지 미리보기 유틸리티 함수
+      function createImagePreview(file, previewElement) {
+        if (!file) {
+          previewElement.innerHTML = "";
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          previewElement.innerHTML = `<img src="${e.target.result}" style="max-width: 100%; max-height: 200px;">`;
+        };
+        reader.readAsDataURL(file);
+      }
+
+      // 실시간 폼 데이터 검증 유틸리티 함수
+      function validateForm(formId, validationRules) {
+        const form = document.getElementById(formId);
+        const elements = form.elements;
+
+        for (const field in validationRules) {
+          if (elements[field]) {
+            const value = elements[field].value;
+            const rule = validationRules[field];
+
+            if (rule.required && !value) {
+              return {
+                isValid: false,
+                message: `${rule.label || field}은(는) 필수 항목입니다.`,
+              };
+            }
+
+            if (rule.min && value < rule.min) {
+              return {
+                isValid: false,
+                message: `${rule.label || field}은(는) ${
+                  rule.min
+                } 이상이어야 합니다.`,
+              };
+            }
+
+            if (rule.max && value > rule.max) {
+              return {
+                isValid: false,
+                message: `${rule.label || field}은(는) ${
+                  rule.max
+                } 이하여야 합니다.`,
+              };
+            }
+          }
+        }
+
+        return { isValid: true };
+      }
+
+      // 알림 표시 유틸리티 함수
+      function showAlert(
+        message,
+        type = "success",
+        container = "main-content"
+      ) {
+        const alertDiv = document.createElement("div");
+        alertDiv.className = `alert alert-${type}`;
+        alertDiv.textContent = message;
+
+        const containerElement = document.querySelector(`.${container}`);
+        containerElement.insertBefore(alertDiv, containerElement.firstChild);
+
+        // 3초 후 알림 자동 제거
+        setTimeout(() => {
+          alertDiv.remove();
+        }, 3000);
+      }
     </script>
   </body>
 </html>
