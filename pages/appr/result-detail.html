@@ -1101,7 +1101,7 @@
         if (downloadPdfBtn) {
           downloadPdfBtn.addEventListener("click", () => {
             if (currentCertificateNumber) {
-              window.location.href = `/api/appr/appraisals/certificates/${currentCertificateNumber}/download`;
+              window.location.href = `/api/appr/appraisals/certificate/${currentCertificateNumber}/download`;
             } else {
               alert("감정서 번호를 찾을 수 없습니다.");
             }
@@ -1109,7 +1109,7 @@
         }
 
         if (qrCodeImgEl) {
-          qrCodeImgEl.src = `/api/appr/appraisals/certificates/${currentCertificateNumber}/qrcode`;
+          qrCodeImgEl.src = `/api/appr/appraisals/certificate/${currentCertificateNumber}/qrcode`;
         }
 
         fetch(`/api/appr/appraisals/certificate/${currentCertificateNumber}`)
