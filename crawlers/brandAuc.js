@@ -1293,6 +1293,4 @@ class BrandAucValueCrawler extends AxiosCrawler {
 const brandAucCrawler = new BrandAucCrawler(brandAucConfig);
 const brandAucValueCrawler = new BrandAucValueCrawler(brandAucValueConfig);
 
-brandAucCrawler.login();
-
 module.exports = { brandAucCrawler, brandAucValueCrawler };
