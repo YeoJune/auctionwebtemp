@@ -1,1297 +1,1940 @@
 <!DOCTYPE html>
 <html lang="ko">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>까사트레이드 - 이용 가이드 및 FAQ</title>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
     <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap"
+      rel="stylesheet" />
     <link rel="stylesheet" href="/styles/common.css" />
     <link rel="stylesheet" href="/styles/main.css" />
     <link rel="stylesheet" href="/styles/header.css" />
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
-            line-height: 1.6;
-            color: #1A1A1A;
-            background-color: #FAFAFA;
-        }
-        
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Noto Sans KR", -apple-system, BlinkMacSystemFont,
+          sans-serif;
+        line-height: 1.6;
+        color: #1a1a1a;
+        background-color: #fafafa;
+      }
+
+      .section {
+        padding: 40px 24px;
+      }
+
+      .section-container {
+        max-width: 1280px;
+        margin: 0 auto;
+      }
+
+      .section-title {
+        text-align: center;
+        font-size: 36px;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin-bottom: 48px;
+        letter-spacing: -0.02em;
+      }
+      /* 이용가이드 스타일 */
+
+      .guide-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+      }
+
+      .guide-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        transition: transform 0.3s ease;
+        border: 1px solid #e5e7eb;
+      }
+
+      .guide-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+      }
+
+      .guide-subtitle {
+        font-size: 24px;
+        font-weight: 600;
+        color: #1e3a8a;
+        margin-bottom: 16px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #e5e7eb;
+      }
+
+      .guide-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .guide-list > li {
+        margin-bottom: 20px;
+      }
+
+      .guide-list > li > strong {
+        display: block;
+        margin-bottom: 12px;
+        color: #1a1a1a;
+        font-size: 18px;
+      }
+
+      .guide-list > li > ul {
+        list-style: none;
+        padding-left: 20px;
+        margin-top: 8px;
+      }
+
+      .guide-list > li > ul > li {
+        position: relative;
+        padding-left: 20px;
+        margin-bottom: 12px;
+        color: #4b5563;
+      }
+
+      .guide-list > li > ul > li:before {
+        content: "•";
+        position: absolute;
+        left: 0;
+        color: #1e3a8a;
+      }
+
+      .guide-tip {
+        background: #fffbeb;
+        border-left: 4px solid #f59e0b;
+        padding: 16px;
+        margin-top: 24px;
+        border-radius: 0 8px 8px 0;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      .tip-icon {
+        font-size: 24px;
+        line-height: 1;
+      }
+      /* 가이드북 탭 스타일 */
+
+      .guidebook-tabs {
+        display: flex;
+        margin-bottom: 24px;
+        background: #f8faff;
+        padding: 16px;
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        flex-wrap: wrap;
+      }
+
+      .guidebook-tab {
+        display: block;
+        padding: 12px 16px;
+        cursor: pointer;
+        font-weight: 500;
+        color: #4b5563;
+        text-align: center;
+        margin: 0 4px 8px;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        flex: 1 0 auto;
+        min-width: 120px;
+      }
+
+      .guidebook-tab:hover {
+        background: #eff6ff;
+        color: #1e3a8a;
+      }
+
+      .guidebook-tab.active {
+        background: #1e3a8a;
+        color: white;
+        border-color: #1e3a8a;
+      }
+
+      .guidebook-content {
+        position: relative;
+        min-height: 400px;
+      }
+
+      .guidebook-page {
+        display: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .guidebook-page.active {
+        display: block;
+        opacity: 1;
+      }
+      /* FAQ 섹션 스타일 */
+
+      .faq {
+        padding: 40px 0;
+        background-color: white;
+      }
+
+      .faq-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      .faq-item {
+        background: white;
+        border-radius: 12px;
+        margin-bottom: 16px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        border: 1px solid #e5e7eb;
+        transition: all 0.3s ease;
+      }
+
+      .faq-item:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .faq-question {
+        width: 100%;
+        text-align: left;
+        background: none;
+        border: none;
+        padding: 24px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 500;
+        color: #1a1a1a;
+        font-size: 18px;
+        transition: background-color 0.3s ease;
+      }
+
+      .faq-question:hover {
+        background-color: #f8faff;
+      }
+
+      .faq-question h3 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+      }
+
+      .faq-answer {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out;
+        padding: 0 24px;
+        background-color: #f8fafc;
+        border-top: 1px solid #e5e7eb;
+      }
+
+      .faq-item.active .faq-answer {
+        max-height: 500px;
+        padding: 24px;
+      }
+
+      .faq-answer ol {
+        padding-left: 24px;
+        margin-top: 12px;
+        margin-bottom: 12px;
+      }
+
+      .faq-answer ol li {
+        margin-bottom: 8px;
+      }
+
+      .toggle-icon {
+        font-size: 20px;
+        transition: transform 0.3s ease;
+        flex-shrink: 0;
+        margin-left: 10px;
+      }
+
+      .faq-item.active .toggle-icon {
+        transform: rotate(45deg);
+      }
+
+      .image-container {
+        background-color: #f8faff;
+        border-radius: 8px;
+        text-align: center;
+        padding: 20px;
+        margin: 16px 0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      }
+
+      .image-container img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 6px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        object-fit: contain;
+      }
+
+      .pricing-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 24px;
+        margin-bottom: 24px;
+      }
+
+      .pricing-card {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        border: 1px solid #e5e7eb;
+      }
+
+      .pricing-title {
+        color: #1e3a8a;
+        font-size: 24px;
+        font-weight: 600;
+        margin-bottom: 16px;
+        text-align: center;
+      }
+
+      .highlight-box {
+        background: #f8faff;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 24px;
+      }
+
+      .highlight-box p {
+        margin-bottom: 8px;
+      }
+
+      .highlight-box p:last-child {
+        margin-bottom: 0;
+      }
+
+      .service-list {
+        list-style: none;
+        padding: 0;
+        margin-bottom: 24px;
+      }
+
+      .service-list li {
+        padding-left: 24px;
+        position: relative;
+        margin-bottom: 12px;
+      }
+
+      .service-list li:before {
+        content: "✓";
+        position: absolute;
+        left: 0;
+        color: #1e3a8a;
+      }
+
+      .price-list {
+        list-style: none;
+        padding: 0;
+      }
+
+      .price-list li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      .price-list li:last-child {
+        border-bottom: none;
+      }
+
+      .commission-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 16px;
+      }
+
+      .commission-table th,
+      .commission-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      .commission-table th {
+        background: #f8faff;
+        font-weight: 600;
+        color: #1e3a8a;
+      }
+
+      .commission-table tr:last-child td {
+        border-bottom: none;
+      }
+      /* 추가된 스타일 */
+
+      .auction-type-box {
+        background: #f0f9ff;
+        border-radius: 8px;
+        padding: 16px;
+        margin: 20px 0;
+        border-left: 4px solid #0ea5e9;
+      }
+
+      .color-indicator {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        margin-right: 8px;
+        vertical-align: middle;
+      }
+
+      .color-blue {
+        background-color: #1e40af;
+      }
+
+      .color-green {
+        background-color: #10b981;
+      }
+
+      .steps-container {
+        margin: 16px 0;
+        padding: 16px;
+        background: #f8fafc;
+        border-radius: 8px;
+      }
+
+      .step-item {
+        display: flex;
+        margin-bottom: 16px;
+        align-items: flex-start;
+      }
+
+      .step-number {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #1e3a8a;
+        color: white;
+        font-weight: bold;
+        margin-right: 12px;
+        flex-shrink: 0;
+      }
+
+      .step-content {
+        flex: 1;
+      }
+      /* 이미지 모달 스타일 추가 */
+
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.9);
+        z-index: 1000;
+        overflow: auto;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .modal.show {
+        display: flex !important;
+      }
+
+      .modal-content {
+        position: relative;
+        margin: auto;
+        max-width: 90%;
+        max-height: 90vh;
+      }
+
+      .modal-image {
+        max-width: 100%;
+        max-height: 90vh;
+        object-fit: contain;
+      }
+
+      .close-button {
+        position: absolute;
+        top: -40px;
+        right: 0;
+        color: #fff;
+        font-size: 30px;
+        font-weight: bold;
+        cursor: pointer;
+        background: none;
+        border: none;
+        padding: 10px;
+      }
+
+      .image-container img {
+        cursor: pointer;
+        transition: opacity 0.3s;
+      }
+
+      .image-container img:hover {
+        opacity: 0.8;
+      }
+      /* 링크 스타일 */
+
+      .pricing-link {
+        color: #1e3a8a;
+        text-decoration: underline;
+        cursor: pointer;
+        font-weight: 500;
+      }
+
+      .pricing-link:hover {
+        color: #1e40af;
+      }
+      /* 새로 추가된 CAS 감정 시스템 관련 스타일 */
+
+      .cas-card {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        border: 1px solid #e5e7eb;
+        margin-bottom: 20px;
+      }
+
+      .cas-service-title {
+        color: #1e3a8a;
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      .cas-service-description {
+        margin-bottom: 16px;
+      }
+
+      .cas-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+      }
+
+      .cas-table th,
+      .cas-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      .cas-table th {
+        background: #f8faff;
+        font-weight: 600;
+        color: #1e3a8a;
+      }
+
+      .cas-process {
+        background: #f0f9ff;
+        border-radius: 8px;
+        padding: 16px;
+        margin: 20px 0;
+      }
+
+      .cas-process-title {
+        font-weight: 600;
+        color: #1e3a8a;
+        margin-bottom: 12px;
+      }
+
+      .cas-process-list {
+        list-style: none;
+        padding: 0;
+      }
+
+      .cas-process-list li {
+        position: relative;
+        padding-left: 24px;
+        margin-bottom: 10px;
+      }
+
+      .cas-process-list li:before {
+        content: "✓";
+        position: absolute;
+        left: 0;
+        color: #1e3a8a;
+      }
+
+      .comparison-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 16px 0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+      }
+
+      .comparison-table th,
+      .comparison-table td {
+        padding: 12px;
+        text-align: center;
+        border: 1px solid #e5e7eb;
+      }
+
+      .comparison-table th {
+        background: #f8faff;
+        font-weight: 600;
+        color: #1e3a8a;
+      }
+
+      .comparison-table tr:nth-child(even) {
+        background-color: #f9fafb;
+      }
+
+      .auction-faq {
+        background: #f0f7ff;
+        border-radius: 8px;
+        padding: 16px;
+        margin-top: 24px;
+      }
+
+      .auction-faq h4 {
+        color: #1e3a8a;
+        margin-bottom: 16px;
+      }
+
+      .auction-faq-item {
+        margin-bottom: 16px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      .auction-faq-item:last-child {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+      }
+
+      .auction-faq-question {
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+
+      .auction-faq-answer {
+        color: #4b5563;
+      }
+
+      .auction-steps {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        margin: 20px 0;
+      }
+
+      .auction-step {
+        background: white;
+        border-radius: 8px;
+        padding: 16px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        border-left: 4px solid #1e3a8a;
+      }
+
+      .auction-step-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .auction-step-number {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #1e3a8a;
+        color: white;
+        font-weight: bold;
+        margin-right: 12px;
+      }
+
+      .auction-step-title {
+        font-weight: 600;
+        color: #1e3a8a;
+      }
+
+      .auction-summary {
+        background: #f0f9ff;
+        border-radius: 8px;
+        padding: 16px;
+        margin: 20px 0;
+        border-left: 4px solid #1e3a8a;
+      }
+      /* 모바일 스타일 */
+
+      @media (max-width: 768px) {
         .section {
-            padding: 40px 24px;
+          padding: 20px 12px;
         }
-        
-        .section-container {
-            max-width: 1280px;
-            margin: 0 auto;
-        }
-        
-        .section-title {
-            text-align: center;
-            font-size: 36px;
-            font-weight: 700;
-            color: #1A1A1A;
-            margin-bottom: 48px;
-            letter-spacing: -0.02em;
-        }
-        /* 이용가이드 스타일 */
-        
         .guide-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
+          padding: 0 8px;
         }
-        
         .guide-card {
-            background: #fff;
-            border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 24px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            transition: transform 0.3s ease;
-            border: 1px solid #E5E7EB;
+          padding: 16px;
+          margin-bottom: 16px;
+          border-radius: 12px;
         }
-        
-        .guide-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-        }
-        
-        .guide-subtitle {
-            font-size: 24px;
-            font-weight: 600;
-            color: #1E3A8A;
-            margin-bottom: 16px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #E5E7EB;
-        }
-        
-        .guide-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-        
-        .guide-list>li {
-            margin-bottom: 20px;
-        }
-        
-        .guide-list>li>strong {
-            display: block;
-            margin-bottom: 12px;
-            color: #1A1A1A;
-            font-size: 18px;
-        }
-        
-        .guide-list>li>ul {
-            list-style: none;
-            padding-left: 20px;
-            margin-top: 8px;
-        }
-        
-        .guide-list>li>ul>li {
-            position: relative;
-            padding-left: 20px;
-            margin-bottom: 12px;
-            color: #4B5563;
-        }
-        
-        .guide-list>li>ul>li:before {
-            content: "•";
-            position: absolute;
-            left: 0;
-            color: #1E3A8A;
-        }
-        
-        .guide-tip {
-            background: #FFFBEB;
-            border-left: 4px solid #F59E0B;
-            padding: 16px;
-            margin-top: 24px;
-            border-radius: 0 8px 8px 0;
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-        }
-        
-        .tip-icon {
-            font-size: 24px;
-            line-height: 1;
-        }
-        /* 가이드북 탭 스타일 */
-        
         .guidebook-tabs {
-            display: flex;
-            margin-bottom: 24px;
-            background: #F8FAFF;
-            padding: 16px;
-            border-radius: 12px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            flex-wrap: wrap;
+          padding: 8px;
+          margin: 0 -8px 16px -8px;
+          border-radius: 0;
+          flex-direction: column;
         }
-        
         .guidebook-tab {
-            display: block;
-            padding: 12px 16px;
-            cursor: pointer;
-            font-weight: 500;
-            color: #4B5563;
-            text-align: center;
-            margin: 0 4px 8px;
-            background: #fff;
-            border: 1px solid #E5E7EB;
-            border-radius: 8px;
-            flex: 1 0 auto;
-            min-width: 120px;
+          padding: 14px 16px;
+          font-size: 16px;
+          margin-bottom: 6px;
+          width: 100%;
         }
-        
-        .guidebook-tab:hover {
-            background: #EFF6FF;
-            color: #1E3A8A;
+        .guide-subtitle {
+          font-size: 22px;
+          margin-bottom: 12px;
         }
-        
-        .guidebook-tab.active {
-            background: #1E3A8A;
-            color: white;
-            border-color: #1E3A8A;
+        .guide-list > li {
+          margin-bottom: 16px;
         }
-        
-        .guidebook-content {
-            position: relative;
-            min-height: 400px;
+        .guide-list > li > strong {
+          font-size: 18px;
+          margin-bottom: 8px;
         }
-        
-        .guidebook-page {
-            display: none;
-            opacity: 0;
-            transition: opacity 0.3s ease;
+        .guide-list > li > p,
+        .guide-list > li > ul > li {
+          font-size: 16px;
+          line-height: 1.5;
         }
-        
-        .guidebook-page.active {
-            display: block;
-            opacity: 1;
-        }
-        /* FAQ 섹션 스타일 */
-        
-        .faq {
-            padding: 40px 0;
-            background-color: white;
-        }
-        
-        .faq-container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 0 24px;
-        }
-        
-        .faq-item {
-            background: white;
-            border-radius: 12px;
-            margin-bottom: 16px;
-            overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            border: 1px solid #E5E7EB;
-            transition: all 0.3s ease;
-        }
-        
-        .faq-item:hover {
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        
-        .faq-question {
-            width: 100%;
-            text-align: left;
-            background: none;
-            border: none;
-            padding: 24px;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: 500;
-            color: #1A1A1A;
-            font-size: 18px;
-            transition: background-color 0.3s ease;
-        }
-        
-        .faq-question:hover {
-            background-color: #F8FAFF;
-        }
-        
-        .faq-question h3 {
-            margin: 0;
-            font-size: 18px;
-            font-weight: 600;
-        }
-        
-        .faq-answer {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease-out;
-            padding: 0 24px;
-            background-color: #f8fafc;
-            border-top: 1px solid #e5e7eb;
-        }
-        
-        .faq-item.active .faq-answer {
-            max-height: 500px;
-            padding: 24px;
-        }
-        
-        .faq-answer ol {
-            padding-left: 24px;
-            margin-top: 12px;
-            margin-bottom: 12px;
-        }
-        
-        .faq-answer ol li {
-            margin-bottom: 8px;
-        }
-        
-        .toggle-icon {
-            font-size: 20px;
-            transition: transform 0.3s ease;
-            flex-shrink: 0;
-            margin-left: 10px;
-        }
-        
-        .faq-item.active .toggle-icon {
-            transform: rotate(45deg);
-        }
-        
         .image-container {
-            background-color: #F8FAFF;
-            border-radius: 8px;
-            text-align: center;
-            padding: 20px;
-            margin: 16px 0;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+          margin: 12px -8px;
+          padding: 12px;
+          border-radius: 0;
         }
-        
         .image-container img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 6px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            object-fit: contain;
+          width: 100%;
+          max-height: none;
+          border-radius: 8px;
         }
-        
-        .pricing-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 24px;
-            margin-bottom: 24px;
+        .guide-tip {
+          margin: 16px -8px 0;
+          padding: 16px;
+          border-radius: 0;
         }
-        
-        .pricing-card {
-            background: white;
-            border-radius: 12px;
-            padding: 24px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            border: 1px solid #E5E7EB;
+        .guide-tip p {
+          font-size: 15px;
         }
-        
+        .section-title {
+          font-size: 24px;
+          margin-bottom: 24px;
+        }
+        .guide-subtitle {
+          font-size: 20px;
+        }
+        .guide-card {
+          padding: 20px;
+          margin-bottom: 16px;
+        }
+        .guide-list > li > strong {
+          font-size: 16px;
+        }
+        .guide-list > li > p,
+        .guide-list > li > ul > li,
+        .faq-question,
+        .faq-answer p {
+          font-size: 15px;
+        }
         .pricing-title {
-            color: #1E3A8A;
-            font-size: 24px;
-            font-weight: 600;
-            margin-bottom: 16px;
-            text-align: center;
+          font-size: 20px;
         }
-        
-        .highlight-box {
-            background: #F8FAFF;
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 24px;
-        }
-        
         .highlight-box p {
-            margin-bottom: 8px;
+          font-size: 15px;
         }
-        
-        .highlight-box p:last-child {
-            margin-bottom: 0;
-        }
-        
-        .service-list {
-            list-style: none;
-            padding: 0;
-            margin-bottom: 24px;
-        }
-        
-        .service-list li {
-            padding-left: 24px;
-            position: relative;
-            margin-bottom: 12px;
-        }
-        
-        .service-list li:before {
-            content: "✓";
-            position: absolute;
-            left: 0;
-            color: #1E3A8A;
-        }
-        
-        .price-list {
-            list-style: none;
-            padding: 0;
-        }
-        
-        .price-list li {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid #E5E7EB;
-        }
-        
-        .price-list li:last-child {
-            border-bottom: none;
-        }
-        
-        .commission-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 16px;
-        }
-        
+        .service-list li,
+        .price-list li,
         .commission-table th,
         .commission-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #E5E7EB;
+          font-size: 15px;
         }
-        
-        .commission-table th {
-            background: #F8FAFF;
-            font-weight: 600;
-            color: #1E3A8A;
-        }
-        
-        .commission-table tr:last-child td {
-            border-bottom: none;
-        }
-        /* 추가된 스타일 */
-        
-        .auction-type-box {
-            background: #F0F9FF;
-            border-radius: 8px;
-            padding: 16px;
-            margin: 20px 0;
-            border-left: 4px solid #0EA5E9;
-        }
-        
-        .color-indicator {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            margin-right: 8px;
-            vertical-align: middle;
-        }
-        
-        .color-blue {
-            background-color: #1E40AF;
-        }
-        
-        .color-green {
-            background-color: #10B981;
-        }
-        
-        .steps-container {
-            margin: 16px 0;
-            padding: 16px;
-            background: #F8FAFC;
-            border-radius: 8px;
-        }
-        
-        .step-item {
-            display: flex;
-            margin-bottom: 16px;
-            align-items: flex-start;
-        }
-        
-        .step-number {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            background: #1E3A8A;
-            color: white;
-            font-weight: bold;
-            margin-right: 12px;
-            flex-shrink: 0;
-        }
-        
-        .step-content {
-            flex: 1;
-        }
-        /* 이미지 모달 스타일 추가 */
-        
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.9);
-            z-index: 1000;
-            overflow: auto;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .modal.show {
-            display: flex !important;
-        }
-        
-        .modal-content {
-            position: relative;
-            margin: auto;
-            max-width: 90%;
-            max-height: 90vh;
-        }
-        
-        .modal-image {
-            max-width: 100%;
-            max-height: 90vh;
-            object-fit: contain;
-        }
-        
-        .close-button {
-            position: absolute;
-            top: -40px;
-            right: 0;
-            color: #fff;
-            font-size: 30px;
-            font-weight: bold;
-            cursor: pointer;
-            background: none;
-            border: none;
-            padding: 10px;
-        }
-        
-        .image-container img {
-            cursor: pointer;
-            transition: opacity 0.3s;
-        }
-        
-        .image-container img:hover {
-            opacity: 0.8;
-        }
-        /* 링크 스타일 */
-        
-        .pricing-link {
-            color: #1E3A8A;
-            text-decoration: underline;
-            cursor: pointer;
-            font-weight: 500;
-        }
-        
-        .pricing-link:hover {
-            color: #1e40af;
-        }
-        /* 모바일 스타일 */
-        
-        @media (max-width: 768px) {
-            .section {
-                padding: 20px 12px;
-            }
-            .guide-container {
-                padding: 0 8px;
-            }
-            .guide-card {
-                padding: 16px;
-                margin-bottom: 16px;
-                border-radius: 12px;
-            }
-            .guidebook-tabs {
-                padding: 8px;
-                margin: 0 -8px 16px -8px;
-                border-radius: 0;
-                flex-direction: column;
-            }
-            .guidebook-tab {
-                padding: 14px 16px;
-                font-size: 16px;
-                margin-bottom: 6px;
-                width: 100%;
-            }
-            .guide-subtitle {
-                font-size: 22px;
-                margin-bottom: 12px;
-            }
-            .guide-list>li {
-                margin-bottom: 16px;
-            }
-            .guide-list>li>strong {
-                font-size: 18px;
-                margin-bottom: 8px;
-            }
-            .guide-list>li>p,
-            .guide-list>li>ul>li {
-                font-size: 16px;
-                line-height: 1.5;
-            }
-            .image-container {
-                margin: 12px -8px;
-                padding: 12px;
-                border-radius: 0;
-            }
-            .image-container img {
-                width: 100%;
-                max-height: none;
-                border-radius: 8px;
-            }
-            .guide-tip {
-                margin: 16px -8px 0;
-                padding: 16px;
-                border-radius: 0;
-            }
-            .guide-tip p {
-                font-size: 15px;
-            }
-            .section-title {
-                font-size: 24px;
-                margin-bottom: 24px;
-            }
-            .guide-subtitle {
-                font-size: 20px;
-            }
-            .guide-card {
-                padding: 20px;
-                margin-bottom: 16px;
-            }
-            .guide-list>li>strong {
-                font-size: 16px;
-            }
-            .guide-list>li>p,
-            .guide-list>li>ul>li,
-            .faq-question,
-            .faq-answer p {
-                font-size: 15px;
-            }
-            .pricing-title {
-                font-size: 20px;
-            }
-            .highlight-box p {
-                font-size: 15px;
-            }
-            .service-list li,
-            .price-list li,
-            .commission-table th,
-            .commission-table td {
-                font-size: 15px;
-            }
-        }
+      }
     </style>
-</head>
+  </head>
 
-<body>
-    
-    <div class="container">
-        <header class="main-header">
-            <div class="header-content">
-              <div class="logo-container">
-                <img
-                  src="images/logo.png"
-                  alt="Logo"
-                  onclick="location.href = '/productPage'" />
-              </div>
-              <button class="mobile-menu-toggle">
-                <i class="fas fa-bars"></i>
-              </button>
-              <div class="nav-container">
-                <button
-                  class="nav-button"
-                  id="productListBtn"
-                  onclick="location.href = '/productPage'">
-                  <i class="fas fa-list"></i>
-                  <span>상품 리스트</span>
-                </button>
-                <button
-                  class="nav-button"
-                  id="bidProductsBtn"
-                  onclick="window.location.href = '/bidProductsPage'">
-                  <i class="fas fa-gavel"></i>
-                  <span>입찰 항목</span>
-                </button>
-                <button
-                  class="nav-button"
-                  id="bidResultsBtn"
-                  onclick="window.location.href = '/bidResultsPage'">
-                  <i class="fas fa-clipboard-check"></i>
-                  <span>입찰 결과</span>
-                </button>
-                <button
-                  class="nav-button"
-                  onclick="window.location.href = '/valuesPage'">
-                  <i class="fas fa-chart-line"></i>
-                  <span>낙찰 시세표</span>
-                </button>
-                <button
-                  class="nav-button"
-                  onclick="window.open('http://pf.kakao.com/_xcCxoqn/chat', '_blank')">
-                  <i class="fas fa-comments"></i>
-                  <span>실시간 문의</span>
-                </button>
-                <button
-                  class="nav-button "
-                  onclick="window.location.href = '/inquiryPage'">
-                  <i class="fas fa-user-plus"></i>
-                  <span>입점신청</span>
-                </button>
-                <button
-                  class="nav-button active"
-                  onclick="window.location.href = '/guidePage'">
-                  <i class="fas fa-book"></i>
-                  <span>이용가이드</span>
-                </button>
-              </div>
-              <div class="auth-container">
-                <button id="signinBtn" class="auth-button">로그인</button>
-                <button id="signoutBtn" class="auth-button" style="display: none">
-                  로그아웃
-                </button>
-              </div>
-            </div>
-          </header>
+  <body>
+    <header class="main-header">
+      <div class="header-content">
+        <div class="logo-container">
+          <img
+            src="images/logo.png"
+            alt="Logo"
+            onclick="location.href = '/productPage'" />
+        </div>
+        <button class="mobile-menu-toggle">
+          <i class="fas fa-bars"></i>
+        </button>
+        <div class="nav-container">
+          <button
+            class="nav-button"
+            id="productListBtn"
+            onclick="location.href = '/productPage'">
+            <i class="fas fa-list"></i>
+            <span>상품 리스트</span>
+          </button>
+          <button
+            class="nav-button"
+            id="bidProductsBtn"
+            onclick="window.location.href = '/bidProductsPage'">
+            <i class="fas fa-gavel"></i>
+            <span>입찰 항목</span>
+          </button>
+          <button
+            class="nav-button"
+            id="bidResultsBtn"
+            onclick="window.location.href = '/bidResultsPage'">
+            <i class="fas fa-clipboard-check"></i>
+            <span>입찰 결과</span>
+          </button>
+          <button
+            class="nav-button"
+            onclick="window.location.href = '/valuesPage'">
+            <i class="fas fa-chart-line"></i>
+            <span>낙찰 시세표</span>
+          </button>
+          <button
+            class="nav-button"
+            onclick="window.open('http://pf.kakao.com/_xcCxoqn/chat', '_blank')">
+            <i class="fas fa-comments"></i>
+            <span>실시간 문의</span>
+          </button>
+          <button
+            class="nav-button"
+            onclick="window.location.href = '/inquiryPage'">
+            <i class="fas fa-user-plus"></i>
+            <span>입점신청</span>
+          </button>
+          <button
+            class="nav-button active"
+            onclick="window.location.href = '/guidePage'">
+            <i class="fas fa-book"></i>
+            <span>이용가이드</span>
+          </button>
+        </div>
+        <div class="auth-container">
+          <button id="signinBtn" class="auth-button">로그인</button>
+          <button id="signoutBtn" class="auth-button" style="display: none">
+            로그아웃
+          </button>
+        </div>
+      </div>
+    </header>
     <!-- 이용 가이드 섹션 -->
     <section class="section" id="guide">
-        <div class="section-container">
-            <h2 class="section-title">이용 가이드</h2>
-            <div class="guide-container">
-                <!-- 가이드북 스타일의 탭 네비게이션 -->
-                <div class="guidebook-tabs">
-                    <button class="guidebook-tab active" data-tab="service">1. 서비스 소개</button>
-                    <button class="guidebook-tab" data-tab="signup">2. 입점신청</button>
-                    <button class="guidebook-tab" data-tab="auction">3. 경매안내</button>
-                    <button class="guidebook-tab" data-tab="pricing">4. 요금안내</button>
-                    <button class="guidebook-tab" data-tab="delivery">5. 배송 및 반품</button>
+      <div class="section-container">
+        <h2 class="section-title">이용 가이드</h2>
+        <div class="guide-container">
+          <!-- 가이드북 스타일의 탭 네비게이션 -->
+          <div class="guidebook-tabs">
+            <button class="guidebook-tab active" data-tab="service">
+              1. 서비스 소개
+            </button>
+            <button class="guidebook-tab" data-tab="signup">2. 입점신청</button>
+            <button class="guidebook-tab" data-tab="auction">
+              3. 경매안내
+            </button>
+            <button class="guidebook-tab" data-tab="pricing">
+              4. 요금안내
+            </button>
+            <button class="guidebook-tab" data-tab="delivery">
+              5. 배송 및 반품
+            </button>
+            <button class="guidebook-tab" data-tab="cas">
+              6. CAS 명품감정시스템
+            </button>
+          </div>
+
+          <!-- 가이드북 컨텐츠 영역 -->
+          <div class="guidebook-content">
+            <!-- 1. 서비스 소개 탭 -->
+            <div class="guidebook-page active" id="service-page">
+              <div class="guide-card">
+                <h3 class="guide-subtitle">1. 서비스 소개</h3>
+                <ul class="guide-list">
+                  <li>
+                    <strong>까사트레이드는 무엇인가요?</strong>
+                    <p>
+                      국내 최초 명품 경매 플랫폼입니다.<br />빈티지 및 새
+                      명품들을 직접 경매로 낙찰받으실수 있으며, 국내 도매가보다
+                      저렴히 경쟁력 있는 가격에 품질 높은 명품을 구매할 수
+                      있습니다.
+                    </p>
+                    <p>
+                      단순한 경매 중계가 아닌
+                      <strong
+                        >감정서 발급 부터 수선까지 자동제안 서비스로</strong
+                      >
+                      국내 유일 명품 유통 구조 플랫폼으로 진화하고 있습니다.
+                    </p>
+                  </li>
+                </ul>
+
+                <div class="pricing-grid">
+                  <div class="pricing-card">
+                    <h3 class="pricing-title">까사 플랫폼</h3>
+                    <ul class="service-list">
+                      <li>실시간 경매</li>
+                      <li>100만개의 시세 확인</li>
+                      <li>실시간 환율, 세금, 계산</li>
+                      <li>원스톱 결제</li>
+                    </ul>
+                  </div>
+
+                  <div class="pricing-card">
+                    <h3 class="pricing-title">세무 및 통관</h3>
+                    <ul class="service-list">
+                      <li>현지 세금 업무 처리</li>
+                      <li>통관 서류 작성</li>
+                      <li>보험 서류 작성</li>
+                      <li>수입 신고서 작성</li>
+                      <li>원산지 증명</li>
+                    </ul>
+                  </div>
+
+                  <div class="pricing-card">
+                    <h3 class="pricing-title">품질 보증</h3>
+                    <ul class="service-list">
+                      <li>정가품 무료 감정</li>
+                      <li>구성품 확인</li>
+                      <li>출고시 사진전송</li>
+                      <li>해외 반품 처리</li>
+                      <li>CAS 명품감정시스템 연동</li>
+                      <li>CRS 수선연계 서비스</li>
+                    </ul>
+                  </div>
+
+                  <div class="pricing-card">
+                    <h3 class="pricing-title">비즈니스 지원</h3>
+                    <ul class="service-list">
+                      <li>판매 전략 수립</li>
+                      <li>아이템 추천</li>
+                      <li>담당 경매사 배정</li>
+                      <li>협력사 제휴금액 이용</li>
+                      <li>감정서 발급 서비스</li>
+                      <li>수선사 제휴금액 이용</li>
+                    </ul>
+                  </div>
                 </div>
-
-                <!-- 가이드북 컨텐츠 영역 -->
-                <div class="guidebook-content">
-                    <!-- 1. 서비스 소개 탭 -->
-                    <div class="guidebook-page active" id="service-page">
-                        <div class="guide-card">
-                            <h3 class="guide-subtitle">1. 서비스 소개</h3>
-                            <ul class="guide-list">
-                                <li>
-                                    <strong>까사트레이드는 무엇인가요?</strong>
-                                    <p>국내 최초 명품 경매 플랫폼입니다.<br>빈티지 및 새 명품들을 직접 경매로 낙찰받으실수 있으며, 국내 도매가보다 저렴히 경쟁력 있는 가격에 품질 높은 명품을 구매할 수 있습니다.</p>
-                                </li>
-                            </ul>
-
-                            <div class="pricing-grid">
-                                <div class="pricing-card">
-                                    <h3 class="pricing-title">까사 플랫폼</h3>
-                                    <ul class="service-list">
-                                        <li>실시간 경매</li>
-                                        <li>100만개의 시세 확인</li>
-                                        <li>실시간 환율, 세금, 계산</li>
-                                        <li>원스톱 결제</li>
-                                    </ul>
-                                </div>
-
-                                <div class="pricing-card">
-                                    <h3 class="pricing-title">세무 및 통관</h3>
-                                    <ul class="service-list">
-                                        <li>현지 세금 업무 처리</li>
-                                        <li>통관 서류 작성</li>
-                                        <li>수입 신고서 작성</li>
-                                        <li>원산지 증명</li>
-                                    </ul>
-                                </div>
-
-                                <div class="pricing-card">
-                                    <h3 class="pricing-title">품질 보증</h3>
-                                    <ul class="service-list">
-                                        <li>정가품 무료 감정</li>
-                                        <li>제품 케어 서비스(유상)</li>
-                                        <li>보험 서류 작성</li>
-                                        <li>해외 반품 처리</li>
-                                    </ul>
-                                </div>
-
-                                <div class="pricing-card">
-                                    <h3 class="pricing-title">비즈니스 지원</h3>
-                                    <ul class="service-list">
-                                        <li>판매 전략 수립</li>
-                                        <li>아이템 추천</li>
-                                        <li>담당 경매사 배정</li>
-                                        <li>협력사 제휴금액 이용</li>
-                                        <li>풀필먼트, 촬영, 판매</li>
-                                        <li>수선사 제휴금액 이용</li>
-                                    </ul>
-                                </div>
-                            </div>
-
-                            <div class="guide-tip">
-                                <div class="tip-icon">💡</div>
-                                <p>TIP: 매주 5만개 이상의 상품이 업데이트되며, 교육비나 초기비용 없이 바로 경매에 참여하실 수 있습니다.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 2. 회원가입 및 로그인 탭 -->
-                    <div class="guidebook-page" id="signup-page">
-                        <div class="guide-card">
-                            <h3 class="guide-subtitle">2. 입점신청</h3>
-                            <ul class="guide-list">
-                                <li>
-                                    <strong>원활한 서비스 제공을 위해 입점 가능 고객사의 수에 제한이 있음을 안내드립니다.<br>
-                                        아래 신청서를 작성해 주시면, 검토 후 담당자가 순차적으로 연락드리겠습니다.</strong>
-
-                                    <div style="margin-top: 20px; background: #f8fafc; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                                        <h4 style="margin-bottom: 15px; font-size: 18px; color: #1E3A8A;">입점신청</h4>
-                                        <form id="inquiryForm">
-                                            <div style="margin-bottom: 15px;">
-                                                <label for="companyName" style="display: block; margin-bottom: 5px; font-weight: 500;">상호명 (개인일시 성함작성) *</label>
-                                                <input type="text" id="companyName" name="companyName" style="width: 100%; padding: 10px; border: 1px solid #E5E7EB; border-radius: 6px;" required>
-                                            </div>
-
-                                            <div style="margin-bottom: 15px;">
-                                                <label for="phone" style="display: block; margin-bottom: 5px; font-weight: 500;">연락처 *</label>
-                                                <input type="tel" id="phone" name="phone" style="width: 100%; padding: 10px; border: 1px solid #E5E7EB; border-radius: 6px;" required>
-                                            </div>
-
-                                            <div style="margin-bottom: 15px;">
-                                                <label for="phone" style="display: block; margin-bottom: 5px; font-weight: 500;">이메일 (계산서 발행) *</label>
-                                                <input type="tel" id="phone" name="phone" style="width: 100%; padding: 10px; border: 1px solid #E5E7EB; border-radius: 6px;" required>
-                                            </div>
-
-                                            <div style="margin-bottom: 15px;">
-                                                <label for="phone" style="display: block; margin-bottom: 5px; font-weight: 500;">희망 배송지 정보 *</label>
-                                                <input type="tel" id="phone" name="phone" style="width: 100%; padding: 10px; border: 1px solid #E5E7EB; border-radius: 6px;" required>
-                                            </div>
-
-                                            <div style="margin-bottom: 15px;">
-                                                <label for="phone" style="display: block; margin-bottom: 5px; font-weight: 500;">희망 경매 시작일 *</label>
-                                                <input type="tel" id="phone" name="phone" style="width: 100%; padding: 10px; border: 1px solid #E5E7EB; border-radius: 6px;" required>
-                                            </div>
-
-                                            <div style="margin-bottom: 15px;">
-                                                <label for="referral" style="display: block; margin-bottom: 5px; font-weight: 500;">어디를 통해 들어오셨나요? *</label>
-                                                <input type="text" id="referral" name="referral" placeholder="예: 인스타그램, 네이버 블로그, 지인 소개, 검색 등" style="width: 100%; padding: 10px; border: 1px solid #E5E7EB; border-radius: 6px;" required>
-                                            </div>
-
-                                            <div style="margin-bottom: 15px;">
-                                                <label for="deposit" style="display: block; margin-bottom: 5px; font-weight: 500;">희망보증금 (만원) *</label>
-                                                <input type="number" id="deposit" name="deposit" placeholder="예: 500" style="width: 100%; padding: 10px; border: 1px solid #E5E7EB; border-radius: 6px;" required>
-                                                <p style="margin-top: 5px; font-size: 14px; color: #6B7280;">
-                                                    <span class="pricing-link" onclick="navigateToTab('pricing')">보증금에 대한 자세한 내용은 이용가이드에 요금안내 탭을 참고해주세요.</span>
-                                                </p>
-                                            </div>
-
-                                            <div style="text-align: center; margin-top: 20px;">
-                                                <button type="submit" style="background-color: #1E3A8A; color: white; border: none; border-radius: 6px; padding: 12px 24px; font-size: 16px; font-weight: 500; cursor: pointer;">입점신청</button>
-                                            </div>
-                                        </form>
-                                    </div>
-
-                                    <div class="guide-tip">
-                                        <div class="tip-icon">💡</div>
-                                        <p>TIP: 회원가입 시 사업자등록증 사본을 미리 준비해두시면 승인 과정이 더 빠르게 진행됩니다.</p>
-                                    </div>
-                        </div>
-                    </div>
-
-                    <!-- 3. 경매 탭 -->
-                    <div class="guidebook-page" id="auction-page">
-                        <div class="guide-card">
-                            <h3 class="guide-subtitle">3. 경매 안내</h3>
-                            <ul class="guide-list">
-                                <li>
-                                    <strong>까사트레이드는 두 가지 경매 방식을 제공합니다.<br>경매는 보증금 한도 내에서 입찰 가능합니다.</strong>
-
-                                    <div class="auction-type-box">
-                                        <h4 style="margin-bottom: 12px; font-size: 18px;">경매 유형 구분 방법</h4>
-                                        <p style="margin-bottom: 10px;"><span class="color-indicator color-green"></span> <strong>초록색</strong> - 직접경매 (마감 경매)</p>
-                                        <p><span class="color-indicator color-blue"></span> <strong>파란색</strong> - 현장경매 (협상 경매)</p>
-                                    </div>
-
-                                    <style>
-                                        .details-toggle {
-                                            background-color: #10B981;
-                                            color: white;
-                                            border: none;
-                                            padding: 8px 16px;
-                                            border-radius: 6px;
-                                            cursor: pointer;
-                                            font-weight: 500;
-                                            margin-top: 15px;
-                                            display: inline-block;
-                                            transition: all 0.3s ease;
-                                        }
-                                        
-                                        .details-toggle:hover {
-                                            background-color: #059669;
-                                        }
-                                        
-                                        .details-toggle.blue {
-                                            background-color: #1E3A8A;
-                                        }
-                                        
-                                        .details-toggle.blue:hover {
-                                            background-color: #2563EB;
-                                        }
-                                        
-                                        .auction-details {
-                                            display: none;
-                                            margin-top: 20px;
-                                            padding-top: 10px;
-                                            border-top: 1px dashed #E5E7EB;
-                                        }
-                                        
-                                        .auction-details.show {
-                                            display: block;
-                                            animation: fadeIn 0.5s;
-                                        }
-                                        
-                                        @keyframes fadeIn {
-                                            from {
-                                                opacity: 0;
-                                            }
-                                            to {
-                                                opacity: 1;
-                                            }
-                                        }
-                                    </style>
-
-                                    <div class="pricing-grid" style="margin-top: 20px;">
-                                        <div class="pricing-card" style="border-left: 4px solid #10B981;">
-                                            <h3 class="pricing-title" style="color: #10B981;">직접경매 (마감 경매)</h3>
-                                            <p style="text-align: center; margin-bottom: 16px;">회원님이 온라인으로 직접 참여하는 방식</p>
-                                            <ul class="service-list">
-                                                <li>표기된 마감시간까지 입찰가능</li>
-                                                <li>새로고침으로 현재 입찰가 확인 가능</li>
-                                                <li>최고 입찰자가 낙찰자로 결정</li>
-                                                <li>실시간 금액 확인하며 추가 입찰가능</li>
-                                            </ul>
-
-                                            <button class="details-toggle" onclick="toggleDetails('direct-details')">자세히 보기</button>
-
-                                            <div id="direct-details" class="auction-details">
-                                                <h4 style="margin-bottom: 16px; color: #10B981;">직접경매 상세 안내</h4>
-
-                                                <div class="step-item">
-                                                    <div class="step-number">1</div>
-                                                    <div class="step-content">
-                                                        <p>직접경매 마감 시간: 보통 오후 6~7시에 마감됩니다.</p>
-                                                    </div>
-                                                </div>
-
-                                                <div class="step-item">
-                                                    <div class="step-number">2</div>
-                                                    <div class="step-content">
-                                                        <p>직접경매 요일: 월, 수, 금요일에 가장 많이 진행됩니다.</p>
-                                                    </div>
-                                                </div>
-
-                                                <div class="step-item">
-                                                    <div class="step-number">3</div>
-                                                    <div class="step-content">
-                                                        <p>마감 시간과 날짜는 각 제품 상세 페이지 상단에서 확인할 수 있습니다.</p>
-                                                    </div>
-                                                </div>
-
-                                                <div class="step-item">
-                                                    <div class="step-number">4</div>
-                                                    <div class="step-content">
-                                                        <p>하루 전부터 경매 상품 목록이 업데이트되므로, 관심 있는 상품은 미리 즐겨찾기에 추가해두시는 것이 좋습니다.</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="pricing-card" style="border-left: 4px solid #1E3A8A;">
-                                            <h3 class="pricing-title" style="color: #1E3A8A;">현장경매 (협상 경매)</h3>
-                                            <p style="text-align: center; margin-bottom: 16px;">전문 경매사가 현지에서 대신 입찰하는 방식</p>
-                                            <ul class="service-list">
-                                                <li>전문 경매사와 협상 후 진행</li>
-                                                <li>3단계 입찰 과정</li>
-                                                <li>경매사가 다음날 현장경매 참여</li>
-                                            </ul>
-
-                                            <button class="details-toggle blue" onclick="toggleDetails('onsite-details')">자세히 보기</button>
-
-                                            <div id="onsite-details" class="auction-details">
-                                                <h4 style="margin-bottom: 16px; color: #1E3A8A;">현장경매 상세 입찰 과정</h4>
-
-                                                <div class="step-item">
-                                                    <div class="step-number">1</div>
-                                                    <div class="step-content">
-                                                        <p>회원님이 시스템을 통해 1차 입찰가를 제시합니다.</p>
-                                                    </div>
-                                                </div>
-
-                                                <div class="step-item">
-                                                    <div class="step-number">2</div>
-                                                    <div class="step-content">
-                                                        <p>경매사가 2차 제안가를 알려드립니다. (카카오톡 채널에 2차 제안가 요청 시 영업시간 10시~18시 내 1~2시간 안에 처리)</p>
-                                                    </div>
-                                                </div>
-
-                                                <div class="step-item">
-                                                    <div class="step-number">3</div>
-                                                    <div class="step-content">
-                                                        <p>회원님이 3차로 최종 입찰가를 결정하면 경매사가 다음날 현장에서 대리 입찰합니다.</p>
-                                                    </div>
-                                                </div>
-
-                                                <div class="step-item">
-                                                    <div class="step-number">4</div>
-                                                    <div class="step-content">
-                                                        <p>낙찰 방식: 경매사는 한 단계씩 올라가며 입찰합니다. (예: 최종 입찰가를 100,000엔으로 결정하셨고 다른 입찰자의 최고가가 80,000엔이라면, 경매사는 81,000엔으로 입찰하여 낙찰받습니다)</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </li>
-                            </ul>
-                            <div class="guide-tip">
-                                <div class="tip-icon">💡</div>
-                                <p>TIP: 경매에 참여하기 전 경매 유형을 반드시 확인하세요. 초록색은 직접경매, 파란색은 현장경매를 의미합니다.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 4. 요금안내 탭 -->
-                    <div class="guidebook-page" id="pricing-page">
-                        <div class="guide-card">
-                            <h3 class="guide-subtitle">4. 요금안내</h3>
-                            <div class="pricing-grid">
-                                <div class="pricing-card">
-                                    <h3 class="pricing-title">보증금</h3>
-                                    <div class="highlight-box">
-                                        <p><strong>맞춤형 보증금</strong></p>
-                                        <p>보증금으로 월 이용료 및 낙찰금액을 지불하실 수 없습니다.</p>
-                                        <p>보증금은 계약 종료 후 추가 배송비 청구후 14일 이내 환불됩니다.</p>
-                                        <p><strong>예시:</strong> 100만원을 납부하시면 입찰 한도는 100만원으로 제한됩니다.</p>
-                                    </div>
-                                </div>
-
-                                <div class="pricing-card">
-                                    <h3 class="pricing-title">월 이용료</h3>
-                                    <div class="highlight-box">
-                                        <p><strong>신규 고객 1개월 무료 체험!</strong></p>
-                                    </div>
-                                    <ul class="service-list">
-                                        <li>매주 각 업체별 추천리스트 전달</li>
-                                        <li>무료감정 (감정서 발급 유료)</li>
-                                        <li>담당 경매사 배정</li>
-                                        <li>추천 입찰가 제안</li>
-                                        <li>실시간 상담</li>
-                                        <li>도금, 수선, 염색 제안 및 협력사 금액</li>
-                                    </ul>
-                                    <ul class="price-list">
-                                        <li><span>1개월</span> <strong>99,000원</strong></li>
-                                        <li><span>3개월</span> <strong>279,000원</strong></li>
-                                        <li><span>6개월</span> <strong>495,000원</strong></li>
-                                        <li><span>12개월</span> <strong>990,000원</strong></li>
-                                    </ul>
-                                </div>
-
-                                <div class="pricing-card">
-                                    <h3 class="pricing-title">입찰대행 수수료</h3>
-                                    <div class="highlight-box">
-                                        <p><strong>1일 입찰금액 기준</strong></p>
-                                    </div>
-                                    <table class="commission-table">
-                                        <thead>
-                                            <tr>
-                                                <th>입찰 금액</th>
-                                                <th>수수료율</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr>
-                                                <td>~5,000,000원</td>
-                                                <td>10%</td>
-                                            </tr>
-                                            <tr>
-                                                <td>500만원 ~ 1,000만원</td>
-                                                <td>7%</td>
-                                            </tr>
-                                            <tr>
-                                                <td>1,000만원 ~ 5,000만원</td>
-                                                <td>5%</td>
-                                            </tr>
-                                            <tr>
-                                                <td>5,000만원 이상</td>
-                                                <td>별도 협의</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 5. 배송 및 반품 탭 -->
-                    <div class="guidebook-page" id="delivery-page">
-                        <div class="guide-card">
-                            <h3 class="guide-subtitle">5. 배송 및 반품</h3>
-                            <ul class="guide-list">
-                                <li>
-                                    <strong>배송 과정</strong>
-                                    <p>낙찰 상품 견적서발급 → 통관 → 검수 및 감정 → 국내배송 (평균 7~10영업일 소요)</p>
-                                </li>
-                                <li>
-                                    <strong>검수 및 감정</strong>
-                                    <p>제품 클릭시 구성품, 상세내용 확인가능 [구글번역이용 추천]</p>
-                                    <p>1차) 출품사 감정 → 2차) 세관감정 → 3차) 까사트레이드 감정 [4~5월경 유료 감정서 발급 가능]</p>
-                                </li>
-                                <li>
-                                    <strong>반품 및 교환 정책</strong>
-                                    <p>반품은 가품일 경우 전액 환불 및 반품 진행됩니다.</p>
-                                    <p>교환은 불가합니다.</p>
-                                </li>
-                            </ul>
-                            <div class="guide-tip">
-                                <div class="tip-icon">💡</div>
-                                <p>TIP: 낙찰일로부터 통상 7-10일 정도 소요되며, 연휴나 특수한 상황에 따라 기간이 달라질 수 있습니다.</p>
-                            </div>
-                        </div>
-                    </div>
+                <div class="guide-tip">
+                  <div class="tip-icon">💡</div>
+                  <p>
+                    TIP: 매주 5만개 이상의 상품이 업데이트되며, 교육비나
+                    초기비용 없이 바로 경매에 참여하실 수 있습니다. 이제는 감정,
+                    수선, 재판매까지 원스톱으로 해결 가능합니다!
+                  </p>
                 </div>
+              </div>
             </div>
+
+            <!-- 2. 입점신청 탭 -->
+            <div class="guidebook-page" id="signup-page">
+              <div class="guide-card">
+                <h3 class="guide-subtitle">2. 입점신청</h3>
+                <ul class="guide-list">
+                  <li>
+                    <strong
+                      >원활한 서비스 제공을 위해 입점 가능 고객사의 수에 제한이
+                      있음을 안내드립니다.<br />
+                      아래 신청서를 작성해 주시면, 검토 후 담당자가 순차적으로
+                      연락드리겠습니다.</strong
+                    >
+
+                    <div
+                      style="
+                        margin-top: 20px;
+                        background: #f8fafc;
+                        padding: 20px;
+                        border-radius: 8px;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                      ">
+                      <h4
+                        style="
+                          margin-bottom: 15px;
+                          font-size: 18px;
+                          color: #1e3a8a;
+                        ">
+                        입점신청
+                      </h4>
+                      <form id="inquiryForm">
+                        <div style="margin-bottom: 15px">
+                          <label
+                            for="companyName"
+                            style="
+                              display: block;
+                              margin-bottom: 5px;
+                              font-weight: 500;
+                            "
+                            >상호명 (개인일시 성함작성) *</label
+                          >
+                          <input
+                            type="text"
+                            id="companyName"
+                            name="companyName"
+                            style="
+                              width: 100%;
+                              padding: 10px;
+                              border: 1px solid #e5e7eb;
+                              border-radius: 6px;
+                            "
+                            required />
+                        </div>
+
+                        <div style="margin-bottom: 15px">
+                          <label
+                            for="phone"
+                            style="
+                              display: block;
+                              margin-bottom: 5px;
+                              font-weight: 500;
+                            "
+                            >연락처 *</label
+                          >
+                          <input
+                            type="tel"
+                            id="phone"
+                            name="phone"
+                            style="
+                              width: 100%;
+                              padding: 10px;
+                              border: 1px solid #e5e7eb;
+                              border-radius: 6px;
+                            "
+                            required />
+                        </div>
+
+                        <div style="margin-bottom: 15px">
+                          <label
+                            for="email"
+                            style="
+                              display: block;
+                              margin-bottom: 5px;
+                              font-weight: 500;
+                            "
+                            >이메일 (계산서 발행) *</label
+                          >
+                          <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            style="
+                              width: 100%;
+                              padding: 10px;
+                              border: 1px solid #e5e7eb;
+                              border-radius: 6px;
+                            "
+                            required />
+                        </div>
+
+                        <div style="margin-bottom: 15px">
+                          <label
+                            for="address"
+                            style="
+                              display: block;
+                              margin-bottom: 5px;
+                              font-weight: 500;
+                            "
+                            >희망 배송지 정보 *</label
+                          >
+                          <input
+                            type="text"
+                            id="address"
+                            name="address"
+                            style="
+                              width: 100%;
+                              padding: 10px;
+                              border: 1px solid #e5e7eb;
+                              border-radius: 6px;
+                            "
+                            required />
+                        </div>
+
+                        <div style="margin-bottom: 15px">
+                          <label
+                            for="startDate"
+                            style="
+                              display: block;
+                              margin-bottom: 5px;
+                              font-weight: 500;
+                            "
+                            >희망 경매 시작일 *</label
+                          >
+                          <input
+                            type="text"
+                            id="startDate"
+                            name="startDate"
+                            style="
+                              width: 100%;
+                              padding: 10px;
+                              border: 1px solid #e5e7eb;
+                              border-radius: 6px;
+                            "
+                            required />
+                        </div>
+
+                        <div style="margin-bottom: 15px">
+                          <label
+                            for="referral"
+                            style="
+                              display: block;
+                              margin-bottom: 5px;
+                              font-weight: 500;
+                            "
+                            >어디를 통해 들어오셨나요? *</label
+                          >
+                          <input
+                            type="text"
+                            id="referral"
+                            name="referral"
+                            placeholder="예: 인스타그램, 네이버 블로그, 지인 소개, 검색 등"
+                            style="
+                              width: 100%;
+                              padding: 10px;
+                              border: 1px solid #e5e7eb;
+                              border-radius: 6px;
+                            "
+                            required />
+                        </div>
+
+                        <div style="margin-bottom: 15px">
+                          <label
+                            for="deposit"
+                            style="
+                              display: block;
+                              margin-bottom: 5px;
+                              font-weight: 500;
+                            "
+                            >희망보증금 (만원) *</label
+                          >
+                          <input
+                            type="number"
+                            id="deposit"
+                            name="deposit"
+                            placeholder="예: 500"
+                            style="
+                              width: 100%;
+                              padding: 10px;
+                              border: 1px solid #e5e7eb;
+                              border-radius: 6px;
+                            "
+                            required />
+                          <p
+                            style="
+                              margin-top: 5px;
+                              font-size: 14px;
+                              color: #6b7280;
+                            ">
+                            <span
+                              class="pricing-link"
+                              onclick="navigateToTab('pricing')"
+                              >보증금에 대한 자세한 내용은 이용가이드에 요금안내
+                              탭을 참고해주세요.</span
+                            >
+                          </p>
+                        </div>
+
+                        <div style="text-align: center; margin-top: 20px">
+                          <button
+                            type="submit"
+                            style="
+                              background-color: #1e3a8a;
+                              color: white;
+                              border: none;
+                              border-radius: 6px;
+                              padding: 12px 24px;
+                              font-size: 16px;
+                              font-weight: 500;
+                              cursor: pointer;
+                            ">
+                            입점신청
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+
+                    <div class="guide-tip">
+                      <div class="tip-icon">💡</div>
+                      <p>
+                        TIP: 회원가입 시 사업자등록증 사본을 미리 준비해두시면
+                        승인 과정이 더 빠르게 진행됩니다.
+                      </p>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <!-- 3. 경매안내 탭 -->
+            <div class="guidebook-page" id="auction-page">
+              <div class="guide-card">
+                <h3 class="guide-subtitle">3. 경매 안내</h3>
+                <ul class="guide-list">
+                  <li>
+                    <strong>경매 방식 안내</strong>
+                    <p>
+                      까사트레이드는 두 가지 경매 방식을 제공하며, 경매는 보증금
+                      한도 내에서 입찰 가능합니다.
+                    </p>
+
+                    <div class="auction-type-box">
+                      <h4 style="margin-bottom: 12px; font-size: 18px">
+                        경매 유형 구분 방법
+                      </h4>
+                      <p style="margin-bottom: 10px">
+                        <span class="color-indicator color-green"></span>
+                        <strong>초록색</strong> - 직접경매 (마감 경매)
+                      </p>
+                      <p>
+                        <span class="color-indicator color-blue"></span>
+                        <strong>파란색</strong> - 현장경매 (협상 경매)
+                      </p>
+                    </div>
+
+                    <div class="pricing-grid" style="margin-top: 20px">
+                      <div
+                        class="pricing-card"
+                        style="border-left: 4px solid #10b981">
+                        <h3 class="pricing-title" style="color: #10b981">
+                          직접경매 (마감 경매)
+                        </h3>
+                        <p style="text-align: center; margin-bottom: 16px">
+                          회원님이 온라인으로 직접 참여하는 방식
+                        </p>
+                        <ul class="service-list">
+                          <li>고객이 원하는 입찰가를 직접 입력</li>
+                          <li>
+                            경매 마감 시간까지
+                            <strong
+                              >가장 높은 입찰가를 입력한 사람이 자동
+                              낙찰</strong
+                            >
+                          </li>
+                          <li>낙찰 여부는 입찰결과 탭에서 확인 가능</li>
+                          <li>
+                            <strong
+                              >일부 상품은 마감시간 직전 입찰 시 수 초~수 분
+                              자동 연장될 수 있으므로 반드시 확인 요망</strong
+                            >
+                          </li>
+                          <li>
+                            시세가 명확하거나 중저가 아이템, 초보자에게 적합
+                          </li>
+                        </ul>
+                      </div>
+
+                      <div
+                        class="pricing-card"
+                        style="border-left: 4px solid #1e3a8a">
+                        <h3 class="pricing-title" style="color: #1e3a8a">
+                          현장경매 (협상 경매)
+                        </h3>
+                        <p style="text-align: center; margin-bottom: 16px">
+                          전문 경매사가 현지에서 대신 입찰하는 방식
+                        </p>
+                        <ul class="service-list">
+                          <li>
+                            고객이 직접 입찰하지 않고, 까사 경매사가 현지에서
+                            대리 입찰
+                          </li>
+                          <li>
+                            고가 아이템 또는 시세를 모르겠는 아이템에 유리
+                          </li>
+                          <li>3단계 제안 흐름 진행</li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    <div class="auction-steps">
+                      <div class="auction-step">
+                        <div class="auction-step-header">
+                          <div class="auction-step-number">1</div>
+                          <div class="auction-step-title">
+                            1차 입찰가격 입력
+                          </div>
+                        </div>
+                        <p>고객이 1차로 낙찰 희망가격 입력</p>
+                      </div>
+                      <div class="auction-step">
+                        <div class="auction-step-header">
+                          <div class="auction-step-number">2</div>
+                          <div class="auction-step-title">2차 제안가 안내</div>
+                        </div>
+                        <p>까사 경매팀이 시세 기반 2차 제안가 제공</p>
+                      </div>
+                      <div class="auction-step">
+                        <div class="auction-step-header">
+                          <div class="auction-step-number">3</div>
+                          <div class="auction-step-title">
+                            3차 최종입찰가 입력
+                          </div>
+                        </div>
+                        <p>고객이 직접 경매 들어갈 3차 최종 입찰가 입력</p>
+                      </div>
+                    </div>
+                    <div class="auction-summary">
+                      <p>
+                        <strong>직접경매</strong>는 단순하고 빠르며, 시세가
+                        명확한 아이템에 적합합니다. <br /><strong
+                          >현장경매</strong
+                        >는 경매사가 대신 입찰하며, 제안가 구조를 통해 경쟁률이
+                        높은 프리미엄 상품을 유리하게 낙찰받을 수 있습니다.
+                      </p>
+                      <p style="margin-top: 10px; color: #ef4444">
+                        <strong
+                          >⚠️ 주의: 3차 최종입찰가가 입력되지 않으면 경매는
+                          자동으로 취소되며 참여되지 않습니다.</strong
+                        >
+                      </p>
+                    </div>
+
+                    <div class="auction-faq">
+                      <h4>자주 묻는 질문</h4>
+                      <div class="auction-faq-item">
+                        <div class="auction-faq-question">
+                          Q. 입찰했는데 안 보여요.
+                        </div>
+                        <div class="auction-faq-answer">
+                          입찰항목에서 필터를 '전체'로 바꾸세요. 경쟁 입찰자가
+                          있으면 내 입찰은 자동 취소되어 목록에 안 보입니다.
+                        </div>
+                      </div>
+                      <div class="auction-faq-item">
+                        <div class="auction-faq-question">
+                          Q. 현장경매인데 왜 또 입력하라고 하나요?
+                        </div>
+                        <div class="auction-faq-answer">
+                          1차 제안 후 경매사가 2차 제안가를 안내하고, 그걸
+                          기반으로 3차 최종입찰가를 반드시 입력해야 실제 참여가
+                          됩니다.
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+                <div class="guide-tip">
+                  <div class="tip-icon">💡</div>
+                  <p>
+                    TIP: 경매에 참여하기 전 경매 유형을 반드시 확인하세요.
+                    초록색은 직접경매, 파란색은 현장경매를 의미합니다.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4. 요금안내 탭 -->
+            <div class="guidebook-page" id="pricing-page">
+              <div class="guide-card">
+                <h3 class="guide-subtitle">4. 요금안내</h3>
+                <div class="pricing-grid">
+                  <div class="pricing-card">
+                    <h3 class="pricing-title">보증금</h3>
+                    <div class="highlight-box">
+                      <p><strong>맞춤형 보증금</strong></p>
+                      <p>납부 하신 보증금 만큼 1일 입찰한도가 결정됩니다.</p>
+                      <p>
+                        보증금으로 월 이용료 및 낙찰금액을 지불하실 수 없습니다.
+                      </p>
+                      <p>
+                        보증금은 계약 종료 후 추가 배송비 청구후 14영업일 이내
+                        환불됩니다.
+                      </p>
+                      <p>
+                        <strong>예시:</strong> 100만원을 납부하시면 1일 입찰
+                        한도는 100만원으로 제한됩니다.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="pricing-card">
+                    <h3 class="pricing-title">월 이용료</h3>
+                    <div class="highlight-box">
+                      <p><strong>신규 고객 1개월 무료 체험!</strong></p>
+                    </div>
+                    <ul class="service-list">
+                      <li>추천 아이템 카테고리 제공</li>
+                      <li>무료감정 (감정서 발급 유료)</li>
+                      <li>담당 경매사 배정</li>
+                      <li>추천 입찰가 제안</li>
+                      <li>실시간 상담</li>
+                      <li>도금, 수선, 염색 제안 및 협력사 금액</li>
+                    </ul>
+                    <ul class="price-list">
+                      <li><span>1개월</span> <strong>99,000원</strong></li>
+                      <li><span>3개월</span> <strong>279,000원</strong></li>
+                      <li><span>6개월</span> <strong>495,000원</strong></li>
+                      <li><span>12개월</span> <strong>990,000원</strong></li>
+                    </ul>
+                  </div>
+                  <div class="pricing-card">
+                    <h3 class="pricing-title">입찰대행 수수료</h3>
+                    <div class="highlight-box">
+                      <p><strong>1일 입찰금액 기준</strong></p>
+                    </div>
+                    <table class="commission-table">
+                      <thead>
+                        <tr>
+                          <th>입찰 금액</th>
+                          <th>수수료율</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>~5,000,000원</td>
+                          <td>10%</td>
+                        </tr>
+                        <tr>
+                          <td>500만원 ~ 1,000만원</td>
+                          <td>7%</td>
+                        </tr>
+                        <tr>
+                          <td>1,000만원 ~ 5,000만원</td>
+                          <td>5%</td>
+                        </tr>
+                        <tr>
+                          <td>5,000만원 이상</td>
+                          <td>별도 협의</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 5. 배송 및 반품 탭 -->
+            <div class="guidebook-page" id="delivery-page">
+              <div class="guide-card">
+                <h3 class="guide-subtitle">5. 배송 및 반품</h3>
+                <ul class="guide-list">
+                  <li>
+                    <strong>배송 과정</strong>
+                    <p>
+                      낙찰 상품 견적서발급 → 통관 → 검수 및 감정 → 국내배송
+                      (평균 7~10영업일 소요)
+                    </p>
+                  </li>
+                  <li>
+                    <strong>검수 및 감정</strong>
+                    <p>
+                      1차) 출품사 감정 → 2차) 세관감정 → 3차) 까사트레이드 검수
+                    </p>
+                  </li>
+                  <li>
+                    <strong>반품 및 교환 정책</strong>
+                    <p>반품은 가품일 경우 전액 환불 및 반품 진행됩니다.</p>
+                    <p>교환은 불가합니다.</p>
+                  </li>
+                </ul>
+                <div class="guide-tip">
+                  <div class="tip-icon">💡</div>
+                  <p>
+                    TIP: 낙찰일로부터 통상 7-10일 정도 소요되며, 연휴나 특수한
+                    상황에 따라 기간이 달라질 수 있습니다.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <!-- 6. CAS 명품감정시스템 탭 -->
+            <div class="guidebook-page" id="cas-page">
+              <div class="guide-card">
+                <h3 class="guide-subtitle">6. CAS 명품감정시스템</h3>
+
+                <div class="cas-card">
+                  <h4 class="cas-service-title">CAS 명품감정시스템 소개</h4>
+                  <p class="cas-service-description">
+                    까사트레이드는 명품 경매를 넘어
+                    <strong>감정 → 수선 → 재판매</strong>까지 가능한 명품 유통
+                    구조 플랫폼으로 진화하고 있습니다. CAS(Casa Authentication
+                    System)는 까사트레이드가 운영하는 명품 감정 시스템으로,
+                    디지털 감정과 실물 감정을 통해 신뢰할 수 있는 감정 서비스를
+                    제공합니다.
+                  </p>
+                </div>
+
+                <div class="cas-card">
+                  <h4 class="cas-service-title">감정 서비스 종류</h4>
+                  <table class="cas-table">
+                    <thead>
+                      <tr>
+                        <th>서비스 유형</th>
+                        <th>설명</th>
+                        <th>비용 (일반회원 기준)</th>
+                        <th>결과</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>퀵링크 감정</td>
+                        <td>번개장터/당근마켓 링크 제출 → 감정</td>
+                        <td>까사 회원 무료 (월 10회)</td>
+                        <td>정품/가품/판단불가</td>
+                      </tr>
+                      <tr>
+                        <td>사진 감정 (오픈예정)</td>
+                        <td>직접 사진 업로드 후 감정</td>
+                        <td>까사 회원 10,000원</td>
+                        <td>온라인 감정서 발급</td>
+                      </tr>
+                      <tr>
+                        <td>실물 감정</td>
+                        <td>택배로 실물 발송 후 정밀 감정</td>
+                        <td>까사 회원 15,000원</td>
+                        <td>정식 감정서 발급 가능</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="cas-card">
+                  <h4 class="cas-service-title">감정서 발급 유형</h4>
+                  <ul class="service-list">
+                    <li>PDF 감정서: 온라인용, 감정번호 포함</li>
+                    <li>실물 감정서: 종이, QR 및 감정번호 포함</li>
+                    <li>
+                      모든 감정 결과는 진위 여부(정품/가품/판단불가)와 상태 평가
+                      포함
+                    </li>
+                  </ul>
+
+                  <div class="cas-process">
+                    <h5 class="cas-process-title">감정서 발급 프로세스</h5>
+                    <ul class="cas-process-list">
+                      <li>고객이 홈페이지에서 감정 신청</li>
+                      <li>사진 기반 예비 판별 or 실물 도착 후 정밀 감정</li>
+                      <li>내부 기준 및 시세/구성품 일치율 검토</li>
+                      <li>감정서 생성 및 고객 전달 (마이페이지 저장)</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div class="cas-card">
+                  <h4 class="cas-service-title">회원 등급별 감정 혜택</h4>
+                  <table class="cas-table">
+                    <thead>
+                      <tr>
+                        <th>구분</th>
+                        <th>퀵링크 감정</th>
+                        <th>실물 감정</th>
+                        <th>사진 감정</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>까사 회원</td>
+                        <td>무료 (월 10회)</td>
+                        <td>12,000원</td>
+                        <td>오픈 예정</td>
+                      </tr>
+                      <tr>
+                        <td>제휴 회원</td>
+                        <td>무료 (월 5회)</td>
+                        <td>20,000원</td>
+                        <td>오픈 예정</td>
+                      </tr>
+                      <tr>
+                        <td>일반 회원</td>
+                        <td>월 29,000원 (월 10회)</td>
+                        <td>38,000원</td>
+                        <td>15,000원</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="cas-card">
+                  <h4 class="cas-service-title">
+                    까사 낙찰 상품의 처리 흐름 (감정·수선 연계)
+                  </h4>
+
+                  <div class="cas-process">
+                    <h5 class="cas-process-title">
+                      ① 수선만 원하는 경우 (감정서 없이)
+                    </h5>
+                    <ul class="cas-process-list">
+                      <li>까사 검수팀이 낙찰상품 수령</li>
+                      <li>사진 촬영 및 수선 필요 항목 체크</li>
+                      <li>고객에게 수선 제안</li>
+                      <li>고객 수락 → 까사 네트워크 수선사 자동 연동</li>
+                      <li>수선 완료 → 까사 재확인 및 전/후 사진 전달</li>
+                      <li>고객 수령 or 위탁 재출품 선택</li>
+                    </ul>
+                  </div>
+
+                  <div class="cas-process">
+                    <h5 class="cas-process-title">
+                      ② 감정서 발급만 원하는 경우 (수선 없이)
+                    </h5>
+                    <ul class="cas-process-list">
+                      <li>고객이 낙찰 직후 감정서 발급 요청</li>
+                      <li>까사 감정원(CAS) 정밀 감정 진행</li>
+                      <li>사진 촬영 및 감정서 작성</li>
+                      <li>QR 포함 공식 감정서 발급 후 상품 출고</li>
+                    </ul>
+                  </div>
+
+                  <div class="cas-process">
+                    <h5 class="cas-process-title">
+                      ③ 감정 + 수선 동시 진행 시
+                    </h5>
+                    <ul class="cas-process-list">
+                      <li>감정 결과와 함께 수선 제안 포함</li>
+                      <li>수선이 정품 여부에 영향 없을 경우 병행 가능</li>
+                      <li>수선 완료 후 감정서 + 복원 인증 제공</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <!-- 
+                            <div class="cas-card">
+                                <h4 class="cas-service-title">CRS 복원시스템 개발 방향 (예정)</h4>
+                                <p class="cas-service-description">
+                                    CRS(Casa Restoration System)는 까사트레이드가 운영하는 명품 복원/수선 시스템으로, 현재는 내부 검수 과정에서 까사 직원이 고객의 상품 상태를 보고 적절한 수선사에게 자동으로 연결하고 있습니다. 앞으로는 고객이 수선사를 직접 선택할 수 있도록 다음과 같은 고도화 기능을 개발 중입니다:
+                                </p>
+                                
+                                <div class="cas-process">
+                                    <h5 class="cas-process-title">개선될 서비스 흐름</h5>
+                                    <ul class="cas-process-list">
+                                        <li>고객이 감정 신청 또는 낙찰 시 수선 의사를 밝히면, 감정사가 수선 필요 부위를 사진과 함께 체크합니다.</li>
+                                        <li>이 정보가 <strong>CAS에 입점된 수선사 네트워크</strong>에 전달되어, 복수 수선사로부터 견적이 자동으로 도착합니다.</li>
+                                        <li>고객은 <strong>수선사의 가격, 후기, 경력, 위치</strong>를 비교하고 직접 선택할 수 있습니다.</li>
+                                        <li>선택한 수선사에게 택배로 전달되며, 수선 완료 후 까사 측에서 수선 품질을 검수하고 전/후 사진을 제공합니다.</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="cas-process">
+                                    <h5 class="cas-process-title">핵심 기능</h5>
+                                    <ul class="cas-process-list">
+                                        <li><strong>수선사 입점 시스템</strong>: 까사 감정 시스템 내 공식 인증을 거쳐 입점 신청 가능</li>
+                                        <li><strong>견적 비교 시스템</strong>: 복수 견적 자동 수신 → 마이페이지에서 비교 및 선택</li>
+                                        <li><strong>복원 리포트 발급</strong>: 수선 전/후 이미지와 간단한 복원 요약 제공</li>
+                                        <li><strong>안전한 수선 이행</strong>: 까사 물류팀을 통한 수선사 간 연계 및 검수 프로세스 유지</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            -->
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
     </section>
 
     <!-- FAQ 섹션 -->
     <section class="section faq" id="faq">
-        <div class="section-container">
-            <h2 class="section-title">자주 묻는 질문</h2>
-            <div class="faq-container">
-                <!-- FAQ 섹션 - 경매 참여 질문 업데이트 -->
+      <div class="section-container">
+        <h2 class="section-title">자주 묻는 질문</h2>
+        <div class="faq-container">
+          <!-- FAQ 섹션 - 경매 참여 질문 업데이트 -->
 
-                <div class="faq-item">
-                    <button class="faq-question">
-                        <h3>해외 법인경매가 뭔가요?</h3>
-                        <span class="toggle-icon">+</span>
-                    </button>
-                    <div class="faq-answer">
-                        <p>해외 법인경매는 이베이나 옥션처럼 개인 간 거래가 아닌, 자격과 일정 입회금을 납부한 제한된 사업자들만 참여할 수 있는 전문 경매 방식입니다..</p>
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <button class="faq-question">
-                        <h3>배송기간이 얼마나 걸리나요?</h3>
-                        <span class="toggle-icon">+</span>
-                    </button>
-                    <div class="faq-answer">
-                        <p>낙찰 결과 안내 후 평균 10영업일 정도 소요됩니다. 통관이나 물류 과정에서 지연이 발생하면 안내드립니다..</p>
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <button class="faq-question">
-                        <h3>모든 상품 확실히 정품 맞나요?</h3>
-                        <span class="toggle-icon">+</span>
-                    </button>
-                    <div class="faq-answer">
-                        <p>까사트레이드는 현재까지 고객이 가품을 수취한 사례가 단 한 건도 없습니다.<br>모든 상품은 출품사의 1차 감정 후, 까사트레이드 전문 감정사의 철저한 2차 감정을 통과합니다.
-                            <br>만에 하나 가품으로 판정될 경우 전액 환불을 보장합니다.
-                            <br>*정식 감정서 발급 서비스(유상)는 4월 오픈 예정입니다. .
-                        </p>
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <button class="faq-question">
-                        <h3>하루 입찰한도는 어떤 기준으로 정해지나요?</h3>
-                        <span class="toggle-icon">+</span>
-                    </button>
-                    <div class="faq-answer">
-                        <p>납부하신 보증금에 따라 설정됩니다.</p>
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <button class="faq-question">
-                        <h3>환불 정책은 어떻게 되나요?</h3>
-                        <span class="toggle-icon">+</span>
-                    </button>
-                    <div class="faq-answer">
-                        <p>제품이 가품으로 판명될 경우 전액 환불 가능합니다. 보증금은 계약 종료 후 추가 배송비 청구 후 14일 이내에 환불됩니다.</p>
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <button class="faq-question">
-                        <h3>직접경매와 현장경매는 어떻게 구분하나요?</h3>
-                        <span class="toggle-icon">+</span>
-                    </button>
-                    <div class="faq-answer">
-                        <p>제품 표시 색상으로 구분할 수 있습니다. 파란색은 현장경매(협상 경매), 초록색은 직접경매(마감 경매)를 의미합니다. 각 제품 상단에 "현장" 또는 "직접"이라는 표시도 함께 확인하실 수 있습니다.</p>
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <button class="faq-question">
-                        <h3>직접경매는 언제 마감되나요?</h3>
-                        <span class="toggle-icon">+</span>
-                    </button>
-                    <div class="faq-answer">
-                        <p>직접경매는 제품 상단에 표시된 마감시간까지 진행됩니다. 일반적으로 오후 6~7시에 마감되며, 주로 월요일, 수요일, 금요일에 많이 진행됩니다. 정확한 마감시간은 각 제품 페이지에서 확인하실 수 있습니다.</p>
-                    </div>
-                </div>
+          <div class="faq-item">
+            <button class="faq-question">
+              <h3>해외 법인경매가 뭔가요?</h3>
+              <span class="toggle-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>
+                해외 법인경매는 이베이나 옥션처럼 개인 간 거래가 아닌, 자격과
+                일정 입회금을 납부한 제한된 사업자들만 참여할 수 있는 전문 경매
+                방식입니다.
+              </p>
             </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question">
+              <h3>배송기간이 얼마나 걸리나요?</h3>
+              <span class="toggle-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>
+                낙찰 결과 안내 후 평균 10영업일 정도 소요됩니다. 통관이나 물류
+                과정에서 지연이 발생하면 안내드립니다.
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question">
+              <h3>모든 상품 확실히 정품 맞나요?</h3>
+              <span class="toggle-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>
+                까사트레이드는 현재까지 고객이 가품을 수취한 사례가 단 한 건도
+                없습니다.<br />모든 상품은 출품사의 1차 감정 후, 까사트레이드
+                전문 감정사의 철저한 2차 감정을 통과합니다. <br />만에 하나
+                가품으로 판정될 경우 전액 환불을 보장합니다. <br />*이제 CAS
+                명품감정시스템을 통해 공식 감정서 발급 서비스(유상)도
+                제공합니다.
+              </p>
+            </div>
+          </div>
+          <div class="faq-item">
+            <button class="faq-question">
+              <h3>하루 입찰한도는 어떤 기준으로 정해지나요?</h3>
+              <span class="toggle-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>납부하신 보증금에 따라 설정됩니다.</p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question">
+              <h3>환불 정책은 어떻게 되나요?</h3>
+              <span class="toggle-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>
+                제품이 가품으로 판명될 경우 전액 환불 가능합니다. 보증금은 계약
+                종료 후 추가 배송비 청구 후 14일 이내에 환불됩니다.
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question">
+              <h3>직접경매와 현장경매는 어떻게 구분하나요?</h3>
+              <span class="toggle-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>
+                제품 표시 색상으로 구분할 수 있습니다. 파란색은 현장경매(협상
+                경매), 초록색은 직접경매(마감 경매)를 의미합니다. 각 제품 상단에
+                "현장" 또는 "직접"이라는 표시도 함께 확인하실 수 있습니다.
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question">
+              <h3>직접경매는 언제 마감되나요?</h3>
+              <span class="toggle-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>
+                직접경매는 제품 상단에 표시된 마감시간까지 진행됩니다.
+                일반적으로 오후 6~7시에 마감되며, 주로 월요일, 수요일, 금요일에
+                많이 진행됩니다. 정확한 마감시간은 각 제품 페이지에서 확인하실
+                수 있습니다.
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question">
+              <h3>CAS 명품감정시스템은 어떻게 이용하나요?</h3>
+              <span class="toggle-icon">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>
+                CAS 명품감정시스템은 까사트레이드 회원이라면 누구나 이용
+                가능합니다. 마이페이지에서 감정 신청을 하거나, 낙찰 상품의 경우
+                고객센터로 문의하시면 안내해 드립니다. 감정 유형에 따라 요금과
+                소요 시간이 다르니 자세한 내용은 이용가이드의 'CAS
+                명품감정시스템' 탭을 참고해 주세요.
+              </p>
+            </div>
+          </div>
         </div>
+      </div>
     </section>
+
+    <!-- 사업자 정보 -->
+    <footer
+      style="
+        background-color: #f8fafc;
+        padding: 40px 0;
+        margin-top: 60px;
+        border-top: 1px solid #e5e7eb;
+      ">
+      <div
+        class="section-container"
+        style="max-width: 1280px; margin: 0 auto; padding: 0 24px">
+        <div
+          style="
+            text-align: center;
+            color: #4b5563;
+            font-size: 14px;
+            line-height: 1.8;
+          ">
+          <p style="margin-bottom: 8px"><strong>까사플랫폼</strong></p>
+          <p style="margin-bottom: 4px">
+            대표: 황승하 | 개인정보관리책임자: 황승하
+          </p>
+          <p style="margin-bottom: 4px">사업자등록번호: 459-01-03147</p>
+          <p style="margin-bottom: 4px">주소: 서울 은평구 갈현동 409-2 2층</p>
+          <p style="margin-bottom: 4px">
+            전화: 02-6959-9640 | 이메일: casaboutique@naver.com
+          </p>
+          <p style="margin-top: 16px; color: #6b7280">Hosting by casatrade</p>
+        </div>
+      </div>
+    </footer>
 
     <!-- 이미지 모달 -->
     <div id="imageModal" class="modal">
-        <div class="modal-content">
-            <button class="close-button" onclick="closeModal()">&times;</button>
-            <img id="modalImage" class="modal-image" src="" alt="확대된 이미지">
-        </div>
+      <div class="modal-content">
+        <button class="close-button" onclick="closeModal()">&times;</button>
+        <img id="modalImage" class="modal-image" src="" alt="확대된 이미지" />
+      </div>
     </div>
-
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // 이미지 클릭 이벤트 처리
-            const images = document.querySelectorAll('.image-container img');
-            const modal = document.getElementById('imageModal');
-            const modalImg = document.getElementById('modalImage');
-            const closeBtn = document.querySelector('.close-button');
+      document.addEventListener("DOMContentLoaded", function () {
+        // 이미지 클릭 이벤트 처리
+        const images = document.querySelectorAll(".image-container img");
+        const modal = document.getElementById("imageModal");
+        const modalImg = document.getElementById("modalImage");
+        const closeBtn = document.querySelector(".close-button");
 
-            // 이미지 클릭시 모달 열기
-            images.forEach(img => {
-                img.addEventListener('click', function() {
-                    modal.style.display = "flex";
-                    modalImg.src = this.src;
-                });
-            });
-
-            // X 버튼 클릭시 모달 닫기
-            closeBtn.addEventListener('click', function() {
-                modal.style.display = "none";
-            });
-
-            // 모달 바깥 영역 클릭시 닫기
-            modal.addEventListener('click', function(e) {
-                if (e.target === modal) {
-                    modal.style.display = "none";
-                }
-            });
-
-            // ESC 키 누르면 모달 닫기
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape' && modal.style.display === "flex") {
-                    modal.style.display = "none";
-                }
-            });
-
-            // 1. 가이드북 탭 기능
-            const guidebookTabs = document.querySelectorAll('.guidebook-tab');
-            const guidebookPages = document.querySelectorAll('.guidebook-page');
-
-            if (guidebookTabs.length > 0 && guidebookPages.length > 0) {
-                guidebookTabs.forEach(tab => {
-                    tab.addEventListener('click', () => {
-                        // 모든 탭 비활성화
-                        guidebookTabs.forEach(t => t.classList.remove('active'));
-                        // 클릭한 탭 활성화
-                        tab.classList.add('active');
-
-                        // 모든 페이지 숨기기
-                        guidebookPages.forEach(page => page.classList.remove('active'));
-                        // 선택한 페이지 표시
-                        const targetPage = document.getElementById(tab.dataset.tab + '-page');
-                        if (targetPage) targetPage.classList.add('active');
-                    });
-                });
-            }
-
-            // 2. FAQ 아코디언 기능
-            const faqQuestions = document.querySelectorAll('.faq-question');
-
-            if (faqQuestions.length > 0) {
-                faqQuestions.forEach(question => {
-                    question.addEventListener('click', function() {
-                        const faqItem = this.parentNode;
-
-                        // 현재 항목의 상태 확인
-                        const isActive = faqItem.classList.contains('active');
-
-                        // 모든 FAQ 항목 닫기
-                        document.querySelectorAll('.faq-item').forEach(item => {
-                            item.classList.remove('active');
-                        });
-
-                        // 클릭한 항목만 토글
-                        if (!isActive) {
-                            faqItem.classList.add('active');
-                        }
-                    });
-                });
-
-                // 페이지 로드시 첫번째 FAQ 항목 자동 오픈
-                document.querySelector('.faq-item').classList.add('active');
-            }
+        // 이미지 클릭시 모달 열기
+        images.forEach((img) => {
+          img.addEventListener("click", function () {
+            modal.style.display = "flex";
+            modalImg.src = this.src;
+          });
         });
 
-        function closeModal() {
-            document.getElementById('imageModal').style.display = "none";
+        // X 버튼 클릭시 모달 닫기
+        closeBtn.addEventListener("click", function () {
+          modal.style.display = "none";
+        });
+
+        // 모달 바깥 영역 클릭시 닫기
+        modal.addEventListener("click", function (e) {
+          if (e.target === modal) {
+            modal.style.display = "none";
+          }
+        });
+
+        // ESC 키 누르면 모달 닫기
+        document.addEventListener("keydown", function (e) {
+          if (e.key === "Escape" && modal.style.display === "flex") {
+            modal.style.display = "none";
+          }
+        });
+
+        // 1. 가이드북 탭 기능
+        const guidebookTabs = document.querySelectorAll(".guidebook-tab");
+        const guidebookPages = document.querySelectorAll(".guidebook-page");
+
+        if (guidebookTabs.length > 0 && guidebookPages.length > 0) {
+          guidebookTabs.forEach((tab) => {
+            tab.addEventListener("click", () => {
+              // 모든 탭 비활성화
+              guidebookTabs.forEach((t) => t.classList.remove("active"));
+              // 클릭한 탭 활성화
+              tab.classList.add("active");
+
+              // 모든 페이지 숨기기
+              guidebookPages.forEach((page) => page.classList.remove("active"));
+              // 선택한 페이지 표시
+              const targetPage = document.getElementById(
+                tab.dataset.tab + "-page"
+              );
+              if (targetPage) targetPage.classList.add("active");
+            });
+          });
         }
 
-        // 보증금에 대한 자세한 내용 링크 클릭 시 요금안내 탭으로 이동하는 함수
-        function navigateToTab(tabName) {
-            // 해당 탭 버튼 찾기
-            const tab = document.querySelector(`.guidebook-tab[data-tab="${tabName}"]`);
-            if (tab) {
-                // 모든 탭 비활성화
-                document.querySelectorAll('.guidebook-tab').forEach(t => t.classList.remove('active'));
-                // 클릭한 탭 활성화
-                tab.classList.add('active');
+        // 2. FAQ 아코디언 기능
+        const faqQuestions = document.querySelectorAll(".faq-question");
 
-                // 모든 페이지 숨기기
-                document.querySelectorAll('.guidebook-page').forEach(page => page.classList.remove('active'));
-                // 선택한 페이지 표시
-                const targetPage = document.getElementById(`${tabName}-page`);
-                if (targetPage) {
-                    targetPage.classList.add('active');
-                    // 스크롤 위치 조정 (요금안내 페이지로 부드럽게 스크롤)
-                    targetPage.scrollIntoView({
-                        behavior: 'smooth'
-                    });
-                }
-            }
+        if (faqQuestions.length > 0) {
+          faqQuestions.forEach((question) => {
+            question.addEventListener("click", function () {
+              const faqItem = this.parentNode;
+
+              // 현재 항목의 상태 확인
+              const isActive = faqItem.classList.contains("active");
+
+              // 모든 FAQ 항목 닫기
+              document.querySelectorAll(".faq-item").forEach((item) => {
+                item.classList.remove("active");
+              });
+
+              // 클릭한 항목만 토글
+              if (!isActive) {
+                faqItem.classList.add("active");
+              }
+            });
+          });
+
+          // 페이지 로드시 첫번째 FAQ 항목 자동 오픈
+          document.querySelector(".faq-item").classList.add("active");
         }
+      });
 
-        // 자세히 보기 토글 기능
-        function toggleDetails(detailsId) {
-            const detailsElement = document.getElementById(detailsId);
-            const button = event.target;
+      function closeModal() {
+        document.getElementById("imageModal").style.display = "none";
+      }
 
-            if (detailsElement.classList.contains('show')) {
-                detailsElement.classList.remove('show');
-                button.textContent = '자세히 보기';
-            } else {
-                detailsElement.classList.add('show');
-                button.textContent = '접기';
-            }
+      // 보증금에 대한 자세한 내용 링크 클릭 시 요금안내 탭으로 이동하는 함수
+      function navigateToTab(tabName) {
+        // 해당 탭 버튼 찾기
+        const tab = document.querySelector(
+          `.guidebook-tab[data-tab="${tabName}"]`
+        );
+        if (tab) {
+          // 모든 탭 비활성화
+          document
+            .querySelectorAll(".guidebook-tab")
+            .forEach((t) => t.classList.remove("active"));
+          // 클릭한 탭 활성화
+          tab.classList.add("active");
+
+          // 모든 페이지 숨기기
+          document
+            .querySelectorAll(".guidebook-page")
+            .forEach((page) => page.classList.remove("active"));
+          // 선택한 페이지 표시
+          const targetPage = document.getElementById(`${tabName}-page`);
+          if (targetPage) {
+            targetPage.classList.add("active");
+            // 스크롤 위치 조정 (요금안내 페이지로 부드럽게 스크롤)
+            targetPage.scrollIntoView({
+              behavior: "smooth",
+            });
+          }
         }
+      }
+
+      // 자세히 보기 토글 기능
+      function toggleDetails(detailsId) {
+        const detailsElement = document.getElementById(detailsId);
+        const button = event.target;
+
+        if (detailsElement.classList.contains("show")) {
+          detailsElement.classList.remove("show");
+          button.textContent = "자세히 보기";
+        } else {
+          detailsElement.classList.add("show");
+          button.textContent = "접기";
+        }
+      }
     </script>
-<script src="/js/common.js"></script>
-<script src="/js/traker.js"></script>
-</body>
+  </body>
+  <script src="/js/common.js"></script>
+  <script src="/js/traker.js"></script>
 </html>
