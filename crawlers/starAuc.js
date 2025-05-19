@@ -18,7 +18,7 @@ const starAucConfig = {
     userId: process.env.CRAWLER_EMAIL3,
     password: process.env.CRAWLER_PASSWORD3,
   },
-  categoryIds: [1, 2, 3, 5, 6, 7, 8],
+  categoryIds: [1, 2, 3, 5, 6, 7, 8, 9],
   categoryTable: {
     1: "시계",
     2: "귀금속",
@@ -27,6 +27,7 @@ const starAucConfig = {
     6: "악세서리",
     7: "의류",
     8: "신발",
+    9: "기타",
   },
   signinSelectors: {
     userId: "#email",
