@@ -576,7 +576,6 @@ class BrandAucCrawler extends AxiosCrawler {
             page: 0,
             size: size,
             viewType: 1,
-            status: 1, // 활성 상품만
             gamenId: "B201-01",
           },
           headers: {
@@ -622,7 +621,6 @@ class BrandAucCrawler extends AxiosCrawler {
                   page: page,
                   size: size,
                   viewType: 1,
-                  status: 1,
                   gamenId: "B201-01",
                 },
                 headers: {
