@@ -186,7 +186,7 @@ router.get("/", isAuthenticated, async (req, res) => {
     // 기본 쿼리
     let query = `
       SELECT 
-        id, appraisal_type, brand, model_name, status, result, 
+        id, appraisal_type, brand, model_name, status, result, certificate_number,
         created_at, JSON_EXTRACT(images, '$[0]') as representative_image
       FROM appraisals 
       WHERE user_id = ?
