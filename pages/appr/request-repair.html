@@ -815,9 +815,11 @@
         }).open();
       }
 
-      // 가격 형식 포맷팅 함수
       function formatPrice(price) {
-        return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") + "원";
+        // 소수점이 있는 경우 정수부분만 사용
+        const intPrice = Math.floor(parseFloat(price));
+        // 천 단위 구분자 추가 후 "원" 표시
+        return intPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") + "원";
       }
 
       // 서비스 선택 핸들러
