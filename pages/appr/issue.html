@@ -1096,8 +1096,8 @@
               if (paymentData.success) {
                 // 결제창 호출을 위한 데이터 준비
                 requestPayment({
-                  clientId: paymentData.client_id,
-                  orderId: paymentData.order_id,
+                  clientId: paymentData.clientId,
+                  orderId: paymentData.orderId,
                   amount: paymentData.amount,
                   goodsName: paymentData.product_name,
                 });

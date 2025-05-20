@@ -234,9 +234,9 @@
                 "결제 완료",
                 "결제가 성공적으로 완료되었습니다.",
                 {
-                  orderId: approvalResult.payment?.order_id || orderId,
+                  orderId: approvalResult.payment?.orderId || orderId,
                   amount: approvalResult.payment?.amount || "",
-                  method: "카드",
+                  method: approvalResult.payment?.paymentMethod || "카드",
                   paidAt: approvalResult.payment?.paid_at,
                 }
               );
