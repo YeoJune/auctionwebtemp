@@ -281,7 +281,7 @@ app.get("/appr/mypage", (req, res) => {
   if (req.session.user) {
     res.sendFile(path.join(apprPagesPath, "mypage.html"));
   } else {
-    res.redirect("/signinPage");
+    res.redirect("/appr/signin");
   }
 });
 app.get("/appr/admin", (req, res) => {
@@ -289,7 +289,7 @@ app.get("/appr/admin", (req, res) => {
   if (req.session.user && req.session.user.id === "admin") {
     res.sendFile(path.join(apprPagesPath, "admin.html")); // pages/appr/admin.html
   } else {
-    res.redirect(req.session.user ? "/appr" : "/signinPage");
+    res.redirect(req.session.user ? "/appr" : "/appr/signin");
   }
 });
 // 나이스페이 결제 완료 후 돌아올 프론트엔드 페이지 (이 페이지에서 서버 API 호출)
