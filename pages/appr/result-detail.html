@@ -1126,7 +1126,7 @@
               contentWrapperEl.style.display = "block";
               const certificate = data.certificate;
               const appraisal = certificate.appraisal;
-              currentAppraisalId = appraisal.id; // .appraisal_id 대신 .id 사용
+              currentAppraisalId = appraisal.id;
 
               productNameEl.textContent =
                 `${appraisal.brand || ""} ${
@@ -1159,7 +1159,22 @@
               let summaryBgColor = "#e0e7ff";
               let summaryColor = "#4338ca";
 
-              if (appraisal.result === "authentic") {
+              // 상태에 따른 표시 추가
+              if (appraisal.status === "pending") {
+                resultText = "감정 대기중";
+                badgeClass = "badge-pending";
+                resultIcon = "⏳";
+                summaryBgColor = "#e0e7ff";
+                summaryColor = "#4338ca";
+                if (downloadPdfBtn) downloadPdfBtn.style.display = "none"; // 대기중에는 다운로드 버튼 숨김
+              } else if (appraisal.status === "in_review") {
+                resultText = "감정 진행중";
+                badgeClass = "badge-pending";
+                resultIcon = "⏳";
+                summaryBgColor = "#e0e7ff";
+                summaryColor = "#4338ca";
+                if (downloadPdfBtn) downloadPdfBtn.style.display = "none"; // 진행중에는 다운로드 버튼 숨김
+              } else if (appraisal.result === "authentic") {
                 resultText = "정품";
                 badgeClass = "badge-success";
                 resultIcon = "✓";
@@ -1182,7 +1197,15 @@
                 resultIcon = "!";
                 summaryBgColor = "#fef3c7";
                 summaryColor = "#d97706";
+              } else if (appraisal.status === "cancelled") {
+                resultText = "취소됨";
+                badgeClass = "badge-warning";
+                resultIcon = "✕";
+                summaryBgColor = "#f3f4f6";
+                summaryColor = "#6b7280";
+                if (downloadPdfBtn) downloadPdfBtn.style.display = "none"; // 취소된 경우 다운로드 버튼 숨김
               }
+
               resultBadgeEl.textContent = resultText;
               resultBadgeEl.className = `badge ${badgeClass}`;
 
@@ -1204,21 +1227,19 @@
                 {
                   label: "감정 방식",
                   value: appraisal.appraisal_type
-                    ? appraisal.appraisal_type
-                        .replace("_", " ")
-                        .replace("photo", "사진")
-                        .replace("physical", "실물")
+                    ? appraisal.appraisal_type === "quicklink"
+                      ? "퀵링크 감정"
+                      : "오프라인 실물 감정"
                     : "-",
                 },
-                // 필요시 추가 정보 (예: 시리얼, 소재, 상태 등)
               ];
               productInfoTableEl.innerHTML = productInfo
                 .map(
                   (item) => `
-                            <tr>
-                                <td style="padding: 8px 0; color: #64748b; width: 100px;">${item.label}</td>
-                                <td style="padding: 8px 0; font-weight: 500;">${item.value}</td>
-                            </tr>`
+              <tr>
+                <td style="padding: 8px 0; color: #64748b; width: 100px;">${item.label}</td>
+                <td style="padding: 8px 0; font-weight: 500;">${item.value}</td>
+              </tr>`
                 )
                 .join("");
 
@@ -1236,21 +1257,35 @@
                 thumbnailImagesEl
               );
 
-              // 복원 제안 탭 내용 (임시 - 실제로는 appraisal_id로 복원 제안 목록을 가져와야 함)
+              // 진행중이거나 대기중인 경우 복원 제안 숨기기
               if (
-                appraisal.result === "authentic" &&
-                ((appraisal.result_notes &&
-                  appraisal.result_notes.toLowerCase().includes("수선")) ||
-                  (appraisal.result_notes &&
-                    appraisal.result_notes.toLowerCase().includes("복원")))
+                appraisal.status === "pending" ||
+                appraisal.status === "in_review"
               ) {
-                // 임시 조건
-                repairNeededPartsEl.style.display = "block";
-                repairItemsListEl.innerHTML = `<li><span style="color: #eab308; margin-right: 10px;">●</span> ${appraisal.result_notes} (상세 내용은 전문가 상담 필요)</li>`; // 예시
-                repairEmptyMessageEl.style.display = "none";
+                if (repairProposalIntroEl) {
+                  repairProposalIntroEl.textContent =
+                    "감정이 완료된 후 복원 서비스 제안을 확인하실 수 있습니다.";
+                  repairNeededPartsEl.style.display = "none";
+                  repairEmptyMessageEl.style.display = "none";
+                  if (repairConsultLinkEl)
+                    repairConsultLinkEl.style.display = "none";
+                }
               } else if (appraisal.result === "authentic") {
-                repairNeededPartsEl.style.display = "none";
-                repairEmptyMessageEl.style.display = "block";
+                // 복원 제안 탭 내용
+                if (
+                  (appraisal.result_notes &&
+                    appraisal.result_notes.toLowerCase().includes("수선")) ||
+                  (appraisal.result_notes &&
+                    appraisal.result_notes.toLowerCase().includes("복원"))
+                ) {
+                  // 임시 조건
+                  repairNeededPartsEl.style.display = "block";
+                  repairItemsListEl.innerHTML = `<li><span style="color: #eab308; margin-right: 10px;">●</span> ${appraisal.result_notes} (상세 내용은 전문가 상담 필요)</li>`; // 예시
+                  repairEmptyMessageEl.style.display = "none";
+                } else {
+                  repairNeededPartsEl.style.display = "none";
+                  repairEmptyMessageEl.style.display = "block";
+                }
               } else {
                 repairProposalIntroEl.textContent =
                   "가품 또는 판단 불가 상품에 대해서는 복원 서비스를 제공하지 않습니다.";
@@ -1260,96 +1295,135 @@
                   repairConsultLinkEl.style.display = "none";
               }
               if (repairConsultLinkEl && currentAppraisalId)
-                repairConsultLinkEl.href = `/appr/request-repair?appraisal_id=${currentAppraisalId}`; // 복원 신청 페이지 (새로 만들어야 함)
+                repairConsultLinkEl.href = `/appr/request-repair?appraisal_id=${currentAppraisalId}`;
 
               // 감정 이력 (임시 - 실제로는 appraisal_id로 이력 API 호출)
-              // API 문서에 감정 이력 관련 API가 없으므로, 생성/수정일 기반으로 단순화
               timelineContainerEl.innerHTML = `
-                            ${
-                              appraisal.created_at
-                                ? `
-                            <div class="timeline-item">
-                                <div class="timeline-date">${new Date(
-                                  appraisal.created_at
-                                ).toLocaleString("ko-KR")}</div>
-                                <div class="timeline-title">감정 신청 접수</div>
-                                <div class="timeline-content">시스템에 감정 요청이 등록되었습니다.</div>
-                            </div>`
-                                : ""
-                            }
-                            ${
-                              appraisal.appraised_at
-                                ? `
-                            <div class="timeline-item completed">
-                                <div class="timeline-date">${new Date(
-                                  appraisal.appraised_at
-                                ).toLocaleString("ko-KR")}</div>
-                                <div class="timeline-title">감정 완료</div>
-                                <div class="timeline-content">전문가 감정이 완료되었습니다.</div>
-                            </div>`
-                                : ""
-                            }
-                            ${
-                              certificate.issued_date
-                                ? `
-                            <div class="timeline-item active">
-                                <div class="timeline-date">${new Date(
-                                  certificate.issued_date
-                                ).toLocaleString("ko-KR")}</div>
-                                <div class="timeline-title">감정서 발급</div>
-                                <div class="timeline-content">공식 감정서가 발급되었습니다. (번호: ${
-                                  certificate.certificate_number
-                                })</div>
-                            </div>`
-                                : ""
-                            }
-                        `;
+          ${
+            appraisal.created_at
+              ? `
+          <div class="timeline-item">
+              <div class="timeline-date">${new Date(
+                appraisal.created_at
+              ).toLocaleString("ko-KR")}</div>
+              <div class="timeline-title">감정 신청 접수</div>
+              <div class="timeline-content">시스템에 감정 요청이 등록되었습니다.</div>
+          </div>`
+              : ""
+          }
+          ${
+            appraisal.status === "in_review"
+              ? `
+          <div class="timeline-item active">
+              <div class="timeline-date">${new Date().toLocaleString(
+                "ko-KR"
+              )}</div>
+              <div class="timeline-title">감정 진행중</div>
+              <div class="timeline-content">전문가가 감정을 진행 중입니다.</div>
+          </div>`
+              : ""
+          }
+          ${
+            appraisal.appraised_at
+              ? `
+          <div class="timeline-item completed">
+              <div class="timeline-date">${new Date(
+                appraisal.appraised_at
+              ).toLocaleString("ko-KR")}</div>
+              <div class="timeline-title">감정 완료</div>
+              <div class="timeline-content">전문가 감정이 완료되었습니다.</div>
+          </div>`
+              : ""
+          }
+          ${
+            certificate.issued_date
+              ? `
+          <div class="timeline-item active">
+              <div class="timeline-date">${new Date(
+                certificate.issued_date
+              ).toLocaleString("ko-KR")}</div>
+              <div class="timeline-title">감정서 발급</div>
+              <div class="timeline-content">공식 감정서가 발급되었습니다. (번호: ${
+                certificate.certificate_number
+              })</div>
+          </div>`
+              : ""
+          }
+          ${
+            appraisal.status === "cancelled"
+              ? `
+          <div class="timeline-item">
+              <div class="timeline-date">${new Date(
+                appraisal.updated_at || appraisal.created_at
+              ).toLocaleString("ko-KR")}</div>
+              <div class="timeline-title">감정 취소</div>
+              <div class="timeline-content">감정 요청이 취소되었습니다.</div>
+          </div>`
+              : ""
+          }
+        `;
+
               // 감정서 발급 상태에 따라 마지막 아이템에 active 클래스 추가
               const timelineItems =
                 timelineContainerEl.querySelectorAll(".timeline-item");
               if (timelineItems.length > 0) {
-                if (
-                  certificate.status === "issued" ||
-                  certificate.status === "delivered" ||
-                  certificate.status === "shipped"
+                // 모든 active 제거
+                timelineItems.forEach((item) =>
+                  item.classList.remove("active")
+                );
+
+                // 상태에 따른 액티브 아이템 설정
+                if (appraisal.status === "in_review") {
+                  // 감정 진행중인 경우
+                  Array.from(timelineItems)
+                    .find((item) =>
+                      item
+                        .querySelector(".timeline-title")
+                        .textContent.includes("감정 진행중")
+                    )
+                    ?.classList.add("active");
+                } else if (
+                  appraisal.status === "completed" &&
+                  certificate.issued_date
                 ) {
-                  timelineItems.forEach((item) =>
-                    item.classList.remove("active")
-                  ); // 모든 active 제거
-                  if (
-                    timelineItems[
-                      timelineItems.length - 1
-                    ].textContent.includes("감정서 발급")
-                  ) {
-                    timelineItems[timelineItems.length - 1].classList.add(
-                      "active"
-                    );
-                  } else if (
-                    timelineItems[
-                      timelineItems.length - 1
-                    ].textContent.includes("감정 완료") &&
-                    !certificate.issued_date
-                  ) {
-                    timelineItems[timelineItems.length - 1].classList.add(
-                      "active"
-                    );
-                  }
+                  // 감정서 발급된 경우
+                  Array.from(timelineItems)
+                    .find((item) =>
+                      item
+                        .querySelector(".timeline-title")
+                        .textContent.includes("감정서 발급")
+                    )
+                    ?.classList.add("active");
                 } else if (
                   appraisal.status === "completed" &&
                   !certificate.issued_date
                 ) {
-                  timelineItems.forEach((item) =>
-                    item.classList.remove("active")
-                  );
-                  if (
-                    timelineItems[
-                      timelineItems.length - 1
-                    ].textContent.includes("감정 완료")
-                  ) {
-                    timelineItems[timelineItems.length - 1].classList.add(
-                      "active"
-                    );
-                  }
+                  // 감정은 완료되었지만 감정서는 아직 발급되지 않은 경우
+                  Array.from(timelineItems)
+                    .find((item) =>
+                      item
+                        .querySelector(".timeline-title")
+                        .textContent.includes("감정 완료")
+                    )
+                    ?.classList.add("active");
+                } else if (appraisal.status === "cancelled") {
+                  // 취소된 경우
+                  Array.from(timelineItems)
+                    .find((item) =>
+                      item
+                        .querySelector(".timeline-title")
+                        .textContent.includes("감정 취소")
+                    )
+                    ?.classList.add("active");
+                } else if (appraisal.status === "pending") {
+                  // 대기중인 경우
+                  Array.from(timelineItems)
+                    .find((item) =>
+                      item
+                        .querySelector(".timeline-title")
+                        .textContent.includes("감정 신청 접수")
+                    )
+                    ?.classList.add("active");
                 }
               }
             } else {

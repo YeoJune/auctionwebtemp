@@ -550,8 +550,8 @@
 
         // URL에서 certificateNumber 파라미터가 있으면 입력 필드에 채우기
         const urlParams = new URLSearchParams(window.location.search);
-        const certNumFromUrl = urlParams.get("certificateNumber"); // index.html에서 넘어올 수 있는 파라미터
-        const requestIdFromUrl = urlParams.get("requestId"); // quick-result.html에서 넘어올 수 있는 파라미터
+        const certNumFromUrl = urlParams.get("certificateNumber");
+        const requestIdFromUrl = urlParams.get("requestId");
 
         if (certNumFromUrl) {
           certificateIdInput.value = certNumFromUrl;
@@ -575,12 +575,57 @@
               return;
             }
 
-            // 입력된 ID를 감정서 번호로 간주하고 상세 페이지로 이동
-            // 실제로는 이 ID가 감정서 번호인지, 감정 요청 ID인지 서버에서 확인하는 로직이 필요할 수 있음
-            // 여기서는 result-detail.html이 감정서 번호를 받는다고 가정
-            window.location.href = `/appr/result-detail/${encodeURIComponent(
-              certificateId
-            )}`;
+            // 로딩 메시지 표시
+            searchResultMessageEl.textContent =
+              "감정서 정보를 조회 중입니다...";
+            searchResultMessageEl.className = "";
+            searchResultMessageEl.style.display = "block";
+
+            // API 호출하여 감정서 번호 유효성 확인
+            fetch(
+              `/api/appr/appraisals/certificate/${encodeURIComponent(
+                certificateId
+              )}`
+            )
+              .then((response) => response.json())
+              .then((data) => {
+                if (data.success) {
+                  // 감정서 존재할 경우 상세 페이지로 이동
+                  window.location.href = `/appr/result-detail/${encodeURIComponent(
+                    certificateId
+                  )}`;
+                } else {
+                  // 감정서가 없는 경우, 감정 ID로 시도
+                  return fetch(
+                    `/api/appr/appraisals/${encodeURIComponent(certificateId)}`
+                  )
+                    .then((response) => response.json())
+                    .then((apprData) => {
+                      if (apprData.success) {
+                        const appraisal = apprData.appraisal;
+                        // 감정 유형에 따라 다른 페이지로 이동
+                        if (appraisal.appraisal_type === "quicklink") {
+                          window.location.href = `/appr/quick-result/${encodeURIComponent(
+                            appraisal.certificate_number
+                          )}`;
+                        } else {
+                          window.location.href = `/appr/result-detail/${encodeURIComponent(
+                            appraisal.certificate_number
+                          )}`;
+                        }
+                      } else {
+                        throw new Error("감정서를 찾을 수 없습니다.");
+                      }
+                    });
+                }
+              })
+              .catch((error) => {
+                searchResultMessageEl.textContent =
+                  "입력하신 감정번호에 해당하는 감정서를 찾을 수 없습니다.";
+                searchResultMessageEl.className = "error";
+                searchResultMessageEl.style.display = "block";
+                console.error("Error fetching certificate:", error);
+              });
           });
         }
       });

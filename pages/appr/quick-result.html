@@ -1154,26 +1154,38 @@
         );
 
         const pathParts = window.location.pathname.split("/");
-        const requestId = pathParts[pathParts.length - 1];
-        currentAppraisalId = requestId; // 감정 ID 저장
+        const certificateNumber = pathParts[pathParts.length - 1];
+        currentCertificateNumber = certificateNumber; // 감정서 번호 저장
 
-        if (!requestId) {
+        if (!certificateNumber) {
           loadingMessageEl.textContent =
-            "잘못된 접근입니다. 감정 요청 ID가 필요합니다.";
+            "잘못된 접근입니다. 감정서 번호가 필요합니다.";
           loadingMessageEl.style.color = "#dc2626";
           return;
         }
 
         if (popupGoToIssueBtn) {
-          popupGoToIssueBtn.addEventListener("click", navigateToIssuePage);
+          popupGoToIssueBtn.addEventListener("click", function () {
+            if (currentCertificateNumber) {
+              window.location.href = `/appr/issue/${currentCertificateNumber}`;
+            }
+          });
         }
 
-        fetch(`/api/appr/appraisals/${requestId}`)
+        // 감정서 번호로 조회
+        fetch(
+          `/api/appr/appraisals/certificate/${encodeURIComponent(
+            certificateNumber
+          )}`
+        )
           .then((response) => response.json())
           .then((data) => {
             loadingMessageEl.style.display = "none";
-            if (data.success && data.appraisal) {
-              const appraisal = data.appraisal;
+            if (data.success && data.certificate) {
+              const certificate = data.certificate;
+              const appraisal = certificate.appraisal;
+              currentAppraisalId = appraisal.id;
+
               resultHeaderEl.style.display = "flex";
 
               productNameEl.textContent = `${
@@ -1200,108 +1212,134 @@
                 }
               }
 
-              // 감정 결과에 따라 크레딧 차감 처리
-              let shouldDeductCredit = false;
-
-              switch (appraisal.result) {
-                case "authentic":
-                  activeResultSectionId = "result-authentic";
-                  resultText = "정품";
-                  badgeClass = "badge-success";
-                  document.getElementById(
-                    "authentic-notes"
-                  ).innerHTML = `고객님이 제공하신 링크의 상품 사진상으로는 <strong>정품</strong>으로 판단됩니다. 실물이 아닌 사진만으로는 완벽한 감정이 어려우므로, 더 정확한 판정을 원하시면 실물 감정 서비스를 이용해보시길 권장드립니다. ${
-                    notes
-                      ? "<br><br><strong>감정사 소견:</strong> " + notes
-                      : ""
-                  }`;
-                  displayImages(
-                    images,
-                    "authentic-main-image",
-                    "authentic-thumbnails"
-                  );
-                  shouldDeductCredit = true; // 정품인 경우 크레딧 차감
-                  break;
-                case "fake":
-                  activeResultSectionId = "result-fake";
-                  resultText = "가품";
-                  badgeClass = "badge-error";
-                  document.getElementById(
-                    "fake-notes"
-                  ).innerHTML = `고객님이 제공하신 링크의 상품 사진상으로는 <strong>가품</strong>으로 판단됩니다. 실물이 아닌 사진만으로는 완벽한 감정이 어려우므로, 더 정확한 판정을 원하시면 실물 감정 서비스를 이용해보시길 권장드립니다. ${
-                    notes
-                      ? "<br><br><strong>감정사 소견:</strong> " + notes
-                      : ""
-                  }`;
-                  displayImages(images, "fake-main-image", "fake-thumbnails");
-                  // 가품일 경우 감정서 발급받기 버튼 숨기기
-                  if (issueCertificateBtn)
-                    issueCertificateBtn.style.display = "none";
-                  shouldDeductCredit = true; // 가품인 경우 크레딧 차감
-                  break;
-                case "uncertain":
-                  activeResultSectionId = "result-uncertain";
-                  resultText = "판단 불가";
-                  badgeClass = "badge-warning";
-                  document.getElementById("uncertain-title").textContent =
-                    "판단 불가";
-                  document.getElementById("uncertain-icon").textContent = "!";
-                  document.getElementById(
-                    "uncertain-message"
-                  ).innerHTML = `고객님이 제공하신 링크의 상품 사진상으로는 정품 여부를 판단하기 어렵습니다. ${
-                    notes ? "<br>" + notes + "<br><br>" : "<br><br>"
-                  }추가 자료를 업로드하거나 정확한 판정을 위해 오프라인 실물 감정을 신청해주세요.`;
-                  document.getElementById(
-                    "uncertain-additional-photos-needed"
-                  ).style.display = "block"; // 자료부족 시에 보이도록 변경
-                  // 자료부족일 경우 감정서 발급받기 버튼 숨기기
-                  if (issueCertificateBtn)
-                    issueCertificateBtn.style.display = "none";
-                  shouldDeductCredit = false; // 자료부족인 경우 크레딧 차감하지 않음
-                  break;
-                case "pending": // 감정 대기중 (API 문서에는 없지만, 추가될 수 있음)
-                  activeResultSectionId = "result-uncertain"; // 자료부족 UI 재활용
-                  resultText = "감정 대기중";
-                  badgeClass = "badge-pending";
-                  document.getElementById("uncertain-title").textContent =
-                    "감정 대기중";
-                  document.getElementById("uncertain-icon").textContent = "⏳";
-                  document.getElementById("uncertain-message").textContent =
-                    "현재 감정이 진행 중입니다. 완료 후 결과를 확인해주세요.";
-                  document.getElementById(
-                    "uncertain-additional-photos-needed"
-                  ).style.display = "none";
-                  if (issueCertificateBtn) issueCertificateBtn.disabled = true; // 대기중에는 발급 버튼 비활성화
-                  break;
-                default: // 기타 상태 (예: cancelled 등)
-                  activeResultSectionId = "result-uncertain"; // 자료부족 UI 재활용
-                  resultText = appraisal.result || "알 수 없음";
-                  badgeClass = "badge-warning";
-                  document.getElementById(
-                    "uncertain-title"
-                  ).textContent = `상태: ${resultText}`;
-                  document.getElementById("uncertain-icon").textContent = "ℹ️";
-                  document.getElementById(
-                    "uncertain-message"
-                  ).textContent = `현재 감정 요청 상태는 '${resultText}' 입니다. ${
-                    notes || ""
-                  }`;
-                  document.getElementById(
-                    "uncertain-additional-photos-needed"
-                  ).style.display = "none";
-                  if (issueCertificateBtn) issueCertificateBtn.disabled = true; // 특정 상태에서 발급 버튼 비활성화
-              }
-
-              // 크레딧 차감 처리
-              if (shouldDeductCredit) {
-                deductQuicklinkCredit(requestId);
+              // 상태에 따른 처리
+              if (appraisal.status === "pending") {
+                activeResultSectionId = "result-uncertain"; // 자료부족 UI 재활용
+                resultText = "감정 대기중";
+                badgeClass = "badge-pending";
+                document.getElementById("uncertain-title").textContent =
+                  "감정 대기중";
+                document.getElementById("uncertain-icon").textContent = "⏳";
+                document.getElementById("uncertain-message").textContent =
+                  "현재 감정 요청이 접수되어 대기 중입니다. 감정이 진행되면 결과를 확인하실 수 있습니다.";
+                document.getElementById(
+                  "uncertain-additional-photos-needed"
+                ).style.display = "none";
+                if (issueCertificateBtn)
+                  issueCertificateBtn.style.display = "none"; // 대기중에는 발급 버튼 숨기기
+              } else if (appraisal.status === "in_review") {
+                activeResultSectionId = "result-uncertain"; // 자료부족 UI 재활용
+                resultText = "감정 진행중";
+                badgeClass = "badge-pending";
+                document.getElementById("uncertain-title").textContent =
+                  "감정 진행중";
+                document.getElementById("uncertain-icon").textContent = "⏳";
+                document.getElementById("uncertain-message").textContent =
+                  "현재 전문가가 감정을 진행 중입니다. 완료되면 결과를 확인하실 수 있습니다.";
+                document.getElementById(
+                  "uncertain-additional-photos-needed"
+                ).style.display = "none";
+                if (issueCertificateBtn)
+                  issueCertificateBtn.style.display = "none"; // 진행중에는 발급 버튼 숨기기
+              } else if (appraisal.status === "cancelled") {
+                activeResultSectionId = "result-uncertain"; // 자료부족 UI 재활용
+                resultText = "취소됨";
+                badgeClass = "badge-warning";
+                document.getElementById("uncertain-title").textContent =
+                  "감정 취소됨";
+                document.getElementById("uncertain-icon").textContent = "✕";
+                document.getElementById("uncertain-message").textContent =
+                  "감정 요청이 취소되었습니다.";
+                document.getElementById(
+                  "uncertain-additional-photos-needed"
+                ).style.display = "none";
+                if (issueCertificateBtn)
+                  issueCertificateBtn.style.display = "none"; // 취소된 경우 발급 버튼 숨기기
+              } else {
+                // 감정 결과에 따른 처리
+                switch (appraisal.result) {
+                  case "authentic":
+                    activeResultSectionId = "result-authentic";
+                    resultText = "정품";
+                    badgeClass = "badge-success";
+                    document.getElementById(
+                      "authentic-notes"
+                    ).innerHTML = `고객님이 제공하신 링크의 상품 사진상으로는 <strong>정품</strong>으로 판단됩니다. 실물이 아닌 사진만으로는 완벽한 감정이 어려우므로, 더 정확한 판정을 원하시면 실물 감정 서비스를 이용해보시길 권장드립니다. ${
+                      notes
+                        ? "<br><br><strong>감정사 소견:</strong> " + notes
+                        : ""
+                    }`;
+                    displayImages(
+                      images,
+                      "authentic-main-image",
+                      "authentic-thumbnails"
+                    );
+                    // 감정서 발급 버튼 표시
+                    if (issueCertificateBtn)
+                      issueCertificateBtn.style.display = "block";
+                    break;
+                  case "fake":
+                    activeResultSectionId = "result-fake";
+                    resultText = "가품";
+                    badgeClass = "badge-error";
+                    document.getElementById(
+                      "fake-notes"
+                    ).innerHTML = `고객님이 제공하신 링크의 상품 사진상으로는 <strong>가품</strong>으로 판단됩니다. 실물이 아닌 사진만으로는 완벽한 감정이 어려우므로, 더 정확한 판정을 원하시면 실물 감정 서비스를 이용해보시길 권장드립니다. ${
+                      notes
+                        ? "<br><br><strong>감정사 소견:</strong> " + notes
+                        : ""
+                    }`;
+                    displayImages(images, "fake-main-image", "fake-thumbnails");
+                    // 가품일 경우 감정서 발급받기 버튼 숨기기
+                    if (issueCertificateBtn)
+                      issueCertificateBtn.style.display = "none";
+                    break;
+                  case "uncertain":
+                    activeResultSectionId = "result-uncertain";
+                    resultText = "판단 불가";
+                    badgeClass = "badge-warning";
+                    document.getElementById("uncertain-title").textContent =
+                      "판단 불가";
+                    document.getElementById("uncertain-icon").textContent = "!";
+                    document.getElementById(
+                      "uncertain-message"
+                    ).innerHTML = `고객님이 제공하신 링크의 상품 사진상으로는 정품 여부를 판단하기 어렵습니다. ${
+                      notes ? "<br>" + notes + "<br><br>" : "<br><br>"
+                    }추가 자료를 업로드하거나 정확한 판정을 위해 오프라인 실물 감정을 신청해주세요.`;
+                    document.getElementById(
+                      "uncertain-additional-photos-needed"
+                    ).style.display = "block"; // 자료부족 시에 보이도록 변경
+                    // 자료부족일 경우 감정서 발급받기 버튼 숨기기
+                    if (issueCertificateBtn)
+                      issueCertificateBtn.style.display = "none";
+                    break;
+                  default:
+                    activeResultSectionId = "result-uncertain"; // 자료부족 UI 재활용
+                    resultText = appraisal.result || "알 수 없음";
+                    badgeClass = "badge-warning";
+                    document.getElementById(
+                      "uncertain-title"
+                    ).textContent = `상태: ${resultText}`;
+                    document.getElementById("uncertain-icon").textContent =
+                      "ℹ️";
+                    document.getElementById(
+                      "uncertain-message"
+                    ).textContent = `현재 감정 요청 상태는 '${resultText}' 입니다. ${
+                      notes || ""
+                    }`;
+                    document.getElementById(
+                      "uncertain-additional-photos-needed"
+                    ).style.display = "none";
+                    if (issueCertificateBtn)
+                      issueCertificateBtn.style.display = "none"; // 기타 상태에서는 발급 버튼 비활성화
+                }
               }
 
               resultBadgeEl.textContent = resultText;
               resultBadgeEl.className = `badge ${badgeClass}`;
               if (popupAppraisalResultEl) {
                 popupAppraisalResultEl.textContent = resultText;
-                popupAppraisalResultEl.className = `badge ${badgeClass}`;
+                popupAppraisalResultEl.className = badgeClass;
               }
 
               if (activeResultSectionId) {
@@ -1309,27 +1347,47 @@
                   .getElementById(activeResultSectionId)
                   .classList.add("active");
               }
-
-              // 정품 또는 가품이 아닐 경우 감정서 발급 버튼 비활성화 (퀵링크 감정 결과에 대한 감정서이므로)
-              if (
-                appraisal.result !== "authentic" &&
-                appraisal.result !== "fake"
-              ) {
-                if (issueCertificateBtn) issueCertificateBtn.disabled = true;
-              }
             } else {
-              document.getElementById("loading-message").textContent =
-                data.message || "감정 결과를 불러오는데 실패했습니다.";
-              document.getElementById("loading-message").style.color =
-                "#dc2626";
+              // 감정서 번호로 조회 실패시 감정 ID로 시도
+              return fetch(
+                `/api/appr/appraisals/${encodeURIComponent(certificateNumber)}`
+              )
+                .then((response) => response.json())
+                .then((data) => {
+                  if (data.success && data.appraisal) {
+                    // 감정 정보를 찾은 경우 해당 감정서 번호로 리다이렉트
+                    if (data.appraisal.certificate_number) {
+                      window.location.href = `/appr/quick-result/${encodeURIComponent(
+                        data.appraisal.certificate_number
+                      )}`;
+                    } else {
+                      throw new Error(
+                        "해당 감정의 감정서 번호를 찾을 수 없습니다."
+                      );
+                    }
+                  } else {
+                    throw new Error("감정 정보를 찾을 수 없습니다.");
+                  }
+                });
             }
           })
           .catch((error) => {
-            console.error("Error fetching appraisal result:", error);
-            document.getElementById("loading-message").textContent =
-              "감정 결과 로드 중 오류가 발생했습니다.";
-            document.getElementById("loading-message").style.color = "#dc2626";
+            console.error(
+              "Error fetching certificate/appraisal details:",
+              error
+            );
+            loadingMessageEl.textContent =
+              "감정 결과 로드 중 오류가 발생했습니다. 감정번호를 확인해주세요.";
+            loadingMessageEl.style.color = "#dc2626";
           });
+
+        function navigateToIssuePage() {
+          if (currentCertificateNumber) {
+            window.location.href = `/appr/issue/${currentCertificateNumber}`;
+          } else {
+            alert("감정서 번호를 찾을 수 없습니다.");
+          }
+        }
       });
     </script>
   </body>
