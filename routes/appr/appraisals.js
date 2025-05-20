@@ -311,7 +311,7 @@ router.get("/my", isAuthenticated, async (req, res) => {
 
     const [appraisals] = await conn.query(
       `SELECT 
-        id, appraisal_type, brand, model_name, status, result, 
+        id, appraisal_type, brand, model_name, status, result, certificate_number,
         created_at, JSON_EXTRACT(images, '$[0]') as representative_image
       FROM appraisals 
       WHERE user_id = ?
