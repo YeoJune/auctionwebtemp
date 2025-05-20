@@ -936,7 +936,10 @@ class BrandAucCrawler extends AxiosCrawler {
             }
             return result;
           } catch (error) {
-            console.error(`Error crawling update for item ${itemId}:`, error);
+            console.error(
+              `Error crawling update for item ${itemId}:`,
+              error.message
+            );
             return null;
           }
         })
@@ -948,7 +951,7 @@ class BrandAucCrawler extends AxiosCrawler {
       console.log(`Update crawl completed for ${results.length} items`);
       return results;
     } catch (error) {
-      console.error("Update crawl with IDs failed:", error);
+      console.error("Update crawl with IDs failed:", error.message);
       return [];
     }
   }
