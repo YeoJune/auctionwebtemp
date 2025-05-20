@@ -148,6 +148,32 @@
         }
       }
 
+      .btn-modern {
+        padding: 14px 28px;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        text-decoration: none;
+      }
+
+      .btn-modern:before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 0;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.1);
+        transition: all 0.3s ease;
+        z-index: -1;
+      }
+
+      .btn-modern:hover:before {
+        width: 100%;
+      }
+
       .btn-primary {
         background-color: #1a2a3a;
         color: #fff;
@@ -497,13 +523,13 @@
                 style="height: 40px" />
             </a>
             <nav class="nav-desktop">
-              <a href="/appr">홈</a>
-              <a href="/appr/request">감정신청</a>
-              <a href="/appr/result">감정번호조회</a>
-              <a href="/appr/mypage">마이페이지</a>
-              <a href="/appr/repair">까사복원시스템</a>
-              <a href="/appr/authenticity">정가품구별법</a>
-              <a href="/appr/signin">로그인</a>
+              <a href="/appr" class="btn-modern">홈</a>
+              <a href="/appr/request" class="btn-modern">감정신청</a>
+              <a href="/appr/result" class="btn-modern">감정번호조회</a>
+              <a href="/appr/mypage" class="btn-modern">마이페이지</a>
+              <a href="/appr/repair" class="btn-modern">까사복원시스템</a>
+              <a href="/appr/authenticity" class="btn-modern">정가품구별법</a>
+              <a href="/appr/signin" class="btn-modern">로그인</a>
             </nav>
           </div>
           <button
