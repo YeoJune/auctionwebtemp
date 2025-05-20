@@ -332,6 +332,11 @@
         background-color: #fee2e2;
         color: #dc2626;
       }
+
+      .brand-header {
+        background-color: #f1f5f9;
+        font-weight: bold;
+      }
     </style>
   </head>
   <body>
@@ -348,6 +353,9 @@
           </li>
           <li><a href="#" data-tab="restorations">복원 서비스 관리</a></li>
           <li><a href="#" data-tab="requests">복원 요청 관리</a></li>
+          <li>
+            <a href="#" data-tab="authenticity-guides">정품 구별법 관리</a>
+          </li>
           <li><a href="#" data-tab="users">회원 관리</a></li>
           <li><a href="#" data-tab="payments">결제 관리</a></li>
         </ul>
@@ -403,7 +411,7 @@
               <input
                 type="text"
                 id="appraisal-search"
-                placeholder="ID, 브랜드, 모델명 검색" />
+                placeholder="인증서번호, 브랜드, 모델명, 이메일 검색" />
               <button id="appraisal-search-btn">검색</button>
             </div>
             <div id="appraisals-table-container">
@@ -490,7 +498,7 @@
               <input
                 type="text"
                 id="restoration-request-search"
-                placeholder="ID, 브랜드, 모델명 검색" />
+                placeholder="인증서번호, 브랜드, 모델명, 이메일 검색" />
               <button id="restoration-request-search-btn">검색</button>
             </div>
             <div id="restoration-requests-table-container">
@@ -524,6 +532,53 @@
           </div>
         </div>
 
+        <!-- 정품 구별법 관리 탭 -->
+        <div id="authenticity-guides-tab" class="tab-content">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">정품 구별법 목록</div>
+              <div>
+                <select
+                  id="authenticity-guide-brand-filter"
+                  class="form-select"
+                  style="width: auto; margin-right: 10px">
+                  <option value="all">전체 브랜드</option>
+                  <option value="루이비통">루이비통</option>
+                  <option value="샤넬">샤넬</option>
+                  <option value="에르메스">에르메스</option>
+                  <option value="구찌">구찌</option>
+                  <option value="프라다">프라다</option>
+                </select>
+                <button id="add-authenticity-guide-btn" class="btn">
+                  신규 구별법 추가
+                </button>
+              </div>
+            </div>
+            <div id="authenticity-guides-table-container">
+              <table id="authenticity-guides-table">
+                <thead>
+                  <tr>
+                    <th>제목</th>
+                    <th>구별법 유형</th>
+                    <th>설명</th>
+                    <th>이미지</th>
+                    <th>상태</th>
+                    <th>관리</th>
+                  </tr>
+                </thead>
+                <tbody id="authenticity-guides-list">
+                  <!-- 정품 구별법 데이터가 JS로 로드됩니다 -->
+                  <tr>
+                    <td colspan="6" style="text-align: center">
+                      정품 구별법 데이터를 불러오는 중...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
         <!-- 회원 관리 탭 -->
         <div id="users-tab" class="tab-content">
           <div class="card">
@@ -543,7 +598,7 @@
               <input
                 type="text"
                 id="user-search"
-                placeholder="아이디, 이메일, 이름 검색" />
+                placeholder="아이디, 이메일, 회사명 검색" />
               <button id="user-search-btn">검색</button>
             </div>
             <div id="users-table-container">
@@ -551,7 +606,7 @@
                 <thead>
                   <tr>
                     <th>아이디</th>
-                    <th>이름/회사명</th>
+                    <th>회사명</th>
                     <th>이메일</th>
                     <th>등급</th>
                     <th>크레딧</th>
@@ -591,9 +646,12 @@
                   ">
                   <option value="all">전체 상태</option>
                   <option value="pending">처리중</option>
+                  <option value="ready">결제 대기</option>
                   <option value="completed">완료</option>
                   <option value="failed">실패</option>
                   <option value="cancelled">취소</option>
+                  <option value="vbank_ready">가상계좌 발급</option>
+                  <option value="vbank_expired">가상계좌 만료</option>
                 </select>
                 <select
                   id="payment-type-filter"
@@ -610,7 +668,7 @@
               <input
                 type="text"
                 id="payment-search"
-                placeholder="주문번호, 회원 ID 검색" />
+                placeholder="주문번호, 이메일, 회사명 검색" />
               <button id="payment-search-btn">검색</button>
             </div>
             <div id="payments-table-container">
@@ -618,7 +676,7 @@
                 <thead>
                   <tr>
                     <th>주문번호</th>
-                    <th>회원ID</th>
+                    <th>회원정보</th>
                     <th>상품유형</th>
                     <th>상품명</th>
                     <th>금액(원)</th>
@@ -786,6 +844,118 @@
       </div>
     </div>
 
+    <!-- 정품 구별법 추가/수정 모달 -->
+    <div id="authenticity-guide-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title" id="authenticity-guide-modal-title">
+            정품 구별법 추가
+          </h2>
+          <button
+            class="modal-close"
+            onclick="closeModal('authenticity-guide-modal')">
+            &times;
+          </button>
+        </div>
+        <form id="authenticity-guide-form">
+          <input type="hidden" id="authenticity-guide-id" />
+          <div class="form-group">
+            <label for="authenticity-guide-brand" class="form-label"
+              >브랜드</label
+            >
+            <select id="authenticity-guide-brand" class="form-select" required>
+              <option value="">브랜드 선택</option>
+              <option value="루이비통">루이비통</option>
+              <option value="샤넬">샤넬</option>
+              <option value="에르메스">에르메스</option>
+              <option value="구찌">구찌</option>
+              <option value="프라다">프라다</option>
+              <option value="기타">기타</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="authenticity-guide-type" class="form-label"
+              >구별법 유형</label
+            >
+            <input
+              type="text"
+              id="authenticity-guide-type"
+              class="form-input"
+              placeholder="예: 로고 비교, 가죽 질감, 스티치 패턴 등"
+              required />
+          </div>
+          <div class="form-group">
+            <label for="authenticity-guide-title" class="form-label"
+              >제목</label
+            >
+            <input
+              type="text"
+              id="authenticity-guide-title"
+              class="form-input"
+              required />
+          </div>
+          <div class="form-group">
+            <label for="authenticity-guide-description" class="form-label"
+              >설명</label
+            >
+            <textarea
+              id="authenticity-guide-description"
+              class="form-textarea"
+              required></textarea>
+          </div>
+          <div class="form-group">
+            <label for="authenticity-guide-authentic-image" class="form-label"
+              >정품 이미지</label
+            >
+            <input
+              type="file"
+              id="authenticity-guide-authentic-image"
+              accept="image/*" />
+            <div id="authentic-image-preview" style="margin-top: 10px"></div>
+          </div>
+          <div class="form-group">
+            <label for="authenticity-guide-fake-image" class="form-label"
+              >가품 이미지</label
+            >
+            <input
+              type="file"
+              id="authenticity-guide-fake-image"
+              accept="image/*" />
+            <div id="fake-image-preview" style="margin-top: 10px"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">활성화 상태</label>
+            <label style="margin-right: 20px">
+              <input
+                type="radio"
+                name="authenticity-guide-active"
+                value="true"
+                checked />
+              활성화
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="authenticity-guide-active"
+                value="false" />
+              비활성화
+            </label>
+          </div>
+          <div style="margin-top: 20px; text-align: right">
+            <button
+              type="button"
+              class="btn btn-outline"
+              onclick="closeModal('authenticity-guide-modal')">
+              취소
+            </button>
+            <button type="submit" class="btn" style="margin-left: 10px">
+              저장
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- 회원 정보 수정 모달 -->
     <div id="user-edit-modal" class="modal">
       <div class="modal-content">
@@ -822,6 +992,16 @@
             <input
               type="number"
               id="user-edit-monthly-limit"
+              class="form-input"
+              required />
+          </div>
+          <div class="form-group">
+            <label for="user-edit-offline-fee" class="form-label"
+              >오프라인 감정 수수료</label
+            >
+            <input
+              type="number"
+              id="user-edit-offline-fee"
               class="form-input"
               required />
           </div>
@@ -879,6 +1059,7 @@
     <script src="/js/appr-admin/appraisals.js"></script>
     <script src="/js/appr-admin/restorations.js"></script>
     <script src="/js/appr-admin/requests.js"></script>
+    <script src="/js/appr-admin/authenticity-guides.js"></script>
     <script src="/js/appr-admin/users.js"></script>
     <script src="/js/appr-admin/payments.js"></script>
 
@@ -933,6 +1114,7 @@
           appraisals: "감정 관리",
           restorations: "복원 서비스 관리",
           requests: "복원 요청 관리",
+          "authenticity-guides": "정품 구별법 관리",
           users: "회원 관리",
           payments: "결제 관리",
         };
@@ -948,6 +1130,9 @@
             break;
           case "requests":
             loadRestorationRequestList();
+            break;
+          case "authenticity-guides":
+            loadAuthenticityGuides();
             break;
           case "users":
             loadUserList();
@@ -988,6 +1173,10 @@
           authentic: { class: "badge-success", text: "정품" },
           fake: { class: "badge-error", text: "가품" },
           uncertain: { class: "badge-warning", text: "판단불가" },
+          ready: { class: "badge-info", text: "결제 대기" },
+          failed: { class: "badge-error", text: "실패" },
+          vbank_ready: { class: "badge-info", text: "가상계좌 발급" },
+          vbank_expired: { class: "badge-error", text: "가상계좌 만료" },
         };
 
         const badgeInfo = statusMap[status] || {

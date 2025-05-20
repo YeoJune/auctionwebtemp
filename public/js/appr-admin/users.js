@@ -101,26 +101,23 @@ function displayUserList(users, pagination) {
   // 테이블 내용 생성
   let html = "";
   users.forEach((user) => {
-    // 회원의 추가 정보가 있는지 확인
-    const membership = user.membership || {};
-
     // 회원 등급에 따른 배지 색상 설정
     let tierBadgeClass = "badge-info";
-    if (membership.tier === "까사트레이드 회원") {
+    if (user.tier === "까사트레이드 회원") {
       tierBadgeClass = "badge-success";
-    } else if (membership.tier === "제휴사 회원") {
+    } else if (user.tier === "제휴사 회원") {
       tierBadgeClass = "badge-warning";
     }
 
     html += `<tr>
             <td>${user.id}</td>
-            <td>${user.name || user.company_name || "-"}</td>
+            <td>${user.company_name || "-"}</td>
             <td>${user.email || "-"}</td>
             <td><span class="badge ${tierBadgeClass}">${
-      membership.tier || "일반회원"
+      user.tier || "일반회원"
     }</span></td>
-            <td>${membership.quick_link_credits_remaining || 0} / ${
-      membership.quick_link_monthly_limit || 0
+            <td>${user.quick_link_credits_remaining || 0} / ${
+      user.quick_link_monthly_limit || 0
     }</td>
             <td>${formatDate(user.created_at) || "-"}</td>
             <td>
@@ -177,23 +174,25 @@ function editUser(userId) {
 
 // 회원 수정 폼에 데이터 채우기
 function populateUserEditForm(user) {
-  // 회원의 추가 정보가 있는지 확인
-  const membership = user.membership || {};
-
   // 폼 필드 채우기
-  document.getElementById("user-edit-tier").value =
-    membership.tier || "일반회원";
+  document.getElementById("user-edit-tier").value = user.tier || "일반회원";
   document.getElementById("user-edit-credits").value =
-    membership.quick_link_credits_remaining || 0;
+    user.quick_link_credits_remaining || 0;
   document.getElementById("user-edit-monthly-limit").value =
-    membership.quick_link_monthly_limit || 0;
+    user.quick_link_monthly_limit || 0;
   document.getElementById("user-edit-subscription-type").value =
-    membership.quick_link_subscription_type || "free";
+    user.quick_link_subscription_type || "free";
+
+  // 오프라인 감정 수수료 추가
+  if (document.getElementById("user-edit-offline-fee")) {
+    document.getElementById("user-edit-offline-fee").value =
+      user.offline_appraisal_fee || 38000;
+  }
 
   // 구독 만료일 설정
-  if (membership.quick_link_subscription_expires_at) {
+  if (user.quick_link_subscription_expires_at) {
     document.getElementById("user-edit-expires-at").value =
-      membership.quick_link_subscription_expires_at.substring(0, 10);
+      user.quick_link_subscription_expires_at.substring(0, 10);
   }
 }
 
@@ -214,6 +213,13 @@ function updateUser() {
       "user-edit-subscription-type"
     ).value,
   };
+
+  // 오프라인 감정 수수료가 있으면 추가
+  if (document.getElementById("user-edit-offline-fee")) {
+    userData.offline_appraisal_fee = parseInt(
+      document.getElementById("user-edit-offline-fee").value
+    );
+  }
 
   // 구독 만료일이 있으면 추가
   const expiresAt = document.getElementById("user-edit-expires-at").value;

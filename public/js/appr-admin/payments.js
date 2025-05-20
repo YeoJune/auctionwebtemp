@@ -120,6 +120,10 @@ function displayPaymentList(payments, pagination) {
       statusBadgeClass = "badge-error";
     } else if (payment.status === "cancelled") {
       statusBadgeClass = "badge-warning";
+    } else if (payment.status === "vbank_ready") {
+      statusBadgeClass = "badge-info";
+    } else if (payment.status === "vbank_expired") {
+      statusBadgeClass = "badge-error";
     }
 
     // 결제 유형 한글화
@@ -134,7 +138,9 @@ function displayPaymentList(payments, pagination) {
 
     html += `<tr>
             <td>${payment.order_id}</td>
-            <td>${payment.user_id}</td>
+            <td>${
+              payment.user_email || payment.company_name || payment.user_id
+            }</td>
             <td>${productTypeKorean}</td>
             <td>${payment.product_name}</td>
             <td>${payment.amount.toLocaleString()}원</td>
@@ -170,6 +176,7 @@ function displayPaymentList(payments, pagination) {
 function getPaymentStatusText(status) {
   const statusMap = {
     pending: "처리중",
+    ready: "결제 대기",
     completed: "완료",
     failed: "실패",
     cancelled: "취소",
@@ -178,6 +185,8 @@ function getPaymentStatusText(status) {
     approval_signature_mismatch: "승인 서명 불일치",
     server_error: "서버 오류",
     approval_api_failed: "API 오류",
+    vbank_ready: "가상계좌 발급",
+    vbank_expired: "가상계좌 만료",
   };
 
   return statusMap[status] || status;
@@ -202,7 +211,7 @@ function viewPaymentDetail(paymentId) {
     })
     .then((data) => {
       if (data.success) {
-        displayPaymentDetail(data.payment);
+        displayPaymentDetail(data.payment, data.related_resource);
       } else {
         throw new Error(data.message || "결제 정보를 불러오는데 실패했습니다.");
       }
@@ -215,7 +224,7 @@ function viewPaymentDetail(paymentId) {
 }
 
 // 결제 상세 정보 표시 함수
-function displayPaymentDetail(payment) {
+function displayPaymentDetail(payment, relatedResource) {
   const container = document.getElementById("payment-detail-content");
 
   // 결제 유형 한글화
@@ -242,10 +251,18 @@ function displayPaymentDetail(payment) {
                 <td>${payment.order_id}</td>
             </tr>
             <tr>
-                <th>회원 ID</th>
-                <td>${payment.user_id}</td>
+                <th>회원 정보</th>
+                <td>${
+                  payment.user_email || payment.company_name || payment.user_id
+                }</td>
                 <th>결제 상태</th>
-                <td>${getStatusBadge(payment.status)}</td>
+                <td><span class="badge ${
+                  payment.status === "completed"
+                    ? "badge-success"
+                    : payment.status === "failed"
+                    ? "badge-error"
+                    : "badge-info"
+                }">${getPaymentStatusText(payment.status)}</span></td>
             </tr>
             <tr>
                 <th>상품 유형</th>
@@ -265,12 +282,81 @@ function displayPaymentDetail(payment) {
                 <th>생성 일시</th>
                 <td>${formatDate(payment.created_at)}</td>
             </tr>
+            ${
+              payment.receipt_url
+                ? `
+            <tr>
+                <th>영수증</th>
+                <td colspan="3"><a href="${payment.receipt_url}" target="_blank">영수증 보기</a></td>
+            </tr>`
+                : ""
+            }
         </table>
     </div>
     `;
 
   // 연관 리소스 정보 추가
-  if (payment.related_resource_id) {
+  if (relatedResource && relatedResource.type) {
+    let resourceType = relatedResource.type;
+    let resourceLabel = "알 수 없음";
+    let resourceDetailHtml = "";
+
+    if (resourceType === "appraisal") {
+      resourceLabel = "감정 정보";
+      if (relatedResource.data) {
+        const appraisal = relatedResource.data;
+        resourceDetailHtml = `
+          <tr>
+            <th>인증서 번호</th>
+            <td>${appraisal.certificate_number || "-"}</td>
+          </tr>
+          <tr>
+            <th>브랜드/모델명</th>
+            <td>${appraisal.brand || "-"} / ${appraisal.model_name || "-"}</td>
+          </tr>
+          <tr>
+            <th>감정 상태</th>
+            <td>${getStatusBadge(appraisal.status)}</td>
+          </tr>
+        `;
+      }
+    } else if (resourceType === "restoration") {
+      resourceLabel = "복원 정보";
+      if (relatedResource.data) {
+        const restoration = relatedResource.data;
+        resourceDetailHtml = `
+          <tr>
+            <th>인증서 번호</th>
+            <td>${restoration.certificate_number || "-"}</td>
+          </tr>
+          <tr>
+            <th>복원 상태</th>
+            <td>${getStatusBadge(restoration.status)}</td>
+          </tr>
+          <tr>
+            <th>서비스 개수</th>
+            <td>${restoration.services ? restoration.services.length : 0}개</td>
+          </tr>
+        `;
+      }
+    }
+
+    html += `
+        <div class="card" style="margin-bottom: 20px;">
+            <div class="card-header">
+                <div class="card-title">${resourceLabel}</div>
+            </div>
+            <table>
+                <tr>
+                    <th style="width: 120px;">리소스 ID</th>
+                    <td>${payment.related_resource_id}</td>
+                </tr>
+                ${resourceDetailHtml}
+            </table>
+        </div>
+        `;
+  } else if (payment.related_resource_id) {
+    // 새 API 응답 형식에서 관련 리소스 정보가 없지만 ID가 있는 경우
     let resourceType = payment.related_resource_type || "알 수 없음";
     let resourceLabel = "알 수 없음";
 
@@ -297,6 +383,55 @@ function displayPaymentDetail(payment) {
             </table>
         </div>
         `;
+  }
+
+  // 카드 정보 표시
+  if (payment.card_info && Object.keys(payment.card_info).length > 0) {
+    html += `
+        <div class="card" style="margin-bottom: 20px;">
+            <div class="card-header">
+                <div class="card-title">카드 결제 정보</div>
+            </div>
+            <table>
+    `;
+
+    const cardInfo = payment.card_info;
+
+    if (cardInfo.cardCompany || cardInfo.cardName) {
+      html += `
+        <tr>
+            <th style="width: 120px;">카드사</th>
+            <td>${cardInfo.cardCompany || cardInfo.cardName || "-"}</td>
+        </tr>
+      `;
+    }
+
+    if (cardInfo.cardNum) {
+      html += `
+        <tr>
+            <th>카드번호</th>
+            <td>${cardInfo.cardNum}</td>
+        </tr>
+      `;
+    }
+
+    if (cardInfo.cardQuota) {
+      html += `
+        <tr>
+            <th>할부개월</th>
+            <td>${
+              cardInfo.cardQuota === "00"
+                ? "일시불"
+                : cardInfo.cardQuota + "개월"
+            }</td>
+        </tr>
+      `;
+    }
+
+    html += `
+            </table>
+        </div>
+    `;
   }
 
   // PG사 거래 정보 추가

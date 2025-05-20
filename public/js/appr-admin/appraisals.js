@@ -107,13 +107,14 @@ function displayAppraisalList(appraisals, pagination) {
   // 테이블 내용 생성
   let html = "";
   appraisals.forEach((appraisal) => {
+    const truncatedId = appraisal.id.substring(0, 8) + "...";
     html += `<tr>
-            <td>${appraisal.id.substring(0, 8)}...</td>
+            <td>${truncatedId}</td>
             <td>${
               appraisal.appraisal_type === "quicklink" ? "퀵링크" : "오프라인"
             }</td>
             <td>${appraisal.brand} / ${appraisal.model_name}</td>
-            <td>${appraisal.user_id}</td>
+            <td>${appraisal.user_email || appraisal.user_id}</td>
             <td>${getStatusBadge(appraisal.status)}</td>
             <td>${getStatusBadge(appraisal.result)}</td>
             <td>${formatDate(appraisal.created_at)}</td>
@@ -184,8 +185,8 @@ function displayAppraisalDetail(appraisal) {
             <tr>
                 <th style="width: 120px;">감정 ID</th>
                 <td>${appraisal.id}</td>
-                <th style="width: 120px;">신청일</th>
-                <td>${formatDate(appraisal.created_at)}</td>
+                <th style="width: 120px;">인증서 번호</th>
+                <td>${appraisal.certificate_number || "-"}</td>
             </tr>
             <tr>
                 <th>감정 유형</th>
@@ -206,8 +207,14 @@ function displayAppraisalDetail(appraisal) {
             <tr>
                 <th>카테고리</th>
                 <td>${appraisal.category}</td>
-                <th>신청자 ID</th>
-                <td>${appraisal.user_id}</td>
+                <th>신청자 정보</th>
+                <td>${appraisal.user_email || appraisal.user_id}</td>
+            </tr>
+            <tr>
+                <th>신청일</th>
+                <td>${formatDate(appraisal.created_at)}</td>
+                <th>감정일</th>
+                <td>${formatDate(appraisal.appraised_at) || "-"}</td>
             </tr>
     `;
 
@@ -287,24 +294,6 @@ function displayAppraisalDetail(appraisal) {
             </div>
             
             <div class="form-group">
-                <label for="appraisal-status" class="form-label">상태 변경</label>
-                <select id="appraisal-status" class="form-select">
-                    <option value="pending" ${
-                      appraisal.status === "pending" ? "selected" : ""
-                    }>접수완료</option>
-                    <option value="in_review" ${
-                      appraisal.status === "in_review" ? "selected" : ""
-                    }>감정중</option>
-                    <option value="completed" ${
-                      appraisal.status === "completed" ? "selected" : ""
-                    }>완료</option>
-                    <option value="cancelled" ${
-                      appraisal.status === "cancelled" ? "selected" : ""
-                    }>취소</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
                 <label for="appraisal-result" class="form-label">감정 결과</label>
                 <select id="appraisal-result" class="form-select">
                     <option value="pending" ${
@@ -330,10 +319,11 @@ function displayAppraisalDetail(appraisal) {
             </div>
             
             <div class="form-group">
-                <label for="appraisal-certificate-number" class="form-label">감정서 번호</label>
-                <input type="text" id="appraisal-certificate-number" class="form-input" value="${
-                  appraisal.certificate_number || ""
-                }">
+                <label for="suggested-restoration-services" class="form-label">추천 복원 서비스</label>
+                <div id="suggested-restoration-services" style="margin-top: 10px;">
+                    <p>추천 복원 서비스를 선택하려면 먼저 복원 서비스 목록을 불러와야 합니다.</p>
+                    <button type="button" class="btn btn-outline" onclick="loadRestorationServicesForAppraisal()">복원 서비스 불러오기</button>
+                </div>
             </div>
             
             <div class="form-group">
@@ -384,6 +374,66 @@ function displayAppraisalDetail(appraisal) {
   container.innerHTML = html;
 }
 
+// 복원 서비스 목록 로드 함수 (감정 상세 모달에서 사용)
+function loadRestorationServicesForAppraisal() {
+  // 로딩 표시
+  document.getElementById("suggested-restoration-services").innerHTML =
+    "<p>복원 서비스를 불러오는 중...</p>";
+
+  // API 호출
+  fetch("/api/appr/admin/restoration-services")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("복원 서비스 목록을 불러오는데 실패했습니다.");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      if (data.success) {
+        displayRestorationServicesCheckboxes(data.services);
+      } else {
+        throw new Error(
+          data.message || "복원 서비스 목록을 불러오는데 실패했습니다."
+        );
+      }
+    })
+    .catch((error) => {
+      document.getElementById(
+        "suggested-restoration-services"
+      ).innerHTML = `<p>오류: ${error.message}</p>`;
+    });
+}
+
+// 복원 서비스 체크박스 표시 함수
+function displayRestorationServicesCheckboxes(services) {
+  // 활성화된 서비스만 필터링
+  const activeServices = services.filter((service) => service.is_active);
+
+  if (activeServices.length === 0) {
+    document.getElementById("suggested-restoration-services").innerHTML =
+      "<p>사용 가능한 복원 서비스가 없습니다.</p>";
+    return;
+  }
+
+  let html = '<div style="margin-top: 10px;">';
+
+  activeServices.forEach((service) => {
+    html += `
+      <div style="margin-bottom: 5px;">
+        <label>
+          <input type="checkbox" name="suggested-restoration-service" value="${
+            service.id
+          }">
+          ${service.name} (${service.price.toLocaleString()}원)
+        </label>
+      </div>
+    `;
+  });
+
+  html += "</div>";
+  document.getElementById("suggested-restoration-services").innerHTML = html;
+}
+
 // 감정 정보 업데이트 함수
 function updateAppraisal() {
   const appraisalId = document.getElementById("appraisal-id").value;
@@ -395,14 +445,19 @@ function updateAppraisal() {
     "result_notes",
     document.getElementById("appraisal-result-notes").value
   );
-  formData.append("status", document.getElementById("appraisal-status").value);
 
-  // 감정서 번호가 있으면 추가
-  const certificateNumber = document.getElementById(
-    "appraisal-certificate-number"
-  ).value;
-  if (certificateNumber) {
-    formData.append("certificate_number", certificateNumber);
+  // 추천 복원 서비스 ID 추가
+  const suggestedServices = document.querySelectorAll(
+    'input[name="suggested-restoration-service"]:checked'
+  );
+  if (suggestedServices.length > 0) {
+    const serviceIds = Array.from(suggestedServices).map(
+      (checkbox) => checkbox.value
+    );
+    formData.append(
+      "suggested_restoration_services",
+      JSON.stringify(serviceIds)
+    );
   }
 
   // PDF 파일이 선택되었으면 추가

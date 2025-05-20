@@ -105,11 +105,11 @@ function displayRestorationServices(services) {
                 <button class="btn btn-outline" onclick="editRestorationService('${
                   service.id
                 }')">수정</button>
-                <button class="btn btn-outline" style="margin-left: 5px;" onclick="toggleRestorationServiceStatus('${
-                  service.id
-                }', ${!service.is_active})">
-                    ${service.is_active ? "비활성화" : "활성화"}
-                </button>
+                ${
+                  service.is_active
+                    ? `<button class="btn btn-outline" style="margin-left: 5px;" onclick="deleteRestorationService('${service.id}')">비활성화</button>`
+                    : `<button class="btn btn-outline" style="margin-left: 5px;" onclick="activateRestorationService('${service.id}')">활성화</button>`
+                }
             </td>
         </tr>`;
   });
@@ -213,11 +213,15 @@ function submitRestorationService() {
     "estimated_days",
     document.getElementById("restoration-service-days").value
   );
-  formData.append(
-    "is_active",
-    document.querySelector('input[name="restoration-service-active"]:checked')
-      .value
-  );
+
+  // 새 서비스 추가가 아닌 수정일 경우에만 is_active 전송
+  if (!isNewService) {
+    formData.append(
+      "is_active",
+      document.querySelector('input[name="restoration-service-active"]:checked')
+        .value
+    );
+  }
 
   // 이미지 파일 추가
   const beforeImage = document.getElementById(
@@ -270,19 +274,44 @@ function submitRestorationService() {
     });
 }
 
-// 복원 서비스 상태 토글 (활성화/비활성화)
-function toggleRestorationServiceStatus(serviceId, newStatus) {
-  if (
-    !confirm(
-      `정말 이 서비스를 ${newStatus ? "활성화" : "비활성화"}하시겠습니까?`
-    )
-  ) {
+// 복원 서비스 비활성화
+function deleteRestorationService(serviceId) {
+  if (!confirm("정말 이 서비스를 비활성화하시겠습니까?")) {
+    return;
+  }
+
+  // API 호출
+  fetch(`/api/appr/admin/restoration-services/${serviceId}`, {
+    method: "DELETE",
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("복원 서비스 비활성화에 실패했습니다.");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      if (data.success) {
+        showAlert("복원 서비스가 비활성화되었습니다.", "success");
+        loadRestorationServiceList(); // 목록 갱신
+      } else {
+        throw new Error(data.message || "복원 서비스 비활성화에 실패했습니다.");
+      }
+    })
+    .catch((error) => {
+      showAlert(error.message, "error");
+    });
+}
+
+// 복원 서비스 활성화
+function activateRestorationService(serviceId) {
+  if (!confirm("정말 이 서비스를 활성화하시겠습니까?")) {
     return;
   }
 
   // 폼 데이터 생성
   const formData = new FormData();
-  formData.append("is_active", newStatus);
+  formData.append("is_active", true);
 
   // API 호출
   fetch(`/api/appr/admin/restoration-services/${serviceId}`, {
@@ -291,21 +320,16 @@ function toggleRestorationServiceStatus(serviceId, newStatus) {
   })
     .then((response) => {
       if (!response.ok) {
-        throw new Error("복원 서비스 상태 변경에 실패했습니다.");
+        throw new Error("복원 서비스 활성화에 실패했습니다.");
       }
       return response.json();
     })
     .then((data) => {
       if (data.success) {
-        showAlert(
-          `복원 서비스가 ${newStatus ? "활성화" : "비활성화"}되었습니다.`,
-          "success"
-        );
+        showAlert("복원 서비스가 활성화되었습니다.", "success");
         loadRestorationServiceList(); // 목록 갱신
       } else {
-        throw new Error(
-          data.message || "복원 서비스 상태 변경에 실패했습니다."
-        );
+        throw new Error(data.message || "복원 서비스 활성화에 실패했습니다.");
       }
     })
     .catch((error) => {

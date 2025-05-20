@@ -104,11 +104,13 @@ function displayRestorationRequestList(restorations, pagination) {
             <td>${request.id.substring(0, 8)}...</td>
             <td>${request.appraisal_id.substring(0, 8)}...</td>
             <td>${
-              request.appraisal
-                ? `${request.appraisal.brand} / ${request.appraisal.model_name}`
+              request.brand && request.model_name
+                ? `${request.brand} / ${request.model_name}`
                 : "-"
             }</td>
-            <td>${request.user_id}</td>
+            <td>${
+              request.user_email || request.company_name || request.user_id
+            }</td>
             <td>${serviceCount}개 항목</td>
             <td>${getStatusBadge(request.status)}</td>
             <td>${formatDate(request.created_at)}</td>
@@ -184,14 +186,24 @@ function displayRestorationRequestDetail(restoration) {
             <tr>
                 <th style="width: 120px;">요청 ID</th>
                 <td>${restoration.id}</td>
-                <th style="width: 120px;">신청일</th>
-                <td>${formatDate(restoration.created_at)}</td>
+                <th style="width: 120px;">인증서 번호</th>
+                <td>${restoration.certificate_number || "-"}</td>
             </tr>
             <tr>
                 <th>감정 ID</th>
                 <td>${restoration.appraisal_id}</td>
-                <th>신청자 ID</th>
-                <td>${restoration.user_id}</td>
+                <th>신청자 정보</th>
+                <td>${
+                  restoration.user_email ||
+                  restoration.company_name ||
+                  restoration.user_id
+                }</td>
+            </tr>
+            <tr>
+                <th>신청일</th>
+                <td>${formatDate(restoration.created_at)}</td>
+                <th>상태</th>
+                <td>${getStatusBadge(restoration.status)}</td>
             </tr>`;
 
   // 상품 정보가 있는 경우 추가
