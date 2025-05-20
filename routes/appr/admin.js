@@ -74,6 +74,35 @@ const restorationUpload = multer({
   },
 });
 
+const authenticityStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const dir = "public/images/authenticity";
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + "-" + uuidv4();
+    cb(null, "authenticity-" + uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
+const authenticityUpload = multer({
+  storage: authenticityStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB 제한
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) {
+      cb(null, true);
+    } else {
+      cb(
+        new Error("유효하지 않은 파일 형식입니다. 이미지만 업로드 가능합니다."),
+        false
+      );
+    }
+  },
+});
+
 // QR 코드 생성 함수
 async function generateQRCode(url, outputPath) {
   try {
@@ -1519,5 +1548,303 @@ router.get("/payments/:id", isAuthenticated, isAdmin, async (req, res) => {
     if (conn) conn.release();
   }
 });
+
+// 정품 구별법 목록 조회 - GET /api/appr/admin/authenticity-guides
+router.get(
+  "/authenticity-guides",
+  isAuthenticated,
+  isAdmin,
+  async (req, res) => {
+    let conn;
+    try {
+      const { brand, is_active } = req.query;
+
+      conn = await pool.getConnection();
+
+      let query = `
+      SELECT 
+        id, brand, guide_type, title, description, 
+        authentic_image, fake_image, is_active, created_at, updated_at
+      FROM authenticity_guides
+      WHERE 1=1
+    `;
+
+      const queryParams = [];
+
+      if (brand) {
+        query += " AND brand = ?";
+        queryParams.push(brand);
+      }
+
+      if (is_active !== undefined) {
+        query += " AND is_active = ?";
+        queryParams.push(is_active === "true");
+      }
+
+      query += " ORDER BY brand, guide_type, created_at DESC";
+
+      const [rows] = await conn.query(query, queryParams);
+
+      res.json({
+        success: true,
+        guides: rows,
+      });
+    } catch (err) {
+      console.error("정품 구별법 목록 조회 중 오류 발생:", err);
+      res.status(500).json({
+        success: false,
+        message: "정품 구별법 목록 조회 중 서버 오류가 발생했습니다.",
+      });
+    } finally {
+      if (conn) conn.release();
+    }
+  }
+);
+
+// 정품 구별법 추가 - POST /api/appr/admin/authenticity-guides
+router.post(
+  "/authenticity-guides",
+  isAuthenticated,
+  isAdmin,
+  authenticityUpload.fields([
+    { name: "authentic_image", maxCount: 1 },
+    { name: "fake_image", maxCount: 1 },
+  ]),
+  async (req, res) => {
+    let conn;
+    try {
+      const { brand, guide_type, title, description } = req.body;
+
+      // 필수 필드 검증
+      if (!brand || !guide_type || !title || !description) {
+        return res.status(400).json({
+          success: false,
+          message: "필수 입력 항목이 누락되었습니다.",
+        });
+      }
+
+      // 이미지 처리
+      let authentic_image = null;
+      let fake_image = null;
+
+      if (req.files) {
+        if (req.files.authentic_image && req.files.authentic_image.length > 0) {
+          authentic_image = `/images/authenticity/${req.files.authentic_image[0].filename}`;
+        }
+
+        if (req.files.fake_image && req.files.fake_image.length > 0) {
+          fake_image = `/images/authenticity/${req.files.fake_image[0].filename}`;
+        }
+      }
+
+      conn = await pool.getConnection();
+
+      // 구별법 ID 생성
+      const guide_id = uuidv4();
+
+      // 정보 저장
+      await conn.query(
+        `INSERT INTO authenticity_guides (
+          id, brand, guide_type, title, description,
+          authentic_image, fake_image, is_active
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          guide_id,
+          brand,
+          guide_type,
+          title,
+          description,
+          authentic_image,
+          fake_image,
+          true,
+        ]
+      );
+
+      res.status(201).json({
+        success: true,
+        guide: {
+          id: guide_id,
+          brand,
+          guide_type,
+          title,
+          description,
+          authentic_image,
+          fake_image,
+          is_active: true,
+        },
+      });
+    } catch (err) {
+      console.error("정품 구별법 추가 중 오류 발생:", err);
+      res.status(500).json({
+        success: false,
+        message: "정품 구별법 추가 중 서버 오류가 발생했습니다.",
+      });
+    } finally {
+      if (conn) conn.release();
+    }
+  }
+);
+
+// 정품 구별법 수정 - PUT /api/appr/admin/authenticity-guides/:id
+router.put(
+  "/authenticity-guides/:id",
+  isAuthenticated,
+  isAdmin,
+  authenticityUpload.fields([
+    { name: "authentic_image", maxCount: 1 },
+    { name: "fake_image", maxCount: 1 },
+  ]),
+  async (req, res) => {
+    let conn;
+    try {
+      const guide_id = req.params.id;
+      const { brand, guide_type, title, description, is_active } = req.body;
+
+      conn = await pool.getConnection();
+
+      // 구별법 존재 여부 확인
+      const [guideRows] = await conn.query(
+        "SELECT * FROM authenticity_guides WHERE id = ?",
+        [guide_id]
+      );
+
+      if (guideRows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "해당 정품 구별법을 찾을 수 없습니다.",
+        });
+      }
+
+      const guide = guideRows[0];
+
+      // 이미지 처리
+      let authentic_image = guide.authentic_image;
+      let fake_image = guide.fake_image;
+
+      if (req.files) {
+        if (req.files.authentic_image && req.files.authentic_image.length > 0) {
+          authentic_image = `/images/authenticity/${req.files.authentic_image[0].filename}`;
+        }
+
+        if (req.files.fake_image && req.files.fake_image.length > 0) {
+          fake_image = `/images/authenticity/${req.files.fake_image[0].filename}`;
+        }
+      }
+
+      // 업데이트할 필드 구성
+      const updateData = {};
+      const updateFields = [];
+      const updateValues = [];
+
+      if (brand) {
+        updateFields.push("brand = ?");
+        updateValues.push(brand);
+        updateData.brand = brand;
+      }
+
+      if (guide_type) {
+        updateFields.push("guide_type = ?");
+        updateValues.push(guide_type);
+        updateData.guide_type = guide_type;
+      }
+
+      if (title) {
+        updateFields.push("title = ?");
+        updateValues.push(title);
+        updateData.title = title;
+      }
+
+      if (description) {
+        updateFields.push("description = ?");
+        updateValues.push(description);
+        updateData.description = description;
+      }
+
+      if (authentic_image !== guide.authentic_image) {
+        updateFields.push("authentic_image = ?");
+        updateValues.push(authentic_image);
+        updateData.authentic_image = authentic_image;
+      }
+
+      if (fake_image !== guide.fake_image) {
+        updateFields.push("fake_image = ?");
+        updateValues.push(fake_image);
+        updateData.fake_image = fake_image;
+      }
+
+      if (is_active !== undefined) {
+        updateFields.push("is_active = ?");
+        updateValues.push(is_active === "true" || is_active === true);
+        updateData.is_active = is_active === "true" || is_active === true;
+      }
+
+      if (updateFields.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "업데이트할 정보가 없습니다.",
+        });
+      }
+
+      // 업데이트 쿼리 실행
+      const query = `UPDATE authenticity_guides SET ${updateFields.join(
+        ", "
+      )} WHERE id = ?`;
+      updateValues.push(guide_id);
+
+      await conn.query(query, updateValues);
+
+      res.json({
+        success: true,
+        guide: {
+          id: guide_id,
+          ...guide,
+          ...updateData,
+        },
+      });
+    } catch (err) {
+      console.error("정품 구별법 수정 중 오류 발생:", err);
+      res.status(500).json({
+        success: false,
+        message: "정품 구별법 수정 중 서버 오류가 발생했습니다.",
+      });
+    } finally {
+      if (conn) conn.release();
+    }
+  }
+);
+
+// 정품 구별법 비활성화 - DELETE /api/appr/admin/authenticity-guides/:id
+router.delete(
+  "/authenticity-guides/:id",
+  isAuthenticated,
+  isAdmin,
+  async (req, res) => {
+    let conn;
+    try {
+      const guide_id = req.params.id;
+
+      conn = await pool.getConnection();
+
+      // 실제 삭제 대신 비활성화 처리
+      await conn.query(
+        "UPDATE authenticity_guides SET is_active = false WHERE id = ?",
+        [guide_id]
+      );
+
+      res.json({
+        success: true,
+        message: "정품 구별법이 비활성화되었습니다.",
+      });
+    } catch (err) {
+      console.error("정품 구별법 삭제 중 오류 발생:", err);
+      res.status(500).json({
+        success: false,
+        message: "정품 구별법 삭제 중 서버 오류가 발생했습니다.",
+      });
+    } finally {
+      if (conn) conn.release();
+    }
+  }
+);
 
 module.exports = router;
