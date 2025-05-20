@@ -200,7 +200,7 @@
     },
     "membership_info": {
       "tier": "까사트레이드 회원" | "제휴사 회원" | "일반회원",
-      "quick_link_credits_remaining_this_month": 5,
+      "quick_link_credits_remaining": 5,
       "quick_link_monthly_limit": 10,
       "subscription_type": "free" | "paid",
       "subscription_expires_at": "date",

@@ -298,7 +298,7 @@ router.get("/my", isAuthenticated, async (req, res) => {
         ? membershipRows[0]
         : {
             tier: "일반회원",
-            quick_link_credits_remaining_this_month: 0,
+            quick_link_credits_remaining: 0,
             quick_link_monthly_limit: 0,
             subscription_type: "free",
             subscription_expires_at: null,

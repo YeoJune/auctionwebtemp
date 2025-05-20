@@ -1434,7 +1434,7 @@
                 // 로그인 안 되어 있거나 에러 시 기본값으로 표시
                 updatePriceDisplay({
                   tier: "일반회원",
-                  quick_link_credits_remaining_this_month: 0,
+                  quick_link_credits_remaining: 0,
                   quick_link_monthly_limit: 0,
                   offline_appraisal_fee: 38000,
                 });
@@ -1444,7 +1444,7 @@
               console.error("회원/멤버십 정보 로드 오류:", error);
               updatePriceDisplay({
                 tier: "일반회원",
-                quick_link_credits_remaining_this_month: 0,
+                quick_link_credits_remaining: 0,
                 quick_link_monthly_limit: 0,
                 offline_appraisal_fee: 38000,
               });
@@ -1478,7 +1478,7 @@
             document.getElementById(
               "quicklink-subscription-info"
             ).style.display = "block";
-            qlCreditInfoEl.innerHTML = `이번 달 남은 크레딧: <strong>${membership.quick_link_credits_remaining_this_month}회</strong> / ${membership.quick_link_monthly_limit}회`;
+            qlCreditInfoEl.innerHTML = `이번 달 남은 크레딧: <strong>${membership.quick_link_credits_remaining}회</strong> / ${membership.quick_link_monthly_limit}회`;
             if (
               membership.tier === "일반회원" &&
               membership.quick_link_monthly_limit === 0
