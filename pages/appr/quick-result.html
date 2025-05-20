@@ -1164,14 +1164,6 @@
           return;
         }
 
-        if (popupGoToIssueBtn) {
-          popupGoToIssueBtn.addEventListener("click", function () {
-            if (currentCertificateNumber) {
-              window.location.href = `/appr/issue/${currentCertificateNumber}`;
-            }
-          });
-        }
-
         // 감정서 번호로 조회
         fetch(
           `/api/appr/appraisals/certificate/${encodeURIComponent(

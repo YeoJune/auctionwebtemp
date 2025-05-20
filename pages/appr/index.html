@@ -1053,7 +1053,7 @@
                     const certificateNumber =
                       this.getAttribute("data-certificate");
                     if (certificateNumber) {
-                      window.location.href = `https://casastrade.com/appr/result-detail/${certificateNumber}`;
+                      window.location.href = `https://casastrade.com/appr/result/${certificateNumber}`;
                     }
                   });
                 });
@@ -1111,7 +1111,7 @@
             const certificateNumberInput =
               document.getElementById("certificate-number"); // 입력 필드 ID
             if (certificateNumberInput && certificateNumberInput.value.trim()) {
-              window.location.href = `/appr/result-detail/${encodeURIComponent(
+              window.location.href = `/appr/result/${encodeURIComponent(
                 certificateNumberInput.value.trim()
               )}`;
             } else {

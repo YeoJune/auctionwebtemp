@@ -209,14 +209,61 @@ app.get("/appr/signin", (req, res) => {
 app.get("/appr/request", (req, res) => {
   res.sendFile(path.join(apprPagesPath, "request.html"));
 });
+// 감정번호 조회 페이지
 app.get("/appr/result", (req, res) => {
   res.sendFile(path.join(apprPagesPath, "result.html"));
 });
-app.get("/appr/result-detail/:certificateNumber", (req, res) => {
-  res.sendFile(path.join(apprPagesPath, "result-detail.html"));
-});
-app.get("/appr/quick-result/:requestId", (req, res) => {
-  res.sendFile(path.join(apprPagesPath, "quick-result.html"));
+// 감정서 조회 통합 라우트
+app.get("/appr/result/:certificateNumber", async (req, res) => {
+  try {
+    const certificateNumber = req.params.certificateNumber;
+
+    // DB 연결
+    const conn = await pool.getConnection();
+
+    try {
+      // 먼저 감정서 번호로 조회
+      const [appraisal] = await conn.query(
+        `SELECT appraisal_type, certificate_number FROM appraisals WHERE certificate_number = ?`,
+        [certificateNumber]
+      );
+
+      if (appraisal.length > 0) {
+        // 감정 유형에 따라 다른 페이지로 리다이렉션
+        if (appraisal[0].appraisal_type === "quicklink") {
+          return res.sendFile(path.join(apprPagesPath, "quick-result.html"));
+        } else {
+          return res.sendFile(path.join(apprPagesPath, "result-detail.html"));
+        }
+      } else {
+        // 감정서 번호로 찾을 수 없는 경우, 감정 ID로 시도
+        const [appraisalById] = await conn.query(
+          `SELECT appraisal_type, certificate_number FROM appraisals WHERE id = ?`,
+          [certificateNumber]
+        );
+
+        if (appraisalById.length > 0) {
+          // 감정번호로 리다이렉션
+          return res.redirect(
+            `/appr/result/${appraisalById[0].certificate_number}`
+          );
+        } else {
+          // 찾을 수 없는 경우 감정번호 조회 페이지로 리다이렉션
+          return res.redirect(
+            `/appr/result?error=not_found&id=${encodeURIComponent(
+              certificateNumber
+            )}`
+          );
+        }
+      }
+    } finally {
+      conn.release();
+    }
+  } catch (error) {
+    console.error("감정서 조회 중 오류:", error);
+    // 오류 발생 시 감정번호 조회 페이지로 리다이렉션
+    return res.redirect(`/appr/result?error=server_error`);
+  }
 });
 app.get("/appr/repair", (req, res) => {
   res.sendFile(path.join(apprPagesPath, "repair.html"));
