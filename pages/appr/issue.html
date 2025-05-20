@@ -912,21 +912,6 @@
             );
           },
         });
-
-        console.log({
-          clientId: paymentData.clientId, // 클라이언트 키
-          method: "card", // 결제 수단
-          orderId: paymentData.orderId, // 주문 ID
-          amount: paymentData.amount, // 결제 금액
-          goodsName: paymentData.goodsName, // 상품명
-          returnUrl: window.location.origin + "/api/appr/payments/approve", // 인증 결과 수신 URL
-          fnError: function (result) {
-            console.error("결제 에러:", result.errorMsg);
-            showPaymentError(
-              result.errorMsg || "결제 처리 중 오류가 발생했습니다."
-            );
-          },
-        });
       }
 
       // 결제 오류 표시 함수
@@ -1111,10 +1096,10 @@
               if (paymentData.success) {
                 // 결제창 호출을 위한 데이터 준비
                 requestPayment({
-                  clientId: paymentData.clientId,
-                  orderId: paymentData.orderId,
-                  amount: paymentData.amount,
-                  goodsName: paymentData.product_name,
+                  clientId: paymentData.paramsForNicePaySDK.clientId,
+                  orderId: paymentData.paramsForNicePaySDK.orderId,
+                  amount: paymentData.paramsForNicePaySDK.amount,
+                  goodsName: paymentData.paramsForNicePaySDK.product_name,
                 });
               } else {
                 showPaymentError(
