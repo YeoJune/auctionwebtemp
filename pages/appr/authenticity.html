@@ -206,14 +206,14 @@
           display: block;
         }
       }
-      
+
       #loading-guides {
         text-align: center;
         padding: 40px 20px;
         font-size: 1.1rem;
         color: #4a5568;
       }
-      
+
       #error-message {
         text-align: center;
         padding: 20px;
@@ -271,7 +271,7 @@
         box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
         z-index: 999;
       ">
-      
+      <a
         href="/appr"
         style="
           display: block;
@@ -282,7 +282,7 @@
         "
         >홈</a
       >
-      
+      <a
         href="/appr/request"
         style="
           display: block;
@@ -293,7 +293,7 @@
         "
         >감정신청</a
       >
-      
+      <a
         href="/appr/result"
         style="
           display: block;
@@ -304,7 +304,7 @@
         "
         >감정번호조회</a
       >
-      
+      <a
         href="/appr/mypage"
         style="
           display: block;
@@ -315,7 +315,7 @@
         "
         >마이페이지</a
       >
-      
+      <a
         href="/appr/repair"
         style="
           display: block;
@@ -326,7 +326,7 @@
         "
         >까사복원시스템</a
       >
-      
+      <a
         href="/appr/authenticity"
         style="
           display: block;
@@ -337,7 +337,7 @@
         "
         >정가품구별법</a
       >
-      
+      <a
         href="/appr/signin"
         style="
           display: block;
@@ -382,14 +382,16 @@
           <!-- 브랜드별 아코디언 UI -->
           <div id="authenticity-guides-container">
             <p id="loading-guides">정품 구별법 목록을 불러오는 중...</p>
-            <p id="error-message">정품 구별법 정보를 불러오는데 실패했습니다.</p>
+            <p id="error-message">
+              정품 구별법 정보를 불러오는데 실패했습니다.
+            </p>
           </div>
 
           <div style="text-align: center; margin-top: 40px">
             <p style="color: #4a5568; margin-bottom: 20px">
               전문가의 정확한 감정이 필요하세요?
             </p>
-            
+            <a
               href="/appr/request"
               style="
                 display: inline-block;
@@ -439,35 +441,35 @@
             </h3>
             <ul style="list-style: none; padding: 0; margin: 0">
               <li style="margin-bottom: 10px">
-                
+                <a
                   href="/appr/request"
                   style="color: #cbd5e0; text-decoration: none"
                   >감정 신청</a
                 >
               </li>
               <li style="margin-bottom: 10px">
-                
+                <a
                   href="/appr/result"
                   style="color: #cbd5e0; text-decoration: none"
                   >감정서 조회</a
                 >
               </li>
               <li style="margin-bottom: 10px">
-                
+                <a
                   href="/appr/repair"
                   style="color: #cbd5e0; text-decoration: none"
                   >까사복원시스템</a
                 >
               </li>
               <li style="margin-bottom: 10px">
-                
+                <a
                   href="/appr/authenticity"
                   style="color: #cbd5e0; text-decoration: none"
                   >정가품구별법</a
                 >
               </li>
               <li>
-                
+                <a
                   href="/appr/mypage"
                   style="color: #cbd5e0; text-decoration: none"
                   >마이페이지</a
@@ -546,32 +548,35 @@
           icon.textContent = "▲";
         }
       }
-      
+
       // 정품 구별법 데이터 로드 및 표시
       function loadAuthenticityGuides() {
-        const guidesContainer = document.getElementById("authenticity-guides-container");
+        const guidesContainer = document.getElementById(
+          "authenticity-guides-container"
+        );
         const loadingElement = document.getElementById("loading-guides");
         const errorElement = document.getElementById("error-message");
-        
+
         fetch("/api/appr/appraisals/authenticity-guides")
-          .then(response => response.json())
-          .then(data => {
+          .then((response) => response.json())
+          .then((data) => {
             if (loadingElement) loadingElement.style.display = "none";
-            
+
             if (data.success && data.guides) {
               // 객체를 배열로 변환하여 순서대로 처리
               const brands = Object.keys(data.guides);
-              
+
               if (brands.length === 0) {
-                guidesContainer.innerHTML = '<p style="text-align: center; padding: 20px;">현재 등록된 정품 구별법이 없습니다.</p>';
+                guidesContainer.innerHTML =
+                  '<p style="text-align: center; padding: 20px;">현재 등록된 정품 구별법이 없습니다.</p>';
                 return;
               }
-              
-              let accordionsHTML = '';
-              
-              brands.forEach(brand => {
+
+              let accordionsHTML = "";
+
+              brands.forEach((brand) => {
                 const guides = data.guides[brand];
-                
+
                 // 브랜드별 아코디언 생성
                 accordionsHTML += `
                   <div class="accordion">
@@ -582,9 +587,9 @@
                     <div class="accordion-content">
                       <div class="accordion-content-inner">
                 `;
-                
+
                 // 각 브랜드의 구별법 항목 추가
-                guides.forEach(guide => {
+                guides.forEach((guide) => {
                   accordionsHTML += `
                     <div style="margin-bottom: 20px">
                       <h4 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 10px;">
@@ -594,14 +599,20 @@
                         <div style="flex: 1; text-align: center">
                           <p style="margin-bottom: 10px; font-weight: 500">정품</p>
                           <img
-                            src="${guide.authentic_image || 'https://via.placeholder.com/300x200/e0e0e0/969696?text=정품'}"
+                            src="${
+                              guide.authentic_image ||
+                              "https://via.placeholder.com/300x200/e0e0e0/969696?text=정품"
+                            }"
                             alt="${brand} 정품 ${guide.title}"
                             style="width: 100%; border-radius: 4px" />
                         </div>
                         <div style="flex: 1; text-align: center">
                           <p style="margin-bottom: 10px; font-weight: 500">가품</p>
                           <img
-                            src="${guide.fake_image || 'https://via.placeholder.com/300x200/e0e0e0/969696?text=가품'}"
+                            src="${
+                              guide.fake_image ||
+                              "https://via.placeholder.com/300x200/e0e0e0/969696?text=가품"
+                            }"
                             alt="${brand} 가품 ${guide.title}"
                             style="width: 100%; border-radius: 4px" />
                         </div>
@@ -612,26 +623,27 @@
                     </div>
                   `;
                 });
-                
+
                 accordionsHTML += `
                       </div>
                     </div>
                   </div>
                 `;
               });
-              
+
               guidesContainer.innerHTML = accordionsHTML;
-              
+
               // 모든 아코디언의 초기 max-height 설정
-              document.querySelectorAll(".accordion-content").forEach(content => {
-                content.style.maxHeight = 0;
-              });
-              
+              document
+                .querySelectorAll(".accordion-content")
+                .forEach((content) => {
+                  content.style.maxHeight = 0;
+                });
             } else {
               if (errorElement) errorElement.style.display = "block";
             }
           })
-          .catch(error => {
+          .catch((error) => {
             console.error("정품 구별법 데이터 로드 중 오류 발생:", error);
             if (loadingElement) loadingElement.style.display = "none";
             if (errorElement) errorElement.style.display = "block";
@@ -667,7 +679,7 @@
 
         handleResponsiveLayout();
         window.addEventListener("resize", handleResponsiveLayout);
-        
+
         // 정품 구별법 데이터 로드
         loadAuthenticityGuides();
       });

@@ -357,6 +357,101 @@ router.get("/my", isAuthenticated, async (req, res) => {
   }
 });
 
+// 브랜드별 정품 구별법 목록 조회 - GET /api/appr/appraisals/authenticity-guides
+router.get("/authenticity-guides", async (req, res) => {
+  let conn;
+  try {
+    const brand = req.query.brand; // 특정 브랜드만 필터링할 경우
+
+    conn = await pool.getConnection();
+
+    let query = `
+      SELECT 
+        id, brand, guide_type, title, description, 
+        authentic_image, fake_image
+      FROM authenticity_guides
+      WHERE is_active = true
+    `;
+
+    const queryParams = [];
+
+    // 특정 브랜드 필터링
+    if (brand) {
+      query += " AND brand = ?";
+      queryParams.push(brand);
+    }
+
+    // 정렬
+    query += " ORDER BY brand, guide_type";
+
+    const [rows] = await conn.query(query, queryParams);
+
+    // 브랜드별로 그룹화
+    const groupedGuides = {};
+
+    rows.forEach((guide) => {
+      if (!groupedGuides[guide.brand]) {
+        groupedGuides[guide.brand] = [];
+      }
+      groupedGuides[guide.brand].push(guide);
+    });
+
+    res.json({
+      success: true,
+      guides: groupedGuides,
+    });
+  } catch (err) {
+    console.error("정품 구별법 목록 조회 중 오류 발생:", err);
+    res.status(500).json({
+      success: false,
+      message: "정품 구별법 목록 조회 중 서버 오류가 발생했습니다.",
+    });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
+// 특정 브랜드의 정품 구별법 조회 - GET /api/appr/appraisals/authenticity-guides/:brand
+router.get("/authenticity-guides/:brand", async (req, res) => {
+  let conn;
+  try {
+    const brand = req.params.brand;
+
+    conn = await pool.getConnection();
+
+    const [rows] = await conn.query(
+      `SELECT 
+        id, brand, guide_type, title, description, 
+        authentic_image, fake_image
+      FROM authenticity_guides
+      WHERE brand = ? AND is_active = true
+      ORDER BY guide_type`,
+      [brand]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "해당 브랜드의 정품 구별법 정보를 찾을 수 없습니다.",
+      });
+    }
+
+    res.json({
+      success: true,
+      brand,
+      guides: rows,
+    });
+  } catch (err) {
+    console.error("브랜드별 정품 구별법 조회 중 오류 발생:", err);
+    res.status(500).json({
+      success: false,
+      message: "브랜드별 정품 구별법 조회 중 서버 오류가 발생했습니다.",
+    });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
 // 감정 상세 조회 - GET /api/appr/appraisals/:certificate_number
 router.get("/:certificate_number", isAuthenticated, async (req, res) => {
   let conn;
@@ -559,101 +654,6 @@ router.get("/certificate/:certificateNumber/qrcode", async (req, res) => {
     res.status(500).json({
       success: false,
       message: "QR코드 이미지 제공 중 서버 오류가 발생했습니다.",
-    });
-  } finally {
-    if (conn) conn.release();
-  }
-});
-
-// 브랜드별 정품 구별법 목록 조회 - GET /api/appr/appraisals/authenticity-guides
-router.get("/authenticity-guides", async (req, res) => {
-  let conn;
-  try {
-    const brand = req.query.brand; // 특정 브랜드만 필터링할 경우
-
-    conn = await pool.getConnection();
-
-    let query = `
-      SELECT 
-        id, brand, guide_type, title, description, 
-        authentic_image, fake_image
-      FROM authenticity_guides
-      WHERE is_active = true
-    `;
-
-    const queryParams = [];
-
-    // 특정 브랜드 필터링
-    if (brand) {
-      query += " AND brand = ?";
-      queryParams.push(brand);
-    }
-
-    // 정렬
-    query += " ORDER BY brand, guide_type";
-
-    const [rows] = await conn.query(query, queryParams);
-
-    // 브랜드별로 그룹화
-    const groupedGuides = {};
-
-    rows.forEach((guide) => {
-      if (!groupedGuides[guide.brand]) {
-        groupedGuides[guide.brand] = [];
-      }
-      groupedGuides[guide.brand].push(guide);
-    });
-
-    res.json({
-      success: true,
-      guides: groupedGuides,
-    });
-  } catch (err) {
-    console.error("정품 구별법 목록 조회 중 오류 발생:", err);
-    res.status(500).json({
-      success: false,
-      message: "정품 구별법 목록 조회 중 서버 오류가 발생했습니다.",
-    });
-  } finally {
-    if (conn) conn.release();
-  }
-});
-
-// 특정 브랜드의 정품 구별법 조회 - GET /api/appr/appraisals/authenticity-guides/:brand
-router.get("/authenticity-guides/:brand", async (req, res) => {
-  let conn;
-  try {
-    const brand = req.params.brand;
-
-    conn = await pool.getConnection();
-
-    const [rows] = await conn.query(
-      `SELECT 
-        id, brand, guide_type, title, description, 
-        authentic_image, fake_image
-      FROM authenticity_guides
-      WHERE brand = ? AND is_active = true
-      ORDER BY guide_type`,
-      [brand]
-    );
-
-    if (rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "해당 브랜드의 정품 구별법 정보를 찾을 수 없습니다.",
-      });
-    }
-
-    res.json({
-      success: true,
-      brand,
-      guides: rows,
-    });
-  } catch (err) {
-    console.error("브랜드별 정품 구별법 조회 중 오류 발생:", err);
-    res.status(500).json({
-      success: false,
-      message: "브랜드별 정품 구별법 조회 중 서버 오류가 발생했습니다.",
     });
   } finally {
     if (conn) conn.release();
