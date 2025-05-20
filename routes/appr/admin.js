@@ -508,7 +508,7 @@ router.put(
         const qrFileName = `qr-${appraisal.certificate_number}.png`;
         const qrPath = path.join(qrDir, qrFileName);
         const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-        const certificateUrl = `${frontendUrl}/appr/result-detail/${appraisal.certificate_number}`;
+        const certificateUrl = `${frontendUrl}/appr/result/${appraisal.certificate_number}`;
 
         const qrGenerated = await generateQRCode(certificateUrl, qrPath);
         if (qrGenerated) {

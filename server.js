@@ -209,6 +209,9 @@ app.get("/appr/signin", (req, res) => {
 app.get("/appr/request", (req, res) => {
   res.sendFile(path.join(apprPagesPath, "request.html"));
 });
+app.get("/appr/request-repair/:certificateNumber", (req, res) => {
+  res.sendFile(path.join(apprPagesPath, "request-repair.html"));
+});
 // 감정번호 조회 페이지
 app.get("/appr/result", (req, res) => {
   res.sendFile(path.join(apprPagesPath, "result.html"));

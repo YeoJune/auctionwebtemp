@@ -1,0 +1,1186 @@
+<!-- pages/appr/request-repair.html -->
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>복원 서비스 신청 - CAS 명품감정시스템</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Montserrat:wght@500;600;700&display=swap"
+      rel="stylesheet" />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Noto Sans KR", sans-serif;
+        color: #333;
+        line-height: 1.6;
+        background-color: #f8fafc;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+      }
+
+      /* 헤더 & 푸터 공통 스타일 */
+      header {
+        background-color: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+      }
+
+      .header-inner {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 18px 0;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 40px;
+      }
+
+      .logo {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #1a2a3a;
+        text-decoration: none;
+        letter-spacing: -0.5px;
+        display: flex;
+        align-items: center;
+      }
+
+      .logo .cas-highlight {
+        background: linear-gradient(135deg, #1a2a3a 0%, #2d4263 100%);
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .nav-desktop {
+        display: none;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: nowrap;
+        justify-content: flex-end;
+      }
+
+      .nav-desktop a {
+        color: #333;
+        text-decoration: none;
+        font-weight: 500;
+        white-space: nowrap;
+        padding: 8px 12px;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        font-size: 0.95rem;
+      }
+
+      .nav-desktop a:hover {
+        color: #666;
+        background-color: rgba(0, 0, 0, 0.05);
+      }
+
+      .mobile-menu-btn {
+        display: block;
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+      }
+
+      .mobile-menu {
+        display: none;
+        position: fixed;
+        top: 70px;
+        left: 0;
+        right: 0;
+        background-color: #fff;
+        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+        z-index: 999;
+      }
+
+      .mobile-menu a {
+        display: block;
+        padding: 15px 20px;
+        color: #4a5568;
+        text-decoration: none;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .mobile-menu a:last-child {
+        border-bottom: none;
+      }
+
+      @media (min-width: 768px) {
+        .nav-desktop {
+          display: flex !important;
+          gap: 8px;
+        }
+        .mobile-menu-btn {
+          display: none !important;
+        }
+      }
+
+      @media (min-width: 1024px) {
+        .nav-desktop {
+          gap: 12px;
+        }
+        .nav-desktop a {
+          padding: 8px 16px;
+          font-size: 1rem;
+        }
+      }
+
+      footer {
+        background-color: #1a2a3a;
+        color: #fff;
+        padding: 40px 0 20px;
+      }
+
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(1, 1fr);
+        gap: 30px;
+        margin-bottom: 30px;
+      }
+
+      @media (min-width: 768px) {
+        .grid-3 {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+
+      /* 폼 및 컴포넌트 스타일 */
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      .form-label {
+        display: block;
+        font-weight: 500;
+        color: #4a5568;
+        margin-bottom: 8px;
+      }
+
+      .input-modern {
+        border: 1px solid #e2e8f0;
+        background-color: #fff;
+        border-radius: 8px;
+        padding: 16px;
+        font-size: 1rem;
+        box-shadow: none;
+        transition: all 0.3s;
+        width: 100%;
+      }
+
+      .input-modern:focus {
+        outline: none;
+        border-color: #1a2a3a;
+        box-shadow: 0 0 0 2px rgba(26, 42, 58, 0.1);
+      }
+
+      .select-modern {
+        border: 1px solid #e2e8f0;
+        background-color: #fff;
+        border-radius: 8px;
+        padding: 16px;
+        font-size: 1rem;
+        box-shadow: none;
+        transition: all 0.3s;
+        width: 100%;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%234a5568' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 16px center;
+      }
+
+      .select-modern:focus {
+        outline: none;
+        border-color: #1a2a3a;
+        box-shadow: 0 0 0 2px rgba(26, 42, 58, 0.1);
+      }
+
+      .textarea-modern {
+        border: 1px solid #e2e8f0;
+        background-color: #fff;
+        border-radius: 8px;
+        padding: 16px;
+        font-size: 1rem;
+        box-shadow: none;
+        transition: all 0.3s;
+        width: 100%;
+        min-height: 120px;
+        resize: vertical;
+      }
+
+      .textarea-modern:focus {
+        outline: none;
+        border-color: #1a2a3a;
+        box-shadow: 0 0 0 2px rgba(26, 42, 58, 0.1);
+      }
+
+      .btn-modern {
+        padding: 14px 28px;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        text-decoration: none;
+        cursor: pointer;
+        display: inline-block;
+        text-align: center;
+      }
+
+      .btn-primary {
+        background-color: #1a2a3a;
+        color: #fff;
+        border: none;
+      }
+
+      .btn-primary:hover {
+        background-color: #2d4263;
+      }
+
+      .btn-outline {
+        background-color: transparent;
+        color: #1a2a3a;
+        border: 1px solid #1a2a3a;
+      }
+
+      .btn-outline:hover {
+        background-color: rgba(26, 42, 58, 0.05);
+      }
+
+      .btn-block {
+        display: block;
+        width: 100%;
+      }
+
+      .card {
+        background-color: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        padding: 30px;
+        margin-bottom: 30px;
+      }
+
+      .alert {
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+      }
+
+      .alert-info {
+        background-color: #e0f2fe;
+        color: #0369a1;
+        border-left: 4px solid #0369a1;
+      }
+
+      .alert-success {
+        background-color: #dcfce7;
+        color: #15803d;
+        border-left: 4px solid #15803d;
+      }
+
+      .alert-error {
+        background-color: #fee2e2;
+        color: #b91c1c;
+        border-left: 4px solid #b91c1c;
+      }
+
+      .service-item {
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        transition: all 0.3s ease;
+      }
+
+      .service-item:hover {
+        border-color: #cbd5e1;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      }
+
+      .service-item input[type="checkbox"] {
+        margin-right: 15px;
+        width: 20px;
+        height: 20px;
+      }
+
+      .service-details {
+        flex: 1;
+      }
+
+      .service-name {
+        font-weight: 600;
+        margin-bottom: 5px;
+      }
+
+      .service-description {
+        font-size: 0.9rem;
+        color: #64748b;
+      }
+
+      .service-price {
+        font-weight: 600;
+        color: #1a2a3a;
+        white-space: nowrap;
+        margin-left: 20px;
+      }
+
+      .tab-section {
+        margin-bottom: 40px;
+      }
+
+      .tab-header {
+        display: flex;
+        border-bottom: 1px solid #e2e8f0;
+        margin-bottom: 30px;
+      }
+
+      .tab {
+        padding: 15px 20px;
+        font-weight: 500;
+        cursor: pointer;
+        position: relative;
+        transition: all 0.3s;
+        color: #64748b;
+      }
+
+      .tab.active {
+        color: #1a2a3a;
+        font-weight: 700;
+      }
+
+      .tab.active::after {
+        content: "";
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background-color: #1a2a3a;
+      }
+
+      .summary-section {
+        background-color: #f8fafc;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 20px;
+      }
+
+      .summary-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .summary-row:last-child {
+        border-bottom: none;
+      }
+
+      .summary-label {
+        color: #64748b;
+      }
+
+      .summary-value {
+        font-weight: 600;
+      }
+
+      .total-row {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #1a2a3a;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 2px solid #e2e8f0;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- 헤더 -->
+    <header>
+      <div class="container">
+        <div class="header-inner">
+          <div class="header-left">
+            <a href="/appr" class="logo">
+              <img
+                src="https://i.ibb.co/FqJhVh0T/image.png"
+                alt="CAS 명품감정시스템"
+                style="height: 40px" />
+            </a>
+
+            <nav class="nav-desktop">
+              <a href="/appr" class="btn-modern">홈</a>
+              <a href="/appr/request" class="btn-modern">감정신청</a>
+              <a href="/appr/result" class="btn-modern">감정번호조회</a>
+              <a href="/appr/mypage" class="btn-modern">마이페이지</a>
+              <a href="/appr/repair" class="btn-modern">까사복원시스템</a>
+              <a href="/appr/authenticity" class="btn-modern">정가품구별법</a>
+              <a href="/appr/signin" class="btn-modern">로그인</a>
+            </nav>
+          </div>
+
+          <button
+            class="mobile-menu-btn"
+            id="menu-icon"
+            onclick="toggleMobileMenu()">
+            ☰
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="mobile-menu" id="mobile-menu">
+      <a href="/appr">홈</a>
+      <a href="/appr/request">감정신청</a>
+      <a href="/appr/result">감정번호조회</a>
+      <a href="/appr/mypage">마이페이지</a>
+      <a href="/appr/repair">까사복원시스템</a>
+      <a href="/appr/authenticity">정가품구별법</a>
+      <a href="/appr/signin">로그인</a>
+    </div>
+
+    <!-- 메인 콘텐츠 -->
+    <main>
+      <section style="padding: 60px 0">
+        <div class="container" style="max-width: 800px">
+          <div style="text-align: center; margin-bottom: 40px">
+            <h1
+              style="
+                font-size: 2.25rem;
+                font-weight: 700;
+                color: #1a2a3a;
+                margin-bottom: 15px;
+              ">
+              복원 서비스 신청
+            </h1>
+            <p style="color: #4a5568; font-size: 1.1rem; line-height: 1.7">
+              감정을 통해 확인된 제품의 복원 서비스를 신청하세요.
+            </p>
+          </div>
+
+          <div
+            id="loading-message"
+            style="text-align: center; padding: 40px; display: none">
+            <p>정보를 불러오는 중입니다...</p>
+          </div>
+
+          <div
+            id="error-message"
+            class="alert alert-error"
+            style="display: none"></div>
+
+          <div id="product-info-section" class="card" style="display: none">
+            <h3
+              style="font-size: 1.3rem; font-weight: 700; margin-bottom: 20px">
+              감정 상품 정보
+            </h3>
+            <div class="form-group">
+              <div class="form-label">감정서 번호</div>
+              <div id="certificate-number" style="font-weight: 500">-</div>
+            </div>
+            <div class="form-group">
+              <div class="form-label">브랜드</div>
+              <div id="brand" style="font-weight: 500">-</div>
+            </div>
+            <div class="form-group">
+              <div class="form-label">모델명</div>
+              <div id="model-name" style="font-weight: 500">-</div>
+            </div>
+            <div class="form-group">
+              <div class="form-label">감정 결과</div>
+              <div id="result" style="font-weight: 500">-</div>
+            </div>
+          </div>
+
+          <form id="repair-form" class="card" style="display: none">
+            <h3
+              style="font-size: 1.3rem; font-weight: 700; margin-bottom: 20px">
+              복원 서비스 선택
+            </h3>
+
+            <div class="alert alert-info">
+              <p>
+                <strong>복원 서비스 안내:</strong> 선택하신 서비스에 따라 복원
+                작업이 진행됩니다. 전문가의 진단에 따라 실제 필요한 서비스가
+                변경될 수 있으며, 이 경우 별도로 연락드립니다.
+              </p>
+            </div>
+
+            <div id="services-container">
+              <!-- 서비스 항목이 여기에 동적으로 추가됩니다 -->
+              <div
+                class="alert alert-info"
+                style="text-align: center"
+                id="no-services-message"
+                style="display: none">
+                이용 가능한 복원 서비스가 없습니다.
+              </div>
+            </div>
+
+            <div
+              id="summary-section"
+              class="summary-section"
+              style="display: none">
+              <h4
+                style="
+                  font-size: 1.1rem;
+                  font-weight: 600;
+                  margin-bottom: 15px;
+                ">
+                선택한 서비스 요약
+              </h4>
+              <div id="selected-services-summary">
+                <!-- 선택한 서비스가 여기에 동적으로 추가됩니다 -->
+              </div>
+              <div class="summary-row total-row">
+                <div class="summary-label">총 결제 금액</div>
+                <div class="summary-value" id="total-price">0원</div>
+              </div>
+            </div>
+
+            <div style="margin-top: 30px">
+              <h3
+                style="
+                  font-size: 1.3rem;
+                  font-weight: 700;
+                  margin-bottom: 20px;
+                ">
+                배송 정보
+              </h3>
+              <div class="form-group">
+                <label for="delivery-name" class="form-label">수령인</label>
+                <input
+                  type="text"
+                  id="delivery-name"
+                  class="input-modern"
+                  placeholder="이름을 입력해주세요"
+                  required />
+              </div>
+              <div class="form-group">
+                <label for="delivery-phone" class="form-label">연락처</label>
+                <input
+                  type="tel"
+                  id="delivery-phone"
+                  class="input-modern"
+                  placeholder="연락 가능한 번호를 입력해주세요"
+                  required />
+              </div>
+              <div class="form-group">
+                <label for="delivery-zipcode" class="form-label"
+                  >우편번호</label
+                >
+                <div style="display: flex; gap: 10px">
+                  <input
+                    type="text"
+                    id="delivery-zipcode"
+                    class="input-modern"
+                    placeholder="우편번호"
+                    readonly
+                    required
+                    style="flex: 1" />
+                  <button
+                    type="button"
+                    id="find-address-btn"
+                    class="btn-modern btn-outline"
+                    style="white-space: nowrap"
+                    onclick="findAddress()">
+                    주소 찾기
+                  </button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="delivery-address1" class="form-label">주소</label>
+                <input
+                  type="text"
+                  id="delivery-address1"
+                  class="input-modern"
+                  placeholder="주소"
+                  readonly
+                  required />
+              </div>
+              <div class="form-group">
+                <label for="delivery-address2" class="form-label"
+                  >상세주소</label
+                >
+                <input
+                  type="text"
+                  id="delivery-address2"
+                  class="input-modern"
+                  placeholder="상세주소를 입력해주세요"
+                  required />
+              </div>
+              <div class="form-group">
+                <label for="notes" class="form-label">요청사항 (선택)</label>
+                <textarea
+                  id="notes"
+                  class="textarea-modern"
+                  placeholder="복원에 관한 추가 요청사항이 있으면 입력해주세요"></textarea>
+              </div>
+            </div>
+
+            <div style="margin-top: 30px">
+              <div class="alert alert-info">
+                <p>
+                  <strong>안내사항:</strong> 복원 서비스 비용은 실제 작업 후
+                  청구됩니다. 작업 시작 전 전문가의 진단에 따라 비용이 변경될 수
+                  있으며, 변경 사항은 사전에 안내드립니다.
+                </p>
+              </div>
+              <button
+                type="submit"
+                id="submit-btn"
+                class="btn-modern btn-primary btn-block"
+                style="margin-top: 20px">
+                복원 서비스 신청하기
+              </button>
+            </div>
+          </form>
+
+          <div
+            id="success-message"
+            class="card"
+            style="display: none; text-align: center">
+            <img
+              src="/images/check-circle.svg"
+              alt="성공"
+              style="width: 80px; height: 80px; margin: 0 auto 20px" />
+            <h3
+              style="font-size: 1.5rem; font-weight: 700; margin-bottom: 15px">
+              복원 서비스 신청이 완료되었습니다
+            </h3>
+            <p style="color: #4a5568; margin-bottom: 30px">
+              신청하신 복원 서비스는 전문가 검토 후 처리됩니다. 진행 상황은
+              마이페이지에서 확인하실 수 있습니다.
+            </p>
+            <div>
+              <a
+                href="/appr/mypage"
+                class="btn-modern btn-primary"
+                style="margin-right: 10px"
+                >마이페이지로 이동</a
+              >
+              <a href="/appr" class="btn-modern btn-outline">홈으로 이동</a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- 푸터 -->
+    <footer>
+      <div class="container">
+        <div class="grid-3">
+          <div>
+            <h3
+              style="font-size: 1.25rem; font-weight: 700; margin-bottom: 15px">
+              <span style="font-size: 0.9rem; vertical-align: top">ⓒ</span> CAS
+              명품감정시스템
+            </h3>
+            <p style="color: #cbd5e0; margin-bottom: 20px">
+              최고의 전문가들이 함께하는<br />국내 최고 명품 감정 서비스
+            </p>
+          </div>
+          <div>
+            <h3
+              style="font-size: 1.1rem; font-weight: 700; margin-bottom: 15px">
+              서비스
+            </h3>
+            <ul style="list-style: none; padding: 0; margin: 0">
+              <li style="margin-bottom: 10px">
+                <a
+                  href="/appr/request"
+                  style="color: #cbd5e0; text-decoration: none"
+                  >감정 신청</a
+                >
+              </li>
+              <li style="margin-bottom: 10px">
+                <a
+                  href="/appr/result"
+                  style="color: #cbd5e0; text-decoration: none"
+                  >감정서 조회</a
+                >
+              </li>
+              <li style="margin-bottom: 10px">
+                <a
+                  href="/appr/repair"
+                  style="color: #cbd5e0; text-decoration: none"
+                  >까사복원시스템</a
+                >
+              </li>
+              <li style="margin-bottom: 10px">
+                <a
+                  href="/appr/authenticity"
+                  style="color: #cbd5e0; text-decoration: none"
+                  >정가품구별법</a
+                >
+              </li>
+              <li>
+                <a
+                  href="/appr/mypage"
+                  style="color: #cbd5e0; text-decoration: none"
+                  >마이페이지</a
+                >
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h3
+              style="font-size: 1.1rem; font-weight: 700; margin-bottom: 15px">
+              정보
+            </h3>
+            <ul style="list-style: none; padding: 0; margin: 0">
+              <li style="margin-bottom: 10px">
+                <a href="#" style="color: #cbd5e0; text-decoration: none"
+                  >회사 소개</a
+                >
+              </li>
+              <li style="margin-bottom: 10px">
+                <a href="#" style="color: #cbd5e0; text-decoration: none"
+                  >이용약관</a
+                >
+              </li>
+              <li>
+                <a href="#" style="color: #cbd5e0; text-decoration: none"
+                  >개인정보처리방침</a
+                >
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div
+          style="
+            border-top: 1px solid #2d3748;
+            padding-top: 20px;
+            text-align: center;
+            color: #a0aec0;
+            font-size: 0.875rem;
+          ">
+          <p>© 2025 CAS 명품감정시스템. All rights reserved.</p>
+        </div>
+      </div>
+    </footer>
+
+    <!-- 주소 검색을 위한 다음 우편번호 서비스 -->
+    <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+
+    <script>
+      // 전역 변수
+      let appraisalInfo = null;
+      let servicesData = [];
+      let selectedServices = [];
+      let totalPrice = 0;
+
+      // 모바일 메뉴 토글
+      function toggleMobileMenu() {
+        const mobileMenu = document.getElementById("mobile-menu");
+        const menuIcon = document.getElementById("menu-icon");
+        if (mobileMenu.style.display === "block") {
+          mobileMenu.style.display = "none";
+          if (menuIcon) menuIcon.textContent = "☰";
+        } else {
+          mobileMenu.style.display = "block";
+          if (menuIcon) menuIcon.textContent = "✕";
+        }
+      }
+
+      // 주소 검색
+      function findAddress() {
+        new daum.Postcode({
+          oncomplete: function (data) {
+            document.getElementById("delivery-zipcode").value = data.zonecode;
+            document.getElementById("delivery-address1").value = data.address;
+            document.getElementById("delivery-address2").focus();
+          },
+        }).open();
+      }
+
+      // 가격 형식 포맷팅 함수
+      function formatPrice(price) {
+        return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") + "원";
+      }
+
+      // 서비스 선택 핸들러
+      function handleServiceSelection(serviceId, checked) {
+        const service = servicesData.find((s) => s.id === serviceId);
+        if (!service) return;
+
+        if (checked) {
+          // 서비스 추가
+          if (!selectedServices.some((s) => s.service_id === serviceId)) {
+            selectedServices.push({
+              service_id: serviceId,
+              service_name: service.name,
+              price: service.price,
+            });
+          }
+        } else {
+          // 서비스 제거
+          selectedServices = selectedServices.filter(
+            (s) => s.service_id !== serviceId
+          );
+        }
+
+        // 요약 및 총 가격 업데이트
+        updateSummary();
+      }
+
+      // 요약 섹션 업데이트
+      function updateSummary() {
+        const summaryContainer = document.getElementById(
+          "selected-services-summary"
+        );
+        const summarySection = document.getElementById("summary-section");
+        const totalPriceEl = document.getElementById("total-price");
+
+        if (selectedServices.length === 0) {
+          summarySection.style.display = "none";
+          totalPrice = 0;
+          totalPriceEl.textContent = formatPrice(totalPrice);
+          return;
+        }
+
+        summarySection.style.display = "block";
+        summaryContainer.innerHTML = "";
+        totalPrice = 0;
+
+        selectedServices.forEach((service) => {
+          totalPrice += service.price;
+
+          const serviceRow = document.createElement("div");
+          serviceRow.className = "summary-row";
+          serviceRow.innerHTML = `
+                    <div class="summary-label">${service.service_name}</div>
+                    <div class="summary-value">${formatPrice(
+                      service.price
+                    )}</div>
+                  `;
+          summaryContainer.appendChild(serviceRow);
+        });
+
+        totalPriceEl.textContent = formatPrice(totalPrice);
+      }
+
+      // 페이지 로드 시 실행
+      document.addEventListener("DOMContentLoaded", async function () {
+        // 레이아웃 조정
+        const handleResponsiveLayout = () => {
+          const mobileMenuButton = document.querySelector(".mobile-menu-btn");
+          const navDesktop = document.querySelector(".nav-desktop");
+          const mobileMenu = document.getElementById("mobile-menu");
+
+          if (window.innerWidth >= 768) {
+            if (navDesktop) navDesktop.style.display = "flex";
+            if (mobileMenuButton) mobileMenuButton.style.display = "none";
+            if (mobileMenu) mobileMenu.style.display = "none";
+          } else {
+            if (navDesktop) navDesktop.style.display = "none";
+            if (mobileMenuButton) mobileMenuButton.style.display = "block";
+          }
+        };
+
+        handleResponsiveLayout();
+        window.addEventListener("resize", handleResponsiveLayout);
+        // URL에서 감정 ID 가져오기
+        const urlParams = new URLSearchParams(window.location.search);
+        const appraisalId = urlParams.get("appraisal_id");
+        const certificateNumber = urlParams.get("certificate_number");
+
+        if (!appraisalId && !certificateNumber) {
+          document.getElementById("loading-message").style.display = "none";
+          document.getElementById("error-message").textContent =
+            "감정 정보가 필요합니다. 올바른 경로로 접근해주세요.";
+          document.getElementById("error-message").style.display = "block";
+          return;
+        }
+
+        // 로딩 메시지 표시
+        document.getElementById("loading-message").style.display = "block";
+
+        // 감정 정보 로드
+        let appraisalPromise;
+        if (certificateNumber) {
+          appraisalPromise = fetch(
+            `/api/appr/appraisals/certificate/${certificateNumber}`
+          )
+            .then((response) => response.json())
+            .then((data) => {
+              if (!data.success)
+                throw new Error(
+                  data.message || "감정서 정보를 불러오는데 실패했습니다."
+                );
+              appraisalInfo = data.certificate.appraisal;
+              return appraisalInfo;
+            });
+        } else {
+          appraisalPromise = fetch(`/api/appr/appraisals/${appraisalId}`)
+            .then((response) => response.json())
+            .then((data) => {
+              if (!data.success)
+                throw new Error(
+                  data.message || "감정 정보를 불러오는데 실패했습니다."
+                );
+              appraisalInfo = data.appraisal;
+              return appraisalInfo;
+            });
+        }
+
+        // 복원 서비스 목록 로드
+        const servicesPromise = fetch(`/api/appr/restorations/services`)
+          .then((response) => response.json())
+          .then((data) => {
+            if (!data.success)
+              throw new Error(
+                data.message || "복원 서비스 목록을 불러오는데 실패했습니다."
+              );
+            servicesData = data.services;
+            return servicesData;
+          });
+
+        // 두 API 호출 완료 후 화면 렌더링
+        Promise.all([appraisalPromise, servicesPromise])
+          .then(([appraisal, services]) => {
+            // 로딩 메시지 숨김
+            document.getElementById("loading-message").style.display = "none";
+
+            // 감정 결과가 정품이 아닌 경우 복원 서비스 신청 불가
+            if (appraisal.result !== "authentic") {
+              document.getElementById("error-message").textContent =
+                "정품으로 감정된 제품만 복원 서비스를 신청할 수 있습니다.";
+              document.getElementById("error-message").style.display = "block";
+              return;
+            }
+
+            // 제품 정보 표시
+            document.getElementById("product-info-section").style.display =
+              "block";
+            document.getElementById("certificate-number").textContent =
+              appraisal.certificate_number || "-";
+            document.getElementById("brand").textContent =
+              appraisal.brand || "-";
+            document.getElementById("model-name").textContent =
+              appraisal.model_name || "-";
+            document.getElementById("result").textContent =
+              appraisal.result === "authentic"
+                ? "정품"
+                : appraisal.result === "fake"
+                ? "가품"
+                : appraisal.result === "uncertain"
+                ? "판단불가"
+                : "정보없음";
+
+            // 복원 폼 표시
+            document.getElementById("repair-form").style.display = "block";
+
+            // 서비스 목록 표시
+            const servicesContainer =
+              document.getElementById("services-container");
+            const noServicesMessage = document.getElementById(
+              "no-services-message"
+            );
+
+            if (services.length === 0) {
+              noServicesMessage.style.display = "block";
+            } else {
+              noServicesMessage.style.display = "none";
+
+              // 추천 서비스 목록 (가정: appraisal.suggested_restoration_services에 추천 서비스 ID가 있음)
+              let suggestedServiceIds = [];
+              try {
+                if (appraisal.suggested_restoration_services) {
+                  if (
+                    typeof appraisal.suggested_restoration_services === "string"
+                  ) {
+                    suggestedServiceIds = JSON.parse(
+                      appraisal.suggested_restoration_services
+                    );
+                  } else {
+                    suggestedServiceIds =
+                      appraisal.suggested_restoration_services;
+                  }
+                }
+              } catch (e) {
+                console.error("추천 서비스 파싱 오류:", e);
+                suggestedServiceIds = [];
+              }
+
+              // 서비스 항목 생성
+              services.forEach((service) => {
+                const isSuggested = suggestedServiceIds.includes(service.id);
+                const serviceItem = document.createElement("div");
+                serviceItem.className = "service-item";
+                if (isSuggested) {
+                  serviceItem.style.backgroundColor = "#f0fdf4";
+                  serviceItem.style.borderColor = "#86efac";
+                }
+
+                serviceItem.innerHTML = `
+                  <input type="checkbox" id="service-${service.id}" ${
+                  isSuggested ? "checked" : ""
+                }
+                    onchange="handleServiceSelection('${
+                      service.id
+                    }', this.checked)">
+                  <div class="service-details">
+                    <div class="service-name">${service.name} ${
+                  isSuggested
+                    ? '<span style="color: #15803d; font-size: 0.8rem; margin-left: 8px;">추천</span>'
+                    : ""
+                }</div>
+                    <div class="service-description">${
+                      service.description || "설명이 없습니다."
+                    }</div>
+                  </div>
+                  <div class="service-price">${formatPrice(service.price)}</div>
+                `;
+
+                servicesContainer.appendChild(serviceItem);
+
+                // 추천 서비스는 기본 선택
+                if (isSuggested) {
+                  handleServiceSelection(service.id, true);
+                }
+              });
+            }
+
+            // 폼 제출 이벤트 리스너
+            document
+              .getElementById("repair-form")
+              .addEventListener("submit", handleFormSubmit);
+
+            // 배송 정보 자동 채우기 (구현된 경우)
+            if (appraisal.delivery_info) {
+              try {
+                let deliveryInfo;
+                if (typeof appraisal.delivery_info === "string") {
+                  deliveryInfo = JSON.parse(appraisal.delivery_info);
+                } else {
+                  deliveryInfo = appraisal.delivery_info;
+                }
+
+                if (deliveryInfo) {
+                  document.getElementById("delivery-name").value =
+                    deliveryInfo.name || "";
+                  document.getElementById("delivery-phone").value =
+                    deliveryInfo.phone || "";
+                  document.getElementById("delivery-zipcode").value =
+                    deliveryInfo.zipcode || "";
+                  document.getElementById("delivery-address1").value =
+                    deliveryInfo.address1 || "";
+                  document.getElementById("delivery-address2").value =
+                    deliveryInfo.address2 || "";
+                }
+              } catch (e) {
+                console.error("배송 정보 파싱 오류:", e);
+              }
+            }
+          })
+          .catch((error) => {
+            console.error("초기 데이터 로드 오류:", error);
+            document.getElementById("loading-message").style.display = "none";
+            document.getElementById("error-message").textContent =
+              error.message || "정보를 불러오는 중 오류가 발생했습니다.";
+            document.getElementById("error-message").style.display = "block";
+          });
+
+        // 폼 제출 처리
+        async function handleFormSubmit(event) {
+          event.preventDefault();
+
+          // 서비스 선택 여부 검증
+          if (selectedServices.length === 0) {
+            alert("최소 하나 이상의 복원 서비스를 선택해주세요.");
+            return;
+          }
+
+          // 폼 데이터 수집
+          const deliveryInfo = {
+            name: document.getElementById("delivery-name").value,
+            phone: document.getElementById("delivery-phone").value,
+            zipcode: document.getElementById("delivery-zipcode").value,
+            address1: document.getElementById("delivery-address1").value,
+            address2: document.getElementById("delivery-address2").value,
+          };
+
+          const notes = document.getElementById("notes").value;
+
+          // 제출 버튼 비활성화
+          const submitBtn = document.getElementById("submit-btn");
+          submitBtn.disabled = true;
+          submitBtn.textContent = "신청 중...";
+
+          try {
+            // API 요청 데이터 구성
+            const requestData = {
+              certificate_number: appraisalInfo.certificate_number,
+              services: selectedServices,
+              delivery_info: deliveryInfo,
+              notes: notes,
+            };
+
+            // API 호출
+            const response = await fetch("/api/appr/restorations", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(requestData),
+            });
+
+            const data = await response.json();
+
+            if (!data.success) {
+              throw new Error(
+                data.message || "복원 서비스 신청 중 오류가 발생했습니다."
+              );
+            }
+
+            // 성공 메시지 표시
+            document.getElementById("repair-form").style.display = "none";
+            document.getElementById("product-info-section").style.display =
+              "none";
+            document.getElementById("success-message").style.display = "block";
+
+            // 페이지 상단으로 스크롤
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          } catch (error) {
+            console.error("복원 서비스 신청 오류:", error);
+            alert(
+              error.message ||
+                "복원 서비스 신청 중 오류가 발생했습니다. 다시 시도해주세요."
+            );
+
+            // 제출 버튼 다시 활성화
+            submitBtn.disabled = false;
+            submitBtn.textContent = "복원 서비스 신청하기";
+          }
+        }
+
+        // 페이지 뒤로가기
+        function goBack() {
+          window.history.back();
+        }
+      });
+    </script>
+  </body>
+</html>
