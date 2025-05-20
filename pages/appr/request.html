@@ -1429,7 +1429,7 @@
               if (data.success) {
                 // 사용자 정보와 멤버십 정보를 사용하여 UI 업데이트
                 updateUserFields(data);
-                updatePriceDisplay(data.membership_info);
+                updatePriceDisplay(data.membership);
               } else {
                 // 로그인 안 되어 있거나 에러 시 기본값으로 표시
                 updatePriceDisplay({
