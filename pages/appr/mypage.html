@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Montserrat:wght@500;600;700&display=swap"
       rel="stylesheet" />
     <style>
-      /* 기본 리셋 및 폰트 설정 (제공해주신 원본 CSS 유지) */
+      /* 기본 리셋 및 폰트 설정 */
       * {
         margin: 0;
         padding: 0;
@@ -32,7 +32,7 @@
         padding: 0 20px;
       }
 
-      /* 헤더 & 푸터 공통 스타일 (제공해주신 원본 CSS 유지) */
+      /* 헤더 & 푸터 공통 스타일 */
       header {
         background-color: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(10px);
@@ -180,7 +180,7 @@
         background-color: rgba(26, 42, 58, 0.05);
       }
 
-      /* 탭 메뉴 스타일 (제공해주신 원본 CSS 유지) */
+      /* 탭 메뉴 스타일 */
       .tabs {
         display: flex;
         gap: 2px;
@@ -206,7 +206,7 @@
         border-bottom-color: #1a2a3a;
       }
 
-      /* 마이페이지 스타일 (제공해주신 원본 CSS 유지) */
+      /* 마이페이지 스타일 */
       .user-profile {
         display: flex;
         align-items: center;
@@ -381,6 +381,8 @@
         cursor: pointer;
         transition: all 0.3s;
         color: #64748b;
+        border: none;
+        background-color: transparent;
       }
       .pagination-item:hover {
         background-color: #e2e8f0;
@@ -403,14 +405,42 @@
         font-size: 1.1rem;
         margin-bottom: 20px;
       }
-      /* 로딩 스피너 (필요시 추가) */
+      /* 로딩 스피너 */
       .loading {
         text-align: center;
         padding: 20px;
         font-style: italic;
         color: #64748b;
       }
-      /* 팝업 스타일 (제공해주신 원본 CSS 유지) */
+      /* 멤버십 배지 스타일 */
+      .membership-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 50px;
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
+      .badge-casatrade {
+        background-color: #e0f2fe;
+        color: #0369a1;
+      }
+      .badge-partner {
+        background-color: #f0fdf4;
+        color: #16a34a;
+      }
+      .badge-regular {
+        background-color: #f1f5f9;
+        color: #475569;
+      }
+      .badge-subscribed {
+        background-color: #d1fae5;
+        color: #059669;
+      }
+      .badge-unsubscribed {
+        background-color: #fee2e2;
+        color: #dc2626;
+      }
+      /* 팝업 스타일 */
       .popup {
         position: fixed;
         top: 0;
@@ -500,7 +530,7 @@
       <section style="padding: 50px 0">
         <div class="container">
           <div class="user-profile">
-            <div class="user-avatar" id="user-avatar-initial"></div>
+            <div class="user-avatar" id="user-avatar-initial">👤</div>
             <div class="user-info">
               <h2 id="user-name-display">로딩 중...</h2>
               <p>가입일: <span id="join-date-display">-</span></p>
@@ -534,10 +564,10 @@
                 </h3>
                 <div style="display: flex; align-items: center">
                   <span
-                    id="membership-badge"
-                    class="badge badge-pending"
+                    id="membership-tier-badge"
+                    class="membership-badge badge-regular"
                     style="margin-right: 10px"
-                    >정보 없음</span
+                    >일반회원</span
                   >
                   <a
                     href="#"
@@ -563,7 +593,7 @@
                 </h3>
                 <div style="display: flex; align-items: center">
                   <span
-                    id="quicklink-credit"
+                    id="quicklink-credit-value"
                     style="
                       font-size: 1.25rem;
                       font-weight: 700;
@@ -573,7 +603,7 @@
                     >0회</span
                   >
                   <span
-                    id="quicklink-limit"
+                    id="quicklink-limit-text"
                     style="color: #64748b; font-size: 0.9rem"
                     >/ 월 0회</span
                   >
@@ -591,8 +621,8 @@
                 </h3>
                 <div style="display: flex; align-items: center">
                   <span
-                    id="subscription-status"
-                    class="badge badge-error"
+                    id="subscription-status-badge"
+                    class="membership-badge badge-unsubscribed"
                     style="margin-right: 10px"
                     >미구독</span
                   >
@@ -623,18 +653,21 @@
           <div class="stats">
             <div
               class="stat-card active"
+              data-status-filter="all"
               onclick="filterAppraisals('all', this)">
               <h3>총 감정요청</h3>
               <div class="number" id="stat-total-appraisals">0</div>
             </div>
             <div
               class="stat-card"
-              onclick="filterAppraisals('pending_review,in_review', this)">
+              data-status-filter="pending,in_review"
+              onclick="filterAppraisals('pending,in_review', this)">
               <h3>감정중</h3>
               <div class="number" id="stat-pending-appraisals">0</div>
             </div>
             <div
               class="stat-card"
+              data-status-filter="completed"
               onclick="filterAppraisals('completed', this)">
               <h3>감정완료</h3>
               <div class="number" id="stat-completed-appraisals">0</div>
@@ -651,7 +684,7 @@
       </section>
     </main>
 
-    <!-- 등급 혜택 팝업 (제공해주신 원본 HTML 구조 유지) -->
+    <!-- 등급 혜택 팝업 -->
     <div id="membership-info-popup" class="popup">
       <div class="popup-content">
         <span class="popup-close" onclick="closePopup('membership-info-popup')"
@@ -721,8 +754,8 @@
       </div>
     </div>
 
-    <!-- 나이스페이 JS SDK (실제 결제 시 HEAD나 BODY 끝에 추가) -->
-    <!-- <script src="https://pay.nicepay.co.kr/v1/js/"></script> -->
+    <!-- 나이스페이 JS SDK -->
+    <script src="https://pay.nicepay.co.kr/v1/js/"></script>
 
     <script>
       function toggleMobileMenu() {
@@ -750,365 +783,471 @@
       let currentAppraisalPage = 1;
       const appraisalsPerPage = 5; // 한 페이지에 표시할 감정 내역 수
       let currentStatusFilter = "all"; // 현재 선택된 감정 상태 필터
+      let allAppraisals = []; // 전체 감정 내역 저장용 변수
 
-      async function fetchMyPageData(page = 1, statusFilter = "all") {
-        const appraisalListLoadingEl = document.getElementById(
-          "appraisal-list-loading"
-        );
-        if (appraisalListLoadingEl)
-          appraisalListLoadingEl.style.display = "block";
-
+      // 마이페이지 데이터 로드
+      async function fetchMyPageData() {
         try {
-          let apiUrl = `/api/appr/appraisals/my?page=${page}&limit=${appraisalsPerPage}`;
-          // '/my' API는 현재 status 필터링을 지원하지 않으므로,
-          // 만약 상태별 필터링된 목록이 필요하면 '/api/appr/appraisals'를 사용하고,
-          // 사용자 정보와 멤버십 정보는 별도로 가져오거나, '/my' API를 수정해야 합니다.
-          // 여기서는 '/my' API가 모든 정보를 다 준다고 가정하고, 클라이언트에서 필터링합니다.
-          // 또는, filterAppraisals 함수에서 직접 /api/appr/appraisals?status=XXX 를 호출하도록 변경합니다.
-          // 현재는 /my 에서 받은 전체 목록을 기준으로 클라이언트 필터링합니다.
+          // 사용자 프로필 및 멤버십 정보 가져오기
+          const profileResponse = await fetch("/api/appr/users/profile", {
+            credentials: "include",
+          });
 
-          const response = await fetch(apiUrl, { credentials: "include" });
-          if (!response.ok) {
-            if (response.status === 401) window.location.href = "/signinPage";
+          if (!profileResponse.ok) {
+            if (profileResponse.status === 401) {
+              window.location.href = "/appr/signin";
+              return;
+            }
             throw new Error(
-              "마이페이지 정보 로드 실패: " + response.statusText
+              "프로필 정보 로드 실패: " + profileResponse.statusText
             );
           }
+
+          const profileData = await profileResponse.json();
+
+          if (profileData.success) {
+            updateUserProfile(profileData.user_profile);
+            updateMembershipInfo(profileData.membership);
+          } else {
+            throw new Error(profileData.message || "프로필 정보 로드 실패");
+          }
+
+          // 감정 내역 가져오기
+          await fetchAppraisals(currentAppraisalPage, currentStatusFilter);
+        } catch (error) {
+          console.error("마이페이지 로드 오류:", error);
+          document.getElementById("user-name-display").textContent =
+            "오류 발생";
+          document.getElementById(
+            "appraisal-list-items"
+          ).innerHTML = `<div class="empty-state">
+              <div class="empty-state-icon">⚠️</div>
+              <p class="empty-state-message">${
+                error.message || "데이터를 불러오는 중 오류가 발생했습니다."
+              }</p>
+            </div>`;
+        }
+      }
+
+      // 사용자 프로필 정보 업데이트
+      function updateUserProfile(user) {
+        if (!user) return;
+
+        const nameDisplay = document.getElementById("user-name-display");
+        const joinDateDisplay = document.getElementById("join-date-display");
+        const avatarInitial = document.getElementById("user-avatar-initial");
+
+        // 사용자 이름 표시
+        nameDisplay.textContent = `${
+          user.company_name || user.email || "고객"
+        }님`;
+
+        // 가입일 표시
+        if (user.created_at) {
+          const joinDate = new Date(user.created_at);
+          joinDateDisplay.textContent = joinDate.toLocaleDateString("ko-KR");
+        }
+
+        // 아바타 이니셜 설정
+        if (user.company_name) {
+          avatarInitial.textContent = user.company_name.charAt(0);
+        } else if (user.email) {
+          avatarInitial.textContent = user.email.charAt(0).toUpperCase();
+        }
+      }
+
+      // 멤버십 및 구독 정보 업데이트
+      function updateMembershipInfo(membership) {
+        if (!membership) return;
+
+        const tierBadge = document.getElementById("membership-tier-badge");
+        const creditValue = document.getElementById("quicklink-credit-value");
+        const creditLimitText = document.getElementById("quicklink-limit-text");
+        const subscriptionBadge = document.getElementById(
+          "subscription-status-badge"
+        );
+        const subscriptionButton = document.getElementById(
+          "btn-manage-subscription"
+        );
+
+        // 회원 등급 표시
+        tierBadge.textContent = membership.tier;
+        if (membership.tier === "까사트레이드 회원") {
+          tierBadge.className = "membership-badge badge-casatrade";
+        } else if (membership.tier === "제휴사 회원") {
+          tierBadge.className = "membership-badge badge-partner";
+        } else {
+          tierBadge.className = "membership-badge badge-regular";
+        }
+        // 크레딧 정보 표시
+        creditValue.textContent = `${membership.quick_link_credits_remaining}회`;
+        creditLimitText.textContent = ` / 월 ${membership.quick_link_monthly_limit}회`;
+
+        // 구독 정보 표시
+        const isSubscribed =
+          membership.quick_link_subscription_type === "paid" &&
+          membership.quick_link_subscription_expires_at &&
+          new Date(membership.quick_link_subscription_expires_at) > new Date();
+
+        if (membership.tier === "일반회원") {
+          if (isSubscribed) {
+            subscriptionBadge.textContent = "구독중";
+            subscriptionBadge.className = "membership-badge badge-subscribed";
+            subscriptionButton.textContent = "구독 관리";
+          } else {
+            subscriptionBadge.textContent = "미구독";
+            subscriptionBadge.className = "membership-badge badge-unsubscribed";
+            subscriptionButton.textContent = "구독 신청하기";
+          }
+          subscriptionButton.style.display = "inline-block";
+        } else {
+          // 까사트레이드 회원이나 제휴사 회원의 경우
+          subscriptionBadge.textContent = "혜택 적용중";
+          subscriptionBadge.className = "membership-badge badge-subscribed";
+          subscriptionButton.style.display = "none"; // 구독 버튼 숨김
+        }
+      }
+
+      // 감정 내역 가져오기
+      async function fetchAppraisals(page = 1, statusFilter = "all") {
+        try {
+          const listContainer = document.getElementById("appraisal-list-items");
+          listContainer.innerHTML =
+            '<div class="loading">감정 내역을 불러오는 중...</div>';
+
+          // API 호출
+          let apiUrl = `/api/appr/appraisals/my?page=${page}&limit=${appraisalsPerPage}`;
+          const response = await fetch(apiUrl, { credentials: "include" });
+
+          if (!response.ok) {
+            throw new Error("감정 내역 로드 실패: " + response.statusText);
+          }
+
           const data = await response.json();
 
           if (data.success) {
-            // 사용자 프로필 정보 업데이트
-            if (data.user_info) {
-              document.getElementById("user-name-display").textContent = `${
-                data.user_info.name || "고객"
-              }님`;
-              document.getElementById("join-date-display").textContent = data
-                .user_info.created_at
-                ? new Date(data.user_info.created_at).toLocaleDateString()
-                : "-"; // API에 created_at 추가 가정
-              if (data.user_info.name) {
-                document.getElementById("user-avatar-initial").textContent =
-                  data.user_info.name.charAt(0);
-              } else {
-                document.getElementById("user-avatar-initial").textContent =
-                  "👤";
-              }
-            }
+            // 감정 내역 저장
+            allAppraisals = data.recent_appraisals.appraisals || [];
 
-            // 멤버십 및 크레딧 정보 업데이트
-            if (data.membership_info) {
-              const tierBadge = document.getElementById(
-                "membership-tier-badge"
-              );
-              const creditValue = document.getElementById(
-                "quicklink-credit-value"
-              );
-              const creditLimitText = document.getElementById(
-                "quicklink-limit-text"
-              );
-              const subscriptionBadge = document.getElementById(
-                "subscription-status-badge"
-              );
-              const subscriptionButton = document.getElementById(
-                "btn-manage-subscription"
-              );
+            // 통계 업데이트
+            updateAppraisalStats(
+              allAppraisals,
+              data.recent_appraisals.pagination?.totalItems || 0
+            );
 
-              tierBadge.textContent = data.membership_info.tier;
-              if (data.membership_info.tier === "까사트레이드 회원")
-                tierBadge.className = "membership-badge badge-casatrade";
-              else if (data.membership_info.tier === "제휴사 회원")
-                tierBadge.className = "membership-badge badge-partner";
-              else tierBadge.className = "membership-badge badge-regular";
-
-              creditValue.textContent = `${data.membership_info.quick_link_credits_remaining_this_month}회`;
-              creditLimitText.textContent = ` / 월 ${data.membership_info.quick_link_credits_monthly_limit}회`;
-
-              if (data.membership_info.tier === "일반회원") {
-                if (
-                  data.membership_info.subscription_expires_at &&
-                  new Date(data.membership_info.subscription_expires_at) >
-                    new Date()
-                ) {
-                  subscriptionBadge.textContent = "구독중";
-                  subscriptionBadge.className =
-                    "membership-badge badge-subscribed";
-                  subscriptionButton.textContent = "구독 관리";
-                  subscriptionButton.onclick = () => {
-                    alert("구독 관리 기능은 준비 중입니다.");
-                  };
-                } else {
-                  subscriptionBadge.textContent = "미구독";
-                  subscriptionBadge.className =
-                    "membership-badge badge-unsubscribed";
-                  subscriptionButton.textContent = "구독 신청하기";
-                  subscriptionButton.onclick = handleSubscriptionAction;
-                }
-                subscriptionButton.style.display = "inline-block";
-              } else {
-                subscriptionBadge.textContent = "혜택 적용중";
-                subscriptionBadge.className =
-                  "membership-badge badge-subscribed";
-                subscriptionButton.style.display = "none";
-              }
-            }
-
-            // 감정 내역 및 통계 업데이트
-            const allAppraisals = data.recent_appraisals.appraisals || [];
-            updateAppraisalStats(allAppraisals); // 전체 목록 기준으로 통계 계산
+            // 감정 내역 필터링 및 표시
             filterAndRenderAppraisals(
               statusFilter,
-              allAppraisals,
               page,
               data.recent_appraisals.pagination
             );
           } else {
-            throw new Error(data.message || "데이터 로드 실패");
+            throw new Error(data.message || "감정 내역 로드 실패");
           }
         } catch (error) {
-          console.error(error);
-          document.getElementById("user-name-display").textContent = "오류";
+          console.error("감정 내역 로드 오류:", error);
           document.getElementById(
             "appraisal-list-items"
-          ).innerHTML = `<p style="color:red;">${error.message}</p>`;
-        } finally {
-          if (appraisalListLoadingEl)
-            appraisalListLoadingEl.style.display = "none";
+          ).innerHTML = `<div class="empty-state">
+              <div class="empty-state-icon">⚠️</div>
+              <p class="empty-state-message">${
+                error.message || "감정 내역을 불러오는 중 오류가 발생했습니다."
+              }</p>
+            </div>`;
         }
       }
 
-      function updateAppraisalStats(appraisals) {
-        let total = 0;
-        let pending = 0;
-        let completed = 0;
-
-        // `/my` API가 페이지네이션된 최근 목록만 주므로, 정확한 전체 통계는 별도 API 필요.
-        // 여기서는 일단 로드된 목록 기준으로만 카운트.
-        // 또는 백엔드에서 전체 통계를 같이 내려주도록 수정.
-        // 임시로, 백엔드에서 전체 totalItems를 내려준다고 가정하고 사용.
-        fetch(`/api/appr/appraisals?limit=1`, { credentials: "include" }) // 전체 개수 파악용
-          .then((res) => res.json())
-          .then((data) => {
-            if (data.success && data.pagination) {
-              document.getElementById("stat-total-appraisals").textContent =
-                data.pagination.totalItems || 0;
-            }
-          });
-
-        // 상태별 카운트는 클라이언트에서 필터링 할 때 계산하거나, 백엔드가 제공해야 함.
-        // 지금은 로드된 목록 기준으로만 계산 (정확하지 않을 수 있음)
-        appraisals.forEach((appr) => {
-          if (appr.status === "pending" || appr.status === "in_review")
-            pending++;
-          if (appr.status === "completed") completed++;
-        });
-        document.getElementById("stat-pending-appraisals").textContent =
-          pending;
-        document.getElementById("stat-completed-appraisals").textContent =
-          completed;
-      }
-
-      function filterAndRenderAppraisals(
-        statusFilter,
-        allAppraisals,
-        currentPage,
-        paginationData
-      ) {
+      // 감정 내역 필터링 및 표시
+      function filterAndRenderAppraisals(statusFilter, page, pagination) {
         let filteredAppraisals = allAppraisals;
+
+        // 상태별 필터링
         if (statusFilter !== "all") {
           const filterStates = statusFilter.split(",");
           filteredAppraisals = allAppraisals.filter((appr) =>
             filterStates.includes(appr.status)
           );
         }
-        // 클라이언트 사이드 필터링 시, 페이지네이션은 전체 목록 기준으로 다시 계산하거나,
-        // 서버 사이드 필터링을 사용해야 정확합니다.
-        // 현재는 `/my` API가 필터링을 지원하지 않으므로, 클라이언트에서 필터링된 목록만 보여줍니다.
-        // 페이지네이션은 서버에서 받은 그대로 사용합니다. (필터 시 페이지네이션이 정확하지 않을 수 있음)
+
+        // 감정 내역 표시
         renderAppraisalList(filteredAppraisals);
-        renderPagination(paginationData, statusFilter); // 필터 상태 전달
+
+        // 페이지네이션 표시
+        renderPagination(pagination, page);
       }
 
+      // 감정 통계 업데이트
+      function updateAppraisalStats(appraisals, totalCount) {
+        const totalEl = document.getElementById("stat-total-appraisals");
+        const pendingEl = document.getElementById("stat-pending-appraisals");
+        const completedEl = document.getElementById(
+          "stat-completed-appraisals"
+        );
+
+        // 전체 개수
+        totalEl.textContent = totalCount || appraisals.length;
+
+        // 상태별 카운트
+        let pendingCount = 0;
+        let completedCount = 0;
+
+        appraisals.forEach((appr) => {
+          if (appr.status === "pending" || appr.status === "in_review") {
+            pendingCount++;
+          } else if (appr.status === "completed") {
+            completedCount++;
+          }
+        });
+
+        pendingEl.textContent = pendingCount;
+        completedEl.textContent = completedCount;
+      }
+
+      // 감정 내역 표시
       function renderAppraisalList(appraisals) {
-        const listDiv = document.getElementById("appraisal-list-items");
-        listDiv.innerHTML = "";
-        if (appraisals && appraisals.length > 0) {
-          appraisals.forEach((appr) => {
-            const itemDiv = document.createElement("div");
-            itemDiv.className = "appraisal-item";
-            let resultText = appr.status;
-            let resultBadgeClass = "badge-pending";
-            if (appr.status === "completed") {
-              if (appr.result === "authentic") {
-                resultText = "정품";
-                resultBadgeClass = "badge-success";
-              } else if (appr.result === "fake") {
-                resultText = "가품";
-                resultBadgeClass = "badge-error";
-              } else if (appr.result === "uncertain") {
-                resultText = "판단불가";
-                resultBadgeClass = "badge-warning";
-              } else {
-                resultText = "완료";
-                resultBadgeClass = "badge-success";
-              }
-            } else if (appr.status === "pending") {
-              resultText = "접수완료";
-            } else if (appr.status === "in_review") {
-              resultText = "감정중";
-            } else if (appr.status === "cancelled") {
-              resultText = "취소됨";
-              resultBadgeClass = "badge-error";
-            }
+        const listContainer = document.getElementById("appraisal-list-items");
 
-            let detailPageUrl = `/appr/quick-result/${appr.id}`;
-            // API 응답에 certificate_number가 포함되어 있다면 아래 주석 해제
-            // if (appr.certificate_number) {
-            //     detailPageUrl = `/appr/result-detail/${appr.certificate_number}`;
-            // }
-
-            itemDiv.innerHTML = `
-                        <div class="appraisal-item-image">
-                            <img src="${
-                              appr.representative_image ||
-                              "https://via.placeholder.com/60x60/eee/ccc?text=NoImg"
-                            }" alt="상품 이미지">
-                        </div>
-                        <div class="appraisal-item-content">
-                            <div class="appraisal-item-title">${appr.brand} ${
-              appr.model_name
-            }</div>
-                            <div class="appraisal-item-details">
-                                신청일: ${new Date(
-                                  appr.created_at
-                                ).toLocaleDateString()}
-                                <span class="badge ${resultBadgeClass}">${resultText.toUpperCase()}</span>
-                            </div>
-                        </div>
-                        ${
-                          appr.status === "completed" ||
-                          appr.status === "cancelled"
-                            ? `<a href="${detailPageUrl}" class="appraisal-item-action">결과 보기</a>`
-                            : `<span class="appraisal-item-action" style="cursor:default; background-color:#f1f5f9; color:#64748b;">진행중</span>`
-                        }
-                    `;
-            listDiv.appendChild(itemDiv);
-          });
-        } else {
-          listDiv.innerHTML =
-            '<div class="empty-state"><div class="empty-state-icon">📋</div><p>해당 조건의 감정 내역이 없습니다.</p></div>';
+        if (!appraisals || appraisals.length === 0) {
+          listContainer.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-state-icon">📋</div>
+              <p class="empty-state-message">해당 조건의 감정 내역이 없습니다.</p>
+            </div>
+          `;
+          return;
         }
+
+        listContainer.innerHTML = "";
+
+        appraisals.forEach((appr) => {
+          const itemDiv = document.createElement("div");
+          itemDiv.className = "appraisal-item";
+
+          // 상태에 따른 배지 설정
+          let statusText = "진행중";
+          let badgeClass = "badge-pending";
+
+          if (appr.status === "completed") {
+            if (appr.result === "authentic") {
+              statusText = "정품";
+              badgeClass = "badge-success";
+            } else if (appr.result === "fake") {
+              statusText = "가품";
+              badgeClass = "badge-error";
+            } else if (appr.result === "uncertain") {
+              statusText = "판단불가";
+              badgeClass = "badge-warning";
+            } else {
+              statusText = "완료";
+              badgeClass = "badge-success";
+            }
+          } else if (appr.status === "pending") {
+            statusText = "접수완료";
+          } else if (appr.status === "in_review") {
+            statusText = "감정중";
+          } else if (appr.status === "cancelled") {
+            statusText = "취소됨";
+            badgeClass = "badge-error";
+          }
+
+          // 결과 상세 페이지 URL (certificate_number 사용)
+          const detailUrl = `/appr/result-detail/${appr.certificate_number}`;
+
+          // 아이템 HTML 구성
+          itemDiv.innerHTML = `
+            <div class="appraisal-item-image">
+              <img src="${
+                appr.images && appr.images.length > 0
+                  ? appr.images[0]
+                  : "https://via.placeholder.com/60x60/eee/ccc?text=NoImg"
+              }" alt="상품 이미지">
+            </div>
+            <div class="appraisal-item-content">
+              <div class="appraisal-item-title">${appr.brand || ""} ${
+            appr.model_name || ""
+          }</div>
+              <div class="appraisal-item-details">
+                신청일: ${new Date(appr.created_at).toLocaleDateString(
+                  "ko-KR"
+                )} 
+                <span class="badge ${badgeClass}">${statusText}</span>
+              </div>
+            </div>
+            ${
+              appr.status === "completed"
+                ? `<a href="${detailUrl}" class="appraisal-item-action">결과 보기</a>`
+                : `<span class="appraisal-item-action" style="cursor:default; background-color:#f1f5f9; color:#64748b;">진행중</span>`
+            }
+          `;
+
+          listContainer.appendChild(itemDiv);
+        });
       }
 
-      function renderPagination(pagination, statusFilterForNextPage) {
-        const paginationDiv = document.getElementById("appraisal-pagination");
-        paginationDiv.innerHTML = "";
-        if (!pagination || pagination.totalPages <= 1) return;
+      // 페이지네이션 렌더링
+      function renderPagination(pagination, currentPage) {
+        const paginationContainer = document.getElementById(
+          "appraisal-pagination"
+        );
+        paginationContainer.innerHTML = "";
+
+        if (
+          !pagination ||
+          !pagination.totalPages ||
+          pagination.totalPages <= 1
+        ) {
+          return;
+        }
 
         for (let i = 1; i <= pagination.totalPages; i++) {
           const pageButton = document.createElement("button");
+          pageButton.className = "pagination-item";
           pageButton.textContent = i;
-          if (i === pagination.currentPage) pageButton.classList.add("active");
-          pageButton.onclick = () => {
+
+          if (i === currentPage) {
+            pageButton.classList.add("active");
+          }
+
+          pageButton.addEventListener("click", () => {
             currentAppraisalPage = i;
-            fetchMyPageData(currentAppraisalPage); // 필터된 목록이 아닌 전체 목록의 페이지를 다시 가져옴
-            // 또는 filterAndLoadAppraisals(statusFilterForNextPage, i) 호출
-          };
-          paginationDiv.appendChild(pageButton);
+            fetchAppraisals(i, currentStatusFilter);
+          });
+
+          paginationContainer.appendChild(pageButton);
         }
       }
 
-      document.querySelectorAll(".stat-card").forEach((card, index) => {
-        // 첫 번째 카드: 전체, 두 번째 카드: 감정중, 세 번째 카드: 감정완료
-        if (index === 0) card.setAttribute("data-status-filter", "all");
-        else if (index === 1)
-          card.setAttribute("data-status-filter", "pending,in_review");
-        else if (index === 2)
-          card.setAttribute("data-status-filter", "completed");
-
-        card.addEventListener("click", (e) => {
-          document
-            .querySelectorAll(".stat-card")
-            .forEach((c) => c.classList.remove("active"));
-          e.currentTarget.classList.add("active");
-          currentAppraisalPage = 1;
-          currentStatusFilter = e.currentTarget.dataset.statusFilter;
-          fetchMyPageData(currentAppraisalPage);
+      // 상태 필터링
+      function filterAppraisals(statusFilter, clickedCard) {
+        // 활성 카드 변경
+        document.querySelectorAll(".stat-card").forEach((card) => {
+          card.classList.remove("active");
         });
-      });
+        clickedCard.classList.add("active");
 
+        // 필터 적용
+        currentStatusFilter = statusFilter;
+        currentAppraisalPage = 1; // 페이지 초기화
+
+        // 이미 로드된 감정 내역이 있으면 필터링만 적용
+        if (allAppraisals.length > 0) {
+          filterAndRenderAppraisals(statusFilter, currentAppraisalPage, {
+            currentPage: 1,
+            totalPages: 1, // 임시값, 실제로는 백엔드 응답의 페이지네이션 정보 사용
+            totalItems: allAppraisals.length,
+          });
+        } else {
+          // 데이터가 없으면 다시 로드
+          fetchAppraisals(currentAppraisalPage, statusFilter);
+        }
+      }
+
+      // 구독 신청/관리 처리
       async function handleSubscriptionAction() {
         const button = document.getElementById("btn-manage-subscription");
-        if (button.textContent === "구독 관리") {
+        const buttonText = button.textContent;
+
+        // 구독 관리 액션
+        if (buttonText === "구독 관리") {
           alert("구독 관리 기능은 준비 중입니다.");
           return;
         }
 
-        // '구독 신청하기' 로직
-        const productInfo = {
-          product_type: "quicklink_subscription",
-          product_name: "퀵링크 월간 구독 (10회)",
-          amount: 29000,
-        };
+        // 구독 신청 액션
         try {
-          button.textContent = "처리중...";
           button.disabled = true;
-          const prepResponse = await fetch("/api/appr/payments/prepare", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(productInfo),
-            credentials: "include",
-          });
-          const prepData = await prepResponse.json();
-          if (prepData.success && prepData.paramsForNicePaySDK) {
-            if (
-              typeof AUTHNICE !== "undefined" &&
-              typeof AUTHNICE.requestPay === "function"
-            ) {
+          button.textContent = "처리 중...";
+
+          // 구독 정보 요청
+          const subscriptionResponse = await fetch(
+            "/api/appr/users/subscription",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ subscription_type: "monthly" }),
+              credentials: "include",
+            }
+          );
+
+          const subscriptionData = await subscriptionResponse.json();
+
+          if (subscriptionData.success && subscriptionData.payment_required) {
+            // 결제 준비 요청
+            const prepareResponse = await fetch("/api/appr/payments/prepare", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                product_type: subscriptionData.payment_info.product_type,
+                product_name: subscriptionData.payment_info.product_name,
+                amount: subscriptionData.payment_info.amount,
+              }),
+              credentials: "include",
+            });
+
+            const prepareData = await prepareResponse.json();
+
+            if (prepareData.success) {
+              // 결제창 호출
               AUTHNICE.requestPay({
-                ...prepData.paramsForNicePaySDK,
+                clientId: prepareData.paramsForNicePaySDK.clientId,
+                method: "card",
+                orderId: prepareData.paramsForNicePaySDK.orderId,
+                amount: prepareData.paramsForNicePaySDK.amount,
+                goodsName: prepareData.paramsForNicePaySDK.goodsName,
+                returnUrl:
+                  window.location.origin + "/api/appr/payments/approve",
                 fnError: function (result) {
-                  alert("결제창 오류 또는 사용자 취소: " + result.errorMsg);
-                  button.textContent = "구독 신청하기";
+                  console.error("결제 에러:", result.errorMsg);
+                  alert(
+                    "결제 처리 중 오류가 발생했습니다: " +
+                      (result.errorMsg || "알 수 없는 오류")
+                  );
                   button.disabled = false;
+                  button.textContent = "구독 신청하기";
                 },
               });
             } else {
-              alert("나이스페이 결제 모듈(AUTHNICE)을 로드할 수 없습니다.");
-              button.textContent = "구독 신청하기";
-              button.disabled = false;
+              throw new Error(
+                prepareData.message || "결제 준비 중 오류가 발생했습니다."
+              );
             }
           } else {
-            alert("결제 준비 실패: " + (prepData.message || "알 수 없는 오류"));
-            button.textContent = "구독 신청하기";
-            button.disabled = false;
+            throw new Error(
+              subscriptionData.message ||
+                "구독 정보 요청 중 오류가 발생했습니다."
+            );
           }
-        } catch (err) {
-          alert("결제 준비 중 오류: " + err.message);
-          button.textContent = "구독 신청하기";
+        } catch (error) {
+          console.error("구독 신청 오류:", error);
+          alert(error.message || "구독 신청 중 오류가 발생했습니다.");
           button.disabled = false;
+          button.textContent = "구독 신청하기";
         }
       }
 
+      // 페이지 로드 시 데이터 로드
       document.addEventListener("DOMContentLoaded", () => {
-        fetchMyPageData(currentAppraisalPage);
+        fetchMyPageData();
+
+        // 반응형 레이아웃 처리
         function handleResponsiveLayout() {
           const navDesktop = document.querySelector(".nav-desktop");
           const mobileMenuBtn = document.querySelector(".mobile-menu-btn");
+
           if (window.innerWidth >= 768) {
             if (navDesktop) navDesktop.style.display = "flex";
             if (mobileMenuBtn) mobileMenuBtn.style.display = "none";
-            if (document.getElementById("mobile-menu"))
-              document.getElementById("mobile-menu").style.display = "none";
+            const mobileMenu = document.getElementById("mobile-menu");
+            if (mobileMenu) mobileMenu.style.display = "none";
           } else {
             if (navDesktop) navDesktop.style.display = "none";
             if (mobileMenuBtn) mobileMenuBtn.style.display = "block";
           }
         }
+
         handleResponsiveLayout();
         window.addEventListener("resize", handleResponsiveLayout);
       });
     </script>
-    <!-- 나이스페이 JS SDK는 공통 레이아웃에 한 번만 포함하거나, 필요시 여기에 추가 -->
-    <script src="https://pay.nicepay.co.kr/v1/js/"></script>
   </body>
 </html>

@@ -160,6 +160,8 @@
         const authResultCode = urlParams.get("authResultCode");
         const authResultMsg = urlParams.get("authResultMsg");
         const tid = urlParams.get("tid");
+        const authToken = urlParams.get("authToken");
+        const signature = urlParams.get("signature");
 
         function displayFinalResult(
           isSuccess,
@@ -213,7 +215,7 @@
         }
 
         // 결제 인증 성공 (NICE Pay에서 리다이렉트됨)
-        if (authResultCode === "0000" && tid) {
+        if (authResultCode === "0000" && tid && authToken) {
           try {
             // 승인 요청 API 호출
             const approvalResponse = await fetch("/api/appr/payments/approve", {
@@ -222,6 +224,8 @@
               body: JSON.stringify({
                 tid: tid,
                 orderId: orderId,
+                authToken: authToken,
+                signature: signature,
               }),
             });
 
@@ -234,9 +238,9 @@
                 "결제 완료",
                 "결제가 성공적으로 완료되었습니다.",
                 {
-                  orderId: approvalResult.payment?.orderId || orderId,
+                  orderId: approvalResult.payment?.order_id || orderId,
                   amount: approvalResult.payment?.amount || "",
-                  method: approvalResult.payment?.paymentMethod || "카드",
+                  method: "카드",
                   paidAt: approvalResult.payment?.paid_at,
                 }
               );
