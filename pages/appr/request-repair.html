@@ -870,19 +870,96 @@
           const serviceRow = document.createElement("div");
           serviceRow.className = "summary-row";
           serviceRow.innerHTML = `
-                    <div class="summary-label">${service.service_name}</div>
-                    <div class="summary-value">${formatPrice(
-                      service.price
-                    )}</div>
-                  `;
+      <div class="summary-label">${service.service_name}</div>
+      <div class="summary-value">${formatPrice(service.price)}</div>
+    `;
           summaryContainer.appendChild(serviceRow);
         });
 
         totalPriceEl.textContent = formatPrice(totalPrice);
       }
 
+      // 페이지 뒤로가기
+      function goBack() {
+        window.history.back();
+      }
+
+      // 폼 제출 처리
+      async function handleFormSubmit(event) {
+        event.preventDefault();
+
+        // 서비스 선택 여부 검증
+        if (selectedServices.length === 0) {
+          alert("최소 하나 이상의 복원 서비스를 선택해주세요.");
+          return;
+        }
+
+        // 폼 데이터 수집
+        const deliveryInfo = {
+          name: document.getElementById("delivery-name").value,
+          phone: document.getElementById("delivery-phone").value,
+          zipcode: document.getElementById("delivery-zipcode").value,
+          address1: document.getElementById("delivery-address1").value,
+          address2: document.getElementById("delivery-address2").value,
+        };
+
+        const notes = document.getElementById("notes").value;
+
+        // 제출 버튼 비활성화
+        const submitBtn = document.getElementById("submit-btn");
+        submitBtn.disabled = true;
+        submitBtn.textContent = "신청 중...";
+
+        try {
+          // API 요청 데이터 구성
+          const requestData = {
+            certificate_number: appraisalInfo.certificate_number,
+            services: selectedServices,
+            delivery_info: deliveryInfo,
+            notes: notes,
+          };
+
+          // API 호출
+          const response = await fetch("/api/appr/restorations", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(requestData),
+            credentials: "include",
+          });
+
+          const data = await response.json();
+
+          if (!data.success) {
+            throw new Error(
+              data.message || "복원 서비스 신청 중 오류가 발생했습니다."
+            );
+          }
+
+          // 성공 메시지 표시
+          document.getElementById("repair-form").style.display = "none";
+          document.getElementById("product-info-section").style.display =
+            "none";
+          document.getElementById("success-message").style.display = "block";
+
+          // 페이지 상단으로 스크롤
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        } catch (error) {
+          console.error("복원 서비스 신청 오류:", error);
+          alert(
+            error.message ||
+              "복원 서비스 신청 중 오류가 발생했습니다. 다시 시도해주세요."
+          );
+
+          // 제출 버튼 다시 활성화
+          submitBtn.disabled = false;
+          submitBtn.textContent = "복원 서비스 신청하기";
+        }
+      }
+
       // 페이지 로드 시 실행
-      document.addEventListener("DOMContentLoaded", async function () {
+      document.addEventListener("DOMContentLoaded", function () {
         // 레이아웃 조정
         const handleResponsiveLayout = () => {
           const mobileMenuButton = document.querySelector(".mobile-menu-btn");
@@ -901,15 +978,15 @@
 
         handleResponsiveLayout();
         window.addEventListener("resize", handleResponsiveLayout);
-        // URL에서 감정 ID 가져오기
-        const urlParams = new URLSearchParams(window.location.search);
-        const appraisalId = urlParams.get("appraisal_id");
-        const certificateNumber = urlParams.get("certificate_number");
 
-        if (!appraisalId && !certificateNumber) {
+        // URL에서 감정서 번호 가져오기
+        const pathParts = window.location.pathname.split("/");
+        const certificateNumber = pathParts[pathParts.length - 1];
+
+        if (!certificateNumber) {
           document.getElementById("loading-message").style.display = "none";
           document.getElementById("error-message").textContent =
-            "감정 정보가 필요합니다. 올바른 경로로 접근해주세요.";
+            "감정서 번호가 필요합니다. 올바른 경로로 접근해주세요.";
           document.getElementById("error-message").style.display = "block";
           return;
         }
@@ -918,58 +995,46 @@
         document.getElementById("loading-message").style.display = "block";
 
         // 감정 정보 로드
-        let appraisalPromise;
-        if (certificateNumber) {
-          appraisalPromise = fetch(
-            `/api/appr/appraisals/certificate/${certificateNumber}`
-          )
-            .then((response) => response.json())
-            .then((data) => {
-              if (!data.success)
-                throw new Error(
-                  data.message || "감정서 정보를 불러오는데 실패했습니다."
-                );
-              appraisalInfo = data.certificate.appraisal;
-              return appraisalInfo;
-            });
-        } else {
-          appraisalPromise = fetch(`/api/appr/appraisals/${appraisalId}`)
-            .then((response) => response.json())
-            .then((data) => {
-              if (!data.success)
-                throw new Error(
-                  data.message || "감정 정보를 불러오는데 실패했습니다."
-                );
-              appraisalInfo = data.appraisal;
-              return appraisalInfo;
-            });
-        }
-
-        // 복원 서비스 목록 로드
-        const servicesPromise = fetch(`/api/appr/restorations/services`)
+        fetch(`/api/appr/appraisals/certificate/${certificateNumber}`)
           .then((response) => response.json())
           .then((data) => {
             if (!data.success)
               throw new Error(
-                data.message || "복원 서비스 목록을 불러오는데 실패했습니다."
+                data.message || "감정서 정보를 불러오는데 실패했습니다."
               );
-            servicesData = data.services;
-            return servicesData;
-          });
-
-        // 두 API 호출 완료 후 화면 렌더링
-        Promise.all([appraisalPromise, servicesPromise])
-          .then(([appraisal, services]) => {
-            // 로딩 메시지 숨김
-            document.getElementById("loading-message").style.display = "none";
-
+            appraisalInfo = data.certificate.appraisal;
+            return appraisalInfo;
+          })
+          .then((appraisal) => {
             // 감정 결과가 정품이 아닌 경우 복원 서비스 신청 불가
             if (appraisal.result !== "authentic") {
+              document.getElementById("loading-message").style.display = "none";
               document.getElementById("error-message").textContent =
                 "정품으로 감정된 제품만 복원 서비스를 신청할 수 있습니다.";
               document.getElementById("error-message").style.display = "block";
-              return;
+              return Promise.reject(
+                new Error(
+                  "정품으로 감정된 제품만 복원 서비스를 신청할 수 있습니다."
+                )
+              );
             }
+
+            // 복원 서비스 목록 로드
+            return fetch(`/api/appr/restorations/services`)
+              .then((response) => response.json())
+              .then((data) => {
+                if (!data.success)
+                  throw new Error(
+                    data.message ||
+                      "복원 서비스 목록을 불러오는데 실패했습니다."
+                  );
+                servicesData = data.services;
+                return { appraisal, services: servicesData };
+              });
+          })
+          .then(({ appraisal, services }) => {
+            // 로딩 메시지 숨김
+            document.getElementById("loading-message").style.display = "none";
 
             // 제품 정보 표시
             document.getElementById("product-info-section").style.display =
@@ -1004,7 +1069,7 @@
             } else {
               noServicesMessage.style.display = "none";
 
-              // 추천 서비스 목록 (가정: appraisal.suggested_restoration_services에 추천 서비스 ID가 있음)
+              // 추천 서비스 목록
               let suggestedServiceIds = [];
               try {
                 if (appraisal.suggested_restoration_services) {
@@ -1035,24 +1100,22 @@
                 }
 
                 serviceItem.innerHTML = `
-                  <input type="checkbox" id="service-${service.id}" ${
+            <input type="checkbox" id="service-${service.id}" ${
                   isSuggested ? "checked" : ""
-                }
-                    onchange="handleServiceSelection('${
-                      service.id
-                    }', this.checked)">
-                  <div class="service-details">
-                    <div class="service-name">${service.name} ${
+                } 
+              onchange="handleServiceSelection('${service.id}', this.checked)">
+            <div class="service-details">
+              <div class="service-name">${service.name} ${
                   isSuggested
                     ? '<span style="color: #15803d; font-size: 0.8rem; margin-left: 8px;">추천</span>'
                     : ""
                 }</div>
-                    <div class="service-description">${
-                      service.description || "설명이 없습니다."
-                    }</div>
-                  </div>
-                  <div class="service-price">${formatPrice(service.price)}</div>
-                `;
+              <div class="service-description">${
+                service.description || "설명이 없습니다."
+              }</div>
+            </div>
+            <div class="service-price">${formatPrice(service.price)}</div>
+          `;
 
                 servicesContainer.appendChild(serviceItem);
 
@@ -1068,7 +1131,7 @@
               .getElementById("repair-form")
               .addEventListener("submit", handleFormSubmit);
 
-            // 배송 정보 자동 채우기 (구현된 경우)
+            // 배송 정보 자동 채우기
             if (appraisal.delivery_info) {
               try {
                 let deliveryInfo;
@@ -1096,90 +1159,17 @@
             }
           })
           .catch((error) => {
-            console.error("초기 데이터 로드 오류:", error);
+            console.error("데이터 로드 오류:", error);
             document.getElementById("loading-message").style.display = "none";
-            document.getElementById("error-message").textContent =
-              error.message || "정보를 불러오는 중 오류가 발생했습니다.";
-            document.getElementById("error-message").style.display = "block";
-          });
-
-        // 폼 제출 처리
-        async function handleFormSubmit(event) {
-          event.preventDefault();
-
-          // 서비스 선택 여부 검증
-          if (selectedServices.length === 0) {
-            alert("최소 하나 이상의 복원 서비스를 선택해주세요.");
-            return;
-          }
-
-          // 폼 데이터 수집
-          const deliveryInfo = {
-            name: document.getElementById("delivery-name").value,
-            phone: document.getElementById("delivery-phone").value,
-            zipcode: document.getElementById("delivery-zipcode").value,
-            address1: document.getElementById("delivery-address1").value,
-            address2: document.getElementById("delivery-address2").value,
-          };
-
-          const notes = document.getElementById("notes").value;
-
-          // 제출 버튼 비활성화
-          const submitBtn = document.getElementById("submit-btn");
-          submitBtn.disabled = true;
-          submitBtn.textContent = "신청 중...";
-
-          try {
-            // API 요청 데이터 구성
-            const requestData = {
-              certificate_number: appraisalInfo.certificate_number,
-              services: selectedServices,
-              delivery_info: deliveryInfo,
-              notes: notes,
-            };
-
-            // API 호출
-            const response = await fetch("/api/appr/restorations", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(requestData),
-            });
-
-            const data = await response.json();
-
-            if (!data.success) {
-              throw new Error(
-                data.message || "복원 서비스 신청 중 오류가 발생했습니다."
-              );
+            if (
+              !document.getElementById("error-message").style.display ===
+              "block"
+            ) {
+              document.getElementById("error-message").textContent =
+                error.message || "정보를 불러오는 중 오류가 발생했습니다.";
+              document.getElementById("error-message").style.display = "block";
             }
-
-            // 성공 메시지 표시
-            document.getElementById("repair-form").style.display = "none";
-            document.getElementById("product-info-section").style.display =
-              "none";
-            document.getElementById("success-message").style.display = "block";
-
-            // 페이지 상단으로 스크롤
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          } catch (error) {
-            console.error("복원 서비스 신청 오류:", error);
-            alert(
-              error.message ||
-                "복원 서비스 신청 중 오류가 발생했습니다. 다시 시도해주세요."
-            );
-
-            // 제출 버튼 다시 활성화
-            submitBtn.disabled = false;
-            submitBtn.textContent = "복원 서비스 신청하기";
-          }
-        }
-
-        // 페이지 뒤로가기
-        function goBack() {
-          window.history.back();
-        }
+          });
       });
     </script>
   </body>

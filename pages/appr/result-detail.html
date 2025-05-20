@@ -1297,7 +1297,7 @@
                   repairConsultLinkEl.style.display = "none";
               }
               if (repairConsultLinkEl && currentAppraisalId)
-                repairConsultLinkEl.href = `/appr/request-repair?appraisal_id=${currentAppraisalId}`;
+                repairConsultLinkEl.href = `/appr/request-repair/${certificate.certificate_number}`;
 
               // 감정 이력 (임시 - 실제로는 appraisal_id로 이력 API 호출)
               timelineContainerEl.innerHTML = `
