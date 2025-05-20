@@ -1248,6 +1248,68 @@
         handleResponsiveLayout();
         window.addEventListener("resize", handleResponsiveLayout);
       });
+      // 로그인 상태에 따라 로그인/로그아웃 버튼을 변경하는 함수
+      function updateAuthButton() {
+        // 서버에 로그인 상태 확인 API 호출
+        fetch("/api/auth/user", {
+          method: "GET",
+          credentials: "include", // 쿠키를 포함하여 요청 전송
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            // 로그인 버튼 요소들 가져오기 (데스크톱 및 모바일)
+            const desktopAuthButton = document.querySelector(
+              '.nav-desktop a[href="/appr/signin"]'
+            );
+            const mobileAuthButton = document.querySelector(
+              '#mobile-menu a[href="/appr/signin"]'
+            );
+
+            if (data.user && data.user.id) {
+              // 사용자가 로그인된 경우, 로그인 버튼을 로그아웃 버튼으로 변경
+              if (desktopAuthButton) {
+                desktopAuthButton.textContent = "로그아웃";
+                desktopAuthButton.setAttribute("href", "#");
+                desktopAuthButton.addEventListener("click", handleLogout);
+              }
+
+              if (mobileAuthButton) {
+                mobileAuthButton.textContent = "로그아웃";
+                mobileAuthButton.setAttribute("href", "#");
+                mobileAuthButton.addEventListener("click", handleLogout);
+              }
+            }
+          })
+          .catch((error) => {
+            console.error("로그인 상태 확인 중 오류 발생:", error);
+          });
+      }
+
+      // 로그아웃 처리 함수
+      function handleLogout(event) {
+        event.preventDefault();
+
+        fetch("/api/auth/logout", {
+          method: "POST",
+          credentials: "include", // 쿠키를 포함하여 요청 전송
+        })
+          .then((response) => {
+            if (response.ok) {
+              // 로그아웃 성공 시 페이지 새로고침
+              window.location.reload();
+            } else {
+              console.error("로그아웃 실패");
+            }
+          })
+          .catch((error) => {
+            console.error("로그아웃 처리 중 오류 발생:", error);
+          });
+      }
+
+      // DOMContentLoaded 이벤트 리스너 추가
+      document.addEventListener("DOMContentLoaded", function () {
+        updateAuthButton();
+      });
     </script>
   </body>
 </html>
