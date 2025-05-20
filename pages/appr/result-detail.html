@@ -1122,6 +1122,8 @@
             return response.json();
           })
           .then((data) => {
+            loadingEl.style.display = "none";
+
             if (data.success && data.certificate) {
               contentWrapperEl.style.display = "block";
               const certificate = data.certificate;
