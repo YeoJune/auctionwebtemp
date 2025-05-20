@@ -1,5 +1,8 @@
 // public/js/appr-admin/restorations.js - 복원 서비스 관리 관련 기능
 
+// 전역 변수
+let restorationServices = [];
+
 // 페이지 로드시 이벤트 리스너 등록
 document.addEventListener("DOMContentLoaded", function () {
   // 복원 서비스 추가 버튼 이벤트
@@ -59,6 +62,8 @@ function loadRestorationServiceList() {
     })
     .then((data) => {
       if (data.success) {
+        // 전역 변수에 서비스 목록 저장
+        restorationServices = data.services;
         displayRestorationServices(data.services);
       } else {
         throw new Error(
@@ -138,27 +143,15 @@ function editRestorationService(serviceId) {
     "복원 서비스 수정";
   openModal("restoration-service-modal");
 
-  // API 호출하여 서비스 정보 가져오기
-  fetch(`/api/appr/admin/restoration-services/${serviceId}`)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("복원 서비스 정보를 불러오는데 실패했습니다.");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      if (data.success) {
-        populateRestorationServiceForm(data.service);
-      } else {
-        throw new Error(
-          data.message || "복원 서비스 정보를 불러오는데 실패했습니다."
-        );
-      }
-    })
-    .catch((error) => {
-      showAlert(error.message, "error");
-      closeModal("restoration-service-modal");
-    });
+  // 전역 변수에서 서비스 정보 찾기
+  const service = restorationServices.find((s) => s.id === serviceId);
+
+  if (service) {
+    populateRestorationServiceForm(service);
+  } else {
+    showAlert("서비스 정보를 찾을 수 없습니다.", "error");
+    closeModal("restoration-service-modal");
+  }
 }
 
 // 복원 서비스 폼에 데이터 채우기

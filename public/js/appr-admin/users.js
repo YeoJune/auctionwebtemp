@@ -148,28 +148,52 @@ function editUser(userId) {
   document.getElementById("user-edit-form").reset();
   document.getElementById("user-edit-id").value = userId;
 
+  // 현재 테이블에서 해당 사용자 정보 찾기
+  const users = document.querySelectorAll("#users-list tr");
+  let userData = null;
+
+  for (let i = 0; i < users.length; i++) {
+    const idCell = users[i].querySelector("td:first-child");
+    if (idCell && idCell.textContent === userId) {
+      // 이 행이 찾는 사용자의 행입니다
+      const tier = users[i].querySelector("td:nth-child(4) .badge").textContent;
+      const credits = users[i]
+        .querySelector("td:nth-child(5)")
+        .textContent.split("/")[0]
+        .trim();
+      const monthlyLimit = users[i]
+        .querySelector("td:nth-child(5)")
+        .textContent.split("/")[1]
+        .trim();
+
+      userData = {
+        id: userId,
+        tier: tier,
+        quick_link_credits_remaining: parseInt(credits),
+        quick_link_monthly_limit: parseInt(monthlyLimit),
+        // 기본값 설정
+        offline_appraisal_fee: 38000,
+        quick_link_subscription_type: "free",
+        quick_link_subscription_expires_at: null,
+      };
+      break;
+    }
+  }
+
   // 모달 표시
   openModal("user-edit-modal");
 
-  // API 호출하여 회원 정보 가져오기
-  fetch(`/api/appr/admin/users/${userId}`)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("회원 정보를 불러오는데 실패했습니다.");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      if (data.success) {
-        populateUserEditForm(data.user);
-      } else {
-        throw new Error(data.message || "회원 정보를 불러오는데 실패했습니다.");
-      }
-    })
-    .catch((error) => {
-      showAlert(error.message, "error");
-      closeModal("user-edit-modal");
-    });
+  if (userData) {
+    populateUserEditForm(userData);
+  } else {
+    // 사용자 정보를 찾지 못했을 경우 기본값으로 설정
+    document.getElementById("user-edit-tier").value = "일반회원";
+    document.getElementById("user-edit-credits").value = "0";
+    document.getElementById("user-edit-monthly-limit").value = "0";
+    document.getElementById("user-edit-offline-fee").value = "38000";
+    document.getElementById("user-edit-subscription-type").value = "free";
+    document.getElementById("user-edit-expires-at").value = "";
+  }
 }
 
 // 회원 수정 폼에 데이터 채우기

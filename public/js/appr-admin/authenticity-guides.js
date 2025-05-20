@@ -2,6 +2,7 @@
 
 // 전역 변수
 let currentBrandFilter = "all";
+let authenticityGuides = [];
 
 // 페이지 로드 시 이벤트 리스너 설정
 document.addEventListener("DOMContentLoaded", function () {
@@ -78,6 +79,8 @@ function loadAuthenticityGuides() {
     })
     .then((data) => {
       if (data.success) {
+        // 전역 변수에 구별법 목록 저장
+        authenticityGuides = data.guides;
         displayAuthenticityGuides(data.guides);
       } else {
         throw new Error(
@@ -183,27 +186,15 @@ function editAuthenticityGuide(guideId) {
     "정품 구별법 수정";
   openModal("authenticity-guide-modal");
 
-  // API 호출하여 구별법 정보 가져오기
-  fetch(`/api/appr/admin/authenticity-guides/${guideId}`)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("정품 구별법 정보를 불러오는데 실패했습니다.");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      if (data.success) {
-        populateAuthenticityGuideForm(data.guide);
-      } else {
-        throw new Error(
-          data.message || "정품 구별법 정보를 불러오는데 실패했습니다."
-        );
-      }
-    })
-    .catch((error) => {
-      showAlert(error.message, "error");
-      closeModal("authenticity-guide-modal");
-    });
+  // 전역 변수에서 구별법 정보 찾기
+  const guide = authenticityGuides.find((g) => g.id === guideId);
+
+  if (guide) {
+    populateAuthenticityGuideForm(guide);
+  } else {
+    showAlert("정품 구별법 정보를 찾을 수 없습니다.", "error");
+    closeModal("authenticity-guide-modal");
+  }
 }
 
 // 정품 구별법 폼에 데이터 채우기
