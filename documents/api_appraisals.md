@@ -21,6 +21,8 @@
 | GET    | `/api/appr/appraisals/certificate/:certificateNumber`          | 감정서 정보 조회                              |
 | GET    | `/api/appr/appraisals/certificate/:certificateNumber/download` | PDF 감정서 다운로드                           |
 | GET    | `/api/appr/appraisals/certificate/:certificateNumber/qrcode`   | 감정서 QR코드 이미지 제공                     |
+| GET    | `/api/appr/appraisals/authenticity-guides`                     | 브랜드별 정품 구별법 목록 조회                |
+| GET    | `/api/appr/appraisals/authenticity-guides/:brand`              | 특정 브랜드의 정품 구별법 조회                |
 
 ### 1.3 복원(Restorations) API
 
@@ -67,6 +69,10 @@
 | PUT    | `/api/appr/admin/restorations/:id`         | 복원 상태 및 이미지 업데이트 (통합 API) |
 | GET    | `/api/appr/admin/payments`                 | 결제 내역 조회                          |
 | GET    | `/api/appr/admin/payments/:id`             | 결제 상세 정보 조회                     |
+| GET    | `/api/appr/admin/authenticity-guides`      | 정품 구별법 목록 조회                   |
+| POST   | `/api/appr/admin/authenticity-guides`      | 정품 구별법 추가                        |
+| PUT    | `/api/appr/admin/authenticity-guides/:id`  | 정품 구별법 수정                        |
+| DELETE | `/api/appr/admin/authenticity-guides/:id`  | 정품 구별법 비활성화                    |
 
 ## 2. API별 명세
 
@@ -246,9 +252,102 @@
   }
   ```
 
-다른 엔드포인트는 동일하게 동작합니다.
+#### 2.2.6 PDF 감정서 다운로드 - GET `/api/appr/appraisals/certificate/:certificateNumber/download`
+
+- **응답**: PDF 파일 스트림
+
+#### 2.2.7 감정서 QR코드 이미지 제공 - GET `/api/appr/appraisals/certificate/:certificateNumber/qrcode`
+
+- **응답**: PNG 이미지 스트림
+
+#### 2.2.8 브랜드별 정품 구별법 목록 조회 - GET `/api/appr/appraisals/authenticity-guides`
+
+- **쿼리 파라미터**:
+  - `brand`: 브랜드명 (선택사항)
+- **응답**:
+  ```json
+  {
+    "success": true,
+    "guides": {
+      "루이비통": [
+        {
+          "id": "uuid",
+          "brand": "루이비통",
+          "guide_type": "로고 비교",
+          "title": "로고 비교",
+          "description": "정품 루이비통 로고는 정교하고...",
+          "authentic_image": "url",
+          "fake_image": "url"
+        },
+        {
+          "id": "uuid",
+          "brand": "루이비통",
+          "guide_type": "가죽 질감 비교",
+          "title": "가죽 질감 비교",
+          "description": "정품 루이비통 가죽은...",
+          "authentic_image": "url",
+          "fake_image": "url"
+        }
+      ],
+      "샤넬": [
+        /* 샤넬 구별법 목록 */
+      ]
+    }
+  }
+  ```
+
+#### 2.2.9 특정 브랜드의 정품 구별법 조회 - GET `/api/appr/appraisals/authenticity-guides/:brand`
+
+- **응답**:
+  ```json
+  {
+    "success": true,
+    "brand": "루이비통",
+    "guides": [
+      {
+        "id": "uuid",
+        "brand": "루이비통",
+        "guide_type": "로고 비교",
+        "title": "로고 비교",
+        "description": "정품 루이비통 로고는 정교하고...",
+        "authentic_image": "url",
+        "fake_image": "url"
+      },
+      {
+        "id": "uuid",
+        "brand": "루이비통",
+        "guide_type": "가죽 질감 비교",
+        "title": "가죽 질감 비교",
+        "description": "정품 루이비통 가죽은...",
+        "authentic_image": "url",
+        "fake_image": "url"
+      }
+    ]
+  }
+  ```
 
 ### 2.3 복원(Restorations) API
+
+#### 2.3.1 복원 서비스 목록 조회 - GET `/api/appr/restorations/services`
+
+- **응답**:
+  ```json
+  {
+    "success": true,
+    "services": [
+      {
+        "id": "uuid",
+        "name": "string",
+        "description": "string",
+        "price": 50000,
+        "estimated_days": 7,
+        "before_image": "url",
+        "after_image": "url",
+        "is_active": true
+      }
+    ]
+  }
+  ```
 
 #### 2.3.2 복원 서비스 신청 - POST `/api/appr/restorations`
 
@@ -289,9 +388,413 @@
   }
   ```
 
+#### 2.3.3 복원 요청 목록 조회 - GET `/api/appr/restorations`
+
+- **쿼리 파라미터**:
+  - `page`: 페이지 번호 (기본값: 1)
+  - `limit`: 페이지당 항목 수 (기본값: 10)
+  - `status`: 상태 필터 (선택사항)
+- **응답**:
+  ```json
+  {
+    "success": true,
+    "restorations": [
+      {
+        "id": "uuid",
+        "appraisal_id": "uuid",
+        "status": "pending" | "in_progress" | "completed" | "cancelled",
+        "total_price": 150000,
+        "created_at": "timestamp",
+        "estimated_completion_date": "date",
+        "completed_at": "timestamp",
+        "brand": "string",
+        "model_name": "string"
+      }
+    ],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 5,
+      "totalItems": 48,
+      "limit": 10
+    }
+  }
+  ```
+
+#### 2.3.4 복원 요청 상세 조회 - GET `/api/appr/restorations/:id`
+
+- **응답**:
+  ```json
+  {
+    "success": true,
+    "restoration": {
+      "id": "uuid",
+      "appraisal_id": "uuid",
+      "certificate_number": "CAS-YYYYMMDD-XXXX",
+      "status": "pending" | "in_progress" | "completed" | "cancelled",
+      "services": [
+        {
+          "service_id": "uuid",
+          "service_name": "string",
+          "price": 50000,
+          "status": "pending" | "in_progress" | "completed"
+        }
+      ],
+      "total_price": 150000,
+      "delivery_info": {
+        "name": "string",
+        "phone": "string",
+        "zipcode": "string",
+        "address1": "string",
+        "address2": "string"
+      },
+      "notes": "string",
+      "images": {
+        "before": ["url"],
+        "after": ["url"],
+        "progress": ["url"]
+      },
+      "estimated_completion_date": "date",
+      "completed_at": "timestamp",
+      "created_at": "timestamp",
+      "appraisal": {
+        "id": "uuid",
+        "brand": "string",
+        "model_name": "string",
+        "category": "string",
+        "images": ["url"]
+      }
+    }
+  }
+  ```
+
+### 2.4 사용자(Users) API
+
+#### 2.4.1 회원 프로필 및 멤버십 정보 조회 - GET `/api/appr/users/profile`
+
+- **응답**:
+  ```json
+  {
+    "success": true,
+    "user_profile": {
+      "id": "string",
+      "email": "string",
+      "company_name": "string",
+      "phone": "string",
+      "address": "string",
+      "created_at": "timestamp"
+    },
+    "membership": {
+      "tier": "까사트레이드 회원" | "제휴사 회원" | "일반회원",
+      "quick_link_credits_remaining": 5,
+      "quick_link_monthly_limit": 10,
+      "quick_link_subscription_type": "free" | "paid",
+      "quick_link_subscription_expires_at": "date",
+      "offline_appraisal_fee": 38000,
+      "last_reset_date": "date"
+    }
+  }
+  ```
+
+#### 2.4.2 구독 정보 조회 - GET `/api/appr/users/subscription`
+
+- **응답**:
+  ```json
+  {
+    "success": true,
+    "subscription": {
+      "is_subscribed": true,
+      "type": "free" | "paid",
+      "tier": "까사트레이드 회원" | "제휴사 회원" | "일반회원",
+      "credits_remaining": 5,
+      "monthly_limit": 10,
+      "expires_at": "date",
+      "auto_renew": false
+    }
+  }
+  ```
+
+#### 2.4.3 구독 신청/갱신 - POST `/api/appr/users/subscription`
+
+- **요청 본문**:
+  ```json
+  {
+    "subscription_type": "monthly"
+  }
+  ```
+- **응답**:
+  ```json
+  {
+    "success": true,
+    "payment_required": true,
+    "payment_info": {
+      "product_type": "quicklink_subscription",
+      "product_name": "퀵링크 월간 구독 (10회)",
+      "amount": 29000,
+      "redirect_url": "/api/appr/payments/prepare"
+    }
+  }
+  ```
+
+### 2.5 결제(Payments) API
+
+#### 2.5.1 결제 준비 - POST `/api/appr/payments/prepare`
+
+- **요청 본문**:
+  ```json
+  {
+    "product_type": "quicklink_subscription" | "certificate_issue" | "restoration_service",
+    "product_name": "string",
+    "amount": 29000,
+    "related_resource_id": "uuid"  // 선택사항
+  }
+  ```
+- **응답**:
+  ```json
+  {
+    "success": true,
+    "order_id": "ORDER_TIMESTAMP_XXX",
+    "paramsForNicePaySDK": {
+      "clientId": "NICEPAY_CLIENT_KEY",
+      "method": "card",
+      "orderId": "ORDER_TIMESTAMP_XXX",
+      "amount": 29000,
+      "goodsName": "string",
+      "returnUrl": "http://example.com/appr/payment-callback",
+      "timestamp": "timestamp",
+      "signature": "hash"
+    }
+  }
+  ```
+
+#### 2.5.2 결제 승인 요청 - POST `/api/appr/payments/approve`
+
+- **요청 본문**:
+  ```json
+  {
+    "orderId": "ORDER_TIMESTAMP_XXX",
+    "authToken": "string",
+    "amount": 29000
+  }
+  ```
+- **응답**:
+  ```json
+  {
+    "success": true,
+    "message": "결제가 성공적으로 처리되었습니다.",
+    "payment": {
+      "id": "uuid",
+      "order_id": "ORDER_TIMESTAMP_XXX",
+      "status": "completed",
+      "amount": 29000,
+      "paid_at": "timestamp",
+      "receipt_url": "url",
+      "card_info": {}
+    }
+  }
+  ```
+
+#### 2.5.3 결제 정보 조회 - GET `/api/appr/payments/:orderId`
+
+- **응답**:
+  ```json
+  {
+    "success": true,
+    "payment": {
+      "id": "uuid",
+      "user_id": "string",
+      "order_id": "ORDER_TIMESTAMP_XXX",
+      "payment_gateway_transaction_id": "string",
+      "product_type": "quicklink_subscription" | "certificate_issue" | "restoration_service",
+      "product_name": "string",
+      "amount": 29000,
+      "status": "pending" | "ready" | "completed" | "failed" | "cancelled" | "vbank_ready" | "vbank_expired",
+      "payment_method": "card",
+      "raw_response_data": {},
+      "receipt_url": "url",
+      "related_resource_id": "uuid",
+      "related_resource_type": "appraisal" | "restoration",
+      "paid_at": "timestamp",
+      "created_at": "timestamp"
+    }
+  }
+  ```
+
+#### 2.5.4 결제 웹훅 처리 - POST `/api/appr/payments/webhook`
+
+- **요청 본문**: 나이스페이 웹훅 데이터
+- **응답**: 200 OK
+
+#### 2.5.5 결제 내역 조회 - GET `/api/appr/payments/history`
+
+- **쿼리 파라미터**:
+  - `page`: 페이지 번호 (기본값: 1)
+  - `limit`: 페이지당 항목 수 (기본값: 10)
+  - `type`: 상품 유형 필터 (선택사항)
+- **응답**:
+  ```json
+  {
+    "success": true,
+    "payments": [
+      {
+        "id": "uuid",
+        "order_id": "ORDER_TIMESTAMP_XXX",
+        "product_type": "quicklink_subscription" | "certificate_issue" | "restoration_service",
+        "product_name": "string",
+        "amount": 29000,
+        "status": "completed" | "failed" | "pending" | "cancelled",
+        "payment_method": "card",
+        "paid_at": "timestamp",
+        "receipt_url": "url"
+      }
+    ],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 5,
+      "totalItems": 48,
+      "limit": 10
+    }
+  }
+  ```
+
 ### 2.6 관리자(Admin) API
 
+#### 2.6.1 회원 관리
+
+- **GET `/api/appr/admin/users`**: 회원 목록 조회
+
+  - **쿼리 파라미터**:
+    - `page`: 페이지 번호 (기본값: 1)
+    - `limit`: 페이지당 항목 수 (기본값: 20)
+    - `search`: 검색어 (선택사항, ID/이메일/회사명)
+  - **응답**:
+    ```json
+    {
+      "success": true,
+      "users": [
+        {
+          "id": "string",
+          "email": "string",
+          "company_name": "string",
+          "phone": "string",
+          "created_at": "timestamp",
+          "tier": "까사트레이드 회원" | "제휴사 회원" | "일반회원",
+          "quick_link_credits_remaining": 5,
+          "quick_link_monthly_limit": 10,
+          "quick_link_subscription_type": "free" | "paid",
+          "quick_link_subscription_expires_at": "date"
+        }
+      ],
+      "pagination": {
+        "total": 100,
+        "totalPages": 5,
+        "currentPage": 1,
+        "limit": 20
+      }
+    }
+    ```
+
+- **PUT `/api/appr/admin/users/:id`**: 회원 정보 수정
+  - **요청 본문**:
+    ```json
+    {
+      "tier": "까사트레이드 회원" | "제휴사 회원" | "일반회원",
+      "quick_link_credits_remaining": 10,
+      "quick_link_monthly_limit": 10,
+      "offline_appraisal_fee": 38000,
+      "quick_link_subscription_type": "free" | "paid",
+      "quick_link_subscription_expires_at": "date"
+    }
+    ```
+  - **응답**:
+    ```json
+    {
+      "success": true,
+      "user": {
+        "id": "string",
+        "email": "string",
+        "company_name": "string",
+        "phone": "string",
+        "tier": "까사트레이드 회원" | "제휴사 회원" | "일반회원",
+        "quick_link_credits_remaining": 10,
+        "quick_link_monthly_limit": 10,
+        "quick_link_subscription_type": "free" | "paid",
+        "quick_link_subscription_expires_at": "date",
+        "offline_appraisal_fee": 38000
+      }
+    }
+    ```
+
 #### 2.6.2 감정 관리
+
+- **GET `/api/appr/admin/appraisals`**: 전체 감정 목록 조회
+
+  - **쿼리 파라미터**:
+    - `page`: 페이지 번호 (기본값: 1)
+    - `limit`: 페이지당 항목 수 (기본값: 20)
+    - `status`: 상태 필터 (선택사항)
+    - `result`: 결과 필터 (선택사항)
+    - `type`: 유형 필터 (선택사항)
+    - `search`: 검색어 (선택사항, 브랜드/모델명/사용자ID/인증서번호)
+  - **응답**:
+
+    ```json
+    {
+      "success": true,
+      "appraisals": [
+        {
+          "id": "uuid",
+          "user_id": "string",
+          "appraisal_type": "quicklink" | "offline",
+          "status": "pending" | "in_review" | "completed" | "cancelled",
+          "brand": "string",
+          "model_name": "string",
+          "category": "string",
+          "result": "pending" | "authentic" | "fake" | "uncertain",
+          "certificate_number": "CAS-YYYYMMDD-XXXX",
+          "created_at": "timestamp",
+          "user_email": "string",
+          "company_name": "string",
+          "representative_image": "url"
+        }
+      ],
+      "pagination": {
+        "currentPage": 1,
+        "totalPages": 5,
+        "totalItems": 100,
+        "limit": 20
+      }
+    }
+    ```
+
+- **GET `/api/appr/admin/appraisals/:id`**: 감정 상세 정보 조회
+
+  - **응답**:
+    ```json
+    {
+      "success": true,
+      "appraisal": {
+        "id": "uuid",
+        "user_id": "string",
+        "appraisal_type": "quicklink" | "offline",
+        "status": "pending" | "in_review" | "completed" | "cancelled",
+        "certificate_number": "CAS-YYYYMMDD-XXXX",
+        "brand": "string",
+        "model_name": "string",
+        "category": "string",
+        "product_link": "string",
+        "platform": "string",
+        "purchase_year": "string",
+        "components_included": ["string"],
+        "delivery_info": {},
+        "result": "pending" | "authentic" | "fake" | "uncertain",
+        "result_notes": "string",
+        "images": ["url"],
+        "user_email": "string",
+        "company_name": "string",
+        "created_at": "timestamp"
+      }
+    }
+    ```
 
 - **PUT `/api/appr/admin/appraisals/:id`**: 감정 결과 및 상태 업데이트 (통합 API)
 
@@ -345,7 +848,408 @@
   }
   ```
 
+#### 2.6.3 복원 서비스 관리
+
+- **GET `/api/appr/admin/restoration-services`**: 복원 서비스 목록 조회
+
+  - **응답**:
+    ```json
+    {
+      "success": true,
+      "services": [
+        {
+          "id": "uuid",
+          "name": "string",
+          "description": "string",
+          "price": 50000,
+          "estimated_days": 7,
+          "before_image": "url",
+          "after_image": "url",
+          "is_active": true,
+          "created_at": "timestamp",
+          "updated_at": "timestamp"
+        }
+      ]
+    }
+    ```
+
+- **POST `/api/appr/admin/restoration-services`**: 복원 서비스 추가
+
+  - **요청**: `multipart/form-data`
+    ```
+    name: "string"
+    description: "string"
+    price: 50000
+    estimated_days: 7
+    before_image: 파일 (선택사항)
+    after_image: 파일 (선택사항)
+    ```
+  - **응답**:
+    ```json
+    {
+      "success": true,
+      "service": {
+        "id": "uuid",
+        "name": "string",
+        "description": "string",
+        "price": 50000,
+        "estimated_days": 7,
+        "before_image": "url",
+        "after_image": "url",
+        "is_active": true
+      }
+    }
+    ```
+
+- **PUT `/api/appr/admin/restoration-services/:id`**: 복원 서비스 수정
+
+  - **요청**: `multipart/form-data`
+    ```
+    name: "string" (선택사항)
+    description: "string" (선택사항)
+    price: 50000 (선택사항)
+    estimated_days: 7 (선택사항)
+    before_image: 파일 (선택사항)
+    after_image: 파일 (선택사항)
+    ```
+  - **응답**:
+    ```json
+    {
+      "success": true,
+      "service": {
+        "id": "uuid",
+        "name": "string",
+        "description": "string",
+        "price": 50000,
+        "estimated_days": 7,
+        "before_image": "url",
+        "after_image": "url",
+        "is_active": true
+      }
+    }
+    ```
+
+- **DELETE `/api/appr/admin/restoration-services/:id`**: 복원 서비스 비활성화
+  - **응답**:
+    ```json
+    {
+      "success": true,
+      "message": "복원 서비스가 비활성화되었습니다."
+    }
+    ```
+
+#### 2.6.4 복원 요청 관리
+
+- **GET `/api/appr/admin/restorations`**: 전체 복원 요청 목록 조회
+
+  - **쿼리 파라미터**:
+    - `page`: 페이지 번호 (기본값: 1)
+    - `limit`: 페이지당 항목 수 (기본값: 20)
+    - `status`: 상태 필터 (선택사항)
+    - `search`: 검색어 (선택사항, 브랜드/모델명/사용자ID/이메일)
+  - **응답**:
+    ```json
+    {
+      "success": true,
+      "restorations": [
+        {
+          "id": "uuid",
+          "appraisal_id": "uuid",
+          "status": "pending" | "in_progress" | "completed" | "cancelled",
+          "total_price": 150000,
+          "created_at": "timestamp",
+          "estimated_completion_date": "date",
+          "completed_at": "timestamp",
+          "brand": "string",
+          "model_name": "string",
+          "user_id": "string",
+          "user_email": "string",
+          "company_name": "string"
+        }
+      ],
+      "pagination": {
+        "currentPage": 1,
+        "totalPages": 5,
+        "totalItems": 100,
+        "limit": 20
+      }
+    }
+    ```
+
+- **GET `/api/appr/admin/restorations/:id`**: 복원 요청 상세 정보 조회
+
+  - **응답**:
+    ```json
+    {
+      "success": true,
+      "restoration": {
+        "id": "uuid",
+        "appraisal_id": "uuid",
+        "certificate_number": "CAS-YYYYMMDD-XXXX",
+        "status": "pending" | "in_progress" | "completed" | "cancelled",
+        "services": [
+          {
+            "service_id": "uuid",
+            "service_name": "string",
+            "price": 50000,
+            "status": "pending" | "in_progress" | "completed"
+          }
+        ],
+        "total_price": 150000,
+        "delivery_info": {
+          "name": "string",
+          "phone": "string",
+          "zipcode": "string",
+          "address1": "string",
+          "address2": "string"
+        },
+        "notes": "string",
+        "images": {
+          "before": ["url"],
+          "after": ["url"],
+          "progress": ["url"]
+        },
+        "user_email": "string",
+        "company_name": "string",
+        "estimated_completion_date": "date",
+        "completed_at": "timestamp",
+        "created_at": "timestamp",
+        "appraisal": {
+          "id": "uuid",
+          "brand": "string",
+          "model_name": "string",
+          "category": "string",
+          "images": ["url"]
+        }
+      }
+    }
+    ```
+
+- **PUT `/api/appr/admin/restorations/:id`**: 복원 상태 및 이미지 업데이트 (통합 API)
+  - **요청**: `multipart/form-data`
+    ```
+    status: "pending" | "in_progress" | "completed" | "cancelled" (선택사항)
+    estimated_completion_date: "date" (선택사항)
+    completed_at: "date" (선택사항)
+    services: "JSON 문자열" (선택사항, 서비스 상태 업데이트)
+    before_images: 파일[] (선택사항)
+    after_images: 파일[] (선택사항)
+    progress_images: 파일[] (선택사항)
+    ```
+  - **응답**:
+    ```json
+    {
+      "success": true,
+      "restoration": {
+        "id": "uuid",
+        "status": "in_progress" | "completed" | "cancelled" | "pending",
+        "estimated_completion_date": "date",
+        "services": [
+          {
+            "service_id": "uuid",
+            "service_name": "string",
+            "price": 50000,
+            "status": "in_progress" | "completed" | "pending"
+          }
+        ],
+        "images": {
+          "before": ["url"],
+          "after": ["url"],
+          "progress": ["url"]
+        }
+      }
+    }
+    ```
+
+#### 2.6.5 결제 관리
+
+- **GET `/api/appr/admin/payments`**: 결제 내역 조회
+
+  - **쿼리 파라미터**:
+    - `page`: 페이지 번호 (기본값: 1)
+    - `limit`: 페이지당 항목 수 (기본값: 20)
+    - `status`: 상태 필터 (선택사항)
+    - `type`: 상품 유형 필터 (선택사항)
+    - `startDate`: 시작 날짜 필터 (선택사항)
+    - `endDate`: 종료 날짜 필터 (선택사항)
+    - `search`: 검색어 (선택사항, 주문번호/상품명/사용자ID/이메일)
+  - **응답**:
+    ```json
+    {
+      "success": true,
+      "payments": [
+        {
+          "id": "uuid",
+          "user_id": "string",
+          "order_id": "ORDER_TIMESTAMP_XXX",
+          "product_type": "quicklink_subscription" | "certificate_issue" | "restoration_service",
+          "product_name": "string",
+          "amount": 29000,
+          "status": "pending" | "ready" | "completed" | "failed" | "cancelled" | "vbank_ready" | "vbank_expired",
+          "payment_method": "card",
+          "paid_at": "timestamp",
+          "created_at": "timestamp",
+          "user_email": "string",
+          "company_name": "string"
+        }
+      ],
+      "pagination": {
+        "currentPage": 1,
+        "totalPages": 5,
+        "totalItems": 100,
+        "limit": 20
+      }
+    }
+    ```
+
+- **GET `/api/appr/admin/payments/:id`**: 결제 상세 정보 조회
+  - **응답**:
+    ```json
+    {
+      "success": true,
+      "payment": {
+        "id": "uuid",
+        "user_id": "string",
+        "order_id": "ORDER_TIMESTAMP_XXX",
+        "payment_gateway_transaction_id": "string",
+        "product_type": "quicklink_subscription" | "certificate_issue" | "restoration_service",
+        "product_name": "string",
+        "amount": 29000,
+        "status": "pending" | "ready" | "completed" | "failed" | "cancelled" | "vbank_ready" | "vbank_expired",
+        "payment_method": "card",
+        "raw_response_data": {},
+        "card_info": {},
+        "receipt_url": "url",
+        "related_resource_id": "uuid",
+        "related_resource_type": "appraisal" | "restoration",
+        "paid_at": "timestamp",
+        "created_at": "timestamp",
+        "user_email": "string",
+        "company_name": "string"
+      },
+      "related_resource": {
+        "type": "appraisal" | "restoration",
+        "data": {}
+      }
+    }
+    ```
+
+#### 2.6.6 정품 구별법 관리
+
+- **GET `/api/appr/admin/authenticity-guides`**: 정품 구별법 목록 조회
+
+  - **쿼리 파라미터**:
+    - `brand`: 브랜드 필터 (선택사항)
+    - `is_active`: 활성화 상태 필터 (선택사항, true/false)
+  - **응답**:
+    ```json
+    {
+      "success": true,
+      "guides": [
+        {
+          "id": "uuid",
+          "brand": "string",
+          "guide_type": "string",
+          "title": "string",
+          "description": "string",
+          "authentic_image": "url",
+          "fake_image": "url",
+          "is_active": true,
+          "created_at": "timestamp",
+          "updated_at": "timestamp"
+        }
+      ]
+    }
+    ```
+
+- **POST `/api/appr/admin/authenticity-guides`**: 정품 구별법 추가
+
+  - **요청**: `multipart/form-data`
+    ```
+    brand: "string"
+    guide_type: "string"
+    title: "string"
+    description: "string"
+    authentic_image: 파일 (선택사항)
+    fake_image: 파일 (선택사항)
+    ```
+  - **응답**:
+    ```json
+    {
+      "success": true,
+      "guide": {
+        "id": "uuid",
+        "brand": "string",
+        "guide_type": "string",
+        "title": "string",
+        "description": "string",
+        "authentic_image": "url",
+        "fake_image": "url",
+        "is_active": true
+      }
+    }
+    ```
+
+- **PUT `/api/appr/admin/authenticity-guides/:id`**: 정품 구별법 수정
+
+  - **요청**: `multipart/form-data`
+    ```
+    brand: "string" (선택사항)
+    guide_type: "string" (선택사항)
+    title: "string" (선택사항)
+    description: "string" (선택사항)
+    authentic_image: 파일 (선택사항)
+    fake_image: 파일 (선택사항)
+    is_active: "true" | "false" (선택사항)
+    ```
+  - **응답**:
+    ```json
+    {
+      "success": true,
+      "guide": {
+        "id": "uuid",
+        "brand": "string",
+        "guide_type": "string",
+        "title": "string",
+        "description": "string",
+        "authentic_image": "url",
+        "fake_image": "url",
+        "is_active": true
+      }
+    }
+    ```
+
+- **DELETE `/api/appr/admin/authenticity-guides/:id`**: 정품 구별법 비활성화
+  - **응답**:
+    ```json
+    {
+      "success": true,
+      "message": "정품 구별법이 비활성화되었습니다."
+    }
+    ```
+
 ## 3. 데이터베이스 구조
+
+### 3.1 users 테이블 (사용자 정보)
+
+기존 테이블 사용
+
+### 3.2 appr_users 테이블 (감정 서비스 관련 사용자 추가 정보)
+
+```sql
+CREATE TABLE appr_users (
+  user_id VARCHAR(50) PRIMARY KEY,                -- users 테이블의 id 참조
+  tier ENUM('까사트레이드 회원', '제휴사 회원', '일반회원') DEFAULT '일반회원',
+  quick_link_credits_remaining INT DEFAULT 0,
+  quick_link_monthly_limit INT DEFAULT 0,
+  quick_link_subscription_type ENUM('free', 'paid') DEFAULT 'free',
+  quick_link_subscription_expires_at DATETIME NULL,
+  offline_appraisal_fee INT DEFAULT 38000,
+  last_reset_date DATE NULL,                      -- 크레딧 마지막 리셋 날짜
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+)
+```
 
 ### 3.3 appraisals 테이블 (감정 신청 및 결과)
 
@@ -401,6 +1305,23 @@ CREATE TABLE appraisals (
 )
 ```
 
+### 3.4 restoration_services 테이블 (복원 서비스 목록)
+
+```sql
+CREATE TABLE restoration_services (
+  id VARCHAR(36) PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  description TEXT NOT NULL,
+  price DECIMAL(10, 2) NOT NULL,
+  estimated_days INT NOT NULL,                   -- 예상 소요 일수
+  before_image VARCHAR(255) NULL,                -- 복원 전 이미지 URL
+  after_image VARCHAR(255) NULL,                 -- 복원 후 이미지 URL
+  is_active BOOLEAN DEFAULT TRUE,                -- 서비스 활성화 상태
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+)
+```
+
 ### 3.5 restoration_requests 테이블 (복원 신청)
 
 ```sql
@@ -447,6 +1368,23 @@ CREATE TABLE payments (
   related_resource_id VARCHAR(36) NULL,        -- 연관 리소스 ID (appraisal_id, restoration_request_id)
   related_resource_type VARCHAR(50) NULL,      -- 연관 리소스 타입 (appraisal, restoration)
   paid_at DATETIME NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+)
+```
+
+### 3.7 authenticity_guides 테이블 (정품 구별법)
+
+```sql
+CREATE TABLE authenticity_guides (
+  id VARCHAR(36) PRIMARY KEY,
+  brand VARCHAR(100) NOT NULL,                 -- 브랜드명 (루이비통, 샤넬, 에르메스 등)
+  guide_type VARCHAR(100) NOT NULL,            -- 구별법 유형 (로고 비교, 가죽 질감 비교 등)
+  title VARCHAR(255) NOT NULL,                 -- 구별법 제목
+  description TEXT NOT NULL,                   -- 구별법 설명
+  authentic_image VARCHAR(255) NULL,           -- 정품 이미지 URL
+  fake_image VARCHAR(255) NULL,                -- 가품 이미지 URL
+  is_active BOOLEAN DEFAULT TRUE,              -- 활성화 여부
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )
