@@ -34,11 +34,11 @@ router.get("/services", async (req, res) => {
 router.post("/", isAuthenticated, async (req, res) => {
   let conn;
   try {
-    const { appraisal_id, services, delivery_info, notes } = req.body;
+    const { certificate_number, services, delivery_info, notes } = req.body;
 
     // 필수 필드 검증
     if (
-      !appraisal_id ||
+      !certificate_number ||
       !services ||
       !Array.isArray(services) ||
       services.length === 0 ||
@@ -55,10 +55,10 @@ router.post("/", isAuthenticated, async (req, res) => {
     // 사용자 ID 가져오기
     const user_id = req.session.user.id;
 
-    // 감정 정보 확인
+    // 감정 정보 확인 (certificate_number로 조회)
     const [appraisalRows] = await conn.query(
-      "SELECT id, brand, model_name FROM appraisals WHERE id = ? AND user_id = ?",
-      [appraisal_id, user_id]
+      "SELECT id, brand, model_name FROM appraisals WHERE certificate_number = ? AND user_id = ?",
+      [certificate_number, user_id]
     );
 
     if (appraisalRows.length === 0) {
@@ -67,6 +67,8 @@ router.post("/", isAuthenticated, async (req, res) => {
         message: "해당 감정 정보를 찾을 수 없습니다.",
       });
     }
+
+    const appraisal_id = appraisalRows[0].id;
 
     // 서비스 가격 및 유효성 검증
     let total_price = 0;
@@ -99,15 +101,16 @@ router.post("/", isAuthenticated, async (req, res) => {
     // 복원 ID 생성
     const restoration_id = uuidv4();
 
-    // 복원 요청 저장
+    // 복원 요청 저장 부분
     const [result] = await conn.query(
       `INSERT INTO restoration_requests (
-        id, appraisal_id, user_id, services, status, total_price,
-        delivery_info, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    id, appraisal_id, certificate_number, user_id, services, status, total_price,
+    delivery_info, notes
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         restoration_id,
         appraisal_id,
+        certificate_number,
         user_id,
         JSON.stringify(validServices),
         "pending",
@@ -138,6 +141,7 @@ router.post("/", isAuthenticated, async (req, res) => {
       restoration: {
         id: restoration_id,
         appraisal_id,
+        certificate_number,
         status: "pending",
         total_price,
         estimated_completion_date: estimatedDate,

@@ -105,13 +105,30 @@ router.post("/", isAuthenticated, async (req, res) => {
     // 감정 ID 생성
     const appraisal_id = uuidv4();
 
+    // 인증서 번호 생성
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    const dateStr = `${year}${month}${day}`;
+
+    // 오늘 발급된 인증서 수 확인
+    const [certCountResult] = await conn.query(
+      "SELECT COUNT(*) as count FROM appraisals WHERE DATE(created_at) = CURDATE()"
+    );
+    const certCount = certCountResult[0].count + 1;
+    const sequenceNumber = String(certCount).padStart(4, "0");
+
+    const certificate_number = `CAS-${dateStr}-${sequenceNumber}`;
+
     // 감정 데이터 저장
     await conn.query(
       `INSERT INTO appraisals (
         id, user_id, appraisal_type, brand, model_name, category, 
         remarks, product_link, platform, purchase_year, 
-        components_included, delivery_info, status, result
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        components_included, delivery_info, status, result,
+        certificate_number
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         appraisal_id,
         user_id,
@@ -127,6 +144,7 @@ router.post("/", isAuthenticated, async (req, res) => {
         delivery_info ? JSON.stringify(delivery_info) : null,
         "pending",
         "pending",
+        certificate_number,
       ]
     );
 
@@ -134,6 +152,7 @@ router.post("/", isAuthenticated, async (req, res) => {
       success: true,
       appraisal: {
         id: appraisal_id,
+        certificate_number,
         appraisal_type,
         status: "pending",
         created_at: new Date(),
@@ -159,6 +178,8 @@ router.get("/", isAuthenticated, async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
     const status = req.query.status;
+    const all = req.query.all === "true";
+    const today = req.query.today === "true";
 
     conn = await pool.getConnection();
 
@@ -179,9 +200,19 @@ router.get("/", isAuthenticated, async (req, res) => {
       queryParams.push(status);
     }
 
-    // 최신순 정렬 및 페이지네이션
-    query += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
-    queryParams.push(limit, offset);
+    // today 필터 적용
+    if (today) {
+      query += " AND DATE(created_at) = CURDATE()";
+    }
+
+    // 최신순 정렬
+    query += " ORDER BY created_at DESC";
+
+    // limit이 0이 아닌 경우에만 페이지네이션 적용
+    if (limit !== 0) {
+      query += " LIMIT ? OFFSET ?";
+      queryParams.push(limit, offset);
+    }
 
     // 쿼리 실행
     const [rows] = await conn.query(query, queryParams);
@@ -194,6 +225,10 @@ router.get("/", isAuthenticated, async (req, res) => {
     if (status) {
       countQuery += " AND status = ?";
       countParams.push(status);
+    }
+
+    if (today) {
+      countQuery += " AND DATE(created_at) = CURDATE()";
     }
 
     const [countResult] = await conn.query(countQuery, countParams);
@@ -210,7 +245,7 @@ router.get("/", isAuthenticated, async (req, res) => {
       })),
       pagination: {
         currentPage: page,
-        totalPages: Math.ceil(total / limit),
+        totalPages: limit === 0 ? 1 : Math.ceil(total / limit),
         totalItems: total,
         limit,
       },
@@ -234,9 +269,9 @@ router.get("/my", isAuthenticated, async (req, res) => {
 
     conn = await pool.getConnection();
 
-    // 사용자 기본 정보 조회
+    // 사용자 기본 정보 조회 - business_number, company_name, address 추가
     const [users] = await conn.query(
-      "SELECT id, email, company_name as name, phone, created_at FROM users WHERE id = ?",
+      "SELECT id, email, company_name, phone, business_number, address, created_at FROM users WHERE id = ?",
       [user_id]
     );
 
@@ -322,18 +357,18 @@ router.get("/my", isAuthenticated, async (req, res) => {
   }
 });
 
-// 감정 상세 조회 - GET /api/appr/appraisals/:id
-router.get("/:id", isAuthenticated, async (req, res) => {
+// 감정 상세 조회 - GET /api/appr/appraisals/:certificate_number
+router.get("/:certificate_number", isAuthenticated, async (req, res) => {
   let conn;
   try {
-    const appraisal_id = req.params.id;
+    const certificate_number = req.params.certificate_number;
     const user_id = req.session.user.id;
 
     conn = await pool.getConnection();
 
     const [rows] = await conn.query(
-      `SELECT * FROM appraisals WHERE id = ? AND user_id = ?`,
-      [appraisal_id, user_id]
+      `SELECT * FROM appraisals WHERE certificate_number = ? AND user_id = ?`,
+      [certificate_number, user_id]
     );
 
     if (rows.length === 0) {
@@ -378,11 +413,12 @@ router.get("/certificate/:certificateNumber", async (req, res) => {
 
     conn = await pool.getConnection();
 
+    // status 조건 제거
     const [rows] = await conn.query(
       `SELECT 
         id, brand, model_name, category, appraisal_type, 
-        result, result_notes, images, appraised_at, certificate_number
-      FROM appraisals WHERE certificate_number = ? AND status = 'completed'`,
+        result, result_notes, images, appraised_at, certificate_number, status
+      FROM appraisals WHERE certificate_number = ?`,
       [certificateNumber]
     );
 
@@ -431,8 +467,9 @@ router.get("/certificate/:certificateNumber/download", async (req, res) => {
 
     conn = await pool.getConnection();
 
+    // status 조건 제거
     const [rows] = await conn.query(
-      "SELECT certificate_url FROM appraisals WHERE certificate_number = ? AND status = 'completed'",
+      "SELECT certificate_url FROM appraisals WHERE certificate_number = ?",
       [certificateNumber]
     );
 
@@ -485,8 +522,9 @@ router.get("/certificate/:certificateNumber/qrcode", async (req, res) => {
 
     conn = await pool.getConnection();
 
+    // status 조건 제거
     const [rows] = await conn.query(
-      "SELECT qrcode_url FROM appraisals WHERE certificate_number = ? AND status = 'completed'",
+      "SELECT qrcode_url FROM appraisals WHERE certificate_number = ?",
       [certificateNumber]
     );
 

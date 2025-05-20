@@ -5,6 +5,22 @@ const pool = require("../../utils/DB");
 const { isAuthenticated, isAdmin } = require("../../utils/middleware");
 const { v4: uuidv4 } = require("uuid");
 const crypto = require("crypto");
+const axios = require("axios"); // axios 추가 필요
+const Buffer = require("buffer").Buffer;
+
+// 나이스페이 설정
+const NICEPAY_CLIENT_KEY = process.env.NICEPAY_CLIENT_KEY;
+const NICEPAY_SECRET_KEY = process.env.NICEPAY_SECRET_KEY;
+const NICEPAY_API_URL =
+  process.env.NODE_ENV === "production"
+    ? "https://api.nicepay.co.kr/v1/payments"
+    : "https://sandbox-api.nicepay.co.kr/v1/payments";
+
+// Basic 인증 헤더 생성 함수
+function generateBasicAuthHeader() {
+  const credentials = `${NICEPAY_CLIENT_KEY}:${NICEPAY_SECRET_KEY}`;
+  return `Basic ${Buffer.from(credentials).toString("base64")}`;
+}
 
 // 결제 준비 - POST /api/appr/payments/prepare
 router.post("/prepare", isAuthenticated, async (req, res) => {
@@ -22,12 +38,13 @@ router.post("/prepare", isAuthenticated, async (req, res) => {
     }
 
     const user_id = req.session.user.id;
+    // 주문 ID 생성 (나이스페이 가이드에 맞게 포맷 변경)
     const order_id = `ORDER_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
     conn = await pool.getConnection();
 
     // 결제 정보 저장
-    await conn.query(
+    const [insertResult] = await conn.query(
       `INSERT INTO payments (
         id, user_id, order_id, product_type, product_name, 
         amount, status, related_resource_id, related_resource_type
@@ -49,25 +66,28 @@ router.post("/prepare", isAuthenticated, async (req, res) => {
       ]
     );
 
-    // 나이스페이 SDK용 파라미터 생성 (예시)
-    // 실제 구현시 나이스페이 연동 문서에 맞춰 조정 필요
+    // 나이스페이 SDK 파라미터 생성
     const timestamp = Date.now().toString();
-    const secretKey = process.env.NICEPAY_SECRET_KEY || "test_secret_key";
     const signature = crypto
-      .createHmac("sha256", secretKey)
+      .createHmac("sha256", NICEPAY_SECRET_KEY)
       .update(order_id + amount + timestamp)
       .digest("hex");
 
+    // 프론트엔드에서 사용할 반환 URL 설정
+    const returnUrl = `${
+      process.env.FRONTEND_URL || "http://localhost:3000"
+    }/appr/payment-callback`;
+
     const paramsForNicePaySDK = {
-      order_id: order_id,
-      amount: amount,
-      product_name: product_name,
+      clientId: NICEPAY_CLIENT_KEY,
+      method: "card", // 기본 결제 수단
+      orderId: order_id,
+      amount: parseInt(amount),
+      goodsName: product_name,
+      returnUrl: returnUrl,
       timestamp: timestamp,
       signature: signature,
-      return_url: `${
-        process.env.FRONTEND_URL || "http://localhost:3000"
-      }/appr/payment-processing.html?orderId=${order_id}`,
-      // 추가 파라미터는 나이스페이 연동 문서 참조
+      // 필요에 따라 추가 파라미터 설정
     };
 
     res.json({
@@ -90,12 +110,12 @@ router.post("/prepare", isAuthenticated, async (req, res) => {
 router.post("/approve", isAuthenticated, async (req, res) => {
   let conn;
   try {
-    const { orderId } = req.body;
+    const { orderId, authToken, amount } = req.body;
 
-    if (!orderId) {
+    if (!orderId || !authToken) {
       return res.status(400).json({
         success: false,
-        message: "주문 번호가 누락되었습니다.",
+        message: "주문 번호와 인증 토큰이 누락되었습니다.",
       });
     }
 
@@ -123,40 +143,109 @@ router.post("/approve", isAuthenticated, async (req, res) => {
       });
     }
 
-    // 나이스페이 결제 승인 요청 (실제 구현 필요)
-    // 여기서는 가상으로 성공으로 처리
+    // 나이스페이 결제 승인 API 호출
+    try {
+      const response = await axios.post(
+        `${NICEPAY_API_URL}/${authToken}`,
+        {
+          amount: parseInt(payment.amount),
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: generateBasicAuthHeader(),
+          },
+        }
+      );
 
-    // 결제 상태 업데이트
-    await conn.query(
-      "UPDATE payments SET status = ?, payment_method = ?, paid_at = NOW() WHERE id = ?",
-      ["completed", "card", payment.id]
-    );
+      // 나이스페이 응답 처리
+      if (response.data.resultCode === "0000") {
+        // 결제 성공 처리
+        const payMethod = response.data.payMethod || "CARD";
+        const approveNo = response.data.approveNo || "";
+        const tid = response.data.tid || "";
+        const cardInfo = response.data.card
+          ? JSON.stringify(response.data.card)
+          : null;
 
-    // 관련 리소스 처리
-    if (payment.product_type === "quicklink_subscription") {
-      // 퀵링크 구독 처리
-      await handleQuickLinkSubscription(conn, req.session.user.id);
-    } else if (payment.related_resource_id) {
-      if (payment.product_type === "certificate_issue") {
-        // 감정서 발급 처리
-        await handleCertificateIssue(conn, payment.related_resource_id);
-      } else if (payment.product_type === "restoration_service") {
-        // 복원 서비스 처리
-        await handleRestorationService(conn, payment.related_resource_id);
+        // 결제 상태 업데이트
+        await conn.query(
+          `UPDATE payments SET 
+            status = ?, 
+            payment_method = ?, 
+            payment_gateway_transaction_id = ?,
+            raw_response_data = ?,
+            paid_at = NOW() 
+          WHERE id = ?`,
+          [
+            "completed",
+            payMethod,
+            tid,
+            JSON.stringify(response.data),
+            payment.id,
+          ]
+        );
+
+        // 관련 리소스 처리
+        if (payment.product_type === "quicklink_subscription") {
+          // 퀵링크 구독 처리
+          await handleQuickLinkSubscription(conn, req.session.user.id);
+        } else if (payment.related_resource_id) {
+          if (payment.product_type === "certificate_issue") {
+            // 감정서 발급 처리
+            await handleCertificateIssue(conn, payment.related_resource_id);
+          } else if (payment.product_type === "restoration_service") {
+            // 복원 서비스 처리
+            await handleRestorationService(conn, payment.related_resource_id);
+          }
+        }
+
+        res.json({
+          success: true,
+          message: "결제가 성공적으로 처리되었습니다.",
+          payment: {
+            id: payment.id,
+            order_id: payment.order_id,
+            status: "completed",
+            amount: payment.amount,
+            paid_at: new Date(),
+            receipt_url: response.data.receiptUrl || null,
+            card_info: response.data.card || null,
+          },
+        });
+      } else {
+        // 결제 실패 처리
+        await conn.query(
+          "UPDATE payments SET status = ?, raw_response_data = ? WHERE id = ?",
+          ["failed", JSON.stringify(response.data), payment.id]
+        );
+
+        res.status(400).json({
+          success: false,
+          message: `결제 승인 실패: ${
+            response.data.resultMsg || "알 수 없는 오류"
+          }`,
+          errorCode: response.data.resultCode,
+        });
       }
-    }
+    } catch (error) {
+      console.error("나이스페이 API 호출 중 오류:", error);
 
-    res.json({
-      success: true,
-      message: "결제가 성공적으로 처리되었습니다.",
-      payment: {
-        id: payment.id,
-        order_id: payment.order_id,
-        status: "completed",
-        amount: payment.amount,
-        paid_at: new Date(),
-      },
-    });
+      // API 호출 실패 처리
+      await conn.query(
+        "UPDATE payments SET status = ?, raw_response_data = ? WHERE id = ?",
+        [
+          "approval_api_failed",
+          JSON.stringify(error.response?.data || error.message),
+          payment.id,
+        ]
+      );
+
+      res.status(500).json({
+        success: false,
+        message: "결제 승인 API 호출 중 오류가 발생했습니다.",
+      });
+    }
   } catch (err) {
     console.error("결제 승인 중 오류 발생:", err);
     res.status(500).json({
@@ -256,9 +345,19 @@ router.get("/:orderId", isAuthenticated, async (req, res) => {
       });
     }
 
+    // raw_response_data가 있으면 JSON 파싱
+    const payment = rows[0];
+    if (payment.raw_response_data) {
+      try {
+        payment.raw_response_data = JSON.parse(payment.raw_response_data);
+      } catch (error) {
+        console.error("결제 응답 데이터 파싱 오류:", error);
+      }
+    }
+
     res.json({
       success: true,
-      payment: rows[0],
+      payment: payment,
     });
   } catch (err) {
     console.error("결제 정보 조회 중 오류 발생:", err);
@@ -275,11 +374,25 @@ router.get("/:orderId", isAuthenticated, async (req, res) => {
 router.post("/webhook", async (req, res) => {
   let conn;
   try {
-    // 나이스페이에서 전송한 데이터 확인
-    const { orderId, transactionKey, status, amount } = req.body;
+    // 나이스페이 웹훅 데이터
+    const {
+      resultCode,
+      resultMsg,
+      tid,
+      orderId,
+      ediDate,
+      signature,
+      status,
+      paidAt,
+      payMethod,
+      amount,
+      goodsName,
+      receiptUrl,
+      card,
+    } = req.body;
 
-    if (!orderId || !transactionKey || !status) {
-      return res.status(400).send("Bad Request");
+    if (!orderId || !tid || !resultCode) {
+      return res.status(400).send("Bad Request: Missing required parameters");
     }
 
     conn = await pool.getConnection();
@@ -291,10 +404,13 @@ router.post("/webhook", async (req, res) => {
     );
 
     if (rows.length === 0) {
-      return res.status(404).send("Not Found");
+      return res.status(404).send("Not Found: Order not found");
     }
 
     const payment = rows[0];
+
+    // 웹훅 서명 검증 (필요 시)
+    // Note: 실제 구현 시 나이스페이 문서에 따라 signature 검증 로직 추가 필요
 
     // 금액 검증
     if (parseFloat(payment.amount) !== parseFloat(amount)) {
@@ -306,10 +422,42 @@ router.post("/webhook", async (req, res) => {
     }
 
     // 결제 상태 업데이트
-    const newStatus = status === "success" ? "completed" : "failed";
+    let newStatus;
+    if (status === "paid" && resultCode === "0000") {
+      newStatus = "completed";
+    } else if (status === "ready" && resultCode === "0000") {
+      newStatus = "ready"; // 가상계좌 발급 상태
+    } else if (status === "vbankReady") {
+      newStatus = "vbank_ready";
+    } else if (status === "vbankExpired") {
+      newStatus = "vbank_expired";
+    } else if (status === "canceled") {
+      newStatus = "cancelled";
+    } else {
+      newStatus = "failed";
+    }
+
+    // 웹훅 데이터 저장
     await conn.query(
-      "UPDATE payments SET status = ?, payment_gateway_transaction_id = ?, raw_response_data = ?, paid_at = NOW() WHERE id = ?",
-      [newStatus, transactionKey, JSON.stringify(req.body), payment.id]
+      `UPDATE payments SET 
+        status = ?, 
+        payment_gateway_transaction_id = ?, 
+        raw_response_data = ?,
+        payment_method = ?,
+        card_info = ?,
+        receipt_url = ?,
+        paid_at = ?
+      WHERE id = ?`,
+      [
+        newStatus,
+        tid,
+        JSON.stringify(req.body),
+        payMethod || payment.payment_method,
+        card ? JSON.stringify(card) : null,
+        receiptUrl || null,
+        paidAt || null,
+        payment.id,
+      ]
     );
 
     // 관련 리소스 처리 (성공인 경우)
@@ -325,7 +473,8 @@ router.post("/webhook", async (req, res) => {
       }
     }
 
-    res.send("OK");
+    // 200 응답 (나이스페이 웹훅은 200 OK 응답을 기대)
+    res.status(200).send("OK");
   } catch (err) {
     console.error("결제 웹훅 처리 중 오류 발생:", err);
     res.status(500).send("Internal Server Error");
@@ -350,7 +499,7 @@ router.get("/history", isAuthenticated, async (req, res) => {
     let query = `
       SELECT 
         id, order_id, product_type, product_name, amount, 
-        status, payment_method, paid_at
+        status, payment_method, paid_at, receipt_url
       FROM payments 
       WHERE user_id = ?
     `;

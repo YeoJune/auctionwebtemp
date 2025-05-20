@@ -463,7 +463,7 @@ router.put(
     let conn;
     try {
       const appraisal_id = req.params.id;
-      const { result, result_notes, certificate_number, status } = req.body;
+      const { result, result_notes, suggested_restoration_services } = req.body;
 
       conn = await pool.getConnection();
 
@@ -498,20 +498,17 @@ router.put(
         certificate_url = `/images/appraisals/${req.files.pdf[0].filename}`;
       }
 
-      // QR 코드 생성 (certificate_number가 있고 변경된 경우)
-      if (
-        certificate_number &&
-        certificate_number !== appraisal.certificate_number
-      ) {
+      // QR 코드 생성 (인증서 번호가 있는 경우)
+      if (appraisal.certificate_number && !qrcode_url) {
         const qrDir = path.join(__dirname, "../../public/images/qrcodes");
         if (!fs.existsSync(qrDir)) {
           fs.mkdirSync(qrDir, { recursive: true });
         }
 
-        const qrFileName = `qr-${certificate_number}.png`;
+        const qrFileName = `qr-${appraisal.certificate_number}.png`;
         const qrPath = path.join(qrDir, qrFileName);
         const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-        const certificateUrl = `${frontendUrl}/appr/result-detail/${certificate_number}`;
+        const certificateUrl = `${frontendUrl}/appr/result-detail/${appraisal.certificate_number}`;
 
         const qrGenerated = await generateQRCode(certificateUrl, qrPath);
         if (qrGenerated) {
@@ -519,7 +516,81 @@ router.put(
         }
       }
 
-      // 크레딧 차감 처리
+      // 복원 서비스 제안 처리
+      let suggested_restoration = null;
+      if (
+        suggested_restoration_services &&
+        Array.isArray(suggested_restoration_services) &&
+        suggested_restoration_services.length > 0
+      ) {
+        // 제안된 복원 서비스 ID가 유효한지 확인
+        const [validServices] = await conn.query(
+          "SELECT id, name, description, price FROM restoration_services WHERE id IN (?) AND is_active = true",
+          [suggested_restoration_services]
+        );
+
+        if (validServices.length > 0) {
+          suggested_restoration = validServices;
+        }
+      }
+
+      // 감정 정보 업데이트
+      const updateData = {};
+      const updateFields = [];
+      const updateValues = [];
+
+      if (result) {
+        updateFields.push("result = ?");
+        updateValues.push(result);
+        updateData.result = result;
+
+        // 결과가 설정되면 status를 자동으로 변경
+        if (result !== "pending") {
+          updateFields.push("status = 'completed'");
+          updateData.status = "completed";
+        } else {
+          // 결과가 pending이면 status는 in_review로 설정
+          updateFields.push("status = 'in_review'");
+          updateData.status = "in_review";
+        }
+      } else {
+        // 결과가 없으면 status는 in_review로 설정
+        updateFields.push("status = 'in_review'");
+        updateData.status = "in_review";
+      }
+
+      if (result_notes !== undefined) {
+        updateFields.push("result_notes = ?");
+        updateValues.push(result_notes);
+        updateData.result_notes = result_notes;
+      }
+
+      if (existingImages.length > 0) {
+        updateFields.push("images = ?");
+        updateValues.push(JSON.stringify(existingImages));
+        updateData.images = existingImages;
+      }
+
+      if (certificate_url) {
+        updateFields.push("certificate_url = ?");
+        updateValues.push(certificate_url);
+        updateData.certificate_url = certificate_url;
+      }
+
+      if (qrcode_url) {
+        updateFields.push("qrcode_url = ?");
+        updateValues.push(qrcode_url);
+        updateData.qrcode_url = qrcode_url;
+      }
+
+      // 제안된 복원 서비스가 있는 경우 저장
+      if (suggested_restoration) {
+        updateFields.push("suggested_restoration_services = ?");
+        updateValues.push(JSON.stringify(suggested_restoration));
+        updateData.suggested_restoration_services = suggested_restoration;
+      }
+
+      // 크레딧 차감 처리 (결과가 pending이 아니고, status가 completed로 변경되는 경우)
       let creditInfo = { deducted: false, remaining: 0 };
 
       if (result && result !== "pending" && !appraisal.credit_deducted) {
@@ -546,61 +617,13 @@ router.put(
               deducted: true,
               remaining: newCredits,
             };
+
+            // 크레딧 차감 여부 업데이트
+            updateFields.push("credit_deducted = ?");
+            updateValues.push(true);
+            updateData.credit_deducted = true;
           }
         }
-      }
-
-      // 감정 정보 업데이트
-      const updateData = {};
-      const updateFields = [];
-      const updateValues = [];
-
-      if (result) {
-        updateFields.push("result = ?");
-        updateValues.push(result);
-        updateData.result = result;
-      }
-
-      if (result_notes !== undefined) {
-        updateFields.push("result_notes = ?");
-        updateValues.push(result_notes);
-        updateData.result_notes = result_notes;
-      }
-
-      if (certificate_number) {
-        updateFields.push("certificate_number = ?");
-        updateValues.push(certificate_number);
-        updateData.certificate_number = certificate_number;
-      }
-
-      if (status) {
-        updateFields.push("status = ?");
-        updateValues.push(status);
-        updateData.status = status;
-      }
-
-      if (existingImages.length > 0) {
-        updateFields.push("images = ?");
-        updateValues.push(JSON.stringify(existingImages));
-        updateData.images = existingImages;
-      }
-
-      if (certificate_url) {
-        updateFields.push("certificate_url = ?");
-        updateValues.push(certificate_url);
-        updateData.certificate_url = certificate_url;
-      }
-
-      if (qrcode_url) {
-        updateFields.push("qrcode_url = ?");
-        updateValues.push(qrcode_url);
-        updateData.qrcode_url = qrcode_url;
-      }
-
-      if (result && result !== "pending") {
-        updateFields.push("credit_deducted = ?");
-        updateValues.push(true);
-        updateData.credit_deducted = true;
 
         // 감정 완료 시간도 설정
         updateFields.push("appraised_at = ?");
@@ -627,6 +650,7 @@ router.put(
         success: true,
         appraisal: {
           id: appraisal_id,
+          certificate_number: appraisal.certificate_number,
           ...updateData,
         },
         credit_info: creditInfo,

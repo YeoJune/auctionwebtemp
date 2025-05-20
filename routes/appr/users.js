@@ -14,7 +14,7 @@ router.get("/profile", isAuthenticated, async (req, res) => {
 
     // 사용자 기본 정보 조회
     const [userRows] = await conn.query(
-      "SELECT id, email, company_name as name, phone, address, created_at FROM users WHERE id = ?",
+      "SELECT id, email, company_name, phone, address, created_at FROM users WHERE id = ?",
       [user_id]
     );
 
