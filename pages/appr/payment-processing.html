@@ -1,3 +1,4 @@
+<!-- pages/appr/payment-processing.html -->
 <!DOCTYPE html>
 <html lang="ko">
   <head>
@@ -24,14 +25,18 @@
         padding: 40px;
         border-radius: 8px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        max-width: 500px;
+        width: 90%;
       }
       .message-box h1 {
         margin-top: 0;
         color: #333;
+        font-size: 1.8rem;
       }
       .message-box p {
         color: #555;
         font-size: 1.1em;
+        line-height: 1.6;
       }
       .loader {
         border: 5px solid #f3f3f3;
@@ -53,12 +58,50 @@
       .btn-action {
         display: inline-block;
         margin-top: 20px;
-        padding: 10px 20px;
+        padding: 12px 24px;
         background-color: #1a2a3a;
         color: white;
         text-decoration: none;
         border-radius: 5px;
         font-weight: 500;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+      .btn-action:hover {
+        background-color: #2d4263;
+      }
+      .receipt-info {
+        margin-top: 20px;
+        text-align: left;
+        padding: 15px;
+        background-color: #f8fafc;
+        border-radius: 6px;
+      }
+      .receipt-info dl {
+        margin: 0;
+        display: grid;
+        grid-template-columns: 100px 1fr;
+        gap: 10px;
+      }
+      .receipt-info dt {
+        color: #64748b;
+        font-weight: 500;
+      }
+      .receipt-info dd {
+        margin: 0;
+        color: #1a2a3a;
+        font-weight: 500;
+      }
+      .icon-success {
+        color: #059669;
+        font-size: 3rem;
+        margin-bottom: 10px;
+      }
+      .icon-error {
+        color: #dc2626;
+        font-size: 3rem;
+        margin-bottom: 10px;
       }
     </style>
   </head>
@@ -68,12 +111,28 @@
         <h1>결제 정보 확인 중...</h1>
         <div class="loader"></div>
         <p>잠시만 기다려 주십시오.</p>
+        <p style="font-size: 0.9rem; color: #6b7280">
+          결제 정보를 확인하고 있습니다. 창을 닫지 마세요.
+        </p>
       </div>
       <div id="result-indicator" style="display: none">
+        <div id="icon-container"></div>
         <h1 id="result-title"></h1>
         <p id="result-text"></p>
+        <div id="receipt-container" style="display: none" class="receipt-info">
+          <dl>
+            <dt>주문번호</dt>
+            <dd id="receipt-order-id">-</dd>
+            <dt>결제금액</dt>
+            <dd id="receipt-amount">-</dd>
+            <dt>결제방법</dt>
+            <dd id="receipt-method">-</dd>
+            <dt>결제일시</dt>
+            <dd id="receipt-date">-</dd>
+          </dl>
+        </div>
         <a href="/appr/mypage" id="btn-next-action" class="btn-action"
-          >마이페이지로 돌아가기</a
+          >마이페이지로 이동</a
         >
       </div>
     </div>
@@ -87,22 +146,55 @@
         const resultTitle = document.getElementById("result-title");
         const resultText = document.getElementById("result-text");
         const nextActionButton = document.getElementById("btn-next-action");
+        const receiptContainer = document.getElementById("receipt-container");
+        const iconContainer = document.getElementById("icon-container");
+
+        // 결제 정보 표시 요소
+        const receiptOrderId = document.getElementById("receipt-order-id");
+        const receiptAmount = document.getElementById("receipt-amount");
+        const receiptMethod = document.getElementById("receipt-method");
+        const receiptDate = document.getElementById("receipt-date");
 
         const urlParams = new URLSearchParams(window.location.search);
         const orderId = urlParams.get("orderId");
-        const status = urlParams.get("status");
-        const msg = urlParams.get("msg");
-        const code = urlParams.get("code");
+        const authResultCode = urlParams.get("authResultCode");
+        const authResultMsg = urlParams.get("authResultMsg");
+        const tid = urlParams.get("tid");
 
         function displayFinalResult(
+          isSuccess,
           title,
           text,
-          nextPageText = "마이페이지로 돌아가기",
+          receiptData = null,
+          nextPageText = "마이페이지로 이동",
           nextPageUrl = "/appr/mypage"
         ) {
           processingIndicator.style.display = "none";
+
+          // 아이콘 표시
+          iconContainer.innerHTML = isSuccess
+            ? '<div class="icon-success">✓</div>'
+            : '<div class="icon-error">✗</div>';
+
           resultTitle.textContent = title;
           resultText.textContent = text;
+
+          // 영수증 정보 표시 (성공 시에만)
+          if (isSuccess && receiptData) {
+            receiptOrderId.textContent = receiptData.orderId || "-";
+            receiptAmount.textContent = receiptData.amount
+              ? `${Number(receiptData.amount).toLocaleString()}원`
+              : "-";
+            receiptMethod.textContent = receiptData.method || "카드";
+
+            const paidDate = receiptData.paidAt
+              ? new Date(receiptData.paidAt).toLocaleString("ko-KR")
+              : new Date().toLocaleString("ko-KR");
+            receiptDate.textContent = paidDate;
+
+            receiptContainer.style.display = "block";
+          }
+
           nextActionButton.textContent = nextPageText;
           nextActionButton.href = nextPageUrl;
           resultIndicator.style.display = "block";
@@ -110,86 +202,129 @@
 
         if (!orderId) {
           displayFinalResult(
+            false,
             "오류",
             "잘못된 접근입니다. 주문 정보를 확인할 수 없습니다.",
+            null,
             "홈으로 가기",
             "/appr"
           );
           return;
         }
 
-        if (status === "auth_success") {
-          // 서버에 저장된 인증 정보 가져오기
+        // 결제 인증 성공 (NICE Pay에서 리다이렉트됨)
+        if (authResultCode === "0000" && tid) {
           try {
-            const authInfoResponse = await fetch(
-              `/api/appr/payments/${orderId}`
-            );
-            if (!authInfoResponse.ok) {
-              const errorData = await authInfoResponse
-                .json()
-                .catch(() => ({ message: "인증 정보 조회 실패" }));
-              throw new Error(
-                errorData.message ||
-                  `인증 정보 조회에 실패했습니다. (상태: ${authInfoResponse.status})`
-              );
-            }
-            const authInfoData = await authInfoResponse.json();
+            // 승인 요청 API 호출
+            const approvalResponse = await fetch("/api/appr/payments/approve", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                tid: tid,
+                orderId: orderId,
+              }),
+            });
 
-            if (authInfoData.success && authInfoData.authInfo) {
-              processingIndicator.querySelector("h1").textContent =
-                "최종 결제 승인 요청 중...";
-              // 최종 승인 요청
-              const approvalResponse = await fetch(
-                "/api/appr/payments/approve",
+            const approvalResult = await approvalResponse.json();
+
+            if (approvalResult.success) {
+              // 결제 승인 성공
+              displayFinalResult(
+                true,
+                "결제 완료",
+                "결제가 성공적으로 완료되었습니다.",
                 {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ orderId: orderId }),
+                  orderId: approvalResult.payment?.order_id || orderId,
+                  amount: approvalResult.payment?.amount || "",
+                  method: "카드",
+                  paidAt: approvalResult.payment?.paid_at,
                 }
               );
-              const approvalResult = await approvalResponse.json();
+            } else {
+              // 승인 API 요청 실패
+              displayFinalResult(
+                false,
+                "결제 실패",
+                approvalResult.message ||
+                  "결제 승인 처리 중 오류가 발생했습니다."
+              );
+            }
+          } catch (error) {
+            console.error("결제 승인 처리 중 오류:", error);
+            displayFinalResult(
+              false,
+              "결제 처리 오류",
+              "결제 승인 중 네트워크 오류가 발생했습니다."
+            );
+          }
+        }
+        // 결제 인증 실패
+        else if (authResultCode && authResultCode !== "0000") {
+          displayFinalResult(
+            false,
+            "결제 인증 실패",
+            authResultMsg || "결제 인증 과정에서 오류가 발생했습니다."
+          );
+        }
+        // 결과 파라미터 없는 경우 - 결제 정보 조회
+        else {
+          try {
+            // 결제 정보 조회 API 호출
+            const paymentInfoResponse = await fetch(
+              `/api/appr/payments/${orderId}`
+            );
 
-              if (approvalResult.success) {
+            if (!paymentInfoResponse.ok) {
+              throw new Error(
+                `결제 정보 조회 실패 (상태: ${paymentInfoResponse.status})`
+              );
+            }
+
+            const paymentInfo = await paymentInfoResponse.json();
+
+            if (paymentInfo.success && paymentInfo.payment) {
+              const payment = paymentInfo.payment;
+
+              // 결제 상태에 따른 처리
+              if (payment.status === "completed") {
                 displayFinalResult(
-                  "결제 성공",
-                  approvalResult.message || "결제가 성공적으로 완료되었습니다."
+                  true,
+                  "결제 완료",
+                  "결제가 이미 완료되었습니다.",
+                  {
+                    orderId: payment.order_id,
+                    amount: payment.amount,
+                    method: payment.payment_method || "카드",
+                    paidAt: payment.paid_at,
+                  }
+                );
+              } else if (payment.status === "failed") {
+                displayFinalResult(
+                  false,
+                  "결제 실패",
+                  "결제 처리 중 오류가 발생했습니다."
                 );
               } else {
+                // 진행 중인 상태
                 displayFinalResult(
-                  "결제 실패",
-                  approvalResult.message || "결제 처리 중 오류가 발생했습니다."
+                  false,
+                  "결제 진행 중",
+                  "결제가 아직 완료되지 않았습니다. 다시 시도해주세요."
                 );
               }
             } else {
               throw new Error(
-                authInfoData.message ||
-                  "서버에서 인증 정보를 가져오지 못했습니다."
+                paymentInfo.message || "결제 정보를 찾을 수 없습니다."
               );
             }
           } catch (error) {
-            console.error("최종 승인 처리 중 오류:", error);
+            console.error("결제 정보 조회 오류:", error);
             displayFinalResult(
-              "결제 처리 오류",
-              `결제 처리 중 오류가 발생했습니다: ${error.message}`
+              false,
+              "결제 정보 조회 실패",
+              `결제 정보를 확인할 수 없습니다: ${error.message}`
             );
           }
-        } else if (status === "auth_fail") {
-          displayFinalResult(
-            "결제 인증 실패",
-            `오류 코드 [${code}]: ${msg || "알 수 없는 인증 오류입니다."}`
-          );
-        } else if (status === "auth_signature_error") {
-          displayFinalResult(
-            "결제 인증 오류",
-            msg || "결제 정보 인증에 실패했습니다. (서명 오류)"
-          );
-        } else {
-          displayFinalResult(
-            "알 수 없는 상태",
-            "결제 상태를 확인할 수 없습니다.",
-            "홈으로 가기",
-            "/appr"
-          );
         }
       });
     </script>
