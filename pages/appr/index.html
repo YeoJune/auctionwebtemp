@@ -486,12 +486,59 @@
           <div
             class="container"
             style="max-width: 1200px; margin: 0 auto; padding: 0 20px">
-            <div style="margin-bottom: 20px">
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 20px;
+              ">
               <p style="color: #4a5568; font-size: 1.1rem">
-                명품감정 전체
-                <strong id="total-appraisals-count">0</strong> 건 | 오늘
-                <strong id="today-appraisals-count">0</strong> 건
+                명품감정
+                <span id="count-display"
+                  >전체 <strong id="total-appraisals-count">0</strong></span
+                >
+                건
               </p>
+              <div
+                class="toggle-container"
+                style="
+                  display: flex;
+                  align-items: center;
+                  background-color: #f1f5f9;
+                  border-radius: 20px;
+                  padding: 4px;
+                ">
+                <button
+                  id="toggle-all"
+                  class="toggle-btn active"
+                  style="
+                    cursor: pointer;
+                    padding: 6px 12px;
+                    border-radius: 16px;
+                    border: none;
+                    background-color: #1a2a3a;
+                    color: white;
+                    font-weight: 500;
+                    transition: all 0.2s ease;
+                  ">
+                  전체
+                </button>
+                <button
+                  id="toggle-today"
+                  class="toggle-btn"
+                  style="
+                    cursor: pointer;
+                    padding: 6px 12px;
+                    border-radius: 16px;
+                    border: none;
+                    background-color: transparent;
+                    font-weight: 500;
+                    transition: all 0.2s ease;
+                  ">
+                  오늘
+                </button>
+              </div>
             </div>
             <div
               id="appraisal-list-container"
@@ -500,6 +547,8 @@
                 border-radius: 8px;
                 overflow: hidden;
                 box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+                max-height: 500px;
+                overflow-y: auto;
               ">
               <!-- 감정 내역이 여기에 동적으로 추가됩니다. -->
               <p
@@ -834,161 +883,203 @@
         const totalAppraisalsCountEl = document.getElementById(
           "total-appraisals-count"
         );
-        const todayAppraisalsCountEl = document.getElementById(
-          "today-appraisals-count"
-        );
+        const countDisplayEl = document.getElementById("count-display");
         const appraisalListContainer = document.getElementById(
           "appraisal-list-container"
         );
         const loadingAppraisalsEl =
           document.getElementById("loading-appraisals");
+        const toggleAllBtn = document.getElementById("toggle-all");
+        const toggleTodayBtn = document.getElementById("toggle-today");
 
-        // 1. 감정 통계 불러오기
-        fetch("/api/appr/appraisals/stats")
-          .then((response) => response.json())
-          .then((data) => {
-            if (data.success && data.stats) {
-              if (totalAppraisalsCountEl)
+        let isToday = false; // 초기값은 전체 보기
+
+        // 토글 버튼 이벤트 리스너
+        toggleAllBtn.addEventListener("click", function () {
+          if (!isToday) return;
+          isToday = false;
+          toggleAllBtn.classList.add("active");
+          toggleAllBtn.style.backgroundColor = "#1a2a3a";
+          toggleAllBtn.style.color = "white";
+          toggleTodayBtn.classList.remove("active");
+          toggleTodayBtn.style.backgroundColor = "transparent";
+          toggleTodayBtn.style.color = "#1a2a3a";
+          countDisplayEl.innerHTML = `전체 <strong id="total-appraisals-count">${totalAppraisalsCountEl.textContent}</strong>`;
+          loadAppraisals(false);
+        });
+
+        toggleTodayBtn.addEventListener("click", function () {
+          if (isToday) return;
+          isToday = true;
+          toggleTodayBtn.classList.add("active");
+          toggleTodayBtn.style.backgroundColor = "#1a2a3a";
+          toggleTodayBtn.style.color = "white";
+          toggleAllBtn.classList.remove("active");
+          toggleAllBtn.style.backgroundColor = "transparent";
+          toggleAllBtn.style.color = "#1a2a3a";
+          countDisplayEl.innerHTML = `오늘 <strong id="total-appraisals-count">${totalAppraisalsCountEl.textContent}</strong>`;
+          loadAppraisals(true);
+        });
+
+        // 감정 내역 로드 함수
+        function loadAppraisals(todayOnly) {
+          if (loadingAppraisalsEl) loadingAppraisalsEl.style.display = "block";
+          if (appraisalListContainer) appraisalListContainer.innerHTML = "";
+          appraisalListContainer.appendChild(loadingAppraisalsEl);
+
+          let url = "/api/appr/appraisals?limit=0";
+          if (todayOnly) {
+            url += "&today=true";
+          }
+
+          fetch(url)
+            .then((response) => response.json())
+            .then((data) => {
+              if (loadingAppraisalsEl)
+                loadingAppraisalsEl.style.display = "none";
+              if (
+                data.success &&
+                data.appraisals &&
+                data.appraisals.length > 0
+              ) {
                 totalAppraisalsCountEl.textContent =
-                  data.stats.total_appraisals.toLocaleString();
-              if (todayAppraisalsCountEl)
-                todayAppraisalsCountEl.textContent =
-                  data.stats.today_appraisals.toLocaleString();
-            }
-          })
-          .catch((error) => {
-            console.error("감정 통계 로드 실패:", error);
-            if (totalAppraisalsCountEl)
-              totalAppraisalsCountEl.textContent = "오류";
-            if (todayAppraisalsCountEl)
-              todayAppraisalsCountEl.textContent = "오류";
-          });
+                  data.pagination.totalItems.toLocaleString();
 
-        // 2. 최근 감정 목록 불러오기 (최대 10개)
-        fetch("/api/appr/appraisals?limit=10&page=1") // API 문서에 따르면 최신순 정렬은 백엔드에서 기본으로 할 수 있음
-          .then((response) => response.json())
-          .then((data) => {
-            if (loadingAppraisalsEl) loadingAppraisalsEl.style.display = "none";
-            if (data.success && data.appraisals && data.appraisals.length > 0) {
-              data.appraisals.forEach((appraisal) => {
-                const itemDiv = document.createElement("div");
-                itemDiv.className = "appraisal-item";
-                itemDiv.setAttribute("data-id", appraisal.id);
-                itemDiv.style.display = "grid";
-                itemDiv.style.gridTemplateColumns = "1fr auto";
-                itemDiv.style.gap = "15px";
-                itemDiv.style.padding = "15px";
-                itemDiv.style.borderBottom = "1px solid #e2e8f0";
-                itemDiv.style.alignItems = "center";
-                itemDiv.style.cursor = "pointer";
+                data.appraisals.forEach((appraisal) => {
+                  const itemDiv = document.createElement("div");
+                  itemDiv.className = "appraisal-item";
+                  itemDiv.setAttribute(
+                    "data-certificate",
+                    appraisal.certificate_number
+                  );
+                  itemDiv.style.display = "grid";
+                  itemDiv.style.gridTemplateColumns = "1fr auto";
+                  itemDiv.style.gap = "15px";
+                  itemDiv.style.padding = "15px";
+                  itemDiv.style.borderBottom = "1px solid #e2e8f0";
+                  itemDiv.style.alignItems = "center";
+                  itemDiv.style.cursor = "pointer";
 
-                const infoDiv = document.createElement("div");
-                infoDiv.className = "appraisal-info";
+                  const infoDiv = document.createElement("div");
+                  infoDiv.className = "appraisal-info";
 
-                const titleP = document.createElement("p");
-                titleP.style.fontWeight = "500";
-                titleP.style.color = "#1a2a3a";
-                titleP.style.marginBottom = "5px";
+                  const titleP = document.createElement("p");
+                  titleP.style.fontWeight = "500";
+                  titleP.style.color = "#1a2a3a";
+                  titleP.style.marginBottom = "5px";
 
-                const typeSpan = document.createElement("span");
-                typeSpan.className = "appraisal-type";
-                typeSpan.style.backgroundColor = "#e6eefa";
-                typeSpan.style.color = "#1a4ea3";
-                typeSpan.style.padding = "3px 8px";
-                typeSpan.style.borderRadius = "4px";
-                typeSpan.style.fontSize = "0.75rem";
-                typeSpan.style.marginRight = "5px";
+                  const typeSpan = document.createElement("span");
+                  typeSpan.className = "appraisal-type";
+                  typeSpan.style.backgroundColor = "#e6eefa";
+                  typeSpan.style.color = "#1a4ea3";
+                  typeSpan.style.padding = "3px 8px";
+                  typeSpan.style.borderRadius = "4px";
+                  typeSpan.style.fontSize = "0.75rem";
+                  typeSpan.style.marginRight = "5px";
 
-                // appraisal_type에 따라 텍스트 설정
-                let appraisalTypeText = "온라인 사진 명품 감정";
-                if (appraisal.appraisal_type === "quicklink") {
-                  appraisalTypeText = "퀵링크 감정";
-                } else if (appraisal.appraisal_type === "offline") {
-                  appraisalTypeText = "오프라인 실물 명품 감정";
-                }
-                typeSpan.textContent = appraisalTypeText;
-
-                titleP.appendChild(typeSpan);
-                titleP.appendChild(
-                  document.createTextNode(
-                    ` ${appraisal.brand || ""} ${
-                      appraisal.model_name || ""
-                    }`.trim()
-                  )
-                );
-
-                const metaP = document.createElement("p");
-                metaP.style.fontSize = "0.875rem";
-                metaP.style.color = "#4a5568";
-                // user_id 마스킹 (API 응답에 user_id가 있다면)
-                // const maskedUserId = appraisal.user_id ? appraisal.user_id.substring(0,3) + '***' : '비회원';
-                // 현재 API 응답에 user_id가 없으므로 임의 텍스트 사용 또는 생략
-                const date = new Date(appraisal.created_at).toLocaleString(
-                  "ko-KR",
-                  {
-                    year: "numeric",
-                    month: "2-digit",
-                    day: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
+                  // appraisal_type에 따라 텍스트 설정
+                  let appraisalTypeText = "온라인 사진 명품 감정";
+                  if (appraisal.appraisal_type === "quicklink") {
+                    appraisalTypeText = "퀵링크 감정";
+                  } else if (appraisal.appraisal_type === "offline") {
+                    appraisalTypeText = "오프라인 실물 명품 감정";
                   }
-                );
-                metaP.textContent = `신청일: ${date}`; // API에 user_id가 없으므로 제외
+                  typeSpan.textContent = appraisalTypeText;
 
-                infoDiv.appendChild(titleP);
-                infoDiv.appendChild(metaP);
+                  titleP.appendChild(typeSpan);
+                  titleP.appendChild(
+                    document.createTextNode(
+                      ` ${appraisal.brand || ""} ${
+                        appraisal.model_name || ""
+                      }`.trim()
+                    )
+                  );
 
-                const statusDiv = document.createElement("div");
-                statusDiv.className = "appraisal-status";
-                const statusSpan = document.createElement("span");
-                statusSpan.style.padding = "5px 10px";
-                statusSpan.style.borderRadius = "4px";
-                statusSpan.style.fontSize = "0.75rem";
-                if (appraisal.status === "completed") {
-                  statusSpan.textContent = "감정완료";
-                  statusSpan.style.backgroundColor = "#d1fae5";
-                  statusSpan.style.color = "#059669";
-                } else if (appraisal.status === "in_review") {
-                  statusSpan.textContent = "감정중";
-                  statusSpan.style.backgroundColor = "#e0f2fe";
-                  statusSpan.style.color = "#0369a1";
-                } else if (appraisal.status === "pending") {
-                  statusSpan.textContent = "접수완료";
-                  statusSpan.style.backgroundColor = "#e0f2fe";
-                  statusSpan.style.color = "#0369a1";
-                } else if (appraisal.status === "cancelled") {
-                  statusSpan.textContent = "취소됨";
-                  statusSpan.style.backgroundColor = "#f1f5f9";
-                  statusSpan.style.color = "#334155";
-                } else {
-                  statusSpan.textContent = appraisal.status; // 기타 상태 그대로 표시
-                  statusSpan.style.backgroundColor = "#f1f5f9";
-                  statusSpan.style.color = "#334155";
-                }
-                statusDiv.appendChild(statusSpan);
+                  const metaP = document.createElement("p");
+                  metaP.style.fontSize = "0.875rem";
+                  metaP.style.color = "#4a5568";
+                  const date = new Date(appraisal.created_at).toLocaleString(
+                    "ko-KR",
+                    {
+                      year: "numeric",
+                      month: "2-digit",
+                      day: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    }
+                  );
+                  metaP.textContent = `신청일: ${date}`;
 
-                itemDiv.appendChild(infoDiv);
-                itemDiv.appendChild(statusDiv);
+                  infoDiv.appendChild(titleP);
+                  infoDiv.appendChild(metaP);
+
+                  const statusDiv = document.createElement("div");
+                  statusDiv.className = "appraisal-status";
+                  const statusSpan = document.createElement("span");
+                  statusSpan.style.padding = "5px 10px";
+                  statusSpan.style.borderRadius = "4px";
+                  statusSpan.style.fontSize = "0.75rem";
+                  if (appraisal.status === "completed") {
+                    statusSpan.textContent = "감정완료";
+                    statusSpan.style.backgroundColor = "#d1fae5";
+                    statusSpan.style.color = "#059669";
+                  } else if (appraisal.status === "in_review") {
+                    statusSpan.textContent = "감정중";
+                    statusSpan.style.backgroundColor = "#e0f2fe";
+                    statusSpan.style.color = "#0369a1";
+                  } else if (appraisal.status === "pending") {
+                    statusSpan.textContent = "접수완료";
+                    statusSpan.style.backgroundColor = "#e0f2fe";
+                    statusSpan.style.color = "#0369a1";
+                  } else if (appraisal.status === "cancelled") {
+                    statusSpan.textContent = "취소됨";
+                    statusSpan.style.backgroundColor = "#f1f5f9";
+                    statusSpan.style.color = "#334155";
+                  } else {
+                    statusSpan.textContent = appraisal.status; // 기타 상태 그대로 표시
+                    statusSpan.style.backgroundColor = "#f1f5f9";
+                    statusSpan.style.color = "#334155";
+                  }
+                  statusDiv.appendChild(statusSpan);
+
+                  itemDiv.appendChild(infoDiv);
+                  itemDiv.appendChild(statusDiv);
+                  if (appraisalListContainer) {
+                    appraisalListContainer.appendChild(itemDiv);
+                  }
+
+                  // 클릭 이벤트 리스너 추가
+                  itemDiv.addEventListener("click", function () {
+                    const certificateNumber =
+                      this.getAttribute("data-certificate");
+                    if (certificateNumber) {
+                      window.location.href = `https://casastrade.com/appr/result-detail/${certificateNumber}`;
+                    }
+                  });
+                });
+              } else if (data.appraisals && data.appraisals.length === 0) {
                 if (appraisalListContainer)
-                  appraisalListContainer.appendChild(itemDiv);
-              });
-            } else if (data.appraisals && data.appraisals.length === 0) {
+                  appraisalListContainer.innerHTML =
+                    '<p style="padding: 15px; text-align: center; color: #4a5568;">감정 내역이 없습니다.</p>';
+                totalAppraisalsCountEl.textContent = "0";
+              } else {
+                if (appraisalListContainer)
+                  appraisalListContainer.innerHTML =
+                    '<p style="padding: 15px; text-align: center; color: #dc2626;">감정 내역을 불러오는데 실패했습니다.</p>';
+              }
+            })
+            .catch((error) => {
+              console.error("감정 목록 로드 실패:", error);
+              if (loadingAppraisalsEl)
+                loadingAppraisalsEl.style.display = "none";
               if (appraisalListContainer)
                 appraisalListContainer.innerHTML =
-                  '<p style="padding: 15px; text-align: center; color: #4a5568;">최근 감정 내역이 없습니다.</p>';
-            } else {
-              if (appraisalListContainer)
-                appraisalListContainer.innerHTML =
-                  '<p style="padding: 15px; text-align: center; color: #dc2626;">감정 내역을 불러오는데 실패했습니다.</p>';
-            }
-          })
-          .catch((error) => {
-            console.error("최근 감정 목록 로드 실패:", error);
-            if (loadingAppraisalsEl) loadingAppraisalsEl.style.display = "none";
-            if (appraisalListContainer)
-              appraisalListContainer.innerHTML =
-                '<p style="padding: 15px; text-align: center; color: #dc2626;">감정 내역 로드 중 오류 발생.</p>';
-          });
+                  '<p style="padding: 15px; text-align: center; color: #dc2626;">감정 내역 로드 중 오류 발생.</p>';
+            });
+        }
+
+        // 초기 데이터 로드 (전체)
+        loadAppraisals(false);
         // --- 최근 감정 내역 데이터 로드 끝 ---
 
         document
