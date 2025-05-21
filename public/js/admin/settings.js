@@ -38,8 +38,8 @@ document.addEventListener("DOMContentLoaded", function () {
     .getElementById("uploadLogoBtn")
     .addEventListener("click", uploadLogo);
   document
-    .getElementById("uploadIntroBtn")
-    .addEventListener("click", uploadIntro);
+    .getElementById("uploadGuideBtn")
+    .addEventListener("click", uploadGuide);
   document
     .getElementById("updateScheduleBtn")
     .addEventListener("click", submitCrawlSchedule);
@@ -344,38 +344,38 @@ async function uploadLogo() {
   }
 }
 
-// intro.html 업로드
-async function uploadIntro() {
-  const introFile = document.getElementById("introFile").files[0];
-  if (!introFile) {
-    showAlert("인트로 페이지 파일을 선택해주세요.");
+// guide.html 업로드
+async function uploadGuide() {
+  const guideFile = document.getElementById("guideFile").files[0];
+  if (!guideFile) {
+    showAlert("가이드 페이지 파일을 선택해주세요.");
     return;
   }
 
   // HTML 파일 검증
-  if (!introFile.type.includes("html")) {
+  if (!guideFile.type.includes("html")) {
     showAlert("HTML 파일만 업로드 가능합니다.");
     return;
   }
 
   const formData = new FormData();
-  formData.append("intro", introFile);
+  formData.append("guide", guideFile);
 
   try {
     // 파일 업로드 API는 fetchAPI 함수 대신 기본 fetch 사용
-    const response = await fetch("/api/admin/upload-intro", {
+    const response = await fetch("/api/admin/upload-guide", {
       method: "POST",
       body: formData,
       credentials: "include",
     });
 
     if (!response.ok) {
-      throw new Error("인트로 페이지 업로드에 실패했습니다.");
+      throw new Error("가이드 페이지 업로드에 실패했습니다.");
     }
 
-    showAlert("인트로 페이지가 성공적으로 업로드되었습니다.", "success");
+    showAlert("가이드 페이지가 성공적으로 업로드되었습니다.", "success");
   } catch (error) {
-    handleError(error, "인트로 페이지 업로드 중 오류가 발생했습니다.");
+    handleError(error, "가이드 페이지 업로드 중 오류가 발생했습니다.");
   }
 }
 

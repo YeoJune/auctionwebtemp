@@ -49,18 +49,18 @@ const uploadNoticeImage = multer({
   },
 });
 
-// intro.html을 위한 multer 설정
-const introStorage = multer.diskStorage({
+// guide.html을 위한 multer 설정
+const guideStorage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, "public/pages/");
   },
   filename: function (req, file, cb) {
-    cb(null, "intro.html");
+    cb(null, "guide.html");
   },
 });
 
-const uploadIntro = multer({
-  storage: introStorage,
+const uploadGuide = multer({
+  storage: guideStorage,
   fileFilter: (req, file, cb) => {
     // HTML 파일만 허용
     if (file.mimetype === "text/html") {
@@ -111,16 +111,16 @@ router.get("/check-status", async (req, res) => {
   res.json({ isAdmin });
 });
 
-// intro.html 업로드 라우트
+// guide.html 업로드 라우트
 router.post(
-  "/upload-intro",
+  "/upload-guide",
   isAdmin,
-  uploadIntro.single("intro"),
+  uploadGuide.single("guide"),
   (req, res) => {
     if (req.file) {
-      res.json({ message: "intro.html이 성공적으로 업로드되었습니다." });
+      res.json({ message: "guide.html이 성공적으로 업로드되었습니다." });
     } else {
-      res.status(400).json({ message: "intro.html 업로드에 실패했습니다." });
+      res.status(400).json({ message: "guide.html 업로드에 실패했습니다." });
     }
   }
 );
