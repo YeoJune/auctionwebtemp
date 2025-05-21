@@ -52,7 +52,7 @@ const uploadNoticeImage = multer({
 // guide.html을 위한 multer 설정
 const guideStorage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "public/pages/");
+    cb(null, "pages/");
   },
   filename: function (req, file, cb) {
     cb(null, "guide.html");
