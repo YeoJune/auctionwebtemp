@@ -462,29 +462,74 @@ router.put("/complete", isAdmin, async (req, res) => {
     const placeholders = bidIds.map(() => "?").join(",");
 
     let updateResult;
+    let completedCount = 0;
+    let cancelledCount = 0;
 
     // 낙찰 금액이 있는 경우
     if (winningPrice !== undefined) {
-      // 낙찰 금액이 있을 경우 한 번에 모든 해당 입찰 업데이트
-      [updateResult] = await connection.query(
-        `UPDATE live_bids SET status = 'completed', final_price = ? WHERE id IN (${placeholders}) AND status = 'final'`,
-        [winningPrice, ...bidIds]
+      // winningPrice가 final_price보다 큰 경우 취소, 아닐 경우 완료
+      // 취소 처리: winningPrice > final_price
+      const [cancelResult] = await connection.query(
+        `UPDATE live_bids SET status = 'cancelled' WHERE id IN (${placeholders}) AND status = 'final' AND final_price < ?`,
+        [...bidIds, winningPrice]
       );
+      cancelledCount = cancelResult.affectedRows;
+
+      // 완료 처리: winningPrice <= final_price
+      const [completeResult] = await connection.query(
+        `UPDATE live_bids SET status = 'completed', final_price = ? WHERE id IN (${placeholders}) AND status = 'final' AND final_price >= ?`,
+        [winningPrice, ...bidIds, winningPrice]
+      );
+      completedCount = completeResult.affectedRows;
+
+      updateResult = {
+        affectedRows: cancelledCount + completedCount,
+      };
     } else {
       // 낙찰 금액이 없을 경우 기존 최종 입찰가로 완료 처리
       [updateResult] = await connection.query(
         `UPDATE live_bids SET status = 'completed' WHERE id IN (${placeholders}) AND status = 'final'`,
         bidIds
       );
+      completedCount = updateResult.affectedRows;
     }
 
     await connection.commit();
 
+    // 응답 메시지 구성
+    let message;
+    if (id) {
+      if (winningPrice !== undefined) {
+        if (completedCount > 0) {
+          message = "Bid completed successfully";
+        } else if (cancelledCount > 0) {
+          message = "Bid cancelled (winning price exceeds final price)";
+        } else {
+          message = "No bid found or already processed";
+        }
+      } else {
+        message = "Bid completed successfully";
+      }
+    } else {
+      const messages = [];
+      if (completedCount > 0) {
+        messages.push(`${completedCount} bid(s) completed`);
+      }
+      if (cancelledCount > 0) {
+        messages.push(
+          `${cancelledCount} bid(s) cancelled (winning price exceeds final price)`
+        );
+      }
+      message =
+        messages.length > 0
+          ? messages.join(", ")
+          : "No bids found or already processed";
+    }
+
     res.status(200).json({
-      message: id
-        ? "Bid completed successfully"
-        : `${updateResult.affectedRows} bids completed successfully`,
-      status: "completed",
+      message: message,
+      completedCount: completedCount,
+      cancelledCount: cancelledCount,
       winningPrice: winningPrice,
     });
   } catch (err) {
