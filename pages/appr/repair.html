@@ -628,7 +628,7 @@
                 const priceP = document.createElement("p");
                 // 가격 표시 수정 - 숫자인지 확인 후 처리
                 let priceDisplay = service.price;
-                if (!isNaN(parseFloat(service.price))) {
+                if (!isNaN(service.price)) {
                   // 숫자인 경우 천 단위 구분자 추가
                   priceDisplay = `${parseFloat(
                     service.price

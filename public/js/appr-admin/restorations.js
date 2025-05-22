@@ -94,7 +94,7 @@ function displayRestorationServices(services) {
   services.forEach((service) => {
     // 가격 표시 로직 수정 - 문자열일 수도 있음
     let priceDisplay = service.price;
-    if (!isNaN(parseFloat(service.price))) {
+    if (!isNaN(service.price)) {
       // 숫자인 경우에만 천 단위 구분자 추가
       priceDisplay = parseFloat(service.price).toLocaleString();
     }
