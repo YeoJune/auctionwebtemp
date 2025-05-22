@@ -129,63 +129,67 @@
 
 #### 2.2.2 감정 목록 조회 - GET `/api/appr/appraisals`
 
+**인증**: 선택사항 (로그인 없이도 접근 가능)
+
 - **쿼리 파라미터**:
+
   - `page`: 페이지 번호 (기본값: 1)
   - `limit`: 페이지당 항목 수 (기본값: 10, 0인 경우 모든 항목 반환)
   - `status`: 상태 필터 (선택사항)
   - `all`: 전체 데이터 조회 (true/false)
   - `today`: 오늘 데이터만 조회 (true/false)
+  - `myOnly`: 본인 감정 목록만 조회 (true/false, 로그인 필요)
+
 - **응답 (로그인한 경우)**:
 
-```json
-{
-  "success": true,
-  "appraisals": [
-    {
-      "id": "uuid",
-      "appraisal_type": "quicklink",
-      "brand": "string",
-      "model_name": "string",
-      "status": "pending",
-      "result": "pending",
-      "certificate_number": "CAS-YYYYMMDD-XXXX",
-      "created_at": "timestamp",
-      "representative_image": "url"
+  ```json
+  {
+    "success": true,
+    "appraisals": [
+      {
+        "id": "uuid",
+        "appraisal_type": "quicklink",
+        "brand": "string",
+        "model_name": "string",
+        "status": "pending",
+        "result": "pending",
+        "certificate_number": "CAS-YYYYMMDD-XXXX",
+        "created_at": "timestamp",
+        "representative_image": "url"
+      }
+    ],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 5,
+      "totalItems": 48,
+      "limit": 10
     }
-  ],
-  "pagination": {
-    "currentPage": 1,
-    "totalPages": 5,
-    "totalItems": 48,
-    "limit": 10
   }
-}
-```
+  ```
 
 - **응답 (로그인하지 않은 경우)**:
-
-```json
-{
-  "success": true,
-  "appraisals": [
-    {
-      "certificate_number": "CAS-YYYYMMDD-XXXX",
-      "appraisal_type": "quicklink",
-      "brand": "string",
-      "model_name": "string",
-      "status": "pending",
-      "category": "string",
-      "created_at": "timestamp"
+  ```json
+  {
+    "success": true,
+    "appraisals": [
+      {
+        "certificate_number": "CAS-YYYYMMDD-XXXX",
+        "appraisal_type": "quicklink",
+        "brand": "string",
+        "model_name": "string",
+        "status": "pending",
+        "category": "string",
+        "created_at": "timestamp"
+      }
+    ],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 5,
+      "totalItems": 48,
+      "limit": 10
     }
-  ],
-  "pagination": {
-    "currentPage": 1,
-    "totalPages": 5,
-    "totalItems": 48,
-    "limit": 10
   }
-}
-```
+  ```
 
 #### 2.2.3 감정 상세 조회 - GET `/api/appr/appraisals/:certificate_number`
 

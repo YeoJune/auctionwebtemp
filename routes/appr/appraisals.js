@@ -169,7 +169,7 @@ router.post("/", isAuthenticated, async (req, res) => {
   }
 });
 
-// 감정 목록 조회 - GET /api/appr/appraisals
+// 감정 목록 조회 - GET /api/appr/appraisals (전체 목록 조회, 로그인 여부와 관계없이)
 router.get("/", async (req, res) => {
   let conn;
   try {
@@ -179,6 +179,7 @@ router.get("/", async (req, res) => {
     const status = req.query.status;
     const all = req.query.all === "true";
     const today = req.query.today === "true";
+    const myOnly = req.query.myOnly === "true"; // 새로운 파라미터 추가
 
     conn = await pool.getConnection();
 
@@ -188,8 +189,8 @@ router.get("/", async (req, res) => {
 
     let query, queryParams, countQuery, countParams;
 
-    if (isAuthenticated) {
-      // 로그인한 경우: 본인의 감정 목록만 조회 (기존 로직)
+    if (isAuthenticated && myOnly) {
+      // 로그인한 상태에서 myOnly=true인 경우: 본인의 감정 목록만 조회
       const user_id = req.session.user.id;
 
       query = `
@@ -204,7 +205,7 @@ router.get("/", async (req, res) => {
       countQuery = "SELECT COUNT(*) as total FROM appraisals WHERE user_id = ?";
       countParams = [user_id];
     } else {
-      // 로그인하지 않은 경우: 모든 감정 목록 조회 (민감하지 않은 정보만)
+      // 기본값: 모든 감정 목록 조회 (민감하지 않은 정보만)
       query = `
         SELECT 
           certificate_number, appraisal_type, brand, model_name, status, category,
@@ -248,8 +249,8 @@ router.get("/", async (req, res) => {
 
     // 결과 포맷팅
     let appraisals;
-    if (isAuthenticated) {
-      // 로그인한 경우: 기존 포맷 (이미지 포함)
+    if (isAuthenticated && myOnly) {
+      // 본인 목록 조회인 경우: 모든 정보 포함
       appraisals = rows.map((row) => ({
         ...row,
         representative_image: row.representative_image
@@ -257,7 +258,7 @@ router.get("/", async (req, res) => {
           : null,
       }));
     } else {
-      // 로그인하지 않은 경우: 민감하지 않은 정보만
+      // 전체 목록 조회인 경우: 민감하지 않은 정보만
       appraisals = rows.map((row) => ({
         certificate_number: row.certificate_number,
         appraisal_type: row.appraisal_type,
