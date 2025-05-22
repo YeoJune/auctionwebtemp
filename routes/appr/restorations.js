@@ -71,7 +71,7 @@ router.post("/", isAuthenticated, async (req, res) => {
     const appraisal_id = appraisalRows[0].id;
 
     // 서비스 가격 및 유효성 검증
-    let total_price = 0;
+    let total_price = "견적 문의"; // 기본값을 문자열로 설정
     const validServices = [];
 
     for (const service of services) {
@@ -91,11 +91,21 @@ router.post("/", isAuthenticated, async (req, res) => {
       validServices.push({
         service_id: dbService.id,
         service_name: dbService.name,
-        price: dbService.price,
+        price: dbService.price, // 문자열 그대로 저장
         status: "pending",
       });
 
-      total_price += parseFloat(dbService.price);
+      // 가격이 숫자인 경우에만 합계 계산
+      if (!isNaN(parseFloat(dbService.price))) {
+        if (total_price === "견적 문의") {
+          total_price = parseFloat(dbService.price);
+        } else if (!isNaN(parseFloat(total_price))) {
+          total_price = parseFloat(total_price) + parseFloat(dbService.price);
+        }
+      } else {
+        // 하나라도 문자열 가격이 있으면 전체를 "견적 문의"로 설정
+        total_price = "견적 문의";
+      }
     }
 
     // 복원 ID 생성
@@ -114,7 +124,7 @@ router.post("/", isAuthenticated, async (req, res) => {
         user_id,
         JSON.stringify(validServices),
         "pending",
-        total_price,
+        typeof total_price === "number" ? total_price.toString() : total_price, // 문자열로 저장
         JSON.stringify(delivery_info),
         notes || null,
       ]

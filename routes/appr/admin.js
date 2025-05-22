@@ -767,7 +767,7 @@ router.post(
       // 서비스 ID 생성
       const service_id = uuidv4();
 
-      // 서비스 정보 저장
+      // 서비스 정보 저장 - price를 문자열로 저장
       await conn.query(
         `INSERT INTO restoration_services (
         id, name, description, price, estimated_days,
@@ -777,7 +777,7 @@ router.post(
           service_id,
           name,
           description,
-          parseFloat(price),
+          price, // 문자열로 저장 (parseFloat 제거)
           parseInt(estimated_days),
           before_image,
           after_image,
@@ -791,7 +791,7 @@ router.post(
           id: service_id,
           name,
           description,
-          price: parseFloat(price),
+          price: price, // 문자열 그대로 반환
           estimated_days: parseInt(estimated_days),
           before_image,
           after_image,
@@ -874,8 +874,8 @@ router.put(
 
       if (price) {
         updateFields.push("price = ?");
-        updateValues.push(parseFloat(price));
-        updateData.price = parseFloat(price);
+        updateValues.push(price); // 문자열로 저장 (parseFloat 제거)
+        updateData.price = price;
       }
 
       if (estimated_days) {

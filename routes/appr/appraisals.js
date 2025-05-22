@@ -170,10 +170,9 @@ router.post("/", isAuthenticated, async (req, res) => {
 });
 
 // 감정 목록 조회 - GET /api/appr/appraisals
-router.get("/", isAuthenticated, async (req, res) => {
+router.get("/", async (req, res) => {
   let conn;
   try {
-    const user_id = req.session.user.id;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
@@ -183,26 +182,54 @@ router.get("/", isAuthenticated, async (req, res) => {
 
     conn = await pool.getConnection();
 
-    // 기본 쿼리
-    let query = `
-      SELECT 
-        id, appraisal_type, brand, model_name, status, result, certificate_number,
-        created_at, JSON_EXTRACT(images, '$[0]') as representative_image
-      FROM appraisals 
-      WHERE user_id = ?
-    `;
+    // 로그인 여부 확인
+    const isAuthenticated =
+      req.session && req.session.user && req.session.user.id;
 
-    const queryParams = [user_id];
+    let query, queryParams, countQuery, countParams;
+
+    if (isAuthenticated) {
+      // 로그인한 경우: 본인의 감정 목록만 조회 (기존 로직)
+      const user_id = req.session.user.id;
+
+      query = `
+        SELECT 
+          id, appraisal_type, brand, model_name, status, result, certificate_number,
+          created_at, JSON_EXTRACT(images, '$[0]') as representative_image
+        FROM appraisals 
+        WHERE user_id = ?
+      `;
+      queryParams = [user_id];
+
+      countQuery = "SELECT COUNT(*) as total FROM appraisals WHERE user_id = ?";
+      countParams = [user_id];
+    } else {
+      // 로그인하지 않은 경우: 모든 감정 목록 조회 (민감하지 않은 정보만)
+      query = `
+        SELECT 
+          certificate_number, appraisal_type, brand, model_name, status, category,
+          created_at
+        FROM appraisals 
+        WHERE 1=1
+      `;
+      queryParams = [];
+
+      countQuery = "SELECT COUNT(*) as total FROM appraisals WHERE 1=1";
+      countParams = [];
+    }
 
     // 상태 필터 적용
     if (status) {
       query += " AND status = ?";
       queryParams.push(status);
+      countQuery += " AND status = ?";
+      countParams.push(status);
     }
 
     // today 필터 적용
     if (today) {
       query += " AND DATE(created_at) = CURDATE()";
+      countQuery += " AND DATE(created_at) = CURDATE()";
     }
 
     // 최신순 정렬
@@ -216,33 +243,35 @@ router.get("/", isAuthenticated, async (req, res) => {
 
     // 쿼리 실행
     const [rows] = await conn.query(query, queryParams);
-
-    // 전체 개수 조회
-    let countQuery =
-      "SELECT COUNT(*) as total FROM appraisals WHERE user_id = ?";
-    const countParams = [user_id];
-
-    if (status) {
-      countQuery += " AND status = ?";
-      countParams.push(status);
-    }
-
-    if (today) {
-      countQuery += " AND DATE(created_at) = CURDATE()";
-    }
-
     const [countResult] = await conn.query(countQuery, countParams);
     const total = countResult[0].total;
 
-    // 결과 반환
-    res.json({
-      success: true,
-      appraisals: rows.map((row) => ({
+    // 결과 포맷팅
+    let appraisals;
+    if (isAuthenticated) {
+      // 로그인한 경우: 기존 포맷 (이미지 포함)
+      appraisals = rows.map((row) => ({
         ...row,
         representative_image: row.representative_image
           ? JSON.parse(row.representative_image)
           : null,
-      })),
+      }));
+    } else {
+      // 로그인하지 않은 경우: 민감하지 않은 정보만
+      appraisals = rows.map((row) => ({
+        certificate_number: row.certificate_number,
+        appraisal_type: row.appraisal_type,
+        brand: row.brand,
+        model_name: row.model_name,
+        status: row.status,
+        category: row.category,
+        created_at: row.created_at,
+      }));
+    }
+
+    res.json({
+      success: true,
+      appraisals,
       pagination: {
         currentPage: page,
         totalPages: limit === 0 ? 1 : Math.ceil(total / limit),
@@ -452,7 +481,7 @@ router.get("/authenticity-guides/:brand", async (req, res) => {
   }
 });
 
-// 감정 상세 조회 - GET /api/appr/appraisals/:certificate_number
+// 감정 상세 조회 - GET /api/appr/appraisals/:certificate_number (로그인 필요)
 router.get("/:certificate_number", isAuthenticated, async (req, res) => {
   let conn;
   try {
@@ -469,7 +498,7 @@ router.get("/:certificate_number", isAuthenticated, async (req, res) => {
     if (rows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "해당 감정 정보를 찾을 수 없습니다.",
+        message: "해당 감정 정보를 찾을 수 없거나 접근 권한이 없습니다.",
       });
     }
 
@@ -500,7 +529,7 @@ router.get("/:certificate_number", isAuthenticated, async (req, res) => {
   }
 });
 
-// 감정서 정보 조회 - GET /api/appr/appraisals/certificate/:certificateNumber
+// 감정서 정보 조회 - GET /api/appr/appraisals/certificate/:certificateNumber (로그인 불필요, 공개 정보만)
 router.get("/certificate/:certificateNumber", async (req, res) => {
   let conn;
   try {
@@ -508,11 +537,11 @@ router.get("/certificate/:certificateNumber", async (req, res) => {
 
     conn = await pool.getConnection();
 
-    // status 조건 제거
+    // 로그인 없이도 접근 가능하도록 수정 - 민감하지 않은 정보만 제공
     const [rows] = await conn.query(
       `SELECT 
-        id, brand, model_name, category, appraisal_type, 
-        result, result_notes, images, appraised_at, certificate_number, status
+        certificate_number, brand, model_name, category, appraisal_type, 
+        created_at, status
       FROM appraisals WHERE certificate_number = ?`,
       [certificateNumber]
     );
@@ -520,16 +549,11 @@ router.get("/certificate/:certificateNumber", async (req, res) => {
     if (rows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "해당 감정서를 찾을 수 없습니다.",
+        message: "해당 감정 정보를 찾을 수 없습니다.",
       });
     }
 
     const appraisal = rows[0];
-
-    // JSON 데이터 파싱
-    if (appraisal.images) {
-      appraisal.images = JSON.parse(appraisal.images);
-    }
 
     // 검증 코드 생성 (간단히 certificate_number의 앞 6자리)
     const verification_code = certificateNumber.substring(0, 6);
@@ -538,21 +562,96 @@ router.get("/certificate/:certificateNumber", async (req, res) => {
       success: true,
       certificate: {
         certificate_number: certificateNumber,
-        issued_date: appraisal.appraised_at,
         verification_code,
-        appraisal,
+        appraisal: {
+          certificate_number: appraisal.certificate_number,
+          brand: appraisal.brand,
+          model_name: appraisal.model_name,
+          category: appraisal.category,
+          appraisal_type: appraisal.appraisal_type,
+          created_at: appraisal.created_at,
+          status: appraisal.status,
+        },
       },
     });
   } catch (err) {
-    console.error("감정서 정보 조회 중 오류 발생:", err);
+    console.error("감정 정보 조회 중 오류 발생:", err);
     res.status(500).json({
       success: false,
-      message: "감정서 정보 조회 중 서버 오류가 발생했습니다.",
+      message: "감정 정보 조회 중 서버 오류가 발생했습니다.",
     });
   } finally {
     if (conn) conn.release();
   }
 });
+
+// 감정서 상세 정보 조회 - GET /api/appr/appraisals/certificate/:certificateNumber/detail (로그인 필요)
+router.get(
+  "/certificate/:certificateNumber/detail",
+  isAuthenticated,
+  async (req, res) => {
+    let conn;
+    try {
+      const certificateNumber = req.params.certificateNumber;
+      const user_id = req.session.user.id;
+
+      conn = await pool.getConnection();
+
+      // 로그인한 사용자의 감정 내역만 조회 가능
+      const [rows] = await conn.query(
+        `SELECT 
+        id, brand, model_name, category, appraisal_type, 
+        result, result_notes, images, appraised_at, certificate_number, status,
+        remarks, product_link, platform, purchase_year, components_included, delivery_info
+      FROM appraisals WHERE certificate_number = ? AND user_id = ?`,
+        [certificateNumber, user_id]
+      );
+
+      if (rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "해당 감정서를 찾을 수 없거나 접근 권한이 없습니다.",
+        });
+      }
+
+      const appraisal = rows[0];
+
+      // JSON 데이터 파싱
+      if (appraisal.images) {
+        appraisal.images = JSON.parse(appraisal.images);
+      }
+      if (appraisal.components_included) {
+        appraisal.components_included = JSON.parse(
+          appraisal.components_included
+        );
+      }
+      if (appraisal.delivery_info) {
+        appraisal.delivery_info = JSON.parse(appraisal.delivery_info);
+      }
+
+      // 검증 코드 생성 (간단히 certificate_number의 앞 6자리)
+      const verification_code = certificateNumber.substring(0, 6);
+
+      res.json({
+        success: true,
+        certificate: {
+          certificate_number: certificateNumber,
+          issued_date: appraisal.appraised_at,
+          verification_code,
+          appraisal,
+        },
+      });
+    } catch (err) {
+      console.error("감정서 상세 정보 조회 중 오류 발생:", err);
+      res.status(500).json({
+        success: false,
+        message: "감정서 상세 정보 조회 중 서버 오류가 발생했습니다.",
+      });
+    } finally {
+      if (conn) conn.release();
+    }
+  }
+);
 
 // PDF 감정서 다운로드 - GET /api/appr/appraisals/certificate/:certificateNumber/download
 router.get("/certificate/:certificateNumber/download", async (req, res) => {

@@ -258,20 +258,28 @@ function displayRestorationRequestDetail(restoration) {
             <thead>
                 <tr>
                     <th>서비스명</th>
-                    <th>가격(원)</th>
+                    <th>가격</th>
                     <th>상태</th>
                 </tr>
             </thead>
             <tbody>
     `;
 
-  // 서비스 항목 목록
+  // 서비스 항목 목록 (가격 표시 로직 수정)
   if (restoration.services && restoration.services.length > 0) {
     restoration.services.forEach((service) => {
+      // 가격 표시 로직 수정 - 문자열일 수도 있음
+      let priceDisplay = service.price;
+      if (!isNaN(parseFloat(service.price))) {
+        // 숫자인 경우에만 천 단위 구분자 + "원" 추가
+        priceDisplay = parseFloat(service.price).toLocaleString() + "원";
+      }
+      // 문자열인 경우 그대로 표시
+
       html += `
                 <tr>
                     <td>${service.service_name}</td>
-                    <td>${service.price.toLocaleString()}</td>
+                    <td>${priceDisplay}</td>
                     <td>${getStatusBadge(service.status)}</td>
                 </tr>
             `;
@@ -281,12 +289,21 @@ function displayRestorationRequestDetail(restoration) {
       '<tr><td colspan="3" style="text-align: center;">서비스 항목이 없습니다.</td></tr>';
   }
 
+  // 총 금액 표시 로직 수정
+  let totalPriceDisplay = restoration.total_price;
+  if (!isNaN(parseFloat(restoration.total_price))) {
+    // 숫자인 경우에만 천 단위 구분자 + "원" 추가
+    totalPriceDisplay =
+      parseFloat(restoration.total_price).toLocaleString() + "원";
+  }
+  // 문자열인 경우 ("견적 문의" 등) 그대로 표시
+
   html += `
             </tbody>
             <tfoot>
                 <tr>
                     <th>총 금액</th>
-                    <td colspan="2"><strong>${restoration.total_price.toLocaleString()}원</strong></td>
+                    <td colspan="2"><strong>${totalPriceDisplay}</strong></td>
                 </tr>
             </tfoot>
         </table>
@@ -447,14 +464,20 @@ function displayRestorationRequestDetail(restoration) {
                 <div id="service-status-container">
     `;
 
-  // 서비스 항목 상태 관리
+  // 서비스 항목 상태 관리 (가격 표시 로직 수정)
   if (restoration.services && restoration.services.length > 0) {
     restoration.services.forEach((service, index) => {
+      // 가격 표시 로직 수정
+      let priceDisplay = service.price;
+      if (!isNaN(parseFloat(service.price))) {
+        priceDisplay = parseFloat(service.price).toLocaleString() + "원";
+      }
+
       html += `
                 <div style="margin-bottom: 10px; padding: 10px; background-color: #f8fafc; border-radius: 4px;">
                     <p><strong>${
                       service.service_name
-                    }</strong> (${service.price.toLocaleString()}원)</p>
+                    }</strong> (${priceDisplay})</p>
                     <select id="service-status-${index}" class="form-select" style="margin-top: 5px;">
                         <option value="pending" ${
                           service.status === "pending" ? "selected" : ""

@@ -92,6 +92,14 @@ function displayRestorationServices(services) {
   // 테이블 내용 생성
   let html = "";
   services.forEach((service) => {
+    // 가격 표시 로직 수정 - 문자열일 수도 있음
+    let priceDisplay = service.price;
+    if (!isNaN(parseFloat(service.price))) {
+      // 숫자인 경우에만 천 단위 구분자 추가
+      priceDisplay = parseFloat(service.price).toLocaleString();
+    }
+    // 문자열인 경우 그대로 표시
+
     html += `<tr>
             <td>${service.name}</td>
             <td>${
@@ -99,7 +107,7 @@ function displayRestorationServices(services) {
                 ? service.description.substring(0, 50) + "..."
                 : service.description
             }</td>
-            <td>${service.price.toLocaleString()}</td>
+            <td>${priceDisplay}</td>
             <td>${service.estimated_days}</td>
             <td>${
               service.is_active

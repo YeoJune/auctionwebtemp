@@ -135,30 +135,57 @@
   - `status`: 상태 필터 (선택사항)
   - `all`: 전체 데이터 조회 (true/false)
   - `today`: 오늘 데이터만 조회 (true/false)
-- **응답**:
-  ```json
-  {
-    "success": true,
-    "appraisals": [
-      {
-        "id": "uuid",
-        "appraisal_type": "quicklink",
-        "brand": "string",
-        "model_name": "string",
-        "status": "pending",
-        "result": "pending",
-        "created_at": "timestamp",
-        "representative_image": "url"
-      }
-    ],
-    "pagination": {
-      "currentPage": 1,
-      "totalPages": 5,
-      "totalItems": 48,
-      "limit": 10
+- **응답 (로그인한 경우)**:
+
+```json
+{
+  "success": true,
+  "appraisals": [
+    {
+      "id": "uuid",
+      "appraisal_type": "quicklink",
+      "brand": "string",
+      "model_name": "string",
+      "status": "pending",
+      "result": "pending",
+      "certificate_number": "CAS-YYYYMMDD-XXXX",
+      "created_at": "timestamp",
+      "representative_image": "url"
     }
+  ],
+  "pagination": {
+    "currentPage": 1,
+    "totalPages": 5,
+    "totalItems": 48,
+    "limit": 10
   }
-  ```
+}
+```
+
+- **응답 (로그인하지 않은 경우)**:
+
+```json
+{
+  "success": true,
+  "appraisals": [
+    {
+      "certificate_number": "CAS-YYYYMMDD-XXXX",
+      "appraisal_type": "quicklink",
+      "brand": "string",
+      "model_name": "string",
+      "status": "pending",
+      "category": "string",
+      "created_at": "timestamp"
+    }
+  ],
+  "pagination": {
+    "currentPage": 1,
+    "totalPages": 5,
+    "totalItems": 48,
+    "limit": 10
+  }
+}
+```
 
 #### 2.2.3 감정 상세 조회 - GET `/api/appr/appraisals/:certificate_number`
 
@@ -234,19 +261,15 @@
     "success": true,
     "certificate": {
       "certificate_number": "string",
-      "issued_date": "timestamp",
       "verification_code": "string",
       "appraisal": {
-        "id": "uuid",
+        "certificate_number": "string",
         "brand": "string",
         "model_name": "string",
         "category": "string",
         "appraisal_type": "quicklink" | "offline",
-        "result": "authentic" | "fake" | "uncertain" | "pending",
-        "status": "pending" | "in_review" | "completed" | "cancelled",
-        "result_notes": "string",
-        "images": ["url"],
-        "appraised_at": "timestamp"
+        "created_at": "timestamp",
+        "status": "pending" | "in_review" | "completed" | "cancelled"
       }
     }
   }
@@ -326,9 +349,9 @@
   }
   ```
 
-### 2.3 복원(Restorations) API
+## 2.3 복원(Restorations) API
 
-#### 2.3.1 복원 서비스 목록 조회 - GET `/api/appr/restorations/services`
+### 2.3.1 복원 서비스 목록 조회 - GET `/api/appr/restorations/services`
 
 - **응답**:
   ```json
@@ -339,7 +362,7 @@
         "id": "uuid",
         "name": "string",
         "description": "string",
-        "price": 50000,
+        "price": "string",
         "estimated_days": 7,
         "before_image": "url",
         "after_image": "url",
@@ -349,46 +372,49 @@
   }
   ```
 
-#### 2.3.2 복원 서비스 신청 - POST `/api/appr/restorations`
+### 2.3.2 복원 서비스 신청 - POST `/api/appr/restorations`
 
 - **요청 본문**:
-  ```json
-  {
-    "certificate_number": "CAS-YYYYMMDD-XXXX",
-    "services": [
-      {
-        "service_id": "uuid",
-        "service_name": "string",
-        "price": 50000
-      }
-    ],
-    "delivery_info": {
-      "name": "string",
-      "phone": "string",
-      "zipcode": "string",
-      "address1": "string",
-      "address2": "string"
-    },
-    "notes": "string"
-  }
-  ```
-- **응답**:
-  ```json
-  {
-    "success": true,
-    "restoration": {
-      "id": "uuid",
-      "appraisal_id": "uuid",
-      "certificate_number": "CAS-YYYYMMDD-XXXX",
-      "status": "pending",
-      "total_price": 150000,
-      "estimated_completion_date": "date",
-      "created_at": "timestamp"
-    }
-  }
-  ```
 
-#### 2.3.3 복원 요청 목록 조회 - GET `/api/appr/restorations`
+```json
+{
+  "certificate_number": "CAS-YYYYMMDD-XXXX",
+  "services": [
+    {
+      "service_id": "uuid",
+      "service_name": "string",
+      "price": "string"
+    }
+  ],
+  "delivery_info": {
+    "name": "string",
+    "phone": "string",
+    "zipcode": "string",
+    "address1": "string",
+    "address2": "string"
+  },
+  "notes": "string"
+}
+```
+
+- **응답**:
+
+```json
+{
+  "success": true,
+  "restoration": {
+    "id": "uuid",
+    "appraisal_id": "uuid",
+    "certificate_number": "CAS-YYYYMMDD-XXXX",
+    "status": "pending",
+    "total_price": "string",
+    "estimated_completion_date": "date",
+    "created_at": "timestamp"
+  }
+}
+```
+
+### 2.3.3 복원 요청 목록 조회 - GET `/api/appr/restorations`
 
 - **쿼리 파라미터**:
   - `page`: 페이지 번호 (기본값: 1)
@@ -403,7 +429,7 @@
         "id": "uuid",
         "appraisal_id": "uuid",
         "status": "pending" | "in_progress" | "completed" | "cancelled",
-        "total_price": 150000,
+        "total_price": "string",
         "created_at": "timestamp",
         "estimated_completion_date": "date",
         "completed_at": "timestamp",
@@ -420,7 +446,7 @@
   }
   ```
 
-#### 2.3.4 복원 요청 상세 조회 - GET `/api/appr/restorations/:id`
+### 2.3.4 복원 요청 상세 조회 - GET `/api/appr/restorations/:id`
 
 - **응답**:
   ```json
@@ -435,11 +461,11 @@
         {
           "service_id": "uuid",
           "service_name": "string",
-          "price": 50000,
+          "price": "string",
           "status": "pending" | "in_progress" | "completed"
         }
       ],
-      "total_price": 150000,
+      "total_price": "string",
       "delivery_info": {
         "name": "string",
         "phone": "string",
@@ -467,196 +493,7 @@
   }
   ```
 
-### 2.4 사용자(Users) API
-
-#### 2.4.1 회원 프로필 및 멤버십 정보 조회 - GET `/api/appr/users/profile`
-
-- **응답**:
-  ```json
-  {
-    "success": true,
-    "user_profile": {
-      "id": "string",
-      "email": "string",
-      "company_name": "string",
-      "phone": "string",
-      "address": "string",
-      "created_at": "timestamp"
-    },
-    "membership": {
-      "tier": "까사트레이드 회원" | "제휴사 회원" | "일반회원",
-      "quick_link_credits_remaining": 5,
-      "quick_link_monthly_limit": 10,
-      "quick_link_subscription_type": "free" | "paid",
-      "quick_link_subscription_expires_at": "date",
-      "offline_appraisal_fee": 38000,
-      "last_reset_date": "date"
-    }
-  }
-  ```
-
-#### 2.4.2 구독 정보 조회 - GET `/api/appr/users/subscription`
-
-- **응답**:
-  ```json
-  {
-    "success": true,
-    "subscription": {
-      "is_subscribed": true,
-      "type": "free" | "paid",
-      "tier": "까사트레이드 회원" | "제휴사 회원" | "일반회원",
-      "credits_remaining": 5,
-      "monthly_limit": 10,
-      "expires_at": "date",
-      "auto_renew": false
-    }
-  }
-  ```
-
-#### 2.4.3 구독 신청/갱신 - POST `/api/appr/users/subscription`
-
-- **요청 본문**:
-  ```json
-  {
-    "subscription_type": "monthly"
-  }
-  ```
-- **응답**:
-  ```json
-  {
-    "success": true,
-    "payment_required": true,
-    "payment_info": {
-      "product_type": "quicklink_subscription",
-      "product_name": "퀵링크 월간 구독 (10회)",
-      "amount": 29000,
-      "redirect_url": "/api/appr/payments/prepare"
-    }
-  }
-  ```
-
-### 2.5 결제(Payments) API
-
-#### 2.5.1 결제 준비 - POST `/api/appr/payments/prepare`
-
-- **요청 본문**:
-  ```json
-  {
-    "product_type": "quicklink_subscription" | "certificate_issue" | "restoration_service",
-    "product_name": "string",
-    "amount": 29000,
-    "related_resource_id": "uuid"  // 선택사항
-  }
-  ```
-- **응답**:
-  ```json
-  {
-    "success": true,
-    "order_id": "ORDER_TIMESTAMP_XXX",
-    "paramsForNicePaySDK": {
-      "clientId": "NICEPAY_CLIENT_KEY",
-      "method": "card",
-      "orderId": "ORDER_TIMESTAMP_XXX",
-      "amount": 29000,
-      "goodsName": "string",
-      "returnUrl": "http://example.com/appr/payment-callback",
-      "timestamp": "timestamp",
-      "signature": "hash"
-    }
-  }
-  ```
-
-#### 2.5.2 결제 승인 요청 - POST `/api/appr/payments/approve`
-
-- **요청 본문**:
-  ```json
-  {
-    "orderId": "ORDER_TIMESTAMP_XXX",
-    "authToken": "string",
-    "amount": 29000
-  }
-  ```
-- **응답**:
-  ```json
-  {
-    "success": true,
-    "message": "결제가 성공적으로 처리되었습니다.",
-    "payment": {
-      "id": "uuid",
-      "order_id": "ORDER_TIMESTAMP_XXX",
-      "status": "completed",
-      "amount": 29000,
-      "paid_at": "timestamp",
-      "receipt_url": "url",
-      "card_info": {}
-    }
-  }
-  ```
-
-#### 2.5.3 결제 정보 조회 - GET `/api/appr/payments/:orderId`
-
-- **응답**:
-  ```json
-  {
-    "success": true,
-    "payment": {
-      "id": "uuid",
-      "user_id": "string",
-      "order_id": "ORDER_TIMESTAMP_XXX",
-      "payment_gateway_transaction_id": "string",
-      "product_type": "quicklink_subscription" | "certificate_issue" | "restoration_service",
-      "product_name": "string",
-      "amount": 29000,
-      "status": "pending" | "ready" | "completed" | "failed" | "cancelled" | "vbank_ready" | "vbank_expired",
-      "payment_method": "card",
-      "raw_response_data": {},
-      "receipt_url": "url",
-      "related_resource_id": "uuid",
-      "related_resource_type": "appraisal" | "restoration",
-      "paid_at": "timestamp",
-      "created_at": "timestamp"
-    }
-  }
-  ```
-
-#### 2.5.4 결제 웹훅 처리 - POST `/api/appr/payments/webhook`
-
-- **요청 본문**: 나이스페이 웹훅 데이터
-- **응답**: 200 OK
-
-#### 2.5.5 결제 내역 조회 - GET `/api/appr/payments/history`
-
-- **쿼리 파라미터**:
-  - `page`: 페이지 번호 (기본값: 1)
-  - `limit`: 페이지당 항목 수 (기본값: 10)
-  - `type`: 상품 유형 필터 (선택사항)
-- **응답**:
-  ```json
-  {
-    "success": true,
-    "payments": [
-      {
-        "id": "uuid",
-        "order_id": "ORDER_TIMESTAMP_XXX",
-        "product_type": "quicklink_subscription" | "certificate_issue" | "restoration_service",
-        "product_name": "string",
-        "amount": 29000,
-        "status": "completed" | "failed" | "pending" | "cancelled",
-        "payment_method": "card",
-        "paid_at": "timestamp",
-        "receipt_url": "url"
-      }
-    ],
-    "pagination": {
-      "currentPage": 1,
-      "totalPages": 5,
-      "totalItems": 48,
-      "limit": 10
-    }
-  }
-  ```
-
-### 2.6 관리자(Admin) API
+## 2.6 관리자(Admin) API
 
 #### 2.6.1 회원 관리
 
@@ -861,7 +698,7 @@
           "id": "uuid",
           "name": "string",
           "description": "string",
-          "price": 50000,
+          "price": "string",
           "estimated_days": 7,
           "before_image": "url",
           "after_image": "url",
@@ -879,7 +716,7 @@
     ```
     name: "string"
     description: "string"
-    price: 50000
+    price: "string"
     estimated_days: 7
     before_image: 파일 (선택사항)
     after_image: 파일 (선택사항)
@@ -892,7 +729,7 @@
         "id": "uuid",
         "name": "string",
         "description": "string",
-        "price": 50000,
+        "price": "string",
         "estimated_days": 7,
         "before_image": "url",
         "after_image": "url",
@@ -907,7 +744,7 @@
     ```
     name: "string" (선택사항)
     description: "string" (선택사항)
-    price: 50000 (선택사항)
+    price: "string" (선택사항)
     estimated_days: 7 (선택사항)
     before_image: 파일 (선택사항)
     after_image: 파일 (선택사항)
@@ -920,7 +757,7 @@
         "id": "uuid",
         "name": "string",
         "description": "string",
-        "price": 50000,
+        "price": "string",
         "estimated_days": 7,
         "before_image": "url",
         "after_image": "url",
@@ -956,7 +793,7 @@
           "id": "uuid",
           "appraisal_id": "uuid",
           "status": "pending" | "in_progress" | "completed" | "cancelled",
-          "total_price": 150000,
+          "total_price": "string",
           "created_at": "timestamp",
           "estimated_completion_date": "date",
           "completed_at": "timestamp",
@@ -991,11 +828,11 @@
           {
             "service_id": "uuid",
             "service_name": "string",
-            "price": 50000,
+            "price": "string",
             "status": "pending" | "in_progress" | "completed"
           }
         ],
-        "total_price": 150000,
+        "total_price": "string",
         "delivery_info": {
           "name": "string",
           "phone": "string",
@@ -1048,7 +885,7 @@
           {
             "service_id": "uuid",
             "service_name": "string",
-            "price": 50000,
+            "price": "string",
             "status": "in_progress" | "completed" | "pending"
           }
         ],
@@ -1312,11 +1149,11 @@ CREATE TABLE restoration_services (
   id VARCHAR(36) PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
   description TEXT NOT NULL,
-  price DECIMAL(10, 2) NOT NULL,
-  estimated_days INT NOT NULL,                   -- 예상 소요 일수
-  before_image VARCHAR(255) NULL,                -- 복원 전 이미지 URL
-  after_image VARCHAR(255) NULL,                 -- 복원 후 이미지 URL
-  is_active BOOLEAN DEFAULT TRUE,                -- 서비스 활성화 상태
+  price VARCHAR(255) NOT NULL,
+  estimated_days INT NOT NULL,
+  before_image VARCHAR(255) NULL,
+  after_image VARCHAR(255) NULL,
+  is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )
@@ -1327,23 +1164,17 @@ CREATE TABLE restoration_services (
 ```sql
 CREATE TABLE restoration_requests (
   id VARCHAR(36) PRIMARY KEY,
-  appraisal_id VARCHAR(36) NOT NULL,           -- appraisals.id 참조
-  certificate_number VARCHAR(50) NOT NULL,     -- appraisals.certificate_number 참조
-  user_id VARCHAR(50) NOT NULL,                -- users 테이블의 id 참조
-
-  -- 복원 서비스 정보
-  services JSON NOT NULL,                      -- [{ service_id, service_name, price, status }]
-  status ENUM('pending', 'in_progress', 'completed', 'cancelled') DEFAULT 'pending',
-  total_price DECIMAL(10, 2) NOT NULL,
-
-  -- 배송 정보 (복원 완료 후 배송용)
-  delivery_info JSON NOT NULL,                 -- { name, phone, zipcode, address1, address2 }
-
-  -- 복원 상태 정보
-  notes TEXT NULL,                             -- 복원 관련 특이사항/요청사항
-  images JSON NULL,                            -- { before: [], after: [], progress: [] }
+  appraisal_id VARCHAR(36) NOT NULL,
+  certificate_number VARCHAR(50) NOT NULL,
+  user_id VARCHAR(50) NOT NULL,
+  services JSON NOT NULL,
+  status ENUM('pending','in_progress','completed','cancelled') DEFAULT 'pending',
+  total_price VARCHAR(255) NOT NULL,
+  delivery_info JSON NOT NULL,
+  notes TEXT NULL,
+  images JSON NULL,
   estimated_completion_date DATE NULL,
-  completed_at DATETIME NULL,                  -- 복원 완료 시간
+  completed_at DATETIME NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )
@@ -1357,7 +1188,7 @@ CREATE TABLE payments (
   user_id VARCHAR(50) NOT NULL,                -- users 테이블의 id 참조
   order_id VARCHAR(100) NOT NULL UNIQUE,       -- PG사 주문번호 (`Moid`)
   payment_gateway_transaction_id VARCHAR(100) NULL, -- PG사 거래번호 (`TID`)
-  product_type ENUM('quicklink_subscription', 'certificate_issue', 'restoration_service') NOT NULL,
+  product_type ENUM('quicklink_subscription' | 'certificate_issue' | 'restoration_service') NOT NULL,
   product_name VARCHAR(255) NOT NULL,
   amount DECIMAL(10, 2) NOT NULL,
   status ENUM('pending', 'ready', 'completed', 'failed', 'cancelled', 'vbank_ready', 'vbank_expired', 'auth_failed', 'auth_signature_mismatch', 'approval_signature_mismatch', 'server_error', 'approval_api_failed') DEFAULT 'pending',

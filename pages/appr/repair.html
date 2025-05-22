@@ -626,9 +626,18 @@
                 titleH3.textContent = service.name;
 
                 const priceP = document.createElement("p");
-                priceP.innerHTML = `가격: <strong>${Number(
-                  service.price
-                ).toLocaleString()}원</strong>`;
+                // 가격 표시 수정 - 숫자인지 확인 후 처리
+                let priceDisplay = service.price;
+                if (!isNaN(parseFloat(service.price))) {
+                  // 숫자인 경우 천 단위 구분자 추가
+                  priceDisplay = `${parseFloat(
+                    service.price
+                  ).toLocaleString()}원`;
+                } else {
+                  // 문자열인 경우 그대로 표시
+                  priceDisplay = service.price;
+                }
+                priceP.innerHTML = `가격: <strong>${priceDisplay}</strong>`;
 
                 const daysP = document.createElement("p");
                 daysP.innerHTML = `소요기간: <strong>${service.estimated_days}일</strong>`;

@@ -495,7 +495,7 @@
                 margin-bottom: 20px;
               ">
               <p style="color: #4a5568; font-size: 1.1rem">
-                명품감정
+                전체 명품감정 내역
                 <span id="count-display"
                   >전체 <strong id="total-appraisals-count">0</strong></span
                 >
@@ -556,6 +556,15 @@
                 id="loading-appraisals"
                 style="padding: 15px; text-align: center; color: #4a5568">
                 감정 내역을 불러오는 중...
+              </p>
+            </div>
+            <!-- 안내 메시지 추가 -->
+            <div style="margin-top: 15px; text-align: center">
+              <p style="color: #6b7280; font-size: 0.875rem">
+                📍 모든 사용자의 감정 내역을 공개적으로 표시합니다 (최대 20건)
+              </p>
+              <p style="color: #6b7280; font-size: 0.875rem; margin-top: 5px">
+                상세한 감정 결과는 감정 신청자만 확인할 수 있습니다
               </p>
             </div>
           </div>
@@ -928,7 +937,8 @@
           if (appraisalListContainer) appraisalListContainer.innerHTML = "";
           appraisalListContainer.appendChild(loadingAppraisalsEl);
 
-          let url = "/api/appr/appraisals?limit=0";
+          // 최대 20개 아이템까지만 표기
+          let url = "/api/appr/appraisals?limit=20";
           if (todayOnly) {
             url += "&today=true";
           }
@@ -1009,7 +1019,8 @@
                       minute: "2-digit",
                     }
                   );
-                  metaP.textContent = `감정번호: ${appraisal.certificate_number}`;
+                  // 감정번호만 표시 (민감하지 않은 공개 정보)
+                  metaP.textContent = `감정번호: ${appraisal.certificate_number} | ${date}`;
 
                   infoDiv.appendChild(titleP);
                   infoDiv.appendChild(metaP);
@@ -1020,6 +1031,8 @@
                   statusSpan.style.padding = "5px 10px";
                   statusSpan.style.borderRadius = "4px";
                   statusSpan.style.fontSize = "0.75rem";
+
+                  // 상태 표시 (공개 정보)
                   if (appraisal.status === "completed") {
                     statusSpan.textContent = "감정완료";
                     statusSpan.style.backgroundColor = "#d1fae5";
@@ -1037,7 +1050,7 @@
                     statusSpan.style.backgroundColor = "#f1f5f9";
                     statusSpan.style.color = "#334155";
                   } else {
-                    statusSpan.textContent = appraisal.status; // 기타 상태 그대로 표시
+                    statusSpan.textContent = appraisal.status;
                     statusSpan.style.backgroundColor = "#f1f5f9";
                     statusSpan.style.color = "#334155";
                   }
@@ -1049,15 +1062,30 @@
                     appraisalListContainer.appendChild(itemDiv);
                   }
 
-                  // 클릭 이벤트 리스너 추가
+                  // 클릭 이벤트 리스너 추가 - 공개 감정서 조회 페이지로 이동
                   itemDiv.addEventListener("click", function () {
                     const certificateNumber =
                       this.getAttribute("data-certificate");
                     if (certificateNumber) {
-                      window.location.href = `https://casastrade.com/appr/result/${certificateNumber}`;
+                      window.location.href = `/appr/result/${certificateNumber}`;
                     }
                   });
                 });
+
+                // 20개 이상인 경우 "더보기" 메시지 추가
+                if (data.pagination.totalItems > 20) {
+                  const moreItemsDiv = document.createElement("div");
+                  moreItemsDiv.style.padding = "15px";
+                  moreItemsDiv.style.textAlign = "center";
+                  moreItemsDiv.style.backgroundColor = "#f8fafc";
+                  moreItemsDiv.style.color = "#4a5568";
+                  moreItemsDiv.style.fontSize = "0.875rem";
+                  moreItemsDiv.style.borderTop = "1px solid #e2e8f0";
+                  moreItemsDiv.innerHTML = `최근 20개 감정만 표시됩니다. 전체 ${data.pagination.totalItems.toLocaleString()}건 중 20건`;
+                  if (appraisalListContainer) {
+                    appraisalListContainer.appendChild(moreItemsDiv);
+                  }
+                }
               } else if (data.appraisals && data.appraisals.length === 0) {
                 if (appraisalListContainer)
                   appraisalListContainer.innerHTML =

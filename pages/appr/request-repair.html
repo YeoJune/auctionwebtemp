@@ -885,10 +885,17 @@
 
       // 가격 형식 포맷팅 함수
       function formatPrice(price) {
-        // 소수점이 있는 경우 정수부분만 사용
-        const intPrice = Math.floor(parseFloat(price));
-        // 천 단위 구분자 추가 후 "원" 표시
-        return intPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") + "원";
+        // 숫자인지 확인
+        if (!isNaN(parseFloat(price))) {
+          // 숫자인 경우: 소수점 제거 후 천 단위 구분자 추가
+          const intPrice = Math.floor(parseFloat(price));
+          return (
+            intPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") + "원"
+          );
+        } else {
+          // 문자열인 경우: 그대로 반환
+          return price;
+        }
       }
 
       // NICE Pay 결제창 호출 함수
@@ -914,17 +921,18 @@
       }
 
       // 서비스 선택 핸들러
+
       function handleServiceSelection(serviceId, checked) {
         const service = servicesData.find((s) => s.id === serviceId);
         if (!service) return;
 
         if (checked) {
-          // 서비스 추가 - 가격을 정수로 변환하여 저장
+          // 서비스 추가
           if (!selectedServices.some((s) => s.service_id === serviceId)) {
             selectedServices.push({
               service_id: serviceId,
               service_name: service.name,
-              price: Math.floor(parseFloat(service.price)), // 소수점 제거
+              price: service.price, // 원본 가격 그대로 저장 (문자열 또는 숫자)
             });
           }
         } else {
@@ -949,36 +957,60 @@
         if (selectedServices.length === 0) {
           summarySection.style.display = "none";
           totalPrice = 0;
-          totalPriceEl.textContent = formatPrice(totalPrice);
+          totalPriceEl.textContent = "0원";
           return;
         }
 
         summarySection.style.display = "block";
         summaryContainer.innerHTML = "";
-        totalPrice = 0;
+
+        let calculableTotal = 0;
+        let hasNonNumericPrice = false;
 
         selectedServices.forEach((service) => {
-          totalPrice += service.price;
-
           const serviceRow = document.createElement("div");
           serviceRow.className = "summary-row";
+
+          // 가격 표시 및 계산
+          let priceDisplay = formatPrice(service.price);
+          if (!isNaN(parseFloat(service.price))) {
+            calculableTotal += Math.floor(parseFloat(service.price));
+          } else {
+            hasNonNumericPrice = true;
+          }
+
           serviceRow.innerHTML = `
        <div class="summary-label">${service.service_name}</div>
-       <div class="summary-value">${formatPrice(service.price)}</div>
+       <div class="summary-value">${priceDisplay}</div>
      `;
           summaryContainer.appendChild(serviceRow);
         });
 
-        totalPriceEl.textContent = formatPrice(totalPrice);
+        // 총액 표시
+        if (hasNonNumericPrice) {
+          totalPriceEl.textContent = "견적 문의";
+          totalPrice = "견적 문의";
+        } else {
+          totalPrice = calculableTotal;
+          totalPriceEl.textContent = formatPrice(calculableTotal);
+        }
       }
 
       // 폼 제출 처리
+      // 폼 제출 처리 (수정됨)
       async function handleFormSubmit(event) {
         event.preventDefault();
 
         // 서비스 선택 여부 검증
         if (selectedServices.length === 0) {
           alert("최소 하나 이상의 복원 서비스를 선택해주세요.");
+          return;
+        }
+
+        // 견적 문의인 경우 결제 없이 처리
+        if (totalPrice === "견적 문의") {
+          // 견적 문의로 처리
+          await handleEstimateRequest();
           return;
         }
 
@@ -1027,19 +1059,14 @@
             );
           }
 
-          // 결제창 호출을 위한 데이터
-          const paymentOrderId = prepareData.paramsForNicePaySDK.orderId;
-
-          // API 요청 데이터 구성
+          // 복원 서비스 API 호출
           const requestData = {
             certificate_number: appraisalInfo.certificate_number,
             services: selectedServices,
             delivery_info: deliveryInfo,
             notes: notes,
-            payment_order_id: paymentOrderId,
           };
 
-          // 복원 서비스 API 호출 - orderId 저장용
           const saveResponse = await fetch("/api/appr/restorations", {
             method: "POST",
             headers: {
@@ -1060,7 +1087,7 @@
           // 결제창 호출
           requestPayment({
             clientId: prepareData.paramsForNicePaySDK.clientId,
-            orderId: paymentOrderId,
+            orderId: prepareData.paramsForNicePaySDK.orderId,
             amount: prepareData.paramsForNicePaySDK.amount,
             goodsName: "복원 서비스",
           });
@@ -1072,6 +1099,64 @@
           );
 
           // 제출 버튼 다시 활성화
+          submitBtn.disabled = false;
+          submitBtn.textContent = "복원 서비스 신청하기";
+        }
+      }
+
+      // 견적 문의 처리 함수
+      async function handleEstimateRequest() {
+        const deliveryInfo = {
+          name: document.getElementById("delivery-name").value,
+          phone: document.getElementById("delivery-phone").value,
+          zipcode: document.getElementById("delivery-zipcode").value,
+          address1: document.getElementById("delivery-address1").value,
+          address2: document.getElementById("delivery-address2").value,
+        };
+
+        const notes = document.getElementById("notes").value;
+
+        const submitBtn = document.getElementById("submit-btn");
+        submitBtn.disabled = true;
+        submitBtn.textContent = "처리 중...";
+
+        try {
+          const requestData = {
+            certificate_number: appraisalInfo.certificate_number,
+            services: selectedServices,
+            delivery_info: deliveryInfo,
+            notes: notes + " (견적 문의)",
+          };
+
+          const response = await fetch("/api/appr/restorations", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(requestData),
+            credentials: "include",
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            // 성공 메시지 표시
+            document.getElementById("repair-form").style.display = "none";
+            document.getElementById("product-info-section").style.display =
+              "none";
+            document.getElementById("success-message").style.display = "block";
+          } else {
+            throw new Error(
+              data.message || "복원 서비스 신청 중 오류가 발생했습니다."
+            );
+          }
+        } catch (error) {
+          console.error("견적 문의 처리 오류:", error);
+          alert(
+            error.message ||
+              "견적 문의 처리 중 오류가 발생했습니다. 다시 시도해주세요."
+          );
+
           submitBtn.disabled = false;
           submitBtn.textContent = "복원 서비스 신청하기";
         }
