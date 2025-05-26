@@ -194,6 +194,7 @@ router.get("/", async (req, res) => {
         submitted_to_platform: row.submitted_to_platform,
         created_at: row.created_at,
         updated_at: row.updated_at,
+        winning_price: row.winning_price,
       };
 
       // Only include item if it exists
