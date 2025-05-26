@@ -121,9 +121,21 @@ const apprPagesPath = path.join(__dirname, "pages", "appr");
 app.use(express.static(publicPath));
 
 // 메인 서비스 페이지
-app.get("/", (req, res) => {
-  res.redirect("/productPage");
+app.use((req, res, next) => {
+  const host = req.headers.host;
+
+  if (host === "cassystem.com" || host === "www.cassystem.com") {
+    // cassystem은 redirect 하지 말고 그대로 응답
+    next();
+  } else {
+    // casastrade.com 등에서는 기존 redirect 적용
+    if (req.path === "/") {
+      return res.redirect("/productPage");
+    }
+    next();
+  }
 });
+
 app.get("/productPage", (req, res) => {
   res.sendFile(path.join(mainPagesPath, "product.html"));
 });
