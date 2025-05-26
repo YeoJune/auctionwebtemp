@@ -210,8 +210,8 @@ function groupResultsByDate() {
   const groupedByDate = {};
 
   state.combinedResults.forEach((item) => {
-    // scheduled_date를 기준으로 날짜만 추출 (시간 제외)
-    const dateStr = formatDate(item.scheduled_date);
+    // item.scheduled_date를 기준으로 날짜만 추출 (시간 제외)
+    const dateStr = formatDate(item.item?.scheduled_date);
 
     if (!groupedByDate[dateStr]) {
       groupedByDate[dateStr] = {
