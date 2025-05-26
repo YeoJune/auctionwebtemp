@@ -131,6 +131,10 @@ app.use((req, res, next) => {
   next();
 });
 
+app.get("/", (req, res) => {
+  res.redirect("/productPage");
+});
+
 app.get("/productPage", (req, res) => {
   res.sendFile(path.join(mainPagesPath, "product.html"));
 });
