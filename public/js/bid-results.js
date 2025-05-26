@@ -552,7 +552,7 @@ function createDailyResultRow(dayResult) {
     if (item.image && item.image !== "/images/placeholder.png") {
       const imageElement = document.createElement("img");
       imageElement.src = item.image;
-      imageElement.alt = item.item?.original_title || "상품 이미지";
+      imageElement.alt = item.item?.title || "상품 이미지";
       imageElement.classList.add("product-thumbnail");
 
       // 이미지 로드 오류 시 텍스트로 대체하고 다시 로드 시도하지 않음
@@ -576,7 +576,7 @@ function createDailyResultRow(dayResult) {
     brandCell.textContent = item.item?.brand || "-";
 
     const titleCell = document.createElement("td");
-    titleCell.textContent = item.item?.original_title || "제목 없음";
+    titleCell.textContent = item.item?.title || "제목 없음";
 
     const japaneseCell = document.createElement("td");
     japaneseCell.textContent = `${formatNumber(item.japanesePrice)} ¥`;
