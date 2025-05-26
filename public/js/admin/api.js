@@ -193,6 +193,14 @@ async function cancelBid(idOrIds) {
   });
 }
 
+// 현장 경매 수정
+async function updateLiveBid(bidId, updateData) {
+  return fetchAPI(`/live-bids/${bidId}`, {
+    method: "PUT",
+    body: JSON.stringify(updateData),
+  });
+}
+
 // ---- 직접 경매 API ----
 
 // 직접 경매 목록 조회 (페이지네이션, 정렬, 날짜 필터 추가)
@@ -282,6 +290,14 @@ async function markDirectBidAsSubmitted(idOrIds) {
   return fetchAPI("/direct-bids/mark-submitted", {
     method: "PUT",
     body: JSON.stringify(payload),
+  });
+}
+
+// 직접 경매 수정
+async function updateDirectBid(bidId, updateData) {
+  return fetchAPI(`/direct-bids/${bidId}`, {
+    method: "PUT",
+    body: JSON.stringify(updateData),
   });
 }
 

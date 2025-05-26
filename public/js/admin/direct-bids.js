@@ -114,6 +114,9 @@ document.addEventListener("DOMContentLoaded", function () {
   document
     .getElementById("submitBulkMarkAsSubmitted")
     ?.addEventListener("click", submitBulkMarkAsSubmitted);
+  document
+    .getElementById("submitEditBid")
+    ?.addEventListener("click", submitEditBid);
 });
 
 // 필터 상태에 따라 데이터 로드
@@ -225,8 +228,8 @@ function renderDirectBidsTable(directBids) {
   const linkFunc = {
     1: (itemId) => `https://www.ecoauc.com/client/auction-items/view/${itemId}`,
     2: (itemId) =>
-      `https://bid.brand-auc.com/items/detail?uketsukeBng=${itemId}`, // BrandAuc 링크
-    3: (itemId) => `https://www.starbuyers-global-auction.com/item/${itemId}`, // StarAuc 링크
+      `https://bid.brand-auc.com/items/detail?uketsukeBng=${itemId}`,
+    3: (itemId) => `https://www.starbuyers-global-auction.com/item/${itemId}`,
   };
 
   directBids.forEach((bid) => {
@@ -254,10 +257,11 @@ function renderDirectBidsTable(directBids) {
       submittedBadge = '<span class="badge badge-warning">미반영</span>';
     }
 
-    // 작업 버튼
-    let actionButtons = "";
+    // 작업 버튼 - 수정 버튼 추가
+    let actionButtons = `<button class="btn btn-sm btn-secondary" onclick="openEditBidModal(${bid.id})">수정</button>`;
+
     if (bid.status === "active") {
-      actionButtons = `
+      actionButtons += `
         <button class="btn" onclick="openCompleteModal(${bid.id})">낙찰 완료</button>
         <button class="btn btn-secondary" onclick="openCancelModal(${bid.id})">낙찰 실패</button>
       `;
@@ -693,5 +697,99 @@ async function submitBulkMarkAsSubmitted() {
     await loadDirectBids();
   } catch (error) {
     handleError(error, "일괄 반영 완료 표시 중 오류가 발생했습니다.");
+  }
+}
+
+// 수정 모달 열기
+function openEditBidModal(bidId) {
+  // 현재 입찰 데이터 찾기
+  const tableBody = document.getElementById("directBidsTableBody");
+  const rows = tableBody.querySelectorAll("tr");
+  let currentBid = null;
+
+  // 테이블에서 해당 입찰 찾기 (간단한 방법)
+  for (let row of rows) {
+    const checkbox = row.querySelector(".bid-checkbox");
+    if (checkbox && checkbox.dataset.bidId == bidId) {
+      // 현재 표시된 데이터에서 값 추출
+      const cells = row.querySelectorAll("td");
+      const currentPriceText = cells[4]?.textContent || "";
+      const winningPriceText = cells[5]?.textContent || "";
+      const statusText = cells[8]?.textContent || "";
+      const submittedText = cells[9]?.textContent || "";
+
+      // 가격에서 숫자만 추출
+      const currentPriceMatch = currentPriceText.match(/현지가:\s*¥([\d,]+)/);
+      const winningPriceMatch = winningPriceText.match(/현지가:\s*¥([\d,]+)/);
+
+      currentBid = {
+        id: bidId,
+        current_price: currentPriceMatch
+          ? parseInt(currentPriceMatch[1].replace(/,/g, ""))
+          : 0,
+        winning_price: winningPriceMatch
+          ? parseInt(winningPriceMatch[1].replace(/,/g, ""))
+          : null,
+        status: statusText.includes("활성")
+          ? "active"
+          : statusText.includes("완료")
+          ? "completed"
+          : "cancelled",
+        submitted_to_platform: submittedText.includes("반영됨"),
+      };
+      break;
+    }
+  }
+
+  if (!currentBid) {
+    showAlert("입찰 정보를 찾을 수 없습니다.");
+    return;
+  }
+
+  // 모달에 현재 값 설정
+  document.getElementById("editBidId").value = bidId;
+  document.getElementById("editCurrentPrice").value =
+    currentBid.current_price || "";
+  document.getElementById("editStatus").value = currentBid.status;
+  document.getElementById("editSubmittedToPlatform").checked =
+    currentBid.submitted_to_platform;
+  document.getElementById("editWinningPrice").value =
+    currentBid.winning_price || "";
+
+  openModal("editBidModal");
+}
+
+// 수정 제출
+async function submitEditBid() {
+  const bidId = document.getElementById("editBidId").value;
+  const currentPrice = document.getElementById("editCurrentPrice").value;
+  const status = document.getElementById("editStatus").value;
+  const submittedToPlatform = document.getElementById(
+    "editSubmittedToPlatform"
+  ).checked;
+  const winningPrice = document.getElementById("editWinningPrice").value;
+
+  if (!bidId) {
+    showAlert("입찰 ID가 유효하지 않습니다.");
+    return;
+  }
+
+  try {
+    const updateData = {};
+
+    if (currentPrice) updateData.current_price = parseInt(currentPrice);
+    if (status) updateData.status = status;
+    updateData.submitted_to_platform = submittedToPlatform;
+    if (winningPrice) updateData.winning_price = parseInt(winningPrice);
+
+    await updateDirectBid(bidId, updateData);
+
+    closeAllModals();
+    showAlert("입찰 정보가 수정되었습니다.", "success");
+
+    // 데이터 새로고침
+    await loadDirectBids();
+  } catch (error) {
+    handleError(error, "입찰 수정 중 오류가 발생했습니다.");
   }
 }

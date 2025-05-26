@@ -289,6 +289,78 @@
       </div>
     </div>
 
+    <!-- 입찰 정보 수정 모달 -->
+    <div class="modal-overlay" id="editBidModal">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3 class="modal-title">입찰 정보 수정</h3>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="editBidId" />
+
+          <div class="form-group">
+            <label class="form-label" for="editFirstPrice"
+              >1차 입찰가 (엔화)</label
+            >
+            <input
+              type="number"
+              id="editFirstPrice"
+              class="form-control"
+              placeholder="1차 입찰가 입력" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="editSecondPrice"
+              >2차 제안가 (엔화)</label
+            >
+            <input
+              type="number"
+              id="editSecondPrice"
+              class="form-control"
+              placeholder="2차 제안가 입력" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="editFinalPrice"
+              >최종 입찰가 (엔화)</label
+            >
+            <input
+              type="number"
+              id="editFinalPrice"
+              class="form-control"
+              placeholder="최종 입찰가 입력" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="editStatus">상태</label>
+            <select id="editStatus" class="form-control">
+              <option value="first">1차 입찰</option>
+              <option value="second">2차 제안</option>
+              <option value="final">최종 입찰</option>
+              <option value="completed">완료</option>
+              <option value="cancelled">낙찰 실패</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="editWinningPrice"
+              >낙찰 금액 (엔화)</label
+            >
+            <input
+              type="number"
+              id="editWinningPrice"
+              class="form-control"
+              placeholder="낙찰 금액 입력" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary close-modal">취소</button>
+          <button class="btn" id="submitEditBid">수정 저장</button>
+        </div>
+      </div>
+    </div>
+
     <script src="/js/admin/common.js"></script>
     <script src="/js/admin/api.js"></script>
     <script src="/js/admin/live-bids.js"></script>
