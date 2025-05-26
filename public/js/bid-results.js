@@ -147,8 +147,9 @@ async function fetchCompletedBids() {
     const params = {
       status: "completed", // 완료된 입찰만 가져옴
       fromDate: fromDate,
-      sortBy: "updated_at", // 백엔드에서는 updated_at으로 정렬
+      sortBy: "scheduled_date", // scheduled_date로 변경
       sortOrder: "desc",
+      limit: 0, // 모든 데이터 가져오기
     };
 
     // API 요청 URL 생성
@@ -209,8 +210,8 @@ function groupResultsByDate() {
   const groupedByDate = {};
 
   state.combinedResults.forEach((item) => {
-    // 날짜만 추출 (시간 제외)
-    const dateStr = formatDate(item.updated_at);
+    // scheduled_date를 기준으로 날짜만 추출 (시간 제외)
+    const dateStr = formatDate(item.scheduled_date);
 
     if (!groupedByDate[dateStr]) {
       groupedByDate[dateStr] = {
