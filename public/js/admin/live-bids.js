@@ -351,6 +351,7 @@ function renderLiveBidsTable(liveBids) {
                 ? formatCurrency(bid.item.starting_price, "JPY")
                 : "-"
             }</span>
+            <span>예정일시: ${scheduledDate}</span>
           </div>
         </div>
       </div>
