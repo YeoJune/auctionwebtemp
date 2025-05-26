@@ -664,7 +664,8 @@ function displayProducts() {
       (product.displayStatus === "active" ||
         product.displayStatus === "first" ||
         product.displayStatus === "second" ||
-        product.displayStatus === "final") &&
+        product.displayStatus === "final" ||
+        product.displayStatus === "cancelled") &&
       timer &&
       !isScheduledPassed;
 
@@ -1010,12 +1011,7 @@ function displayBidInfoInModal(product, item) {
   const isScheduledPassed = scheduled < now;
 
   // 마감되었거나 완료/취소 상태인 경우 읽기 전용 표시
-  if (
-    !timer ||
-    isScheduledPassed ||
-    product.displayStatus === "completed" ||
-    product.displayStatus === "cancelled"
-  ) {
+  if (!timer || isScheduledPassed || product.displayStatus === "completed") {
     // 입찰 불가 상태인 경우 읽기 전용 입찰 정보 표시
     displayReadOnlyBidInfo(product, item, bidSection);
     return;
