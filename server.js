@@ -123,17 +123,12 @@ app.use(express.static(publicPath));
 // 메인 서비스 페이지
 app.use((req, res, next) => {
   const host = req.headers.host;
-
   if (host === "cassystem.com" || host === "www.cassystem.com") {
-    // cassystem은 redirect 하지 말고 그대로 응답
-    next();
-  } else {
-    // casastrade.com 등에서는 기존 redirect 적용
-    if (req.path === "/") {
-      return res.redirect("/productPage");
+    if (!req.path.startsWith("/appr")) {
+      req.url = "/appr" + req.url;
     }
-    next();
   }
+  next();
 });
 
 app.get("/productPage", (req, res) => {
