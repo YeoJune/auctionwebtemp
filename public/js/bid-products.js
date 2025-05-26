@@ -611,6 +611,7 @@ function getStatusClass(status, scheduledDate) {
 }
 
 // 결과 표시
+// 결과 표시 함수 - winning_price 수정
 function displayProducts() {
   const container = document.getElementById("productList");
   if (!container) return;
@@ -760,9 +761,11 @@ function displayProducts() {
 
       const auctionId = item.auc_num || 1;
       const category = item.category || "기타";
+      let japanesePrice = 0;
       let bidInfoHTML = ``;
 
       if (product.type === "direct") {
+        japanesePrice = product.current_price || 0;
         bidInfoHTML += `
                   <div class="price-row">
                       <span class="price-label">입찰 금액:</span>
@@ -772,7 +775,7 @@ function displayProducts() {
                   </div>
               `;
 
-        // winning_price가 있으면 winning_price로 관부가세 포함 가격 표시, 없으면 계산된 가격 표시
+        // winning_price가 있으면 표시
         if (product.winning_price) {
           const winningKoreanPrice = calculateTotalPrice(
             product.winning_price,
@@ -780,7 +783,13 @@ function displayProducts() {
             category
           );
           bidInfoHTML += `
-                    <div class="price-row price-korean">
+                    <div class="price-row winning-price">
+                        <span class="price-label">낙찰 금액:</span>
+                        <span class="price-value">${formatNumber(
+                          product.winning_price
+                        )} ¥</span>
+                    </div>
+                    <div class="price-row price-korean winning-price">
                         <span class="price-label">관부가세 포함:</span>
                         <span class="price-value">${formatNumber(
                           winningKoreanPrice
@@ -788,16 +797,15 @@ function displayProducts() {
                     </div>
                 `;
         } else {
-          const koreanPrice = calculateTotalPrice(
-            product.current_price,
-            auctionId,
-            category
-          );
           bidInfoHTML += `
                     <div class="price-row price-korean">
                         <span class="price-label">관부가세 포함:</span>
                         <span class="price-value">${formatNumber(
-                          koreanPrice
+                          calculateTotalPrice(
+                            japanesePrice,
+                            auctionId,
+                            category
+                          )
                         )} ₩</span>
                     </div>
                 `;
@@ -844,7 +852,13 @@ function displayProducts() {
                   </div>
               `;
 
-        // winning_price가 있으면 winning_price로 관부가세 포함 가격 계산, 없으면 기존 로직 사용
+        japanesePrice =
+          product.final_price ||
+          product.second_price ||
+          product.first_price ||
+          0;
+
+        // winning_price가 있으면 낙찰 금액과 관부가세 포함 표시
         if (product.winning_price) {
           const winningKoreanPrice = calculateTotalPrice(
             product.winning_price,
@@ -852,22 +866,22 @@ function displayProducts() {
             category
           );
           bidInfoHTML += `
-                    <div class="price-row price-korean">
+                    <div class="price-row winning-price">
+                        <span class="price-label">낙찰 금액:</span>
+                        <span class="price-value">${formatNumber(
+                          product.winning_price
+                        )} ¥</span>
+                    </div>
+                    <div class="price-row price-korean winning-price">
                         <span class="price-label">관부가세 포함:</span>
                         <span class="price-value">${formatNumber(
                           winningKoreanPrice
                         )} ₩</span>
                     </div>
                 `;
-        } else {
-          const japanesePrice =
-            product.final_price ||
-            product.second_price ||
-            product.first_price ||
-            0;
-
-          if (japanesePrice > 0) {
-            bidInfoHTML += `
+        } else if (japanesePrice > 0) {
+          // winning_price가 없고 일반 입찰가가 있으면 관부가세 포함 표시
+          bidInfoHTML += `
                       <div class="price-row price-korean">
                           <span class="price-label">관부가세 포함:</span>
                           <span class="price-value">${formatNumber(
@@ -879,7 +893,6 @@ function displayProducts() {
                           )} ₩</span>
                       </div>
                   `;
-          }
         }
       }
 
@@ -1067,8 +1080,7 @@ function displayBidInfoInModal(product, item) {
   BidManager.initializePriceCalculators();
 }
 
-// 읽기 전용 입찰 정보 표시
-
+// 읽기 전용 입찰 정보 표시 함수
 function displayReadOnlyBidInfo(product, item, container) {
   // 상태에 따라 다른 표시와 클래스 적용 - 실제 상태 사용
   const statusClass = getStatusClass(
@@ -1080,28 +1092,19 @@ function displayReadOnlyBidInfo(product, item, container) {
     item.scheduled_date
   );
 
-  // 원화 가격 계산 - winning_price 우선 사용
+  // 원화 가격 계산
   const auctionId = item.auc_num || 1;
   const category = item.category || "기타";
   let japanesePrice = 0;
-  let koreanPrice = 0;
 
-  if (product.winning_price) {
-    // winning_price가 있으면 우선 사용
-    japanesePrice = product.winning_price;
-    koreanPrice = calculateTotalPrice(
-      product.winning_price,
-      auctionId,
-      category
-    );
-  } else if (product.type === "direct") {
+  if (product.type === "direct") {
     japanesePrice = product.current_price || 0;
-    koreanPrice = calculateTotalPrice(japanesePrice, auctionId, category);
   } else {
     japanesePrice =
       product.final_price || product.second_price || product.first_price || 0;
-    koreanPrice = calculateTotalPrice(japanesePrice, auctionId, category);
   }
+
+  const koreanPrice = calculateTotalPrice(japanesePrice, auctionId, category);
 
   let priceInfoHTML = `
       <div class="modal-price-info">
@@ -1128,6 +1131,29 @@ function displayReadOnlyBidInfo(product, item, container) {
           )}
         </div>
       `;
+
+    // winning_price가 있으면 낙찰 금액과 관부가세 포함 표시
+    if (product.winning_price) {
+      const winningKoreanPrice = calculateTotalPrice(
+        product.winning_price,
+        auctionId,
+        category
+      );
+      priceInfoHTML += `
+          <div class="price-winning">
+            <strong>낙찰 금액:</strong> ￥${formatNumber(product.winning_price)}
+          </div>
+          <div class="price-winning-korean">
+            <strong>관부가세 포함:</strong> ₩${formatNumber(winningKoreanPrice)}
+          </div>
+        `;
+    } else {
+      priceInfoHTML += `
+          <div class="price-korean">
+            <strong>관부가세 포함:</strong> ₩${formatNumber(koreanPrice)}
+          </div>
+        `;
+    }
   } else {
     priceInfoHTML += `
         <div class="price-type">
@@ -1158,24 +1184,30 @@ function displayReadOnlyBidInfo(product, item, container) {
           </div>
         `;
     }
-  }
 
-  // winning_price가 있으면 해당 정보 표시, 없으면 계산된 관부가세 포함 가격 표시
-  if (product.winning_price) {
-    priceInfoHTML += `
-        <div class="price-winning">
-          <strong>낙찰 금액:</strong> ￥${formatNumber(product.winning_price)}
-        </div>
-        <div class="price-korean">
-          <strong>관부가세 포함:</strong> ₩${formatNumber(koreanPrice)}
-        </div>
-      `;
-  } else if (japanesePrice > 0) {
-    priceInfoHTML += `
-        <div class="price-korean">
-          <strong>관부가세 포함:</strong> ₩${formatNumber(koreanPrice)}
-        </div>
-      `;
+    // winning_price가 있으면 낙찰 금액과 관부가세 포함 표시
+    if (product.winning_price) {
+      const winningKoreanPrice = calculateTotalPrice(
+        product.winning_price,
+        auctionId,
+        category
+      );
+      priceInfoHTML += `
+          <div class="price-winning">
+            <strong>낙찰 금액:</strong> ￥${formatNumber(product.winning_price)}
+          </div>
+          <div class="price-winning-korean">
+            <strong>관부가세 포함:</strong> ₩${formatNumber(winningKoreanPrice)}
+          </div>
+        `;
+    } else if (japanesePrice > 0) {
+      // winning_price가 없고 일반 입찰가가 있으면 관부가세 포함 표시
+      priceInfoHTML += `
+          <div class="price-korean">
+            <strong>관부가세 포함:</strong> ₩${formatNumber(koreanPrice)}
+          </div>
+        `;
+    }
   }
 
   priceInfoHTML += `
