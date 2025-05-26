@@ -32,7 +32,10 @@ router.get("/", async (req, res) => {
     sortBy = "updated_at",
     sortOrder = "desc",
   } = req.query;
-  const offset = (page - 1) * limit;
+
+  // limit=0일 때는 페이지네이션 적용하지 않음
+  const usesPagination = parseInt(limit) !== 0;
+  const offset = usesPagination ? (page - 1) * limit : 0;
 
   if (!req.session.user) {
     return res.status(401).json({ message: "Unauthorized" });
@@ -163,14 +166,19 @@ router.get("/", async (req, res) => {
     // 정렬 쿼리 추가
     mainQuery += ` ORDER BY ${orderByColumn} ${direction}`;
 
-    // 페이지네이션 추가
-    mainQuery += " LIMIT ? OFFSET ?";
-    const mainQueryParams = [...queryParams, parseInt(limit), parseInt(offset)];
+    // 페이지네이션 추가 (limit=0이 아닌 경우에만)
+    let mainQueryParams;
+    if (usesPagination) {
+      mainQuery += " LIMIT ? OFFSET ?";
+      mainQueryParams = [...queryParams, parseInt(limit), parseInt(offset)];
+    } else {
+      mainQueryParams = [...queryParams];
+    }
 
     // 총 개수 가져오기
     const [countResult] = await connection.query(countQuery, queryParams);
     const total = countResult[0].total;
-    const totalPages = Math.ceil(total / limit);
+    const totalPages = usesPagination ? Math.ceil(total / limit) : 1;
 
     // 데이터 쿼리 실행
     const [rows] = await connection.query(mainQuery, mainQueryParams);

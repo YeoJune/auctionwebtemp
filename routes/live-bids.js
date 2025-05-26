@@ -24,7 +24,10 @@ router.get("/", async (req, res) => {
     sortBy = "updated_at",
     sortOrder = "desc",
   } = req.query;
-  const offset = (page - 1) * limit;
+
+  // limit=0일 때는 페이지네이션 적용하지 않음
+  const usesPagination = parseInt(limit) !== 0;
+  const offset = usesPagination ? (page - 1) * limit : 0;
 
   if (!req.session.user) {
     return res.status(401).json({ message: "Unauthorized" });
@@ -124,26 +127,29 @@ router.get("/", async (req, res) => {
 
   // 정렬 쿼리 추가
   const orderByClause = ` ORDER BY ${orderByColumn} ${direction}`;
-  const paginationClause = " LIMIT ? OFFSET ?";
 
-  const finalQuery = mainQuery + orderByClause + paginationClause;
+  let finalQuery = mainQuery + orderByClause;
+  let finalQueryParams;
 
-  // Add pagination parameters
-  queryParams.push(parseInt(limit), parseInt(offset));
+  // 페이지네이션 추가 (limit=0이 아닌 경우에만)
+  if (usesPagination) {
+    const paginationClause = " LIMIT ? OFFSET ?";
+    finalQuery += paginationClause;
+    finalQueryParams = [...queryParams, parseInt(limit), parseInt(offset)];
+  } else {
+    finalQueryParams = [...queryParams];
+  }
 
   const connection = await pool.getConnection();
 
   try {
     // Get total count
-    const [countResult] = await connection.query(
-      countQuery,
-      queryParams.slice(0, -2)
-    );
+    const [countResult] = await connection.query(countQuery, queryParams);
     const total = countResult[0].total;
-    const totalPages = Math.ceil(total / limit);
+    const totalPages = usesPagination ? Math.ceil(total / limit) : 1;
 
     // Get bids with item details in a single query
-    const [rows] = await connection.query(finalQuery, queryParams);
+    const [rows] = await connection.query(finalQuery, finalQueryParams);
 
     // Format result to match expected structure
     const bidsWithItems = rows.map((row) => {
