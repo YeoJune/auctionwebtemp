@@ -245,11 +245,15 @@ async function placeBid(itemId, currentPrice) {
   });
 }
 
-// 직접 경매 낙찰 완료 처리 - 단일 또는 다중 처리 지원
-async function completeDirectBid(idOrIds) {
+async function completeDirectBid(idOrIds, winningPrice) {
   // 단일 ID인지 배열인지 확인
   const isArray = Array.isArray(idOrIds);
   const payload = isArray ? { ids: idOrIds } : { id: idOrIds };
+
+  // winningPrice가 있으면 추가
+  if (winningPrice !== undefined) {
+    payload.winningPrice = winningPrice;
+  }
 
   return fetchAPI("/direct-bids/complete", {
     method: "PUT",

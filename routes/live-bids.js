@@ -473,17 +473,16 @@ router.put("/complete", isAdmin, async (req, res) => {
 
     // 낙찰 금액이 있는 경우
     if (winningPrice !== undefined) {
-      // winningPrice가 final_price보다 큰 경우 취소, 아닐 경우 완료
       // 취소 처리: winningPrice > final_price
       const [cancelResult] = await connection.query(
-        `UPDATE live_bids SET status = 'cancelled' WHERE id IN (${placeholders}) AND status = 'final' AND final_price < ?`,
-        [...bidIds, winningPrice]
+        `UPDATE live_bids SET status = 'cancelled', winning_price = ? WHERE id IN (${placeholders}) AND status = 'final' AND final_price < ?`,
+        [winningPrice, ...bidIds, winningPrice]
       );
       cancelledCount = cancelResult.affectedRows;
 
       // 완료 처리: winningPrice <= final_price
       const [completeResult] = await connection.query(
-        `UPDATE live_bids SET status = 'completed', final_price = ? WHERE id IN (${placeholders}) AND status = 'final' AND final_price >= ?`,
+        `UPDATE live_bids SET status = 'completed', winning_price = ? WHERE id IN (${placeholders}) AND status = 'final' AND final_price >= ?`,
         [winningPrice, ...bidIds, winningPrice]
       );
       completedCount = completeResult.affectedRows;
@@ -492,9 +491,9 @@ router.put("/complete", isAdmin, async (req, res) => {
         affectedRows: cancelledCount + completedCount,
       };
     } else {
-      // 낙찰 금액이 없을 경우 기존 최종 입찰가로 완료 처리
+      // 낙찰 금액이 없을 경우 기존 최종 입찰가를 winning_price로 설정하여 완료 처리
       [updateResult] = await connection.query(
-        `UPDATE live_bids SET status = 'completed' WHERE id IN (${placeholders}) AND status = 'final'`,
+        `UPDATE live_bids SET status = 'completed', winning_price = final_price WHERE id IN (${placeholders}) AND status = 'final'`,
         bidIds
       );
       completedCount = updateResult.affectedRows;

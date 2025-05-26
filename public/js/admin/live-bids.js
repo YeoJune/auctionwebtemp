@@ -286,6 +286,7 @@ function renderLiveBidsTable(liveBids) {
     let firstTotalPrice = "-";
     let secondTotalPrice = "-";
     let finalTotalPrice = "-";
+    let winningTotalPrice = "-";
 
     if (bid.item && bid.item.auc_num && bid.item.category) {
       const auc_num = bid.item.auc_num;
@@ -308,6 +309,13 @@ function renderLiveBidsTable(liveBids) {
       if (bid.final_price) {
         finalTotalPrice = formatCurrency(
           calculateTotalPrice(bid.final_price, auc_num, category),
+          "KRW"
+        );
+      }
+
+      if (bid.winning_price) {
+        winningTotalPrice = formatCurrency(
+          calculateTotalPrice(bid.winning_price, auc_num, category),
           "KRW"
         );
       }
@@ -339,7 +347,6 @@ function renderLiveBidsTable(liveBids) {
                 ? formatCurrency(bid.item.starting_price, "JPY")
                 : "-"
             }</span>
-            <span>예정일시: ${scheduledDate}</span>
           </div>
         </div>
       </div>
@@ -363,8 +370,16 @@ function renderLiveBidsTable(liveBids) {
       }</div>
       <div class="total-price">관부가세 포함: ${finalTotalPrice}</div>
     </td>
+    <td>
+      <div>현지가: ${
+        bid.winning_price ? formatCurrency(bid.winning_price, "JPY") : "-"
+      }</div>
+      <div class="total-price">관부가세 포함: ${winningTotalPrice}</div>
+    </td>
+    <td>
+      <div>${scheduledDate}</div>
+    </td>
     <td>${statusBadge}</td>
-    <td>${formatDate(bid.created_at)}</td>
     <td>${formatDate(bid.updated_at)}</td>
     <td>${actionButtons}</td>
   </tr>

@@ -535,7 +535,7 @@ router.post("/", async (req, res) => {
 
 // 낙찰 완료 처리 - 단일 또는 다중 처리 지원
 router.put("/complete", isAdmin, async (req, res) => {
-  const { id, ids } = req.body; // 단일 id 또는 다중 ids 배열 수신
+  const { id, ids, winningPrice } = req.body; // 단일 id 또는 다중 ids 배열 수신
 
   // id나 ids 중 하나는 필수
   if (!id && (!ids || !Array.isArray(ids) || ids.length === 0)) {
@@ -553,11 +553,37 @@ router.put("/complete", isAdmin, async (req, res) => {
     // 한 번의 쿼리로 여러 입찰 상태를 업데이트
     const placeholders = bidIds.map(() => "?").join(",");
 
-    // 활성 상태인 입찰만 완료 처리
-    const [updateResult] = await connection.query(
-      `UPDATE direct_bids SET status = 'completed' WHERE id IN (${placeholders}) AND status = 'active'`,
-      bidIds
-    );
+    let updateResult;
+    let completedCount = 0;
+    let cancelledCount = 0;
+
+    // 낙찰 금액이 있는 경우
+    if (winningPrice !== undefined) {
+      // 취소 처리: winningPrice > current_price
+      const [cancelResult] = await connection.query(
+        `UPDATE direct_bids SET status = 'cancelled', winning_price = ? WHERE id IN (${placeholders}) AND status = 'active' AND current_price < ?`,
+        [winningPrice, ...bidIds, winningPrice]
+      );
+      cancelledCount = cancelResult.affectedRows;
+
+      // 완료 처리: winningPrice <= current_price
+      const [completeResult] = await connection.query(
+        `UPDATE direct_bids SET status = 'completed', winning_price = ? WHERE id IN (${placeholders}) AND status = 'active' AND current_price >= ?`,
+        [winningPrice, ...bidIds, winningPrice]
+      );
+      completedCount = completeResult.affectedRows;
+
+      updateResult = {
+        affectedRows: cancelledCount + completedCount,
+      };
+    } else {
+      // 낙찰 금액이 없을 경우 기존 current_price를 winning_price로 설정하여 완료 처리
+      [updateResult] = await connection.query(
+        `UPDATE direct_bids SET status = 'completed', winning_price = current_price WHERE id IN (${placeholders}) AND status = 'active'`,
+        bidIds
+      );
+      completedCount = updateResult.affectedRows;
+    }
 
     // 완료된 항목의 item_id 조회
     const [completedBids] = await connection.query(
@@ -575,11 +601,42 @@ router.put("/complete", isAdmin, async (req, res) => {
 
     await connection.commit();
 
+    // 응답 메시지 구성
+    let message;
+    if (id) {
+      if (winningPrice !== undefined) {
+        if (completedCount > 0) {
+          message = "Bid completed successfully";
+        } else if (cancelledCount > 0) {
+          message = "Bid cancelled (winning price exceeds current price)";
+        } else {
+          message = "No bid found or already processed";
+        }
+      } else {
+        message = "Bid completed successfully";
+      }
+    } else {
+      const messages = [];
+      if (completedCount > 0) {
+        messages.push(`${completedCount} bid(s) completed`);
+      }
+      if (cancelledCount > 0) {
+        messages.push(
+          `${cancelledCount} bid(s) cancelled (winning price exceeds current price)`
+        );
+      }
+      message =
+        messages.length > 0
+          ? messages.join(", ")
+          : "No bids found or already processed";
+    }
+
     res.status(200).json({
-      message: id
-        ? "Bid completed successfully"
-        : `${updateResult.affectedRows} bids completed successfully`,
+      message: message,
       status: "completed",
+      completedCount: completedCount,
+      cancelledCount: cancelledCount,
+      winningPrice: winningPrice,
     });
   } catch (err) {
     await connection.rollback();
