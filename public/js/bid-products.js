@@ -779,6 +779,29 @@ function displayProducts() {
                       )} ₩</span>
                   </div>
               `;
+
+        // winning_price가 있으면 표시
+        if (product.winning_price) {
+          const winningKoreanPrice = calculateTotalPrice(
+            product.winning_price,
+            auctionId,
+            category
+          );
+          bidInfoHTML += `
+                    <div class="price-row winning-price">
+                        <span class="price-label">낙찰 금액:</span>
+                        <span class="price-value">${formatNumber(
+                          product.winning_price
+                        )} ¥</span>
+                    </div>
+                    <div class="price-row price-korean winning-price">
+                        <span class="price-label">낙찰 금액 (관부가세 포함):</span>
+                        <span class="price-value">${formatNumber(
+                          winningKoreanPrice
+                        )} ₩</span>
+                    </div>
+                `;
+        }
       } else {
         bidInfoHTML += `
                   <div class="price-stages">
@@ -853,6 +876,29 @@ function displayProducts() {
                           )} ₩</span>
                       </div>
                   `;
+        }
+
+        // winning_price가 있으면 표시
+        if (product.winning_price) {
+          const winningKoreanPrice = calculateTotalPrice(
+            product.winning_price,
+            auctionId,
+            category
+          );
+          bidInfoHTML += `
+                    <div class="price-row winning-price">
+                        <span class="price-label">낙찰 금액:</span>
+                        <span class="price-value">${formatNumber(
+                          product.winning_price
+                        )} ¥</span>
+                    </div>
+                    <div class="price-row price-korean winning-price">
+                        <span class="price-label">낙찰 금액 (관부가세 포함):</span>
+                        <span class="price-value">${formatNumber(
+                          winningKoreanPrice
+                        )} ₩</span>
+                    </div>
+                `;
         }
       }
 
@@ -1094,6 +1140,25 @@ function displayReadOnlyBidInfo(product, item, container) {
           <strong>관부가세 포함:</strong> ₩${formatNumber(koreanPrice)}
         </div>
       `;
+
+    // winning_price가 있으면 추가 표시
+    if (product.winning_price) {
+      const winningKoreanPrice = calculateTotalPrice(
+        product.winning_price,
+        auctionId,
+        category
+      );
+      priceInfoHTML += `
+          <div class="price-winning">
+            <strong>낙찰 금액:</strong> ￥${formatNumber(product.winning_price)}
+          </div>
+          <div class="price-winning-korean">
+            <strong>낙찰 금액 (관부가세 포함):</strong> ₩${formatNumber(
+              winningKoreanPrice
+            )}
+          </div>
+        `;
+    }
   } else {
     priceInfoHTML += `
         <div class="price-type">
@@ -1130,6 +1195,25 @@ function displayReadOnlyBidInfo(product, item, container) {
       priceInfoHTML += `
           <div class="price-korean">
             <strong>관부가세 포함:</strong> ₩${formatNumber(koreanPrice)}
+          </div>
+        `;
+    }
+
+    // winning_price가 있으면 추가 표시
+    if (product.winning_price) {
+      const winningKoreanPrice = calculateTotalPrice(
+        product.winning_price,
+        auctionId,
+        category
+      );
+      priceInfoHTML += `
+          <div class="price-winning">
+            <strong>낙찰 금액:</strong> ￥${formatNumber(product.winning_price)}
+          </div>
+          <div class="price-winning-korean">
+            <strong>낙찰 금액 (관부가세 포함):</strong> ₩${formatNumber(
+              winningKoreanPrice
+            )}
           </div>
         `;
     }

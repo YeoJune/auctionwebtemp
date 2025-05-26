@@ -223,11 +223,16 @@ function groupResultsByDate() {
       };
     }
 
-    // 가격 정보 계산 - 숫자형으로 확실하게 변환
+    // 가격 정보 계산 - winning_price 사용, 없으면 기본값 사용
     let japanesePrice = 0;
-    if (item.type === "direct") {
+    if (item.winning_price) {
+      // winning_price가 있으면 우선 사용
+      japanesePrice = Number(item.winning_price);
+    } else if (item.type === "direct") {
+      // winning_price가 없고 direct 타입이면 current_price 사용
       japanesePrice = Number(item.current_price || 0);
     } else {
+      // winning_price가 없고 live 타입이면 final_price 사용
       japanesePrice = Number(item.final_price || 0);
     }
 
