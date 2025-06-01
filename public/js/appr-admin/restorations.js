@@ -99,32 +99,31 @@ function displayRestorationServices(services) {
       priceDisplay = parseFloat(service.price).toLocaleString();
     }
     // 문자열인 경우 그대로 표시
-
     html += `<tr>
-            <td>${service.name}</td>
-            <td>${
-              service.description.length > 50
-                ? service.description.substring(0, 50) + "..."
-                : service.description
-            }</td>
-            <td>${priceDisplay}</td>
-            <td>${service.estimated_days}</td>
-            <td>${
+        <td>${service.name}</td>
+        <td>${
+          service.description.length > 50
+            ? service.description.substring(0, 50) + "..."
+            : service.description
+        }</td>
+        <td>${priceDisplay}</td>
+        <td>${service.estimated_days}</td>
+        <td>${
+          service.is_active
+            ? '<span class="badge badge-success">활성화</span>'
+            : '<span class="badge badge-error">비활성화</span>'
+        }</td>
+        <td>
+            <button class="btn btn-outline" onclick="editRestorationService('${
+              service.id
+            }')">수정</button>
+            ${
               service.is_active
-                ? '<span class="badge badge-success">활성화</span>'
-                : '<span class="badge badge-error">비활성화</span>'
-            }</td>
-            <td>
-                <button class="btn btn-outline" onclick="editRestorationService('${
-                  service.id
-                }')">수정</button>
-                ${
-                  service.is_active
-                    ? `<button class="btn btn-outline" style="margin-left: 5px;" onclick="deleteRestorationService('${service.id}')">비활성화</button>`
-                    : `<button class="btn btn-outline" style="margin-left: 5px;" onclick="activateRestorationService('${service.id}')">활성화</button>`
-                }
-            </td>
-        </tr>`;
+                ? `<button class="btn btn-outline" style="margin-left: 5px;" onclick="deleteRestorationService('${service.id}')">비활성화</button>`
+                : `<button class="btn btn-outline" style="margin-left: 5px;" onclick="activateRestorationService('${service.id}')">활성화</button>`
+            }
+        </td>
+    </tr>`;
   });
 
   tableBody.innerHTML = html;

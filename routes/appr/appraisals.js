@@ -105,9 +105,9 @@ router.post("/", isAuthenticated, async (req, res) => {
     // 감정 ID 생성
     const appraisal_id = uuidv4();
 
-    // 인증서 번호 생성
+    // 인증서 번호 생성 - casYYMMDD{seq} 포맷으로 변경 (연도 2자리 포함)
     const today = new Date();
-    const year = today.getFullYear();
+    const year = String(today.getFullYear()).slice(-2); // 연도 마지막 2자리
     const month = String(today.getMonth() + 1).padStart(2, "0");
     const day = String(today.getDate()).padStart(2, "0");
     const dateStr = `${year}${month}${day}`;
@@ -119,7 +119,7 @@ router.post("/", isAuthenticated, async (req, res) => {
     const certCount = certCountResult[0].count + 1;
     const sequenceNumber = String(certCount).padStart(4, "0");
 
-    const certificate_number = `CAS-${dateStr}-${sequenceNumber}`;
+    const certificate_number = `cas${dateStr}${sequenceNumber}`;
 
     // 감정 데이터 저장
     await conn.query(
@@ -530,22 +530,35 @@ router.get("/:certificate_number", isAuthenticated, async (req, res) => {
   }
 });
 
-// 감정서 정보 조회 - GET /api/appr/appraisals/certificate/:certificateNumber (로그인 불필요, 공개 정보만)
+// 감정서 정보 조회 - GET /api/appr/appraisals/certificate/:certificateNumber (QR 액세스키 포함 시 공개 조회)
 router.get("/certificate/:certificateNumber", async (req, res) => {
   let conn;
   try {
     const certificateNumber = req.params.certificateNumber;
+    const accessKey = req.query.access;
 
     conn = await pool.getConnection();
 
-    // 로그인 없이도 접근 가능하도록 수정 - 민감하지 않은 정보만 제공
-    const [rows] = await conn.query(
-      `SELECT 
+    // QR 액세스키가 있는 경우 공개 조회, 없는 경우 기본 조회
+    let query, params;
+
+    if (accessKey) {
+      // QR 액세스키가 일치하는 경우 상세 정보 제공
+      query = `SELECT 
+        certificate_number, brand, model_name, category, appraisal_type, 
+        created_at, status, result, result_notes, images, qr_access_key
+      FROM appraisals WHERE certificate_number = ? AND qr_access_key = ?`;
+      params = [certificateNumber, accessKey];
+    } else {
+      // 액세스키가 없는 경우 기본 정보만 제공
+      query = `SELECT 
         certificate_number, brand, model_name, category, appraisal_type, 
         created_at, status
-      FROM appraisals WHERE certificate_number = ?`,
-      [certificateNumber]
-    );
+      FROM appraisals WHERE certificate_number = ?`;
+      params = [certificateNumber];
+    }
+
+    const [rows] = await conn.query(query, params);
 
     if (rows.length === 0) {
       return res.status(404).json({
@@ -559,21 +572,34 @@ router.get("/certificate/:certificateNumber", async (req, res) => {
     // 검증 코드 생성 (간단히 certificate_number의 앞 6자리)
     const verification_code = certificateNumber.substring(0, 6);
 
+    // QR 액세스키가 있는 경우 상세 정보 포함
+    const responseData = {
+      certificate_number: certificateNumber,
+      verification_code,
+      appraisal: {
+        certificate_number: appraisal.certificate_number,
+        brand: appraisal.brand,
+        model_name: appraisal.model_name,
+        category: appraisal.category,
+        appraisal_type: appraisal.appraisal_type,
+        created_at: appraisal.created_at,
+        status: appraisal.status,
+      },
+    };
+
+    // QR 액세스키가 있고 유효한 경우 추가 정보 제공
+    if (accessKey && appraisal.qr_access_key === accessKey) {
+      responseData.appraisal.result = appraisal.result;
+      responseData.appraisal.result_notes = appraisal.result_notes;
+      responseData.appraisal.images = appraisal.images
+        ? JSON.parse(appraisal.images)
+        : null;
+      responseData.is_public_access = true;
+    }
+
     res.json({
       success: true,
-      certificate: {
-        certificate_number: certificateNumber,
-        verification_code,
-        appraisal: {
-          certificate_number: appraisal.certificate_number,
-          brand: appraisal.brand,
-          model_name: appraisal.model_name,
-          category: appraisal.category,
-          appraisal_type: appraisal.appraisal_type,
-          created_at: appraisal.created_at,
-          status: appraisal.status,
-        },
-      },
+      certificate: responseData,
     });
   } catch (err) {
     console.error("감정 정보 조회 중 오류 발생:", err);

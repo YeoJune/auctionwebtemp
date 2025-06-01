@@ -228,14 +228,38 @@ app.get("/appr/result", (req, res) => {
   res.sendFile(path.join(apprPagesPath, "result.html"));
 });
 // 감정서 조회 통합 라우트 (수정됨)
+// 감정서 조회 통합 라우트 (QR 액세스키 지원)
 app.get("/appr/result/:certificateNumber", async (req, res) => {
   try {
     const certificateNumber = req.params.certificateNumber;
+    const accessKey = req.query.access; // QR에서 오는 액세스키
 
     // DB 연결
     const conn = await pool.getConnection();
 
     try {
+      // QR 액세스키가 있는 경우 공개 접근 허용
+      if (accessKey) {
+        const [appraisal] = await conn.query(
+          `SELECT appraisal_type, certificate_number, user_id, qr_access_key 
+          FROM appraisals WHERE certificate_number = ? AND qr_access_key = ?`,
+          [certificateNumber, accessKey]
+        );
+
+        if (appraisal.length > 0) {
+          // QR 액세스키가 유효한 경우 → 공개 조회 페이지로
+          return res.sendFile(path.join(apprPagesPath, "result-public.html"));
+        } else {
+          // 액세스키가 유효하지 않은 경우
+          return res.redirect(
+            `/appr/result?error=invalid_access_key&certificate=${encodeURIComponent(
+              certificateNumber
+            )}`
+          );
+        }
+      }
+
+      // 기존 로직: 액세스키가 없는 경우
       // 먼저 감정서 번호로 조회
       const [appraisal] = await conn.query(
         `SELECT appraisal_type, certificate_number, user_id FROM appraisals WHERE certificate_number = ?`,

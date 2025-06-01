@@ -8,6 +8,7 @@ const path = require("path");
 const fs = require("fs");
 const { v4: uuidv4 } = require("uuid");
 const QRCode = require("qrcode");
+const crypto = require("crypto");
 
 // Multer 설정 - 감정 이미지 저장
 const appraisalStorage = multer.diskStorage({
@@ -103,15 +104,31 @@ const authenticityUpload = multer({
   },
 });
 
-// QR 코드 생성 함수
-async function generateQRCode(url, outputPath) {
+// QR 코드 생성 함수 - 인증서별 고유 비대칭키 생성
+async function generateQRCodeWithKey(certificateNumber, outputPath) {
   try {
-    await QRCode.toFile(outputPath, url, {
+    // 인증서 번호 기반으로 고유한 비대칭키 생성
+    const crypto = require("crypto");
+    const secretKey = process.env.QR_SECRET_KEY || "default-secret-key";
+
+    // 인증서 번호와 고정 시드를 조합해서 항상 동일한 키가 생성되도록 함
+    const seed = certificateNumber + secretKey + "FIXED_SEED";
+    const accessKey = crypto
+      .createHash("sha256")
+      .update(seed)
+      .digest("hex")
+      .substring(0, 32); // 32자리 고유키
+
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+    const certificateUrl = `${frontendUrl}/appr/result/${certificateNumber}?access=${accessKey}`;
+
+    await QRCode.toFile(outputPath, certificateUrl, {
       errorCorrectionLevel: "H",
       margin: 1,
       width: 300,
     });
-    return true;
+
+    return accessKey; // 생성된 액세스키 반환
   } catch (error) {
     console.error("QR 코드 생성 중 오류:", error);
     return false;
@@ -512,6 +529,7 @@ router.put(
       const appraisal = appraisalRows[0];
       let existingImages = appraisal.images ? JSON.parse(appraisal.images) : [];
       let qrcode_url = appraisal.qrcode_url;
+      let qr_access_key = appraisal.qr_access_key;
       let certificate_url = appraisal.certificate_url;
 
       // 이미지 처리
@@ -527,8 +545,19 @@ router.put(
         certificate_url = `/images/appraisals/${req.files.pdf[0].filename}`;
       }
 
-      // QR 코드 생성 (인증서 번호가 있는 경우)
-      if (appraisal.certificate_number && !qrcode_url) {
+      // QR 코드 및 액세스키 생성 (인증서 번호가 있고 아직 생성되지 않은 경우)
+      if (appraisal.certificate_number && !qr_access_key) {
+        // 인증서별 고유 액세스키 생성
+        const crypto = require("crypto");
+        const secretKey = process.env.QR_SECRET_KEY || "default-secret-key";
+        const seed = appraisal.certificate_number + secretKey + "FIXED_SEED";
+        qr_access_key = crypto
+          .createHash("sha256")
+          .update(seed)
+          .digest("hex")
+          .substring(0, 32);
+
+        // QR 코드 파일 생성
         const qrDir = path.join(__dirname, "../../public/images/qrcodes");
         if (!fs.existsSync(qrDir)) {
           fs.mkdirSync(qrDir, { recursive: true });
@@ -536,11 +565,17 @@ router.put(
 
         const qrFileName = `qr-${appraisal.certificate_number}.png`;
         const qrPath = path.join(qrDir, qrFileName);
-        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-        const certificateUrl = `${frontendUrl}/appr/result/${appraisal.certificate_number}`;
 
-        const qrGenerated = await generateQRCode(certificateUrl, qrPath);
-        if (qrGenerated) {
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+        const certificateUrl = `${frontendUrl}/appr/result/${appraisal.certificate_number}?access=${qr_access_key}`;
+
+        const qrGenerated = await QRCode.toFile(qrPath, certificateUrl, {
+          errorCorrectionLevel: "H",
+          margin: 1,
+          width: 300,
+        });
+
+        if (qrGenerated !== false) {
           qrcode_url = `/images/qrcodes/${qrFileName}`;
         }
       }
@@ -610,6 +645,12 @@ router.put(
         updateFields.push("qrcode_url = ?");
         updateValues.push(qrcode_url);
         updateData.qrcode_url = qrcode_url;
+      }
+
+      if (qr_access_key) {
+        updateFields.push("qr_access_key = ?");
+        updateValues.push(qr_access_key);
+        updateData.qr_access_key = qr_access_key;
       }
 
       // 제안된 복원 서비스가 있는 경우 저장
@@ -767,7 +808,7 @@ router.post(
       // 서비스 ID 생성
       const service_id = uuidv4();
 
-      // 서비스 정보 저장 - price를 문자열로 저장
+      // 서비스 정보 저장 - price와 estimated_days 모두 문자열로 저장
       await conn.query(
         `INSERT INTO restoration_services (
         id, name, description, price, estimated_days,
@@ -777,8 +818,8 @@ router.post(
           service_id,
           name,
           description,
-          price, // 문자열로 저장 (parseFloat 제거)
-          parseInt(estimated_days),
+          price, // 문자열로 저장
+          estimated_days, // 문자열로 저장 (변경됨)
           before_image,
           after_image,
           true,
@@ -791,8 +832,8 @@ router.post(
           id: service_id,
           name,
           description,
-          price: price, // 문자열 그대로 반환
-          estimated_days: parseInt(estimated_days),
+          price: price,
+          estimated_days: estimated_days, // 문자열로 반환
           before_image,
           after_image,
           is_active: true,
@@ -874,14 +915,14 @@ router.put(
 
       if (price) {
         updateFields.push("price = ?");
-        updateValues.push(price); // 문자열로 저장 (parseFloat 제거)
+        updateValues.push(price); // 문자열로 저장
         updateData.price = price;
       }
 
       if (estimated_days) {
         updateFields.push("estimated_days = ?");
-        updateValues.push(parseInt(estimated_days));
-        updateData.estimated_days = parseInt(estimated_days);
+        updateValues.push(estimated_days); // 문자열로 저장 (변경됨)
+        updateData.estimated_days = estimated_days;
       }
 
       if (before_image !== service.before_image) {
