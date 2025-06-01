@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", function () {
     .getElementById("winningPrice")
     .addEventListener("input", updateWinningPriceKRW);
 
-  // 일괄 낙찰 금액 입력 시 관부가세 포함 가격 업데이트
+  // 일괄 낙찰 금액 입력 시 관부가세 포함 가격 업데이트 (수정: 누락된 이벤트 리스너 추가)
   document
     .getElementById("bulkWinningPrice")
     .addEventListener("input", updateBulkWinningPriceKRW);
@@ -439,7 +439,7 @@ function openCompleteModal(bidId) {
   openModal("completeModal");
 }
 
-// 관부가세 포함 가격 업데이트
+// 관부가세 포함 가격 업데이트 (수정: 데이터 속성 접근 방식 수정)
 function updateWinningPriceKRW() {
   const bidId = document.getElementById("completeBidId").value;
   const winningPrice = parseFloat(
@@ -458,9 +458,11 @@ function updateWinningPriceKRW() {
   );
   if (!checkbox) return;
 
-  const auc_num = checkbox.dataset.aucNum || 1;
-  const category = checkbox.dataset.category || "기타";
-  const currentPrice = parseFloat(checkbox.dataset.currentPrice) || 0;
+  // 수정: 데이터 속성 접근 방식 통일
+  const auc_num = parseInt(checkbox.getAttribute("data-auc-num")) || 1;
+  const category = checkbox.getAttribute("data-category") || "기타";
+  const currentPrice =
+    parseFloat(checkbox.getAttribute("data-current-price")) || 0;
 
   // 관부가세 포함 가격 계산
   const totalPrice = calculateTotalPrice(winningPrice, auc_num, category);
@@ -484,10 +486,13 @@ function updateWinningPriceKRW() {
   }
 }
 
-// 입찰 완료 제출
+// 입찰 완료 제출 (수정: 데이터 타입 변환 추가)
 async function submitCompleteBid() {
-  const bidId = document.getElementById("completeBidId").value;
-  const winningPrice = document.getElementById("winningPrice").value;
+  const bidId = parseInt(document.getElementById("completeBidId").value);
+  const winningPriceValue = document.getElementById("winningPrice").value;
+  const winningPrice = winningPriceValue
+    ? parseFloat(winningPriceValue)
+    : undefined;
 
   if (!bidId) {
     showAlert("입찰 ID가 유효하지 않습니다.");
@@ -495,13 +500,7 @@ async function submitCompleteBid() {
   }
 
   try {
-    // winningPrice가 있으면 전달, 없으면 기본값 사용
-    if (winningPrice) {
-      await completeDirectBid(bidId, parseFloat(winningPrice));
-    } else {
-      await completeDirectBid(bidId);
-    }
-
+    await completeDirectBid(bidId, winningPrice);
     closeAllModals();
     showAlert("입찰이 완료되었습니다.", "success");
 
@@ -518,9 +517,9 @@ function openCancelModal(bidId) {
   openModal("cancelModal");
 }
 
-// 낙찰 실패 제출
+// 낙찰 실패 제출 (수정: 데이터 타입 변환 추가)
 async function submitCancelBid() {
-  const bidId = document.getElementById("cancelBidId").value;
+  const bidId = parseInt(document.getElementById("cancelBidId").value);
 
   if (!bidId) {
     showAlert("입찰 ID가 유효하지 않습니다.");
@@ -545,9 +544,9 @@ function openMarkAsSubmittedModal(bidId) {
   openModal("markAsSubmittedModal");
 }
 
-// 플랫폼 반영 완료 표시 처리
+// 플랫폼 반영 완료 표시 처리 (수정: 데이터 타입 변환 추가)
 async function markAsSubmitted() {
-  const bidId = document.getElementById("markSubmittedBidId").value;
+  const bidId = parseInt(document.getElementById("markSubmittedBidId").value);
 
   if (!bidId) {
     showAlert("입찰 ID가 유효하지 않습니다.");
@@ -594,7 +593,7 @@ function updateBulkWinningPriceKRW() {
   ).textContent = `관부가세 포함: ${formatCurrency(totalPrice, "KRW")}`;
 }
 
-// 일괄 낙찰 완료 제출 (기존 submitBulkComplete 함수 수정)
+// 일괄 낙찰 완료 제출 (수정: 데이터 타입 변환 추가)
 async function submitBulkComplete() {
   const checkedBids = document.querySelectorAll(".bid-checkbox:checked");
   if (checkedBids.length === 0) {
@@ -603,19 +602,18 @@ async function submitBulkComplete() {
   }
 
   try {
-    // 체크된 입찰 ID 추출
-    const bidIds = Array.from(checkedBids).map(
-      (checkbox) => checkbox.dataset.bidId
+    // 체크된 입찰 ID 추출 및 숫자로 변환
+    const bidIds = Array.from(checkedBids).map((checkbox) =>
+      parseInt(checkbox.dataset.bidId)
     );
 
-    // 낙찰 금액 추출
-    const winningPrice = document.getElementById("bulkWinningPrice").value;
+    // 낙찰 금액 추출 및 변환
+    const winningPriceValue = document.getElementById("bulkWinningPrice").value;
+    const winningPrice = winningPriceValue
+      ? parseFloat(winningPriceValue)
+      : undefined;
 
-    // 수정된 API 함수 호출 - 이제 배열을 직접 전달
-    await completeDirectBid(
-      bidIds,
-      winningPrice ? parseFloat(winningPrice) : undefined
-    );
+    await completeDirectBid(bidIds, winningPrice);
 
     closeAllModals();
     showAlert(`${bidIds.length}개 입찰이 완료되었습니다.`, "success");
@@ -634,7 +632,7 @@ function openBulkCancelModal() {
   openModal("bulkCancelModal");
 }
 
-// 일괄 낙찰 실패 제출 (기존 submitBulkCancel 함수 수정)
+// 일괄 낙찰 실패 제출 (수정: 데이터 타입 변환 추가)
 async function submitBulkCancel() {
   const checkedBids = document.querySelectorAll(".bid-checkbox:checked");
   if (checkedBids.length === 0) {
@@ -643,12 +641,11 @@ async function submitBulkCancel() {
   }
 
   try {
-    // 체크된 입찰 ID 추출
-    const bidIds = Array.from(checkedBids).map(
-      (checkbox) => checkbox.dataset.bidId
+    // 체크된 입찰 ID 추출 및 숫자로 변환
+    const bidIds = Array.from(checkedBids).map((checkbox) =>
+      parseInt(checkbox.dataset.bidId)
     );
 
-    // 수정된 API 함수 호출 - 이제 배열을 직접 전달
     await cancelDirectBid(bidIds);
 
     closeAllModals();
@@ -671,7 +668,7 @@ function openBulkMarkAsSubmittedModal() {
   openModal("bulkMarkAsSubmittedModal");
 }
 
-// 일괄 플랫폼 반영 완료 제출 (기존 submitBulkMarkAsSubmitted 함수 수정)
+// 일괄 플랫폼 반영 완료 제출 (수정: 데이터 타입 변환 추가)
 async function submitBulkMarkAsSubmitted() {
   const checkedBids = document.querySelectorAll(".bid-checkbox:checked");
   if (checkedBids.length === 0) {
@@ -680,12 +677,11 @@ async function submitBulkMarkAsSubmitted() {
   }
 
   try {
-    // 체크된 입찰 ID 추출
-    const bidIds = Array.from(checkedBids).map(
-      (checkbox) => checkbox.dataset.bidId
+    // 체크된 입찰 ID 추출 및 숫자로 변환
+    const bidIds = Array.from(checkedBids).map((checkbox) =>
+      parseInt(checkbox.dataset.bidId)
     );
 
-    // 수정된 API 함수 호출 - 이제 배열을 직접 전달
     await markDirectBidAsSubmitted(bidIds);
 
     closeAllModals();
@@ -760,15 +756,15 @@ function openEditBidModal(bidId) {
   openModal("editBidModal");
 }
 
-// 수정 제출
+// 수정 제출 (수정: 데이터 타입 변환 추가)
 async function submitEditBid() {
-  const bidId = document.getElementById("editBidId").value;
-  const currentPrice = document.getElementById("editCurrentPrice").value;
+  const bidId = parseInt(document.getElementById("editBidId").value);
+  const currentPriceValue = document.getElementById("editCurrentPrice").value;
   const status = document.getElementById("editStatus").value;
   const submittedToPlatform = document.getElementById(
     "editSubmittedToPlatform"
   ).checked;
-  const winningPrice = document.getElementById("editWinningPrice").value;
+  const winningPriceValue = document.getElementById("editWinningPrice").value;
 
   if (!bidId) {
     showAlert("입찰 ID가 유효하지 않습니다.");
@@ -778,10 +774,12 @@ async function submitEditBid() {
   try {
     const updateData = {};
 
-    if (currentPrice) updateData.current_price = parseInt(currentPrice);
+    if (currentPriceValue)
+      updateData.current_price = parseInt(currentPriceValue);
     if (status) updateData.status = status;
     updateData.submitted_to_platform = submittedToPlatform;
-    if (winningPrice) updateData.winning_price = parseInt(winningPrice);
+    if (winningPriceValue)
+      updateData.winning_price = parseInt(winningPriceValue);
 
     await updateDirectBid(bidId, updateData);
 
