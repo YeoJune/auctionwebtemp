@@ -236,175 +236,6 @@ router.get("/", async (req, res) => {
   }
 });
 
-// GET endpoint to retrieve a specific bid by ID
-router.get("/:id", async (req, res) => {
-  const { id } = req.params;
-
-  if (!req.session.user) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
-  const userId = req.session.user.id;
-
-  const connection = await pool.getConnection();
-
-  try {
-    // 입찰 정보 가져오기
-    const [bids] = await connection.query(
-      "SELECT * FROM direct_bids WHERE id = ?",
-      [id]
-    );
-
-    if (bids.length === 0) {
-      return res.status(404).json({ message: "Bid not found" });
-    }
-
-    const bid = bids[0];
-
-    // 인증 확인 - 관리자 또는 입찰 소유자만 볼 수 있음
-    if (userId !== "admin" && bid.user_id !== userId) {
-      return res
-        .status(403)
-        .json({ message: "Not authorized to view this bid" });
-    }
-
-    // 아이템 정보 가져오기
-    const [items] = await connection.query(
-      "SELECT * FROM crawled_items WHERE item_id = ?",
-      [bid.item_id]
-    );
-
-    const bidWithItem = {
-      ...bid,
-      item: items.length > 0 ? items[0] : null,
-    };
-
-    res.status(200).json(bidWithItem);
-  } catch (err) {
-    console.error("Error retrieving bid:", err);
-    res.status(500).json({ message: "Error retrieving bid" });
-  } finally {
-    connection.release();
-  }
-});
-
-// direct_bids 수정 라우터 - 기존 라우터에 추가할 코드
-router.put("/:id", isAdmin, async (req, res) => {
-  const { id } = req.params;
-  const { current_price, status, submitted_to_platform, winning_price } =
-    req.body;
-
-  if (!id) {
-    return res.status(400).json({ message: "Bid ID is required" });
-  }
-
-  const connection = await pool.getConnection();
-
-  try {
-    await connection.beginTransaction();
-
-    // 입찰 정보 확인
-    const [bids] = await connection.query(
-      "SELECT * FROM direct_bids WHERE id = ?",
-      [id]
-    );
-
-    if (bids.length === 0) {
-      await connection.rollback();
-      return res.status(404).json({ message: "Bid not found" });
-    }
-
-    // 업데이트할 필드들과 값들을 동적으로 구성
-    const updates = [];
-    const params = [];
-
-    if (current_price !== undefined) {
-      // 가격이 1000단위인지 확인
-      if (current_price % 1000 !== 0) {
-        await connection.rollback();
-        return res
-          .status(400)
-          .json({ message: "Price must be in units of 1000" });
-      }
-      updates.push("current_price = ?");
-      params.push(current_price);
-    }
-    if (status !== undefined) {
-      // 유효한 status 값 체크
-      const validStatuses = ["active", "completed", "cancelled"];
-      if (!validStatuses.includes(status)) {
-        await connection.rollback();
-        return res.status(400).json({
-          message:
-            "Invalid status. Must be one of: " + validStatuses.join(", "),
-        });
-      }
-      updates.push("status = ?");
-      params.push(status);
-    }
-    if (submitted_to_platform !== undefined) {
-      // boolean 값 확인
-      if (typeof submitted_to_platform !== "boolean") {
-        await connection.rollback();
-        return res.status(400).json({
-          message: "submitted_to_platform must be a boolean value",
-        });
-      }
-      updates.push("submitted_to_platform = ?");
-      params.push(submitted_to_platform);
-    }
-    if (winning_price !== undefined) {
-      updates.push("winning_price = ?");
-      params.push(winning_price);
-    }
-
-    // 업데이트할 필드가 없으면 에러 반환
-    if (updates.length === 0) {
-      await connection.rollback();
-      return res.status(400).json({
-        message:
-          "No valid fields to update. Allowed fields: current_price, status, submitted_to_platform, winning_price",
-      });
-    }
-
-    // updated_at 자동 업데이트 추가
-    updates.push("updated_at = NOW()");
-    params.push(id);
-
-    const updateQuery = `UPDATE direct_bids SET ${updates.join(
-      ", "
-    )} WHERE id = ?`;
-
-    const [updateResult] = await connection.query(updateQuery, params);
-
-    if (updateResult.affectedRows === 0) {
-      await connection.rollback();
-      return res
-        .status(404)
-        .json({ message: "Bid not found or no changes made" });
-    }
-
-    await connection.commit();
-
-    // 업데이트된 bid 정보 반환
-    const [updatedBids] = await connection.query(
-      "SELECT * FROM direct_bids WHERE id = ?",
-      [id]
-    );
-
-    res.status(200).json({
-      message: "Bid updated successfully",
-      bid: updatedBids[0],
-    });
-  } catch (err) {
-    await connection.rollback();
-    console.error("Error updating bid:", err);
-    res.status(500).json({ message: "Error updating bid" });
-  } finally {
-    connection.release();
-  }
-});
-
 // 사용자의 입찰 (자동 생성/업데이트) - 자동 제출 기능 추가
 router.post("/", async (req, res) => {
   const { itemId, currentPrice, autoSubmit = true } = req.body;
@@ -925,6 +756,175 @@ router.put("/mark-submitted", isAdmin, async (req, res) => {
     await connection.rollback();
     console.error("Error marking bid(s) as submitted:", err);
     res.status(500).json({ message: "Error marking bid(s) as submitted" });
+  } finally {
+    connection.release();
+  }
+});
+
+// GET endpoint to retrieve a specific bid by ID
+router.get("/:id", async (req, res) => {
+  const { id } = req.params;
+
+  if (!req.session.user) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const userId = req.session.user.id;
+
+  const connection = await pool.getConnection();
+
+  try {
+    // 입찰 정보 가져오기
+    const [bids] = await connection.query(
+      "SELECT * FROM direct_bids WHERE id = ?",
+      [id]
+    );
+
+    if (bids.length === 0) {
+      return res.status(404).json({ message: "Bid not found" });
+    }
+
+    const bid = bids[0];
+
+    // 인증 확인 - 관리자 또는 입찰 소유자만 볼 수 있음
+    if (userId !== "admin" && bid.user_id !== userId) {
+      return res
+        .status(403)
+        .json({ message: "Not authorized to view this bid" });
+    }
+
+    // 아이템 정보 가져오기
+    const [items] = await connection.query(
+      "SELECT * FROM crawled_items WHERE item_id = ?",
+      [bid.item_id]
+    );
+
+    const bidWithItem = {
+      ...bid,
+      item: items.length > 0 ? items[0] : null,
+    };
+
+    res.status(200).json(bidWithItem);
+  } catch (err) {
+    console.error("Error retrieving bid:", err);
+    res.status(500).json({ message: "Error retrieving bid" });
+  } finally {
+    connection.release();
+  }
+});
+
+// direct_bids 수정 라우터 - 기존 라우터에 추가할 코드
+router.put("/:id", isAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { current_price, status, submitted_to_platform, winning_price } =
+    req.body;
+
+  if (!id) {
+    return res.status(400).json({ message: "Bid ID is required" });
+  }
+
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    // 입찰 정보 확인
+    const [bids] = await connection.query(
+      "SELECT * FROM direct_bids WHERE id = ?",
+      [id]
+    );
+
+    if (bids.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ message: "Bid not found" });
+    }
+
+    // 업데이트할 필드들과 값들을 동적으로 구성
+    const updates = [];
+    const params = [];
+
+    if (current_price !== undefined) {
+      // 가격이 1000단위인지 확인
+      if (current_price % 1000 !== 0) {
+        await connection.rollback();
+        return res
+          .status(400)
+          .json({ message: "Price must be in units of 1000" });
+      }
+      updates.push("current_price = ?");
+      params.push(current_price);
+    }
+    if (status !== undefined) {
+      // 유효한 status 값 체크
+      const validStatuses = ["active", "completed", "cancelled"];
+      if (!validStatuses.includes(status)) {
+        await connection.rollback();
+        return res.status(400).json({
+          message:
+            "Invalid status. Must be one of: " + validStatuses.join(", "),
+        });
+      }
+      updates.push("status = ?");
+      params.push(status);
+    }
+    if (submitted_to_platform !== undefined) {
+      // boolean 값 확인
+      if (typeof submitted_to_platform !== "boolean") {
+        await connection.rollback();
+        return res.status(400).json({
+          message: "submitted_to_platform must be a boolean value",
+        });
+      }
+      updates.push("submitted_to_platform = ?");
+      params.push(submitted_to_platform);
+    }
+    if (winning_price !== undefined) {
+      updates.push("winning_price = ?");
+      params.push(winning_price);
+    }
+
+    // 업데이트할 필드가 없으면 에러 반환
+    if (updates.length === 0) {
+      await connection.rollback();
+      return res.status(400).json({
+        message:
+          "No valid fields to update. Allowed fields: current_price, status, submitted_to_platform, winning_price",
+      });
+    }
+
+    // updated_at 자동 업데이트 추가
+    updates.push("updated_at = NOW()");
+    params.push(id);
+
+    const updateQuery = `UPDATE direct_bids SET ${updates.join(
+      ", "
+    )} WHERE id = ?`;
+
+    const [updateResult] = await connection.query(updateQuery, params);
+
+    if (updateResult.affectedRows === 0) {
+      await connection.rollback();
+      return res
+        .status(404)
+        .json({ message: "Bid not found or no changes made" });
+    }
+
+    await connection.commit();
+
+    // 업데이트된 bid 정보 반환
+    const [updatedBids] = await connection.query(
+      "SELECT * FROM direct_bids WHERE id = ?",
+      [id]
+    );
+
+    res.status(200).json({
+      message: "Bid updated successfully",
+      bid: updatedBids[0],
+    });
+  } catch (err) {
+    await connection.rollback();
+    console.error("Error updating bid:", err);
+    res.status(500).json({ message: "Error updating bid" });
   } finally {
     connection.release();
   }
