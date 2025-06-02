@@ -124,7 +124,7 @@ app.use(express.static(publicPath));
 app.use((req, res, next) => {
   const host = req.headers.host;
   if (host === "cassystem.com" || host === "www.cassystem.com") {
-    if (!req.path.startsWith("/appr") || !req.path.startsWith("/api")) {
+    if (!req.path.startsWith("/appr") && !req.path.startsWith("/api")) {
       req.url = "/appr" + req.url;
     }
   }
