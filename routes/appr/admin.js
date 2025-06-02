@@ -406,9 +406,6 @@ router.post("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
       });
     }
 
-    // 감정 ID 생성
-    const appraisal_id = uuidv4();
-
     // 인증서 번호 생성 또는 검증
     const finalCertificateNumber = await generateCertificateNumber(
       conn,
@@ -418,13 +415,12 @@ router.post("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
     // 감정 데이터 저장
     await conn.query(
       `INSERT INTO appraisals (
-        id, user_id, appraisal_type, brand, model_name, category, 
+        user_id, appraisal_type, brand, model_name, category, 
         remarks, product_link, platform, purchase_year, 
         components_included, delivery_info, status, result,
         certificate_number
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        appraisal_id,
         user_id,
         appraisal_type,
         brand,
