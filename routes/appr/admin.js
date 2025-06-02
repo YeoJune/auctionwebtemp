@@ -135,6 +135,44 @@ async function generateQRCodeWithKey(certificateNumber, outputPath) {
   }
 }
 
+async function generateCertificateNumber(conn, customNumber = null) {
+  if (customNumber) {
+    // 커스텀 번호가 제공된 경우 중복 확인
+    const [existing] = await conn.query(
+      "SELECT certificate_number FROM appraisals WHERE certificate_number = ?",
+      [customNumber]
+    );
+
+    if (existing.length > 0) {
+      throw new Error("이미 존재하는 감정 번호입니다.");
+    }
+
+    return customNumber;
+  }
+
+  // 자동 생성: CAS + 6자리 숫자
+  let certificateNumber;
+  let isUnique = false;
+
+  while (!isUnique) {
+    // 6자리 랜덤 숫자 생성
+    const randomNum = Math.floor(100000 + Math.random() * 900000);
+    certificateNumber = `CAS${randomNum}`;
+
+    // 중복 확인
+    const [existing] = await conn.query(
+      "SELECT certificate_number FROM appraisals WHERE certificate_number = ?",
+      [certificateNumber]
+    );
+
+    if (existing.length === 0) {
+      isUnique = true;
+    }
+  }
+
+  return certificateNumber;
+}
+
 // 회원 목록 조회 - GET /api/appr/admin/users
 router.get("/users", isAuthenticated, isAdmin, async (req, res) => {
   let conn;
@@ -321,6 +359,107 @@ router.put("/users/:id", isAuthenticated, isAdmin, async (req, res) => {
     res.status(500).json({
       success: false,
       message: "회원 정보 수정 중 서버 오류가 발생했습니다.",
+    });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
+// 관리자 감정 생성 - POST /api/appr/admin/appraisals
+router.post("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
+  let conn;
+  try {
+    const {
+      user_id,
+      appraisal_type,
+      brand,
+      model_name,
+      category,
+      remarks,
+      product_link,
+      platform,
+      purchase_year,
+      components_included,
+      delivery_info,
+      certificate_number, // 관리자가 직접 입력할 수 있는 감정 번호
+    } = req.body;
+
+    // 필수 필드 검증
+    if (!user_id || !appraisal_type || !brand || !model_name || !category) {
+      return res.status(400).json({
+        success: false,
+        message: "필수 입력 항목이 누락되었습니다.",
+      });
+    }
+
+    conn = await pool.getConnection();
+
+    // 사용자 존재 여부 확인
+    const [userRows] = await conn.query("SELECT id FROM users WHERE id = ?", [
+      user_id,
+    ]);
+
+    if (userRows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "해당 사용자를 찾을 수 없습니다.",
+      });
+    }
+
+    // 감정 ID 생성
+    const appraisal_id = uuidv4();
+
+    // 인증서 번호 생성 또는 검증
+    const finalCertificateNumber = await generateCertificateNumber(
+      conn,
+      certificate_number
+    );
+
+    // 감정 데이터 저장
+    await conn.query(
+      `INSERT INTO appraisals (
+        id, user_id, appraisal_type, brand, model_name, category, 
+        remarks, product_link, platform, purchase_year, 
+        components_included, delivery_info, status, result,
+        certificate_number
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        appraisal_id,
+        user_id,
+        appraisal_type,
+        brand,
+        model_name,
+        category,
+        remarks || null,
+        product_link || null,
+        platform || null,
+        purchase_year || null,
+        components_included ? JSON.stringify(components_included) : null,
+        delivery_info ? JSON.stringify(delivery_info) : null,
+        "pending",
+        "pending",
+        finalCertificateNumber,
+      ]
+    );
+
+    // 생성된 감정 정보 조회
+    const [createdAppraisal] = await conn.query(
+      `SELECT a.*, u.email as user_email, u.company_name
+       FROM appraisals a
+       JOIN users u ON a.user_id = u.id
+       WHERE a.id = ?`,
+      [appraisal_id]
+    );
+
+    res.status(201).json({
+      success: true,
+      appraisal: createdAppraisal[0],
+    });
+  } catch (err) {
+    console.error("관리자 감정 생성 중 오류 발생:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message || "감정 생성 중 서버 오류가 발생했습니다.",
     });
   } finally {
     if (conn) conn.release();

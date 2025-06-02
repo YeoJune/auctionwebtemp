@@ -398,13 +398,14 @@
                 <select
                   id="appraisal-result-filter"
                   class="form-select"
-                  style="width: auto; display: inline-block">
+                  style="width: auto; display: inline-block; margin-right: 10px">
                   <option value="all">전체 결과</option>
                   <option value="authentic">정품</option>
                   <option value="fake">가품</option>
                   <option value="uncertain">판단불가</option>
                   <option value="pending">감정대기</option>
                 </select>
+                <button id="create-appraisal-btn" class="btn">감정 생성</button>
               </div>
             </div>
             <div class="search-bar">
@@ -418,7 +419,7 @@
               <table id="appraisals-table">
                 <thead>
                   <tr>
-                    <th>ID</th>
+                    <th>감정번호</th>
                     <th>유형</th>
                     <th>브랜드/모델명</th>
                     <th>신청자</th>
@@ -716,6 +717,227 @@
         </div>
         <div id="appraisal-detail-content">
           <!-- 감정 상세 정보와 수정 폼이 JS로 로드됩니다 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 감정 생성 모달 -->
+    <div id="create-appraisal-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">새 감정 생성</h2>
+          <button
+            class="modal-close"
+            onclick="closeModal('create-appraisal-modal')">
+            &times;
+          </button>
+        </div>
+        <form id="create-appraisal-form">
+          <div class="form-group">
+            <label for="create-user-id" class="form-label">사용자 ID *</label>
+            <div style="display: flex; gap: 10px;">
+              <input
+                type="text"
+                id="create-user-id"
+                class="form-input"
+                placeholder="사용자 ID 입력"
+                required
+                style="flex: 1;" />
+              <button
+                type="button"
+                class="btn btn-outline"
+                onclick="searchUsers()">
+                사용자 검색
+              </button>
+            </div>
+            <div id="user-search-results" style="margin-top: 10px;"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="create-certificate-number" class="form-label">감정 번호 (선택사항)</label>
+            <input
+              type="text"
+              id="create-certificate-number"
+              class="form-input"
+              placeholder="예: CAS014312 (비워두면 자동 생성)"
+              pattern="^CAS\d{6}$"
+              title="CAS + 6자리 숫자 형태여야 합니다 (예: CAS014312)" />
+            <small style="color: #666;">비워두면 자동으로 생성됩니다. 직접 입력시 CAS + 6자리 숫자 형태</small>
+          </div>
+
+          <div class="form-group">
+            <label for="create-appraisal-type" class="form-label">감정 유형 *</label>
+            <select id="create-appraisal-type" class="form-select" required>
+              <option value="">감정 유형 선택</option>
+              <option value="quicklink">퀵링크 감정</option>
+              <option value="offline">오프라인 감정</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="create-brand" class="form-label">브랜드 *</label>
+            <input
+              type="text"
+              id="create-brand"
+              class="form-input"
+              placeholder="예: 루이비통, 샤넬, 에르메스 등"
+              required />
+          </div>
+
+          <div class="form-group">
+            <label for="create-model-name" class="form-label">모델명 *</label>
+            <input
+              type="text"
+              id="create-model-name"
+              class="form-input"
+              placeholder="상품의 모델명 입력"
+              required />
+          </div>
+
+          <div class="form-group">
+            <label for="create-category" class="form-label">카테고리 *</label>
+            <select id="create-category" class="form-select" required>
+              <option value="">카테고리 선택</option>
+              <option value="가방">가방</option>
+              <option value="지갑">지갑</option>
+              <option value="신발">신발</option>
+              <option value="의류">의류</option>
+              <option value="시계">시계</option>
+              <option value="액세서리">액세서리</option>
+              <option value="기타">기타</option>
+            </select>
+          </div>
+
+          <!-- 퀵링크 전용 필드 -->
+          <div id="quicklink-fields" style="display: none;">
+            <div class="form-group">
+              <label for="create-product-link" class="form-label">상품 링크 *</label>
+              <input
+                type="url"
+                id="create-product-link"
+                class="form-input"
+                placeholder="https://..." />
+            </div>
+
+            <div class="form-group">
+              <label for="create-platform" class="form-label">플랫폼</label>
+              <input
+                type="text"
+                id="create-platform"
+                class="form-input"
+                placeholder="예: 네이버쇼핑, 당근마켓 등" />
+            </div>
+          </div>
+
+          <!-- 오프라인 전용 필드 -->
+          <div id="offline-fields" style="display: none;">
+            <div class="form-group">
+              <label for="create-purchase-year" class="form-label">구매연도</label>
+              <input
+                type="number"
+                id="create-purchase-year"
+                class="form-input"
+                placeholder="예: 2020"
+                min="1980"
+                max="2025" />
+            </div>
+
+            <div class="form-group">
+              <label for="create-components" class="form-label">구성품</label>
+              <div id="components-container">
+                <div style="margin-bottom: 10px;">
+                  <input
+                    type="text"
+                    class="form-input component-input"
+                    placeholder="구성품 입력 (예: 본체, 더스트백, 보증서 등)"
+                    style="margin-bottom: 5px;" />
+                </div>
+              </div>
+              <button
+                type="button"
+                class="btn btn-outline"
+                onclick="addComponentInput()">
+                구성품 추가
+              </button>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">배송 정보</label>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                <input
+                  type="text"
+                  id="create-delivery-name"
+                  class="form-input"
+                  placeholder="수령인명" />
+                <input
+                  type="tel"
+                  id="create-delivery-phone"
+                  class="form-input"
+                  placeholder="연락처" />
+              </div>
+              <div style="display: grid; grid-template-columns: 150px 1fr; gap: 10px; margin-bottom: 10px;">
+                <input
+                  type="text"
+                  id="create-delivery-zipcode"
+                  class="form-input"
+                  placeholder="우편번호" />
+                <input
+                  type="text"
+                  id="create-delivery-address1"
+                  class="form-input"
+                  placeholder="기본 주소" />
+              </div>
+              <input
+                type="text"
+                id="create-delivery-address2"
+                class="form-input"
+                placeholder="상세 주소" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="create-remarks" class="form-label">비고</label>
+            <textarea
+              id="create-remarks"
+              class="form-textarea"
+              placeholder="특이사항이나 추가 요청사항을 입력하세요"></textarea>
+          </div>
+
+          <div style="margin-top: 20px; text-align: right">
+            <button
+              type="button"
+              class="btn btn-outline"
+              onclick="closeModal('create-appraisal-modal')">
+              취소
+            </button>
+            <button type="submit" class="btn" style="margin-left: 10px">
+              감정 생성
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- 사용자 검색 모달 -->
+    <div id="user-search-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title">사용자 검색</h2>
+          <button
+            class="modal-close"
+            onclick="closeModal('user-search-modal')">
+            &times;
+          </button>
+        </div>
+        <div class="search-bar">
+          <input
+            type="text"
+            id="user-search-input"
+            placeholder="아이디, 이메일, 회사명으로 검색" />
+          <button onclick="performUserSearch()">검색</button>
+        </div>
+        <div id="user-search-list" style="max-height: 400px; overflow-y: auto;">
+          <!-- 검색 결과가 여기에 표시됩니다 -->
         </div>
       </div>
     </div>

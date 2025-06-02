@@ -38,6 +38,44 @@ const upload = multer({
   },
 });
 
+async function generateCertificateNumber(conn, customNumber = null) {
+  if (customNumber) {
+    // 커스텀 번호가 제공된 경우 중복 확인
+    const [existing] = await conn.query(
+      "SELECT certificate_number FROM appraisals WHERE certificate_number = ?",
+      [customNumber]
+    );
+
+    if (existing.length > 0) {
+      throw new Error("이미 존재하는 감정 번호입니다.");
+    }
+
+    return customNumber;
+  }
+
+  // 자동 생성: CAS + 6자리 숫자
+  let certificateNumber;
+  let isUnique = false;
+
+  while (!isUnique) {
+    // 6자리 랜덤 숫자 생성
+    const randomNum = Math.floor(100000 + Math.random() * 900000);
+    certificateNumber = `CAS${randomNum}`;
+
+    // 중복 확인
+    const [existing] = await conn.query(
+      "SELECT certificate_number FROM appraisals WHERE certificate_number = ?",
+      [certificateNumber]
+    );
+
+    if (existing.length === 0) {
+      isUnique = true;
+    }
+  }
+
+  return certificateNumber;
+}
+
 // 감정 신청 - POST /api/appr/appraisals
 router.post("/", isAuthenticated, async (req, res) => {
   let conn;
@@ -105,21 +143,8 @@ router.post("/", isAuthenticated, async (req, res) => {
     // 감정 ID 생성
     const appraisal_id = uuidv4();
 
-    // 인증서 번호 생성 - casYYMMDD{seq} 포맷으로 변경 (연도 2자리 포함)
-    const today = new Date();
-    const year = String(today.getFullYear()).slice(-2); // 연도 마지막 2자리
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2, "0");
-    const dateStr = `${year}${month}${day}`;
-
-    // 오늘 발급된 인증서 수 확인
-    const [certCountResult] = await conn.query(
-      "SELECT COUNT(*) as count FROM appraisals WHERE DATE(created_at) = CURDATE()"
-    );
-    const certCount = certCountResult[0].count + 1;
-    const sequenceNumber = String(certCount).padStart(4, "0");
-
-    const certificate_number = `cas${dateStr}${sequenceNumber}`;
+    // 새로운 인증서 번호 생성 (CAS + 6자리 숫자)
+    const certificate_number = await generateCertificateNumber(conn);
 
     // 감정 데이터 저장
     await conn.query(
@@ -162,7 +187,7 @@ router.post("/", isAuthenticated, async (req, res) => {
     console.error("감정 신청 처리 중 오류 발생:", err);
     res.status(500).json({
       success: false,
-      message: "감정 신청 처리 중 서버 오류가 발생했습니다.",
+      message: err.message || "감정 신청 처리 중 서버 오류가 발생했습니다.",
     });
   } finally {
     if (conn) conn.release();

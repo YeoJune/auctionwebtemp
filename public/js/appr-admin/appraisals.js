@@ -45,6 +45,26 @@ document.addEventListener("DOMContentLoaded", function () {
       currentAppraisalPage = 1;
       loadAppraisalList();
     });
+
+  // 감정 생성 관련 이벤트 리스너 추가
+  document
+    .getElementById("create-appraisal-btn")
+    .addEventListener("click", function () {
+      openCreateAppraisalModal();
+    });
+
+  document
+    .getElementById("create-appraisal-type")
+    .addEventListener("change", function () {
+      toggleAppraisalTypeFields(this.value);
+    });
+
+  document
+    .getElementById("create-appraisal-form")
+    .addEventListener("submit", function (e) {
+      e.preventDefault();
+      submitCreateAppraisal();
+    });
 });
 
 // 감정 목록 로드 함수
@@ -93,6 +113,7 @@ function loadAppraisalList() {
 }
 
 // 감정 목록 표시 함수
+// 수정: 감정번호(인증서번호) 표시하도록 displayAppraisalList 함수 업데이트
 function displayAppraisalList(appraisals, pagination) {
   const tableBody = document.getElementById("appraisals-list");
 
@@ -107,9 +128,8 @@ function displayAppraisalList(appraisals, pagination) {
   // 테이블 내용 생성
   let html = "";
   appraisals.forEach((appraisal) => {
-    const truncatedId = appraisal.id.substring(0, 8) + "...";
     html += `<tr>
-            <td>${truncatedId}</td>
+            <td>${appraisal.certificate_number || "미발급"}</td>
             <td>${
               appraisal.appraisal_type === "quicklink" ? "퀵링크" : "오프라인"
             }</td>
@@ -498,5 +518,157 @@ function updateAppraisal() {
     })
     .catch((error) => {
       showAlert(error.message, "error");
+    });
+}
+
+// 감정 생성 모달 열기
+function openCreateAppraisalModal() {
+  // 폼 초기화 및 검색 결과 클리어
+  document.getElementById("create-appraisal-form").reset();
+  document.getElementById("user-search-results").innerHTML = "";
+  toggleAppraisalTypeFields("");
+  // 구성품 입력 필드 초기화
+  document.getElementById("components-container").innerHTML = `
+    <div style="margin-bottom: 10px;">
+      <input type="text" class="form-input component-input" placeholder="구성품 입력 (예: 본체, 더스트백, 보증서 등)" style="margin-bottom: 5px;" />
+    </div>`;
+  openModal("create-appraisal-modal");
+}
+
+// 감정 유형에 따른 필드 표시/숨김 함수
+function toggleAppraisalTypeFields(type) {
+  const quicklinkFields = document.getElementById("quicklink-fields");
+  const offlineFields = document.getElementById("offline-fields");
+  const productLinkInput = document.getElementById("create-product-link");
+
+  if (type === "quicklink") {
+    quicklinkFields.style.display = "block";
+    offlineFields.style.display = "none";
+    productLinkInput.required = true;
+  } else if (type === "offline") {
+    quicklinkFields.style.display = "none";
+    offlineFields.style.display = "block";
+    productLinkInput.required = false;
+  } else {
+    quicklinkFields.style.display = "none";
+    offlineFields.style.display = "none";
+    productLinkInput.required = false;
+  }
+}
+
+// 구성품 입력 필드 추가 함수
+function addComponentInput() {
+  const newInput = document.createElement("div");
+  newInput.style.marginBottom = "10px";
+  newInput.innerHTML = `
+    <input type="text" class="form-input component-input" placeholder="구성품 입력" style="margin-bottom: 5px;" />
+    <button type="button" class="btn btn-outline" onclick="removeComponentInput(this)" style="margin-left: 10px; padding: 5px 10px;">삭제</button>
+  `;
+  const container = document.getElementById("components-container");
+  container.appendChild(newInput);
+}
+
+// 구성품 입력 필드 삭제 함수
+function removeComponentInput(button) {
+  button.parentElement.remove();
+}
+
+// 사용자 검색 모달 열기 함수
+function searchUsers() {
+  document.getElementById("user-search-list").innerHTML = "";
+  document.getElementById("user-search-input").value = "";
+  openModal("user-search-modal");
+}
+
+// 사용자 검색 실행 함수
+function performUserSearch() {
+  const query = document.getElementById("user-search-input").value.trim();
+  const resultContainer = document.getElementById("user-search-list");
+
+  if (!query) {
+    return showAlert("검색어를 입력해주세요.", "error");
+  }
+
+  resultContainer.innerHTML = '<p style="text-align: center;">검색 중...</p>';
+
+  fetch(`/api/appr/admin/users?search=${encodeURIComponent(query)}&limit=10`)
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.success && data.users.length > 0) {
+        let html = '<table style="width: 100%; border-collapse: collapse;">';
+        html +=
+          "<thead><tr><th>ID</th><th>이메일</th><th>회사명</th><th>선택</th></tr></thead><tbody>";
+        data.users.forEach((user) => {
+          html += `
+            <tr style="border-bottom: 1px solid #e2e8f0;">
+              <td style="padding: 10px;">${user.id}</td>
+              <td style="padding: 10px;">${user.email}</td>
+              <td style="padding: 10px;">${user.company_name || "-"}</td>
+              <td style="padding: 10px;">
+                <button type="button" class="btn btn-outline" onclick="selectUser('${
+                  user.id
+                }', '${user.email}')">선택</button>
+              </td>
+            </tr>
+          `;
+        });
+        html += "</tbody></table>";
+        resultContainer.innerHTML = html;
+      } else {
+        resultContainer.innerHTML =
+          '<p style="text-align: center;">검색 결과가 없습니다.</p>';
+      }
+    })
+    .catch((error) => {
+      resultContainer.innerHTML =
+        '<p style="text-align: center;">검색 중 오류가 발생했습니다.</p>';
+    });
+}
+
+// 사용자 선택 함수
+function selectUser(userId, userEmail) {
+  document.getElementById("create-user-id").value = userId;
+  document.getElementById("user-search-results").innerHTML = `
+    <div style="padding: 10px; background-color: #f0f9ff; border-radius: 4px; border: 1px solid #0ea5e9;">
+      선택된 사용자: ${userId} (${userEmail})
+    </div>
+  `;
+  closeModal("user-search-modal");
+}
+
+// 감정 생성 제출 함수
+function submitCreateAppraisal() {
+  const formData = new FormData(
+    document.getElementById("create-appraisal-form")
+  );
+
+  // 로딩 표시
+  document.getElementById("create-appraisal-message").innerHTML =
+    '<div class="alert alert-info">감정 신청 중...</div>';
+
+  // API 호출
+  fetch("/api/appr/admin/appraisals", {
+    method: "POST",
+    body: formData,
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("감정 신청에 실패했습니다.");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      if (data.success) {
+        showAlert("감정 신청이 완료되었습니다.", "success");
+        closeModal("create-appraisal-modal");
+        loadAppraisalList(); // 목록 새로고침
+      } else {
+        throw new Error(data.message || "감정 신청에 실패했습니다.");
+      }
+    })
+    .catch((error) => {
+      document.getElementById(
+        "create-appraisal-message"
+      ).innerHTML = `<div class="alert alert-danger">오류: ${error.message}</div>`;
     });
 }
