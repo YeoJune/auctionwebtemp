@@ -443,8 +443,8 @@ router.post("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
       `SELECT a.*, u.email as user_email, u.company_name
        FROM appraisals a
        JOIN users u ON a.user_id = u.id
-       WHERE a.id = ?`,
-      [appraisal_id]
+       WHERE a.certificate_number = ?`,
+      [finalCertificateNumber]
     );
 
     res.status(201).json({
