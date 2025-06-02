@@ -419,7 +419,7 @@ router.post("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
         remarks, product_link, platform, purchase_year, 
         components_included, delivery_info, status, result,
         certificate_number
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         user_id,
         appraisal_type,
