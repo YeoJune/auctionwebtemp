@@ -124,7 +124,7 @@ app.use(express.static(publicPath));
 app.use((req, res, next) => {
   const host = req.headers.host;
   if (host === "cassystem.com" || host === "www.cassystem.com") {
-    if (!req.path.startsWith("/appr")) {
+    if (!req.path.startsWith("/appr") || !req.path.startsWith("/api")) {
       req.url = "/appr" + req.url;
     }
   }
@@ -227,7 +227,6 @@ app.get("/appr/request-repair/:certificateNumber", (req, res) => {
 app.get("/appr/result", (req, res) => {
   res.sendFile(path.join(apprPagesPath, "result.html"));
 });
-// 감정서 조회 통합 라우트 (수정됨)
 // 감정서 조회 통합 라우트 (QR 액세스키 지원)
 app.get("/appr/result/:certificateNumber", async (req, res) => {
   try {
