@@ -637,38 +637,103 @@ function selectUser(userId, userEmail) {
 }
 
 // 감정 생성 제출 함수
+// 감정 생성 제출 함수 - 수정된 버전
 function submitCreateAppraisal() {
-  const formData = new FormData(
-    document.getElementById("create-appraisal-form")
-  );
+  // 폼 데이터 수집
+  const formData = {
+    user_id: document.getElementById("create-user-id").value,
+    appraisal_type: document.getElementById("create-appraisal-type").value,
+    brand: document.getElementById("create-brand").value,
+    model_name: document.getElementById("create-model-name").value,
+    category: document.getElementById("create-category").value,
+    remarks: document.getElementById("create-remarks").value,
+  };
 
-  // 로딩 표시
-  document.getElementById("create-appraisal-message").innerHTML =
-    '<div class="alert alert-info">감정 신청 중...</div>';
+  // 선택사항 필드
+  const certificateNumber = document.getElementById(
+    "create-certificate-number"
+  ).value;
+  if (certificateNumber) {
+    formData.certificate_number = certificateNumber;
+  }
+
+  // 감정 유형별 필드
+  if (formData.appraisal_type === "quicklink") {
+    formData.product_link = document.getElementById(
+      "create-product-link"
+    ).value;
+    formData.platform = document.getElementById("create-platform").value;
+  } else if (formData.appraisal_type === "offline") {
+    const purchaseYear = document.getElementById("create-purchase-year").value;
+    if (purchaseYear) {
+      formData.purchase_year = parseInt(purchaseYear);
+    }
+
+    // 구성품 수집
+    const componentInputs = document.querySelectorAll(".component-input");
+    const components = Array.from(componentInputs)
+      .map((input) => input.value.trim())
+      .filter((value) => value);
+    if (components.length > 0) {
+      formData.components_included = components;
+    }
+
+    // 배송 정보 수집
+    const deliveryName = document.getElementById("create-delivery-name").value;
+    const deliveryPhone = document.getElementById(
+      "create-delivery-phone"
+    ).value;
+    const deliveryZipcode = document.getElementById(
+      "create-delivery-zipcode"
+    ).value;
+    const deliveryAddress1 = document.getElementById(
+      "create-delivery-address1"
+    ).value;
+    const deliveryAddress2 = document.getElementById(
+      "create-delivery-address2"
+    ).value;
+
+    if (deliveryName || deliveryPhone || deliveryAddress1) {
+      formData.delivery_info = {
+        name: deliveryName,
+        phone: deliveryPhone,
+        zipcode: deliveryZipcode,
+        address1: deliveryAddress1,
+        address2: deliveryAddress2,
+      };
+    }
+  }
+
+  // 유효성 검사
+  if (!formData.user_id) {
+    showAlert("사용자 ID를 입력해주세요.", "error");
+    return;
+  }
+
+  if (formData.appraisal_type === "quicklink" && !formData.product_link) {
+    showAlert("퀵링크 감정에는 상품 링크가 필요합니다.", "error");
+    return;
+  }
 
   // API 호출
   fetch("/api/appr/admin/appraisals", {
     method: "POST",
-    body: formData,
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(formData),
   })
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("감정 신청에 실패했습니다.");
-      }
-      return response.json();
-    })
+    .then((response) => response.json())
     .then((data) => {
       if (data.success) {
-        showAlert("감정 신청이 완료되었습니다.", "success");
+        showAlert("감정이 성공적으로 생성되었습니다.", "success");
         closeModal("create-appraisal-modal");
         loadAppraisalList(); // 목록 새로고침
       } else {
-        throw new Error(data.message || "감정 신청에 실패했습니다.");
+        throw new Error(data.message || "감정 생성에 실패했습니다.");
       }
     })
     .catch((error) => {
-      document.getElementById(
-        "create-appraisal-message"
-      ).innerHTML = `<div class="alert alert-danger">오류: ${error.message}</div>`;
+      showAlert(error.message, "error");
     });
 }
