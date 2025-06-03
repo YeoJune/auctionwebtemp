@@ -1090,11 +1090,11 @@
           }
 
           // 자동 슬라이드 (5초마다)
-          // setInterval(() => {
-          //   let nextSlide = currentSlide + 1;
-          //   if (nextSlide >= slides.length) nextSlide = 0;
-          //   changeSlide(nextSlide);
-          // }, 5000);
+          setInterval(() => {
+            let nextSlide = currentSlide + 1;
+            if (nextSlide >= slides.length) nextSlide = 0;
+            changeSlide(nextSlide);
+          }, 5000);
         }
 
         // 배너 로딩 시작
