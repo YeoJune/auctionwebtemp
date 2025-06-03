@@ -104,23 +104,11 @@ const authenticityUpload = multer({
   },
 });
 
-// QR 코드 생성 함수 - 인증서별 고유 비대칭키 생성
 async function generateQRCodeWithKey(certificateNumber, outputPath) {
   try {
-    // 인증서 번호 기반으로 고유한 비대칭키 생성
-    const crypto = require("crypto");
-    const secretKey = process.env.QR_SECRET_KEY || "default-secret-key";
-
-    // 인증서 번호와 고정 시드를 조합해서 항상 동일한 키가 생성되도록 함
-    const seed = certificateNumber + secretKey + "FIXED_SEED";
-    const accessKey = crypto
-      .createHash("sha256")
-      .update(seed)
-      .digest("hex")
-      .substring(0, 32); // 32자리 고유키
-
+    // 암호화 없이 직접 감정서 조회 URL 생성
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-    const certificateUrl = `${frontendUrl}/appr/result/${certificateNumber}?access=${accessKey}`;
+    const certificateUrl = `${frontendUrl}/appr/result/${certificateNumber}`;
 
     await QRCode.toFile(outputPath, certificateUrl, {
       errorCorrectionLevel: "H",
@@ -128,7 +116,7 @@ async function generateQRCodeWithKey(certificateNumber, outputPath) {
       width: 300,
     });
 
-    return accessKey; // 생성된 액세스키 반환
+    return true; // 성공 시 true 반환
   } catch (error) {
     console.error("QR 코드 생성 중 오류:", error);
     return false;
@@ -137,27 +125,38 @@ async function generateQRCodeWithKey(certificateNumber, outputPath) {
 
 async function generateCertificateNumber(conn, customNumber = null) {
   if (customNumber) {
-    // 커스텀 번호가 제공된 경우 중복 확인
+    // 커스텀 번호 형식 검증: cas + 숫자 (자릿수 제한 없음)
+    const certPattern = /^cas\d+$/i;
+    if (!certPattern.test(customNumber)) {
+      throw new Error(
+        "감정 번호는 CAS + 숫자 형식이어야 합니다. (예: CAS04312)"
+      );
+    }
+
+    // 대소문자 통일 (소문자로 저장)
+    const normalizedNumber = customNumber.toLowerCase();
+
+    // 중복 확인
     const [existing] = await conn.query(
       "SELECT certificate_number FROM appraisals WHERE certificate_number = ?",
-      [customNumber]
+      [normalizedNumber]
     );
 
     if (existing.length > 0) {
       throw new Error("이미 존재하는 감정 번호입니다.");
     }
 
-    return customNumber;
+    return normalizedNumber;
   }
 
-  // 자동 생성: CAS + 6자리 숫자
+  // 자동 생성: cas + 6자리 숫자
   let certificateNumber;
   let isUnique = false;
 
   while (!isUnique) {
     // 6자리 랜덤 숫자 생성
     const randomNum = Math.floor(100000 + Math.random() * 900000);
-    certificateNumber = `CAS${randomNum}`;
+    certificateNumber = `cas${randomNum}`;
 
     // 중복 확인
     const [existing] = await conn.query(
@@ -172,6 +171,311 @@ async function generateCertificateNumber(conn, customNumber = null) {
 
   return certificateNumber;
 }
+
+// Multer 설정 - 배너 이미지 저장
+const bannerStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const dir = "public/images/banners";
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + "-" + uuidv4();
+    cb(null, "banner-" + uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
+const bannerUpload = multer({
+  storage: bannerStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB 제한
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) {
+      cb(null, true);
+    } else {
+      cb(
+        new Error("유효하지 않은 파일 형식입니다. 이미지만 업로드 가능합니다."),
+        false
+      );
+    }
+  },
+});
+
+// 배너 목록 조회 - GET /api/appr/admin/banners
+router.get("/banners", isAuthenticated, isAdmin, async (req, res) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+
+    const [rows] = await conn.query(
+      "SELECT * FROM main_banners ORDER BY display_order ASC, created_at DESC"
+    );
+
+    res.json({
+      success: true,
+      banners: rows,
+    });
+  } catch (err) {
+    console.error("배너 목록 조회 중 오류 발생:", err);
+    res.status(500).json({
+      success: false,
+      message: "배너 목록 조회 중 서버 오류가 발생했습니다.",
+    });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
+// 배너 추가 - POST /api/appr/admin/banners
+router.post(
+  "/banners",
+  isAuthenticated,
+  isAdmin,
+  bannerUpload.single("banner_image"),
+  async (req, res) => {
+    let conn;
+    try {
+      const {
+        title,
+        subtitle,
+        description,
+        button_text,
+        button_link,
+        display_order,
+        is_active,
+      } = req.body;
+
+      // 필수 필드 검증
+      if (!title || !description) {
+        return res.status(400).json({
+          success: false,
+          message: "제목과 설명은 필수 입력 항목입니다.",
+        });
+      }
+
+      let banner_image = null;
+      if (req.file) {
+        banner_image = `/images/banners/${req.file.filename}`;
+      }
+
+      conn = await pool.getConnection();
+
+      const banner_id = uuidv4();
+
+      await conn.query(
+        `INSERT INTO main_banners (
+          id, title, subtitle, description, banner_image,
+          button_text, button_link, display_order, is_active
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          banner_id,
+          title,
+          subtitle || null,
+          description,
+          banner_image,
+          button_text || null,
+          button_link || null,
+          parseInt(display_order) || 0,
+          is_active === "true" || is_active === true,
+        ]
+      );
+
+      res.status(201).json({
+        success: true,
+        banner: {
+          id: banner_id,
+          title,
+          subtitle,
+          description,
+          banner_image,
+          button_text,
+          button_link,
+          display_order: parseInt(display_order) || 0,
+          is_active: is_active === "true" || is_active === true,
+        },
+      });
+    } catch (err) {
+      console.error("배너 추가 중 오류 발생:", err);
+      res.status(500).json({
+        success: false,
+        message: "배너 추가 중 서버 오류가 발생했습니다.",
+      });
+    } finally {
+      if (conn) conn.release();
+    }
+  }
+);
+
+// 배너 수정 - PUT /api/appr/admin/banners/:id
+router.put(
+  "/banners/:id",
+  isAuthenticated,
+  isAdmin,
+  bannerUpload.single("banner_image"),
+  async (req, res) => {
+    let conn;
+    try {
+      const banner_id = req.params.id;
+      const {
+        title,
+        subtitle,
+        description,
+        button_text,
+        button_link,
+        display_order,
+        is_active,
+      } = req.body;
+
+      conn = await pool.getConnection();
+
+      // 배너 존재 여부 확인
+      const [bannerRows] = await conn.query(
+        "SELECT * FROM main_banners WHERE id = ?",
+        [banner_id]
+      );
+
+      if (bannerRows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "해당 배너를 찾을 수 없습니다.",
+        });
+      }
+
+      const banner = bannerRows[0];
+      let banner_image = banner.banner_image;
+
+      // 새 이미지가 업로드된 경우
+      if (req.file) {
+        banner_image = `/images/banners/${req.file.filename}`;
+      }
+
+      // 업데이트할 필드 구성
+      const updateData = {};
+      const updateFields = [];
+      const updateValues = [];
+
+      if (title !== undefined) {
+        updateFields.push("title = ?");
+        updateValues.push(title);
+        updateData.title = title;
+      }
+
+      if (subtitle !== undefined) {
+        updateFields.push("subtitle = ?");
+        updateValues.push(subtitle);
+        updateData.subtitle = subtitle;
+      }
+
+      if (description !== undefined) {
+        updateFields.push("description = ?");
+        updateValues.push(description);
+        updateData.description = description;
+      }
+
+      if (banner_image !== banner.banner_image) {
+        updateFields.push("banner_image = ?");
+        updateValues.push(banner_image);
+        updateData.banner_image = banner_image;
+      }
+
+      if (button_text !== undefined) {
+        updateFields.push("button_text = ?");
+        updateValues.push(button_text);
+        updateData.button_text = button_text;
+      }
+
+      if (button_link !== undefined) {
+        updateFields.push("button_link = ?");
+        updateValues.push(button_link);
+        updateData.button_link = button_link;
+      }
+
+      if (display_order !== undefined) {
+        updateFields.push("display_order = ?");
+        updateValues.push(parseInt(display_order));
+        updateData.display_order = parseInt(display_order);
+      }
+
+      if (is_active !== undefined) {
+        updateFields.push("is_active = ?");
+        updateValues.push(is_active === "true" || is_active === true);
+        updateData.is_active = is_active === "true" || is_active === true;
+      }
+
+      if (updateFields.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "업데이트할 정보가 없습니다.",
+        });
+      }
+
+      // 업데이트 쿼리 실행
+      const query = `UPDATE main_banners SET ${updateFields.join(
+        ", "
+      )} WHERE id = ?`;
+      updateValues.push(banner_id);
+
+      await conn.query(query, updateValues);
+
+      res.json({
+        success: true,
+        banner: {
+          id: banner_id,
+          ...banner,
+          ...updateData,
+        },
+      });
+    } catch (err) {
+      console.error("배너 수정 중 오류 발생:", err);
+      res.status(500).json({
+        success: false,
+        message: "배너 수정 중 서버 오류가 발생했습니다.",
+      });
+    } finally {
+      if (conn) conn.release();
+    }
+  }
+);
+
+// 배너 삭제 - DELETE /api/appr/admin/banners/:id
+router.delete("/banners/:id", isAuthenticated, isAdmin, async (req, res) => {
+  let conn;
+  try {
+    const banner_id = req.params.id;
+
+    conn = await pool.getConnection();
+
+    // 배너 존재 여부 확인
+    const [bannerRows] = await conn.query(
+      "SELECT * FROM main_banners WHERE id = ?",
+      [banner_id]
+    );
+
+    if (bannerRows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "해당 배너를 찾을 수 없습니다.",
+      });
+    }
+
+    // 배너 삭제
+    await conn.query("DELETE FROM main_banners WHERE id = ?", [banner_id]);
+
+    res.json({
+      success: true,
+      message: "배너가 삭제되었습니다.",
+    });
+  } catch (err) {
+    console.error("배너 삭제 중 오류 발생:", err);
+    res.status(500).json({
+      success: false,
+      message: "배너 삭제 중 서버 오류가 발생했습니다.",
+    });
+  } finally {
+    if (conn) conn.release();
+  }
+});
 
 // 회원 목록 조회 - GET /api/appr/admin/users
 router.get("/users", isAuthenticated, isAdmin, async (req, res) => {
@@ -680,18 +984,7 @@ router.put(
         certificate_url = `/images/appraisals/${req.files.pdf[0].filename}`;
       }
 
-      // QR 코드 및 액세스키 생성 (인증서 번호가 있고 아직 생성되지 않은 경우)
-      if (appraisal.certificate_number && !qr_access_key) {
-        // 인증서별 고유 액세스키 생성
-        const crypto = require("crypto");
-        const secretKey = process.env.QR_SECRET_KEY || "default-secret-key";
-        const seed = appraisal.certificate_number + secretKey + "FIXED_SEED";
-        qr_access_key = crypto
-          .createHash("sha256")
-          .update(seed)
-          .digest("hex")
-          .substring(0, 32);
-
+      if (appraisal.certificate_number && !qrcode_url) {
         // QR 코드 파일 생성
         const qrDir = path.join(__dirname, "../../public/images/qrcodes");
         if (!fs.existsSync(qrDir)) {
@@ -702,38 +995,22 @@ router.put(
         const qrPath = path.join(qrDir, qrFileName);
 
         const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-        const certificateUrl = `${frontendUrl}/appr/result/${appraisal.certificate_number}?access=${qr_access_key}`;
+        const certificateUrl = `${frontendUrl}/appr/result/${appraisal.certificate_number}`;
 
-        const qrGenerated = await QRCode.toFile(qrPath, certificateUrl, {
-          errorCorrectionLevel: "H",
-          margin: 1,
-          width: 300,
-        });
+        try {
+          await QRCode.toFile(qrPath, certificateUrl, {
+            errorCorrectionLevel: "H",
+            margin: 1,
+            width: 300,
+          });
 
-        if (qrGenerated !== false) {
           qrcode_url = `/images/qrcodes/${qrFileName}`;
+        } catch (error) {
+          console.error("QR 코드 생성 중 오류:", error);
         }
       }
 
-      // 복원 서비스 제안 처리
-      let suggested_restoration = null;
-      if (
-        suggested_restoration_services &&
-        Array.isArray(suggested_restoration_services) &&
-        suggested_restoration_services.length > 0
-      ) {
-        // 제안된 복원 서비스 ID가 유효한지 확인
-        const [validServices] = await conn.query(
-          "SELECT id, name, description, price FROM restoration_services WHERE id IN (?) AND is_active = true",
-          [suggested_restoration_services]
-        );
-
-        if (validServices.length > 0) {
-          suggested_restoration = validServices;
-        }
-      }
-
-      // 감정 정보 업데이트
+      // 감정 정보 업데이트 필드 구성
       const updateData = {};
       const updateFields = [];
       const updateValues = [];
@@ -780,12 +1057,6 @@ router.put(
         updateFields.push("qrcode_url = ?");
         updateValues.push(qrcode_url);
         updateData.qrcode_url = qrcode_url;
-      }
-
-      if (qr_access_key) {
-        updateFields.push("qr_access_key = ?");
-        updateValues.push(qr_access_key);
-        updateData.qr_access_key = qr_access_key;
       }
 
       // 제안된 복원 서비스가 있는 경우 저장

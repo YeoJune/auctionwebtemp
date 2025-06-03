@@ -40,27 +40,38 @@ const upload = multer({
 
 async function generateCertificateNumber(conn, customNumber = null) {
   if (customNumber) {
-    // 커스텀 번호가 제공된 경우 중복 확인
+    // 커스텀 번호 형식 검증: cas + 숫자 (자릿수 제한 없음)
+    const certPattern = /^cas\d+$/i;
+    if (!certPattern.test(customNumber)) {
+      throw new Error(
+        "감정 번호는 CAS + 숫자 형식이어야 합니다. (예: CAS04312)"
+      );
+    }
+
+    // 대소문자 통일 (소문자로 저장)
+    const normalizedNumber = customNumber.toLowerCase();
+
+    // 중복 확인
     const [existing] = await conn.query(
       "SELECT certificate_number FROM appraisals WHERE certificate_number = ?",
-      [customNumber]
+      [normalizedNumber]
     );
 
     if (existing.length > 0) {
       throw new Error("이미 존재하는 감정 번호입니다.");
     }
 
-    return customNumber;
+    return normalizedNumber;
   }
 
-  // 자동 생성: CAS + 6자리 숫자
+  // 자동 생성: cas + 6자리 숫자
   let certificateNumber;
   let isUnique = false;
 
   while (!isUnique) {
     // 6자리 랜덤 숫자 생성
     const randomNum = Math.floor(100000 + Math.random() * 900000);
-    certificateNumber = `CAS${randomNum}`;
+    certificateNumber = `cas${randomNum}`;
 
     // 중복 확인
     const [existing] = await conn.query(
@@ -507,6 +518,36 @@ router.get("/authenticity-guides/:brand", async (req, res) => {
   }
 });
 
+// 활성 배너 목록 조회 - GET /api/appr/appraisals/banners (공개 조회)
+router.get("/banners", async (req, res) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+
+    const [rows] = await conn.query(
+      `SELECT 
+        id, title, subtitle, description, banner_image,
+        button_text, button_link, display_order
+      FROM main_banners 
+      WHERE is_active = true 
+      ORDER BY display_order ASC, created_at DESC`
+    );
+
+    res.json({
+      success: true,
+      banners: rows,
+    });
+  } catch (err) {
+    console.error("배너 목록 조회 중 오류 발생:", err);
+    res.status(500).json({
+      success: false,
+      message: "배너 목록 조회 중 서버 오류가 발생했습니다.",
+    });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
 // 감정 상세 조회 - GET /api/appr/appraisals/:certificate_number (로그인 필요)
 router.get("/:certificate_number", isAuthenticated, async (req, res) => {
   let conn;
@@ -555,35 +596,23 @@ router.get("/:certificate_number", isAuthenticated, async (req, res) => {
   }
 });
 
-// 감정서 정보 조회 - GET /api/appr/appraisals/certificate/:certificateNumber (QR 액세스키 포함 시 공개 조회)
+// routes/appr/appraisals.js - 감정서 정보 조회 API 수정 (비로그인 공개)
+// 감정서 정보 조회 - GET /api/appr/appraisals/certificate/:certificateNumber (공개 조회)
 router.get("/certificate/:certificateNumber", async (req, res) => {
   let conn;
   try {
-    const certificateNumber = req.params.certificateNumber;
-    const accessKey = req.query.access;
+    const certificateNumber = req.params.certificateNumber.toLowerCase(); // 소문자로 변환
 
     conn = await pool.getConnection();
 
-    // QR 액세스키가 있는 경우 공개 조회, 없는 경우 기본 조회
-    let query, params;
-
-    if (accessKey) {
-      // QR 액세스키가 일치하는 경우 상세 정보 제공
-      query = `SELECT 
+    // 모든 감정 정보를 공개적으로 제공 (암호화 없음)
+    const [rows] = await conn.query(
+      `SELECT 
         certificate_number, brand, model_name, category, appraisal_type, 
-        created_at, status, result, result_notes, images, qr_access_key
-      FROM appraisals WHERE certificate_number = ? AND qr_access_key = ?`;
-      params = [certificateNumber, accessKey];
-    } else {
-      // 액세스키가 없는 경우 기본 정보만 제공
-      query = `SELECT 
-        certificate_number, brand, model_name, category, appraisal_type, 
-        created_at, status
-      FROM appraisals WHERE certificate_number = ?`;
-      params = [certificateNumber];
-    }
-
-    const [rows] = await conn.query(query, params);
+        created_at, status, result, result_notes, images, appraised_at
+      FROM appraisals WHERE certificate_number = ?`,
+      [certificateNumber]
+    );
 
     if (rows.length === 0) {
       return res.status(404).json({
@@ -597,7 +626,16 @@ router.get("/certificate/:certificateNumber", async (req, res) => {
     // 검증 코드 생성 (간단히 certificate_number의 앞 6자리)
     const verification_code = certificateNumber.substring(0, 6);
 
-    // QR 액세스키가 있는 경우 상세 정보 포함
+    // JSON 데이터 파싱
+    let images = null;
+    if (appraisal.images) {
+      try {
+        images = JSON.parse(appraisal.images);
+      } catch (error) {
+        console.error("이미지 JSON 파싱 오류:", error);
+      }
+    }
+
     const responseData = {
       certificate_number: certificateNumber,
       verification_code,
@@ -608,19 +646,14 @@ router.get("/certificate/:certificateNumber", async (req, res) => {
         category: appraisal.category,
         appraisal_type: appraisal.appraisal_type,
         created_at: appraisal.created_at,
+        appraised_at: appraisal.appraised_at,
         status: appraisal.status,
+        result: appraisal.result,
+        result_notes: appraisal.result_notes,
+        images: images,
       },
+      is_public_access: true,
     };
-
-    // QR 액세스키가 있고 유효한 경우 추가 정보 제공
-    if (accessKey && appraisal.qr_access_key === accessKey) {
-      responseData.appraisal.result = appraisal.result;
-      responseData.appraisal.result_notes = appraisal.result_notes;
-      responseData.appraisal.images = appraisal.images
-        ? JSON.parse(appraisal.images)
-        : null;
-      responseData.is_public_access = true;
-    }
 
     res.json({
       success: true,
