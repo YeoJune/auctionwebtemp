@@ -1090,11 +1090,11 @@
           }
 
           // 자동 슬라이드 (5초마다)
-          setInterval(() => {
-            let nextSlide = currentSlide + 1;
-            if (nextSlide >= slides.length) nextSlide = 0;
-            changeSlide(nextSlide);
-          }, 5000);
+          // setInterval(() => {
+          //   let nextSlide = currentSlide + 1;
+          //   if (nextSlide >= slides.length) nextSlide = 0;
+          //   changeSlide(nextSlide);
+          // }, 5000);
         }
 
         // 배너 로딩 시작
@@ -1251,8 +1251,6 @@
                       year: "numeric",
                       month: "2-digit",
                       day: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
                     }
                   );
                   // 감정번호만 표시 (민감하지 않은 공개 정보)
