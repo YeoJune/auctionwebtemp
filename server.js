@@ -230,25 +230,29 @@ app.get("/appr/result", (req, res) => {
 // 감정서 조회 통합 라우트 (공개 조회)
 app.get("/appr/result/:certificateNumber", async (req, res) => {
   try {
-    const certificateNumber = req.params.certificateNumber.toLowerCase(); // 소문자로 변환
+    const certificateNumber = req.params.certificateNumber;
 
     // DB 연결
     const conn = await pool.getConnection();
 
     try {
-      // 감정서 번호로 조회 (대소문자 구분 없음)
+      // 먼저 감정서 번호로 조회
       const [appraisal] = await conn.query(
-        `SELECT appraisal_type, certificate_number, user_id, status FROM appraisals WHERE certificate_number = ?`,
+        `SELECT appraisal_type, certificate_number FROM appraisals WHERE certificate_number = ?`,
         [certificateNumber]
       );
 
       if (appraisal.length > 0) {
-        // 감정서가 존재하는 경우 → 공개 조회 페이지로
-        return res.sendFile(path.join(apprPagesPath, "result-public.html"));
+        // 본인의 감정서인 경우: 감정 유형에 따라 상세 페이지로
+        if (appraisal[0].appraisal_type === "quicklink") {
+          return res.sendFile(path.join(apprPagesPath, "quick-result.html"));
+        } else {
+          return res.sendFile(path.join(apprPagesPath, "result-detail.html"));
+        }
       } else {
         // 감정서 번호로 찾을 수 없는 경우, 감정 ID로 시도
         const [appraisalById] = await conn.query(
-          `SELECT appraisal_type, certificate_number, user_id FROM appraisals WHERE id = ?`,
+          `SELECT appraisal_type, certificate_number FROM appraisals WHERE id = ?`,
           [certificateNumber]
         );
 
@@ -260,7 +264,7 @@ app.get("/appr/result/:certificateNumber", async (req, res) => {
         } else {
           // 찾을 수 없는 경우 감정번호 조회 페이지로 리다이렉션
           return res.redirect(
-            `/appr/result?error=not_found&certificate=${encodeURIComponent(
+            `/appr/result?error=not_found&id=${encodeURIComponent(
               certificateNumber
             )}`
           );
