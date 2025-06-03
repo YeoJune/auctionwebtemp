@@ -523,13 +523,7 @@
                 align-items: center;
                 margin-bottom: 20px;
               ">
-              <p style="color: #4a5568; font-size: 1.1rem">
-                전체 명품감정 내역
-                <span id="count-display"
-                  >전체 <strong id="total-appraisals-count">0</strong></span
-                >
-                건
-              </p>
+              <p style="color: #4a5568; font-size: 1.1rem">명품감정 내역</p>
               <div
                 class="toggle-container"
                 style="
@@ -1140,9 +1134,6 @@
         handleScrollAnimations();
 
         // --- 최근 감정 내역 데이터 로드 ---
-        const totalAppraisalsCountEl = document.getElementById(
-          "total-appraisals-count"
-        );
         const countDisplayEl = document.getElementById("count-display");
         const appraisalListContainer = document.getElementById(
           "appraisal-list-container"
@@ -1164,7 +1155,6 @@
           toggleTodayBtn.classList.remove("active");
           toggleTodayBtn.style.backgroundColor = "transparent";
           toggleTodayBtn.style.color = "#1a2a3a";
-          countDisplayEl.innerHTML = `전체 <strong id="total-appraisals-count">${totalAppraisalsCountEl.textContent}</strong>`;
           loadAppraisals(false);
         });
 
@@ -1177,7 +1167,6 @@
           toggleAllBtn.classList.remove("active");
           toggleAllBtn.style.backgroundColor = "transparent";
           toggleAllBtn.style.color = "#1a2a3a";
-          countDisplayEl.innerHTML = `오늘 <strong id="total-appraisals-count">${totalAppraisalsCountEl.textContent}</strong>`;
           loadAppraisals(true);
         });
 
