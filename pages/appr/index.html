@@ -862,22 +862,6 @@
         }
       }
 
-      let currentSlide = 0;
-      const slides = document.querySelectorAll(".slider-item");
-      function changeSlide(n) {
-        if (slides.length === 0) return;
-        slides[currentSlide].classList.remove("active");
-        currentSlide = n;
-        slides[currentSlide].classList.add("active");
-      }
-      if (slides.length > 1) {
-        setInterval(() => {
-          let nextSlide = currentSlide + 1;
-          if (nextSlide >= slides.length) nextSlide = 0;
-          changeSlide(nextSlide);
-        }, 5000);
-      }
-
       document.addEventListener("DOMContentLoaded", function () {
         // 동적 배너 로딩 함수
         function loadBanners() {
@@ -1090,11 +1074,11 @@
           }
 
           // 자동 슬라이드 (5초마다)
-          // setInterval(() => {
-          //   let nextSlide = currentSlide + 1;
-          //   if (nextSlide >= slides.length) nextSlide = 0;
-          //   changeSlide(nextSlide);
-          // }, 5000);
+          setInterval(() => {
+            let nextSlide = currentSlide + 1;
+            if (nextSlide >= slides.length) nextSlide = 0;
+            changeSlide(nextSlide);
+          }, 5000);
         }
 
         // 배너 로딩 시작
