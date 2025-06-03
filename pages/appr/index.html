@@ -1192,9 +1192,6 @@
                 data.appraisals &&
                 data.appraisals.length > 0
               ) {
-                totalAppraisalsCountEl.textContent =
-                  data.pagination.totalItems.toLocaleString();
-
                 data.appraisals.forEach((appraisal) => {
                   const itemDiv = document.createElement("div");
                   itemDiv.className = "appraisal-item";
@@ -1329,7 +1326,6 @@
                 if (appraisalListContainer)
                   appraisalListContainer.innerHTML =
                     '<p style="padding: 15px; text-align: center; color: #4a5568;">감정 내역이 없습니다.</p>';
-                totalAppraisalsCountEl.textContent = "0";
               } else {
                 if (appraisalListContainer)
                   appraisalListContainer.innerHTML =
