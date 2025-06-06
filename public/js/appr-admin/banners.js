@@ -54,14 +54,16 @@ function displayBannerList(banners) {
       (banner) => `
     <tr>
       <td>
-        <div style="font-weight: 500; color: #1a2a3a;">${banner.title}</div>
+        <div style="font-weight: 500; color: #1a2a3a;">${
+          banner.title || "-"
+        }</div>
       </td>
       <td>
         <div style="color: #4a5568;">${banner.subtitle || "-"}</div>
       </td>
       <td>
         <div style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${
-          banner.description
+          banner.description || ""
         }">
           ${banner.description}
         </div>
@@ -125,11 +127,11 @@ function editBanner(bannerId) {
           document.getElementById("banner-modal-title").textContent =
             "배너 수정";
           document.getElementById("banner-id").value = banner.id;
-          document.getElementById("banner-title").value = banner.title;
+          document.getElementById("banner-title").value = banner.title || "";
           document.getElementById("banner-subtitle").value =
             banner.subtitle || "";
           document.getElementById("banner-description").value =
-            banner.description;
+            banner.description || "";
           document.getElementById("banner-button-text").value =
             banner.button_text || "";
           document.getElementById("banner-button-link").value =
@@ -216,24 +218,33 @@ function handleBannerFormSubmit() {
       const bannerId = document.getElementById("banner-id").value;
       const isEdit = !!bannerId;
 
+      // 필수 필드 검증 - 설명만 필수로 변경
+      const description = document
+        .getElementById("banner-description")
+        .value.trim();
+      if (!description) {
+        showError("설명은 필수 입력 항목입니다.");
+        return;
+      }
+
       // 폼 데이터 수집
       const formData = new FormData();
-      formData.append("title", document.getElementById("banner-title").value);
+      formData.append(
+        "title",
+        document.getElementById("banner-title").value.trim()
+      );
       formData.append(
         "subtitle",
-        document.getElementById("banner-subtitle").value
+        document.getElementById("banner-subtitle").value.trim()
       );
-      formData.append(
-        "description",
-        document.getElementById("banner-description").value
-      );
+      formData.append("description", description);
       formData.append(
         "button_text",
-        document.getElementById("banner-button-text").value
+        document.getElementById("banner-button-text").value.trim()
       );
       formData.append(
         "button_link",
-        document.getElementById("banner-button-link").value
+        document.getElementById("banner-button-link").value.trim()
       );
       formData.append(
         "display_order",

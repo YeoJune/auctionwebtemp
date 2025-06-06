@@ -246,11 +246,11 @@ router.post(
         is_active,
       } = req.body;
 
-      // 필수 필드 검증
-      if (!title || !description) {
+      // 필수 필드 검증 - 설명만 필수로 변경
+      if (!description || !description.trim()) {
         return res.status(400).json({
           success: false,
-          message: "제목과 설명은 필수 입력 항목입니다.",
+          message: "설명은 필수 입력 항목입니다.",
         });
       }
 
@@ -270,12 +270,12 @@ router.post(
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           banner_id,
-          title,
-          subtitle || null,
-          description,
+          title?.trim() || null,
+          subtitle?.trim() || null,
+          description.trim(),
           banner_image,
-          button_text || null,
-          button_link || null,
+          button_text?.trim() || null,
+          button_link?.trim() || null,
           parseInt(display_order) || 0,
           is_active === "true" || is_active === true,
         ]
@@ -285,12 +285,12 @@ router.post(
         success: true,
         banner: {
           id: banner_id,
-          title,
-          subtitle,
-          description,
+          title: title?.trim() || null,
+          subtitle: subtitle?.trim() || null,
+          description: description.trim(),
           banner_image,
-          button_text,
-          button_link,
+          button_text: button_text?.trim() || null,
+          button_link: button_link?.trim() || null,
           display_order: parseInt(display_order) || 0,
           is_active: is_active === "true" || is_active === true,
         },
@@ -971,7 +971,7 @@ router.put(
       let qr_access_key = appraisal.qr_access_key;
       let certificate_url = appraisal.certificate_url;
 
-      // 이미지 처리
+      // 이미지 처리 - 퀵링크와 오프라인 모두 지원
       if (req.files && req.files.images) {
         const newImages = req.files.images.map(
           (file) => `/images/appraisals/${file.filename}`
@@ -1059,11 +1059,21 @@ router.put(
         updateData.qrcode_url = qrcode_url;
       }
 
-      // 제안된 복원 서비스가 있는 경우 저장
-      if (suggested_restoration) {
-        updateFields.push("suggested_restoration_services = ?");
-        updateValues.push(JSON.stringify(suggested_restoration));
-        updateData.suggested_restoration_services = suggested_restoration;
+      // 제안된 복원 서비스가 있는 경우 저장 - 변수명 수정
+      if (suggested_restoration_services) {
+        try {
+          // JSON 문자열인지 확인하고 파싱
+          const serviceIds =
+            typeof suggested_restoration_services === "string"
+              ? JSON.parse(suggested_restoration_services)
+              : suggested_restoration_services;
+
+          updateFields.push("suggested_restoration_services = ?");
+          updateValues.push(JSON.stringify(serviceIds));
+          updateData.suggested_restoration_services = serviceIds;
+        } catch (error) {
+          console.error("복원 서비스 JSON 파싱 오류:", error);
+        }
       }
 
       // 크레딧 차감 처리 (결과가 pending이 아니고, status가 completed로 변경되는 경우)

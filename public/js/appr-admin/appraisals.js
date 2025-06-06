@@ -192,10 +192,11 @@ function viewAppraisalDetail(appraisalId) {
 }
 
 // 감정 상세 정보 표시 함수
+// 감정 상세 정보 표시 함수 - displayAppraisalDetail 함수 수정
 function displayAppraisalDetail(appraisal) {
   const container = document.getElementById("appraisal-detail-content");
 
-  // 감정 기본 정보 섹션
+  // 감정 기본 정보 섹션 - 브랜드, 카테고리, 날짜, 감정결과 정보 추가
   let html = `
     <div class="card" style="margin-bottom: 20px;">
         <div class="card-header">
@@ -221,20 +222,26 @@ function displayAppraisalDetail(appraisal) {
             <tr>
                 <th>브랜드</th>
                 <td>${appraisal.brand}</td>
-                <th>모델명</th>
-                <td>${appraisal.model_name}</td>
-            </tr>
-            <tr>
                 <th>카테고리</th>
                 <td>${appraisal.category}</td>
-                <th>신청자 정보</th>
-                <td>${appraisal.user_email || appraisal.user_id}</td>
             </tr>
             <tr>
+                <th>모델명</th>
+                <td>${appraisal.model_name}</td>
+                <th>감정 결과</th>
+                <td>${getStatusBadge(appraisal.result)}</td>
+            </tr>
+            <tr>
+                <th>신청자 정보</th>
+                <td>${appraisal.user_email || appraisal.user_id}</td>
                 <th>신청일</th>
                 <td>${formatDate(appraisal.created_at)}</td>
-                <th>감정일</th>
+            </tr>
+            <tr>
+                <th>감정 완료일</th>
                 <td>${formatDate(appraisal.appraised_at) || "-"}</td>
+                <th>현재 소견</th>
+                <td>${appraisal.result_notes || "-"}</td>
             </tr>
     `;
 
@@ -332,8 +339,8 @@ function displayAppraisalDetail(appraisal) {
             </div>
             
             <div class="form-group">
-                <label for="appraisal-result-notes" class="form-label">감정 결과 내용</label>
-                <textarea id="appraisal-result-notes" class="form-textarea">${
+                <label for="appraisal-result-notes" class="form-label">감정 결과 소견 내용</label>
+                <textarea id="appraisal-result-notes" class="form-textarea" placeholder="감정 결과에 대한 상세한 소견을 입력하세요">${
                   appraisal.result_notes || ""
                 }</textarea>
             </div>
@@ -359,28 +366,41 @@ function displayAppraisalDetail(appraisal) {
         
         <div class="card" style="margin-bottom: 20px;">
             <div class="card-header">
-                <div class="card-title">이미지</div>
+                <div class="card-title">이미지 관리</div>
             </div>
             
             <div class="form-group">
-                <label for="appraisal-images" class="form-label">이미지 업로드 (여러 장 선택 가능)</label>
+                <label for="appraisal-images" class="form-label">새 이미지 업로드 (여러 장 선택 가능)</label>
                 <input type="file" id="appraisal-images" multiple accept="image/*">
+                <small style="color: #666; display: block; margin-top: 5px;">
+                    ${
+                      appraisal.appraisal_type === "quicklink"
+                        ? "퀵링크"
+                        : "오프라인"
+                    } 감정 이미지를 업로드할 수 있습니다.
+                </small>
             </div>
             
-            <div id="appraisal-images-preview" style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 10px;">
+            <div id="appraisal-images-preview" style="margin-top: 15px;">
+                <h4 style="margin-bottom: 10px; font-size: 1rem; color: #1a2a3a;">현재 업로드된 이미지</h4>
+                <div style="display: flex; flex-wrap: wrap; gap: 10px;">
                 ${
                   appraisal.images && appraisal.images.length > 0
                     ? appraisal.images
                         .map(
-                          (img) => `
-                    <div style="position: relative; width: 150px; height: 150px; margin-bottom: 10px;">
-                        <img src="${img}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;">
-                    </div>
-                `
+                          (img, index) => `
+                        <div style="position: relative; width: 150px; height: 150px; margin-bottom: 10px;">
+                            <img src="${img}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px; border: 1px solid #e2e8f0;">
+                            <div style="position: absolute; bottom: 5px; left: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75rem;">
+                                ${index + 1}
+                            </div>
+                        </div>
+                    `
                         )
                         .join("")
-                    : "<p>업로드된 이미지가 없습니다.</p>"
+                    : "<p style='color: #666; font-style: italic;'>업로드된 이미지가 없습니다.</p>"
                 }
+                </div>
             </div>
         </div>
         
