@@ -941,7 +941,7 @@ router.put(
   isAuthenticated,
   isAdmin,
   appraisalUpload.fields([
-    { name: "images", maxCount: 10 },
+    { name: "images", maxCount: 20 },
     { name: "pdf", maxCount: 1 },
   ]),
   async (req, res) => {
