@@ -141,7 +141,7 @@ function editBanner(bannerId) {
 
           // 활성화 상태 설정
           document.querySelector(
-            `input[name="banner-active"][value="${banner.is_active}"]`
+            `input[name="banner-active"][value="${banner.is_active == 1}"]`
           ).checked = true;
 
           // 기존 이미지 미리보기
