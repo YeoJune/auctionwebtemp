@@ -163,6 +163,24 @@
         <div class="modal-body">
           <input type="hidden" id="completeBidId" />
           <p>선택한 입찰을 낙찰 완료 처리하시겠습니까?</p>
+
+          <!-- 추가할 부분 시작 -->
+          <div class="form-group">
+            <label class="form-label" for="winningPrice"
+              >낙찰 금액 (엔화)</label
+            >
+            <input
+              type="number"
+              id="winningPrice"
+              class="form-control"
+              placeholder="낙찰 금액 입력 (선택사항)" />
+            <div id="winningPriceKRW" class="price-display">
+              관부가세 포함: -
+            </div>
+            <div id="priceComparisonMessage" class="price-comparison"></div>
+          </div>
+          <!-- 추가할 부분 끝 -->
+
           <p>완료 후에는 취소할 수 없습니다.</p>
         </div>
         <div class="modal-footer">
@@ -171,7 +189,6 @@
         </div>
       </div>
     </div>
-
     <!-- 입찰 취소 모달 -->
     <div class="modal-overlay" id="cancelModal">
       <div class="modal-dialog">
