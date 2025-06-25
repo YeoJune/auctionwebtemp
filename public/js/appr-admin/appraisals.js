@@ -112,8 +112,7 @@ function loadAppraisalList() {
     });
 }
 
-// 감정 목록 표시 함수
-// 수정: 감정번호(인증서번호) 표시하도록 displayAppraisalList 함수 업데이트
+// 기존 displayAppraisalList 함수에서 삭제 버튼만 추가
 function displayAppraisalList(appraisals, pagination) {
   const tableBody = document.getElementById("appraisals-list");
 
@@ -142,6 +141,11 @@ function displayAppraisalList(appraisals, pagination) {
                 <button class="btn btn-outline" onclick="viewAppraisalDetail('${
                   appraisal.id
                 }')">상세/수정</button>
+                <button class="btn" style="background-color: #dc2626; margin-left: 5px;" onclick="deleteAppraisal('${
+                  appraisal.id
+                }', '${appraisal.certificate_number || "미발급"}', '${
+      appraisal.brand
+    }', '${appraisal.model_name}')">삭제</button>
             </td>
         </tr>`;
   });
@@ -158,6 +162,47 @@ function displayAppraisalList(appraisals, pagination) {
       loadAppraisalList();
     }
   );
+}
+
+// 간단한 삭제 함수 추가
+function deleteAppraisal(appraisalId, certificateNumber, brand, modelName) {
+  if (
+    confirm(
+      `정말로 감정을 삭제하시겠습니까?\n\n${certificateNumber} - ${brand} / ${modelName}\n\n삭제된 데이터는 복구할 수 없습니다.`
+    )
+  ) {
+    // API 호출
+    fetch(`/api/appr/admin/appraisals/${appraisalId}`, {
+      method: "DELETE",
+    })
+      .then((response) => {
+        if (!response.ok) {
+          return response.json().then((data) => {
+            throw new Error(data.message || "감정 삭제에 실패했습니다.");
+          });
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (data.success) {
+          showAlert("감정이 성공적으로 삭제되었습니다.", "success");
+
+          // 상세 모달이 열려있으면 닫기
+          const modal = document.getElementById("appraisal-detail-modal");
+          if (modal && modal.style.display === "flex") {
+            closeModal("appraisal-detail-modal");
+          }
+
+          // 목록 새로고침
+          loadAppraisalList();
+        } else {
+          throw new Error(data.message || "감정 삭제에 실패했습니다.");
+        }
+      })
+      .catch((error) => {
+        showAlert(error.message, "error");
+      });
+  }
 }
 
 // 감정 상세 조회 함수
@@ -560,9 +605,21 @@ function displayAppraisalDetail(appraisal) {
             </div>
         </div>
         
-        <div style="margin-top: 20px; text-align: right;">
-            <button type="button" class="btn btn-outline" onclick="closeModal('appraisal-detail-modal')">취소</button>
-            <button type="button" class="btn" style="margin-left: 10px;" onclick="updateAppraisal()">저장</button>
+        
+        <div style="margin-top: 20px; display: flex; justify-content: space-between;">
+            <div>
+                <button type="button" class="btn" style="background-color: #dc2626;" onclick="deleteAppraisal('${
+                  appraisal.id
+                }', '${appraisal.certificate_number || "미발급"}', '${
+    appraisal.brand
+  }', '${appraisal.model_name}')">
+                    삭제
+                </button>
+            </div>
+            <div>
+                <button type="button" class="btn btn-outline" onclick="closeModal('appraisal-detail-modal')">취소</button>
+                <button type="button" class="btn" style="margin-left: 10px;" onclick="updateAppraisal()">저장</button>
+            </div>
         </div>
     </form>
     `;

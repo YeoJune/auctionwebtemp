@@ -1334,6 +1334,153 @@ router.put(
   }
 );
 
+// 감정 삭제 - DELETE /api/appr/admin/appraisals/:id
+router.delete("/appraisals/:id", isAuthenticated, isAdmin, async (req, res) => {
+  let conn;
+  try {
+    const appraisal_id = req.params.id;
+
+    conn = await pool.getConnection();
+
+    // 감정 정보 조회 (존재 여부 확인 및 관련 정보 수집)
+    const [appraisalRows] = await conn.query(
+      "SELECT * FROM appraisals WHERE id = ?",
+      [appraisal_id]
+    );
+
+    if (appraisalRows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "해당 감정 정보를 찾을 수 없습니다.",
+      });
+    }
+
+    const appraisal = appraisalRows[0];
+
+    // 트랜잭션 시작
+    await conn.beginTransaction();
+
+    try {
+      // 1. 관련 복원 요청이 있는지 확인하고 삭제
+      const [restorationRequests] = await conn.query(
+        "SELECT id FROM restoration_requests WHERE appraisal_id = ?",
+        [appraisal_id]
+      );
+
+      if (restorationRequests.length > 0) {
+        // 복원 요청도 함께 삭제
+        await conn.query(
+          "DELETE FROM restoration_requests WHERE appraisal_id = ?",
+          [appraisal_id]
+        );
+      }
+
+      // 2. 결제 정보가 있는지 확인하고 관련 리소스 정보 업데이트
+      await conn.query(
+        `UPDATE payments 
+         SET related_resource_id = NULL, related_resource_type = NULL 
+         WHERE related_resource_id = ? AND related_resource_type = 'appraisal'`,
+        [appraisal_id]
+      );
+
+      // 3. 크레딧이 차감된 경우 복구 (퀵링크만)
+      if (
+        appraisal.credit_deducted &&
+        appraisal.appraisal_type === "quicklink"
+      ) {
+        const [userRows] = await conn.query(
+          "SELECT * FROM appr_users WHERE user_id = ?",
+          [appraisal.user_id]
+        );
+
+        if (userRows.length > 0) {
+          // 크레딧 1개 복구
+          await conn.query(
+            "UPDATE appr_users SET quick_link_credits_remaining = quick_link_credits_remaining + 1 WHERE user_id = ?",
+            [appraisal.user_id]
+          );
+        }
+      }
+
+      // 4. 감정 정보 삭제
+      await conn.query("DELETE FROM appraisals WHERE id = ?", [appraisal_id]);
+
+      // 5. 관련 파일 삭제 (비동기로 처리하여 응답 속도 개선)
+      setImmediate(() => {
+        try {
+          // 이미지 파일 삭제
+          if (appraisal.images) {
+            const images = JSON.parse(appraisal.images);
+            images.forEach((imagePath) => {
+              const fullPath = path.join(__dirname, "../../public", imagePath);
+              if (fs.existsSync(fullPath)) {
+                fs.unlinkSync(fullPath);
+              }
+            });
+          }
+
+          // PDF 파일 삭제
+          if (appraisal.certificate_url) {
+            const pdfPath = path.join(
+              __dirname,
+              "../../public",
+              appraisal.certificate_url
+            );
+            if (fs.existsSync(pdfPath)) {
+              fs.unlinkSync(pdfPath);
+            }
+          }
+
+          // QR 코드 파일 삭제
+          if (appraisal.qrcode_url) {
+            const qrPath = path.join(
+              __dirname,
+              "../../public",
+              appraisal.qrcode_url
+            );
+            if (fs.existsSync(qrPath)) {
+              fs.unlinkSync(qrPath);
+            }
+          }
+        } catch (fileError) {
+          console.error("파일 삭제 중 오류:", fileError);
+          // 파일 삭제 실패는 로그만 남기고 계속 진행
+        }
+      });
+
+      // 트랜잭션 커밋
+      await conn.commit();
+
+      res.json({
+        success: true,
+        message: "감정 정보가 성공적으로 삭제되었습니다.",
+        deleted_appraisal: {
+          id: appraisal_id,
+          certificate_number: appraisal.certificate_number,
+          brand: appraisal.brand,
+          model_name: appraisal.model_name,
+          credit_restored:
+            appraisal.credit_deducted &&
+            appraisal.appraisal_type === "quicklink",
+          related_restorations_deleted: restorationRequests.length,
+        },
+      });
+    } catch (error) {
+      // 트랜잭션 롤백
+      await conn.rollback();
+      throw error;
+    }
+  } catch (err) {
+    console.error("감정 삭제 중 오류 발생:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message || "감정 삭제 중 서버 오류가 발생했습니다.",
+    });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
 // 복원 서비스 목록 조회 - GET /api/appr/admin/restoration-services
 router.get(
   "/restoration-services",
