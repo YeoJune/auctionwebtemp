@@ -47,11 +47,6 @@ document.addEventListener("DOMContentLoaded", function () {
     .getElementById("winningPrice")
     .addEventListener("input", updateWinningPriceKRW);
 
-  // 일괄 낙찰 금액 입력 시 관부가세 포함 가격 업데이트 (수정: 누락된 이벤트 리스너 추가)
-  document
-    .getElementById("bulkWinningPrice")
-    .addEventListener("input", updateBulkWinningPriceKRW);
-
   // 페이지 크기 변경 이벤트
   document.getElementById("pageSize")?.addEventListener("change", function () {
     itemsPerPage = parseInt(this.value);
