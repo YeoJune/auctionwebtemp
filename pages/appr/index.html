@@ -880,7 +880,7 @@
                   loadingBanner.classList.remove("active");
                 }
 
-                // 동적 배너 생성
+                // 동적 배너 생성 부분 수정
                 data.banners.forEach((banner, index) => {
                   const bannerDiv = document.createElement("div");
                   bannerDiv.className = "slider-item";
@@ -896,135 +896,163 @@
 
                   // 배너 이미지가 있는 경우 배경으로 설정
                   let backgroundImageHTML = "";
-                  if (banner.banner_image) {
+                  if (
+                    banner.banner_image &&
+                    banner.banner_image.trim() !== ""
+                  ) {
                     backgroundImageHTML = `
-                <div style="
-                  position: absolute;
-                  top: 0;
-                  left: 0;
-                  right: 0;
-                  bottom: 0;
-                  background-image: url('${banner.banner_image}');
-                  background-size: cover;
-                  background-position: center;
-                  opacity: 0.7;
-                  mix-blend-mode: overlay;
-                "></div>
-              `;
+                      <div style="
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        bottom: 0;
+                        background-image: url('${banner.banner_image}');
+                        background-size: cover;
+                        background-position: center;
+                        opacity: 0.7;
+                        mix-blend-mode: overlay;
+                      "></div>
+                    `;
                   }
+
+                  // 제목 구성 (title과 subtitle 처리)
+                  let titleHTML = "";
+                  const title =
+                    banner.title && banner.title.trim() !== ""
+                      ? banner.title.trim()
+                      : "정확한";
+                  const subtitle =
+                    banner.subtitle && banner.subtitle.trim() !== ""
+                      ? banner.subtitle.trim()
+                      : null;
+
+                  if (subtitle) {
+                    titleHTML = `${title}<br /><span style="color: #e2e8f0">${subtitle}</span>`;
+                  } else {
+                    titleHTML = title;
+                  }
+
+                  // 설명 처리
+                  const description =
+                    banner.description && banner.description.trim() !== ""
+                      ? banner.description.trim()
+                      : "국내 최고 전문가의 정밀한 감정 서비스로<br />소중한 명품의 가치를 확인하세요.";
 
                   // 버튼 HTML 생성
                   let buttonsHTML = "";
-                  if (banner.button_text && banner.button_link) {
+                  const hasCustomButton =
+                    banner.button_text &&
+                    banner.button_text.trim() !== "" &&
+                    banner.button_link &&
+                    banner.button_link.trim() !== "";
+
+                  if (hasCustomButton) {
                     buttonsHTML = `
-                <div style="display: flex; gap: 15px; flex-wrap: wrap">
-                  <a
-                    href="${banner.button_link}"
-                    class="btn-modern"
-                    style="
-                      padding: 15px 30px;
-                      background-color: #fff;
-                      color: #1a2a3a;
-                      text-decoration: none;
-                      font-weight: 600;
-                      border-radius: 8px;
-                      transition: all 0.3s;
-                    ">
-                    ${banner.button_text}
-                  </a>
-                  <a
-                    href="/appr/result"
-                    class="btn-modern"
-                    style="
-                      padding: 15px 30px;
-                      background-color: transparent;
-                      color: #fff;
-                      text-decoration: none;
-                      font-weight: 600;
-                      border-radius: 8px;
-                      border: 1px solid rgba(255, 255, 255, 0.7);
-                      transition: all 0.3s;
-                    ">
-                    감정서 조회하기
-                  </a>
-                </div>
-              `;
+                      <div style="display: flex; gap: 15px; flex-wrap: wrap">
+                        <a
+                          href="${banner.button_link.trim()}"
+                          class="btn-modern"
+                          style="
+                            padding: 15px 30px;
+                            background-color: #fff;
+                            color: #1a2a3a;
+                            text-decoration: none;
+                            font-weight: 600;
+                            border-radius: 8px;
+                            transition: all 0.3s;
+                          ">
+                          ${banner.button_text.trim()}
+                        </a>
+                        <a
+                          href="/appr/result"
+                          class="btn-modern"
+                          style="
+                            padding: 15px 30px;
+                            background-color: transparent;
+                            color: #fff;
+                            text-decoration: none;
+                            font-weight: 600;
+                            border-radius: 8px;
+                            border: 1px solid rgba(255, 255, 255, 0.7);
+                            transition: all 0.3s;
+                          ">
+                          감정서 조회하기
+                        </a>
+                      </div>
+                    `;
                   } else {
                     // 기본 버튼들
                     buttonsHTML = `
-                <div style="display: flex; gap: 15px; flex-wrap: wrap">
-                  <a
-                    href="/appr/request"
-                    class="btn-modern"
-                    style="
-                      padding: 15px 30px;
-                      background-color: #fff;
-                      color: #1a2a3a;
-                      text-decoration: none;
-                      font-weight: 600;
-                      border-radius: 8px;
-                      transition: all 0.3s;
-                    ">
-                    감정 신청하기
-                  </a>
-                  <a
-                    href="/appr/result"
-                    class="btn-modern"
-                    style="
-                      padding: 15px 30px;
-                      background-color: transparent;
-                      color: #fff;
-                      text-decoration: none;
-                      font-weight: 600;
-                      border-radius: 8px;
-                      border: 1px solid rgba(255, 255, 255, 0.7);
-                      transition: all 0.3s;
-                    ">
-                    감정서 조회하기
-                  </a>
-                </div>
-              `;
+                      <div style="display: flex; gap: 15px; flex-wrap: wrap">
+                        <a
+                          href="/appr/request"
+                          class="btn-modern"
+                          style="
+                            padding: 15px 30px;
+                            background-color: #fff;
+                            color: #1a2a3a;
+                            text-decoration: none;
+                            font-weight: 600;
+                            border-radius: 8px;
+                            transition: all 0.3s;
+                          ">
+                          감정 신청하기
+                        </a>
+                        <a
+                          href="/appr/result"
+                          class="btn-modern"
+                          style="
+                            padding: 15px 30px;
+                            background-color: transparent;
+                            color: #fff;
+                            text-decoration: none;
+                            font-weight: 600;
+                            border-radius: 8px;
+                            border: 1px solid rgba(255, 255, 255, 0.7);
+                            transition: all 0.3s;
+                          ">
+                          감정서 조회하기
+                        </a>
+                      </div>
+                    `;
                   }
 
                   bannerDiv.innerHTML = `
-              ${backgroundImageHTML}
-              <div style="
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                display: flex;
-                align-items: center;
-              ">
-                <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 0 20px">
-                  <div style="max-width: 600px; color: #fff" class="fade-in visible">
-                    <h1 style="
-                      font-size: 3.5rem;
-                      font-weight: 700;
-                      margin-bottom: 20px;
-                      line-height: 1.2;
-                      letter-spacing: -1px;
+                    ${backgroundImageHTML}
+                    <div style="
+                      position: absolute;
+                      top: 0;
+                      left: 0;
+                      width: 100%;
+                      height: 100%;
+                      display: flex;
+                      align-items: center;
                     ">
-                      ${banner.title}${
-                    banner.subtitle
-                      ? `<br /><span style="color: #e2e8f0">${banner.subtitle}</span>`
-                      : ""
-                  }
-                    </h1>
-                    <p style="
-                      font-size: 1.25rem;
-                      margin-bottom: 30px;
-                      color: rgba(255, 255, 255, 0.9);
-                      line-height: 1.6;
-                    ">
-                      ${banner.description}
-                    </p>
-                    ${buttonsHTML}
-                  </div>
-                </div>
-              </div>
-            `;
+                      <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 0 20px">
+                        <div style="max-width: 600px; color: #fff" class="fade-in visible">
+                          <h1 style="
+                            font-size: 3.5rem;
+                            font-weight: 700;
+                            margin-bottom: 20px;
+                            line-height: 1.2;
+                            letter-spacing: -1px;
+                          ">
+                            ${titleHTML}
+                          </h1>
+                          <p style="
+                            font-size: 1.25rem;
+                            margin-bottom: 30px;
+                            color: rgba(255, 255, 255, 0.9);
+                            line-height: 1.6;
+                          ">
+                            ${description}
+                          </p>
+                          ${buttonsHTML}
+                        </div>
+                      </div>
+                    </div>
+                  `;
 
                   sliderContainer.appendChild(bannerDiv);
                 });
