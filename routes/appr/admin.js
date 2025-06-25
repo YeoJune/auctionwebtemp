@@ -162,12 +162,16 @@ async function generateCertificateNumber(conn, customNumber = null) {
 
     let nextNumber = 1; // 기본값: cas1부터 시작
 
+    let digitCount = 6; // 기본 6자리
+
     if (rows.length > 0) {
       const lastCertNumber = rows[0].certificate_number;
       // "cas" 제거하고 숫자 부분만 추출
       const match = lastCertNumber.match(/^cas(\d+)$/i);
       if (match) {
-        const lastNumber = parseInt(match[1]);
+        const numberPart = match[1];
+        digitCount = numberPart.length; // 기존 자릿수 유지
+        const lastNumber = parseInt(numberPart);
         nextNumber = lastNumber + 1;
       }
     }
@@ -179,7 +183,9 @@ async function generateCertificateNumber(conn, customNumber = null) {
     const maxAttempts = 1000; // 무한루프 방지
 
     while (!isUnique && attempts < maxAttempts) {
-      certificateNumber = `cas${nextNumber}`;
+      // 자릿수 맞춰서 0 패딩
+      const paddedNumber = nextNumber.toString().padStart(digitCount, "0");
+      certificateNumber = `cas${paddedNumber}`;
 
       // 중복 확인
       const [existing] = await conn.query(
