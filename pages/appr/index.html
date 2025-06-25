@@ -863,24 +863,17 @@
       }
 
       document.addEventListener("DOMContentLoaded", function () {
-        // 동적 배너 로딩 함수
         function loadBanners() {
           fetch("/api/appr/appraisals/banners")
             .then((response) => response.json())
             .then((data) => {
               const sliderContainer =
                 document.getElementById("slider-container");
-              const loadingBanner = document.getElementById("banner-loading");
-              const defaultBanner = document.getElementById("default-banner");
+
+              // 기존 모든 배너 제거
+              sliderContainer.innerHTML = "";
 
               if (data.success && data.banners && data.banners.length > 0) {
-                // 로딩 배너 숨기기
-                if (loadingBanner) {
-                  loadingBanner.style.display = "none";
-                  loadingBanner.classList.remove("active");
-                }
-
-                // 동적 배너 생성 부분 수정
                 data.banners.forEach((banner, index) => {
                   const bannerDiv = document.createElement("div");
                   bannerDiv.className = "slider-item";
@@ -916,7 +909,7 @@
                     `;
                   }
 
-                  // 제목 구성 - 있는 것만 표시
+                  // 제목 구성
                   let titleHTML = "";
                   const title =
                     banner.title && banner.title.trim() !== ""
@@ -935,13 +928,13 @@
                     titleHTML = `<span style="color: #e2e8f0">${subtitle}</span>`;
                   }
 
-                  // 설명 - 있을 때만 표시
+                  // 설명
                   const description =
                     banner.description && banner.description.trim() !== ""
                       ? banner.description.trim()
                       : "";
 
-                  // 버튼 - 있을 때만 표시
+                  // 버튼
                   let buttonsHTML = "";
                   const hasCustomButton =
                     banner.button_text &&
@@ -970,7 +963,7 @@
                     `;
                   }
 
-                  // HTML 구성 - 각 요소가 있을 때만 추가
+                  // HTML 구성
                   let contentHTML = "";
 
                   if (titleHTML) {
@@ -1030,30 +1023,73 @@
                 initializeSlider();
               } else {
                 // 배너가 없는 경우 기본 배너 표시
-                if (loadingBanner) {
-                  loadingBanner.style.display = "none";
-                  loadingBanner.classList.remove("active");
-                }
-                if (defaultBanner) {
-                  defaultBanner.style.display = "block";
-                  defaultBanner.classList.add("active");
-                }
+                const defaultBanner = document.createElement("div");
+                defaultBanner.className = "slider-item active";
+                defaultBanner.style.position = "absolute";
+                defaultBanner.style.top = "0";
+                defaultBanner.style.left = "0";
+                defaultBanner.style.width = "100%";
+                defaultBanner.style.height = "100%";
+                defaultBanner.style.background =
+                  "linear-gradient(135deg, #1a2a3a 0%, #2d4263 100%)";
+
+                defaultBanner.innerHTML = `
+                  <div style="
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                  ">
+                    <div style="color: #fff; text-align: center">
+                      <h1 style="font-size: 3rem; margin-bottom: 20px;">CAS 명품감정시스템</h1>
+                      <p style="font-size: 1.25rem;">신뢰할 수 있는 명품 감정 서비스</p>
+                    </div>
+                  </div>
+                `;
+
+                sliderContainer.appendChild(defaultBanner);
               }
             })
             .catch((error) => {
               console.error("배너 로딩 실패:", error);
-              // 오류 발생 시 기본 배너 표시
-              const loadingBanner = document.getElementById("banner-loading");
-              const defaultBanner = document.getElementById("default-banner");
+              // 오류 시 기본 배너 표시
+              const sliderContainer =
+                document.getElementById("slider-container");
+              sliderContainer.innerHTML = "";
 
-              if (loadingBanner) {
-                loadingBanner.style.display = "none";
-                loadingBanner.classList.remove("active");
-              }
-              if (defaultBanner) {
-                defaultBanner.style.display = "block";
-                defaultBanner.classList.add("active");
-              }
+              const errorBanner = document.createElement("div");
+              errorBanner.className = "slider-item active";
+              errorBanner.style.position = "absolute";
+              errorBanner.style.top = "0";
+              errorBanner.style.left = "0";
+              errorBanner.style.width = "100%";
+              errorBanner.style.height = "100%";
+              errorBanner.style.background =
+                "linear-gradient(135deg, #1a2a3a 0%, #2d4263 100%)";
+
+              errorBanner.innerHTML = `
+                <div style="
+                  position: absolute;
+                  top: 0;
+                  left: 0;
+                  width: 100%;
+                  height: 100%;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                ">
+                  <div style="color: #fff; text-align: center">
+                    <h1 style="font-size: 3rem; margin-bottom: 20px;">CAS 명품감정시스템</h1>
+                    <p style="font-size: 1.25rem;">신뢰할 수 있는 명품 감정 서비스</p>
+                  </div>
+                </div>
+              `;
+
+              sliderContainer.appendChild(errorBanner);
             });
         }
 
