@@ -64,27 +64,80 @@ async function generateCertificateNumber(conn, customNumber = null) {
     return normalizedNumber;
   }
 
-  // 자동 생성: cas + 6자리 숫자
-  let certificateNumber;
-  let isUnique = false;
-
-  while (!isUnique) {
-    // 6자리 랜덤 숫자 생성
-    const randomNum = Math.floor(100000 + Math.random() * 900000);
-    certificateNumber = `cas${randomNum}`;
-
-    // 중복 확인
-    const [existing] = await conn.query(
-      "SELECT certificate_number FROM appraisals WHERE certificate_number = ?",
-      [certificateNumber]
+  // 자동 생성: 가장 최근 번호 + 1
+  try {
+    // 기존 인증서 번호 중 가장 큰 숫자 찾기 (cas 접두사 제거 후 숫자만 추출)
+    const [rows] = await conn.query(
+      `SELECT certificate_number 
+       FROM appraisals 
+       WHERE certificate_number REGEXP '^cas[0-9]+$' 
+       ORDER BY CAST(SUBSTRING(certificate_number, 4) AS UNSIGNED) DESC 
+       LIMIT 1`
     );
 
-    if (existing.length === 0) {
-      isUnique = true;
-    }
-  }
+    let nextNumber = 1;
+    let digitLength = 6; // 기본 자릿수: 기존 데이터가 없으면 6자리로 시작
 
-  return certificateNumber;
+    if (rows.length > 0) {
+      const lastCertNumber = rows[0].certificate_number;
+      // cas 제거하고 숫자 부분만 추출
+      const numberPart = lastCertNumber.replace(/^cas/i, "");
+      const lastNumber = parseInt(numberPart);
+      digitLength = numberPart.length; // 기존 자릿수 유지
+      nextNumber = lastNumber + 1;
+    }
+
+    // 중복 확인하면서 사용 가능한 번호 찾기
+    let certificateNumber;
+    let isUnique = false;
+    let attempts = 0;
+    const maxAttempts = 1000; // 무한루프 방지
+
+    while (!isUnique && attempts < maxAttempts) {
+      // 자릿수 맞춰서 0 패딩
+      const paddedNumber = nextNumber.toString().padStart(digitLength, "0");
+      certificateNumber = `cas${paddedNumber}`;
+
+      // 중복 확인
+      const [existing] = await conn.query(
+        "SELECT certificate_number FROM appraisals WHERE certificate_number = ?",
+        [certificateNumber]
+      );
+
+      if (existing.length === 0) {
+        isUnique = true;
+      } else {
+        nextNumber++; // 중복이면 다음 번호 시도
+        attempts++;
+      }
+    }
+
+    if (!isUnique) {
+      // 만약 1000번 시도해도 안 되면 랜덤으로 폴백 (자릿수 맞춰서)
+      console.warn("순차 번호 생성 실패, 랜덤 번호로 폴백");
+      const randomNum = Math.floor(
+        Math.pow(10, digitLength - 1) +
+          Math.random() *
+            (Math.pow(10, digitLength) - Math.pow(10, digitLength - 1))
+      );
+      certificateNumber = `cas${randomNum}`;
+
+      // 랜덤 번호도 중복 확인
+      const [randomCheck] = await conn.query(
+        "SELECT certificate_number FROM appraisals WHERE certificate_number = ?",
+        [certificateNumber]
+      );
+
+      if (randomCheck.length > 0) {
+        throw new Error("인증서 번호 생성에 실패했습니다. 다시 시도해주세요.");
+      }
+    }
+
+    return certificateNumber;
+  } catch (error) {
+    console.error("인증서 번호 생성 중 오류:", error);
+    throw new Error("인증서 번호 생성 중 오류가 발생했습니다.");
+  }
 }
 
 // 감정 신청 - POST /api/appr/appraisals

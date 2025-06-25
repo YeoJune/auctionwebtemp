@@ -191,129 +191,285 @@ function viewAppraisalDetail(appraisalId) {
     });
 }
 
-// 감정 상세 정보 표시 함수
-// 감정 상세 정보 표시 함수 - displayAppraisalDetail 함수 수정
+// 감정 상세 정보 표시 함수 - 기본 정보도 수정 가능하도록 개선
 function displayAppraisalDetail(appraisal) {
   const container = document.getElementById("appraisal-detail-content");
 
-  // 감정 기본 정보 섹션 - 브랜드, 카테고리, 날짜, 감정결과 정보 추가
+  // 감정 기본 정보 수정 폼
   let html = `
-    <div class="card" style="margin-bottom: 20px;">
-        <div class="card-header">
-            <div class="card-title">기본 정보</div>
-        </div>
-        <table>
-            <tr>
-                <th style="width: 120px;">감정 ID</th>
-                <td>${appraisal.id}</td>
-                <th style="width: 120px;">인증서 번호</th>
-                <td>${appraisal.certificate_number || "-"}</td>
-            </tr>
-            <tr>
-                <th>감정 유형</th>
-                <td>${
-                  appraisal.appraisal_type === "quicklink"
-                    ? "퀵링크"
-                    : "오프라인"
-                }</td>
-                <th>감정 상태</th>
-                <td>${getStatusBadge(appraisal.status)}</td>
-            </tr>
-            <tr>
-                <th>브랜드</th>
-                <td>${appraisal.brand}</td>
-                <th>카테고리</th>
-                <td>${appraisal.category}</td>
-            </tr>
-            <tr>
-                <th>모델명</th>
-                <td>${appraisal.model_name}</td>
-                <th>감정 결과</th>
-                <td>${getStatusBadge(appraisal.result)}</td>
-            </tr>
-            <tr>
-                <th>신청자 정보</th>
-                <td>${appraisal.user_email || appraisal.user_id}</td>
-                <th>신청일</th>
-                <td>${formatDate(appraisal.created_at)}</td>
-            </tr>
-            <tr>
-                <th>감정 완료일</th>
-                <td>${formatDate(appraisal.appraised_at) || "-"}</td>
-                <th>현재 소견</th>
-                <td>${appraisal.result_notes || "-"}</td>
-            </tr>
-    `;
-
-  // 퀵링크 감정 전용 정보
-  if (appraisal.appraisal_type === "quicklink") {
-    html += `
-            <tr>
-                <th>상품 링크</th>
-                <td colspan="3">
-                    <a href="${appraisal.product_link}" target="_blank">${
-      appraisal.product_link
-    }</a>
-                </td>
-            </tr>
-            <tr>
-                <th>플랫폼</th>
-                <td colspan="3">${appraisal.platform || "-"}</td>
-            </tr>
-        `;
-  }
-
-  // 오프라인 감정 전용 정보
-  if (appraisal.appraisal_type === "offline") {
-    // 구성품 정보 처리
-    let componentsHtml = "-";
-    if (
-      appraisal.components_included &&
-      appraisal.components_included.length > 0
-    ) {
-      componentsHtml = appraisal.components_included.join(", ");
-    }
-
-    // 배송 정보 처리
-    let deliveryHtml = "-";
-    if (appraisal.delivery_info) {
-      const delivery = appraisal.delivery_info;
-      deliveryHtml = `
-                ${delivery.name} / ${delivery.phone}<br>
-                (${delivery.zipcode}) ${delivery.address1} ${
-        delivery.address2 || ""
-      }
-            `;
-    }
-
-    html += `
-            <tr>
-                <th>구매연도</th>
-                <td>${appraisal.purchase_year || "-"}</td>
-                <th>구성품</th>
-                <td>${componentsHtml}</td>
-            </tr>
-            <tr>
-                <th>배송정보</th>
-                <td colspan="3">${deliveryHtml}</td>
-            </tr>
-        `;
-  }
-
-  // 추가 비고 정보
-  html += `
-            <tr>
-                <th>비고</th>
-                <td colspan="3">${appraisal.remarks || "-"}</td>
-            </tr>
-        </table>
-    </div>
-    `;
-
-  // 감정 결과 및 이미지 업데이트 폼
-  html += `
     <form id="appraisal-update-form" enctype="multipart/form-data">
         <input type="hidden" id="appraisal-id" value="${appraisal.id}">
+        
+        <div class="card" style="margin-bottom: 20px;">
+            <div class="card-header">
+                <div class="card-title">기본 정보</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="appraisal-certificate-number" class="form-label">인증서 번호</label>
+                <input
+                    type="text"
+                    id="appraisal-certificate-number"
+                    class="form-input"
+                    value="${appraisal.certificate_number || ""}"
+                    placeholder="예: CAS004312"
+                    pattern="^[Cc][Aa][Ss]\\d+$"
+                    title="CAS + 숫자 형태여야 합니다 (예: CAS004312)" />
+                <small style="color: #666">비워두면 자동으로 생성됩니다</small>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div class="form-group">
+                    <label for="appraisal-type-select" class="form-label">감정 유형</label>
+                    <select id="appraisal-type-select" class="form-select" onchange="toggleAppraisalTypeFieldsInDetail(this.value)">
+                        <option value="quicklink" ${
+                          appraisal.appraisal_type === "quicklink"
+                            ? "selected"
+                            : ""
+                        }>퀵링크</option>
+                        <option value="offline" ${
+                          appraisal.appraisal_type === "offline"
+                            ? "selected"
+                            : ""
+                        }>오프라인</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="appraisal-category-select" class="form-label">카테고리</label>
+                    <select id="appraisal-category-select" class="form-select">
+                        <option value="가방" ${
+                          appraisal.category === "가방" ? "selected" : ""
+                        }>가방</option>
+                        <option value="지갑" ${
+                          appraisal.category === "지갑" ? "selected" : ""
+                        }>지갑</option>
+                        <option value="신발" ${
+                          appraisal.category === "신발" ? "selected" : ""
+                        }>신발</option>
+                        <option value="의류" ${
+                          appraisal.category === "의류" ? "selected" : ""
+                        }>의류</option>
+                        <option value="시계" ${
+                          appraisal.category === "시계" ? "selected" : ""
+                        }>시계</option>
+                        <option value="액세서리" ${
+                          appraisal.category === "액세서리" ? "selected" : ""
+                        }>액세서리</option>
+                        <option value="기타" ${
+                          appraisal.category === "기타" ? "selected" : ""
+                        }>기타</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div class="form-group">
+                    <label for="appraisal-brand-input" class="form-label">브랜드</label>
+                    <input
+                        type="text"
+                        id="appraisal-brand-input"
+                        class="form-input"
+                        value="${appraisal.brand}"
+                        placeholder="예: 루이비통, 샤넬, 에르메스 등" />
+                </div>
+                
+                <div class="form-group">
+                    <label for="appraisal-model-input" class="form-label">모델명</label>
+                    <input
+                        type="text"
+                        id="appraisal-model-input"
+                        class="form-input"
+                        value="${appraisal.model_name}"
+                        placeholder="상품의 모델명 입력" />
+                </div>
+            </div>
+
+            <!-- 퀵링크 전용 필드 -->
+            <div id="quicklink-fields-detail" style="${
+              appraisal.appraisal_type === "quicklink"
+                ? "display: block"
+                : "display: none"
+            }">
+                <div class="form-group">
+                    <label for="appraisal-product-link" class="form-label">상품 링크</label>
+                    <input
+                        type="url"
+                        id="appraisal-product-link"
+                        class="form-input"
+                        value="${appraisal.product_link || ""}"
+                        placeholder="https://..." />
+                </div>
+
+                <div class="form-group">
+                    <label for="appraisal-platform" class="form-label">플랫폼</label>
+                    <input
+                        type="text"
+                        id="appraisal-platform"
+                        class="form-input"
+                        value="${appraisal.platform || ""}"
+                        placeholder="예: 네이버쇼핑, 당근마켓 등" />
+                </div>
+            </div>
+
+            <!-- 오프라인 전용 필드 -->
+            <div id="offline-fields-detail" style="${
+              appraisal.appraisal_type === "offline"
+                ? "display: block"
+                : "display: none"
+            }">
+                <div class="form-group">
+                    <label for="appraisal-purchase-year" class="form-label">구매연도</label>
+                    <input
+                        type="number"
+                        id="appraisal-purchase-year"
+                        class="form-input"
+                        value="${appraisal.purchase_year || ""}"
+                        placeholder="예: 2020"
+                        min="1980"
+                        max="2025" />
+                </div>
+
+                <div class="form-group">
+                    <label for="appraisal-components" class="form-label">구성품</label>
+                    <div id="components-container-detail">
+                        ${
+                          appraisal.components_included &&
+                          appraisal.components_included.length > 0
+                            ? appraisal.components_included
+                                .map(
+                                  (component, index) => `
+                                <div style="margin-bottom: 10px;">
+                                    <input
+                                        type="text"
+                                        class="form-input component-input-detail"
+                                        value="${component}"
+                                        placeholder="구성품 입력"
+                                        style="margin-bottom: 5px;" />
+                                    ${
+                                      index > 0
+                                        ? '<button type="button" class="btn btn-outline" onclick="removeComponentInputDetail(this)" style="margin-left: 10px; padding: 5px 10px;">삭제</button>'
+                                        : ""
+                                    }
+                                </div>
+                            `
+                                )
+                                .join("")
+                            : `
+                                <div style="margin-bottom: 10px;">
+                                    <input
+                                        type="text"
+                                        class="form-input component-input-detail"
+                                        placeholder="구성품 입력 (예: 본체, 더스트백, 보증서 등)"
+                                        style="margin-bottom: 5px;" />
+                                </div>
+                            `
+                        }
+                    </div>
+                    <button
+                        type="button"
+                        class="btn btn-outline"
+                        onclick="addComponentInputDetail()">
+                        구성품 추가
+                    </button>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">배송 정보</label>
+                    ${
+                      appraisal.delivery_info
+                        ? (() => {
+                            const delivery = appraisal.delivery_info;
+                            return `
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                                <input
+                                    type="text"
+                                    id="appraisal-delivery-name"
+                                    class="form-input"
+                                    value="${delivery.name || ""}"
+                                    placeholder="수령인명" />
+                                <input
+                                    type="tel"
+                                    id="appraisal-delivery-phone"
+                                    class="form-input"
+                                    value="${delivery.phone || ""}"
+                                    placeholder="연락처" />
+                            </div>
+                            <div style="display: grid; grid-template-columns: 150px 1fr; gap: 10px; margin-bottom: 10px;">
+                                <input
+                                    type="text"
+                                    id="appraisal-delivery-zipcode"
+                                    class="form-input"
+                                    value="${delivery.zipcode || ""}"
+                                    placeholder="우편번호" />
+                                <input
+                                    type="text"
+                                    id="appraisal-delivery-address1"
+                                    class="form-input"
+                                    value="${delivery.address1 || ""}"
+                                    placeholder="기본 주소" />
+                            </div>
+                            <input
+                                type="text"
+                                id="appraisal-delivery-address2"
+                                class="form-input"
+                                value="${delivery.address2 || ""}"
+                                placeholder="상세 주소" />
+                        `;
+                          })()
+                        : `
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                            <input
+                                type="text"
+                                id="appraisal-delivery-name"
+                                class="form-input"
+                                placeholder="수령인명" />
+                            <input
+                                type="tel"
+                                id="appraisal-delivery-phone"
+                                class="form-input"
+                                placeholder="연락처" />
+                        </div>
+                        <div style="display: grid; grid-template-columns: 150px 1fr; gap: 10px; margin-bottom: 10px;">
+                            <input
+                                type="text"
+                                id="appraisal-delivery-zipcode"
+                                class="form-input"
+                                placeholder="우편번호" />
+                            <input
+                                type="text"
+                                id="appraisal-delivery-address1"
+                                class="form-input"
+                                placeholder="기본 주소" />
+                        </div>
+                        <input
+                            type="text"
+                            id="appraisal-delivery-address2"
+                            class="form-input"
+                            placeholder="상세 주소" />
+                    `
+                    }
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="appraisal-remarks-input" class="form-label">비고</label>
+                <textarea
+                    id="appraisal-remarks-input"
+                    class="form-textarea"
+                    placeholder="특이사항이나 추가 요청사항을 입력하세요">${
+                      appraisal.remarks || ""
+                    }</textarea>
+            </div>
+
+            <div style="margin-bottom: 15px; padding: 10px; background-color: #f8fafc; border-radius: 4px;">
+                <strong>신청자 정보:</strong> ${
+                  appraisal.user_email || appraisal.user_id
+                } | 
+                <strong>신청일:</strong> ${formatDate(appraisal.created_at)} |
+                <strong>현재 상태:</strong> ${getStatusBadge(appraisal.status)}
+            </div>
+        </div>
         
         <div class="card" style="margin-bottom: 20px;">
             <div class="card-header">
@@ -414,6 +570,37 @@ function displayAppraisalDetail(appraisal) {
   container.innerHTML = html;
 }
 
+// 감정 유형에 따른 필드 표시/숨김 함수 (상세 모달용)
+function toggleAppraisalTypeFieldsInDetail(type) {
+  const quicklinkFields = document.getElementById("quicklink-fields-detail");
+  const offlineFields = document.getElementById("offline-fields-detail");
+
+  if (type === "quicklink") {
+    quicklinkFields.style.display = "block";
+    offlineFields.style.display = "none";
+  } else if (type === "offline") {
+    quicklinkFields.style.display = "none";
+    offlineFields.style.display = "block";
+  }
+}
+
+// 구성품 입력 필드 추가 함수 (상세 모달용)
+function addComponentInputDetail() {
+  const newInput = document.createElement("div");
+  newInput.style.marginBottom = "10px";
+  newInput.innerHTML = `
+    <input type="text" class="form-input component-input-detail" placeholder="구성품 입력" style="margin-bottom: 5px;" />
+    <button type="button" class="btn btn-outline" onclick="removeComponentInputDetail(this)" style="margin-left: 10px; padding: 5px 10px;">삭제</button>
+  `;
+  const container = document.getElementById("components-container-detail");
+  container.appendChild(newInput);
+}
+
+// 구성품 입력 필드 삭제 함수 (상세 모달용)
+function removeComponentInputDetail(button) {
+  button.parentElement.remove();
+}
+
 // 복원 서비스 목록 로드 함수 (감정 상세 모달에서 사용)
 function loadRestorationServicesForAppraisal() {
   // 로딩 표시
@@ -474,12 +661,95 @@ function displayRestorationServicesCheckboxes(services) {
   document.getElementById("suggested-restoration-services").innerHTML = html;
 }
 
-// 감정 정보 업데이트 함수
+// 감정 정보 업데이트 함수 - 기본 정보도 포함하도록 수정
 function updateAppraisal() {
   const appraisalId = document.getElementById("appraisal-id").value;
 
   // 폼 데이터 생성
   const formData = new FormData();
+
+  // 기본 정보 필드들 추가
+  formData.append(
+    "certificate_number",
+    document.getElementById("appraisal-certificate-number").value || ""
+  );
+  formData.append(
+    "appraisal_type",
+    document.getElementById("appraisal-type-select").value
+  );
+  formData.append(
+    "brand",
+    document.getElementById("appraisal-brand-input").value
+  );
+  formData.append(
+    "model_name",
+    document.getElementById("appraisal-model-input").value
+  );
+  formData.append(
+    "category",
+    document.getElementById("appraisal-category-select").value
+  );
+  formData.append(
+    "remarks",
+    document.getElementById("appraisal-remarks-input").value
+  );
+
+  // 감정 유형별 필드 추가
+  const appraisalType = document.getElementById("appraisal-type-select").value;
+
+  if (appraisalType === "quicklink") {
+    formData.append(
+      "product_link",
+      document.getElementById("appraisal-product-link").value || ""
+    );
+    formData.append(
+      "platform",
+      document.getElementById("appraisal-platform").value || ""
+    );
+  } else if (appraisalType === "offline") {
+    const purchaseYear = document.getElementById(
+      "appraisal-purchase-year"
+    ).value;
+    if (purchaseYear) {
+      formData.append("purchase_year", purchaseYear);
+    }
+
+    // 구성품 수집
+    const componentInputs = document.querySelectorAll(
+      ".component-input-detail"
+    );
+    const components = Array.from(componentInputs)
+      .map((input) => input.value.trim())
+      .filter((value) => value);
+    if (components.length > 0) {
+      formData.append("components_included", JSON.stringify(components));
+    }
+
+    // 배송 정보 수집
+    const deliveryName =
+      document.getElementById("appraisal-delivery-name")?.value || "";
+    const deliveryPhone =
+      document.getElementById("appraisal-delivery-phone")?.value || "";
+    const deliveryZipcode =
+      document.getElementById("appraisal-delivery-zipcode")?.value || "";
+    const deliveryAddress1 =
+      document.getElementById("appraisal-delivery-address1")?.value || "";
+    const deliveryAddress2 =
+      document.getElementById("appraisal-delivery-address2")?.value || "";
+
+    if (deliveryName || deliveryPhone || deliveryAddress1) {
+      const deliveryInfo = {
+        name: deliveryName,
+        phone: deliveryPhone,
+        zipcode: deliveryZipcode,
+        address1: deliveryAddress1,
+        address2: deliveryAddress2,
+      };
+      formData.append("delivery_info", JSON.stringify(deliveryInfo));
+    }
+  }
+
+  // 감정 결과 필드들 추가
   formData.append("result", document.getElementById("appraisal-result").value);
   formData.append(
     "result_notes",
@@ -512,9 +782,31 @@ function updateAppraisal() {
     formData.append("images", imageFiles[i]);
   }
 
+  // 유효성 검사
+  const brand = formData.get("brand");
+  const modelName = formData.get("model_name");
+  const category = formData.get("category");
+
+  if (!brand || !modelName || !category) {
+    showAlert("브랜드, 모델명, 카테고리는 필수 입력 항목입니다.", "error");
+    return;
+  }
+
+  if (appraisalType === "quicklink") {
+    const productLink = formData.get("product_link");
+    if (!productLink) {
+      showAlert("퀵링크 감정에는 상품 링크가 필요합니다.", "error");
+      return;
+    }
+  }
+
   // 로딩 표시
-  document.getElementById("appraisal-detail-content").innerHTML +=
-    '<div class="alert alert-info">업데이트 중...</div>';
+  const submitButton = document.querySelector(
+    'button[onclick="updateAppraisal()"]'
+  );
+  const originalText = submitButton.textContent;
+  submitButton.textContent = "업데이트 중...";
+  submitButton.disabled = true;
 
   // API 호출
   fetch(`/api/appr/admin/appraisals/${appraisalId}`, {
@@ -523,7 +815,9 @@ function updateAppraisal() {
   })
     .then((response) => {
       if (!response.ok) {
-        throw new Error("감정 정보 업데이트에 실패했습니다.");
+        return response.json().then((data) => {
+          throw new Error(data.message || "감정 정보 업데이트에 실패했습니다.");
+        });
       }
       return response.json();
     })
@@ -538,6 +832,11 @@ function updateAppraisal() {
     })
     .catch((error) => {
       showAlert(error.message, "error");
+    })
+    .finally(() => {
+      // 버튼 상태 복원
+      submitButton.textContent = originalText;
+      submitButton.disabled = false;
     });
 }
 

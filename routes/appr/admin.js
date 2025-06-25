@@ -149,27 +149,80 @@ async function generateCertificateNumber(conn, customNumber = null) {
     return normalizedNumber;
   }
 
-  // 자동 생성: cas + 6자리 숫자
-  let certificateNumber;
-  let isUnique = false;
-
-  while (!isUnique) {
-    // 6자리 랜덤 숫자 생성
-    const randomNum = Math.floor(100000 + Math.random() * 900000);
-    certificateNumber = `cas${randomNum}`;
-
-    // 중복 확인
-    const [existing] = await conn.query(
-      "SELECT certificate_number FROM appraisals WHERE certificate_number = ?",
-      [certificateNumber]
+  // 자동 생성: 가장 최근 번호 + 1
+  try {
+    // 기존 인증서 번호 중 가장 큰 숫자 찾기 (cas 접두사 제거 후 숫자만 추출)
+    const [rows] = await conn.query(
+      `SELECT certificate_number 
+       FROM appraisals 
+       WHERE certificate_number REGEXP '^cas[0-9]+$' 
+       ORDER BY CAST(SUBSTRING(certificate_number, 4) AS UNSIGNED) DESC 
+       LIMIT 1`
     );
 
-    if (existing.length === 0) {
-      isUnique = true;
-    }
-  }
+    let nextNumber = 1;
+    let digitLength = 6; // 기본 자릿수: 기존 데이터가 없으면 6자리로 시작
 
-  return certificateNumber;
+    if (rows.length > 0) {
+      const lastCertNumber = rows[0].certificate_number;
+      // cas 제거하고 숫자 부분만 추출
+      const numberPart = lastCertNumber.replace(/^cas/i, "");
+      const lastNumber = parseInt(numberPart);
+      digitLength = numberPart.length; // 기존 자릿수 유지
+      nextNumber = lastNumber + 1;
+    }
+
+    // 중복 확인하면서 사용 가능한 번호 찾기
+    let certificateNumber;
+    let isUnique = false;
+    let attempts = 0;
+    const maxAttempts = 1000; // 무한루프 방지
+
+    while (!isUnique && attempts < maxAttempts) {
+      // 자릿수 맞춰서 0 패딩
+      const paddedNumber = nextNumber.toString().padStart(digitLength, "0");
+      certificateNumber = `cas${paddedNumber}`;
+
+      // 중복 확인
+      const [existing] = await conn.query(
+        "SELECT certificate_number FROM appraisals WHERE certificate_number = ?",
+        [certificateNumber]
+      );
+
+      if (existing.length === 0) {
+        isUnique = true;
+      } else {
+        nextNumber++; // 중복이면 다음 번호 시도
+        attempts++;
+      }
+    }
+
+    if (!isUnique) {
+      // 만약 1000번 시도해도 안 되면 랜덤으로 폴백 (자릿수 맞춰서)
+      console.warn("순차 번호 생성 실패, 랜덤 번호로 폴백");
+      const randomNum = Math.floor(
+        Math.pow(10, digitLength - 1) +
+          Math.random() *
+            (Math.pow(10, digitLength) - Math.pow(10, digitLength - 1))
+      );
+      certificateNumber = `cas${randomNum}`;
+
+      // 랜덤 번호도 중복 확인
+      const [randomCheck] = await conn.query(
+        "SELECT certificate_number FROM appraisals WHERE certificate_number = ?",
+        [certificateNumber]
+      );
+
+      if (randomCheck.length > 0) {
+        throw new Error("인증서 번호 생성에 실패했습니다. 다시 시도해주세요.");
+      }
+    }
+
+    return certificateNumber;
+  } catch (error) {
+    console.error("인증서 번호 생성 중 오류:", error);
+    throw new Error("인증서 번호 생성 중 오류가 발생했습니다.");
+  }
 }
 
 // Multer 설정 - 배너 이미지 저장
@@ -948,7 +1001,24 @@ router.put(
     let conn;
     try {
       const appraisal_id = req.params.id;
-      const { result, result_notes, suggested_restoration_services } = req.body;
+      const {
+        // 기본 정보 필드들 추가
+        brand,
+        model_name,
+        category,
+        appraisal_type,
+        product_link,
+        platform,
+        purchase_year,
+        components_included,
+        delivery_info,
+        remarks,
+        certificate_number,
+        // 기존 감정 결과 필드들
+        result,
+        result_notes,
+        suggested_restoration_services,
+      } = req.body;
 
       conn = await pool.getConnection();
 
@@ -966,6 +1036,37 @@ router.put(
       }
 
       const appraisal = appraisalRows[0];
+
+      // 인증서 번호 변경 시 중복 확인
+      if (
+        certificate_number &&
+        certificate_number !== appraisal.certificate_number
+      ) {
+        const normalizedNumber = certificate_number.toLowerCase();
+
+        // 형식 검증
+        const certPattern = /^cas\d+$/i;
+        if (!certPattern.test(normalizedNumber)) {
+          return res.status(400).json({
+            success: false,
+            message: "감정 번호는 CAS + 숫자 형식이어야 합니다. (예: CAS04312)",
+          });
+        }
+
+        // 중복 확인
+        const [existing] = await conn.query(
+          "SELECT certificate_number FROM appraisals WHERE certificate_number = ? AND id != ?",
+          [normalizedNumber, appraisal_id]
+        );
+
+        if (existing.length > 0) {
+          return res.status(400).json({
+            success: false,
+            message: "이미 존재하는 감정 번호입니다.",
+          });
+        }
+      }
+
       let existingImages = appraisal.images ? JSON.parse(appraisal.images) : [];
       let qrcode_url = appraisal.qrcode_url;
       let qr_access_key = appraisal.qr_access_key;
@@ -984,18 +1085,21 @@ router.put(
         certificate_url = `/images/appraisals/${req.files.pdf[0].filename}`;
       }
 
-      if (appraisal.certificate_number && !qrcode_url) {
+      // QR 코드 생성 (인증서 번호가 있고 QR 코드가 없는 경우)
+      const finalCertificateNumber =
+        certificate_number || appraisal.certificate_number;
+      if (finalCertificateNumber && !qrcode_url) {
         // QR 코드 파일 생성
         const qrDir = path.join(__dirname, "../../public/images/qrcodes");
         if (!fs.existsSync(qrDir)) {
           fs.mkdirSync(qrDir, { recursive: true });
         }
 
-        const qrFileName = `qr-${appraisal.certificate_number}.png`;
+        const qrFileName = `qr-${finalCertificateNumber}.png`;
         const qrPath = path.join(qrDir, qrFileName);
 
         const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-        const certificateUrl = `${frontendUrl}/appr/result/${appraisal.certificate_number}`;
+        const certificateUrl = `${frontendUrl}/appr/result/${finalCertificateNumber}`;
 
         try {
           await QRCode.toFile(qrPath, certificateUrl, {
@@ -1015,6 +1119,82 @@ router.put(
       const updateFields = [];
       const updateValues = [];
 
+      // 기본 정보 업데이트 필드들
+      if (brand !== undefined) {
+        updateFields.push("brand = ?");
+        updateValues.push(brand);
+        updateData.brand = brand;
+      }
+
+      if (model_name !== undefined) {
+        updateFields.push("model_name = ?");
+        updateValues.push(model_name);
+        updateData.model_name = model_name;
+      }
+
+      if (category !== undefined) {
+        updateFields.push("category = ?");
+        updateValues.push(category);
+        updateData.category = category;
+      }
+
+      if (appraisal_type !== undefined) {
+        updateFields.push("appraisal_type = ?");
+        updateValues.push(appraisal_type);
+        updateData.appraisal_type = appraisal_type;
+      }
+
+      if (product_link !== undefined) {
+        updateFields.push("product_link = ?");
+        updateValues.push(product_link);
+        updateData.product_link = product_link;
+      }
+
+      if (platform !== undefined) {
+        updateFields.push("platform = ?");
+        updateValues.push(platform);
+        updateData.platform = platform;
+      }
+
+      if (purchase_year !== undefined) {
+        updateFields.push("purchase_year = ?");
+        updateValues.push(purchase_year ? parseInt(purchase_year) : null);
+        updateData.purchase_year = purchase_year
+          ? parseInt(purchase_year)
+          : null;
+      }
+
+      if (components_included !== undefined) {
+        updateFields.push("components_included = ?");
+        updateValues.push(
+          components_included ? JSON.stringify(components_included) : null
+        );
+        updateData.components_included = components_included;
+      }
+
+      if (delivery_info !== undefined) {
+        updateFields.push("delivery_info = ?");
+        updateValues.push(delivery_info ? JSON.stringify(delivery_info) : null);
+        updateData.delivery_info = delivery_info;
+      }
+
+      if (remarks !== undefined) {
+        updateFields.push("remarks = ?");
+        updateValues.push(remarks);
+        updateData.remarks = remarks;
+      }
+
+      if (certificate_number !== undefined) {
+        updateFields.push("certificate_number = ?");
+        updateValues.push(
+          certificate_number ? certificate_number.toLowerCase() : null
+        );
+        updateData.certificate_number = certificate_number
+          ? certificate_number.toLowerCase()
+          : null;
+      }
+
+      // 기존 감정 결과 필드들
       if (result) {
         updateFields.push("result = ?");
         updateValues.push(result);
@@ -1059,7 +1239,7 @@ router.put(
         updateData.qrcode_url = qrcode_url;
       }
 
-      // 제안된 복원 서비스가 있는 경우 저장 - 변수명 수정
+      // 제안된 복원 서비스가 있는 경우 저장
       if (suggested_restoration_services) {
         try {
           // JSON 문자열인지 확인하고 파싱
@@ -1136,7 +1316,7 @@ router.put(
         success: true,
         appraisal: {
           id: appraisal_id,
-          certificate_number: appraisal.certificate_number,
+          certificate_number: finalCertificateNumber,
           ...updateData,
         },
         credit_info: creditInfo,
@@ -1145,7 +1325,8 @@ router.put(
       console.error("감정 정보 업데이트 중 오류 발생:", err);
       res.status(500).json({
         success: false,
-        message: "감정 정보 업데이트 중 서버 오류가 발생했습니다.",
+        message:
+          err.message || "감정 정보 업데이트 중 서버 오류가 발생했습니다.",
       });
     } finally {
       if (conn) conn.release();
