@@ -64,27 +64,27 @@ async function generateCertificateNumber(conn, customNumber = null) {
     return normalizedNumber;
   }
 
-  // 자동 생성: 가장 최근 번호 + 1
+  // 자동 생성: 가장 최근에 생성된 번호 + 1
   try {
-    // 기존 인증서 번호 중 가장 큰 숫자 찾기 (cas 접두사 제거 후 숫자만 추출)
+    // 가장 최근에 생성된 인증서 번호 조회 (created_at 기준)
     const [rows] = await conn.query(
       `SELECT certificate_number 
        FROM appraisals 
        WHERE certificate_number REGEXP '^cas[0-9]+$' 
-       ORDER BY CAST(SUBSTRING(certificate_number, 4) AS UNSIGNED) DESC 
+       ORDER BY created_at DESC 
        LIMIT 1`
     );
 
-    let nextNumber = 1;
-    let digitLength = 6; // 기본 자릿수: 기존 데이터가 없으면 6자리로 시작
+    let nextNumber = 1; // 기본값: cas1부터 시작
 
     if (rows.length > 0) {
       const lastCertNumber = rows[0].certificate_number;
-      // cas 제거하고 숫자 부분만 추출
-      const numberPart = lastCertNumber.replace(/^cas/i, "");
-      const lastNumber = parseInt(numberPart);
-      digitLength = numberPart.length; // 기존 자릿수 유지
-      nextNumber = lastNumber + 1;
+      // "cas" 제거하고 숫자 부분만 추출
+      const match = lastCertNumber.match(/^cas(\d+)$/i);
+      if (match) {
+        const lastNumber = parseInt(match[1]);
+        nextNumber = lastNumber + 1;
+      }
     }
 
     // 중복 확인하면서 사용 가능한 번호 찾기
@@ -94,9 +94,7 @@ async function generateCertificateNumber(conn, customNumber = null) {
     const maxAttempts = 1000; // 무한루프 방지
 
     while (!isUnique && attempts < maxAttempts) {
-      // 자릿수 맞춰서 0 패딩
-      const paddedNumber = nextNumber.toString().padStart(digitLength, "0");
-      certificateNumber = `cas${paddedNumber}`;
+      certificateNumber = `cas${nextNumber}`;
 
       // 중복 확인
       const [existing] = await conn.query(
@@ -113,13 +111,9 @@ async function generateCertificateNumber(conn, customNumber = null) {
     }
 
     if (!isUnique) {
-      // 만약 1000번 시도해도 안 되면 랜덤으로 폴백 (자릿수 맞춰서)
+      // 만약 1000번 시도해도 안 되면 랜덤으로 폴백
       console.warn("순차 번호 생성 실패, 랜덤 번호로 폴백");
-      const randomNum = Math.floor(
-        Math.pow(10, digitLength - 1) +
-          Math.random() *
-            (Math.pow(10, digitLength) - Math.pow(10, digitLength - 1))
-      );
+      const randomNum = Math.floor(100000 + Math.random() * 900000);
       certificateNumber = `cas${randomNum}`;
 
       // 랜덤 번호도 중복 확인
