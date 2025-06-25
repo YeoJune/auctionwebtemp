@@ -894,7 +894,7 @@
                   bannerDiv.style.background =
                     "linear-gradient(135deg, #1a2a3a 0%, #2d4263 100%)";
 
-                  // 배너 이미지가 있는 경우 배경으로 설정
+                  // 배너 이미지가 있는 경우에만 배경으로 설정
                   let backgroundImageHTML = "";
                   if (
                     banner.banner_image &&
@@ -916,30 +916,32 @@
                     `;
                   }
 
-                  // 제목 구성 (title과 subtitle 처리)
+                  // 제목 구성 - 있는 것만 표시
                   let titleHTML = "";
                   const title =
                     banner.title && banner.title.trim() !== ""
                       ? banner.title.trim()
-                      : "정확한";
+                      : "";
                   const subtitle =
                     banner.subtitle && banner.subtitle.trim() !== ""
                       ? banner.subtitle.trim()
-                      : null;
+                      : "";
 
-                  if (subtitle) {
+                  if (title && subtitle) {
                     titleHTML = `${title}<br /><span style="color: #e2e8f0">${subtitle}</span>`;
-                  } else {
+                  } else if (title) {
                     titleHTML = title;
+                  } else if (subtitle) {
+                    titleHTML = `<span style="color: #e2e8f0">${subtitle}</span>`;
                   }
 
-                  // 설명 처리
+                  // 설명 - 있을 때만 표시
                   const description =
                     banner.description && banner.description.trim() !== ""
                       ? banner.description.trim()
-                      : "국내 최고 전문가의 정밀한 감정 서비스로<br />소중한 명품의 가치를 확인하세요.";
+                      : "";
 
-                  // 버튼 HTML 생성
+                  // 버튼 - 있을 때만 표시
                   let buttonsHTML = "";
                   const hasCustomButton =
                     banner.button_text &&
@@ -964,58 +966,42 @@
                           ">
                           ${banner.button_text.trim()}
                         </a>
-                        <a
-                          href="/appr/result"
-                          class="btn-modern"
-                          style="
-                            padding: 15px 30px;
-                            background-color: transparent;
-                            color: #fff;
-                            text-decoration: none;
-                            font-weight: 600;
-                            border-radius: 8px;
-                            border: 1px solid rgba(255, 255, 255, 0.7);
-                            transition: all 0.3s;
-                          ">
-                          감정서 조회하기
-                        </a>
                       </div>
                     `;
-                  } else {
-                    // 기본 버튼들
-                    buttonsHTML = `
-                      <div style="display: flex; gap: 15px; flex-wrap: wrap">
-                        <a
-                          href="/appr/request"
-                          class="btn-modern"
-                          style="
-                            padding: 15px 30px;
-                            background-color: #fff;
-                            color: #1a2a3a;
-                            text-decoration: none;
-                            font-weight: 600;
-                            border-radius: 8px;
-                            transition: all 0.3s;
-                          ">
-                          감정 신청하기
-                        </a>
-                        <a
-                          href="/appr/result"
-                          class="btn-modern"
-                          style="
-                            padding: 15px 30px;
-                            background-color: transparent;
-                            color: #fff;
-                            text-decoration: none;
-                            font-weight: 600;
-                            border-radius: 8px;
-                            border: 1px solid rgba(255, 255, 255, 0.7);
-                            transition: all 0.3s;
-                          ">
-                          감정서 조회하기
-                        </a>
-                      </div>
+                  }
+
+                  // HTML 구성 - 각 요소가 있을 때만 추가
+                  let contentHTML = "";
+
+                  if (titleHTML) {
+                    contentHTML += `
+                      <h1 style="
+                        font-size: 3.5rem;
+                        font-weight: 700;
+                        margin-bottom: 20px;
+                        line-height: 1.2;
+                        letter-spacing: -1px;
+                      ">
+                        ${titleHTML}
+                      </h1>
                     `;
+                  }
+
+                  if (description) {
+                    contentHTML += `
+                      <p style="
+                        font-size: 1.25rem;
+                        margin-bottom: 30px;
+                        color: rgba(255, 255, 255, 0.9);
+                        line-height: 1.6;
+                      ">
+                        ${description}
+                      </p>
+                    `;
+                  }
+
+                  if (buttonsHTML) {
+                    contentHTML += buttonsHTML;
                   }
 
                   bannerDiv.innerHTML = `
@@ -1031,24 +1017,7 @@
                     ">
                       <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 0 20px">
                         <div style="max-width: 600px; color: #fff" class="fade-in visible">
-                          <h1 style="
-                            font-size: 3.5rem;
-                            font-weight: 700;
-                            margin-bottom: 20px;
-                            line-height: 1.2;
-                            letter-spacing: -1px;
-                          ">
-                            ${titleHTML}
-                          </h1>
-                          <p style="
-                            font-size: 1.25rem;
-                            margin-bottom: 30px;
-                            color: rgba(255, 255, 255, 0.9);
-                            line-height: 1.6;
-                          ">
-                            ${description}
-                          </p>
-                          ${buttonsHTML}
+                          ${contentHTML}
                         </div>
                       </div>
                     </div>
