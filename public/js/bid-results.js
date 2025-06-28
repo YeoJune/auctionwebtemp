@@ -145,7 +145,7 @@ async function fetchCompletedBids() {
 
     // 정렬 및 페이지네이션 파라미터
     const params = {
-      status: "completed", // 완료된 입찰만 가져옴
+      status: "active,final,completed,cancelled", // 모든 상태
       fromDate: fromDate,
       sortBy: "scheduled_date", // scheduled_date로 변경
       sortOrder: "desc",
@@ -206,84 +206,83 @@ async function fetchCompletedBids() {
 
 // 결과를 일별로 그룹화
 function groupResultsByDate() {
-  // 날짜별로 그룹화
   const groupedByDate = {};
 
   state.combinedResults.forEach((item) => {
-    // item.scheduled_date를 기준으로 날짜만 추출 (시간 제외)
     const dateStr = formatDate(item.item?.scheduled_date);
 
     if (!groupedByDate[dateStr]) {
       groupedByDate[dateStr] = {
         date: dateStr,
-        items: [],
+        successItems: [], // 낙찰 성공
+        failedItems: [], // 낙찰 실패
+        pendingItems: [], // 집계중
         itemCount: 0,
         totalJapanesePrice: 0,
         totalKoreanPrice: 0,
       };
     }
 
-    // 가격 정보 계산 - winning_price 사용, 없으면 기본값 사용
-    let japanesePrice = 0;
-    if (item.winning_price) {
-      // winning_price가 있으면 우선 사용
-      japanesePrice = Number(item.winning_price);
-    } else if (item.type === "direct") {
-      // winning_price가 없고 direct 타입이면 current_price 사용
-      japanesePrice = Number(item.current_price || 0);
-    } else {
-      // winning_price가 없고 live 타입이면 final_price 사용
-      japanesePrice = Number(item.final_price || 0);
-    }
-
-    // 원화 가격 계산 (관부가세 포함)
-    const product = item.item || {};
-    const auctionId = product.auc_num || 1;
-    const category = product.category || "기타";
-    const koreanPrice = Number(
-      calculateTotalPrice(japanesePrice, auctionId, category)
-    );
+    // 상품 상태 분류
+    const bidStatus = classifyBidStatus(item);
 
     // 이미지 경로 처리
     let imagePath = "/images/placeholder.png";
-    if (product && product.image) {
-      // 상대 경로는 그대로 사용, 절대 경로는 도메인 추가 필요 없음
-      imagePath = product.image;
+    if (item.item && item.item.image) {
+      imagePath = item.item.image;
     }
 
-    // 그룹에 아이템 추가
-    groupedByDate[dateStr].items.push({
+    const itemData = {
       ...item,
-      japanesePrice,
-      koreanPrice,
+      finalPrice: bidStatus.finalPrice,
+      winningPrice: bidStatus.winningPrice,
       image: imagePath,
-    });
+    };
 
-    // 합계 업데이트 - 숫자형으로 확실하게 합산
-    groupedByDate[dateStr].itemCount += 1;
-    groupedByDate[dateStr].totalJapanesePrice += japanesePrice;
-    groupedByDate[dateStr].totalKoreanPrice += koreanPrice;
+    // 상태별로 분류
+    if (bidStatus.status === "success") {
+      // 낙찰 성공 - 결제 금액에 포함
+      const koreanPrice = Number(
+        calculateTotalPrice(
+          bidStatus.winningPrice,
+          item.item?.auc_num || 1,
+          item.item?.category || "기타"
+        )
+      );
+      itemData.koreanPrice = koreanPrice;
+
+      groupedByDate[dateStr].successItems.push(itemData);
+      groupedByDate[dateStr].itemCount += 1;
+      groupedByDate[dateStr].totalJapanesePrice += bidStatus.winningPrice;
+      groupedByDate[dateStr].totalKoreanPrice += koreanPrice;
+    } else if (bidStatus.status === "failed") {
+      // 낙찰 실패 - 결제 금액에 포함하지 않음
+      const koreanPrice = Number(
+        calculateTotalPrice(
+          bidStatus.winningPrice,
+          item.item?.auc_num || 1,
+          item.item?.category || "기타"
+        )
+      );
+      itemData.koreanPrice = koreanPrice;
+      groupedByDate[dateStr].failedItems.push(itemData);
+    } else {
+      // 집계중 - 결제 금액에 포함하지 않음
+      groupedByDate[dateStr].pendingItems.push(itemData);
+    }
   });
 
   // 객체를 배열로 변환
   state.dailyResults = Object.values(groupedByDate);
 
-  // 일별 수수료 계산 추가
+  // 일별 수수료 계산 (성공한 상품만)
   state.dailyResults.forEach((day) => {
-    // 수수료 계산
     day.feeAmount = calculateFee(day.totalKoreanPrice);
-
-    // VAT 계산 (수수료의 10%)
     day.vatAmount = Math.round((day.feeAmount / 1.1) * 0.1);
-
-    // 총액 계산
     day.grandTotal = day.totalKoreanPrice + day.feeAmount;
   });
 
-  // 정렬 적용
   sortDailyResults();
-
-  // 총 통계 업데이트
   updateTotalStats();
 }
 
@@ -528,75 +527,42 @@ function createDailyResultRow(dayResult) {
   details.className = "date-details";
   details.style.display = "none";
 
-  // 상세 내용 표 생성
   const detailsTable = document.createElement("table");
   detailsTable.className = "details-table";
 
-  // 테이블 헤더 생성
   const tableHeader = document.createElement("thead");
   tableHeader.innerHTML = `
-    <tr>
-      <th>이미지</th>
-      <th>브랜드</th>
-      <th>상품명</th>
-      <th>금액 (¥)</th>
-      <th>관부가세 포함 (₩)</th>
-    </tr>
-  `;
+  <tr>
+    <th>이미지</th>
+    <th>브랜드</th>
+    <th>상품명</th>
+    <th>최종입찰금액 (¥)</th>
+    <th>실제낙찰금액 (¥)</th>
+    <th>관부가세 포함 (₩)</th>
+  </tr>
+`;
   detailsTable.appendChild(tableHeader);
 
-  // 테이블 본문 생성
   const tableBody = document.createElement("tbody");
-  dayResult.items.forEach((item) => {
-    const row = document.createElement("tr");
 
-    // 이미지 셀
-    const imageCell = document.createElement("td");
-
-    // 이미지가 있는 경우에만 이미지 요소 생성
-    if (item.image && item.image !== "/images/placeholder.png") {
-      const imageElement = document.createElement("img");
-      imageElement.src = item.image;
-      imageElement.alt = item.item?.title || "상품 이미지";
-      imageElement.classList.add("product-thumbnail");
-
-      // 이미지 로드 오류 시 텍스트로 대체하고 다시 로드 시도하지 않음
-      imageElement.onerror = function () {
-        const placeholder = document.createElement("div");
-        placeholder.className = "product-thumbnail-placeholder";
-        placeholder.textContent = "No Image";
-        this.parentNode.replaceChild(placeholder, this);
-      };
-
-      imageCell.appendChild(imageElement);
-    } else {
-      // 이미지 없는 경우 텍스트 플레이스홀더 표시
-      const placeholder = document.createElement("div");
-      placeholder.className = "product-thumbnail-placeholder";
-      placeholder.textContent = "No Image";
-      imageCell.appendChild(placeholder);
-    }
-
-    const brandCell = document.createElement("td");
-    brandCell.textContent = item.item?.brand || "-";
-
-    const titleCell = document.createElement("td");
-    titleCell.textContent = item.item?.title || "제목 없음";
-
-    const japaneseCell = document.createElement("td");
-    japaneseCell.textContent = `${formatNumber(item.japanesePrice)} ¥`;
-
-    const koreanCell = document.createElement("td");
-    koreanCell.textContent = `${formatNumber(item.koreanPrice)} ₩`;
-
-    row.appendChild(imageCell);
-    row.appendChild(brandCell);
-    row.appendChild(titleCell);
-    row.appendChild(japaneseCell);
-    row.appendChild(koreanCell);
-
+  // 낙찰 성공 상품들 먼저 표시 (연한 초록 배경)
+  dayResult.successItems?.forEach((item) => {
+    const row = createItemRow(item, "success");
     tableBody.appendChild(row);
   });
+
+  // 낙찰 실패 상품들 표시 (연한 빨간 배경)
+  dayResult.failedItems?.forEach((item) => {
+    const row = createItemRow(item, "failed");
+    tableBody.appendChild(row);
+  });
+
+  // 집계중 상품들 표시 (기본 배경)
+  dayResult.pendingItems?.forEach((item) => {
+    const row = createItemRow(item, "pending");
+    tableBody.appendChild(row);
+  });
+
   detailsTable.appendChild(tableBody);
 
   details.appendChild(detailsTable);
@@ -616,6 +582,68 @@ function createDailyResultRow(dayResult) {
   dateRow.appendChild(details);
 
   return dateRow;
+}
+
+// 상품 행 생성 함수
+function createItemRow(item, status) {
+  const row = document.createElement("tr");
+  row.classList.add(`bid-${status}`); // CSS 클래스 추가
+
+  // 이미지 셀
+  const imageCell = document.createElement("td");
+  if (item.image && item.image !== "/images/placeholder.png") {
+    const imageElement = document.createElement("img");
+    imageElement.src = item.image;
+    imageElement.alt = item.item?.title || "상품 이미지";
+    imageElement.classList.add("product-thumbnail");
+    imageElement.onerror = function () {
+      const placeholder = document.createElement("div");
+      placeholder.className = "product-thumbnail-placeholder";
+      placeholder.textContent = "No Image";
+      this.parentNode.replaceChild(placeholder, this);
+    };
+    imageCell.appendChild(imageElement);
+  } else {
+    const placeholder = document.createElement("div");
+    placeholder.className = "product-thumbnail-placeholder";
+    placeholder.textContent = "No Image";
+    imageCell.appendChild(placeholder);
+  }
+
+  const brandCell = document.createElement("td");
+  brandCell.textContent = item.item?.brand || "-";
+
+  const titleCell = document.createElement("td");
+  titleCell.textContent = item.item?.title || "제목 없음";
+
+  const finalPriceCell = document.createElement("td");
+  finalPriceCell.textContent = `${formatNumber(item.finalPrice)} ¥`;
+
+  const winningPriceCell = document.createElement("td");
+  if (status === "pending") {
+    winningPriceCell.textContent = "집계중";
+    winningPriceCell.classList.add("pending-text");
+  } else {
+    winningPriceCell.textContent = `${formatNumber(item.winningPrice)} ¥`;
+  }
+
+  const koreanCell = document.createElement("td");
+  if (status === "success") {
+    koreanCell.textContent = `${formatNumber(item.koreanPrice)} ₩`;
+  } else if (status === "failed") {
+    koreanCell.textContent = `${formatNumber(item.koreanPrice)} ₩ (미결제)`;
+  } else {
+    koreanCell.textContent = "-";
+  }
+
+  row.appendChild(imageCell);
+  row.appendChild(brandCell);
+  row.appendChild(titleCell);
+  row.appendChild(finalPriceCell);
+  row.appendChild(winningPriceCell);
+  row.appendChild(koreanCell);
+
+  return row;
 }
 
 // 표시용 날짜 포맷
@@ -660,6 +688,25 @@ function toggleLoading(show) {
   const loadingMsg = document.getElementById("loadingMsg");
   if (loadingMsg) {
     loadingMsg.style.display = show ? "block" : "none";
+  }
+}
+
+// 상품 상태 분류 함수
+function classifyBidStatus(item) {
+  const finalPrice =
+    item.type === "direct"
+      ? Number(item.current_price || 0)
+      : Number(item.final_price || 0);
+  const winningPrice = Number(item.winning_price || 0);
+
+  if (!item.winning_price || winningPrice === 0) {
+    return { status: "pending", finalPrice, winningPrice: null };
+  }
+
+  if (finalPrice === winningPrice) {
+    return { status: "success", finalPrice, winningPrice };
+  } else {
+    return { status: "failed", finalPrice, winningPrice };
   }
 }
 

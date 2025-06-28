@@ -1,5 +1,23 @@
 /* bid-results.css */
 
+/* 상품 상태별 배경색 */
+.bid-success {
+  background-color: #f0f9f0; /* 연한 초록 */
+}
+
+.bid-failed {
+  background-color: #fdf2f2; /* 연한 빨강 */
+}
+
+.bid-pending {
+  background-color: #f9f9f9; /* 기본 배경 */
+}
+
+.pending-text {
+  color: #666;
+  font-style: italic;
+}
+
 /* 검색 및 필터 툴바 */
 .search-toolbar {
   background-color: white;
