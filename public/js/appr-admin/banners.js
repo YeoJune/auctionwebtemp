@@ -230,7 +230,7 @@ function handleBannerFormSubmit() {
       );
       formData.append(
         "description",
-        getElementById("banner-description").value.trim()
+        document.getElementById("banner-description").value.trim()
       );
       formData.append(
         "button_text",
