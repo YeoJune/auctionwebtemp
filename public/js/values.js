@@ -786,19 +786,120 @@ function setupMobileFilters() {
   const filterBtn = document.getElementById("mobileFilterBtn");
   const filtersContainer = document.querySelector(".filters-container");
 
-  if (filterBtn && filtersContainer) {
-    filterBtn.addEventListener("click", () => {
-      filtersContainer.classList.toggle("active");
-    });
+  // 요소가 없으면 함수 종료
+  if (!filterBtn || !filtersContainer) {
+    console.error("Mobile filter elements not found");
+    return;
+  }
 
-    // 필터 외부 클릭시 닫기
-    document.addEventListener("click", (e) => {
-      if (
-        filtersContainer.classList.contains("active") &&
-        !filtersContainer.contains(e.target) &&
-        e.target !== filterBtn
-      ) {
-        filtersContainer.classList.remove("active");
+  // 이미 백드롭이 있는지 확인
+  let backdrop = document.querySelector(".filter-backdrop");
+
+  // 백드롭이 없으면 생성
+  if (!backdrop) {
+    backdrop = document.createElement("div");
+    backdrop.className = "filter-backdrop";
+    backdrop.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 899;
+      display: none;
+    `;
+    document.body.appendChild(backdrop);
+  }
+
+  // 필터 닫기 함수를 전역에 정의
+  if (!window.mobileFilterFunctions) {
+    window.mobileFilterFunctions = {};
+  }
+
+  window.mobileFilterFunctions.closeFilter = function () {
+    if (filtersContainer) {
+      filtersContainer.classList.remove("active");
+    }
+    if (backdrop) {
+      backdrop.style.display = "none";
+    }
+    document.body.style.overflow = "";
+    console.log("필터 닫기 함수 실행됨");
+  };
+
+  // 이미 추가된 요소 확인 및 중복 방지
+  let filtersHeader = filtersContainer.querySelector(".filters-header");
+  if (!filtersHeader) {
+    // 필터 헤더 추가
+    filtersHeader = document.createElement("div");
+    filtersHeader.className = "filters-header";
+    filtersHeader.textContent = "필터";
+    filtersContainer.prepend(filtersHeader);
+  }
+
+  // 닫기 버튼이 이미 있는지 확인
+  let closeBtn = filtersContainer.querySelector(".filter-close-btn");
+  if (closeBtn) {
+    closeBtn.remove(); // 기존 버튼 제거
+  }
+
+  // 필터 닫기 버튼 새로 추가
+  closeBtn = document.createElement("button");
+  closeBtn.className = "filter-close-btn";
+  closeBtn.innerHTML = "&times;";
+  closeBtn.setAttribute("aria-label", "필터 닫기");
+
+  // 기존 이벤트 리스너 제거를 위해 버튼 복제 후 다시 추가
+  closeBtn.addEventListener("click", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    window.mobileFilterFunctions.closeFilter();
+  });
+
+  filtersContainer.prepend(closeBtn);
+
+  // 기존 버튼 이벤트 제거를 위해 복제
+  const filterBtnClone = filterBtn.cloneNode(true);
+  filterBtn.parentNode.replaceChild(filterBtnClone, filterBtn);
+
+  // 필터 열기 버튼 이벤트 추가
+  filterBtnClone.addEventListener("click", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    filtersContainer.classList.add("active");
+    backdrop.style.display = "block";
+    document.body.style.overflow = "hidden";
+  });
+
+  // 백드롭 이벤트 리스너 추가
+  backdrop.addEventListener("click", window.mobileFilterFunctions.closeFilter);
+
+  console.log("모바일 필터 설정 완료");
+
+  // ESC 키 이벤트 리스너
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && filtersContainer.classList.contains("active")) {
+      window.mobileFilterFunctions.closeFilter();
+    }
+  });
+
+  // 필터 적용 버튼에 이벤트 추가
+  const applyFiltersBtn = document.getElementById("applyFiltersBtn");
+  if (applyFiltersBtn) {
+    applyFiltersBtn.addEventListener("click", function () {
+      if (window.innerWidth <= 768) {
+        window.mobileFilterFunctions.closeFilter();
+      }
+    });
+  }
+
+  // 필터 리셋 버튼에도 이벤트 추가
+  const resetFiltersBtn = document.getElementById("resetFiltersBtn");
+  if (resetFiltersBtn) {
+    resetFiltersBtn.addEventListener("click", function () {
+      if (window.innerWidth <= 768) {
+        window.mobileFilterFunctions.closeFilter();
       }
     });
   }
