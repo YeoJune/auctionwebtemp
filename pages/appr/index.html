@@ -903,7 +903,7 @@
                         background-image: url('${banner.banner_image}');
                         background-size: cover;
                         background-position: center;
-                        opacity: 0;
+                        opacity: 1;
                         mix-blend-mode: overlay;
                       "></div>
                     `;
@@ -1106,12 +1106,12 @@
             slides[currentSlide].classList.add("active");
           }
 
-          // 자동 슬라이드 (5초마다)
+          // 자동 슬라이드 (10초마다)
           setInterval(() => {
             let nextSlide = currentSlide + 1;
             if (nextSlide >= slides.length) nextSlide = 0;
             changeSlide(nextSlide);
-          }, 5000);
+          }, 10 * 1000);
         }
 
         // 배너 로딩 시작

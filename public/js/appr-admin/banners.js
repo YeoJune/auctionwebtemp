@@ -228,7 +228,10 @@ function handleBannerFormSubmit() {
         "subtitle",
         document.getElementById("banner-subtitle").value.trim()
       );
-      formData.append("description", description);
+      formData.append(
+        "description",
+        getElementById("banner-description").value.trim()
+      );
       formData.append(
         "button_text",
         document.getElementById("banner-button-text").value.trim()
