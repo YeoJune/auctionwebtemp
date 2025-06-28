@@ -565,6 +565,8 @@ router.get("/scheduled-dates-with-count", async (req, res) => {
       queryParams
     );
 
+    console.log(results);
+
     updateCache(cache.filters.withStats.dates, results);
     res.json(results);
   } catch (error) {
