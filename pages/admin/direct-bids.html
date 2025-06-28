@@ -244,6 +244,24 @@
             선택한 <span id="bulkCompleteCount">0</span>개 항목을 낙찰 완료
             처리하시겠습니까?
           </p>
+
+          <div class="form-group">
+            <label class="form-label" for="bulkWinningPrice"
+              >낙찰 금액 (엔화)</label
+            >
+            <input
+              type="number"
+              id="bulkWinningPrice"
+              class="form-control"
+              placeholder="금액 입력 (선택사항)" />
+            <div id="bulkWinningPriceKRW" class="price-display">
+              관부가세 포함: -
+            </div>
+            <p class="note">
+              ※ 금액을 입력하지 않으면 각 입찰의 현재 입찰가가 사용됩니다.
+            </p>
+          </div>
+
           <p>완료 후에는 취소할 수 없습니다.</p>
         </div>
         <div class="modal-footer">

@@ -68,17 +68,6 @@ async function fetchRecentActivities() {
   return fetchAPI("/dashboard/activities");
 }
 
-// 사용자 통계 조회
-async function fetchUserStats() {
-  try {
-    // API 호출
-    return await fetchAPI("/metrics");
-  } catch (error) {
-    console.error("사용자 통계 가져오기 실패:", error);
-    throw error;
-  }
-}
-
 // 비즈니스 KPI 데이터 조회
 async function fetchBusinessKPI() {
   return fetchAPI("/dashboard/kpi");
@@ -253,12 +242,11 @@ async function placeBid(itemId, currentPrice) {
   });
 }
 
+// 직접 경매 낙찰 완료 처리 - 단일 또는 다중 처리 지원
 async function completeDirectBid(idOrIds, winningPrice) {
-  // 단일 ID인지 배열인지 확인
   const isArray = Array.isArray(idOrIds);
   const payload = isArray ? { ids: idOrIds } : { id: idOrIds };
 
-  // winningPrice가 있으면 추가
   if (winningPrice !== undefined) {
     payload.winningPrice = winningPrice;
   }

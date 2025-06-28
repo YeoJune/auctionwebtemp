@@ -101,6 +101,9 @@ document.addEventListener("DOMContentLoaded", function () {
     .getElementById("bulkMarkSubmittedBtn")
     ?.addEventListener("click", openBulkMarkAsSubmittedModal);
   document
+    .getElementById("bulkWinningPrice")
+    ?.addEventListener("input", updateBulkWinningPriceKRW);
+  document
     .getElementById("submitBulkComplete")
     ?.addEventListener("click", submitBulkComplete);
   document
