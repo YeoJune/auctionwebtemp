@@ -148,7 +148,9 @@ async function buildBaseFilterConditions() {
 
   if (enabledDates.length > 0) {
     conditions.push(
-      `DATE(ci.scheduled_date) IN (${enabledDates.map(() => "?").join(",")})`
+      `DATE(DATE_ADD(ci.scheduled_date, INTERVAL 9 HOUR)) IN (${enabledDates
+        .map(() => "?")
+        .join(",")})`
     );
     queryParams.push(...enabledDates);
   }
@@ -310,7 +312,9 @@ router.get("/", async (req, res) => {
 
     if (enabledDates.length > 0) {
       conditions.push(
-        `DATE(ci.scheduled_date) IN (${enabledDates.map(() => "?").join(",")})`
+        `DATE(DATE_ADD(ci.scheduled_date, INTERVAL 9 HOUR)) IN (${enabledDates
+          .map(() => "?")
+          .join(",")})`
       );
       queryParams.push(...enabledDates);
     }
@@ -345,7 +349,9 @@ router.get("/", async (req, res) => {
           if (date == "null") {
             dateConds.push("ci.scheduled_date IS NULL");
           } else {
-            dateConds.push(`DATE(ci.scheduled_date) = ?`);
+            dateConds.push(
+              `DATE(DATE_ADD(ci.scheduled_date, INTERVAL 9 HOUR)) = ?`
+            );
             queryParams.push(date);
           }
         });
@@ -538,10 +544,10 @@ router.get("/scheduled-dates-with-count", async (req, res) => {
     const { conditions, queryParams } = await buildBaseFilterConditions();
 
     const [results] = await pool.query(
-      `SELECT DATE(ci.scheduled_date) as Date, COUNT(*) as count
+      `SELECT DATE(DATE_ADD(ci.scheduled_date, INTERVAL 9 HOUR)) as Date, COUNT(*) as count
        FROM crawled_items ci
        WHERE ${conditions.join(" AND ")}
-       GROUP BY DATE(ci.scheduled_date)
+       GROUP BY DATE(DATE_ADD(ci.scheduled_date, INTERVAL 9 HOUR))
        ORDER BY Date ASC`,
       queryParams
     );

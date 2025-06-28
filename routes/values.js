@@ -158,7 +158,7 @@ router.get("/", async (req, res) => {
       if (dateList.length > 0) {
         const dateConds = [];
         dateList.forEach((date) => {
-          dateConds.push(`DATE(scheduled_date) = ?`);
+          dateConds.push(`DATE(DATE_ADD(scheduled_date, INTERVAL 9 HOUR)) = ?`);
           queryParams.push(date);
         });
         if (dateConds.length > 0) {
@@ -281,9 +281,9 @@ router.get("/scheduled-dates-with-count", async (req, res) => {
     }
 
     const [results] = await pool.query(`
-      SELECT DATE(scheduled_date) as Date, COUNT(*) as count
+      SELECT DATE(DATE_ADD(scheduled_date, INTERVAL 9 HOUR)) as Date, COUNT(*) as count
       FROM values_items
-      GROUP BY DATE(scheduled_date)
+      GROUP BY DATE(DATE_ADD(scheduled_date, INTERVAL 9 HOUR))
       ORDER BY Date ASC
     `);
 
