@@ -64,7 +64,7 @@ async function downloadAndSaveImage(url, folderName = "products") {
       });
     }
 
-    await processedImage.webp({ quality: 80 }).toFile(filePath);
+    await processedImage.webp({ quality: 100 }).toFile(filePath);
 
     // 성공 시 연속 실패 카운터 초기화
     consecutiveFailures = 0;
