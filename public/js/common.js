@@ -581,13 +581,12 @@ function displayDateFilters(dates) {
 
   dates.forEach((date) => {
     if (date.Date) {
-      const formattedDate = formatDate(date.Date, false);
-      // 개수 표시 제거
+      const normalizedDate = new Date(date.Date).toISOString().split("T")[0];
       const dateItem = createFilterItem(
-        date.Date,
+        normalizedDate,
         "date",
         window.state.selectedDates,
-        formattedDate
+        normalizedDate
       );
       scheduledDateFilters.appendChild(dateItem);
     }

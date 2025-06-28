@@ -10,7 +10,7 @@ let pLimit;
 })();
 
 // ===== 캐싱 관련 설정 =====
-const CACHE_DURATION = 60 * 60 * 1000 * 0;
+const CACHE_DURATION = 60 * 60 * 1000;
 
 const cache = {
   filters: {
