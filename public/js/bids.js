@@ -45,7 +45,7 @@ window.BidManager = (function () {
   }
 
   /**
-   * 현장 경매 입찰 섹션 HTML 생성
+   * 현장 경매 입찰 섹션 HTML 생성 (전체)
    * @param {object} bidInfo - 입찰 정보 객체
    * @param {string} itemId - 상품 ID
    * @param {number} aucNum - 출품사 번호
@@ -61,96 +61,108 @@ window.BidManager = (function () {
 
     // 타이머 HTML
     const timer = getRemainingTime(item.scheduled_date);
+    const isExpired = !timer; // 마감 여부 확인
+
     const timerHTML = timer
       ? `
-        <div class="bid-timer ${timer.isNearEnd ? "near-end" : ""}">
-          입찰마감 남은시간 [${timer.text}]
-        </div>
-      `
-      : "";
+      <div class="bid-timer ${timer.isNearEnd ? "near-end" : ""}">
+        입찰마감 남은시간 [${timer.text}]
+      </div>
+    `
+      : `
+      <div class="bid-timer expired">
+        입찰마감 [마감됨]
+      </div>
+    `;
 
     // 최종 입찰가가 있는 경우
     if (bidInfo?.final_price) {
       return `
-          <div class="bid-info live">
-            ${timerHTML}
-            <div class="final-price">
-              <p>최종 입찰금액: ${cleanNumberFormat(bidInfo.final_price)} ¥</p>
-              <div class="price-details-container">
-                관부가세 포함 ${cleanNumberFormat(
-                  calculateTotalPrice(bidInfo.final_price, aucNum, category)
-                )}원
-              </div>
+        <div class="bid-info live">
+          ${timerHTML}
+          <div class="final-price">
+            <p>최종 입찰금액: ${cleanNumberFormat(bidInfo.final_price)} ¥</p>
+            <div class="price-details-container">
+              관부가세 포함 ${cleanNumberFormat(
+                calculateTotalPrice(bidInfo.final_price, aucNum, category)
+              )}원
             </div>
-          </div>`;
+          </div>
+        </div>`;
     }
 
     // 1차/2차 입찰 진행 중인 경우
     let html = `<div class="bid-info live">
-        ${timerHTML}
-        <div class="real-time-price">
-          <p>시작 금액: ${cleanNumberFormat(startingPrice)} ¥</p>
-          <div class="price-details-container">
-            관부가세 포함 ${cleanNumberFormat(
-              calculateTotalPrice(startingPrice, aucNum, category)
-            )}원
-          </div>
-        </div>`;
+      ${timerHTML}
+      <div class="real-time-price">
+        <p>시작 금액: ${cleanNumberFormat(startingPrice)} ¥</p>
+        <div class="price-details-container">
+          관부가세 포함 ${cleanNumberFormat(
+            calculateTotalPrice(startingPrice, aucNum, category)
+          )}원
+        </div>
+      </div>`;
 
     if (bidInfo?.first_price || bidInfo?.second_price) {
       // 1차 입찰이 있는 경우
       if (bidInfo.first_price) {
         html += `
-            <div class="bid-price-info">
-              <p>1차 입찰금액: ${cleanNumberFormat(bidInfo.first_price)} ¥</p>
-              <div class="price-details-container first-price">
-                관부가세 포함 ${cleanNumberFormat(
-                  calculateTotalPrice(bidInfo.first_price, aucNum, category)
-                )}원
-              </div>
-            </div>`;
+          <div class="bid-price-info">
+            <p>1차 입찰금액: ${cleanNumberFormat(bidInfo.first_price)} ¥</p>
+            <div class="price-details-container first-price">
+              관부가세 포함 ${cleanNumberFormat(
+                calculateTotalPrice(bidInfo.first_price, aucNum, category)
+              )}원
+            </div>
+          </div>`;
       }
 
       // 2차 제안이 있는 경우
       if (bidInfo.second_price) {
         html += `
-            <div class="bid-price-info">
-              <p>2차 제안금액: ${cleanNumberFormat(bidInfo.second_price)} ¥</p>
-              <div class="price-details-container second-price">
-                관부가세 포함 ${cleanNumberFormat(
-                  calculateTotalPrice(bidInfo.second_price, aucNum, category)
-                )}원
-              </div>
-            </div>`;
+          <div class="bid-price-info">
+            <p>2차 제안금액: ${cleanNumberFormat(bidInfo.second_price)} ¥</p>
+            <div class="price-details-container second-price">
+              관부가세 포함 ${cleanNumberFormat(
+                calculateTotalPrice(bidInfo.second_price, aucNum, category)
+              )}원
+            </div>
+          </div>`;
       }
     }
 
-    // 입찰 입력 UI
+    // 입찰 입력 UI - 마감 여부에 따라 버튼 상태 변경
     html += `
-        <div class="bid-input-container">
-          <div class="bid-input-group">
-            <span class="bid-input-label">${
-              bidInfo?.first_price ? "최종입찰 금액" : "1차금액 입력"
-            }</span>
-            <input type="number" placeholder="" class="bid-input" data-item-id="${itemId}" data-bid-type="live">
-            <span class="bid-value-display">000</span>
-            <span class="bid-currency">¥</span>
-            <button class="bid-button" onclick="event.stopPropagation(); BidManager.handleLiveBidSubmit(this.parentElement.querySelector('.bid-input').value, '${itemId}')">입찰</button>
-          </div>
-          <div class="price-details-container"></div>
-          <div class="quick-bid-buttons">
-            <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 1, 'live')">+1,000¥</button>
-            <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 5, 'live')">+5,000¥</button>
-            <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 10, 'live')">+10,000¥</button>
-          </div>
+      <div class="bid-input-container">
+        <div class="bid-input-group">
+          <span class="bid-input-label">${
+            bidInfo?.first_price ? "최종입찰 금액" : "1차금액 입력"
+          }</span>
+          <input type="number" placeholder="" class="bid-input" data-item-id="${itemId}" data-bid-type="live">
+          <span class="bid-value-display">000</span>
+          <span class="bid-currency">¥</span>
+          <button class="bid-button" ${
+            isExpired ? "disabled" : ""
+          } onclick="event.stopPropagation(); ${
+      isExpired
+        ? ""
+        : `BidManager.handleLiveBidSubmit(this.parentElement.querySelector('.bid-input').value, '${itemId}')`
+    }">${isExpired ? "마감됨" : "입찰"}</button>
         </div>
-      </div>`;
+        <div class="price-details-container"></div>
+        <div class="quick-bid-buttons">
+          <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 1, 'live')">+1,000¥</button>
+          <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 5, 'live')">+5,000¥</button>
+          <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 10, 'live')">+10,000¥</button>
+        </div>
+      </div>
+    </div>`;
 
     return html;
   }
 
   /**
-   * 직접 경매 입찰 섹션 HTML 생성
+   * 직접 경매 입찰 섹션 HTML 생성 (전체)
    * @param {object} bidInfo - 입찰 정보 객체
    * @param {string} itemId - 상품 ID
    * @param {number} aucNum - 출품사 번호
@@ -178,59 +190,71 @@ window.BidManager = (function () {
 
     // 타이머 HTML
     const timer = getRemainingTime(item.scheduled_date);
+    const isExpired = !timer; // 마감 여부 확인
+
     const timerHTML = timer
       ? `
-        <div class="bid-timer ${timer.isNearEnd ? "near-end" : ""}">
-          입찰마감 남은시간 [${timer.text}]
-        </div>
-      `
-      : "";
+      <div class="bid-timer ${timer.isNearEnd ? "near-end" : ""}">
+        입찰마감 남은시간 [${timer.text}]
+      </div>
+    `
+      : `
+      <div class="bid-timer expired">
+        입찰마감 [마감됨]
+      </div>
+    `;
 
     let html = `<div class="bid-info direct">
-        ${
-          hasHigherBid
-            ? '<div class="higher-bid-alert">더 높은 입찰 존재</div>'
-            : ""
-        }
-        ${timerHTML}
-        <div class="real-time-price">
-          <p>실시간 금액: ${cleanNumberFormat(live_price)} ¥</p>
-          <div class="price-details-container">
-            관부가세 포함 ${cleanNumberFormat(
-              calculateTotalPrice(live_price, aucNum, category)
-            )}원
-          </div>
-        </div>`;
+      ${
+        hasHigherBid && !isExpired
+          ? '<div class="higher-bid-alert">더 높은 입찰 존재</div>'
+          : ""
+      }
+      ${timerHTML}
+      <div class="real-time-price">
+        <p>실시간 금액: ${cleanNumberFormat(live_price)} ¥</p>
+        <div class="price-details-container">
+          관부가세 포함 ${cleanNumberFormat(
+            calculateTotalPrice(live_price, aucNum, category)
+          )}원
+        </div>
+      </div>`;
 
     if (currentPrice > 0) {
       html += `
-          <div class="bid-price-info">
-            <p>나의 입찰 금액: ${cleanNumberFormat(currentPrice)} ¥</p>
-            <div class="price-details-container my-price">
-              관부가세 포함 ${cleanNumberFormat(
-                calculateTotalPrice(currentPrice, aucNum, category)
-              )}원
-            </div>
-          </div>`;
+        <div class="bid-price-info">
+          <p>나의 입찰 금액: ${cleanNumberFormat(currentPrice)} ¥</p>
+          <div class="price-details-container my-price">
+            관부가세 포함 ${cleanNumberFormat(
+              calculateTotalPrice(currentPrice, aucNum, category)
+            )}원
+          </div>
+        </div>`;
     }
 
-    // 입찰 입력 UI
+    // 입찰 입력 UI - 마감 여부에 따라 버튼 상태 변경
     html += `
-        <div class="bid-input-container">
-          <div class="bid-input-group">
-            <input type="number" placeholder="나의 입찰 금액" class="bid-input" data-item-id="${itemId}" data-bid-type="direct">
-            <span class="bid-value-display">000</span>
-            <span class="bid-currency">¥</span>
-            <button class="bid-button" onclick="event.stopPropagation(); BidManager.handleDirectBidSubmit(this.parentElement.querySelector('.bid-input').value, '${itemId}')">입찰</button>
-          </div>
-          <div class="price-details-container"></div>
-          <div class="quick-bid-buttons">
-            <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 1, 'direct')">+1,000¥</button>
-            <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 5, 'direct')">+5,000¥</button>
-            <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 10, 'direct')">+10,000¥</button>
-          </div>
+      <div class="bid-input-container">
+        <div class="bid-input-group">
+          <input type="number" placeholder="나의 입찰 금액" class="bid-input" data-item-id="${itemId}" data-bid-type="direct">
+          <span class="bid-value-display">000</span>
+          <span class="bid-currency">¥</span>
+          <button class="bid-button" ${
+            isExpired ? "disabled" : ""
+          } onclick="event.stopPropagation(); ${
+      isExpired
+        ? ""
+        : `BidManager.handleDirectBidSubmit(this.parentElement.querySelector('.bid-input').value, '${itemId}')`
+    }">${isExpired ? "마감됨" : "입찰"}</button>
         </div>
-      </div>`;
+        <div class="price-details-container"></div>
+        <div class="quick-bid-buttons">
+          <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 1, 'direct')">+1,000¥</button>
+          <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 5, 'direct')">+5,000¥</button>
+          <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 10, 'direct')">+10,000¥</button>
+        </div>
+      </div>
+    </div>`;
 
     return html;
   }
@@ -259,6 +283,16 @@ window.BidManager = (function () {
       return;
     }
 
+    // 마감 시간 확인 추가
+    const item = _state.currentData.find((item) => item.item_id === itemId);
+    if (item) {
+      const timer = getRemainingTime(item.scheduled_date);
+      if (!timer) {
+        alert("마감된 상품입니다. 입찰이 불가능합니다.");
+        return;
+      }
+    }
+
     if (!value) {
       alert("입찰 금액을 입력해주세요.");
       return;
@@ -280,7 +314,6 @@ window.BidManager = (function () {
     }
 
     const numericValue = parseFloat(value) * 1000; // 1000 곱하기
-    const item = _state.currentData.find((item) => item.item_id === itemId);
     const bidInfo = _state.liveBidData.find((bid) => bid.item_id === itemId);
 
     try {
@@ -339,6 +372,15 @@ window.BidManager = (function () {
       return;
     }
 
+    const item = _state.currentData.find((item) => item.item_id === itemId);
+    if (item) {
+      const timer = getRemainingTime(item.scheduled_date);
+      if (!timer) {
+        alert("마감된 상품입니다. 입찰이 불가능합니다.");
+        return;
+      }
+    }
+
     if (!value) {
       alert("입찰 금액을 입력해주세요.");
       return;
@@ -360,7 +402,6 @@ window.BidManager = (function () {
     }
 
     const numericValue = parseFloat(value) * 1000; // 1000 곱하기
-    const item = _state.currentData.find((item) => item.item_id === itemId);
 
     try {
       await API.fetchAPI("/direct-bids", {
