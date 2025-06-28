@@ -680,8 +680,8 @@ function handlePageChange(page) {
 
   state.currentPage = page;
   displayResults();
-  window.scrollTo(0, 0);
   updateURL();
+  window.scrollTo(0, 0);
 }
 
 // 네비게이션 버튼 설정
