@@ -272,16 +272,17 @@ function groupResultsByDate() {
     }
   });
 
-  groupedByDate[dateStr].totalItemCount =
-    groupedByDate[dateStr].successItems.length +
-    groupedByDate[dateStr].failedItems.length +
-    groupedByDate[dateStr].pendingItems.length;
-
   // 객체를 배열로 변환
   state.dailyResults = Object.values(groupedByDate);
 
-  // 일별 수수료 계산 (성공한 상품만)
+  // 각 날짜별 totalItemCount 계산 (수정된 위치)
   state.dailyResults.forEach((day) => {
+    day.totalItemCount =
+      day.successItems.length +
+      day.failedItems.length +
+      day.pendingItems.length;
+
+    // 일별 수수료 계산 (성공한 상품만)
     day.feeAmount = calculateFee(day.totalKoreanPrice);
     day.vatAmount = Math.round((day.feeAmount / 1.1) * 0.1);
     day.grandTotal = day.totalKoreanPrice + day.feeAmount;
