@@ -676,8 +676,6 @@ function updatePagination() {
 function handlePageChange(page) {
   page = parseInt(page, 10);
 
-  if (page === state.currentPage) return;
-
   state.currentPage = page;
   displayResults();
   updateURL();
