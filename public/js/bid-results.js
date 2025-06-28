@@ -674,8 +674,6 @@ function updatePagination() {
 
 // 페이지 변경 처리
 function handlePageChange(page) {
-  page = parseInt(page, 10);
-
   state.currentPage = page;
   displayResults();
   updateURL();
