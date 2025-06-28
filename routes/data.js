@@ -16,7 +16,7 @@ const apiUrl = `https://api.currencyfreaks.com/v2.0/rates/latest?apikey=${proces
 dotenv.config();
 
 // ===== 캐싱 관련 설정 =====
-const CACHE_DURATION = 60 * 60 * 1000 * 0;
+const CACHE_DURATION = 60 * 60 * 1000;
 
 const cache = {
   exchange: {

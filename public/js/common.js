@@ -7,7 +7,9 @@ function formatDate(dateString, isUTC2KST = false) {
 
   let targetDate = date;
   if (isUTC2KST) {
-    targetDate = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+    targetDate = new Date(
+      date.toLocaleString("en-US", { timeZone: "Asia/Seoul" })
+    );
   }
 
   return targetDate.toISOString().split("T")[0];
@@ -20,7 +22,9 @@ function formatDateTime(dateString, isUTC2KST = false) {
 
   let targetDate = date;
   if (isUTC2KST) {
-    targetDate = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+    targetDate = new Date(
+      date.toLocaleString("en-US", { timeZone: "Asia/Seoul" })
+    );
   }
 
   const year = targetDate.getFullYear();
@@ -577,7 +581,7 @@ function displayDateFilters(dates) {
 
   dates.forEach((date) => {
     if (date.Date) {
-      const formattedDate = formatDate(date.Date, true);
+      const formattedDate = formatDate(date.Date, false);
       // 개수 표시 제거
       const dateItem = createFilterItem(
         date.Date,
