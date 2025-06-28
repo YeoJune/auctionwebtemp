@@ -1334,137 +1334,189 @@ router.put(
   }
 );
 
-// 감정 삭제 - DELETE /api/appr/admin/appraisals/:id
-router.delete("/appraisals/:id", isAuthenticated, isAdmin, async (req, res) => {
+// 감정 삭제 - DELETE /api/appr/admin/appraisals (다중/단일 삭제 통합)
+router.delete("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
   let conn;
   try {
-    const appraisal_id = req.params.id;
+    const { ids } = req.body;
+
+    // 입력 검증
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "삭제할 감정 ID 목록이 필요합니다.",
+      });
+    }
+
+    // ID 개수 제한 (안전을 위해)
+    if (ids.length > 100) {
+      return res.status(400).json({
+        success: false,
+        message: "한 번에 최대 100개까지만 삭제할 수 있습니다.",
+      });
+    }
 
     conn = await pool.getConnection();
 
-    // 감정 정보 조회 (존재 여부 확인 및 관련 정보 수집)
+    // 감정 정보들 조회 (존재 여부 확인 및 관련 정보 수집)
+    const placeholders = ids.map(() => "?").join(", ");
     const [appraisalRows] = await conn.query(
-      "SELECT * FROM appraisals WHERE id = ?",
-      [appraisal_id]
+      `SELECT * FROM appraisals WHERE id IN (${placeholders})`,
+      ids
     );
 
     if (appraisalRows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "해당 감정 정보를 찾을 수 없습니다.",
+        message: "삭제할 감정 정보를 찾을 수 없습니다.",
       });
     }
 
-    const appraisal = appraisalRows[0];
+    // 실제로 존재하는 감정 ID들만 추출
+    const foundIds = appraisalRows.map((appraisal) => appraisal.id);
+    const notFoundIds = ids.filter((id) => !foundIds.includes(id));
 
     // 트랜잭션 시작
     await conn.beginTransaction();
 
+    let deletedCount = 0;
+    let creditRestoredCount = 0;
+    let relatedRestorationsDeleted = 0;
+    const deletedAppraisals = [];
+    const filesToDelete = []; // 나중에 삭제할 파일들
+
     try {
-      // 1. 관련 복원 요청이 있는지 확인하고 삭제
-      const [restorationRequests] = await conn.query(
-        "SELECT id FROM restoration_requests WHERE appraisal_id = ?",
-        [appraisal_id]
-      );
-
-      if (restorationRequests.length > 0) {
-        // 복원 요청도 함께 삭제
-        await conn.query(
-          "DELETE FROM restoration_requests WHERE appraisal_id = ?",
-          [appraisal_id]
-        );
-      }
-
-      // 2. 결제 정보가 있는지 확인하고 관련 리소스 정보 업데이트
-      await conn.query(
-        `UPDATE payments 
-         SET related_resource_id = NULL, related_resource_type = NULL 
-         WHERE related_resource_id = ? AND related_resource_type = 'appraisal'`,
-        [appraisal_id]
-      );
-
-      // 3. 크레딧이 차감된 경우 복구 (퀵링크만)
-      if (
-        appraisal.credit_deducted &&
-        appraisal.appraisal_type === "quicklink"
-      ) {
-        const [userRows] = await conn.query(
-          "SELECT * FROM appr_users WHERE user_id = ?",
-          [appraisal.user_id]
+      for (const appraisal of appraisalRows) {
+        // 1. 관련 복원 요청이 있는지 확인하고 삭제
+        const [restorationRequests] = await conn.query(
+          "SELECT id FROM restoration_requests WHERE appraisal_id = ?",
+          [appraisal.id]
         );
 
-        if (userRows.length > 0) {
-          // 크레딧 1개 복구
+        if (restorationRequests.length > 0) {
+          // 복원 요청도 함께 삭제
           await conn.query(
-            "UPDATE appr_users SET quick_link_credits_remaining = quick_link_credits_remaining + 1 WHERE user_id = ?",
+            "DELETE FROM restoration_requests WHERE appraisal_id = ?",
+            [appraisal.id]
+          );
+          relatedRestorationsDeleted += restorationRequests.length;
+        }
+
+        // 2. 결제 정보가 있는지 확인하고 관련 리소스 정보 업데이트
+        await conn.query(
+          `UPDATE payments 
+           SET related_resource_id = NULL, related_resource_type = NULL 
+           WHERE related_resource_id = ? AND related_resource_type = 'appraisal'`,
+          [appraisal.id]
+        );
+
+        // 3. 크레딧이 차감된 경우 복구 (퀵링크만)
+        if (
+          appraisal.credit_deducted &&
+          appraisal.appraisal_type === "quicklink"
+        ) {
+          const [userRows] = await conn.query(
+            "SELECT * FROM appr_users WHERE user_id = ?",
             [appraisal.user_id]
+          );
+
+          if (userRows.length > 0) {
+            // 크레딧 1개 복구
+            await conn.query(
+              "UPDATE appr_users SET quick_link_credits_remaining = quick_link_credits_remaining + 1 WHERE user_id = ?",
+              [appraisal.user_id]
+            );
+            creditRestoredCount++;
+          }
+        }
+
+        // 4. 감정 정보 삭제
+        await conn.query("DELETE FROM appraisals WHERE id = ?", [appraisal.id]);
+        deletedCount++;
+
+        // 5. 삭제된 감정 정보 저장
+        deletedAppraisals.push({
+          id: appraisal.id,
+          certificate_number: appraisal.certificate_number,
+          brand: appraisal.brand,
+          model_name: appraisal.model_name,
+          user_id: appraisal.user_id,
+          appraisal_type: appraisal.appraisal_type,
+        });
+
+        // 6. 삭제할 파일 목록에 추가
+        // 이미지 파일들
+        if (appraisal.images) {
+          try {
+            const images = JSON.parse(appraisal.images);
+            images.forEach((imagePath) => {
+              filesToDelete.push(
+                path.join(__dirname, "../../public", imagePath)
+              );
+            });
+          } catch (error) {
+            console.error("이미지 JSON 파싱 오류:", error);
+          }
+        }
+
+        // PDF 파일
+        if (appraisal.certificate_url) {
+          filesToDelete.push(
+            path.join(__dirname, "../../public", appraisal.certificate_url)
+          );
+        }
+
+        // QR 코드 파일
+        if (appraisal.qrcode_url) {
+          filesToDelete.push(
+            path.join(__dirname, "../../public", appraisal.qrcode_url)
           );
         }
       }
 
-      // 4. 감정 정보 삭제
-      await conn.query("DELETE FROM appraisals WHERE id = ?", [appraisal_id]);
-
-      // 5. 관련 파일 삭제 (비동기로 처리하여 응답 속도 개선)
-      setImmediate(() => {
-        try {
-          // 이미지 파일 삭제
-          if (appraisal.images) {
-            const images = JSON.parse(appraisal.images);
-            images.forEach((imagePath) => {
-              const fullPath = path.join(__dirname, "../../public", imagePath);
-              if (fs.existsSync(fullPath)) {
-                fs.unlinkSync(fullPath);
-              }
-            });
-          }
-
-          // PDF 파일 삭제
-          if (appraisal.certificate_url) {
-            const pdfPath = path.join(
-              __dirname,
-              "../../public",
-              appraisal.certificate_url
-            );
-            if (fs.existsSync(pdfPath)) {
-              fs.unlinkSync(pdfPath);
-            }
-          }
-
-          // QR 코드 파일 삭제
-          if (appraisal.qrcode_url) {
-            const qrPath = path.join(
-              __dirname,
-              "../../public",
-              appraisal.qrcode_url
-            );
-            if (fs.existsSync(qrPath)) {
-              fs.unlinkSync(qrPath);
-            }
-          }
-        } catch (fileError) {
-          console.error("파일 삭제 중 오류:", fileError);
-          // 파일 삭제 실패는 로그만 남기고 계속 진행
-        }
-      });
-
       // 트랜잭션 커밋
       await conn.commit();
 
-      res.json({
-        success: true,
-        message: "감정 정보가 성공적으로 삭제되었습니다.",
-        deleted_appraisal: {
-          id: appraisal_id,
-          certificate_number: appraisal.certificate_number,
-          brand: appraisal.brand,
-          model_name: appraisal.model_name,
-          credit_restored:
-            appraisal.credit_deducted &&
-            appraisal.appraisal_type === "quicklink",
-          related_restorations_deleted: restorationRequests.length,
-        },
+      // 7. 관련 파일 삭제 (비동기로 처리하여 응답 속도 개선)
+      setImmediate(() => {
+        filesToDelete.forEach((filePath) => {
+          try {
+            if (fs.existsSync(filePath)) {
+              fs.unlinkSync(filePath);
+            }
+          } catch (fileError) {
+            console.error(`파일 삭제 중 오류 (${filePath}):`, fileError);
+            // 파일 삭제 실패는 로그만 남기고 계속 진행
+          }
+        });
       });
+
+      // 응답 구성
+      const responseMessage =
+        ids.length === 1
+          ? "감정 정보가 성공적으로 삭제되었습니다."
+          : `${deletedCount}개의 감정 정보가 성공적으로 삭제되었습니다.`;
+
+      const response = {
+        success: true,
+        message: responseMessage,
+        summary: {
+          requested_count: ids.length,
+          deleted_count: deletedCount,
+          credit_restored_count: creditRestoredCount,
+          related_restorations_deleted: relatedRestorationsDeleted,
+          files_scheduled_for_deletion: filesToDelete.length,
+        },
+        deleted_appraisals: deletedAppraisals,
+      };
+
+      // 찾지 못한 ID가 있는 경우 추가 정보 제공
+      if (notFoundIds.length > 0) {
+        response.not_found_ids = notFoundIds;
+        response.message += ` (${notFoundIds.length}개 ID를 찾을 수 없어 건너뛰었습니다.)`;
+      }
+
+      res.json(response);
     } catch (error) {
       // 트랜잭션 롤백
       await conn.rollback();

@@ -5,6 +5,7 @@ let currentAppraisalPage = 1;
 let appraisalSearchQuery = "";
 let appraisalStatusFilter = "all";
 let appraisalResultFilter = "all";
+let bulkDeleteMode = false;
 
 // 페이지 로드 시 이벤트 리스너 설정
 document.addEventListener("DOMContentLoaded", function () {
@@ -65,6 +66,22 @@ document.addEventListener("DOMContentLoaded", function () {
       e.preventDefault();
       submitCreateAppraisal();
     });
+
+  document
+    .getElementById("bulk-delete-btn")
+    .addEventListener("click", toggleBulkDeleteMode);
+  document
+    .getElementById("execute-bulk-delete-btn")
+    .addEventListener("click", executeBulkDelete);
+  document
+    .getElementById("select-all-checkbox")
+    .addEventListener("change", toggleSelectAll);
+  document
+    .getElementById("appraisals-list")
+    .addEventListener("change", function (e) {
+      if (e.target.classList.contains("bulk-select-checkbox"))
+        updateBulkDeleteButton();
+    });
 });
 
 // 감정 목록 로드 함수
@@ -112,7 +129,7 @@ function loadAppraisalList() {
     });
 }
 
-// 기존 displayAppraisalList 함수에서 삭제 버튼만 추가
+// displayAppraisalList 함수 수정 (목록에서 삭제 버튼 제거)
 function displayAppraisalList(appraisals, pagination) {
   const tableBody = document.getElementById("appraisals-list");
 
@@ -128,7 +145,14 @@ function displayAppraisalList(appraisals, pagination) {
   let html = "";
   appraisals.forEach((appraisal) => {
     html += `<tr>
-            <td>${appraisal.certificate_number || "미발급"}</td>
+            <td>
+                ${
+                  bulkDeleteMode
+                    ? `<input type="checkbox" class="bulk-select-checkbox" value="${appraisal.id}" style="margin-right: 8px;">`
+                    : ""
+                }
+                ${appraisal.certificate_number || "미발급"}
+            </td>
             <td>${
               appraisal.appraisal_type === "quicklink" ? "퀵링크" : "오프라인"
             }</td>
@@ -141,11 +165,6 @@ function displayAppraisalList(appraisals, pagination) {
                 <button class="btn btn-outline" onclick="viewAppraisalDetail('${
                   appraisal.id
                 }')">상세/수정</button>
-                <button class="btn" style="background-color: #dc2626; margin-left: 5px;" onclick="deleteAppraisal('${
-                  appraisal.id
-                }', '${appraisal.certificate_number || "미발급"}', '${
-      appraisal.brand
-    }', '${appraisal.model_name}')">삭제</button>
             </td>
         </tr>`;
   });
@@ -172,8 +191,10 @@ function deleteAppraisal(appraisalId, certificateNumber, brand, modelName) {
     )
   ) {
     // API 호출
-    fetch(`/api/appr/admin/appraisals/${appraisalId}`, {
+    fetch("/api/appr/admin/appraisals", {
       method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: [appraisalId] }),
     })
       .then((response) => {
         if (!response.ok) {
@@ -199,9 +220,7 @@ function deleteAppraisal(appraisalId, certificateNumber, brand, modelName) {
           throw new Error(data.message || "감정 삭제에 실패했습니다.");
         }
       })
-      .catch((error) => {
-        showAlert(error.message, "error");
-      });
+      .catch((error) => showAlert(error.message, "error"));
   }
 }
 
@@ -1112,4 +1131,80 @@ function submitCreateAppraisal() {
     .catch((error) => {
       showAlert(error.message, "error");
     });
+}
+
+// 다중 삭제 모드 토글 함수
+function toggleBulkDeleteMode() {
+  bulkDeleteMode = !bulkDeleteMode;
+  const button = document.getElementById("bulk-delete-btn");
+  button.textContent = bulkDeleteMode ? "다중 삭제 취소" : "다중 삭제";
+  button.style.backgroundColor = bulkDeleteMode ? "#dc2626" : "#1a2a3a";
+  document.getElementById("select-all-container").style.display = bulkDeleteMode
+    ? "block"
+    : "none";
+  loadAppraisalList();
+}
+
+// 전체 선택 토글 함수
+function toggleSelectAll() {
+  const selectAllCheckbox = document.getElementById("select-all-checkbox");
+  const itemCheckboxes = document.querySelectorAll(".bulk-select-checkbox");
+  itemCheckboxes.forEach(
+    (checkbox) => (checkbox.checked = selectAllCheckbox.checked)
+  );
+  updateBulkDeleteButton();
+}
+
+// 다중 삭제 버튼 업데이트 함수
+function updateBulkDeleteButton() {
+  const selectedItems = document.querySelectorAll(
+    ".bulk-select-checkbox:checked"
+  );
+  const executeButton = document.getElementById("execute-bulk-delete-btn");
+  executeButton.style.display =
+    selectedItems.length > 0 ? "inline-block" : "none";
+  executeButton.textContent = `${selectedItems.length}개 선택된 항목 삭제`;
+}
+
+// 다중 삭제 실행 함수
+function executeBulkDelete() {
+  const selectedCheckboxes = document.querySelectorAll(
+    ".bulk-select-checkbox:checked"
+  );
+  const selectedIds = Array.from(selectedCheckboxes).map(
+    (checkbox) => checkbox.value
+  );
+  if (selectedIds.length === 0) {
+    showAlert("삭제할 감정을 선택해주세요.", "error");
+    return;
+  }
+  if (
+    confirm(
+      `정말로 선택된 ${selectedIds.length}개의 감정을 삭제하시겠습니까?\n\n삭제된 데이터는 복구할 수 없습니다.`
+    )
+  ) {
+    fetch("/api/appr/admin/appraisals", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: selectedIds }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          return response.json().then((data) => {
+            throw new Error(data.message || "감정 삭제에 실패했습니다.");
+          });
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (data.success) {
+          showAlert(data.message, "success");
+          toggleBulkDeleteMode();
+          loadAppraisalList();
+        } else {
+          throw new Error(data.message || "감정 삭제에 실패했습니다.");
+        }
+      })
+      .catch((error) => showAlert(error.message, "error"));
+  }
 }

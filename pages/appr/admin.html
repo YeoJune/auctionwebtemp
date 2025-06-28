@@ -411,6 +411,22 @@
                   <option value="pending">감정대기</option>
                 </select>
                 <button id="create-appraisal-btn" class="btn">감정 생성</button>
+                <button
+                  id="bulk-delete-btn"
+                  class="btn"
+                  style="margin-left: 10px">
+                  다중 삭제
+                </button>
+                <button
+                  id="execute-bulk-delete-btn"
+                  class="btn"
+                  style="
+                    margin-left: 10px;
+                    background-color: #dc2626;
+                    display: none;
+                  ">
+                  삭제 실행
+                </button>
               </div>
             </div>
             <div class="search-bar">
@@ -419,6 +435,26 @@
                 id="appraisal-search"
                 placeholder="인증서번호, 브랜드, 모델명, 이메일 검색" />
               <button id="appraisal-search-btn">검색</button>
+            </div>
+            <div
+              id="select-all-container"
+              style="
+                display: none;
+                margin-bottom: 15px;
+                padding: 10px;
+                background-color: #f8fafc;
+                border-radius: 6px;
+              ">
+              <label style="font-weight: 500">
+                <input
+                  type="checkbox"
+                  id="select-all-checkbox"
+                  style="margin-right: 8px" />
+                전체 선택
+              </label>
+              <span style="margin-left: 15px; color: #666; font-size: 0.9rem">
+                선택 후 우측 상단의 "삭제 실행" 버튼을 클릭하세요.
+              </span>
             </div>
             <div id="appraisals-table-container">
               <table id="appraisals-table">
