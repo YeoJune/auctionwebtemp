@@ -585,6 +585,10 @@ window.BidManager = (function () {
    * @returns {string} 입찰 입력 UI HTML
    */
   function getBidInputHTML(bidInfo, item, bidType) {
+    // 마감 여부 확인
+    const timer = getRemainingTime(item.scheduled_date);
+    const isExpired = !timer;
+
     // 최종 입찰가가 있으면 입력 UI를 표시하지 않음
     if (bidType === "live" && bidInfo?.final_price) {
       return "";
@@ -598,39 +602,45 @@ window.BidManager = (function () {
     }
 
     return `
-        <div class="bid-input-container">
-          ${
-            bidInputLabel
-              ? `<div class="bid-input-label">${bidInputLabel}</div>`
-              : ""
-          }
-          <div class="bid-input-group">
-            <input type="number" class="bid-input" data-item-id="${
-              item.item_id
-            }" data-bid-type="${bidType}">
-            <span class="bid-value-display">000</span>
-            <span class="bid-currency">￥</span>
-            <button class="bid-button" onclick="event.stopPropagation(); BidManager.handle${
-              bidType === "live" ? "Live" : "Direct"
-            }BidSubmit(this.parentElement.querySelector('.bid-input').value, '${
-      item.item_id
-    }')">입찰</button>
-          </div>
-          <div class="price-details-container"></div>
-          </div>
-          <div class="quick-bid-buttons">
-            <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${
-              item.item_id
-            }', 1, '${bidType}')">+1,000￥</button>
-            <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${
-              item.item_id
-            }', 5, '${bidType}')">+5,000￥</button>
-            <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${
-              item.item_id
-            }', 10, '${bidType}')">+10,000￥</button>
-          </div>
+      <div class="bid-input-container">
+        ${
+          bidInputLabel
+            ? `<div class="bid-input-label">${bidInputLabel}</div>`
+            : ""
+        }
+        <div class="bid-input-group">
+          <input type="number" class="bid-input" data-item-id="${
+            item.item_id
+          }" data-bid-type="${bidType}">
+          <span class="bid-value-display">000</span>
+          <span class="bid-currency">￥</span>
+          <button class="bid-button" ${
+            isExpired ? "disabled" : ""
+          } onclick="event.stopPropagation(); ${
+      isExpired
+        ? ""
+        : `BidManager.handle${
+            bidType === "live" ? "Live" : "Direct"
+          }BidSubmit(this.parentElement.querySelector('.bid-input').value, '${
+            item.item_id
+          }')`
+    }">${isExpired ? "마감됨" : "입찰"}</button>
         </div>
-      `;
+        <div class="price-details-container"></div>
+        </div>
+        <div class="quick-bid-buttons">
+          <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${
+            item.item_id
+          }', 1, '${bidType}')">+1,000￥</button>
+          <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${
+            item.item_id
+          }', 5, '${bidType}')">+5,000￥</button>
+          <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${
+            item.item_id
+          }', 10, '${bidType}')">+10,000￥</button>
+        </div>
+      </div>
+    `;
   }
 
   /**
