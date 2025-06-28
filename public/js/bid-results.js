@@ -272,6 +272,11 @@ function groupResultsByDate() {
     }
   });
 
+  groupedByDate[dateStr].totalItemCount =
+    groupedByDate[dateStr].successItems.length +
+    groupedByDate[dateStr].failedItems.length +
+    groupedByDate[dateStr].pendingItems.length;
+
   // 객체를 배열로 변환
   state.dailyResults = Object.values(groupedByDate);
 
@@ -290,6 +295,7 @@ function groupResultsByDate() {
 function updateTotalStats() {
   state.totalStats = {
     itemCount: 0,
+    totalItemCount: 0,
     japaneseAmount: 0,
     koreanAmount: 0,
     feeAmount: 0,
@@ -299,6 +305,7 @@ function updateTotalStats() {
 
   state.dailyResults.forEach((day) => {
     state.totalStats.itemCount += Number(day.itemCount);
+    state.totalStats.totalItemCount += Number(day.totalItemCount || 0);
     state.totalStats.japaneseAmount += Number(day.totalJapanesePrice);
     state.totalStats.koreanAmount += Number(day.totalKoreanPrice);
     state.totalStats.feeAmount += Number(day.feeAmount);
@@ -307,9 +314,9 @@ function updateTotalStats() {
   });
 
   // UI 업데이트
-  document.getElementById("totalItemCount").textContent = formatNumber(
+  document.getElementById("totalItemCount").textContent = `${formatNumber(
     state.totalStats.itemCount
-  );
+  )}/${formatNumber(state.totalStats.totalItemCount)}`;
   document.getElementById("totalJapaneseAmount").textContent =
     formatNumber(state.totalStats.japaneseAmount) + " ¥";
   document.getElementById("totalKoreanAmount").textContent =
@@ -497,7 +504,9 @@ function createDailyResultRow(dayResult) {
   summary.innerHTML = `
     <div class="summary-item">
       <span class="summary-label">상품 수:</span>
-      <span class="summary-value">${formatNumber(dayResult.itemCount)}개</span>
+      <span class="summary-value">${formatNumber(
+        dayResult.itemCount
+      )}/${formatNumber(dayResult.totalItemCount || 0)}개</span>
     </div>
     <div class="summary-item">
       <span class="summary-label">총액 (¥):</span>
@@ -631,7 +640,7 @@ function createItemRow(item, status) {
   if (status === "success") {
     koreanCell.textContent = `${formatNumber(item.koreanPrice)} ₩`;
   } else if (status === "failed") {
-    koreanCell.textContent = `${formatNumber(item.koreanPrice)} ₩ (미결제)`;
+    koreanCell.textContent = `${formatNumber(item.koreanPrice)} ₩`;
   } else {
     koreanCell.textContent = "-";
   }
