@@ -218,15 +218,6 @@ function handleBannerFormSubmit() {
       const bannerId = document.getElementById("banner-id").value;
       const isEdit = !!bannerId;
 
-      // 필수 필드 검증 - 설명만 필수로 변경
-      const description = document
-        .getElementById("banner-description")
-        .value.trim();
-      if (!description) {
-        showError("설명은 필수 입력 항목입니다.");
-        return;
-      }
-
       // 폼 데이터 수집
       const formData = new FormData();
       formData.append(

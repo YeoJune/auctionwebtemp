@@ -299,14 +299,6 @@ router.post(
         is_active,
       } = req.body;
 
-      // 필수 필드 검증 - 설명만 필수로 변경
-      if (!description || !description.trim()) {
-        return res.status(400).json({
-          success: false,
-          message: "설명은 필수 입력 항목입니다.",
-        });
-      }
-
       let banner_image = null;
       if (req.file) {
         banner_image = `/images/banners/${req.file.filename}`;
