@@ -72,14 +72,6 @@ function invalidateCache(type, subType = null) {
   }
 }
 
-function formatDate(dateString) {
-  const date = new Date(dateString);
-  const kstDate = new Date(
-    date.toLocaleString("en-US", { timeZone: "Asia/Seoul" })
-  );
-  return kstDate.toISOString().split("T")[0];
-}
-
 router.get("/", async (req, res) => {
   const {
     page = 1,
@@ -166,11 +158,8 @@ router.get("/", async (req, res) => {
       if (dateList.length > 0) {
         const dateConds = [];
         dateList.forEach((date) => {
-          const kstDate = formatDate(date);
-          dateConds.push(
-            `DATE(CONVERT_TZ(scheduled_date, '+00:00', '+09:00')) = ?`
-          );
-          queryParams.push(kstDate);
+          dateConds.push(`DATE(DATE_ADD(scheduled_date, INTERVAL 9 HOUR)) = ?`);
+          queryParams.push(date);
         });
         if (dateConds.length > 0) {
           conditions.push(`(${dateConds.join(" OR ")})`);
@@ -292,9 +281,9 @@ router.get("/scheduled-dates-with-count", async (req, res) => {
     }
 
     const [results] = await pool.query(`
-      SELECT DATE(CONVERT_TZ(scheduled_date, '+00:00', '+09:00')) as Date, COUNT(*) as count
+      SELECT DATE(DATE_ADD(scheduled_date, INTERVAL 9 HOUR)) as Date, COUNT(*) as count
       FROM values_items
-      GROUP BY DATE(CONVERT_TZ(scheduled_date, '+00:00', '+09:00'))
+      GROUP BY DATE(DATE_ADD(scheduled_date, INTERVAL 9 HOUR))
       ORDER BY Date ASC
     `);
 

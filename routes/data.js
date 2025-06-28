@@ -93,14 +93,6 @@ function invalidateCache(type, subType = null) {
   }
 }
 
-function formatDate(dateString) {
-  const date = new Date(dateString);
-  const kstDate = new Date(
-    date.toLocaleString("en-US", { timeZone: "Asia/Seoul" })
-  );
-  return kstDate.toISOString().split("T")[0];
-}
-
 async function getEnabledFilters(filterType) {
   const cacheMapping = {
     brand: cache.filters.enabled.brands,
@@ -156,7 +148,7 @@ async function buildBaseFilterConditions() {
 
   if (enabledDates.length > 0) {
     conditions.push(
-      `DATE(CONVERT_TZ(ci.scheduled_date, '+00:00', '+09:00')) IN (${enabledDates
+      `DATE(DATE_ADD(ci.scheduled_date, INTERVAL 9 HOUR)) IN (${enabledDates
         .map(() => "?")
         .join(",")})`
     );
@@ -320,7 +312,7 @@ router.get("/", async (req, res) => {
 
     if (enabledDates.length > 0) {
       conditions.push(
-        `DATE(CONVERT_TZ(ci.scheduled_date, '+00:00', '+09:00')) IN (${enabledDates
+        `DATE(DATE_ADD(ci.scheduled_date, INTERVAL 9 HOUR)) IN (${enabledDates
           .map(() => "?")
           .join(",")})`
       );
@@ -357,19 +349,14 @@ router.get("/", async (req, res) => {
           if (date == "null") {
             dateConds.push("ci.scheduled_date IS NULL");
           } else {
-            const kstDate = formatDate(date);
-            if (enabledDates.includes(kstDate)) {
-              dateConds.push(
-                `DATE(CONVERT_TZ(ci.scheduled_date, '+00:00', '+09:00')) = ?`
-              );
-              queryParams.push(kstDate);
-            }
+            dateConds.push(
+              `DATE(DATE_ADD(ci.scheduled_date, INTERVAL 9 HOUR)) = ?`
+            );
+            queryParams.push(date);
           }
         });
         if (dateConds.length > 0) {
           conditions.push(`(${dateConds.join(" OR ")})`);
-        } else {
-          conditions.push("1=0");
         }
       }
     }
@@ -557,10 +544,10 @@ router.get("/scheduled-dates-with-count", async (req, res) => {
     const { conditions, queryParams } = await buildBaseFilterConditions();
 
     const [results] = await pool.query(
-      `SELECT DATE(CONVERT_TZ(ci.scheduled_date, '+00:00', '+09:00')) as Date, COUNT(*) as count
+      `SELECT DATE(DATE_ADD(ci.scheduled_date, INTERVAL 9 HOUR)) as Date, COUNT(*) as count
        FROM crawled_items ci
        WHERE ${conditions.join(" AND ")}
-       GROUP BY DATE(CONVERT_TZ(ci.scheduled_date, '+00:00', '+09:00'))
+       GROUP BY DATE(DATE_ADD(ci.scheduled_date, INTERVAL 9 HOUR))
        ORDER BY Date ASC`,
       queryParams
     );
