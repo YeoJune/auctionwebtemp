@@ -15,9 +15,11 @@ window.state = {
   isAuthenticated: false, // 인증 상태
   totalStats: {
     itemCount: 0,
+    totalItemCount: 0,
     japaneseAmount: 0,
     koreanAmount: 0,
     feeAmount: 0,
+    vatAmount: 0,
     grandTotalAmount: 0,
   },
 };
@@ -61,6 +63,11 @@ function loadStateFromURL() {
     state.currentPage = parseInt(urlParams.get("page"));
   if (urlParams.has("sortBy")) state.sortBy = urlParams.get("sortBy");
   if (urlParams.has("sortOrder")) state.sortOrder = urlParams.get("sortOrder");
+
+  // 페이지 번호가 숫자가 아니거나 유효하지 않은 경우 기본값으로 설정
+  if (isNaN(state.currentPage) || state.currentPage < 1) {
+    state.currentPage = 1;
+  }
 
   // UI 요소 상태 업데이트
   updateUIFromState();
@@ -129,7 +136,7 @@ async function handleSignout() {
   }
 }
 
-// 완료된 입찰 데이터 가져오기
+// 완료된 입찰 데이터 가져오기 (서버 사이드 페이지네이션)
 async function fetchCompletedBids() {
   if (!state.isAuthenticated) {
     return;
@@ -143,49 +150,57 @@ async function fetchCompletedBids() {
     dateLimit.setDate(dateLimit.getDate() - state.dateRange);
     const fromDate = formatDate(dateLimit);
 
-    // 정렬 및 페이지네이션 파라미터
+    // 서버 사이드 페이지네이션 파라미터
     const params = {
       status: "active,final,completed,cancelled", // 모든 상태
       fromDate: fromDate,
-      sortBy: "scheduled_date", // scheduled_date로 변경
-      sortOrder: "desc",
-      limit: 0, // 모든 데이터 가져오기
+      page: state.currentPage, // 현재 페이지
+      limit: state.itemsPerPage, // 페이지당 날짜 수
+      sortBy: state.sortBy === "date" ? "scheduled_date" : state.sortBy,
+      sortOrder: state.sortOrder,
+      groupBy: "date", // 일별 그룹화 요청
     };
 
     // API 요청 URL 생성
     const queryString = API.createURLParams(params);
 
-    // 경매 타입에 관계없이 모든 데이터 가져오기
-    const [liveResults, directResults] = await Promise.all([
-      API.fetchAPI(`/live-bids?${queryString}`),
-      API.fetchAPI(`/direct-bids?${queryString}`),
-    ]);
+    // 통합된 결과 API 엔드포인트 호출 (백엔드에서 구현 필요)
+    const results = await API.fetchAPI(`/bid-results?${queryString}`);
 
-    // 결합 및 타입 정보 추가
-    const liveBids = liveResults.bids || [];
-    const directBids = directResults.bids || [];
+    // 서버에서 받은 데이터 설정
+    state.dailyResults = results.dailyResults || [];
+    state.totalItems = results.total || 0;
+    state.totalPages = results.totalPages || 1;
+    state.totalStats = results.totalStats || {
+      itemCount: 0,
+      totalItemCount: 0,
+      japaneseAmount: 0,
+      koreanAmount: 0,
+      feeAmount: 0,
+      vatAmount: 0,
+      grandTotalAmount: 0,
+    };
 
-    const liveBidsWithType = liveBids
-      .filter((bid) => bid)
-      .map((bid) => ({
-        ...bid,
-        type: "live",
-      }));
+    // 페이지 번호 유효성 검사
+    if (state.totalPages === 0) {
+      state.totalPages = 1;
+    }
 
-    const directBidsWithType = directBids
-      .filter((bid) => bid)
-      .map((bid) => ({
-        ...bid,
-        type: "direct",
-      }));
+    // 현재 페이지가 총 페이지 수를 초과하면 조정
+    if (state.currentPage > state.totalPages) {
+      state.currentPage = 1;
+      // 첫 페이지의 데이터를 가져오기 위해 함수를 재귀적으로 호출
+      return await fetchCompletedBids();
+    }
 
-    state.combinedResults = [...liveBidsWithType, ...directBidsWithType];
-
-    // 일별로 그룹화
-    groupResultsByDate();
+    // 현재 페이지 데이터를 필터링된 결과로 설정
+    state.filteredResults = [...state.dailyResults];
 
     // URL 업데이트
     updateURL();
+
+    // 통계 정보 UI 업데이트
+    updateTotalStatsUI();
 
     // 결과 표시
     displayResults();
@@ -204,116 +219,8 @@ async function fetchCompletedBids() {
   }
 }
 
-// 결과를 일별로 그룹화
-function groupResultsByDate() {
-  const groupedByDate = {};
-
-  state.combinedResults.forEach((item) => {
-    const dateStr = formatDate(item.item?.scheduled_date);
-
-    if (!groupedByDate[dateStr]) {
-      groupedByDate[dateStr] = {
-        date: dateStr,
-        successItems: [], // 낙찰 성공
-        failedItems: [], // 낙찰 실패
-        pendingItems: [], // 집계중
-        itemCount: 0,
-        totalJapanesePrice: 0,
-        totalKoreanPrice: 0,
-      };
-    }
-
-    // 상품 상태 분류
-    const bidStatus = classifyBidStatus(item);
-
-    // 이미지 경로 처리
-    let imagePath = "/images/placeholder.png";
-    if (item.item && item.item.image) {
-      imagePath = item.item.image;
-    }
-
-    const itemData = {
-      ...item,
-      finalPrice: bidStatus.finalPrice,
-      winningPrice: bidStatus.winningPrice,
-      image: imagePath,
-    };
-
-    // 상태별로 분류
-    if (bidStatus.status === "success") {
-      // 낙찰 성공 - 결제 금액에 포함
-      const koreanPrice = Number(
-        calculateTotalPrice(
-          bidStatus.winningPrice,
-          item.item?.auc_num || 1,
-          item.item?.category || "기타"
-        )
-      );
-      itemData.koreanPrice = koreanPrice;
-
-      groupedByDate[dateStr].successItems.push(itemData);
-      groupedByDate[dateStr].itemCount += 1;
-      groupedByDate[dateStr].totalJapanesePrice += bidStatus.winningPrice;
-      groupedByDate[dateStr].totalKoreanPrice += koreanPrice;
-    } else if (bidStatus.status === "failed") {
-      // 낙찰 실패 - 결제 금액에 포함하지 않음
-      const koreanPrice = Number(
-        calculateTotalPrice(
-          bidStatus.winningPrice,
-          item.item?.auc_num || 1,
-          item.item?.category || "기타"
-        )
-      );
-      itemData.koreanPrice = koreanPrice;
-      groupedByDate[dateStr].failedItems.push(itemData);
-    } else {
-      // 집계중 - 결제 금액에 포함하지 않음
-      groupedByDate[dateStr].pendingItems.push(itemData);
-    }
-  });
-
-  // 객체를 배열로 변환
-  state.dailyResults = Object.values(groupedByDate);
-
-  // 각 날짜별 totalItemCount 계산 (수정된 위치)
-  state.dailyResults.forEach((day) => {
-    day.totalItemCount =
-      day.successItems.length +
-      day.failedItems.length +
-      day.pendingItems.length;
-
-    // 일별 수수료 계산 (성공한 상품만)
-    day.feeAmount = calculateFee(day.totalKoreanPrice);
-    day.vatAmount = Math.round((day.feeAmount / 1.1) * 0.1);
-    day.grandTotal = day.totalKoreanPrice + day.feeAmount;
-  });
-
-  sortDailyResults();
-  updateTotalStats();
-}
-
-// 총 통계 업데이트
-function updateTotalStats() {
-  state.totalStats = {
-    itemCount: 0,
-    totalItemCount: 0,
-    japaneseAmount: 0,
-    koreanAmount: 0,
-    feeAmount: 0,
-    vatAmount: 0,
-    grandTotalAmount: 0,
-  };
-
-  state.dailyResults.forEach((day) => {
-    state.totalStats.itemCount += Number(day.itemCount);
-    state.totalStats.totalItemCount += Number(day.totalItemCount || 0);
-    state.totalStats.japaneseAmount += Number(day.totalJapanesePrice);
-    state.totalStats.koreanAmount += Number(day.totalKoreanPrice);
-    state.totalStats.feeAmount += Number(day.feeAmount);
-    state.totalStats.vatAmount += Number(day.vatAmount);
-    state.totalStats.grandTotalAmount += Number(day.grandTotal);
-  });
-
+// 총 통계 UI 업데이트
+function updateTotalStatsUI() {
   // UI 업데이트
   document.getElementById("totalItemCount").textContent = `${formatNumber(
     state.totalStats.itemCount
@@ -328,42 +235,6 @@ function updateTotalStats() {
     formatNumber(state.totalStats.vatAmount) + " ₩";
   document.getElementById("grandTotalAmount").textContent =
     formatNumber(state.totalStats.grandTotalAmount) + " ₩";
-}
-
-// 일별 결과 정렬
-function sortDailyResults() {
-  state.dailyResults.sort((a, b) => {
-    let valueA, valueB;
-
-    // 정렬 기준에 따른 값 추출
-    switch (state.sortBy) {
-      case "date":
-        valueA = new Date(a.date);
-        valueB = new Date(b.date);
-        break;
-      case "total_price":
-        valueA = a.grandTotal;
-        valueB = b.grandTotal;
-        break;
-      case "item_count":
-        valueA = a.itemCount;
-        valueB = b.itemCount;
-        break;
-      default:
-        valueA = new Date(a.date);
-        valueB = new Date(b.date);
-        break;
-    }
-
-    // 정렬 방향 적용
-    const direction = state.sortOrder === "asc" ? 1 : -1;
-    return direction * (valueA - valueB);
-  });
-
-  // 필터링된 결과 업데이트
-  state.filteredResults = [...state.dailyResults];
-  state.totalItems = state.filteredResults.length;
-  state.totalPages = Math.ceil(state.totalItems / state.itemsPerPage);
 }
 
 // 이벤트 리스너 설정
@@ -409,12 +280,14 @@ function handleSortChange(sortKey) {
     state.sortOrder = "desc"; // 기본 내림차순 (최신순, 가격 높은순, 개수 많은순)
   }
 
+  // 첫 페이지로 돌아가기
+  state.currentPage = 1;
+
   // 정렬 버튼 UI 업데이트
   updateSortButtonsUI();
 
-  // 정렬 적용
-  sortDailyResults();
-  displayResults();
+  // 서버에서 새로운 정렬로 데이터 가져오기
+  fetchCompletedBids();
 
   // URL 업데이트
   updateURL();
@@ -466,18 +339,11 @@ function displayResults() {
     return;
   }
 
-  // 현재 페이지에 해당하는 결과만 표시
-  const startIdx = (state.currentPage - 1) * state.itemsPerPage;
-  const endIdx = Math.min(
-    startIdx + state.itemsPerPage,
-    state.filteredResults.length
-  );
-
-  for (let i = startIdx; i < endIdx; i++) {
-    const dayResult = state.filteredResults[i];
+  // 서버에서 이미 페이지네이션된 데이터를 받았으므로 모든 결과를 바로 표시
+  state.filteredResults.forEach((dayResult) => {
     const dateRow = createDailyResultRow(dayResult);
     container.appendChild(dateRow);
-  }
+  });
 }
 
 // 일별 결과 행 생성
@@ -672,11 +538,21 @@ function updatePagination() {
   createPagination(state.currentPage, state.totalPages, handlePageChange);
 }
 
-// 페이지 변경 처리
-function handlePageChange(page) {
+// 페이지 변경 처리 (서버 사이드)
+async function handlePageChange(page) {
+  page = parseInt(page, 10);
+
+  if (page === state.currentPage || page < 1 || page > state.totalPages) {
+    return;
+  }
+
+  // 상태 업데이트
   state.currentPage = page;
-  displayResults();
-  updateURL();
+
+  // 서버에서 새 페이지의 데이터 가져오기
+  await fetchCompletedBids();
+
+  // 페이지 상단으로 스크롤
   window.scrollTo(0, 0);
 }
 
@@ -697,7 +573,7 @@ function toggleLoading(show) {
   }
 }
 
-// 상품 상태 분류 함수
+// 상품 상태 분류 함수 (서버에서 이미 분류된 상태로 받지만 클라이언트 예비용)
 function classifyBidStatus(item) {
   const finalPrice =
     item.type === "direct"
