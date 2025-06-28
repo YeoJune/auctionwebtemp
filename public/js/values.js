@@ -46,7 +46,6 @@ function displayData(data) {
   });
 }
 
-// 제품 카드 생성
 function createProductCard(item) {
   const card = createElement("div", "product-card");
   card.dataset.itemId = item.item_id;
@@ -101,165 +100,125 @@ function createProductCard(item) {
         )} ¥</div>
       </div>
     </div>
+    ${priceDisplay}
   `;
 
+  // 카드 클릭 이벤트 (수정 버튼 제외)
   card.addEventListener("click", (event) => {
     if (!event.target.closest(".edit-price-icon")) {
       showDetails(item.item_id);
     }
   });
 
+  // 관리자인 경우 가격 수정 이벤트 직접 추가
+  if (state.isAdmin) {
+    const editIcon = card.querySelector(".edit-price-icon");
+    if (editIcon) {
+      editIcon.addEventListener("click", (e) => {
+        e.stopPropagation();
+        handlePriceEdit(item.item_id, editIcon.closest(".price-value"));
+      });
+    }
+  }
+
   return card;
 }
 
-// 가격 수정 설정 (관리자 기능)
-function setupPriceEditing() {
-  if (!state.isAdmin) return;
+// 가격 수정 설정 (관리자 기능
+async function handlePriceEdit(itemId, priceSpan) {
+  const currentPrice = priceSpan.textContent.trim().replace(/[^0-9]/g, "");
+  const originalContent = priceSpan.innerHTML;
 
-  document.getElementById("dataBody").addEventListener("click", async (e) => {
-    const editIcon = e.target.closest(".edit-price-icon");
-    if (!editIcon) return;
+  // 인라인 수정 UI로 변경
+  priceSpan.innerHTML = `
+    <input type="number" class="price-input" value="${currentPrice}" style="width: 80px; margin-right: 5px;" />
+    <button class="save-price" style="padding: 3px 8px; margin-right: 5px;">저장</button>
+    <button class="cancel-price" style="padding: 3px 8px; background-color: #f0f0f0; color: #333;">취소</button>
+  `;
+
+  const input = priceSpan.querySelector(".price-input");
+  const saveBtn = priceSpan.querySelector(".save-price");
+  const cancelBtn = priceSpan.querySelector(".cancel-price");
+
+  input.focus();
+
+  // 저장 버튼 이벤트
+  saveBtn.onclick = async (e) => {
     e.stopPropagation();
+    const newPrice = input.value;
 
-    const priceSpan = editIcon.closest(".price-value");
-    const currentPrice = priceSpan.textContent.trim().replace(/[^0-9]/g, "");
-    const itemId = priceSpan.dataset.itemId;
+    if (!newPrice || isNaN(newPrice)) {
+      alert("올바른 가격을 입력해주세요.");
+      return;
+    }
 
-    // 인라인 수정 UI로 변경
-    const originalContent = priceSpan.innerHTML;
-    priceSpan.innerHTML = `
-      <input type="number" class="price-input" value="${currentPrice}" style="width: 80px; margin-right: 5px;" />
-      <button class="save-price" style="padding: 3px 8px; margin-right: 5px;">저장</button>
-      <button class="cancel-price" style="padding: 3px 8px; background-color: #f0f0f0; color: #333;">취소</button>
-    `;
-
-    const input = priceSpan.querySelector(".price-input");
-    input.focus();
-
-    // 저장 버튼 이벤트
-    priceSpan.querySelector(".save-price").onclick = async (e) => {
-      e.stopPropagation();
-      const newPrice = input.value;
-      try {
-        const response = await API.fetchAPI(`/admin/values/${itemId}/price`, {
-          method: "PUT",
-          body: JSON.stringify({ final_price: newPrice }),
-        });
-
-        if (response) {
-          priceSpan.innerHTML = `${formatNumber(
-            parseInt(newPrice)
-          )} ¥ <button class="edit-price-icon"><i class="fas fa-edit"></i></button>`;
-
-          // 카드의 가격 정보도 업데이트
-          const infoValue = priceSpan
-            .closest(".product-card")
-            .querySelector(".info-cell:nth-child(3) .info-value");
-          if (infoValue) {
-            infoValue.textContent = `${formatNumber(parseInt(newPrice))} ¥`;
-          }
-        }
-      } catch (error) {
-        console.error("Error updating price:", error);
-        priceSpan.innerHTML = originalContent;
-      }
-    };
-
-    // 취소 버튼 이벤트
-    priceSpan.querySelector(".cancel-price").onclick = (e) => {
-      e.stopPropagation();
-      priceSpan.innerHTML = originalContent;
-    };
-  });
-}
-
-// 브랜드 필터 표시 (체크박스 방식)
-function displayBrandFilters(brands) {
-  const brandCheckboxes = document.getElementById("brandCheckboxes");
-  if (!brandCheckboxes) return;
-
-  // 기존 옵션 제거 (전체 선택 제외)
-  const allCheckbox = brandCheckboxes.querySelector(".multiselect-all");
-  brandCheckboxes.innerHTML = "";
-  if (allCheckbox) brandCheckboxes.appendChild(allCheckbox);
-
-  // 전체 선택 체크박스 이벤트 설정
-  const brandAllCheckbox = document.getElementById("brand-all");
-  if (brandAllCheckbox) {
-    brandAllCheckbox.addEventListener("change", function () {
-      const checkboxes = brandCheckboxes.querySelectorAll(
-        "input[type='checkbox']:not(#brand-all)"
-      );
-      checkboxes.forEach((checkbox) => {
-        checkbox.checked = this.checked;
-
-        // 체크 상태에 따라 selectedBrands 배열 업데이트
-        const brandValue = checkbox.value;
-        const index = window.state.selectedBrands.indexOf(brandValue);
-
-        if (this.checked && index === -1) {
-          window.state.selectedBrands.push(brandValue);
-        } else if (!this.checked && index !== -1) {
-          window.state.selectedBrands.splice(index, 1);
-        }
+    try {
+      const response = await API.fetchAPI(`/admin/values/${itemId}/price`, {
+        method: "PUT",
+        body: JSON.stringify({ final_price: newPrice }),
       });
 
-      // 선택된 항목 수 업데이트
-      updateSelectedCount("brand");
-    });
-  }
+      if (response) {
+        // 성공 시 UI 업데이트
+        priceSpan.innerHTML = `${formatNumber(
+          parseInt(newPrice)
+        )} ¥ <button class="edit-price-icon"><i class="fas fa-edit"></i></button>`;
 
-  // 새 체크박스 추가
-  brands.forEach((brand) => {
-    if (!brand.brand) return; // 빈 브랜드명 제외
-
-    const item = createElement("div", "filter-item");
-
-    const checkbox = createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.id = `brand-${brand.brand.replace(/\s+/g, "-")}`;
-    checkbox.value = brand.brand;
-
-    // 이미 선택된 브랜드면 체크
-    if (window.state.selectedBrands.includes(brand.brand)) {
-      checkbox.checked = true;
-    }
-
-    checkbox.addEventListener("change", function () {
-      if (this.checked) {
-        window.state.selectedBrands.push(this.value);
-      } else {
-        const index = window.state.selectedBrands.indexOf(this.value);
-        if (index > -1) {
-          window.state.selectedBrands.splice(index, 1);
+        // 카드의 가격 정보도 업데이트
+        const card = priceSpan.closest(".product-card");
+        const infoValue = card.querySelector(
+          ".info-cell:nth-child(3) .info-value"
+        );
+        if (infoValue) {
+          infoValue.textContent = `${formatNumber(parseInt(newPrice))} ¥`;
         }
+
+        // 새로운 수정 버튼에 이벤트 리스너 다시 추가
+        const newEditIcon = priceSpan.querySelector(".edit-price-icon");
+        if (newEditIcon) {
+          newEditIcon.addEventListener("click", (e) => {
+            e.stopPropagation();
+            handlePriceEdit(itemId, priceSpan);
+          });
+        }
+
+        alert("가격이 성공적으로 수정되었습니다.");
       }
-
-      // "전체 선택" 체크박스 상태 업데이트
-      updateAllCheckbox("brand");
-      // 선택된 항목 수 업데이트
-      updateSelectedCount("brand");
-    });
-
-    const label = createElement("label");
-    label.htmlFor = checkbox.id;
-    label.textContent = brand.brand;
-
-    if (brand.count) {
-      const countSpan = createElement("span", "item-count");
-      countSpan.textContent = ` (${brand.count})`;
-      label.appendChild(countSpan);
+    } catch (error) {
+      console.error("Error updating price:", error);
+      priceSpan.innerHTML = originalContent;
+      alert("가격 수정 중 오류가 발생했습니다.");
     }
+  };
 
-    item.appendChild(checkbox);
-    item.appendChild(label);
-    brandCheckboxes.appendChild(item);
+  // 취소 버튼 이벤트
+  cancelBtn.onclick = (e) => {
+    e.stopPropagation();
+    priceSpan.innerHTML = originalContent;
+
+    // 원래 수정 버튼에 이벤트 리스너 다시 추가
+    const editIcon = priceSpan.querySelector(".edit-price-icon");
+    if (editIcon) {
+      editIcon.addEventListener("click", (e) => {
+        e.stopPropagation();
+        handlePriceEdit(itemId, priceSpan);
+      });
+    }
+  };
+
+  // Enter 키로 저장
+  input.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
+      saveBtn.click();
+    }
   });
 
-  // 선택된 항목 수 업데이트
-  updateSelectedCount("brand");
-  // 검색 기능 설정
-  setupFilterSearch("brandSearchInput", "brandCheckboxes");
+  // ESC 키로 취소
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      cancelBtn.click();
+    }
+  });
 }
 
 // 카테고리 필터 표시 (체크박스 방식)
@@ -964,11 +923,6 @@ async function initialize() {
 
     // 모바일 필터 설정
     setupMobileFilters();
-
-    // 관리자인 경우 가격 수정 기능 설정
-    if (state.isAdmin) {
-      setupPriceEditing();
-    }
 
     // 초기 데이터 로드
     await fetchData();
