@@ -108,9 +108,9 @@ function calculateLocalFee(price, auctionId, category) {
 function calculateCustomsDuty(amountKRW, category) {
   if (!amountKRW || !category) return 0;
 
-  // 의류/신발: 23% 관세
+  // 의류/신발: 13% 관세
   if (["의류", "신발"].includes(category)) {
-    return Math.round(amountKRW * 0.23);
+    return Math.round(amountKRW * 0.13);
   }
 
   // 그 외 카테고리 (가방/악세서리/소품/귀금속/시계 등)
