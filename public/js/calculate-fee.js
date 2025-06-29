@@ -118,19 +118,32 @@ function calculateCustomsDuty(amountKRW, category) {
     // 200만원 이하: 8% 관세
     return Math.round(amountKRW * 0.08);
   } else if (amountKRW < 1000000000) {
-    // 200만원 초과 10억 미만에 대한 복합 관세 계산
+    // 200만원 초과 10억 미만에 대한 복합 관세 계산 (부가세 제외)
     const baseCustoms = amountKRW * 0.08; // 기본 관세 8%
     const amount = amountKRW; // 원금
     const excess = (baseCustoms + amount - 2000000) * 0.2; // 200만원 초과분에 대한 20%
     const superExcess = excess * 0.3; // 추가세에 대한 30%
 
-    // (기본관세 + 원금 + 추가세 + 할증) * 1.1 - 원금
-    return Math.round(
-      (baseCustoms + amount + excess + superExcess) * 1.1 - amount
-    );
+    // 복합관세 = 기본관세 + 추가세 + 할증 (부가세 제외)
+    return Math.round(baseCustoms + excess + superExcess);
   }
 
   return 0; // 10억 이상
+}
+
+/**
+ * 부가세 계산 함수
+ * @param {number} amountKRW - 원화 금액 (과세가격)
+ * @param {number} customsDuty - 관세
+ * @param {string} category - 상품 카테고리
+ * @returns {number} 계산된 부가세
+ */
+function calculateVAT(amountKRW, customsDuty, category) {
+  if (!amountKRW || !category) return 0;
+
+  // 모든 구간에서 일관성 있게 부가세 10% 적용
+  // 부가세 = (과세가격 + 관세) × 10%
+  return Math.round((amountKRW + customsDuty) * 0.1);
 }
 
 /**
@@ -149,11 +162,14 @@ function calculateTotalPrice(price, auctionId, category) {
   // 2. 원화 환산 (현지가격 + 현지수수료)
   const totalAmountKRW = (price + localFee) * EXCHANGE_RATE;
 
-  // 3. 관세 계산 (부가세 제외)
+  // 3. 관세 계산
   const customsDuty = calculateCustomsDuty(totalAmountKRW, category);
 
-  // 4. 최종 금액 반환 (반올림)
-  return Math.round(totalAmountKRW + customsDuty);
+  // 4. 부가세 계산
+  const vat = calculateVAT(totalAmountKRW, customsDuty, category);
+
+  // 5. 최종 금액 반환 (원화환산 + 관세 + 부가세)
+  return Math.round(totalAmountKRW + customsDuty + vat);
 }
 
 /**
