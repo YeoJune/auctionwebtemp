@@ -89,7 +89,7 @@ router.get("/", async (req, res) => {
       b.id, b.item_id, b.user_id, b.first_price, b.second_price, b.final_price, 
       b.status, b.created_at, b.updated_at, b.winning_price, b.appr_id,
       i.item_id, i.original_title, i.auc_num, i.category, i.brand, i.rank,
-      i.starting_price, i.scheduled_date, i.image, i.original_scheduled_date, i.title,
+      i.starting_price, i.scheduled_date, i.image, i.original_scheduled_date, i.title
     FROM live_bids b
     LEFT JOIN crawled_items i ON b.item_id = i.item_id
     WHERE ${whereClause}
