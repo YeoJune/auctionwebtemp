@@ -1247,6 +1247,8 @@
                     appraisalTypeText = "퀵링크 감정";
                   } else if (appraisal.appraisal_type === "offline") {
                     appraisalTypeText = "오프라인 실물 명품 감정";
+                  } else if (appraisal.appraisal_type === "from_auction") {
+                    appraisalTypeText = "경매장 연계 감정";
                   }
                   typeSpan.textContent = appraisalTypeText;
 

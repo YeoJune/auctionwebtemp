@@ -296,6 +296,11 @@ function displayAppraisalDetail(appraisal) {
                             ? "selected"
                             : ""
                         }>오프라인</option>
+                        <option value="from_auction" ${
+                          appraisal.appraisal_type === "from_auction"
+                            ? "selected"
+                            : ""
+                        }>경매장 연계</option>
                     </select>
                 </div>
                 
@@ -646,17 +651,58 @@ function displayAppraisalDetail(appraisal) {
   container.innerHTML = html;
 }
 
-// 감정 유형에 따른 필드 표시/숨김 함수 (상세 모달용)
-function toggleAppraisalTypeFieldsInDetail(type) {
-  const quicklinkFields = document.getElementById("quicklink-fields-detail");
-  const offlineFields = document.getElementById("offline-fields-detail");
+// 감정 유형에 따른 필드 표시/숨김 함수
+function toggleAppraisalTypeFields(type) {
+  const quicklinkFields = document.getElementById("quicklink-fields");
+  const offlineFields = document.getElementById("offline-fields");
+  const auctionFields = document.getElementById("auction-fields"); // 경매장 연계 필드 추가
+  const productLinkInput = document.getElementById("create-product-link");
 
   if (type === "quicklink") {
     quicklinkFields.style.display = "block";
     offlineFields.style.display = "none";
+    auctionFields.style.display = "none";
+    productLinkInput.required = true;
   } else if (type === "offline") {
     quicklinkFields.style.display = "none";
     offlineFields.style.display = "block";
+    auctionFields.style.display = "none";
+    productLinkInput.required = false;
+  } else if (type === "from_auction") {
+    quicklinkFields.style.display = "none";
+    offlineFields.style.display = "none";
+    auctionFields.style.display = "block";
+    productLinkInput.required = false;
+  } else {
+    quicklinkFields.style.display = "none";
+    offlineFields.style.display = "none";
+    auctionFields.style.display = "none";
+    productLinkInput.required = false;
+  }
+}
+
+// 감정 유형에 따른 필드 표시/숨김 함수 (상세 모달용)
+function toggleAppraisalTypeFieldsInDetail(type) {
+  const quicklinkFields = document.getElementById("quicklink-fields-detail");
+  const offlineFields = document.getElementById("offline-fields-detail");
+  const auctionFields = document.getElementById("auction-fields-detail"); // 경매장 연계 필드 추가
+
+  if (type === "quicklink") {
+    quicklinkFields.style.display = "block";
+    offlineFields.style.display = "none";
+    auctionFields.style.display = "none";
+  } else if (type === "offline") {
+    quicklinkFields.style.display = "none";
+    offlineFields.style.display = "block";
+    auctionFields.style.display = "none";
+  } else if (type === "from_auction") {
+    quicklinkFields.style.display = "none";
+    offlineFields.style.display = "none";
+    auctionFields.style.display = "block";
+  } else {
+    quicklinkFields.style.display = "none";
+    offlineFields.style.display = "none";
+    auctionFields.style.display = "none";
   }
 }
 
@@ -823,6 +869,15 @@ function updateAppraisal() {
       };
       formData.append("delivery_info", JSON.stringify(deliveryInfo));
     }
+  } else if (appraisalType === "from_auction") {
+    formData.append(
+      "auction_house",
+      document.getElementById("appraisal-auction-house").value || ""
+    );
+    formData.append(
+      "auction_item_id",
+      document.getElementById("appraisal-auction-item-id").value || ""
+    );
   }
 
   // 감정 결과 필드들 추가
@@ -934,19 +989,28 @@ function openCreateAppraisalModal() {
 function toggleAppraisalTypeFields(type) {
   const quicklinkFields = document.getElementById("quicklink-fields");
   const offlineFields = document.getElementById("offline-fields");
+  const auctionFields = document.getElementById("auction-fields"); // 경매장 연계 필드 추가
   const productLinkInput = document.getElementById("create-product-link");
 
   if (type === "quicklink") {
     quicklinkFields.style.display = "block";
     offlineFields.style.display = "none";
+    auctionFields.style.display = "none";
     productLinkInput.required = true;
   } else if (type === "offline") {
     quicklinkFields.style.display = "none";
     offlineFields.style.display = "block";
+    auctionFields.style.display = "none";
+    productLinkInput.required = false;
+  } else if (type === "from_auction") {
+    quicklinkFields.style.display = "none";
+    offlineFields.style.display = "none";
+    auctionFields.style.display = "block";
     productLinkInput.required = false;
   } else {
     quicklinkFields.style.display = "none";
     offlineFields.style.display = "none";
+    auctionFields.style.display = "none";
     productLinkInput.required = false;
   }
 }
@@ -1032,7 +1096,6 @@ function selectUser(userId, userEmail) {
 }
 
 // 감정 생성 제출 함수
-// 감정 생성 제출 함수 - 수정된 버전
 function submitCreateAppraisal() {
   // 폼 데이터 수집
   const formData = {
@@ -1097,6 +1160,13 @@ function submitCreateAppraisal() {
         address2: deliveryAddress2,
       };
     }
+  } else if (formData.appraisal_type === "from_auction") {
+    formData.auction_house = document.getElementById(
+      "create-auction-house"
+    ).value;
+    formData.auction_item_id = document.getElementById(
+      "create-auction-item-id"
+    ).value;
   }
 
   // 유효성 검사
