@@ -597,101 +597,114 @@ router.put("/users/:id", isAuthenticated, isAdmin, async (req, res) => {
 });
 
 // 관리자 감정 생성 - POST /api/appr/admin/appraisals
-router.post("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
-  let conn;
-  try {
-    const {
-      user_id,
-      appraisal_type,
-      brand,
-      model_name,
-      category,
-      remarks,
-      product_link,
-      platform,
-      purchase_year,
-      components_included,
-      delivery_info,
-      certificate_number, // 관리자가 직접 입력할 수 있는 감정 번호
-    } = req.body;
-
-    // 필수 필드 검증
-    if (!user_id || !appraisal_type || !brand || !model_name || !category) {
-      return res.status(400).json({
-        success: false,
-        message: "필수 입력 항목이 누락되었습니다.",
-      });
-    }
-
-    conn = await pool.getConnection();
-
-    // 사용자 존재 여부 확인
-    const [userRows] = await conn.query("SELECT id FROM users WHERE id = ?", [
-      user_id,
-    ]);
-
-    if (userRows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "해당 사용자를 찾을 수 없습니다.",
-      });
-    }
-
-    // 공통 함수로 인증서 번호 생성 또는 검증
-    const finalCertificateNumber = await generateCertificateNumber(
-      conn,
-      certificate_number
-    );
-
-    // 감정 데이터 저장
-    await conn.query(
-      `INSERT INTO appraisals (
-        user_id, appraisal_type, brand, model_name, category, 
-        remarks, product_link, platform, purchase_year, 
-        components_included, delivery_info, status, result,
-        certificate_number
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
+router.post(
+  "/appraisals",
+  isAuthenticated,
+  isAdmin,
+  appraisalUpload.array("images", 20), // 이미지 업로드 추가
+  async (req, res) => {
+    let conn;
+    try {
+      const {
         user_id,
         appraisal_type,
         brand,
         model_name,
         category,
-        remarks || null,
-        product_link || null,
-        platform || null,
-        purchase_year || null,
-        components_included ? JSON.stringify(components_included) : null,
-        delivery_info ? JSON.stringify(delivery_info) : null,
-        "pending",
-        "pending",
-        finalCertificateNumber,
-      ]
-    );
+        remarks,
+        product_link,
+        platform,
+        purchase_year,
+        components_included,
+        delivery_info,
+        certificate_number,
+      } = req.body;
 
-    // 생성된 감정 정보 조회
-    const [createdAppraisal] = await conn.query(
-      `SELECT a.*, u.email as user_email, u.company_name
+      // 필수 필드 검증
+      if (!user_id || !appraisal_type || !brand || !model_name || !category) {
+        return res.status(400).json({
+          success: false,
+          message: "필수 입력 항목이 누락되었습니다.",
+        });
+      }
+
+      conn = await pool.getConnection();
+
+      // 사용자 존재 여부 확인
+      const [userRows] = await conn.query("SELECT id FROM users WHERE id = ?", [
+        user_id,
+      ]);
+
+      if (userRows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "해당 사용자를 찾을 수 없습니다.",
+        });
+      }
+
+      // 이미지 처리
+      let images = [];
+      if (req.files && req.files.length > 0) {
+        images = req.files.map((file) => `/images/appraisals/${file.filename}`);
+      }
+
+      // 공통 함수로 인증서 번호 생성 또는 검증
+      const finalCertificateNumber = await generateCertificateNumber(
+        conn,
+        certificate_number
+      );
+
+      // 감정 데이터 저장
+      await conn.query(
+        `INSERT INTO appraisals (
+        user_id, appraisal_type, brand, model_name, category, 
+        remarks, product_link, platform, purchase_year, 
+        components_included, delivery_info, status, result,
+        certificate_number, images
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          user_id,
+          appraisal_type,
+          brand,
+          model_name,
+          category,
+          remarks || null,
+          product_link || null,
+          platform || null,
+          purchase_year || null,
+          components_included ? JSON.stringify(components_included) : null,
+          delivery_info ? JSON.stringify(delivery_info) : null,
+          "pending",
+          "pending",
+          finalCertificateNumber,
+          images.length > 0 ? JSON.stringify(images) : null, // 이미지 추가
+        ]
+      );
+
+      // 생성된 감정 정보 조회
+      const [createdAppraisal] = await conn.query(
+        `SELECT a.*, u.email as user_email, u.company_name
        FROM appraisals a
        JOIN users u ON a.user_id = u.id
        WHERE a.certificate_number = ?`,
-      [finalCertificateNumber]
-    );
+        [finalCertificateNumber]
+      );
 
-    res.status(201).json({
-      success: true,
-      appraisal: createdAppraisal[0],
-    });
-  } catch (err) {
-    console.error("관리자 감정 생성 중 오류 발생:", err);
-    res.status(500).json({
-      success: false,
-      message: err.message || "감정 생성 중 서버 오류가 발생했습니다.",
-    });
-  } finally {
-    if (conn) conn.release();
+      res.status(201).json({
+        success: true,
+        appraisal: createdAppraisal[0],
+      });
+    } catch (err) {
+      console.error("관리자 감정 생성 중 오류 발생:", err);
+      res.status(500).json({
+        success: false,
+        message: err.message || "감정 생성 중 서버 오류가 발생했습니다.",
+      });
+    } finally {
+      if (conn) conn.release();
+    }
   }
-});
+);
 
 // 전체 감정 목록 조회 - GET /api/appr/admin/appraisals
 router.get("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
@@ -1180,6 +1193,80 @@ router.put(
         success: false,
         message:
           err.message || "감정 정보 업데이트 중 서버 오류가 발생했습니다.",
+      });
+    } finally {
+      if (conn) conn.release();
+    }
+  }
+);
+
+// 감정 이미지 삭제 - DELETE /api/appr/admin/appraisals/:id/images
+router.delete(
+  "/appraisals/:id/images",
+  isAuthenticated,
+  isAdmin,
+  async (req, res) => {
+    let conn;
+    try {
+      const appraisal_id = req.params.id;
+      const { image_url } = req.body;
+
+      if (!image_url) {
+        return res.status(400).json({
+          success: false,
+          message: "삭제할 이미지 URL이 필요합니다.",
+        });
+      }
+
+      conn = await pool.getConnection();
+
+      // 감정 정보 조회
+      const [appraisalRows] = await conn.query(
+        "SELECT images FROM appraisals WHERE id = ?",
+        [appraisal_id]
+      );
+
+      if (appraisalRows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "해당 감정 정보를 찾을 수 없습니다.",
+        });
+      }
+
+      const appraisal = appraisalRows[0];
+      let images = appraisal.images ? JSON.parse(appraisal.images) : [];
+
+      // 이미지 목록에서 해당 URL 제거
+      const updatedImages = images.filter((img) => img !== image_url);
+
+      // DB 업데이트
+      await conn.query("UPDATE appraisals SET images = ? WHERE id = ?", [
+        updatedImages.length > 0 ? JSON.stringify(updatedImages) : null,
+        appraisal_id,
+      ]);
+
+      // 실제 파일 삭제 (비동기로 처리)
+      setImmediate(() => {
+        try {
+          const filePath = path.join(__dirname, "../../public", image_url);
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+          }
+        } catch (fileError) {
+          console.error(`이미지 파일 삭제 중 오류 (${image_url}):`, fileError);
+        }
+      });
+
+      res.json({
+        success: true,
+        message: "이미지가 성공적으로 삭제되었습니다.",
+        remaining_images: updatedImages,
+      });
+    } catch (err) {
+      console.error("이미지 삭제 중 오류 발생:", err);
+      res.status(500).json({
+        success: false,
+        message: "이미지 삭제 중 서버 오류가 발생했습니다.",
       });
     } finally {
       if (conn) conn.release();

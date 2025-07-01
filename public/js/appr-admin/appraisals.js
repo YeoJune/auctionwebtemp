@@ -608,17 +608,22 @@ function displayAppraisalDetail(appraisal) {
             
             <div id="appraisal-images-preview" style="margin-top: 15px;">
                 <h4 style="margin-bottom: 10px; font-size: 1rem; color: #1a2a3a;">현재 업로드된 이미지</h4>
-                <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                <div id="current-images-container" style="display: flex; flex-wrap: wrap; gap: 10px;">
                 ${
                   appraisal.images && appraisal.images.length > 0
                     ? appraisal.images
                         .map(
                           (img, index) => `
-                        <div style="position: relative; width: 150px; height: 150px; margin-bottom: 10px;">
+                        <div class="image-item" data-image-url="${img}" style="position: relative; width: 150px; height: 150px; margin-bottom: 10px;">
                             <img src="${img}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px; border: 1px solid #e2e8f0;">
                             <div style="position: absolute; bottom: 5px; left: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75rem;">
                                 ${index + 1}
                             </div>
+                            <button type="button" onclick="deleteAppraisalImage('${appraisal.id}', '${img}')" 
+                                    style="position: absolute; top: 5px; right: 5px; width: 24px; height: 24px; border-radius: 50%; background: rgba(220, 38, 38, 0.9); color: white; border: none; cursor: pointer; font-size: 16px; line-height: 1; display: flex; align-items: center; justify-content: center;"
+                                    title="이미지 삭제">
+                                ×
+                            </button>
                         </div>
                     `
                         )
@@ -651,179 +656,174 @@ function displayAppraisalDetail(appraisal) {
   container.innerHTML = html;
 }
 
-// 감정 유형에 따른 필드 표시/숨김 함수 (상세 모달용)
-function toggleAppraisalTypeFieldsInDetail(type) {
-  const quicklinkFields = document.getElementById("quicklink-fields-detail");
-  const offlineFields = document.getElementById("offline-fields-detail");
-
-  if (type === "quicklink") {
-    quicklinkFields.style.display = "block";
-    offlineFields.style.display = "none";
-  } else if (type === "offline") {
-    quicklinkFields.style.display = "none";
-    offlineFields.style.display = "block";
-  } else {
-    quicklinkFields.style.display = "none";
-    offlineFields.style.display = "none";
-  }
-}
-
-// 구성품 입력 필드 추가 함수 (상세 모달용)
-function addComponentInputDetail() {
-  const newInput = document.createElement("div");
-  newInput.style.marginBottom = "10px";
-  newInput.innerHTML = `
-    <input type="text" class="form-input component-input-detail" placeholder="구성품 입력" style="margin-bottom: 5px;" />
-    <button type="button" class="btn btn-outline" onclick="removeComponentInputDetail(this)" style="margin-left: 10px; padding: 5px 10px;">삭제</button>
-  `;
-  const container = document.getElementById("components-container-detail");
-  container.appendChild(newInput);
-}
-
-// 구성품 입력 필드 삭제 함수 (상세 모달용)
-function removeComponentInputDetail(button) {
-  button.parentElement.remove();
-}
-
-// 복원 서비스 목록 로드 함수 (감정 상세 모달에서 사용)
-function loadRestorationServicesForAppraisal() {
-  // 로딩 표시
-  document.getElementById("suggested-restoration-services").innerHTML =
-    "<p>복원 서비스를 불러오는 중...</p>";
-
-  // API 호출
-  fetch("/api/appr/admin/restoration-services")
-    .then((response) => {
+// 이미지 삭제 함수 추가
+function deleteAppraisalImage(appraisalId, imageUrl) {
+  if (confirm('정말로 이 이미지를 삭제하시겠습니까?')) {
+    fetch(`/api/appr/admin/appraisals/${appraisalId}/images`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ image_url: imageUrl }),
+    })
+    .then(response => {
       if (!response.ok) {
-        throw new Error("복원 서비스 목록을 불러오는데 실패했습니다.");
+        return response.json().then(data => {
+          throw new Error(data.message || '이미지 삭제에 실패했습니다.');
+        });
       }
       return response.json();
     })
-    .then((data) => {
+    .then(data => {
       if (data.success) {
-        displayRestorationServicesCheckboxes(data.services);
+        // DOM에서 해당 이미지 요소 제거
+        const imageItem = document.querySelector(`[data-image-url="${imageUrl}"]`);
+        if (imageItem) {
+          imageItem.remove();
+        }
+        // 이미지가 모두 삭제된 경우 메시지 표시
+        const container = document.getElementById('current-images-container');
+        if (container && container.children.length === 0) {
+          container.innerHTML = "<p style='color: #666; font-style: italic;'>업로드된 이미지가 없습니다.</p>";
+        }
+        showAlert('이미지가 성공적으로 삭제되었습니다.', 'success');
       } else {
-        throw new Error(
-          data.message || "복원 서비스 목록을 불러오는데 실패했습니다."
-        );
+        throw new Error(data.message || '이미지 삭제에 실패했습니다.');
       }
     })
-    .catch((error) => {
-      document.getElementById(
-        "suggested-restoration-services"
-      ).innerHTML = `<p>오류: ${error.message}</p>`;
+    .catch(error => {
+      showAlert(error.message, 'error');
     });
+  }
 }
 
-// 복원 서비스 체크박스 표시 함수
-function displayRestorationServicesCheckboxes(services) {
-  // 활성화된 서비스만 필터링
-  const activeServices = services.filter((service) => service.is_active);
+// 감정 생성 모달 열기 (이미지 업로드 필드 추가)
+function openCreateAppraisalModal() {
+  // 폼 초기화 및 검색 결과 클리어
+  document.getElementById("create-appraisal-form").reset();
+  document.getElementById("user-search-results").innerHTML = "";
+  toggleAppraisalTypeFields("");
+  document.getElementById("components-container").innerHTML = `
+    <div style="margin-bottom: 10px;">
+      <input type="text" class="form-input component-input" placeholder="구성품 입력 (예: 본체, 더스트백, 보증서 등)" style="margin-bottom: 5px;" />
+    </div>`;
+  // 이미지 미리보기 초기화
+  const preview = document.getElementById("create-images-preview");
+  if (preview) preview.innerHTML = "";
+  openModal("create-appraisal-modal");
+}
 
-  if (activeServices.length === 0) {
-    document.getElementById("suggested-restoration-services").innerHTML =
-      "<p>사용 가능한 복원 서비스가 없습니다.</p>";
-    return;
+// 감정 생성 제출 함수 (FormData로 변경, 이미지 업로드 지원)
+function submitCreateAppraisal() {
+  const formData = new FormData();
+  formData.append('user_id', document.getElementById("create-user-id").value);
+  formData.append('appraisal_type', document.getElementById("create-appraisal-type").value);
+  formData.append('brand', document.getElementById("create-brand").value);
+  formData.append('model_name', document.getElementById("create-model-name").value);
+  formData.append('category', document.getElementById("create-category").value);
+  formData.append('remarks', document.getElementById("create-remarks").value);
+
+  const certificateNumber = document.getElementById("create-certificate-number").value;
+  if (certificateNumber) {
+    formData.append('certificate_number', certificateNumber);
   }
 
-  let html = '<div style="margin-top: 10px;">';
-
-  activeServices.forEach((service) => {
-    html += `
-      <div style="margin-bottom: 5px;">
-        <label>
-          <input type="checkbox" name="suggested-restoration-service" value="${
-            service.id
-          }">
-          ${service.name} (${service.price.toLocaleString()}원)
-        </label>
-      </div>
-    `;
-  });
-
-  html += "</div>";
-  document.getElementById("suggested-restoration-services").innerHTML = html;
-}
-
-// 감정 정보 업데이트 함수 - 기본 정보도 포함하도록 수정
-function updateAppraisal() {
-  const appraisalId = document.getElementById("appraisal-id").value;
-
-  // 폼 데이터 생성
-  const formData = new FormData();
-
-  // 기본 정보 필드들 추가
-  formData.append(
-    "certificate_number",
-    document.getElementById("appraisal-certificate-number").value || ""
-  );
-  formData.append(
-    "appraisal_type",
-    document.getElementById("appraisal-type-select").value
-  );
-  formData.append(
-    "brand",
-    document.getElementById("appraisal-brand-input").value
-  );
-  formData.append(
-    "model_name",
-    document.getElementById("appraisal-model-input").value
-  );
-  formData.append(
-    "category",
-    document.getElementById("appraisal-category-select").value
-  );
-  formData.append(
-    "remarks",
-    document.getElementById("appraisal-remarks-input").value
-  );
-
-  // 감정 유형별 필드 추가
-  const appraisalType = document.getElementById("appraisal-type-select").value;
-
+  const appraisalType = document.getElementById("create-appraisal-type").value;
   if (appraisalType === "quicklink") {
-    formData.append(
-      "product_link",
-      document.getElementById("appraisal-product-link").value || ""
-    );
-    formData.append(
-      "platform",
-      document.getElementById("appraisal-platform").value || ""
-    );
+    formData.append('product_link', document.getElementById("create-product-link").value);
+    formData.append('platform', document.getElementById("create-platform").value);
   } else if (appraisalType === "offline") {
-    const purchaseYear = document.getElementById(
-      "appraisal-purchase-year"
-    ).value;
+    const purchaseYear = document.getElementById("create-purchase-year").value;
     if (purchaseYear) {
-      formData.append("purchase_year", purchaseYear);
+      formData.append('purchase_year', purchaseYear);
     }
-
-    // 구성품 수집
-    const componentInputs = document.querySelectorAll(
-      ".component-input-detail"
-    );
+    const componentInputs = document.querySelectorAll(".component-input");
     const components = Array.from(componentInputs)
       .map((input) => input.value.trim())
       .filter((value) => value);
     if (components.length > 0) {
-      formData.append("components_included", JSON.stringify(components));
+      formData.append('components_included', JSON.stringify(components));
     }
-
-    // 배송 정보 수집
-    const deliveryName =
-      document.getElementById("appraisal-delivery-name")?.value || "";
-    const deliveryPhone =
-      document.getElementById("appraisal-delivery-phone")?.value || "";
-    const deliveryZipcode =
-      document.getElementById("appraisal-delivery-zipcode")?.value || "";
-    const deliveryAddress1 =
-      document.getElementById("appraisal-delivery-address1")?.value || "";
-    const deliveryAddress2 =
-      document.getElementById("appraisal-delivery-address2")?.value || "";
-
+    const deliveryName = document.getElementById("create-delivery-name").value;
+    const deliveryPhone = document.getElementById("create-delivery-phone").value;
+    const deliveryZipcode = document.getElementById("create-delivery-zipcode").value;
+    const deliveryAddress1 = document.getElementById("create-delivery-address1").value;
+    const deliveryAddress2 = document.getElementById("create-delivery-address2").value;
     if (deliveryName || deliveryPhone || deliveryAddress1) {
       const deliveryInfo = {
         name: deliveryName,
+        phone: deliveryPhone,
+        zipcode: deliveryZipcode,
+        address1: deliveryAddress1,
+        address2: deliveryAddress2,
+      };
+      formData.append('delivery_info', JSON.stringify(deliveryInfo));
+    }
+  }
+
+  // 이미지 파일 추가
+  const imageFiles = document.getElementById("create-appraisal-images")?.files;
+  if (imageFiles) {
+    for (let i = 0; i < imageFiles.length; i++) {
+      formData.append('images', imageFiles[i]);
+    }
+  }
+
+  if (!formData.get('user_id')) {
+    showAlert("사용자 ID를 입력해주세요.", "error");
+    return;
+  }
+  if (appraisalType === "quicklink" && !formData.get('product_link')) {
+    showAlert("퀵링크 감정에는 상품 링크가 필요합니다.", "error");
+    return;
+  }
+
+  fetch("/api/appr/admin/appraisals", {
+    method: "POST",
+    body: formData,
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.success) {
+        showAlert("감정이 성공적으로 생성되었습니다.", "success");
+        closeModal("create-appraisal-modal");
+        loadAppraisalList();
+      } else {
+        throw new Error(data.message || "감정 생성에 실패했습니다.");
+      }
+    })
+    .catch((error) => {
+      showAlert(error.message, "error");
+    });
+}
+
+// 이미지 선택 시 미리보기 표시 (감정 생성 모달)
+document.addEventListener("DOMContentLoaded", function() {
+  const imageInput = document.getElementById("create-appraisal-images");
+  const previewContainer = document.getElementById("create-images-preview");
+  if (imageInput && previewContainer) {
+    imageInput.addEventListener("change", function(e) {
+      previewContainer.innerHTML = "";
+      const files = e.target.files;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const imgDiv = document.createElement("div");
+          imgDiv.style.cssText = "position: relative; width: 100px; height: 100px; margin-bottom: 10px;";
+          imgDiv.innerHTML = `
+            <img src="${e.target.result}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px; border: 1px solid #e2e8f0;">
+            <div style="position: absolute; bottom: 2px; left: 2px; background: rgba(0,0,0,0.7); color: white; padding: 1px 4px; border-radius: 2px; font-size: 0.7rem;">
+              ${i + 1}
+            </div>
+          `;
+          previewContainer.appendChild(imgDiv);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+});
         phone: deliveryPhone,
         zipcode: deliveryZipcode,
         address1: deliveryAddress1,
