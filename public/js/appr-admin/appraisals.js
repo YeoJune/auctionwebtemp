@@ -6,6 +6,7 @@ let appraisalSearchQuery = "";
 let appraisalStatusFilter = "all";
 let appraisalResultFilter = "all";
 let bulkDeleteMode = false;
+let imagesToDelete = []; // 삭제 예정 이미지 목록 추가
 
 // 페이지 로드 시 이벤트 리스너 설정
 document.addEventListener("DOMContentLoaded", function () {
@@ -82,6 +83,41 @@ document.addEventListener("DOMContentLoaded", function () {
       if (e.target.classList.contains("bulk-select-checkbox"))
         updateBulkDeleteButton();
     });
+
+  // 이미지 선택 시 미리보기 표시를 위한 이벤트 리스너
+  setTimeout(() => {
+    const imageInput = document.getElementById("create-appraisal-images");
+    const previewContainer = document.getElementById("create-images-preview");
+
+    if (imageInput && previewContainer) {
+      imageInput.addEventListener("change", function (e) {
+        previewContainer.innerHTML = "";
+
+        const files = e.target.files;
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          const reader = new FileReader();
+
+          reader.onload = function (e) {
+            const imgDiv = document.createElement("div");
+            imgDiv.style.cssText =
+              "position: relative; width: 100px; height: 100px; margin-bottom: 10px;";
+            imgDiv.innerHTML = `
+              <img src="${
+                e.target.result
+              }" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px; border: 1px solid #e2e8f0;">
+              <div style="position: absolute; bottom: 2px; left: 2px; background: rgba(0,0,0,0.7); color: white; padding: 1px 4px; border-radius: 2px; font-size: 0.7rem;">
+                ${i + 1}
+              </div>
+            `;
+            previewContainer.appendChild(imgDiv);
+          };
+
+          reader.readAsDataURL(file);
+        }
+      });
+    }
+  }, 100);
 });
 
 // 감정 목록 로드 함수
@@ -226,6 +262,9 @@ function deleteAppraisal(appraisalId, certificateNumber, brand, modelName) {
 
 // 감정 상세 조회 함수
 function viewAppraisalDetail(appraisalId) {
+  // 삭제 예정 이미지 목록 초기화
+  imagesToDelete = [];
+
   // 모달 내용 초기화
   document.getElementById("appraisal-detail-content").innerHTML =
     '<p style="text-align: center;">감정 정보를 불러오는 중...</p>';
@@ -619,11 +658,10 @@ function displayAppraisalDetail(appraisal) {
                             <div style="position: absolute; bottom: 5px; left: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75rem;">
                                 ${index + 1}
                             </div>
-                            <button type="button" onclick="deleteAppraisalImage('${
-                              appraisal.id
-                            }', '${img}')" 
+                            <button type="button" onclick="markImageForDeletion('${img}')" 
+                                    class="image-delete-btn"
                                     style="position: absolute; top: 5px; right: 5px; width: 24px; height: 24px; border-radius: 50%; background: rgba(220, 38, 38, 0.9); color: white; border: none; cursor: pointer; font-size: 16px; line-height: 1; display: flex; align-items: center; justify-content: center;"
-                                    title="이미지 삭제">
+                                    title="삭제 예정으로 표시">
                                 ×
                             </button>
                         </div>
@@ -648,7 +686,7 @@ function displayAppraisalDetail(appraisal) {
                 </button>
             </div>
             <div>
-                <button type="button" class="btn btn-outline" onclick="closeModal('appraisal-detail-modal')">취소</button>
+                <button type="button" class="btn btn-outline" onclick="cancelAppraisalEdit()">취소</button>
                 <button type="button" class="btn" style="margin-left: 10px;" onclick="updateAppraisal()">저장</button>
             </div>
         </div>
@@ -656,6 +694,62 @@ function displayAppraisalDetail(appraisal) {
     `;
 
   container.innerHTML = html;
+}
+
+// 이미지 삭제 예정 표시 함수
+function markImageForDeletion(imageUrl) {
+  if (!imagesToDelete.includes(imageUrl)) {
+    imagesToDelete.push(imageUrl);
+  }
+
+  // 이미지 아이템을 찾아서 삭제 예정 스타일 적용
+  const imageItem = document.querySelector(`[data-image-url="${imageUrl}"]`);
+  if (imageItem) {
+    imageItem.style.opacity = "0.5";
+    imageItem.style.border = "2px solid #dc2626";
+
+    // 버튼 텍스트와 스타일 변경
+    const deleteBtn = imageItem.querySelector(".image-delete-btn");
+    if (deleteBtn) {
+      deleteBtn.style.background = "rgba(34, 197, 94, 0.9)";
+      deleteBtn.innerHTML = "↶";
+      deleteBtn.title = "삭제 취소";
+      deleteBtn.onclick = () => unmarkImageForDeletion(imageUrl);
+    }
+  }
+}
+
+// 이미지 삭제 예정 취소 함수
+function unmarkImageForDeletion(imageUrl) {
+  const index = imagesToDelete.indexOf(imageUrl);
+  if (index > -1) {
+    imagesToDelete.splice(index, 1);
+  }
+
+  // 스타일 원복
+  const imageItem = document.querySelector(`[data-image-url="${imageUrl}"]`);
+  if (imageItem) {
+    imageItem.style.opacity = "1";
+    imageItem.style.border = "1px solid #e2e8f0";
+
+    // 버튼 스타일 원복
+    const deleteBtn = imageItem.querySelector(".image-delete-btn");
+    if (deleteBtn) {
+      deleteBtn.style.background = "rgba(220, 38, 38, 0.9)";
+      deleteBtn.innerHTML = "×";
+      deleteBtn.title = "삭제 예정으로 표시";
+      deleteBtn.onclick = () => markImageForDeletion(imageUrl);
+    }
+  }
+}
+
+// 편집 취소 함수
+function cancelAppraisalEdit() {
+  // 삭제 예정 이미지 목록 초기화
+  imagesToDelete = [];
+
+  // 모달 닫기
+  closeModal("appraisal-detail-modal");
 }
 
 // 감정 유형에 따른 필드 표시/숨김 함수 (상세 모달용)
@@ -899,11 +993,25 @@ function updateAppraisal() {
   submitButton.textContent = "업데이트 중...";
   submitButton.disabled = true;
 
-  // API 호출
-  fetch(`/api/appr/admin/appraisals/${appraisalId}`, {
-    method: "PUT",
-    body: formData,
-  })
+  // 먼저 삭제 예정 이미지들을 삭제
+  Promise.all(
+    imagesToDelete.map((imageUrl) =>
+      fetch(`/api/appr/admin/appraisals/${appraisalId}/images`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ image_url: imageUrl }),
+      })
+    )
+  )
+    .then(() => {
+      // 모든 이미지 삭제가 완료된 후 감정 정보 업데이트
+      return fetch(`/api/appr/admin/appraisals/${appraisalId}`, {
+        method: "PUT",
+        body: formData,
+      });
+    })
     .then((response) => {
       if (!response.ok) {
         return response.json().then((data) => {
@@ -915,6 +1023,7 @@ function updateAppraisal() {
     .then((data) => {
       if (data.success) {
         showAlert("감정 정보가 성공적으로 업데이트되었습니다.", "success");
+        imagesToDelete = []; // 삭제 예정 목록 초기화
         closeModal("appraisal-detail-modal");
         loadAppraisalList(); // 목록 새로고침
       } else {
@@ -936,6 +1045,7 @@ function openCreateAppraisalModal() {
   // 폼 초기화 및 검색 결과 클리어
   document.getElementById("create-appraisal-form").reset();
   document.getElementById("user-search-results").innerHTML = "";
+  document.getElementById("create-images-preview").innerHTML = "";
   toggleAppraisalTypeFields("");
   // 구성품 입력 필드 초기화
   document.getElementById("components-container").innerHTML = `
@@ -1161,79 +1271,78 @@ function submitCreateAppraisal() {
     });
 }
 
-// 이미지 삭제 함수 추가
-function deleteAppraisalImage(appraisalId, imageUrl) {
-  if (confirm("정말로 이 이미지를 삭제하시겠습니까?")) {
-    fetch(`/api/appr/admin/appraisals/${appraisalId}/images`, {
+// 다중 삭제 모드 토글 함수
+function toggleBulkDeleteMode() {
+  bulkDeleteMode = !bulkDeleteMode;
+  const button = document.getElementById("bulk-delete-btn");
+  button.textContent = bulkDeleteMode ? "다중 삭제 취소" : "다중 삭제";
+  button.style.backgroundColor = bulkDeleteMode ? "#dc2626" : "#1a2a3a";
+  document.getElementById("select-all-container").style.display = bulkDeleteMode
+    ? "block"
+    : "none";
+  loadAppraisalList();
+}
+
+// 전체 선택 토글 함수
+function toggleSelectAll() {
+  const selectAllCheckbox = document.getElementById("select-all-checkbox");
+  const itemCheckboxes = document.querySelectorAll(".bulk-select-checkbox");
+  itemCheckboxes.forEach(
+    (checkbox) => (checkbox.checked = selectAllCheckbox.checked)
+  );
+  updateBulkDeleteButton();
+}
+
+// 다중 삭제 버튼 업데이트 함수
+function updateBulkDeleteButton() {
+  const selectedItems = document.querySelectorAll(
+    ".bulk-select-checkbox:checked"
+  );
+  const executeButton = document.getElementById("execute-bulk-delete-btn");
+  executeButton.style.display =
+    selectedItems.length > 0 ? "inline-block" : "none";
+  executeButton.textContent = `${selectedItems.length}개 선택된 항목 삭제`;
+}
+
+// 다중 삭제 실행 함수
+function executeBulkDelete() {
+  const selectedCheckboxes = document.querySelectorAll(
+    ".bulk-select-checkbox:checked"
+  );
+  const selectedIds = Array.from(selectedCheckboxes).map(
+    (checkbox) => checkbox.value
+  );
+  if (selectedIds.length === 0) {
+    showAlert("삭제할 감정을 선택해주세요.", "error");
+    return;
+  }
+  if (
+    confirm(
+      `정말로 선택된 ${selectedIds.length}개의 감정을 삭제하시겠습니까?\n\n삭제된 데이터는 복구할 수 없습니다.`
+    )
+  ) {
+    fetch("/api/appr/admin/appraisals", {
       method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ image_url: imageUrl }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: selectedIds }),
     })
       .then((response) => {
         if (!response.ok) {
           return response.json().then((data) => {
-            throw new Error(data.message || "이미지 삭제에 실패했습니다.");
+            throw new Error(data.message || "감정 삭제에 실패했습니다.");
           });
         }
         return response.json();
       })
       .then((data) => {
         if (data.success) {
-          const imageItem = document.querySelector(
-            `[data-image-url="${imageUrl}"]`
-          );
-          if (imageItem) {
-            imageItem.remove();
-          }
-          const container = document.getElementById("current-images-container");
-          if (container && container.children.length === 0) {
-            container.innerHTML =
-              "<p style='color: #666; font-style: italic;'>업로드된 이미지가 없습니다.</p>";
-          }
-          showAlert("이미지가 성공적으로 삭제되었습니다.", "success");
+          showAlert(data.message, "success");
+          toggleBulkDeleteMode();
+          loadAppraisalList();
         } else {
-          throw new Error(data.message || "이미지 삭제에 실패했습니다.");
+          throw new Error(data.message || "감정 삭제에 실패했습니다.");
         }
       })
-      .catch((error) => {
-        showAlert(error.message, "error");
-      });
+      .catch((error) => showAlert(error.message, "error"));
   }
 }
-
-// 이미지 선택 시 미리보기 표시
-document.addEventListener("DOMContentLoaded", function () {
-  const imageInput = document.getElementById("create-appraisal-images");
-  const previewContainer = document.getElementById("create-images-preview");
-
-  if (imageInput) {
-    imageInput.addEventListener("change", function (e) {
-      previewContainer.innerHTML = "";
-
-      const files = e.target.files;
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const reader = new FileReader();
-
-        reader.onload = function (e) {
-          const imgDiv = document.createElement("div");
-          imgDiv.style.cssText =
-            "position: relative; width: 100px; height: 100px; margin-bottom: 10px;";
-          imgDiv.innerHTML = `
-            <img src="${
-              e.target.result
-            }" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px; border: 1px solid #e2e8f0;">
-            <div style="position: absolute; bottom: 2px; left: 2px; background: rgba(0,0,0,0.7); color: white; padding: 1px 4px; border-radius: 2px; font-size: 0.7rem;">
-              ${i + 1}
-            </div>
-          `;
-          previewContainer.appendChild(imgDiv);
-        };
-
-        reader.readAsDataURL(file);
-      }
-    });
-  }
-});
