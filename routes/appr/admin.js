@@ -8,7 +8,10 @@ const path = require("path");
 const fs = require("fs");
 const { v4: uuidv4 } = require("uuid");
 const QRCode = require("qrcode");
-const crypto = require("crypto");
+const {
+  generateCertificateNumber,
+  generateQRCode,
+} = require("../../utils/appr");
 
 // Multer 설정 - 감정 이미지 저장
 const appraisalStorage = multer.diskStorage({
@@ -103,127 +106,6 @@ const authenticityUpload = multer({
     }
   },
 });
-
-async function generateQRCodeWithKey(certificateNumber, outputPath) {
-  try {
-    // 암호화 없이 직접 감정서 조회 URL 생성
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-    const certificateUrl = `${frontendUrl}/appr/result/${certificateNumber}`;
-
-    await QRCode.toFile(outputPath, certificateUrl, {
-      errorCorrectionLevel: "H",
-      margin: 1,
-      width: 300,
-    });
-
-    return true; // 성공 시 true 반환
-  } catch (error) {
-    console.error("QR 코드 생성 중 오류:", error);
-    return false;
-  }
-}
-
-async function generateCertificateNumber(conn, customNumber = null) {
-  if (customNumber) {
-    // 커스텀 번호 형식 검증: cas + 숫자 (자릿수 제한 없음)
-    const certPattern = /^cas\d+$/i;
-    if (!certPattern.test(customNumber)) {
-      throw new Error(
-        "감정 번호는 CAS + 숫자 형식이어야 합니다. (예: CAS04312)"
-      );
-    }
-
-    // 대소문자 통일 (소문자로 저장)
-    const normalizedNumber = customNumber.toLowerCase();
-
-    // 중복 확인
-    const [existing] = await conn.query(
-      "SELECT certificate_number FROM appraisals WHERE certificate_number = ?",
-      [normalizedNumber]
-    );
-
-    if (existing.length > 0) {
-      throw new Error("이미 존재하는 감정 번호입니다.");
-    }
-
-    return normalizedNumber;
-  }
-
-  // 자동 생성: 가장 최근에 생성된 번호 + 1
-  try {
-    // 가장 최근에 생성된 인증서 번호 조회 (created_at 기준)
-    const [rows] = await conn.query(
-      `SELECT certificate_number 
-       FROM appraisals 
-       WHERE certificate_number REGEXP '^cas[0-9]+$' 
-       ORDER BY created_at DESC 
-       LIMIT 1`
-    );
-
-    let nextNumber = 1; // 기본값: cas1부터 시작
-
-    let digitCount = 6; // 기본 6자리
-
-    if (rows.length > 0) {
-      const lastCertNumber = rows[0].certificate_number;
-      // "cas" 제거하고 숫자 부분만 추출
-      const match = lastCertNumber.match(/^cas(\d+)$/i);
-      if (match) {
-        const numberPart = match[1];
-        digitCount = numberPart.length; // 기존 자릿수 유지
-        const lastNumber = parseInt(numberPart);
-        nextNumber = lastNumber + 1;
-      }
-    }
-
-    // 중복 확인하면서 사용 가능한 번호 찾기
-    let certificateNumber;
-    let isUnique = false;
-    let attempts = 0;
-    const maxAttempts = 1000; // 무한루프 방지
-
-    while (!isUnique && attempts < maxAttempts) {
-      // 자릿수 맞춰서 0 패딩
-      const paddedNumber = nextNumber.toString().padStart(digitCount, "0");
-      certificateNumber = `cas${paddedNumber}`;
-
-      // 중복 확인
-      const [existing] = await conn.query(
-        "SELECT certificate_number FROM appraisals WHERE certificate_number = ?",
-        [certificateNumber]
-      );
-
-      if (existing.length === 0) {
-        isUnique = true;
-      } else {
-        nextNumber++; // 중복이면 다음 번호 시도
-        attempts++;
-      }
-    }
-
-    if (!isUnique) {
-      // 만약 1000번 시도해도 안 되면 랜덤으로 폴백
-      console.warn("순차 번호 생성 실패, 랜덤 번호로 폴백");
-      const randomNum = Math.floor(100000 + Math.random() * 900000);
-      certificateNumber = `cas${randomNum}`;
-
-      // 랜덤 번호도 중복 확인
-      const [randomCheck] = await conn.query(
-        "SELECT certificate_number FROM appraisals WHERE certificate_number = ?",
-        [certificateNumber]
-      );
-
-      if (randomCheck.length > 0) {
-        throw new Error("인증서 번호 생성에 실패했습니다. 다시 시도해주세요.");
-      }
-    }
-
-    return certificateNumber;
-  } catch (error) {
-    console.error("인증서 번호 생성 중 오류:", error);
-    throw new Error("인증서 번호 생성 중 오류가 발생했습니다.");
-  }
-}
 
 // Multer 설정 - 배너 이미지 저장
 const bannerStorage = multer.diskStorage({
@@ -755,7 +637,7 @@ router.post("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
       });
     }
 
-    // 인증서 번호 생성 또는 검증
+    // 공통 함수로 인증서 번호 생성 또는 검증
     const finalCertificateNumber = await generateCertificateNumber(
       conn,
       certificate_number
@@ -1081,29 +963,8 @@ router.put(
       const finalCertificateNumber =
         certificate_number || appraisal.certificate_number;
       if (finalCertificateNumber && !qrcode_url) {
-        // QR 코드 파일 생성
-        const qrDir = path.join(__dirname, "../../public/images/qrcodes");
-        if (!fs.existsSync(qrDir)) {
-          fs.mkdirSync(qrDir, { recursive: true });
-        }
-
-        const qrFileName = `qr-${finalCertificateNumber}.png`;
-        const qrPath = path.join(qrDir, qrFileName);
-
-        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-        const certificateUrl = `${frontendUrl}/appr/result/${finalCertificateNumber}`;
-
-        try {
-          await QRCode.toFile(qrPath, certificateUrl, {
-            errorCorrectionLevel: "H",
-            margin: 1,
-            width: 300,
-          });
-
-          qrcode_url = `/images/qrcodes/${qrFileName}`;
-        } catch (error) {
-          console.error("QR 코드 생성 중 오류:", error);
-        }
+        // 공통 함수로 QR 코드 생성
+        qrcode_url = await generateQRCode(finalCertificateNumber);
       }
 
       // 감정 정보 업데이트 필드 구성

@@ -7,6 +7,7 @@ const { v4: uuidv4 } = require("uuid");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const { generateCertificateNumber } = require("../../utils/appr");
 
 // Multer 설정 - 감정 이미지 저장
 const storage = multer.diskStorage({
@@ -37,108 +38,6 @@ const upload = multer({
     }
   },
 });
-
-async function generateCertificateNumber(conn, customNumber = null) {
-  if (customNumber) {
-    // 커스텀 번호 형식 검증: cas + 숫자 (자릿수 제한 없음)
-    const certPattern = /^cas\d+$/i;
-    if (!certPattern.test(customNumber)) {
-      throw new Error(
-        "감정 번호는 CAS + 숫자 형식이어야 합니다. (예: CAS04312)"
-      );
-    }
-
-    // 대소문자 통일 (소문자로 저장)
-    const normalizedNumber = customNumber.toLowerCase();
-
-    // 중복 확인
-    const [existing] = await conn.query(
-      "SELECT certificate_number FROM appraisals WHERE certificate_number = ?",
-      [normalizedNumber]
-    );
-
-    if (existing.length > 0) {
-      throw new Error("이미 존재하는 감정 번호입니다.");
-    }
-
-    return normalizedNumber;
-  }
-
-  // 자동 생성: 가장 최근에 생성된 번호 + 1
-  try {
-    // 가장 최근에 생성된 인증서 번호 조회 (created_at 기준)
-    const [rows] = await conn.query(
-      `SELECT certificate_number 
-       FROM appraisals 
-       WHERE certificate_number REGEXP '^cas[0-9]+$' 
-       ORDER BY created_at DESC 
-       LIMIT 1`
-    );
-
-    let nextNumber = 1; // 기본값: cas1부터 시작
-
-    let digitCount = 6; // 기본 6자리
-
-    if (rows.length > 0) {
-      const lastCertNumber = rows[0].certificate_number;
-      // "cas" 제거하고 숫자 부분만 추출
-      const match = lastCertNumber.match(/^cas(\d+)$/i);
-      if (match) {
-        const numberPart = match[1];
-        digitCount = numberPart.length; // 기존 자릿수 유지
-        const lastNumber = parseInt(numberPart);
-        nextNumber = lastNumber + 1;
-      }
-    }
-
-    // 중복 확인하면서 사용 가능한 번호 찾기
-    let certificateNumber;
-    let isUnique = false;
-    let attempts = 0;
-    const maxAttempts = 1000; // 무한루프 방지
-
-    while (!isUnique && attempts < maxAttempts) {
-      // 자릿수 맞춰서 0 패딩
-      const paddedNumber = nextNumber.toString().padStart(digitCount, "0");
-      certificateNumber = `cas${paddedNumber}`;
-
-      // 중복 확인
-      const [existing] = await conn.query(
-        "SELECT certificate_number FROM appraisals WHERE certificate_number = ?",
-        [certificateNumber]
-      );
-
-      if (existing.length === 0) {
-        isUnique = true;
-      } else {
-        nextNumber++; // 중복이면 다음 번호 시도
-        attempts++;
-      }
-    }
-
-    if (!isUnique) {
-      // 만약 1000번 시도해도 안 되면 랜덤으로 폴백
-      console.warn("순차 번호 생성 실패, 랜덤 번호로 폴백");
-      const randomNum = Math.floor(100000 + Math.random() * 900000);
-      certificateNumber = `cas${randomNum}`;
-
-      // 랜덤 번호도 중복 확인
-      const [randomCheck] = await conn.query(
-        "SELECT certificate_number FROM appraisals WHERE certificate_number = ?",
-        [certificateNumber]
-      );
-
-      if (randomCheck.length > 0) {
-        throw new Error("인증서 번호 생성에 실패했습니다. 다시 시도해주세요.");
-      }
-    }
-
-    return certificateNumber;
-  } catch (error) {
-    console.error("인증서 번호 생성 중 오류:", error);
-    throw new Error("인증서 번호 생성 중 오류가 발생했습니다.");
-  }
-}
 
 // 감정 신청 - POST /api/appr/appraisals
 router.post("/", isAuthenticated, async (req, res) => {

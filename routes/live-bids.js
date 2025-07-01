@@ -2,6 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const pool = require("../utils/DB");
+const { createAppraisalFromAuction } = require("../utils/appr");
 
 const isAdmin = (req, res, next) => {
   if (req.session.user && req.session.user.id === "admin") {
@@ -704,9 +705,6 @@ router.put("/:id", isAdmin, async (req, res) => {
   }
 });
 
-// routes/live-bids.js에 추가할 코드
-
-// 감정서 신청 API - POST /live-bids/:id/request-appraisal
 router.post("/:id/request-appraisal", async (req, res) => {
   const bidId = req.params.id;
 
@@ -720,9 +718,9 @@ router.post("/:id/request-appraisal", async (req, res) => {
   try {
     await connection.beginTransaction();
 
-    // 1. bid 정보와 item 정보 함께 조회
+    // 1. bid 정보와 item 정보 함께 조회 (additional_images 포함)
     const [bids] = await connection.query(
-      `SELECT l.*, i.brand, i.title, i.category, i.image 
+      `SELECT l.*, i.brand, i.title, i.category, i.image, i.additional_images
        FROM live_bids l 
        JOIN crawled_items i ON l.item_id = i.item_id 
        WHERE l.id = ? AND l.user_id = ? AND l.status = 'completed' AND l.winning_price > 0`,
@@ -747,102 +745,24 @@ router.post("/:id/request-appraisal", async (req, res) => {
       });
     }
 
-    // 3. 감정서 번호 생성 (동일한 함수)
-    async function generateCertificateNumber(conn) {
-      try {
-        const [rows] = await conn.query(
-          `SELECT certificate_number 
-           FROM appraisals 
-           WHERE certificate_number REGEXP '^cas[0-9]+$' 
-           ORDER BY created_at DESC 
-           LIMIT 1`
-        );
+    // 3. 공통 함수를 사용하여 감정서 생성
+    const { appraisal_id, certificate_number } =
+      await createAppraisalFromAuction(
+        connection,
+        bid,
+        {
+          brand: bid.brand,
+          title: bid.title,
+          category: bid.category,
+          image: bid.image,
+          additional_images: bid.additional_images,
+        },
+        userId
+      );
 
-        let nextNumber = 1;
-        let digitCount = 6;
-
-        if (rows.length > 0) {
-          const lastCertNumber = rows[0].certificate_number;
-          const match = lastCertNumber.match(/^cas(\d+)$/i);
-          if (match) {
-            const numberPart = match[1];
-            digitCount = numberPart.length;
-            const lastNumber = parseInt(numberPart);
-            nextNumber = lastNumber + 1;
-          }
-        }
-
-        let certificateNumber;
-        let isUnique = false;
-        let attempts = 0;
-        const maxAttempts = 1000;
-
-        while (!isUnique && attempts < maxAttempts) {
-          const paddedNumber = nextNumber.toString().padStart(digitCount, "0");
-          certificateNumber = `cas${paddedNumber}`;
-
-          const [existing] = await conn.query(
-            "SELECT certificate_number FROM appraisals WHERE certificate_number = ?",
-            [certificateNumber]
-          );
-
-          if (existing.length === 0) {
-            isUnique = true;
-          } else {
-            nextNumber++;
-            attempts++;
-          }
-        }
-
-        if (!isUnique) {
-          const randomNum = Math.floor(100000 + Math.random() * 900000);
-          certificateNumber = `cas${randomNum}`;
-
-          const [randomCheck] = await conn.query(
-            "SELECT certificate_number FROM appraisals WHERE certificate_number = ?",
-            [certificateNumber]
-          );
-
-          if (randomCheck.length > 0) {
-            throw new Error(
-              "인증서 번호 생성에 실패했습니다. 다시 시도해주세요."
-            );
-          }
-        }
-
-        return certificateNumber;
-      } catch (error) {
-        console.error("인증서 번호 생성 중 오류:", error);
-        throw new Error("인증서 번호 생성 중 오류가 발생했습니다.");
-      }
-    }
-
-    const certificateNumber = await generateCertificateNumber(connection);
-
-    // 4. appraisals 테이블에 감정서 생성
-    const [appraisalResult] = await connection.query(
-      `INSERT INTO appraisals (
-        user_id, appraisal_type, status, brand, model_name, category, 
-        result, images, certificate_number
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        userId,
-        "from_auction",
-        "pending",
-        bid.brand || "기타",
-        bid.title || "제목 없음",
-        bid.category || "기타",
-        "pending",
-        JSON.stringify(bid.image ? [bid.image] : []),
-        certificateNumber,
-      ]
-    );
-
-    const appraisalId = appraisalResult.insertId;
-
-    // 5. live_bids 테이블의 appr_id 업데이트
+    // 4. live_bids 테이블의 appr_id 업데이트
     await connection.query("UPDATE live_bids SET appr_id = ? WHERE id = ?", [
-      appraisalId,
+      appraisal_id,
       bidId,
     ]);
 
@@ -850,8 +770,8 @@ router.post("/:id/request-appraisal", async (req, res) => {
 
     res.status(201).json({
       message: "감정서 신청이 완료되었습니다.",
-      appraisal_id: appraisalId,
-      certificate_number: certificateNumber,
+      appraisal_id: appraisal_id,
+      certificate_number: certificate_number,
       status: "pending",
     });
   } catch (err) {
