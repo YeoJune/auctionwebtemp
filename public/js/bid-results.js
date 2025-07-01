@@ -574,6 +574,15 @@ function createDailyResultRow(dayResult) {
       <span class="vat-note">VAT ${formatNumber(dayResult.vatAmount)} ₩</span>
     </div>
     <div class="summary-item">
+      <span class="summary-label">감정서 수수료 (₩):</span>
+      <span class="summary-value">${formatNumber(
+        dayResult.appraisalFee || 0
+      )} ₩</span>
+      <span class="vat-note">VAT ${formatNumber(
+        dayResult.appraisalVat || 0
+      )} ₩</span>
+    </div>
+    <div class="summary-item">
       <span class="summary-label">총액 (₩):</span>
       <span class="summary-value">${formatNumber(dayResult.grandTotal)} ₩</span>
     </div>
@@ -645,9 +654,9 @@ function createDailyResultRow(dayResult) {
 // 상품 행 생성 함수
 function createItemRow(item, status) {
   const row = document.createElement("tr");
-  row.classList.add(`bid-${status}`); // CSS 클래스 추가
+  row.classList.add(`bid-${status}`);
 
-  // 이미지 셀
+  // 기존 셀들 생성
   const imageCell = document.createElement("td");
   if (item.image && item.image !== "/images/placeholder.png") {
     const imageElement = document.createElement("img");
@@ -694,6 +703,7 @@ function createItemRow(item, status) {
     koreanCell.textContent = "-";
   }
 
+  // 감정서 셀 추가
   const appraisalCell = document.createElement("td");
   if (status === "success") {
     const appraisalBtn = createAppraisalButton(item);
