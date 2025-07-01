@@ -1,83 +1,103 @@
-// routes/sitemap.js - 간단한 자동 사이트맵 생성기
 const express = require("express");
 const router = express.Router();
 
-// Express 앱에서 GET 라우트만 추출
-function extractGetRoutes(app) {
+// Express 앱에서 실제 라우트 추출
+function extractRoutes(app) {
   const routes = [];
 
-  function scan(stack, prefix = "") {
+  function collectRoutes(stack, basePath = "") {
     stack.forEach((layer) => {
-      if (layer.route && layer.route.methods.get) {
-        // 일반 GET 라우트
-        routes.push(prefix + layer.route.path);
-      } else if (layer.name === "router" && layer.handle?.stack) {
-        // 중첩 라우터 - 단순하게 처리
-        scan(layer.handle.stack, prefix);
+      if (layer.route) {
+        // 실제 라우트가 있는 경우
+        if (layer.route.methods.get) {
+          const fullPath = basePath + layer.route.path;
+          routes.push(fullPath);
+        }
+      } else if (
+        layer.name === "router" &&
+        layer.handle &&
+        layer.handle.stack
+      ) {
+        // 라우터인 경우 - 마운트 경로를 찾아야 함
+        let mountPath = "";
+
+        // Express 내부에서 마운트 경로를 찾는 방법
+        if (layer.regexp) {
+          const keys = layer.keys || [];
+          const source = layer.regexp.source;
+
+          // 간단한 경우: /^\/api\/ 형태
+          const simpleMatch = source.match(/^\^\\?\/([\w-]+)/);
+          if (simpleMatch) {
+            mountPath = "/" + simpleMatch[1];
+          }
+        }
+
+        collectRoutes(layer.handle.stack, basePath + mountPath);
       }
     });
   }
 
-  if (app._router?.stack) {
-    scan(app._router.stack);
+  if (app._router && app._router.stack) {
+    collectRoutes(app._router.stack);
   }
 
   return routes;
 }
 
-// 사이트맵에 포함할 페이지만 필터링
-function filterPages(routes) {
-  return routes.filter((path) => {
-    // API 제외
-    if (path.startsWith("/api")) return false;
+// 페이지 라우트만 필터링
+function filterPageRoutes(routes) {
+  return routes.filter((route) => {
+    // API 라우트 제외
+    if (route.includes("/api")) return false;
 
-    // 관리자 페이지 제외
-    if (path.includes("/admin")) return false;
+    // 관리자 라우트 제외
+    if (route.includes("/admin")) return false;
 
-    // 동적 라우트 제외
-    if (path.includes(":")) return false;
+    // 동적 파라미터 제외
+    if (route.includes(":")) return false;
 
-    // 시스템 페이지 제외
+    // 시스템 라우트 제외
     if (
-      path.includes("sitemap") ||
-      path.includes("robots") ||
-      path.includes("debug")
+      route.includes("sitemap") ||
+      route.includes("robots") ||
+      route.includes("debug")
     )
       return false;
 
-    // 인증 필요 페이지 제외
+    // 인증 필요한 페이지 제외
     const authPages = [
       "/valuesPage",
       "/bidResultsPage",
       "/bidProductsPage",
       "/appr/mypage",
     ];
-    if (authPages.includes(path)) return false;
+    if (authPages.includes(route)) return false;
 
     return true;
   });
 }
 
-// XML 사이트맵 생성
-function createSitemap(baseUrl, paths) {
-  const now = new Date().toISOString().split("T")[0];
+// 사이트맵 XML 생성
+function generateSitemap(baseUrl, routes) {
+  const lastmod = new Date().toISOString().split("T")[0];
 
-  let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
-  xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
 
-  paths.forEach((path) => {
-    const priority = path === "/" ? "1.0" : "0.5";
-    const changefreq = path === "/" ? "daily" : "weekly";
-
-    xml += "  <url>\n";
-    xml += `    <loc>${baseUrl}${path}</loc>\n`;
-    xml += `    <lastmod>${now}</lastmod>\n`;
-    xml += `    <changefreq>${changefreq}</changefreq>\n`;
-    xml += `    <priority>${priority}</priority>\n`;
-    xml += "  </url>\n";
+  routes.forEach((route) => {
+    const priority = route === "/" ? "1.0" : "0.5";
+    xml += `
+  <url>
+    <loc>${baseUrl}${route}</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>${priority}</priority>
+  </url>`;
   });
 
-  xml += "</urlset>";
+  xml += `
+</urlset>`;
   return xml;
 }
 
@@ -88,30 +108,28 @@ router.get("/sitemap.xml", (req, res) => {
     const protocol = req.secure ? "https" : "http";
     const baseUrl = `${protocol}://${host}`;
 
-    // 1. 모든 GET 라우트 추출
-    const allRoutes = extractGetRoutes(req.app);
+    // 1. 모든 라우트 추출
+    const allRoutes = extractRoutes(req.app);
 
     // 2. 페이지만 필터링
-    let pageRoutes = filterPages(allRoutes);
+    let pageRoutes = filterPageRoutes(allRoutes);
 
     // 3. 도메인별 필터링
     if (host === "cassystem.com" || host === "www.cassystem.com") {
-      // 감정 시스템만
       pageRoutes = pageRoutes.filter(
-        (path) => path.startsWith("/appr") || path === "/"
+        (route) => route.startsWith("/appr") || route === "/"
       );
     } else if (host === "casastrade.com" || host === "www.casastrade.com") {
-      // 메인 서비스만
-      pageRoutes = pageRoutes.filter((path) => !path.startsWith("/appr"));
+      pageRoutes = pageRoutes.filter((route) => !route.startsWith("/appr"));
     }
 
     // 4. XML 생성
-    const sitemap = createSitemap(baseUrl, pageRoutes);
+    const sitemap = generateSitemap(baseUrl, pageRoutes);
 
     res.set("Content-Type", "application/xml");
     res.send(sitemap);
   } catch (error) {
-    console.error("Sitemap error:", error);
+    console.error("Sitemap generation error:", error);
     res.status(500).send("Error generating sitemap");
   }
 });
@@ -127,10 +145,6 @@ Allow: /
 Disallow: /admin
 Disallow: /api/
 Disallow: /appr/admin
-Disallow: /valuesPage
-Disallow: /bidResultsPage
-Disallow: /bidProductsPage
-Disallow: /appr/mypage
 
 Sitemap: ${baseUrl}/sitemap.xml`;
 
@@ -138,14 +152,14 @@ Sitemap: ${baseUrl}/sitemap.xml`;
   res.send(robots);
 });
 
-// 디버그용 (개발시에만)
+// 디버그용
 router.get("/debug/routes", (req, res) => {
-  const allRoutes = extractGetRoutes(req.app);
-  const pageRoutes = filterPages(allRoutes);
+  const allRoutes = extractRoutes(req.app);
+  const pageRoutes = filterPageRoutes(allRoutes);
 
   res.json({
-    all: allRoutes,
-    pages: pageRoutes,
+    allRoutes: allRoutes,
+    pageRoutes: pageRoutes,
   });
 });
 
