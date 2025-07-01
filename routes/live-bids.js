@@ -208,6 +208,7 @@ router.get("/", async (req, res) => {
 });
 
 // 고객의 1차 입찰 제출
+// 1차 입찰 제출 부분 수정 (기존 router.post("/", async (req, res) => { 부분)
 router.post("/", async (req, res) => {
   const { itemId, firstPrice } = req.body;
 
@@ -228,6 +229,31 @@ router.post("/", async (req, res) => {
   try {
     await connection.beginTransaction();
 
+    // 상품 정보 체크 (scheduled_date 포함)
+    const [items] = await connection.query(
+      "SELECT * FROM crawled_items WHERE item_id = ?",
+      [itemId]
+    );
+
+    if (items.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ message: "Item not found" });
+    }
+
+    const item = items[0];
+
+    // 1차 입찰 시간 제한 체크: scheduled_date까지만 가능
+    const now = new Date();
+    const scheduledDate = new Date(item.scheduled_date);
+
+    if (now > scheduledDate) {
+      await connection.rollback();
+      return res.status(400).json({
+        message: "1차 입찰 시간이 종료되었습니다. (경매 예정일까지만 가능)",
+        scheduled_date: item.scheduled_date,
+      });
+    }
+
     // 이미 입찰한 내역이 있는지 체크
     const [existingBids] = await connection.query(
       "SELECT * FROM live_bids WHERE item_id = ? AND user_id = ?",
@@ -239,17 +265,6 @@ router.post("/", async (req, res) => {
       return res
         .status(400)
         .json({ message: "You already have a bid for this item" });
-    }
-
-    // 상품 정보 체크
-    const [items] = await connection.query(
-      "SELECT * FROM crawled_items WHERE item_id = ?",
-      [itemId]
-    );
-
-    if (items.length === 0) {
-      await connection.rollback();
-      return res.status(404).json({ message: "Item not found" });
     }
 
     // 새 입찰 생성
@@ -350,9 +365,12 @@ router.put("/:id/final", async (req, res) => {
   try {
     await connection.beginTransaction();
 
-    // 입찰 정보 확인
+    // 입찰 정보와 상품 정보 함께 확인
     const [bids] = await connection.query(
-      "SELECT * FROM live_bids WHERE id = ?",
+      `SELECT l.*, i.scheduled_date 
+       FROM live_bids l 
+       JOIN crawled_items i ON l.item_id = i.item_id 
+       WHERE l.id = ?`,
       [id]
     );
 
@@ -373,6 +391,24 @@ router.put("/:id/final", async (req, res) => {
     if (bid.status !== "second") {
       await connection.rollback();
       return res.status(400).json({ message: "Bid is not in second stage" });
+    }
+
+    // 2차 입찰 시간 제한 체크: scheduled_date가 포함된 날의 저녁 10시까지
+    const now = new Date();
+    const scheduledDate = new Date(bid.scheduled_date);
+
+    // scheduled_date의 날짜 부분만 가져와서 22:00 (저녁 10시)로 설정
+    const deadline = new Date(scheduledDate);
+    deadline.setHours(22, 0, 0, 0); // 22:00:00.000
+
+    if (now > deadline) {
+      await connection.rollback();
+      return res.status(400).json({
+        message:
+          "최종 입찰 시간이 종료되었습니다. (경매일 저녁 10시까지만 가능)",
+        deadline: deadline.toISOString(),
+        scheduled_date: bid.scheduled_date,
+      });
     }
 
     // 최종 입찰가 업데이트
