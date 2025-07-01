@@ -20,22 +20,42 @@ function extractRoutes(app) {
             method: "GET",
           });
         }
-      } else if (layer.name === "router") {
-        // 서브 라우터
-        const subPath = layer.regexp.source
-          .replace("\\/?", "")
-          .replace("(?=\\/|$)", "")
-          .replace(/\\\//g, "/")
-          .replace(/\$.*/, "");
-
-        if (layer.handle && layer.handle.stack) {
-          extractFromStack(layer.handle.stack, basePath + subPath);
+      } else if (
+        layer.name === "router" &&
+        layer.handle &&
+        layer.handle.stack
+      ) {
+        // 서브 라우터 - 정규식 파싱을 더 안전하게
+        let subPath = "";
+        try {
+          const regexpSource = layer.regexp.source;
+          // 복잡한 정규식 파싱 대신 간단한 매칭만 사용
+          if (regexpSource.includes("api")) {
+            subPath = "/api"; // API 라우터는 무시
+            return; // API 라우터는 건너뛰기
+          }
+          // 다른 서브패스 처리도 안전하게
+          const matches = regexpSource.match(/^\\\/([\w-]+)/);
+          if (matches) {
+            subPath = "/" + matches[1];
+          }
+        } catch (e) {
+          console.warn("라우트 파싱 에러:", e);
+          return; // 파싱 실패시 건너뛰기
         }
+
+        extractFromStack(layer.handle.stack, basePath + subPath);
       }
     });
   }
 
-  extractFromStack(app._router.stack);
+  try {
+    extractFromStack(app._router.stack);
+  } catch (error) {
+    console.warn("라우트 추출 중 에러:", error);
+    return []; // 에러 발생시 빈 배열 반환
+  }
+
   return routes;
 }
 
@@ -148,32 +168,47 @@ router.get("/sitemap.xml", (req, res) => {
         : "http";
     const baseUrl = `${protocol}://${host}`;
 
-    // 1. 앱에서 모든 라우트 추출
-    const allRoutes = extractRoutes(app);
+    // 안전한 방법: 허용할 페이지만 명시적으로 정의
+    const allowedRoutes = [
+      "/",
+      "/productPage",
+      "/signinPage",
+      "/inquiryPage",
+      "/guidePage",
+      "/appr",
+      "/appr/signin",
+      "/appr/request",
+      "/appr/result",
+      "/appr/repair",
+      "/appr/authenticity",
+    ];
 
-    // 2. 페이지 라우트만 필터링
-    let pageRoutes = filterPageRoutes(allRoutes);
-
-    // 3. 호스트별 필터링
+    // 호스트별 필터링
+    let pageRoutes;
     if (host === "cassystem.com" || host === "www.cassystem.com") {
       // 감정 시스템 페이지만
-      pageRoutes = pageRoutes.filter(
-        (route) => route.path.startsWith("/appr") || route.path === "/"
+      pageRoutes = allowedRoutes.filter(
+        (route) => route.startsWith("/appr") || route === "/"
       );
     } else if (host === "casastrade.com" || host === "www.casastrade.com") {
       // 메인 서비스 페이지만 (감정 시스템 제외)
-      pageRoutes = pageRoutes.filter(
-        (route) => !route.path.startsWith("/appr")
-      );
+      pageRoutes = allowedRoutes.filter((route) => !route.startsWith("/appr"));
     } else {
-      // 개발/기타 도메인: 모든 페이지 포함
-      // 필요시 여기서 필터링 로직 추가
+      // 개발/기타 도메인: 자동 추출 방식 사용
+      const allRoutes = extractRoutes(app);
+      const filteredRoutes = filterPageRoutes(allRoutes);
+      pageRoutes = filteredRoutes.map((route) => route.path);
     }
 
-    // 4. SEO 메타데이터 할당
-    const routesWithMeta = assignSEOMetadata(pageRoutes);
+    // 라우트 객체로 변환
+    const routesWithMeta = pageRoutes.map((path) => ({
+      path: path,
+      priority: getPriority(path),
+      changefreq: getChangeFreq(path),
+      lastmod: new Date().toISOString().split("T")[0],
+    }));
 
-    // 5. XML 생성
+    // XML 생성
     const sitemap = generateSitemap(baseUrl, routesWithMeta);
 
     res.set("Content-Type", "application/xml");
@@ -188,6 +223,28 @@ router.get("/sitemap.xml", (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 });
+
+// 우선순위 할당 함수
+function getPriority(path) {
+  if (path === "/" || path === "/productPage" || path === "/appr") {
+    return "1.0";
+  } else if (path.includes("signin") || path.includes("guide")) {
+    return "0.8";
+  } else if (path.includes("inquiry") || path.includes("repair")) {
+    return "0.7";
+  }
+  return "0.5";
+}
+
+// 변경 빈도 할당 함수
+function getChangeFreq(path) {
+  if (path === "/" || path === "/productPage" || path === "/appr") {
+    return "daily";
+  } else if (path.includes("signin") || path.includes("guide")) {
+    return "monthly";
+  }
+  return "weekly";
+}
 
 // 디버깅용: 감지된 모든 라우트 보기
 router.get("/debug/routes", (req, res) => {
