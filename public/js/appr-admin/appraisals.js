@@ -651,51 +651,20 @@ function displayAppraisalDetail(appraisal) {
   container.innerHTML = html;
 }
 
-// 감정 유형에 따른 필드 표시/숨김 함수
-function toggleAppraisalTypeFields(type) {
-  const quicklinkFields = document.getElementById("quicklink-fields");
-  const offlineFields = document.getElementById("offline-fields");
-  const auctionFields = document.getElementById("auction-fields"); // 경매장 연계 필드 추가
-  const productLinkInput = document.getElementById("create-product-link");
-
-  // Ensure elements exist before accessing their style property
-  if (quicklinkFields) quicklinkFields.style.display = "none";
-  if (offlineFields) offlineFields.style.display = "none";
-  if (auctionFields) auctionFields.style.display = "none";
-  if (productLinkInput) productLinkInput.required = false;
-
-  if (type === "quicklink" && quicklinkFields && productLinkInput) {
-    quicklinkFields.style.display = "block";
-    productLinkInput.required = true;
-  } else if (type === "offline" && offlineFields) {
-    offlineFields.style.display = "block";
-  } else if (type === "from_auction" && auctionFields) {
-    auctionFields.style.display = "block";
-  }
-}
-
 // 감정 유형에 따른 필드 표시/숨김 함수 (상세 모달용)
 function toggleAppraisalTypeFieldsInDetail(type) {
   const quicklinkFields = document.getElementById("quicklink-fields-detail");
   const offlineFields = document.getElementById("offline-fields-detail");
-  const auctionFields = document.getElementById("auction-fields-detail"); // 경매장 연계 필드 추가
 
   if (type === "quicklink") {
     quicklinkFields.style.display = "block";
     offlineFields.style.display = "none";
-    auctionFields.style.display = "none";
   } else if (type === "offline") {
     quicklinkFields.style.display = "none";
     offlineFields.style.display = "block";
-    auctionFields.style.display = "none";
-  } else if (type === "from_auction") {
-    quicklinkFields.style.display = "none";
-    offlineFields.style.display = "none";
-    auctionFields.style.display = "block";
   } else {
     quicklinkFields.style.display = "none";
     offlineFields.style.display = "none";
-    auctionFields.style.display = "none";
   }
 }
 
@@ -862,15 +831,6 @@ function updateAppraisal() {
       };
       formData.append("delivery_info", JSON.stringify(deliveryInfo));
     }
-  } else if (appraisalType === "from_auction") {
-    formData.append(
-      "auction_house",
-      document.getElementById("appraisal-auction-house").value || ""
-    );
-    formData.append(
-      "auction_date",
-      document.getElementById("appraisal-auction-date").value || ""
-    );
   }
 
   // 감정 결과 필드들 추가
@@ -982,22 +942,24 @@ function openCreateAppraisalModal() {
 function toggleAppraisalTypeFields(type) {
   const quicklinkFields = document.getElementById("quicklink-fields");
   const offlineFields = document.getElementById("offline-fields");
-  const auctionFields = document.getElementById("auction-fields"); // 경매장 연계 필드 추가
   const productLinkInput = document.getElementById("create-product-link");
 
-  // Ensure elements exist before accessing their style property
-  if (quicklinkFields) quicklinkFields.style.display = "none";
-  if (offlineFields) offlineFields.style.display = "none";
-  if (auctionFields) auctionFields.style.display = "none";
-  if (productLinkInput) productLinkInput.required = false;
-
-  if (type === "quicklink" && quicklinkFields && productLinkInput) {
+  if (type === "quicklink") {
     quicklinkFields.style.display = "block";
+    offlineFields.style.display = "none";
     productLinkInput.required = true;
-  } else if (type === "offline" && offlineFields) {
+  } else if (type === "offline") {
+    quicklinkFields.style.display = "none";
     offlineFields.style.display = "block";
-  } else if (type === "from_auction" && auctionFields) {
-    auctionFields.style.display = "block";
+    productLinkInput.required = false;
+  } else if (type === "from_auction") {
+    quicklinkFields.style.display = "none";
+    offlineFields.style.display = "none";
+    productLinkInput.required = false;
+  } else {
+    quicklinkFields.style.display = "none";
+    offlineFields.style.display = "none";
+    productLinkInput.required = false;
   }
 }
 
@@ -1146,13 +1108,6 @@ function submitCreateAppraisal() {
         address2: deliveryAddress2,
       };
     }
-  } else if (formData.appraisal_type === "from_auction") {
-    formData.auction_house = document.getElementById(
-      "create-auction-house"
-    ).value;
-    formData.auction_date = document.getElementById(
-      "create-auction-date"
-    ).value;
   }
 
   // 유효성 검사
@@ -1250,20 +1205,6 @@ function executeBulkDelete() {
             throw new Error(data.message || "감정 삭제에 실패했습니다.");
           });
         }
-        return response.json();
-      })
-      .then((data) => {
-        if (data.success) {
-          showAlert(data.message, "success");
-          toggleBulkDeleteMode();
-          loadAppraisalList();
-        } else {
-          throw new Error(data.message || "감정 삭제에 실패했습니다.");
-        }
-      })
-      .catch((error) => showAlert(error.message, "error"));
-  }
-}
         return response.json();
       })
       .then((data) => {
