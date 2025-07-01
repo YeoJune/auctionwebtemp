@@ -46,15 +46,24 @@ function filterPageRoutes(routes) {
 
     // 제외할 패턴들
     const excludePatterns = [
-      /^\/api\//, // API 라우트
-      /^\/admin/, // 관리자 페이지
+      /^\/api/, // API 라우트 (모든 하위 경로 포함)
+      /^\/admin(?!$)/, // 관리자 하위 페이지 (/admin은 포함, /admin/xxx는 제외)
       /^\/appr\/admin/, // 감정 시스템 관리자
       /\/payment-processing/, // 결제 처리 페이지
       /\/:[\w]+/, // 파라미터가 있는 동적 라우트
       /^\/(sitemap|robots)/, // 사이트맵, robots.txt
+      /^\/debug/, // 디버그 라우트
     ];
 
-    // 로그인이 필요한 페이지들 (선택적으로 포함/제외)
+    // 빈 경로나 undefined 제외
+    if (!path || path === "") {
+      return false;
+    }
+
+    // 제외 패턴에 매치되는지 확인
+    const shouldExclude = excludePatterns.some((pattern) => pattern.test(path));
+
+    // 로그인이 필요한 페이지들 (SEO상 제외하는 것이 좋음)
     const authRequiredPages = [
       "/valuesPage",
       "/bidResultsPage",
@@ -62,7 +71,10 @@ function filterPageRoutes(routes) {
       "/appr/mypage",
     ];
 
-    return !excludePatterns.some((pattern) => pattern.test(path));
+    // 인증 필요 페이지도 제외 (선택적)
+    const isAuthRequired = authRequiredPages.includes(path);
+
+    return !shouldExclude && !isAuthRequired;
   });
 }
 
