@@ -131,6 +131,12 @@ app.use((req, res, next) => {
   next();
 });
 
+app.get("/naver113e5904aa2153fc24ab52f90746a797.html", (req, res) => {
+  res.sendFile(
+    path.join(__dirname, "public", "naver113e5904aa2153fc24ab52f90746a797.html")
+  );
+});
+
 app.get("/", (req, res) => {
   res.redirect("/productPage");
 });
