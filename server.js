@@ -10,6 +10,9 @@ const path = require("path");
 const pool = require("./utils/DB"); // DB 연결 풀
 const { isAuthenticated } = require("./utils/middleware"); // 인증 미들웨어
 
+// --- 사이트맵 라우트 ---
+const sitemapRoutes = require("./routes/sitemap");
+
 // --- 기존 서비스 라우트 ---
 const authRoutes = require("./routes/auth");
 const wishlistRoutes = require("./routes/wishlist");
@@ -124,12 +127,19 @@ app.use(express.static(publicPath));
 app.use((req, res, next) => {
   const host = req.headers.host;
   if (host === "cassystem.com" || host === "www.cassystem.com") {
-    if (!req.path.startsWith("/appr") && !req.path.startsWith("/api")) {
+    if (
+      !req.path.startsWith("/appr") &&
+      !req.path.startsWith("/api") &&
+      !req.path.startsWith("/sitemap") &&
+      !req.path.startsWith("/robots")
+    ) {
       req.url = "/appr" + req.url;
     }
   }
   next();
 });
+
+app.use(sitemapRoutes);
 
 app.get("/naver113e5904aa2153fc24ab52f90746a797.html", (req, res) => {
   res.sendFile(
