@@ -658,26 +658,19 @@ function toggleAppraisalTypeFields(type) {
   const auctionFields = document.getElementById("auction-fields"); // 경매장 연계 필드 추가
   const productLinkInput = document.getElementById("create-product-link");
 
-  if (type === "quicklink") {
+  // Ensure elements exist before accessing their style property
+  if (quicklinkFields) quicklinkFields.style.display = "none";
+  if (offlineFields) offlineFields.style.display = "none";
+  if (auctionFields) auctionFields.style.display = "none";
+  if (productLinkInput) productLinkInput.required = false;
+
+  if (type === "quicklink" && quicklinkFields && productLinkInput) {
     quicklinkFields.style.display = "block";
-    offlineFields.style.display = "none";
-    auctionFields.style.display = "none";
     productLinkInput.required = true;
-  } else if (type === "offline") {
-    quicklinkFields.style.display = "none";
+  } else if (type === "offline" && offlineFields) {
     offlineFields.style.display = "block";
-    auctionFields.style.display = "none";
-    productLinkInput.required = false;
-  } else if (type === "from_auction") {
-    quicklinkFields.style.display = "none";
-    offlineFields.style.display = "none";
+  } else if (type === "from_auction" && auctionFields) {
     auctionFields.style.display = "block";
-    productLinkInput.required = false;
-  } else {
-    quicklinkFields.style.display = "none";
-    offlineFields.style.display = "none";
-    auctionFields.style.display = "none";
-    productLinkInput.required = false;
   }
 }
 
@@ -992,26 +985,19 @@ function toggleAppraisalTypeFields(type) {
   const auctionFields = document.getElementById("auction-fields"); // 경매장 연계 필드 추가
   const productLinkInput = document.getElementById("create-product-link");
 
-  if (type === "quicklink") {
+  // Ensure elements exist before accessing their style property
+  if (quicklinkFields) quicklinkFields.style.display = "none";
+  if (offlineFields) offlineFields.style.display = "none";
+  if (auctionFields) auctionFields.style.display = "none";
+  if (productLinkInput) productLinkInput.required = false;
+
+  if (type === "quicklink" && quicklinkFields && productLinkInput) {
     quicklinkFields.style.display = "block";
-    offlineFields.style.display = "none";
-    auctionFields.style.display = "none";
     productLinkInput.required = true;
-  } else if (type === "offline") {
-    quicklinkFields.style.display = "none";
+  } else if (type === "offline" && offlineFields) {
     offlineFields.style.display = "block";
-    auctionFields.style.display = "none";
-    productLinkInput.required = false;
-  } else if (type === "from_auction") {
-    quicklinkFields.style.display = "none";
-    offlineFields.style.display = "none";
+  } else if (type === "from_auction" && auctionFields) {
     auctionFields.style.display = "block";
-    productLinkInput.required = false;
-  } else {
-    quicklinkFields.style.display = "none";
-    offlineFields.style.display = "none";
-    auctionFields.style.display = "none";
-    productLinkInput.required = false;
   }
 }
 
@@ -1264,6 +1250,20 @@ function executeBulkDelete() {
             throw new Error(data.message || "감정 삭제에 실패했습니다.");
           });
         }
+        return response.json();
+      })
+      .then((data) => {
+        if (data.success) {
+          showAlert(data.message, "success");
+          toggleBulkDeleteMode();
+          loadAppraisalList();
+        } else {
+          throw new Error(data.message || "감정 삭제에 실패했습니다.");
+        }
+      })
+      .catch((error) => showAlert(error.message, "error"));
+  }
+}
         return response.json();
       })
       .then((data) => {
