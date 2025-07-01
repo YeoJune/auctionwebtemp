@@ -207,7 +207,7 @@ async function fetchCompletedBids() {
   }
 }
 
-// 결과를 일별로 그룹화
+// 결합된 결과를 일별로 그룹화하는 함수
 function groupResultsByDate() {
   const groupedByDate = {};
 
@@ -217,9 +217,9 @@ function groupResultsByDate() {
     if (!groupedByDate[dateStr]) {
       groupedByDate[dateStr] = {
         date: dateStr,
-        successItems: [], // 낙찰 성공
-        failedItems: [], // 낙찰 실패
-        pendingItems: [], // 집계중
+        successItems: [],
+        failedItems: [],
+        pendingItems: [],
         itemCount: 0,
         totalJapanesePrice: 0,
         totalKoreanPrice: 0,
@@ -240,12 +240,11 @@ function groupResultsByDate() {
       finalPrice: bidStatus.finalPrice,
       winningPrice: bidStatus.winningPrice,
       image: imagePath,
-      appr_id: item.appr_id, // 추가
+      appr_id: item.appr_id, // appr_id 추가
     };
 
     // 상태별로 분류
     if (bidStatus.status === "success") {
-      // 낙찰 성공 - 결제 금액에 포함
       const koreanPrice = Number(
         calculateTotalPrice(
           bidStatus.winningPrice,
@@ -260,7 +259,6 @@ function groupResultsByDate() {
       groupedByDate[dateStr].totalJapanesePrice += bidStatus.winningPrice;
       groupedByDate[dateStr].totalKoreanPrice += koreanPrice;
     } else if (bidStatus.status === "failed") {
-      // 낙찰 실패 - 결제 금액에 포함하지 않음
       const koreanPrice = Number(
         calculateTotalPrice(
           bidStatus.winningPrice,
@@ -271,7 +269,6 @@ function groupResultsByDate() {
       itemData.koreanPrice = koreanPrice;
       groupedByDate[dateStr].failedItems.push(itemData);
     } else {
-      // 집계중 - 결제 금액에 포함하지 않음
       groupedByDate[dateStr].pendingItems.push(itemData);
     }
   });
@@ -279,7 +276,7 @@ function groupResultsByDate() {
   // 객체를 배열로 변환
   state.dailyResults = Object.values(groupedByDate);
 
-  // 각 날짜별 totalItemCount 계산 (수정된 위치)
+  // 각 날짜별 totalItemCount 계산
   state.dailyResults.forEach((day) => {
     day.totalItemCount =
       day.successItems.length +
@@ -289,14 +286,28 @@ function groupResultsByDate() {
     // 일별 수수료 계산 (성공한 상품만)
     day.feeAmount = calculateFee(day.totalKoreanPrice);
     day.vatAmount = Math.round((day.feeAmount / 1.1) * 0.1);
-    day.grandTotal = day.totalKoreanPrice + day.feeAmount;
+
+    // 일별 감정서 수수료 계산
+    let dailyAppraisalCount = 0;
+    day.successItems.forEach((item) => {
+      if (item.appr_id) {
+        dailyAppraisalCount++;
+      }
+    });
+
+    day.appraisalFee = dailyAppraisalCount * 16500;
+    day.appraisalVat = Math.round(day.appraisalFee / 11);
+    day.appraisalCount = dailyAppraisalCount;
+
+    // 총액에 감정서 수수료 포함
+    day.grandTotal = day.totalKoreanPrice + day.feeAmount + day.appraisalFee;
   });
 
   sortDailyResults();
   updateTotalStats();
 }
 
-// 총 통계 업데이트
+// 총 통계 업데이트 함수
 function updateTotalStats() {
   state.totalStats = {
     itemCount: 0,
@@ -311,6 +322,7 @@ function updateTotalStats() {
     appraisalCount: 0,
   };
 
+  // 기존 통계 계산
   state.dailyResults.forEach((day) => {
     state.totalStats.itemCount += Number(day.itemCount);
     state.totalStats.totalItemCount += Number(day.totalItemCount || 0);
@@ -318,10 +330,13 @@ function updateTotalStats() {
     state.totalStats.koreanAmount += Number(day.totalKoreanPrice);
     state.totalStats.feeAmount += Number(day.feeAmount);
     state.totalStats.vatAmount += Number(day.vatAmount);
+    state.totalStats.appraisalFee += Number(day.appraisalFee || 0);
+    state.totalStats.appraisalVat += Number(day.appraisalVat || 0);
+    state.totalStats.appraisalCount += Number(day.appraisalCount || 0);
     state.totalStats.grandTotalAmount += Number(day.grandTotal);
   });
 
-  // 감정서 관련 통계 계산
+  // 감정서 수수료 계산
   let appraisalCount = 0;
   state.dailyResults.forEach((day) => {
     day.successItems.forEach((item) => {
@@ -331,8 +346,8 @@ function updateTotalStats() {
     });
   });
 
-  const appraisalFee = appraisalCount * 16500;
-  const appraisalVat = Math.round(appraisalFee / 11);
+  const appraisalFee = appraisalCount * 16500; // VAT 포함 16,500원
+  const appraisalVat = Math.round(appraisalFee / 11); // VAT 부분 (16500/11 = 1500)
 
   state.totalStats.appraisalFee = appraisalFee;
   state.totalStats.appraisalVat = appraisalVat;
@@ -351,6 +366,13 @@ function updateTotalStats() {
     formatNumber(state.totalStats.feeAmount) + " ₩";
   document.getElementById("totalVatAmount").textContent =
     formatNumber(state.totalStats.vatAmount) + " ₩";
+
+  // 감정서 수수료 UI 업데이트
+  document.getElementById("totalAppraisalFee").textContent =
+    formatNumber(state.totalStats.appraisalFee) + " ₩";
+  document.getElementById("totalAppraisalVat").textContent =
+    formatNumber(state.totalStats.appraisalVat) + " ₩";
+
   document.getElementById("grandTotalAmount").textContent =
     formatNumber(state.totalStats.grandTotalAmount) + " ₩";
 }
