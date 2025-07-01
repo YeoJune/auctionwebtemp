@@ -246,6 +246,14 @@ router.post("/", async (req, res) => {
     const now = new Date();
     const scheduledDate = new Date(item.scheduled_date);
 
+    if (now > scheduledDate) {
+      await connection.rollback();
+      return res.status(400).json({
+        message: "1차 입찰 시간이 종료되었습니다. (경매 예정일까지만 가능)",
+        scheduled_date: item.scheduled_date,
+      });
+    }
+
     // 이미 입찰한 내역이 있는지 체크
     const [existingBids] = await connection.query(
       "SELECT * FROM live_bids WHERE item_id = ? AND user_id = ?",

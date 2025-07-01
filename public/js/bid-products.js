@@ -569,20 +569,31 @@ function resetFilters() {
 }
 
 // 상태에 맞는 표시 텍스트 반환
-function getStatusDisplay(status, scheduledDate) {
+function getStatusDisplay(status, scheduledDate, bidInfo = null) {
   // 현재 시간과 예정 시간 비교
   const now = new Date();
   const scheduled = new Date(scheduledDate);
 
-  // 액티브 상태이지만 예정 시간이 지난 경우
+  // 현장 경매의 경우 입찰 단계에 따른 마감시간 체크
   if (
-    (status === STATUS_TYPES.ACTIVE ||
-      status === STATUS_TYPES.FIRST ||
-      status === STATUS_TYPES.SECOND ||
-      status === STATUS_TYPES.FINAL) &&
-    scheduled < now
+    status === STATUS_TYPES.ACTIVE ||
+    status === STATUS_TYPES.FIRST ||
+    status === STATUS_TYPES.SECOND ||
+    status === STATUS_TYPES.FINAL
   ) {
-    return "마감됨";
+    // 1차 입찰이 있고 최종 입찰이 없는 경우 - 저녁 10시까지
+    if (bidInfo?.first_price && !bidInfo?.final_price) {
+      const deadline = new Date(scheduled);
+      deadline.setHours(22, 0, 0, 0);
+      if (now > deadline) {
+        return "마감됨";
+      }
+    } else if (!bidInfo?.first_price) {
+      // 1차 입찰 전 - scheduled_date까지
+      if (now > scheduled) {
+        return "마감됨";
+      }
+    }
   }
 
   // 기존 상태 표시 반환
@@ -590,20 +601,31 @@ function getStatusDisplay(status, scheduledDate) {
 }
 
 // 상태에 맞는 CSS 클래스 반환
-function getStatusClass(status, scheduledDate) {
+function getStatusClass(status, scheduledDate, bidInfo = null) {
   // 현재 시간과 예정 시간 비교
   const now = new Date();
   const scheduled = new Date(scheduledDate);
 
-  // 액티브 상태이지만 예정 시간이 지난 경우
+  // 현장 경매의 경우 입찰 단계에 따른 마감시간 체크
   if (
-    (status === STATUS_TYPES.ACTIVE ||
-      status === STATUS_TYPES.FIRST ||
-      status === STATUS_TYPES.SECOND ||
-      status === STATUS_TYPES.FINAL) &&
-    scheduled < now
+    status === STATUS_TYPES.ACTIVE ||
+    status === STATUS_TYPES.FIRST ||
+    status === STATUS_TYPES.SECOND ||
+    status === STATUS_TYPES.FINAL
   ) {
-    return "status-expired"; // 새로운 클래스 추가 필요
+    // 1차 입찰이 있고 최종 입찰이 없는 경우 - 저녁 10시까지
+    if (bidInfo?.first_price && !bidInfo?.final_price) {
+      const deadline = new Date(scheduled);
+      deadline.setHours(22, 0, 0, 0);
+      if (now > deadline) {
+        return "status-expired";
+      }
+    } else if (!bidInfo?.first_price) {
+      // 1차 입찰 전 - scheduled_date까지
+      if (now > scheduled) {
+        return "status-expired";
+      }
+    }
   }
 
   // 기존 클래스 반환
@@ -611,7 +633,73 @@ function getStatusClass(status, scheduledDate) {
 }
 
 // 결과 표시
-// 결과 표시 함수 - winning_price 수정
+// 수정이 필요한 부분들만 제공
+
+// 1. 상태에 맞는 표시 텍스트 반환 함수 수정
+function getStatusDisplay(status, scheduledDate, bidInfo = null) {
+  // 현재 시간과 예정 시간 비교
+  const now = new Date();
+  const scheduled = new Date(scheduledDate);
+
+  // 현장 경매의 경우 입찰 단계에 따른 마감시간 체크
+  if (
+    status === STATUS_TYPES.ACTIVE ||
+    status === STATUS_TYPES.FIRST ||
+    status === STATUS_TYPES.SECOND ||
+    status === STATUS_TYPES.FINAL
+  ) {
+    // 1차 입찰이 있고 최종 입찰이 없는 경우 - 저녁 10시까지
+    if (bidInfo?.first_price && !bidInfo?.final_price) {
+      const deadline = new Date(scheduled);
+      deadline.setHours(22, 0, 0, 0);
+      if (now > deadline) {
+        return "마감됨";
+      }
+    } else if (!bidInfo?.first_price) {
+      // 1차 입찰 전 - scheduled_date까지
+      if (now > scheduled) {
+        return "마감됨";
+      }
+    }
+  }
+
+  // 기존 상태 표시 반환
+  return STATUS_DISPLAY[status] || "알 수 없음";
+}
+
+// 2. 상태에 맞는 CSS 클래스 반환 함수 수정
+function getStatusClass(status, scheduledDate, bidInfo = null) {
+  // 현재 시간과 예정 시간 비교
+  const now = new Date();
+  const scheduled = new Date(scheduledDate);
+
+  // 현장 경매의 경우 입찰 단계에 따른 마감시간 체크
+  if (
+    status === STATUS_TYPES.ACTIVE ||
+    status === STATUS_TYPES.FIRST ||
+    status === STATUS_TYPES.SECOND ||
+    status === STATUS_TYPES.FINAL
+  ) {
+    // 1차 입찰이 있고 최종 입찰이 없는 경우 - 저녁 10시까지
+    if (bidInfo?.first_price && !bidInfo?.final_price) {
+      const deadline = new Date(scheduled);
+      deadline.setHours(22, 0, 0, 0);
+      if (now > deadline) {
+        return "status-expired";
+      }
+    } else if (!bidInfo?.first_price) {
+      // 1차 입찰 전 - scheduled_date까지
+      if (now > scheduled) {
+        return "status-expired";
+      }
+    }
+  }
+
+  // 기존 클래스 반환
+  return STATUS_CLASSES[status] || "status-default";
+}
+
+// 3. displayProducts 함수에서 상태 체크 부분 수정
 function displayProducts() {
   const container = document.getElementById("productList");
   if (!container) return;
@@ -656,10 +744,21 @@ function displayProducts() {
           <div class="item-category">${item.category || "-"}</div>
       `;
 
-    const timer = BidManager.getRemainingTime(item.scheduled_date);
-    const now = new Date();
-    const scheduled = new Date(item.scheduled_date);
-    const isScheduledPassed = scheduled < now;
+    // 현장 경매의 경우 입찰 정보를 고려한 타이머 체크
+    let timer, isExpired;
+    if (product.type === "live") {
+      // 1차 입찰이 있고 최종 입찰이 없는 경우
+      if (product.first_price && !product.final_price) {
+        timer = BidManager.getRemainingTime(item.scheduled_date, "final");
+      } else {
+        timer = BidManager.getRemainingTime(item.scheduled_date, "first");
+      }
+    } else {
+      // 직접 경매는 기존대로
+      timer = BidManager.getRemainingTime(item.scheduled_date, "first");
+    }
+
+    isExpired = !timer;
 
     const isActiveBid =
       (product.displayStatus === "active" ||
@@ -667,18 +766,22 @@ function displayProducts() {
         product.displayStatus === "second" ||
         product.displayStatus === "final" ||
         product.displayStatus === "cancelled") &&
-      timer &&
-      !isScheduledPassed;
+      !isExpired;
 
     const statusSection = document.createElement("div");
     statusSection.className = "result-status";
+
+    // 현장 경매의 경우 입찰 정보를 전달
+    const bidInfo = product.type === "live" ? product : null;
     const statusClass = getStatusClass(
       product.displayStatus,
-      item.scheduled_date
+      item.scheduled_date,
+      bidInfo
     );
     const statusText = getStatusDisplay(
       product.displayStatus,
-      item.scheduled_date
+      item.scheduled_date,
+      bidInfo
     );
 
     statusSection.innerHTML = `
@@ -693,6 +796,7 @@ function displayProducts() {
           <div class="result-date">${formatDateTime(product.updated_at)}</div>
       `;
 
+    // 나머지 코드는 기존과 동일...
     if (isActiveBid) {
       let bidHtml = "";
       const itemId = item.item_id;
@@ -756,6 +860,7 @@ function displayProducts() {
       resultItem.appendChild(bidActionSection);
       resultItem.appendChild(statusSection);
     } else {
+      // 기존 코드와 동일 (입찰 불가 상태)
       const bidInfoSection = document.createElement("div");
       bidInfoSection.className = "bid-info";
 
@@ -1042,16 +1147,25 @@ function displayBidInfoInModal(product, item) {
   const bidSection = document.querySelector(".bid-info-holder");
   if (!bidSection) return;
 
-  // 남은 시간 확인
-  const timer = BidManager.getRemainingTime(item.scheduled_date);
+  // 현장 경매의 경우 입찰 단계에 따른 타이머 체크
+  let timer, isScheduledPassed;
 
-  // 현재 시간과 예정 시간 비교 추가
-  const now = new Date();
-  const scheduled = new Date(item.scheduled_date);
-  const isScheduledPassed = scheduled < now;
+  if (product.type === "live") {
+    // 1차 입찰이 있고 최종 입찰이 없는 경우
+    if (product.first_price && !product.final_price) {
+      timer = BidManager.getRemainingTime(item.scheduled_date, "final");
+    } else {
+      timer = BidManager.getRemainingTime(item.scheduled_date, "first");
+    }
+  } else {
+    // 직접 경매는 기존대로
+    timer = BidManager.getRemainingTime(item.scheduled_date, "first");
+  }
+
+  isScheduledPassed = !timer;
 
   // 마감되었거나 완료/취소 상태인 경우 읽기 전용 표시
-  if (!timer || isScheduledPassed || product.displayStatus === "completed") {
+  if (isScheduledPassed || product.displayStatus === "completed") {
     // 입찰 불가 상태인 경우 읽기 전용 입찰 정보 표시
     displayReadOnlyBidInfo(product, item, bidSection);
     return;
