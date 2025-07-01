@@ -875,8 +875,8 @@ function updateAppraisal() {
       document.getElementById("appraisal-auction-house").value || ""
     );
     formData.append(
-      "auction_item_id",
-      document.getElementById("appraisal-auction-item-id").value || ""
+      "auction_date",
+      document.getElementById("appraisal-auction-date").value || ""
     );
   }
 
@@ -1164,8 +1164,8 @@ function submitCreateAppraisal() {
     formData.auction_house = document.getElementById(
       "create-auction-house"
     ).value;
-    formData.auction_item_id = document.getElementById(
-      "create-auction-item-id"
+    formData.auction_date = document.getElementById(
+      "create-auction-date"
     ).value;
   }
 
