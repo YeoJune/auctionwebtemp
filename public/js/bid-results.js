@@ -19,6 +19,9 @@ window.state = {
     koreanAmount: 0,
     feeAmount: 0,
     grandTotalAmount: 0,
+    appraisalFee: 0, // 추가
+    appraisalVat: 0, // 추가
+    appraisalCount: 0, // 추가
   },
 };
 
@@ -237,6 +240,7 @@ function groupResultsByDate() {
       finalPrice: bidStatus.finalPrice,
       winningPrice: bidStatus.winningPrice,
       image: imagePath,
+      appr_id: item.appr_id, // 추가
     };
 
     // 상태별로 분류
@@ -302,6 +306,9 @@ function updateTotalStats() {
     feeAmount: 0,
     vatAmount: 0,
     grandTotalAmount: 0,
+    appraisalFee: 0,
+    appraisalVat: 0,
+    appraisalCount: 0,
   };
 
   state.dailyResults.forEach((day) => {
@@ -313,6 +320,24 @@ function updateTotalStats() {
     state.totalStats.vatAmount += Number(day.vatAmount);
     state.totalStats.grandTotalAmount += Number(day.grandTotal);
   });
+
+  // 감정서 관련 통계 계산
+  let appraisalCount = 0;
+  state.dailyResults.forEach((day) => {
+    day.successItems.forEach((item) => {
+      if (item.appr_id) {
+        appraisalCount++;
+      }
+    });
+  });
+
+  const appraisalFee = appraisalCount * 16500;
+  const appraisalVat = Math.round(appraisalFee / 11);
+
+  state.totalStats.appraisalFee = appraisalFee;
+  state.totalStats.appraisalVat = appraisalVat;
+  state.totalStats.appraisalCount = appraisalCount;
+  state.totalStats.grandTotalAmount += appraisalFee;
 
   // UI 업데이트
   document.getElementById("totalItemCount").textContent = `${formatNumber(
@@ -549,8 +574,9 @@ function createDailyResultRow(dayResult) {
     <th>최종입찰금액 (¥)</th>
     <th>실제낙찰금액 (¥)</th>
     <th>관부가세 포함 (₩)</th>
+    <th>감정서</th>
   </tr>
-`;
+  `;
   detailsTable.appendChild(tableHeader);
 
   const tableBody = document.createElement("tbody");
@@ -646,14 +672,71 @@ function createItemRow(item, status) {
     koreanCell.textContent = "-";
   }
 
+  const appraisalCell = document.createElement("td");
+  if (status === "success") {
+    const appraisalBtn = createAppraisalButton(item);
+    appraisalCell.appendChild(appraisalBtn);
+  } else {
+    appraisalCell.textContent = "-";
+  }
+
   row.appendChild(imageCell);
   row.appendChild(brandCell);
   row.appendChild(titleCell);
   row.appendChild(finalPriceCell);
   row.appendChild(winningPriceCell);
   row.appendChild(koreanCell);
+  row.appendChild(appraisalCell);
 
   return row;
+}
+
+function createAppraisalButton(item) {
+  const button = document.createElement("button");
+  button.className = "appraisal-btn small-button";
+
+  if (item.appr_id) {
+    button.textContent = "감정서 보기";
+    button.classList.add("success-button");
+    button.onclick = () => {
+      window.open(`/appr/result/${item.appr_id}`, "_blank");
+    };
+  } else {
+    button.textContent = "감정서 신청";
+    button.classList.add("primary-button");
+    button.onclick = () => requestAppraisal(item);
+  }
+
+  return button;
+}
+
+async function requestAppraisal(item) {
+  if (
+    confirm(
+      "감정서를 신청하시겠습니까?\n수수료 16,500원(VAT포함)이 추가됩니다."
+    )
+  ) {
+    try {
+      toggleLoading(true);
+      const endpoint = item.type === "direct" ? "direct-bids" : "live-bids";
+      const response = await API.fetchAPI(
+        `/${endpoint}/${item.id}/request-appraisal`,
+        {
+          method: "POST",
+        }
+      );
+
+      if (response.message) {
+        alert("감정서 신청이 완료되었습니다.");
+        await fetchCompletedBids();
+      }
+    } catch (error) {
+      console.error("감정서 신청 중 오류:", error);
+      alert("감정서 신청 중 오류가 발생했습니다.");
+    } finally {
+      toggleLoading(false);
+    }
+  }
 }
 
 // 표시용 날짜 포맷

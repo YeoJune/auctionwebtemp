@@ -195,6 +195,7 @@ router.get("/", async (req, res) => {
         created_at: row.created_at,
         updated_at: row.updated_at,
         winning_price: row.winning_price,
+        appr_id: row.appr_id,
       };
 
       // Only include item if it exists
@@ -925,6 +926,165 @@ router.put("/:id", isAdmin, async (req, res) => {
     await connection.rollback();
     console.error("Error updating bid:", err);
     res.status(500).json({ message: "Error updating bid" });
+  } finally {
+    connection.release();
+  }
+});
+
+// 감정서 신청 API - POST /direct-bids/:id/request-appraisal
+router.post("/:id/request-appraisal", async (req, res) => {
+  const bidId = req.params.id;
+
+  if (!req.session.user) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const userId = req.session.user.id;
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    // 1. bid 정보와 item 정보 함께 조회
+    const [bids] = await connection.query(
+      `SELECT d.*, i.brand, i.title, i.category, i.image 
+       FROM direct_bids d 
+       JOIN crawled_items i ON d.item_id = i.item_id 
+       WHERE d.id = ? AND d.user_id = ? AND d.status = 'completed' AND d.winning_price > 0`,
+      [bidId, userId]
+    );
+
+    if (bids.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({
+        message: "낙찰된 상품을 찾을 수 없거나 접근 권한이 없습니다.",
+      });
+    }
+
+    const bid = bids[0];
+
+    // 2. 이미 감정서를 신청했는지 확인
+    if (bid.appr_id) {
+      await connection.rollback();
+      return res.status(400).json({
+        message: "이미 감정서를 신청했습니다.",
+        appraisal_id: bid.appr_id,
+      });
+    }
+
+    // 3. 감정서 번호 생성 (기존 함수 활용)
+    async function generateCertificateNumber(conn) {
+      try {
+        const [rows] = await conn.query(
+          `SELECT certificate_number 
+           FROM appraisals 
+           WHERE certificate_number REGEXP '^cas[0-9]+$' 
+           ORDER BY created_at DESC 
+           LIMIT 1`
+        );
+
+        let nextNumber = 1;
+        let digitCount = 6;
+
+        if (rows.length > 0) {
+          const lastCertNumber = rows[0].certificate_number;
+          const match = lastCertNumber.match(/^cas(\d+)$/i);
+          if (match) {
+            const numberPart = match[1];
+            digitCount = numberPart.length;
+            const lastNumber = parseInt(numberPart);
+            nextNumber = lastNumber + 1;
+          }
+        }
+
+        let certificateNumber;
+        let isUnique = false;
+        let attempts = 0;
+        const maxAttempts = 1000;
+
+        while (!isUnique && attempts < maxAttempts) {
+          const paddedNumber = nextNumber.toString().padStart(digitCount, "0");
+          certificateNumber = `cas${paddedNumber}`;
+
+          const [existing] = await conn.query(
+            "SELECT certificate_number FROM appraisals WHERE certificate_number = ?",
+            [certificateNumber]
+          );
+
+          if (existing.length === 0) {
+            isUnique = true;
+          } else {
+            nextNumber++;
+            attempts++;
+          }
+        }
+
+        if (!isUnique) {
+          const randomNum = Math.floor(100000 + Math.random() * 900000);
+          certificateNumber = `cas${randomNum}`;
+
+          const [randomCheck] = await conn.query(
+            "SELECT certificate_number FROM appraisals WHERE certificate_number = ?",
+            [certificateNumber]
+          );
+
+          if (randomCheck.length > 0) {
+            throw new Error(
+              "인증서 번호 생성에 실패했습니다. 다시 시도해주세요."
+            );
+          }
+        }
+
+        return certificateNumber;
+      } catch (error) {
+        console.error("인증서 번호 생성 중 오류:", error);
+        throw new Error("인증서 번호 생성 중 오류가 발생했습니다.");
+      }
+    }
+
+    const certificateNumber = await generateCertificateNumber(connection);
+
+    // 4. appraisals 테이블에 감정서 생성
+    const [appraisalResult] = await connection.query(
+      `INSERT INTO appraisals (
+        user_id, appraisal_type, status, brand, model_name, category, 
+        result, images, certificate_number
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        "from_auction",
+        "pending",
+        bid.brand || "기타",
+        bid.title || "제목 없음",
+        bid.category || "기타",
+        "pending",
+        JSON.stringify(bid.image ? [bid.image] : []),
+        certificateNumber,
+      ]
+    );
+
+    const appraisalId = appraisalResult.insertId;
+
+    // 5. direct_bids 테이블의 appr_id 업데이트
+    await connection.query("UPDATE direct_bids SET appr_id = ? WHERE id = ?", [
+      appraisalId,
+      bidId,
+    ]);
+
+    await connection.commit();
+
+    res.status(201).json({
+      message: "감정서 신청이 완료되었습니다.",
+      appraisal_id: appraisalId,
+      certificate_number: certificateNumber,
+      status: "pending",
+    });
+  } catch (err) {
+    await connection.rollback();
+    console.error("감정서 신청 중 오류 발생:", err);
+    res.status(500).json({
+      message: err.message || "감정서 신청 중 오류가 발생했습니다.",
+    });
   } finally {
     connection.release();
   }
