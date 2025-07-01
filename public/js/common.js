@@ -620,6 +620,8 @@ function displayAucNumFilters(aucNums) {
   const aucNumFilters = document.getElementById("aucNumFilters");
   if (!aucNumFilters) return;
 
+  aucNums = [1, 2, 3]; // 여기
+
   aucNumFilters.innerHTML = "";
 
   // 출품사 정렬
