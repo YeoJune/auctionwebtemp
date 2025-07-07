@@ -382,15 +382,6 @@ class AxiosCrawler {
 
   // 로그인 체크 기본 메서드 (각 크롤러에서 오버라이드)
   async loginCheck() {
-    // 세션이 만료된 경우 무조건 false 반환
-    if (!this.isSessionValid()) {
-      console.log("Session expired, forcing logout");
-      this.lastLoginCheck = Date.now();
-      this.lastLoginCheckResult = false;
-      this.isLoggedIn = false;
-      return false;
-    }
-
     // 마지막 로그인 체크 시간이 5분 이내면 캐시된 결과 반환
     if (
       this.lastLoginCheck &&

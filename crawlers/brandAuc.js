@@ -599,8 +599,6 @@ class BrandAucCrawler extends AxiosCrawler {
       // 현재 bid_type 설정
       this.currentBidType = "direct";
 
-      console.log(firstPageResponse);
-
       // 첫 페이지 아이템 처리
       const firstPageItems = await this.processUpdateItemsPage(
         firstPageResponse.data.content,
@@ -1297,9 +1295,5 @@ class BrandAucValueCrawler extends AxiosCrawler {
 
 const brandAucCrawler = new BrandAucCrawler(brandAucConfig);
 const brandAucValueCrawler = new BrandAucValueCrawler(brandAucValueConfig);
-
-setTimeout(() => {
-  brandAucCrawler.crawlUpdates();
-}, 1000);
 
 module.exports = { brandAucCrawler, brandAucValueCrawler };
