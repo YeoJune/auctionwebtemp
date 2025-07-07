@@ -253,20 +253,49 @@ async function crawlAllUpdates() {
         [itemIds]
       );
 
-      // 변경된 항목만 필터링 (scheduled_date 또는 starting_price가 변경된 것)
+      // ✅ 해결책 3: 개선된 변경 감지 로직
       const changedItems = allUpdates.filter((newItem) => {
         const existingItem = existingItems.find(
           (item) => item.item_id === newItem.item_id
         );
-        if (!existingItem) return true; // 새 아이템이면 포함
 
-        // scheduled_date 또는 starting_price가 변경되었는지 확인
-        return (
-          (newItem.scheduled_date &&
-            newItem.scheduled_date !== existingItem.scheduled_date) ||
-          (newItem.starting_price &&
-            newItem.starting_price !== existingItem.starting_price)
-        );
+        if (!existingItem) {
+          console.log(`New item found: ${newItem.item_id}`);
+          return true;
+        }
+
+        // ✅ 날짜 비교 개선
+        let dateChanged = false;
+        if (newItem.scheduled_date && existingItem.scheduled_date) {
+          const newDate = new Date(newItem.scheduled_date);
+          const existingDate = new Date(existingItem.scheduled_date);
+          dateChanged = newDate.getTime() !== existingDate.getTime();
+
+          if (dateChanged) {
+            console.log(
+              `Date changed for ${newItem.item_id}: ${existingItem.scheduled_date} -> ${newItem.scheduled_date}`
+            );
+          }
+        }
+
+        // ✅ 가격 비교 개선
+        let priceChanged = false;
+        if (
+          newItem.starting_price !== undefined &&
+          existingItem.starting_price !== undefined
+        ) {
+          const newPrice = parseFloat(newItem.starting_price) || 0;
+          const existingPrice = parseFloat(existingItem.starting_price) || 0;
+          priceChanged = Math.abs(newPrice - existingPrice) > 0.01; // 부동소수점 오차 고려
+
+          if (priceChanged) {
+            console.log(
+              `Price changed for ${newItem.item_id}: ${existingItem.starting_price} -> ${newItem.starting_price}`
+            );
+          }
+        }
+
+        return dateChanged || priceChanged;
       });
 
       // 변경된 아이템이 있으면 DB 업데이트 비동기로 실행
@@ -398,17 +427,43 @@ async function crawlAllUpdatesWithId() {
       // 변경된 항목 필터링
       const changedItems = allUpdates.filter((newItem) => {
         const originalItem = originalItems[newItem.item_id];
-        if (!originalItem) return false;
+        if (!originalItem) {
+          console.log(`Original item not found for: ${newItem.item_id}`);
+          return false;
+        }
 
-        // 가격 또는 날짜 변경 확인
-        return (
-          (newItem.scheduled_date &&
-            new Date(newItem.scheduled_date).getTime() !==
-              new Date(originalItem.scheduled_date).getTime()) ||
-          (newItem.starting_price &&
-            parseFloat(newItem.starting_price) !==
-              parseFloat(originalItem.starting_price))
-        );
+        // 날짜 변경 확인
+        let dateChanged = false;
+        if (newItem.scheduled_date && originalItem.scheduled_date) {
+          const newDate = new Date(newItem.scheduled_date);
+          const originalDate = new Date(originalItem.scheduled_date);
+          dateChanged = newDate.getTime() !== originalDate.getTime();
+
+          if (dateChanged) {
+            console.log(
+              `Date changed for ${newItem.item_id}: ${originalItem.scheduled_date} -> ${newItem.scheduled_date}`
+            );
+          }
+        }
+
+        // 가격 변경 확인
+        let priceChanged = false;
+        if (
+          newItem.starting_price !== undefined &&
+          originalItem.starting_price !== undefined
+        ) {
+          const newPrice = parseFloat(newItem.starting_price) || 0;
+          const originalPrice = parseFloat(originalItem.starting_price) || 0;
+          priceChanged = Math.abs(newPrice - originalPrice) > 0.01;
+
+          if (priceChanged) {
+            console.log(
+              `Price changed for ${newItem.item_id}: ${originalItem.starting_price} -> ${newItem.starting_price}`
+            );
+          }
+        }
+
+        return dateChanged || priceChanged;
       });
 
       // 변경된 아이템이 있으면 DB 업데이트 비동기로 실행
