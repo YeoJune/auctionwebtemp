@@ -828,7 +828,7 @@ function classifyBidStatus(item) {
     return { status: "pending", finalPrice, winningPrice: null };
   }
 
-  if (finalPrice === winningPrice) {
+  if (finalPrice >= winningPrice) {
     return { status: "success", finalPrice, winningPrice };
   } else {
     return { status: "failed", finalPrice, winningPrice };
