@@ -447,8 +447,11 @@ class BrandAucCrawler extends AxiosCrawler {
       if (item.seriEndHm && this.auctionDate) {
         // seriEndHm이 있는 경우: auctionDate의 날짜 + seriEndHm의 시간 결합
         try {
-          const kstAuctionDate = this.convertToKST(this.auctionDate);
-          const dateOnly = kstAuctionDate.split("T")[0]; // YYYY-MM-DD 추출
+          const auctionDateStr =
+            typeof this.auctionDate === "string"
+              ? this.auctionDate
+              : this.auctionDate.toISOString();
+          const dateOnly = auctionDateStr.split("T")[0]; // YYYY-MM-DD 추출
 
           // seriEndHm ("16:10") + ":00" = "16:10:00"
           const timeWithSeconds = item.seriEndHm + ":00";
@@ -462,15 +465,11 @@ class BrandAucCrawler extends AxiosCrawler {
             error.message
           );
           // seriEndHm 처리 실패시 기본 auctionDate 사용
-          original_scheduled_date = this.extractDate(
-            this.convertToKST(this.auctionDate)
-          );
+          original_scheduled_date = this.extractDate(this.auctionDate);
         }
       } else {
-        // seriEndHm이 없는 경우: auctionDate 그대로 사용
-        original_scheduled_date = this.extractDate(
-          this.convertToKST(this.auctionDate)
-        );
+        // seriEndHm이 없는 경우: auctionDate를 extractDate로 파싱
+        original_scheduled_date = this.extractDate(this.auctionDate);
       }
       scheduled_date = original_scheduled_date;
     } else {
@@ -763,8 +762,12 @@ class BrandAucCrawler extends AxiosCrawler {
       if (this.auctionDate) {
         if (item.seriEndHm) {
           // seriEndHm이 있는 경우: auctionDate의 날짜 + seriEndHm의 시간 결합
-          const kstAuctionDate = this.convertToKST(this.auctionDate);
-          const dateOnly = kstAuctionDate.split("T")[0]; // YYYY-MM-DD 추출
+          // auctionDate가 이미 KST라면 convertToKST 불필요
+          const auctionDateStr =
+            typeof this.auctionDate === "string"
+              ? this.auctionDate
+              : this.auctionDate.toISOString();
+          const dateOnly = auctionDateStr.split("T")[0]; // YYYY-MM-DD 추출
 
           // seriEndHm ("16:10") + ":00" = "16:10:00"
           const timeWithSeconds = item.seriEndHm + ":00";
@@ -773,9 +776,8 @@ class BrandAucCrawler extends AxiosCrawler {
           const combinedDateTime = `${dateOnly} ${timeWithSeconds}`;
           scheduled_date = this.extractDate(combinedDateTime);
         } else {
-          // seriEndHm이 없는 경우: auctionDate 그대로 사용
-          const kstAuctionDate = this.convertToKST(this.auctionDate);
-          scheduled_date = this.extractDate(kstAuctionDate);
+          // seriEndHm이 없는 경우: auctionDate를 extractDate로 파싱
+          scheduled_date = this.extractDate(this.auctionDate);
         }
       }
     } catch (error) {
