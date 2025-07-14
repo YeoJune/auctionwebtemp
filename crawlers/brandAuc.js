@@ -438,15 +438,46 @@ class BrandAucCrawler extends AxiosCrawler {
     const category =
       this.config.categoryTable[item[genreField]] || item[genreField];
 
-    // 날짜 처리 - direct 타입은 미리 저장된 값 사용, live는 아이템별 값 사용
-    const original_scheduled_date =
-      bidType === "direct"
-        ? this.extractDate(this.convertToKST(this.auctionDate))
-        : this.extractDate(this.convertToKST(item.kaisaiYmd));
+    // 날짜 처리 개선
+    let original_scheduled_date;
+    let scheduled_date;
 
-    // 최종 날짜 계산 (live 타입은 하루 전 18시로 설정)
-    let scheduled_date = original_scheduled_date;
-    if (bidType === "live") {
+    if (bidType === "direct") {
+      // direct 타입은 미리 저장된 auctionDate 사용
+      if (item.seriEndHm && this.auctionDate) {
+        // seriEndHm이 있는 경우: auctionDate의 날짜 + seriEndHm의 시간 결합
+        try {
+          const kstAuctionDate = this.convertToKST(this.auctionDate);
+          const dateOnly = kstAuctionDate.split("T")[0]; // YYYY-MM-DD 추출
+
+          // seriEndHm ("16:10") + ":00" = "16:10:00"
+          const timeWithSeconds = item.seriEndHm + ":00";
+
+          // 날짜와 시간 결합 후 extractDate로 형식 통일
+          const combinedDateTime = `${dateOnly} ${timeWithSeconds}`;
+          original_scheduled_date = this.extractDate(combinedDateTime);
+        } catch (error) {
+          console.warn(
+            `Error creating scheduled_date with seriEndHm for item ${item.uketsukeBng}:`,
+            error.message
+          );
+          // seriEndHm 처리 실패시 기본 auctionDate 사용
+          original_scheduled_date = this.extractDate(
+            this.convertToKST(this.auctionDate)
+          );
+        }
+      } else {
+        // seriEndHm이 없는 경우: auctionDate 그대로 사용
+        original_scheduled_date = this.extractDate(
+          this.convertToKST(this.auctionDate)
+        );
+      }
+      scheduled_date = original_scheduled_date;
+    } else {
+      // live 타입은 아이템별 값 사용
+      original_scheduled_date = this.extractDate(
+        this.convertToKST(item.kaisaiYmd)
+      );
       scheduled_date = this.getPreviousDayAt18(original_scheduled_date);
 
       // 이미 지난 경매는 필터링
@@ -556,6 +587,7 @@ class BrandAucCrawler extends AxiosCrawler {
       };
     }
   }
+
   async crawlUpdates() {
     try {
       const limit = pLimit(5); // 최대 5개의 병렬 요청을 허용
@@ -565,6 +597,34 @@ class BrandAucCrawler extends AxiosCrawler {
 
       // 로그인
       await this.login();
+
+      // auctionDate 설정 (기존 crawlAllItems에서 가져온 로직)
+      await this.cookieJar.setCookie(
+        "brand_language=en",
+        "https://bid.brand-auc.com"
+      );
+
+      // 경매 정보 가져오기
+      const auctionInfoResponse = await this.client.get(
+        "https://bid.brand-auc.com/api/v1/brand-bid/com/auction-info",
+        {
+          headers: {
+            Accept: "application/json",
+            Referer: "https://bid.brand-auc.com/",
+            "X-Requested-With": "XMLHttpRequest",
+          },
+        }
+      );
+
+      // 경매 날짜 정보 저장
+      const auctionDates = auctionInfoResponse.data.nyuShimeYmdList;
+      this.auctionKaisu = auctionInfoResponse.data.kaisaiKaisu;
+
+      if (auctionDates.length === 0) {
+        throw new Error("Failed to get auction dates");
+      }
+
+      this.auctionDate = auctionDates[0];
 
       const allCrawledItems = [];
       const size = 1000; // 한 페이지당 항목 수
@@ -697,9 +757,39 @@ class BrandAucCrawler extends AxiosCrawler {
   }
 
   extractUpdateItemInfo(item) {
+    let scheduled_date = null;
+
+    try {
+      if (this.auctionDate) {
+        if (item.seriEndHm) {
+          // seriEndHm이 있는 경우: auctionDate의 날짜 + seriEndHm의 시간 결합
+          const kstAuctionDate = this.convertToKST(this.auctionDate);
+          const dateOnly = kstAuctionDate.split("T")[0]; // YYYY-MM-DD 추출
+
+          // seriEndHm ("16:10") + ":00" = "16:10:00"
+          const timeWithSeconds = item.seriEndHm + ":00";
+
+          // 날짜와 시간 결합 후 extractDate로 형식 통일
+          const combinedDateTime = `${dateOnly} ${timeWithSeconds}`;
+          scheduled_date = this.extractDate(combinedDateTime);
+        } else {
+          // seriEndHm이 없는 경우: auctionDate 그대로 사용
+          const kstAuctionDate = this.convertToKST(this.auctionDate);
+          scheduled_date = this.extractDate(kstAuctionDate);
+        }
+      }
+    } catch (error) {
+      console.warn(
+        `Error creating scheduled_date for item ${item.uketsukeBng}:`,
+        error.message
+      );
+      scheduled_date = null;
+    }
+
     return {
       item_id: item.uketsukeBng,
       starting_price: item.genzaiKng || item.startKng || 0,
+      scheduled_date: scheduled_date,
     };
   }
 
