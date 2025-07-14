@@ -86,88 +86,6 @@
         padding: 0 20px;
       }
 
-      .inquiry-form {
-        background-color: white;
-        border-radius: 12px;
-        padding: 32px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-      }
-
-      .form-group {
-        margin-bottom: 24px;
-      }
-
-      .form-group label {
-        display: block;
-        margin-bottom: 8px;
-        font-weight: 500;
-        color: #1a1a1a;
-      }
-
-      .form-group input,
-      .form-group textarea,
-      .form-group select {
-        width: 100%;
-        padding: 12px 16px;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        font-family: "Noto Sans KR", sans-serif;
-        font-size: 16px;
-        transition: border-color 0.3s ease;
-      }
-
-      .form-group input:focus,
-      .form-group textarea:focus,
-      .form-group select:focus {
-        outline: none;
-        border-color: #1e3a8a;
-        box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.1);
-      }
-
-      .form-buttons {
-        text-align: center;
-        margin-top: 32px;
-      }
-
-      .submit-button {
-        background-color: #1e3a8a;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 14px 32px;
-        font-size: 16px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.3s ease;
-      }
-
-      .submit-button:hover {
-        background-color: #1e40af;
-        transform: translateY(-2px);
-      }
-
-      .form-message {
-        margin-top: 16px;
-        padding: 12px;
-        border-radius: 8px;
-        text-align: center;
-        display: none;
-      }
-
-      .form-message.success {
-        display: block;
-        background-color: #ecfdf5;
-        color: #065f46;
-        border: 1px solid #a7f3d0;
-      }
-
-      .form-message.error {
-        display: block;
-        background-color: #fef2f2;
-        color: #b91c1c;
-        border: 1px solid #fecaca;
-      }
-
       .inquiry-notice {
         text-align: center;
         margin-bottom: 24px;
@@ -178,30 +96,11 @@
         line-height: 1.6;
       }
 
-      /* 입점신청 설명 섹션 스타일 */
-      .signup-process {
-        margin-bottom: 32px;
+      .inquiry-form {
         background-color: white;
         border-radius: 12px;
-        padding: 24px;
+        padding: 32px;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-      }
-
-      .signup-process h3 {
-        font-size: 20px;
-        color: #1e3a8a;
-        margin-bottom: 16px;
-        padding-bottom: 8px;
-        border-bottom: 2px solid #e5e7eb;
-      }
-
-      .signup-process ol {
-        padding-left: 20px;
-        margin-top: 10px;
-      }
-
-      .signup-process ol li {
-        margin-bottom: 8px;
       }
 
       .pricing-link {
@@ -213,22 +112,6 @@
 
       .pricing-link:hover {
         color: #1e40af;
-      }
-
-      .guide-tip {
-        background: #fffbeb;
-        border-left: 4px solid #f59e0b;
-        padding: 16px;
-        margin-top: 24px;
-        border-radius: 0 8px 8px 0;
-        display: flex;
-        align-items: flex-start;
-        gap: 12px;
-      }
-
-      .tip-icon {
-        font-size: 24px;
-        line-height: 1;
       }
 
       /* 모바일 스타일 */
@@ -322,135 +205,185 @@
           <h2 class="section-title">입점신청</h2>
           <div class="inquiry-container">
             <p class="inquiry-notice">
-              원활한 서비스 제공을 위해 입점 가능 고객사의 수에 제한이 있음을
-              안내드립니다.<br />
+              <strong
+                >까사트레이드는 기업 고객을 위한 B2B 명품 경매
+                플랫폼입니다.</strong
+              ><br /><br />
+
+              개인 구매를 위한 서비스가 아닌, 사업 목적의 명품 매입을 위해
+              운영되고 있습니다.<br /><br />
+
+              또한 경매의 메리트 유지를 위해 입점 가능한 고객사 수를 제한하고
+              있습니다.<br /><br />
+
               아래 신청서를 작성해 주시면, 검토 후 담당자가 순차적으로
               연락드리겠습니다.
             </p>
-            <form id="inquiryForm" class="inquiry-form">
-              <div class="form-group">
-                <label for="companyName">상호명 (개인일시 성함작성) *</label>
-                <input
-                  type="text"
-                  id="companyName"
-                  name="companyName"
-                  required />
+
+            <div class="inquiry-form">
+              <div
+                style="
+                  margin: 16px 0;
+                  padding: 16px;
+                  background: #f8fafc;
+                  border-radius: 8px;
+                  border: 1px solid #e5e7eb;
+                ">
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    flex-wrap: wrap;
+                    gap: 12px;
+                  ">
+                  <div style="flex: 1">
+                    <p
+                      style="
+                        margin: 0;
+                        font-weight: 500;
+                        color: #374151;
+                        font-size: 14px;
+                      ">
+                      💰 보증금에 대한 자세한 내용은 이용가이드 요금안내 탭을
+                      참고해주세요
+                    </p>
+                  </div>
+                  <button
+                    onclick="window.location.href = '/guidePage'"
+                    style="
+                      background-color: #1e3a8a;
+                      color: white;
+                      border: none;
+                      border-radius: 6px;
+                      padding: 8px 16px;
+                      font-size: 14px;
+                      font-weight: 500;
+                      cursor: pointer;
+                      white-space: nowrap;
+                    "
+                    onmouseover="this.style.backgroundColor='#1E40AF'"
+                    onmouseout="this.style.backgroundColor='#1E3A8A'">
+                    요금안내 보기
+                  </button>
+                </div>
               </div>
 
-              <div class="form-group">
-                <label for="phone">연락처 *</label>
-                <input type="tel" id="phone" name="phone" required />
-              </div>
+              <div
+                style="
+                  margin-top: 20px;
+                  background: #f8fafc;
+                  padding: 20px;
+                  border-radius: 8px;
+                  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                ">
+                <h4
+                  style="margin-bottom: 15px; font-size: 18px; color: #1e3a8a">
+                  입점신청
+                </h4>
 
-              <div class="form-group">
-                <label for="email">이메일 (계산서 발행) *</label>
-                <input type="email" id="email" name="email" required />
-              </div>
+                <iframe
+                  src="https://docs.google.com/forms/d/e/1FAIpQLSfLpunL_JyeWESJP3RNn68ZlhTfYCmD9eZ7IGgAK2OJFCBoXw/viewform?embedded=true"
+                  width="100%"
+                  height="800"
+                  frameborder="0"
+                  marginheight="0"
+                  marginwidth="0"
+                  style="border-radius: 8px">
+                  로딩 중...
+                </iframe>
 
-              <div class="form-group">
-                <label for="address">희망 배송지 정보 *</label>
-                <input type="text" id="address" name="address" required />
-              </div>
+                <!-- 입점신청 완료 안내 -->
+                <div
+                  style="
+                    margin-top: 20px;
+                    padding: 20px;
+                    background: white;
+                    border-radius: 8px;
+                    border: 1px solid #e5e7eb;
+                  ">
+                  <h5
+                    style="
+                      margin: 0 0 16px 0;
+                      color: #1f2937;
+                      font-size: 18px;
+                      font-weight: 600;
+                    ">
+                    입점신청 완료 후 다음 단계
+                  </h5>
+                  <p
+                    style="margin: 0 0 20px 0; color: #6b7280; font-size: 14px">
+                    신청서 제출이 완료되었다면 아래 단계를 진행해주세요
+                  </p>
 
-              <div class="form-group">
-                <label for="startDate">희망 경매 시작일 *</label>
-                <input type="text" id="startDate" name="startDate" required />
-              </div>
+                  <div
+                    style="
+                      display: flex;
+                      align-items: flex-start;
+                      gap: 16px;
+                      margin-bottom: 24px;
+                    ">
+                    <div
+                      style="
+                        flex-shrink: 0;
+                        width: 32px;
+                        height: 32px;
+                        background: #1e3a8a;
+                        border-radius: 6px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: white;
+                        font-size: 14px;
+                        font-weight: 600;
+                      ">
+                      1
+                    </div>
+                    <div style="flex: 1">
+                      <h6
+                        style="
+                          margin: 0 0 6px 0;
+                          font-weight: 600;
+                          color: #1f2937;
+                          font-size: 16px;
+                        ">
+                        카카오톡 채널로 "입점신청 완료" 메시지 전송
+                      </h6>
+                      <p style="margin: 0; color: #6b7280; font-size: 14px">
+                        보증금 납부후, 아이디/비밀번호 발급을 위해 반드시
+                        카톡으로 연락해 주세요
+                      </p>
+                    </div>
+                  </div>
 
-              <div class="form-group">
-                <label for="referral">어디를 통해 들어오셨나요? *</label>
-                <input
-                  type="text"
-                  id="referral"
-                  name="referral"
-                  placeholder="예: 인스타그램, 네이버 블로그, 지인 소개, 검색 등"
-                  required />
+                  <div style="text-align: center">
+                    <a
+                      href="https://pf.kakao.com/_xcCxoqn/chat"
+                      target="_blank"
+                      style="
+                        display: inline-block;
+                        background-color: #fee500;
+                        color: #1a1a1a;
+                        padding: 12px 24px;
+                        border-radius: 6px;
+                        text-decoration: none;
+                        font-weight: 600;
+                        font-size: 15px;
+                        transition: all 0.2s ease;
+                      "
+                      onmouseover="this.style.backgroundColor='#FACC15'"
+                      onmouseout="this.style.backgroundColor='#FEE500'">
+                      카카오톡 채널로 연락하기
+                    </a>
+                  </div>
+                </div>
               </div>
-
-              <div class="form-group">
-                <label for="deposit">희망보증금 (만원) *</label>
-                <input
-                  type="number"
-                  id="deposit"
-                  name="deposit"
-                  placeholder="예: 500"
-                  required />
-                <p style="margin-top: 5px; font-size: 14px; color: #6b7280">
-                  <a href="/guidePage#pricing" class="pricing-link"
-                    >보증금에 대한 자세한 내용은 이용가이드에 요금안내 탭을
-                    참고해주세요.</a
-                  >
-                </p>
-              </div>
-
-              <div class="form-buttons">
-                <button type="submit" class="submit-button">입점신청</button>
-              </div>
-
-              <div class="guide-tip">
-                <div class="tip-icon">💡</div>
-                <p>
-                  TIP: 회원가입 시 사업자등록증 사본을 미리 준비해두시면 승인
-                  과정이 더 빠르게 진행됩니다.
-                </p>
-              </div>
-
-              <div id="formMessage" class="form-message"></div>
-            </form>
+            </div>
           </div>
         </div>
       </section>
     </div>
 
-    <script>
-      // DOM이 로드된 후 실행
-      document.addEventListener("DOMContentLoaded", function () {
-        // 폼 제출 처리
-        const inquiryForm = document.getElementById("inquiryForm");
-
-        if (inquiryForm) {
-          inquiryForm.addEventListener("submit", function (e) {
-            e.preventDefault();
-
-            const formData = new FormData(this);
-
-            fetch("https://formspree.io/f/mdkaqpdb", {
-              method: "POST",
-              body: formData,
-              headers: {
-                Accept: "application/json",
-              },
-            })
-              .then((response) => response.json())
-              .then((data) => {
-                const formMessage = document.getElementById("formMessage");
-                if (formMessage) {
-                  if (data.ok) {
-                    formMessage.className = "form-message success";
-                    formMessage.textContent =
-                      "입점신청이 성공적으로 접수되었습니다. 검토 후 담당자가 연락드리겠습니다.";
-                    inquiryForm.reset();
-                  } else {
-                    formMessage.className = "form-message error";
-                    formMessage.textContent =
-                      "입점신청 접수 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
-                  }
-                  formMessage.style.display = "block";
-                }
-              })
-              .catch((error) => {
-                const formMessage = document.getElementById("formMessage");
-                if (formMessage) {
-                  formMessage.className = "form-message error";
-                  formMessage.textContent =
-                    "네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
-                  formMessage.style.display = "block";
-                }
-              });
-          });
-        }
-      });
-    </script>
     <script src="/js/common.js"></script>
     <script src="/js/traker.js"></script>
   </body>

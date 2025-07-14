@@ -896,6 +896,11 @@
                         >
                         국내 유일 명품 유통 구조 플랫폼으로 진화하고 있습니다.
                       </p>
+                      <p>
+                        매주 5만개 이상의 상품이 업데이트되며, 교육비나 초기비용
+                        없이 바로 경매에 참여하실 수 있습니다. 감정, 수선,
+                        재판매까지 원스톱으로 해결 가능합니다.
+                      </p>
                     </li>
                   </ul>
 
@@ -945,14 +950,6 @@
                       </ul>
                     </div>
                   </div>
-                  <div class="guide-tip">
-                    <div class="tip-icon">💡</div>
-                    <p>
-                      TIP: 매주 5만개 이상의 상품이 업데이트되며, 교육비나
-                      초기비용 없이 바로 경매에 참여하실 수 있습니다. 이제는
-                      감정, 수선, 재판매까지 원스톱으로 해결 가능합니다!
-                    </p>
-                  </div>
                 </div>
               </div>
 
@@ -963,11 +960,66 @@
                   <ul class="guide-list">
                     <li>
                       <strong
-                        >원활한 서비스 제공을 위해 입점 가능 고객사의 수에
-                        제한이 있음을 안내드립니다.<br />
+                        >까사트레이드는 기업 고객을 위한 B2B 명품 경매
+                        플랫폼입니다.<br /><br />
+
+                        개인 구매를 위한 서비스가 아닌, 사업 목적의 명품 매입을
+                        위해 운영되고 있습니다.<br /><br />
+
+                        또한 경매의 메리트 유지를 위해 입점 가능한 고객사 수를
+                        제한하고 있습니다.<br /><br />
+
                         아래 신청서를 작성해 주시면, 검토 후 담당자가 순차적으로
                         연락드리겠습니다.</strong
                       >
+
+                      <div
+                        style="
+                          margin: 16px 0;
+                          padding: 16px;
+                          background: #f8fafc;
+                          border-radius: 8px;
+                          border: 1px solid #e5e7eb;
+                        ">
+                        <div
+                          style="
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            flex-wrap: wrap;
+                            gap: 12px;
+                          ">
+                          <div style="flex: 1">
+                            <p
+                              style="
+                                margin: 0;
+                                font-weight: 500;
+                                color: #374151;
+                                font-size: 14px;
+                              ">
+                              💰 보증금에 대한 자세한 내용은 이용가이드 요금안내
+                              탭을 참고해주세요
+                            </p>
+                          </div>
+                          <button
+                            onclick="navigateToTab('pricing')"
+                            style="
+                              background-color: #1e3a8a;
+                              color: white;
+                              border: none;
+                              border-radius: 6px;
+                              padding: 8px 16px;
+                              font-size: 14px;
+                              font-weight: 500;
+                              cursor: pointer;
+                              white-space: nowrap;
+                            "
+                            onmouseover="this.style.backgroundColor='#1E40AF'"
+                            onmouseout="this.style.backgroundColor='#1E3A8A'">
+                            요금안내 보기
+                          </button>
+                        </div>
+                      </div>
 
                       <div
                         style="
@@ -985,208 +1037,114 @@
                           ">
                           입점신청
                         </h4>
-                        <form id="inquiryForm">
-                          <div style="margin-bottom: 15px">
-                            <label
-                              for="companyName"
-                              style="
-                                display: block;
-                                margin-bottom: 5px;
-                                font-weight: 500;
-                              "
-                              >상호명 (개인일시 성함작성) *</label
-                            >
-                            <input
-                              type="text"
-                              id="companyName"
-                              name="companyName"
-                              style="
-                                width: 100%;
-                                padding: 10px;
-                                border: 1px solid #e5e7eb;
-                                border-radius: 6px;
-                              "
-                              required />
-                          </div>
 
-                          <div style="margin-bottom: 15px">
-                            <label
-                              for="phone"
-                              style="
-                                display: block;
-                                margin-bottom: 5px;
-                                font-weight: 500;
-                              "
-                              >연락처 *</label
-                            >
-                            <input
-                              type="tel"
-                              id="phone"
-                              name="phone"
-                              style="
-                                width: 100%;
-                                padding: 10px;
-                                border: 1px solid #e5e7eb;
-                                border-radius: 6px;
-                              "
-                              required />
-                          </div>
+                        <iframe
+                          src="https://docs.google.com/forms/d/e/1FAIpQLSfLpunL_JyeWESJP3RNn68ZlhTfYCmD9eZ7IGgAK2OJFCBoXw/viewform?embedded=true"
+                          width="100%"
+                          height="800"
+                          frameborder="0"
+                          marginheight="0"
+                          marginwidth="0"
+                          style="border-radius: 8px">
+                          로딩 중...
+                        </iframe>
 
-                          <div style="margin-bottom: 15px">
-                            <label
-                              for="email"
-                              style="
-                                display: block;
-                                margin-bottom: 5px;
-                                font-weight: 500;
-                              "
-                              >이메일 (계산서 발행) *</label
-                            >
-                            <input
-                              type="email"
-                              id="email"
-                              name="email"
-                              style="
-                                width: 100%;
-                                padding: 10px;
-                                border: 1px solid #e5e7eb;
-                                border-radius: 6px;
-                              "
-                              required />
-                          </div>
+                        <!-- 입점신청 완료 안내 -->
+                        <div
+                          style="
+                            margin-top: 20px;
+                            padding: 20px;
+                            background: white;
+                            border-radius: 8px;
+                            border: 1px solid #e5e7eb;
+                          ">
+                          <h5
+                            style="
+                              margin: 0 0 16px 0;
+                              color: #1f2937;
+                              font-size: 18px;
+                              font-weight: 600;
+                            ">
+                            입점신청 완료 후 다음 단계
+                          </h5>
+                          <p
+                            style="
+                              margin: 0 0 20px 0;
+                              color: #6b7280;
+                              font-size: 14px;
+                            ">
+                            신청서 제출이 완료되었다면 아래 단계를 진행해주세요
+                          </p>
 
-                          <div style="margin-bottom: 15px">
-                            <label
-                              for="address"
+                          <div
+                            style="
+                              display: flex;
+                              align-items: flex-start;
+                              gap: 16px;
+                              margin-bottom: 24px;
+                            ">
+                            <div
                               style="
-                                display: block;
-                                margin-bottom: 5px;
-                                font-weight: 500;
-                              "
-                              >희망 배송지 정보 *</label
-                            >
-                            <input
-                              type="text"
-                              id="address"
-                              name="address"
-                              style="
-                                width: 100%;
-                                padding: 10px;
-                                border: 1px solid #e5e7eb;
+                                flex-shrink: 0;
+                                width: 32px;
+                                height: 32px;
+                                background: #1e3a8a;
                                 border-radius: 6px;
-                              "
-                              required />
-                          </div>
-
-                          <div style="margin-bottom: 15px">
-                            <label
-                              for="startDate"
-                              style="
-                                display: block;
-                                margin-bottom: 5px;
-                                font-weight: 500;
-                              "
-                              >희망 경매 시작일 *</label
-                            >
-                            <input
-                              type="text"
-                              id="startDate"
-                              name="startDate"
-                              style="
-                                width: 100%;
-                                padding: 10px;
-                                border: 1px solid #e5e7eb;
-                                border-radius: 6px;
-                              "
-                              required />
-                          </div>
-
-                          <div style="margin-bottom: 15px">
-                            <label
-                              for="referral"
-                              style="
-                                display: block;
-                                margin-bottom: 5px;
-                                font-weight: 500;
-                              "
-                              >어디를 통해 들어오셨나요? *</label
-                            >
-                            <input
-                              type="text"
-                              id="referral"
-                              name="referral"
-                              placeholder="예: 인스타그램, 네이버 블로그, 지인 소개, 검색 등"
-                              style="
-                                width: 100%;
-                                padding: 10px;
-                                border: 1px solid #e5e7eb;
-                                border-radius: 6px;
-                              "
-                              required />
-                          </div>
-
-                          <div style="margin-bottom: 15px">
-                            <label
-                              for="deposit"
-                              style="
-                                display: block;
-                                margin-bottom: 5px;
-                                font-weight: 500;
-                              "
-                              >희망보증금 (만원) *</label
-                            >
-                            <input
-                              type="number"
-                              id="deposit"
-                              name="deposit"
-                              placeholder="예: 500"
-                              style="
-                                width: 100%;
-                                padding: 10px;
-                                border: 1px solid #e5e7eb;
-                                border-radius: 6px;
-                              "
-                              required />
-                            <p
-                              style="
-                                margin-top: 5px;
-                                font-size: 14px;
-                                color: #6b7280;
-                              ">
-                              <span
-                                class="pricing-link"
-                                onclick="navigateToTab('pricing')"
-                                >보증금에 대한 자세한 내용은 이용가이드에
-                                요금안내 탭을 참고해주세요.</span
-                              >
-                            </p>
-                          </div>
-
-                          <div style="text-align: center; margin-top: 20px">
-                            <button
-                              type="submit"
-                              style="
-                                background-color: #1e3a8a;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
                                 color: white;
-                                border: none;
-                                border-radius: 6px;
-                                padding: 12px 24px;
-                                font-size: 16px;
-                                font-weight: 500;
-                                cursor: pointer;
+                                font-size: 14px;
+                                font-weight: 600;
                               ">
-                              입점신청
-                            </button>
+                              1
+                            </div>
+                            <div style="flex: 1">
+                              <h6
+                                style="
+                                  margin: 0 0 6px 0;
+                                  font-weight: 600;
+                                  color: #1f2937;
+                                  font-size: 16px;
+                                ">
+                                카카오톡 채널로 "입점신청 완료" 메시지 전송
+                              </h6>
+                              <p
+                                style="
+                                  margin: 0;
+                                  color: #6b7280;
+                                  font-size: 14px;
+                                ">
+                                보증금 납부후, 아이디/비밀번호 발급을 위해
+                                반드시 카톡으로 연락해 주세요
+                              </p>
+                            </div>
                           </div>
-                        </form>
-                      </div>
 
-                      <div class="guide-tip">
-                        <div class="tip-icon">💡</div>
-                        <p>
-                          TIP: 회원가입 시 사업자등록증 사본을 미리 준비해두시면
-                          승인 과정이 더 빠르게 진행됩니다.
-                        </p>
+                          <div style="text-align: center">
+                            <a
+                              href="https://pf.kakao.com/_xcCxoqn/chat"
+                              target="_blank"
+                              style="
+                                display: inline-block;
+                                background-color: #fee500;
+                                color: #1a1a1a;
+                                padding: 12px 24px;
+                                border-radius: 6px;
+                                text-decoration: none;
+                                font-weight: 600;
+                                font-size: 15px;
+                                transition: all 0.2s ease;
+                              "
+                              onmouseover="this.style.backgroundColor='#FACC15'"
+                              onmouseout="this.style.backgroundColor='#FEE500'">
+                              카카오톡 채널로 연락하기
+                            </a>
+                          </div>
+                        </div>
+
+                        <!-- 보증금 안내 (기존 내용 유지) -->
+                        <div style="margin-top: 16px; text-align: center"></div>
                       </div>
                     </li>
                   </ul>
@@ -1229,7 +1187,6 @@
                             회원님이 온라인으로 직접 참여하는 방식
                           </p>
                           <ul class="service-list">
-                            <li>고객이 원하는 입찰가를 직접 입력</li>
                             <li>
                               경매 마감 시간까지
                               <strong
@@ -1237,7 +1194,6 @@
                                 낙찰</strong
                               >
                             </li>
-                            <li>낙찰 여부는 입찰결과 탭에서 확인 가능</li>
                             <li>
                               <strong
                                 >일부 상품은 마감시간 직전 입찰 시 수 초~수 분
@@ -1248,6 +1204,15 @@
                               시세가 명확하거나 중저가 아이템, 초보자에게 적합
                             </li>
                           </ul>
+                          <div
+                            style="
+                              text-align: center;
+                              margin-top: 12px;
+                              color: #1e40af;
+                              font-weight: 600;
+                            ">
+                            참여 후 1영업일 뒤에 결과 확인
+                          </div>
                         </div>
 
                         <div
@@ -1267,88 +1232,129 @@
                             <li>
                               고가 아이템 또는 시세를 모르겠는 아이템에 유리
                             </li>
-                            <li>3단계 제안 흐름 진행</li>
                           </ul>
-                        </div>
-                      </div>
 
-                      <div class="auction-steps">
-                        <div class="auction-step">
-                          <div class="auction-step-header">
-                            <div class="auction-step-number">1</div>
-                            <div class="auction-step-title">
-                              1차 입찰가격 입력
+                          <div
+                            style="
+                              background: #f8fafc;
+                              padding: 16px;
+                              border-radius: 8px;
+                              margin-top: 16px;
+                            ">
+                            <h4 style="color: #1e3a8a; margin-bottom: 12px">
+                              3단계 제안 흐름
+                            </h4>
+                            <div style="margin-bottom: 12px">
+                              <strong>1차 입찰가격 입력</strong><br />
+                              <span style="color: #6b7280"
+                                >고객이 1차로 낙찰 희망가격 입력</span
+                              >
+                            </div>
+                            <div style="margin-bottom: 12px">
+                              <strong>2차 제안가 안내</strong><br />
+                              <span style="color: #6b7280"
+                                >까사 경매팀이 시세 기반 2차 제안가 제공</span
+                              >
+                            </div>
+                            <div>
+                              <strong>3차 최종입찰가 입력</strong><br />
+                              <span style="color: #6b7280"
+                                >고객이 직접 경매 들어갈 3차 최종 입찰가
+                                입력</span
+                              >
                             </div>
                           </div>
-                          <p>고객이 1차로 낙찰 희망가격 입력</p>
-                        </div>
-                        <div class="auction-step">
-                          <div class="auction-step-header">
-                            <div class="auction-step-number">2</div>
-                            <div class="auction-step-title">
-                              2차 제안가 안내
-                            </div>
-                          </div>
-                          <p>까사 경매팀이 시세 기반 2차 제안가 제공</p>
-                        </div>
-                        <div class="auction-step">
-                          <div class="auction-step-header">
-                            <div class="auction-step-number">3</div>
-                            <div class="auction-step-title">
-                              3차 최종입찰가 입력
-                            </div>
-                          </div>
-                          <p>고객이 직접 경매 들어갈 3차 최종 입찰가 입력</p>
-                        </div>
-                      </div>
-                      <div class="auction-summary">
-                        <p>
-                          <strong>직접경매</strong>는 단순하고 빠르며, 시세가
-                          명확한 아이템에 적합합니다. <br /><strong
-                            >현장경매</strong
-                          >는 경매사가 대신 입찰하며, 제안가 구조를 통해
-                          경쟁률이 높은 프리미엄 상품을 유리하게 낙찰받을 수
-                          있습니다.
-                        </p>
-                        <p style="margin-top: 10px; color: #ef4444">
-                          <strong
-                            >⚠️ 주의: 3차 최종입찰가가 입력되지 않으면 경매는
-                            자동으로 취소되며 참여되지 않습니다.</strong
-                          >
-                        </p>
-                      </div>
 
-                      <div class="auction-faq">
-                        <h4>자주 묻는 질문</h4>
-                        <div class="auction-faq-item">
-                          <div class="auction-faq-question">
-                            Q. 입찰했는데 안 보여요.
-                          </div>
-                          <div class="auction-faq-answer">
-                            입찰항목에서 필터를 '전체'로 바꾸세요. 경쟁 입찰자가
-                            있으면 내 입찰은 자동 취소되어 목록에 안 보입니다.
-                          </div>
-                        </div>
-                        <div class="auction-faq-item">
-                          <div class="auction-faq-question">
-                            Q. 현장경매인데 왜 또 입력하라고 하나요?
-                          </div>
-                          <div class="auction-faq-answer">
-                            1차 제안 후 경매사가 2차 제안가를 안내하고, 그걸
-                            기반으로 3차 최종입찰가를 반드시 입력해야 실제
-                            참여가 됩니다.
+                          <div
+                            style="
+                              text-align: center;
+                              margin-top: 12px;
+                              color: #1e40af;
+                              font-weight: 600;
+                            ">
+                            참여 후 2영업일 뒤에 결과 확인
                           </div>
                         </div>
                       </div>
                     </li>
+
+                    <li>
+                      <strong>입찰 금액 입력 주의사항</strong>
+                      <div
+                        class="pricing-card"
+                        style="
+                          border-left: 4px solid #f59e0b;
+                          background-color: #fffbeb;
+                        ">
+                        <div
+                          style="
+                            background: #fef3c7;
+                            padding: 16px;
+                            border-radius: 8px;
+                            margin-bottom: 16px;
+                          ">
+                          <h4
+                            style="
+                              color: #92400e;
+                              margin-bottom: 12px;
+                              font-size: 18px;
+                            ">
+                            입찰 단위 확인 필수
+                          </h4>
+                          <ul style="list-style: none; padding: 0; margin: 0">
+                            <li style="margin-bottom: 8px">
+                              <strong>올바른 입력:</strong> 7만원 입찰 시 "7"
+                              입력 → 7,000엔
+                            </li>
+                            <li style="margin-bottom: 8px">
+                              <strong>잘못된 입력:</strong> "7000" 입력 시 →
+                              7,000,000엔 (약 700만원)
+                            </li>
+                            <li style="color: #92400e; font-weight: 600">
+                              입찰 전 금액을 반드시 재확인해 주세요
+                            </li>
+                          </ul>
+                        </div>
+                        <h4
+                          style="
+                            color: #1e3a8a;
+                            margin-bottom: 12px;
+                            font-size: 16px;
+                          ">
+                          기타 주의사항
+                        </h4>
+                        <ul class="service-list">
+                          <li>낙찰된 상품은 취소가 불가능합니다</li>
+                          <li>입찰은 보증금 한도 내에서만 가능합니다</li>
+                          <li>
+                            입찰 전 상품 상태와 구성품을 상세히 확인하세요
+                          </li>
+                        </ul>
+                      </div>
+                    </li>
+
+                    <li>
+                      <strong>제품 정보 확인 방법</strong>
+                      <div class="pricing-card">
+                        <ul class="service-list">
+                          <li>
+                            제품 클릭시 구성품, 상세내용 확인이 가능합니다
+                          </li>
+                          <li>
+                            일부 외국어 페이지는 크롬 번역 이용을 추천드립니다
+                          </li>
+                          <li>
+                            국내 시세는 크롬 브라우저 마우스 우클릭 구글 렌즈
+                            검색으로 쉽게 가능합니다
+                          </li>
+                          <li>
+                            상품의 내외부 상태, 사이즈, 색상, 구성품 등을 자세히
+                            확인하신 후 입찰해 주세요
+                          </li>
+                        </ul>
+                      </div>
+                    </li>
                   </ul>
-                  <div class="guide-tip">
-                    <div class="tip-icon">💡</div>
-                    <p>
-                      TIP: 경매에 참여하기 전 경매 유형을 반드시 확인하세요.
-                      초록색은 직접경매, 파란색은 현장경매를 의미합니다.
-                    </p>
-                  </div>
                 </div>
               </div>
 
@@ -1360,21 +1366,32 @@
                     <div class="pricing-card">
                       <h3 class="pricing-title">보증금</h3>
                       <div class="highlight-box">
-                        <p><strong>맞춤형 보증금</strong></p>
-                        <p>납부 하신 보증금 만큼 1일 입찰한도가 결정됩니다.</p>
-                        <p>
-                          보증금으로 월 이용료 및 낙찰금액을 지불하실 수
-                          없습니다.
-                        </p>
-                        <p>
-                          보증금은 계약 종료 후 추가 배송비 청구후 14영업일 이내
-                          환불됩니다.
-                        </p>
-                        <p>
-                          <strong>예시:</strong> 100만원을 납부하시면 1일 입찰
-                          한도는 100만원으로 제한됩니다.
-                        </p>
+                        <p><strong>보증금 운영 방식 안내</strong></p>
                       </div>
+
+                      <h4
+                        style="
+                          color: #1e3a8a;
+                          margin: 20px 0 12px 0;
+                          font-size: 18px;
+                        ">
+                        입찰 한도
+                      </h4>
+                      <ul style="list-style: none; padding: 0">
+                        <li style="margin-bottom: 12px">
+                          입찰은 납부하신 보증금 한도 내에서만 가능합니다<br />
+                          <span style="color: #6b7280; font-size: 14px"
+                            >예) 보증금 100만원 → 당일 입찰금액 합계 100만원까지
+                            가능</span
+                          >
+                        </li>
+                        <li style="margin-bottom: 12px">
+                          추가 입찰을 원하시면 보증금을 추가 납부해 주세요
+                        </li>
+                        <li style="margin-bottom: 12px">
+                          계약 종료 시 환급됩니다
+                        </li>
+                      </ul>
                     </div>
 
                     <div class="pricing-card">
@@ -1400,18 +1417,22 @@
                     <div class="pricing-card">
                       <h3 class="pricing-title">입찰대행 수수료</h3>
                       <div class="highlight-box">
-                        <p><strong>1일 입찰금액 기준</strong></p>
+                        <p><strong>낙찰금액 기준</strong></p>
                       </div>
                       <table class="commission-table">
                         <thead>
                           <tr>
-                            <th>입찰 금액</th>
-                            <th>수수료율</th>
+                            <th>낙찰 금액</th>
+                            <th>수수료</th>
                           </tr>
                         </thead>
                         <tbody>
                           <tr>
-                            <td>~5,000,000원</td>
+                            <td>10만원 미만</td>
+                            <td>10,000원</td>
+                          </tr>
+                          <tr>
+                            <td>11만원 ~ 500만원</td>
                             <td>10%</td>
                           </tr>
                           <tr>
@@ -1651,12 +1672,34 @@
         </div>
       </section>
 
+      <!-- 이미지 모달 -->
+      <div id="imageModal" class="modal">
+        <div class="modal-content">
+          <button class="close-button" onclick="closeModal()">&times;</button>
+          <img id="modalImage" class="modal-image" src="" alt="확대된 이미지" />
+        </div>
+      </div>
+
       <!-- FAQ 섹션 -->
       <section class="section faq" id="faq">
         <div class="section-container">
           <h2 class="section-title">자주 묻는 질문</h2>
           <div class="faq-container">
-            <!-- FAQ 섹션 - 경매 참여 질문 업데이트 -->
+            <div class="faq-item">
+              <button class="faq-question">
+                <h3>보증금 환급은 어떻게 되나요?</h3>
+                <span class="toggle-icon">+</span>
+              </button>
+              <div class="faq-answer">
+                <p>계약 종료 시 14영업일 이내에 환급해 드립니다.</p>
+                <p>무료 체험 고객은 체험 기간 종료 후 환급 가능합니다.</p>
+                <p>환급 시 미결제 배송비 등이 차감될 수 있습니다.</p>
+                <p>
+                  보증금은 예치금이 아니므로 낙찰대금 결제에는 사용되지
+                  않습니다.
+                </p>
+              </div>
+            </div>
 
             <div class="faq-item">
               <button class="faq-question">
@@ -1679,8 +1722,8 @@
               </button>
               <div class="faq-answer">
                 <p>
-                  낙찰 결과 안내 후 평균 10영업일 정도 소요됩니다. 통관이나 물류
-                  과정에서 지연이 발생하면 안내드립니다.
+                  낙찰 결과 안내 후 평균 7~10영업일 정도 소요됩니다. 통관이나
+                  물류 과정에서 지연이 발생하면 안내드립니다.
                 </p>
               </div>
             </div>
@@ -1701,117 +1744,9 @@
                 </p>
               </div>
             </div>
-            <div class="faq-item">
-              <button class="faq-question">
-                <h3>하루 입찰한도는 어떤 기준으로 정해지나요?</h3>
-                <span class="toggle-icon">+</span>
-              </button>
-              <div class="faq-answer">
-                <p>납부하신 보증금에 따라 설정됩니다.</p>
-              </div>
-            </div>
-
-            <div class="faq-item">
-              <button class="faq-question">
-                <h3>환불 정책은 어떻게 되나요?</h3>
-                <span class="toggle-icon">+</span>
-              </button>
-              <div class="faq-answer">
-                <p>
-                  제품이 가품으로 판명될 경우 전액 환불 가능합니다. 보증금은
-                  계약 종료 후 추가 배송비 청구 후 14일 이내에 환불됩니다.
-                </p>
-              </div>
-            </div>
-
-            <div class="faq-item">
-              <button class="faq-question">
-                <h3>직접경매와 현장경매는 어떻게 구분하나요?</h3>
-                <span class="toggle-icon">+</span>
-              </button>
-              <div class="faq-answer">
-                <p>
-                  제품 표시 색상으로 구분할 수 있습니다. 파란색은 현장경매(협상
-                  경매), 초록색은 직접경매(마감 경매)를 의미합니다. 각 제품
-                  상단에 "현장" 또는 "직접"이라는 표시도 함께 확인하실 수
-                  있습니다.
-                </p>
-              </div>
-            </div>
-
-            <div class="faq-item">
-              <button class="faq-question">
-                <h3>직접경매는 언제 마감되나요?</h3>
-                <span class="toggle-icon">+</span>
-              </button>
-              <div class="faq-answer">
-                <p>
-                  직접경매는 제품 상단에 표시된 마감시간까지 진행됩니다.
-                  일반적으로 오후 6~7시에 마감되며, 주로 월요일, 수요일,
-                  금요일에 많이 진행됩니다. 정확한 마감시간은 각 제품 페이지에서
-                  확인하실 수 있습니다.
-                </p>
-              </div>
-            </div>
-
-            <div class="faq-item">
-              <button class="faq-question">
-                <h3>CAS 명품감정시스템은 어떻게 이용하나요?</h3>
-                <span class="toggle-icon">+</span>
-              </button>
-              <div class="faq-answer">
-                <p>
-                  CAS 명품감정시스템은 까사트레이드 회원이라면 누구나 이용
-                  가능합니다. 마이페이지에서 감정 신청을 하거나, 낙찰 상품의
-                  경우 고객센터로 문의하시면 안내해 드립니다. 감정 유형에 따라
-                  요금과 소요 시간이 다르니 자세한 내용은 이용가이드의 'CAS
-                  명품감정시스템' 탭을 참고해 주세요.
-                </p>
-              </div>
-            </div>
           </div>
         </div>
       </section>
-    </div>
-
-    <!-- 사업자 정보 -->
-    <footer
-      style="
-        background-color: #f8fafc;
-        padding: 40px 0;
-        margin-top: 60px;
-        border-top: 1px solid #e5e7eb;
-      ">
-      <div
-        class="section-container"
-        style="max-width: 1280px; margin: 0 auto; padding: 0 24px">
-        <div
-          style="
-            text-align: center;
-            color: #4b5563;
-            font-size: 14px;
-            line-height: 1.8;
-          ">
-          <p style="margin-bottom: 8px"><strong>까사플랫폼</strong></p>
-          <p style="margin-bottom: 4px">
-            대표: 황승하 | 개인정보관리책임자: 황승하
-          </p>
-          <p style="margin-bottom: 4px">사업자등록번호: 459-01-03147</p>
-          <p style="margin-bottom: 4px">주소: 서울 은평구 갈현동 409-2 2층</p>
-          <p style="margin-bottom: 4px">
-            전화: 02-6959-9640 | 이메일: casaboutique@naver.com
-          </p>
-          <p style="margin-top: 16px; color: #6b7280">Hosting by casatrade</p>
-        </div>
-      </div>
-    </footer>
-
-    <!-- 이미지 모달 -->
-    <div id="imageModal" class="modal">
-      <div class="modal-content">
-        <button class="close-button" onclick="closeModal()">&times;</button>
-        <img id="modalImage" class="modal-image" src="" alt="확대된 이미지" />
-      </div>
     </div>
     <script>
       document.addEventListener("DOMContentLoaded", function () {
@@ -1947,7 +1882,7 @@
         }
       }
     </script>
+    <script src="/js/common.js"></script>
+    <script src="/js/traker.js"></script>
   </body>
-  <script src="/js/common.js"></script>
-  <script src="/js/traker.js"></script>
 </html>
