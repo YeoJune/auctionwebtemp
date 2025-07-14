@@ -260,8 +260,8 @@ async function crawlAllUpdates() {
         );
 
         if (!existingItem) {
-          console.log(`New item found: ${newItem.item_id}`);
-          return true;
+          // console.log(`New item found: ${newItem.item_id}`);
+          return false;
         }
 
         // ✅ 날짜 비교 개선
