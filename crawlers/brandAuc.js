@@ -447,7 +447,8 @@ class BrandAucCrawler extends AxiosCrawler {
       if (item.seriEndHm && this.auctionDate) {
         // seriEndHm이 있는 경우: auctionDate의 날짜 + seriEndHm의 시간 결합
         try {
-          const dateOnly = this.auctionDate.split("T")[0]; // YYYY-MM-DD 추출
+          const kstAuctionDate = this.convertToKST(this.auctionDate);
+          const dateOnly = kstAuctionDate.split("T")[0]; // YYYY-MM-DD 추출
 
           // seriEndHm ("16:10") + ":00" = "16:10:00"
           const timeWithSeconds = item.seriEndHm + ":00";
@@ -460,12 +461,16 @@ class BrandAucCrawler extends AxiosCrawler {
             `Error creating scheduled_date with seriEndHm for item ${item.uketsukeBng}:`,
             error.message
           );
-          // seriEndHm 처리 실패시 기본 auctionDate 사용
-          original_scheduled_date = this.extractDate(this.auctionDate);
+          // seriEndHm 처리 실패시 기존 방식 사용
+          original_scheduled_date = this.extractDate(
+            this.convertToKST(this.auctionDate)
+          );
         }
       } else {
-        // seriEndHm이 없는 경우: auctionDate를 extractDate로 파싱
-        original_scheduled_date = this.extractDate(this.auctionDate);
+        // seriEndHm이 없는 경우: 기존 방식 그대로
+        original_scheduled_date = this.extractDate(
+          this.convertToKST(this.auctionDate)
+        );
       }
       scheduled_date = original_scheduled_date;
     } else {
@@ -758,8 +763,8 @@ class BrandAucCrawler extends AxiosCrawler {
       if (this.auctionDate) {
         if (item.seriEndHm) {
           // seriEndHm이 있는 경우: auctionDate의 날짜 + seriEndHm의 시간 결합
-          // auctionDate에서 날짜 부분만 추출
-          const dateOnly = this.auctionDate.split("T")[0]; // YYYY-MM-DD 추출
+          const kstAuctionDate = this.convertToKST(this.auctionDate);
+          const dateOnly = kstAuctionDate.split("T")[0]; // YYYY-MM-DD 추출
 
           // seriEndHm ("16:10") + ":00" = "16:10:00"
           const timeWithSeconds = item.seriEndHm + ":00";
@@ -768,8 +773,10 @@ class BrandAucCrawler extends AxiosCrawler {
           const combinedDateTime = `${dateOnly} ${timeWithSeconds}`;
           scheduled_date = this.extractDate(combinedDateTime);
         } else {
-          // seriEndHm이 없는 경우: auctionDate를 extractDate로 파싱
-          scheduled_date = this.extractDate(this.auctionDate);
+          // seriEndHm이 없는 경우: 기존 방식 그대로
+          scheduled_date = this.extractDate(
+            this.convertToKST(this.auctionDate)
+          );
         }
       }
     } catch (error) {
