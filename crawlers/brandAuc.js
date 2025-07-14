@@ -447,11 +447,7 @@ class BrandAucCrawler extends AxiosCrawler {
       if (item.seriEndHm && this.auctionDate) {
         // seriEndHm이 있는 경우: auctionDate의 날짜 + seriEndHm의 시간 결합
         try {
-          const auctionDateStr =
-            typeof this.auctionDate === "string"
-              ? this.auctionDate
-              : this.auctionDate.toISOString();
-          const dateOnly = auctionDateStr.split("T")[0]; // YYYY-MM-DD 추출
+          const dateOnly = this.auctionDate.split("T")[0]; // YYYY-MM-DD 추출
 
           // seriEndHm ("16:10") + ":00" = "16:10:00"
           const timeWithSeconds = item.seriEndHm + ":00";
@@ -762,12 +758,8 @@ class BrandAucCrawler extends AxiosCrawler {
       if (this.auctionDate) {
         if (item.seriEndHm) {
           // seriEndHm이 있는 경우: auctionDate의 날짜 + seriEndHm의 시간 결합
-          // auctionDate가 이미 KST라면 convertToKST 불필요
-          const auctionDateStr =
-            typeof this.auctionDate === "string"
-              ? this.auctionDate
-              : this.auctionDate.toISOString();
-          const dateOnly = auctionDateStr.split("T")[0]; // YYYY-MM-DD 추출
+          // auctionDate에서 날짜 부분만 추출
+          const dateOnly = this.auctionDate.split("T")[0]; // YYYY-MM-DD 추출
 
           // seriEndHm ("16:10") + ":00" = "16:10:00"
           const timeWithSeconds = item.seriEndHm + ":00";
