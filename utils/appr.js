@@ -8,7 +8,7 @@ const fs = require("fs");
 const WATERMARK_CONFIG = {
   path: path.join(__dirname, "../public/images/watermark.png"),
   opacity: 0.4, // 40% 투명도
-  widthPercent: 0.3, // 이미지 너비의 30%
+  widthPercent: 0.25, // 이미지 너비의 25%
   position: "center", // 중앙 배치
 };
 
