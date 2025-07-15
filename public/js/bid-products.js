@@ -63,7 +63,7 @@ const STATUS_DISPLAY = {
   [STATUS_TYPES.SECOND]: "2차 제안",
   [STATUS_TYPES.FINAL]: "최종 입찰",
   [STATUS_TYPES.COMPLETED]: "낙찰 완료",
-  [STATUS_TYPES.CANCELLED]: "낙찰 실패",
+  [STATUS_TYPES.CANCELLED]: "더 높은 입찰 존재",
 };
 
 // 상태 CSS 클래스
