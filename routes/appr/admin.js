@@ -11,6 +11,7 @@ const QRCode = require("qrcode");
 const {
   generateCertificateNumber,
   generateQRCode,
+  processUploadedImages,
 } = require("../../utils/appr");
 
 // Multer 설정 - 감정 이미지 저장
@@ -601,7 +602,7 @@ router.post(
   "/appraisals",
   isAuthenticated,
   isAdmin,
-  appraisalUpload.array("images", 20), // 이미지 업로드 추가
+  appraisalUpload.array("images", 20),
   async (req, res) => {
     let conn;
     try {
@@ -620,7 +621,6 @@ router.post(
         certificate_number,
       } = req.body;
 
-      // 필수 필드 검증
       if (!user_id || !appraisal_type || !brand || !model_name || !category) {
         return res.status(400).json({
           success: false,
@@ -630,7 +630,6 @@ router.post(
 
       conn = await pool.getConnection();
 
-      // 사용자 존재 여부 확인
       const [userRows] = await conn.query("SELECT id FROM users WHERE id = ?", [
         user_id,
       ]);
@@ -642,19 +641,18 @@ router.post(
         });
       }
 
-      // 이미지 처리
-      let images = [];
-      if (req.files && req.files.length > 0) {
-        images = req.files.map((file) => `/images/appraisals/${file.filename}`);
-      }
+      // 워터마크 적용된 이미지 처리
+      const images = await processUploadedImages(
+        req.files,
+        path.join(__dirname, "../../public/images/appraisals"),
+        { skipExisting: true }
+      );
 
-      // 공통 함수로 인증서 번호 생성 또는 검증
       const finalCertificateNumber = await generateCertificateNumber(
         conn,
         certificate_number
       );
 
-      // 감정 데이터 저장
       await conn.query(
         `INSERT INTO appraisals (
         user_id, appraisal_type, brand, model_name, category, 
@@ -677,11 +675,10 @@ router.post(
           "pending",
           "pending",
           finalCertificateNumber,
-          images.length > 0 ? JSON.stringify(images) : null, // 이미지 추가
+          images.length > 0 ? JSON.stringify(images) : null,
         ]
       );
 
-      // 생성된 감정 정보 조회
       const [createdAppraisal] = await conn.query(
         `SELECT a.*, u.email as user_email, u.company_name
        FROM appraisals a
@@ -961,8 +958,10 @@ router.put(
 
       // 이미지 처리 - 퀵링크와 오프라인 모두 지원
       if (req.files && req.files.images) {
-        const newImages = req.files.images.map(
-          (file) => `/images/appraisals/${file.filename}`
+        const newImages = await processUploadedImages(
+          req.files.images,
+          path.join(__dirname, "../../public/images/appraisals"),
+          { skipExisting: true }
         );
         existingImages = [...existingImages, ...newImages];
       }

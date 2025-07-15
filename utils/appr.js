@@ -1,14 +1,273 @@
-// utils/appr.js
+// utils/appr.js - 완전히 수정된 버전
 const QRCode = require("qrcode");
+const sharp = require("sharp");
 const path = require("path");
 const fs = require("fs");
 
+// 워터마크 설정
+const WATERMARK_CONFIG = {
+  path: path.join(__dirname, "../public/images/watermark.png"),
+  opacity: 0.4, // 40% 투명도
+  widthPercent: 0.3, // 이미지 너비의 30%
+  position: "center", // 중앙 배치
+};
+
 /**
- * 감정서 번호 생성 함수
+ * 워터마크 적용 여부 확인
+ */
+function isWatermarked(filename) {
+  if (!filename) return false;
+  return (
+    filename.includes("-wm-") ||
+    filename.includes("-wm.") ||
+    filename.startsWith("wm-")
+  );
+}
+
+/**
+ * 이미지에 워터마크를 적용하는 내부 함수
+ */
+async function applyWatermarkToImage(inputPath, outputPath) {
+  try {
+    // 워터마크 파일 존재 여부 확인
+    if (!fs.existsSync(WATERMARK_CONFIG.path)) {
+      console.warn(
+        "워터마크 파일을 찾을 수 없습니다. 원본 이미지 사용:",
+        WATERMARK_CONFIG.path
+      );
+      await sharp(inputPath).toFile(outputPath);
+      return false;
+    }
+
+    // 원본 이미지 정보 가져오기
+    const originalImage = sharp(inputPath);
+    const { width: originalWidth, height: originalHeight } =
+      await originalImage.metadata();
+
+    if (!originalWidth || !originalHeight) {
+      throw new Error("이미지 메타데이터를 읽을 수 없습니다");
+    }
+
+    // 워터마크 크기 계산
+    const watermarkWidth = Math.round(
+      originalWidth * WATERMARK_CONFIG.widthPercent
+    );
+
+    // 워터마크 이미지 처리
+    const watermarkBuffer = await sharp(WATERMARK_CONFIG.path)
+      .resize(watermarkWidth, null, {
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .png()
+      .composite([
+        {
+          input: Buffer.from([
+            255,
+            255,
+            255,
+            Math.round(255 * WATERMARK_CONFIG.opacity),
+          ]),
+          raw: { width: 1, height: 1, channels: 4 },
+          tile: true,
+          blend: "dest-in",
+        },
+      ])
+      .toBuffer();
+
+    // 워터마크 위치 계산 (중앙)
+    const { width: watermarkActualWidth, height: watermarkActualHeight } =
+      await sharp(watermarkBuffer).metadata();
+    const left = Math.round((originalWidth - watermarkActualWidth) / 2);
+    const top = Math.round((originalHeight - watermarkActualHeight) / 2);
+
+    // 워터마크 합성
+    await originalImage
+      .composite([
+        {
+          input: watermarkBuffer,
+          left: left,
+          top: top,
+          blend: "over",
+        },
+      ])
+      .toFile(outputPath);
+
+    console.log(`워터마크 적용 완료: ${outputPath}`);
+    return true;
+  } catch (error) {
+    console.error("워터마크 적용 실패:", error);
+    // 실패 시 원본 이미지 복사
+    try {
+      await sharp(inputPath).toFile(outputPath);
+      return false;
+    } catch (copyError) {
+      console.error("원본 이미지 복사 실패:", copyError);
+      throw copyError;
+    }
+  }
+}
+
+/**
+ * 업로드된 파일들에 워터마크를 일괄 적용하는 함수
+ */
+async function processUploadedImages(files, destinationDir, options = {}) {
+  if (!files || files.length === 0) return [];
+
+  const {
+    skipExisting = true, // 이미 워터마크된 이미지는 건너뛰기
+    forceReprocess = false, // 강제 재처리 옵션
+    preserveOriginal = false, // 원본 파일 보존 옵션
+  } = options;
+
+  const processedImages = [];
+
+  for (const file of files) {
+    try {
+      // 파일 정보 검증
+      if (!file || !file.filename || !file.path) {
+        console.warn("잘못된 파일 정보:", file);
+        continue;
+      }
+
+      // 이미지 파일 여부 확인
+      if (!file.mimetype || !file.mimetype.startsWith("image/")) {
+        console.log(`이미지가 아닌 파일 건너뛰기: ${file.filename}`);
+        processedImages.push(`/images/appraisals/${file.filename}`);
+        continue;
+      }
+
+      const originalPath = file.path;
+
+      // 이미 워터마크가 적용된 파일인지 확인
+      if (skipExisting && isWatermarked(file.filename) && !forceReprocess) {
+        console.log(`이미 워터마크된 파일 건너뛰기: ${file.filename}`);
+        processedImages.push(`/images/appraisals/${file.filename}`);
+        continue;
+      }
+
+      // 원본 파일 존재 여부 확인
+      if (!fs.existsSync(originalPath)) {
+        console.warn(`원본 파일을 찾을 수 없음: ${originalPath}`);
+        processedImages.push(`/images/appraisals/${file.filename}`);
+        continue;
+      }
+
+      // 새 파일명 생성 (워터마크 표시)
+      const fileExt = path.extname(file.filename);
+      const baseName = path.basename(file.filename, fileExt);
+      const watermarkedFilename = `${baseName}-wm${fileExt}`;
+      const watermarkedPath = path.join(destinationDir, watermarkedFilename);
+
+      // 워터마크 적용
+      const success = await applyWatermarkToImage(
+        originalPath,
+        watermarkedPath
+      );
+
+      if (success) {
+        processedImages.push(`/images/appraisals/${watermarkedFilename}`);
+
+        // 원본 파일 삭제 (보존 옵션이 false인 경우만)
+        if (!preserveOriginal) {
+          setImmediate(() => {
+            try {
+              if (fs.existsSync(originalPath)) {
+                fs.unlinkSync(originalPath);
+                console.log(`원본 파일 삭제 완료: ${originalPath}`);
+              }
+            } catch (error) {
+              console.error(`원본 파일 삭제 실패: ${originalPath}`, error);
+            }
+          });
+        }
+      } else {
+        // 워터마크 적용 실패 시 원본 파일 사용
+        console.warn(`워터마크 적용 실패, 원본 사용: ${file.filename}`);
+        processedImages.push(`/images/appraisals/${file.filename}`);
+      }
+    } catch (error) {
+      console.error(`파일 ${file?.filename} 처리 실패:`, error);
+
+      // 처리 실패 시 원본 파일 사용
+      if (file && file.filename) {
+        processedImages.push(`/images/appraisals/${file.filename}`);
+      }
+    }
+  }
+
+  return processedImages;
+}
+
+/**
+ * 기존 이미지 배열에서 워터마크 적용 (선택적)
+ */
+async function ensureWatermarkOnExistingImages(imageUrls, options = {}) {
+  if (!imageUrls || !Array.isArray(imageUrls)) return [];
+
+  const { forceReprocess = false } = options;
+  const processedUrls = [];
+  const appraisalsDir = path.join(__dirname, "../public/images/appraisals");
+
+  for (const imageUrl of imageUrls) {
+    try {
+      if (!imageUrl || typeof imageUrl !== "string") {
+        console.warn("잘못된 이미지 URL:", imageUrl);
+        continue;
+      }
+
+      const filename = path.basename(imageUrl);
+
+      // 이미 워터마크가 적용된 이미지인지 확인
+      if (isWatermarked(filename) && !forceReprocess) {
+        processedUrls.push(imageUrl);
+        continue;
+      }
+
+      const originalPath = path.join(
+        __dirname,
+        "../public",
+        imageUrl.replace(/^\//, "")
+      );
+
+      // 파일 존재 여부 확인
+      if (!fs.existsSync(originalPath)) {
+        console.warn(`이미지 파일을 찾을 수 없음: ${originalPath}`);
+        processedUrls.push(imageUrl); // 원본 URL 유지
+        continue;
+      }
+
+      // 워터마크 적용된 새 파일명 생성
+      const fileExt = path.extname(filename);
+      const baseName = path.basename(filename, fileExt);
+      const watermarkedFilename = `${baseName}-wm${fileExt}`;
+      const watermarkedPath = path.join(appraisalsDir, watermarkedFilename);
+
+      // 워터마크 적용
+      const success = await applyWatermarkToImage(
+        originalPath,
+        watermarkedPath
+      );
+
+      if (success) {
+        processedUrls.push(`/images/appraisals/${watermarkedFilename}`);
+      } else {
+        processedUrls.push(imageUrl); // 실패 시 원본 URL 유지
+      }
+    } catch (error) {
+      console.error(`기존 이미지 워터마크 적용 실패: ${imageUrl}`, error);
+      processedUrls.push(imageUrl); // 실패 시 원본 URL 유지
+    }
+  }
+
+  return processedUrls;
+}
+
+/**
+ * 감정서 번호 생성 함수 (기존과 동일)
  */
 async function generateCertificateNumber(conn, customNumber = null) {
   if (customNumber) {
-    // 커스텀 번호 형식 검증: cas + 숫자 (자릿수 제한 없음)
     const certPattern = /^cas\d+$/i;
     if (!certPattern.test(customNumber)) {
       throw new Error(
@@ -16,10 +275,7 @@ async function generateCertificateNumber(conn, customNumber = null) {
       );
     }
 
-    // 대소문자 통일 (소문자로 저장)
     const normalizedNumber = customNumber.toLowerCase();
-
-    // 중복 확인
     const [existing] = await conn.query(
       "SELECT certificate_number FROM appraisals WHERE certificate_number = ?",
       [normalizedNumber]
@@ -32,9 +288,7 @@ async function generateCertificateNumber(conn, customNumber = null) {
     return normalizedNumber;
   }
 
-  // 자동 생성: 가장 최근에 생성된 번호 + 1
   try {
-    // 가장 최근에 생성된 인증서 번호 조회 (created_at 기준)
     const [rows] = await conn.query(
       `SELECT certificate_number 
        FROM appraisals 
@@ -43,33 +297,29 @@ async function generateCertificateNumber(conn, customNumber = null) {
        LIMIT 1`
     );
 
-    let nextNumber = 1; // 기본값: cas1부터 시작
-    let digitCount = 6; // 기본 6자리
+    let nextNumber = 1;
+    let digitCount = 6;
 
     if (rows.length > 0) {
       const lastCertNumber = rows[0].certificate_number;
-      // "cas" 제거하고 숫자 부분만 추출
       const match = lastCertNumber.match(/^cas(\d+)$/i);
       if (match) {
         const numberPart = match[1];
-        digitCount = numberPart.length; // 기존 자릿수 유지
+        digitCount = numberPart.length;
         const lastNumber = parseInt(numberPart);
         nextNumber = lastNumber + 1;
       }
     }
 
-    // 중복 확인하면서 사용 가능한 번호 찾기
     let certificateNumber;
     let isUnique = false;
     let attempts = 0;
-    const maxAttempts = 1000; // 무한루프 방지
+    const maxAttempts = 1000;
 
     while (!isUnique && attempts < maxAttempts) {
-      // 자릿수 맞춰서 0 패딩
       const paddedNumber = nextNumber.toString().padStart(digitCount, "0");
       certificateNumber = `cas${paddedNumber}`;
 
-      // 중복 확인
       const [existing] = await conn.query(
         "SELECT certificate_number FROM appraisals WHERE certificate_number = ?",
         [certificateNumber]
@@ -78,18 +328,16 @@ async function generateCertificateNumber(conn, customNumber = null) {
       if (existing.length === 0) {
         isUnique = true;
       } else {
-        nextNumber++; // 중복이면 다음 번호 시도
+        nextNumber++;
         attempts++;
       }
     }
 
     if (!isUnique) {
-      // 만약 1000번 시도해도 안 되면 랜덤으로 폴백
       console.warn("순차 번호 생성 실패, 랜덤 번호로 폴백");
       const randomNum = Math.floor(100000 + Math.random() * 900000);
       certificateNumber = `cas${randomNum}`;
 
-      // 랜덤 번호도 중복 확인
       const [randomCheck] = await conn.query(
         "SELECT certificate_number FROM appraisals WHERE certificate_number = ?",
         [certificateNumber]
@@ -108,11 +356,10 @@ async function generateCertificateNumber(conn, customNumber = null) {
 }
 
 /**
- * QR 코드 생성 함수
+ * QR 코드 생성 함수 (기존과 동일)
  */
 async function generateQRCode(certificateNumber) {
   try {
-    // QR 코드 디렉토리 생성
     const qrDir = path.join(__dirname, "../public/images/qrcodes");
     if (!fs.existsSync(qrDir)) {
       fs.mkdirSync(qrDir, { recursive: true });
@@ -121,11 +368,9 @@ async function generateQRCode(certificateNumber) {
     const qrFileName = `qr-${certificateNumber}.png`;
     const qrPath = path.join(qrDir, qrFileName);
 
-    // 프론트엔드 URL 설정
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
     const certificateUrl = `${frontendUrl}/appr/result/${certificateNumber}`;
 
-    // QR 코드 생성
     await QRCode.toFile(qrPath, certificateUrl, {
       errorCorrectionLevel: "H",
       margin: 1,
@@ -140,35 +385,40 @@ async function generateQRCode(certificateNumber) {
 }
 
 /**
- * 경매 결과로부터 감정서 생성 함수
+ * 경매 결과로부터 감정서 생성 함수 (수정됨)
  */
 async function createAppraisalFromAuction(conn, bid, item, userId) {
   try {
-    // 1. 감정서 번호 생성
     const certificateNumber = await generateCertificateNumber(conn);
-
-    // 2. QR 코드 생성
     const qrcodeUrl = await generateQRCode(certificateNumber);
 
-    // 3. 이미지 처리 - additional_images에서 가져오기
-    let images = [];
+    // 이미지 처리
+    let processedImages = [];
+
+    // additional_images에서 이미지 가져오기
+    let rawImages = [];
     if (item.additional_images) {
       try {
         const additionalImages = JSON.parse(item.additional_images);
         if (Array.isArray(additionalImages)) {
-          images = additionalImages;
+          rawImages = additionalImages;
         }
       } catch (error) {
         console.error("additional_images JSON 파싱 오류:", error);
       }
     }
 
-    // additional_images가 없거나 빈 배열이면 기본 image 사용
-    if (images.length === 0 && item.image) {
-      images = [item.image];
+    if (rawImages.length === 0 && item.image) {
+      rawImages = [item.image];
     }
 
-    // 4. appraisals 테이블에 감정서 생성
+    // 경매 이미지들에 워터마크 적용 (필요한 경우만)
+    if (rawImages.length > 0) {
+      processedImages = await ensureWatermarkOnExistingImages(rawImages, {
+        forceReprocess: false, // 이미 워터마크가 있으면 건너뛰기
+      });
+    }
+
     const [appraisalResult] = await conn.query(
       `INSERT INTO appraisals (
         user_id, appraisal_type, status, brand, model_name, category, 
@@ -182,7 +432,7 @@ async function createAppraisalFromAuction(conn, bid, item, userId) {
         item.title || "제목 없음",
         item.category || "기타",
         "pending",
-        JSON.stringify(images),
+        processedImages.length > 0 ? JSON.stringify(processedImages) : null,
         certificateNumber,
         qrcodeUrl,
       ]
@@ -200,7 +450,68 @@ async function createAppraisalFromAuction(conn, bid, item, userId) {
 }
 
 /**
- * additional_images 파싱 유틸리티 함수
+ * 기존 감정서 이미지 워터마크 마이그레이션 (일회성)
+ */
+async function migrateExistingAppraisalImages(conn, batchSize = 10) {
+  try {
+    console.log("기존 감정서 이미지 워터마크 마이그레이션 시작...");
+
+    const [appraisals] = await conn.query(
+      `
+      SELECT id, images 
+      FROM appraisals 
+      WHERE images IS NOT NULL 
+      AND images != 'null' 
+      AND images != '[]'
+      LIMIT ?
+    `,
+      [batchSize]
+    );
+
+    let processedCount = 0;
+
+    for (const appraisal of appraisals) {
+      try {
+        const images = JSON.parse(appraisal.images);
+
+        if (Array.isArray(images) && images.length > 0) {
+          // 워터마크 확인 및 적용
+          const watermarkedImages = await ensureWatermarkOnExistingImages(
+            images,
+            {
+              forceReprocess: false,
+            }
+          );
+
+          // 변경사항이 있으면 DB 업데이트
+          const hasChanges =
+            JSON.stringify(watermarkedImages) !== JSON.stringify(images);
+
+          if (hasChanges) {
+            await conn.query("UPDATE appraisals SET images = ? WHERE id = ?", [
+              JSON.stringify(watermarkedImages),
+              appraisal.id,
+            ]);
+
+            console.log(`감정서 ${appraisal.id} 이미지 워터마크 적용 완료`);
+            processedCount++;
+          }
+        }
+      } catch (error) {
+        console.error(`감정서 ${appraisal.id} 처리 실패:`, error);
+      }
+    }
+
+    console.log(`마이그레이션 완료: ${processedCount}개 감정서 처리됨`);
+    return processedCount;
+  } catch (error) {
+    console.error("마이그레이션 중 오류:", error);
+    throw error;
+  }
+}
+
+/**
+ * additional_images 파싱 유틸리티 함수 (기존과 동일)
  */
 function parseAdditionalImages(additionalImagesJson) {
   if (!additionalImagesJson) return [];
@@ -219,4 +530,9 @@ module.exports = {
   generateQRCode,
   createAppraisalFromAuction,
   parseAdditionalImages,
+  processUploadedImages, // 새 업로드 파일 처리
+  ensureWatermarkOnExistingImages, // 기존 이미지 워터마크 적용
+  migrateExistingAppraisalImages, // 마이그레이션 함수
+  isWatermarked, // 워터마크 여부 확인
+  applyWatermarkToImage, // 직접 워터마크 적용
 };
