@@ -728,11 +728,9 @@ function createAppraisalButton(item) {
   button.className = "appraisal-btn small-button";
 
   if (item.appr_id) {
-    button.textContent = "감정서 보기";
+    button.textContent = "감정서 발급 완료";
     button.classList.add("success-button");
-    button.onclick = () => {
-      window.open(`cassystem.com/${item.appr_id}`, "_blank");
-    };
+    button.onclick = () => {};
   } else {
     button.textContent = "감정서 신청";
     button.classList.add("primary-button");
