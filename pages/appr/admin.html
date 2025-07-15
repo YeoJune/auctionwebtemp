@@ -465,6 +465,12 @@
                 </select>
                 <button id="create-appraisal-btn" class="btn">감정 생성</button>
                 <button
+                  id="bulk-change-btn"
+                  class="btn"
+                  style="margin-left: 10px">
+                  일괄 변경
+                </button>
+                <button
                   id="bulk-delete-btn"
                   class="btn"
                   style="margin-left: 10px">
@@ -481,13 +487,6 @@
                   삭제 실행
                 </button>
               </div>
-            </div>
-            <div class="search-bar">
-              <input
-                type="text"
-                id="appraisal-search"
-                placeholder="인증서번호, 브랜드, 모델명, 이메일 검색" />
-              <button id="appraisal-search-btn">검색</button>
             </div>
             <div
               id="select-all-container"
@@ -508,6 +507,81 @@
               <span style="margin-left: 15px; color: #666; font-size: 0.9rem">
                 선택 후 우측 상단의 "삭제 실행" 버튼을 클릭하세요.
               </span>
+            </div>
+            <div
+              id="bulk-change-container"
+              style="
+                display: none;
+                margin-bottom: 15px;
+                padding: 15px;
+                background-color: #f8fafc;
+                border-radius: 6px;
+                border: 1px solid #e2e8f0;
+              ">
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 15px;
+                  flex-wrap: wrap;
+                ">
+                <div style="font-weight: 500; color: #1a2a3a">
+                  선택된 항목 일괄 변경:
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 10px">
+                  <label style="font-weight: 500">상태 변경:</label>
+                  <select
+                    id="bulk-status-select"
+                    class="form-select"
+                    style="width: auto; min-width: 120px">
+                    <option value="">선택</option>
+                    <option value="pending">접수완료</option>
+                    <option value="in_review">감정중</option>
+                    <option value="completed">완료</option>
+                    <option value="cancelled">취소</option>
+                  </select>
+                  <button
+                    type="button"
+                    class="btn btn-outline"
+                    onclick="executeBulkStatusChange()"
+                    style="padding: 6px 12px">
+                    상태 변경
+                  </button>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 10px">
+                  <label style="font-weight: 500">결과 변경:</label>
+                  <select
+                    id="bulk-result-select"
+                    class="form-select"
+                    style="width: auto; min-width: 120px">
+                    <option value="">선택</option>
+                    <option value="pending">감정대기</option>
+                    <option value="authentic">정품</option>
+                    <option value="fake">가품</option>
+                    <option value="uncertain">판단불가</option>
+                  </select>
+                  <input
+                    type="text"
+                    id="bulk-result-notes"
+                    class="form-input"
+                    placeholder="결과 소견 (선택사항)"
+                    style="width: 200px" />
+                  <button
+                    type="button"
+                    class="btn btn-outline"
+                    onclick="executeBulkResultChange()"
+                    style="padding: 6px 12px">
+                    결과 변경
+                  </button>
+                </div>
+              </div>
+
+              <div style="margin-top: 10px; font-size: 0.875rem; color: #666">
+                <span id="bulk-selected-count">0</span>개 항목이 선택되었습니다.
+                변경하고 싶은 항목을 선택한 후 해당 버튼을 클릭하세요.
+              </div>
             </div>
             <div id="appraisals-table-container">
               <table id="appraisals-table">

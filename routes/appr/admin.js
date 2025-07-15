@@ -2623,4 +2623,330 @@ router.delete(
   }
 );
 
+// 감정 상태 일괄 변경 - PUT /api/appr/admin/appraisals/bulk-status
+router.put(
+  "/appraisals/bulk-status",
+  isAuthenticated,
+  isAdmin,
+  async (req, res) => {
+    let conn;
+    try {
+      const { ids, status } = req.body;
+
+      // 입력 검증
+      if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "변경할 감정 ID 목록이 필요합니다.",
+        });
+      }
+
+      if (!status) {
+        return res.status(400).json({
+          success: false,
+          message: "변경할 상태가 필요합니다.",
+        });
+      }
+
+      // 유효한 상태값 검증
+      const validStatuses = ["pending", "in_review", "completed", "cancelled"];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: "유효하지 않은 상태값입니다.",
+        });
+      }
+
+      // ID 개수 제한 (안전을 위해)
+      if (ids.length > 100) {
+        return res.status(400).json({
+          success: false,
+          message: "한 번에 최대 100개까지만 변경할 수 있습니다.",
+        });
+      }
+
+      conn = await pool.getConnection();
+
+      // 감정 정보들 조회 (존재 여부 확인)
+      const placeholders = ids.map(() => "?").join(", ");
+      const [appraisalRows] = await conn.query(
+        `SELECT id, certificate_number, brand, model_name, user_id, status FROM appraisals WHERE id IN (${placeholders})`,
+        ids
+      );
+
+      if (appraisalRows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "변경할 감정 정보를 찾을 수 없습니다.",
+        });
+      }
+
+      // 실제로 존재하는 감정 ID들만 추출
+      const foundIds = appraisalRows.map((appraisal) => appraisal.id);
+      const notFoundIds = ids.filter((id) => !foundIds.includes(id));
+
+      // 트랜잭션 시작
+      await conn.beginTransaction();
+
+      try {
+        let updatedCount = 0;
+        const updatedAppraisals = [];
+
+        // 상태 일괄 업데이트
+        const updateQuery = `UPDATE appraisals SET status = ? WHERE id IN (${placeholders})`;
+        await conn.query(updateQuery, [status, ...foundIds]);
+
+        updatedCount = foundIds.length;
+
+        // 업데이트된 감정 정보 수집
+        for (const appraisal of appraisalRows) {
+          updatedAppraisals.push({
+            id: appraisal.id,
+            certificate_number: appraisal.certificate_number,
+            brand: appraisal.brand,
+            model_name: appraisal.model_name,
+            user_id: appraisal.user_id,
+            old_status: appraisal.status,
+            new_status: status,
+          });
+        }
+
+        // 트랜잭션 커밋
+        await conn.commit();
+
+        // 응답 구성
+        const responseMessage =
+          ids.length === 1
+            ? "감정 상태가 성공적으로 변경되었습니다."
+            : `${updatedCount}개의 감정 상태가 성공적으로 변경되었습니다.`;
+
+        const response = {
+          success: true,
+          message: responseMessage,
+          summary: {
+            requested_count: ids.length,
+            updated_count: updatedCount,
+            new_status: status,
+          },
+          updated_appraisals: updatedAppraisals,
+        };
+
+        // 찾지 못한 ID가 있는 경우 추가 정보 제공
+        if (notFoundIds.length > 0) {
+          response.not_found_ids = notFoundIds;
+          response.message += ` (${notFoundIds.length}개 ID를 찾을 수 없어 건너뛰었습니다.)`;
+        }
+
+        res.json(response);
+      } catch (error) {
+        // 트랜잭션 롤백
+        await conn.rollback();
+        throw error;
+      }
+    } catch (err) {
+      console.error("감정 상태 일괄 변경 중 오류 발생:", err);
+      res.status(500).json({
+        success: false,
+        message:
+          err.message || "감정 상태 일괄 변경 중 서버 오류가 발생했습니다.",
+      });
+    } finally {
+      if (conn) conn.release();
+    }
+  }
+);
+
+// 감정 결과 일괄 변경 - PUT /api/appr/admin/appraisals/bulk-result
+router.put(
+  "/appraisals/bulk-result",
+  isAuthenticated,
+  isAdmin,
+  async (req, res) => {
+    let conn;
+    try {
+      const { ids, result, result_notes } = req.body;
+
+      // 입력 검증
+      if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "변경할 감정 ID 목록이 필요합니다.",
+        });
+      }
+
+      if (!result) {
+        return res.status(400).json({
+          success: false,
+          message: "변경할 결과가 필요합니다.",
+        });
+      }
+
+      // 유효한 결과값 검증
+      const validResults = ["pending", "authentic", "fake", "uncertain"];
+      if (!validResults.includes(result)) {
+        return res.status(400).json({
+          success: false,
+          message: "유효하지 않은 결과값입니다.",
+        });
+      }
+
+      // ID 개수 제한 (안전을 위해)
+      if (ids.length > 100) {
+        return res.status(400).json({
+          success: false,
+          message: "한 번에 최대 100개까지만 변경할 수 있습니다.",
+        });
+      }
+
+      conn = await pool.getConnection();
+
+      // 감정 정보들 조회 (존재 여부 확인)
+      const placeholders = ids.map(() => "?").join(", ");
+      const [appraisalRows] = await conn.query(
+        `SELECT id, certificate_number, brand, model_name, user_id, result, status, appraisal_type, credit_deducted FROM appraisals WHERE id IN (${placeholders})`,
+        ids
+      );
+
+      if (appraisalRows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "변경할 감정 정보를 찾을 수 없습니다.",
+        });
+      }
+
+      // 실제로 존재하는 감정 ID들만 추출
+      const foundIds = appraisalRows.map((appraisal) => appraisal.id);
+      const notFoundIds = ids.filter((id) => !foundIds.includes(id));
+
+      // 트랜잭션 시작
+      await conn.beginTransaction();
+
+      try {
+        let updatedCount = 0;
+        let creditDeductedCount = 0;
+        const updatedAppraisals = [];
+
+        for (const appraisal of appraisalRows) {
+          // 결과 및 상태 업데이트 쿼리 구성
+          let updateQuery = "UPDATE appraisals SET result = ?";
+          let updateParams = [result];
+
+          // 결과가 pending이 아니면 status를 completed로, pending이면 in_review로 설정
+          if (result !== "pending") {
+            updateQuery += ", status = 'completed'";
+          } else {
+            updateQuery += ", status = 'in_review'";
+          }
+
+          // 결과 노트가 있으면 추가
+          if (result_notes) {
+            updateQuery += ", result_notes = ?";
+            updateParams.push(result_notes);
+          }
+
+          // 크레딧 차감 처리 (결과가 pending이 아니고, 아직 크레딧이 차감되지 않은 퀵링크 감정)
+          let creditDeducted = false;
+          if (
+            result !== "pending" &&
+            !appraisal.credit_deducted &&
+            appraisal.appraisal_type === "quicklink"
+          ) {
+            // 사용자 크레딧 조회 및 차감
+            const [userRows] = await conn.query(
+              "SELECT * FROM appr_users WHERE user_id = ?",
+              [appraisal.user_id]
+            );
+
+            if (userRows.length > 0) {
+              const user = userRows[0];
+              const newCredits = Math.max(
+                0,
+                user.quick_link_credits_remaining - 1
+              );
+
+              await conn.query(
+                "UPDATE appr_users SET quick_link_credits_remaining = ? WHERE user_id = ?",
+                [newCredits, appraisal.user_id]
+              );
+
+              creditDeducted = true;
+              creditDeductedCount++;
+
+              // 크레딧 차감 여부와 감정 완료 시간 업데이트
+              updateQuery += ", credit_deducted = true, appraised_at = NOW()";
+            }
+          } else if (result !== "pending") {
+            // 크레딧은 차감하지 않지만 감정 완료 시간은 설정
+            updateQuery += ", appraised_at = NOW()";
+          }
+
+          updateQuery += " WHERE id = ?";
+          updateParams.push(appraisal.id);
+
+          // 감정 정보 업데이트
+          await conn.query(updateQuery, updateParams);
+          updatedCount++;
+
+          // 업데이트된 감정 정보 수집
+          updatedAppraisals.push({
+            id: appraisal.id,
+            certificate_number: appraisal.certificate_number,
+            brand: appraisal.brand,
+            model_name: appraisal.model_name,
+            user_id: appraisal.user_id,
+            old_result: appraisal.result,
+            new_result: result,
+            old_status: appraisal.status,
+            new_status: result !== "pending" ? "completed" : "in_review",
+            credit_deducted: creditDeducted,
+          });
+        }
+
+        // 트랜잭션 커밋
+        await conn.commit();
+
+        // 응답 구성
+        const responseMessage =
+          ids.length === 1
+            ? "감정 결과가 성공적으로 변경되었습니다."
+            : `${updatedCount}개의 감정 결과가 성공적으로 변경되었습니다.`;
+
+        const response = {
+          success: true,
+          message: responseMessage,
+          summary: {
+            requested_count: ids.length,
+            updated_count: updatedCount,
+            credit_deducted_count: creditDeductedCount,
+            new_result: result,
+            result_notes: result_notes || null,
+          },
+          updated_appraisals: updatedAppraisals,
+        };
+
+        // 찾지 못한 ID가 있는 경우 추가 정보 제공
+        if (notFoundIds.length > 0) {
+          response.not_found_ids = notFoundIds;
+          response.message += ` (${notFoundIds.length}개 ID를 찾을 수 없어 건너뛰었습니다.)`;
+        }
+
+        res.json(response);
+      } catch (error) {
+        // 트랜잭션 롤백
+        await conn.rollback();
+        throw error;
+      }
+    } catch (err) {
+      console.error("감정 결과 일괄 변경 중 오류 발생:", err);
+      res.status(500).json({
+        success: false,
+        message:
+          err.message || "감정 결과 일괄 변경 중 서버 오류가 발생했습니다.",
+      });
+    } finally {
+      if (conn) conn.release();
+    }
+  }
+);
+
 module.exports = router;

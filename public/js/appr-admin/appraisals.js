@@ -1,4 +1,4 @@
-// public/js/appr-admin/appraisals.js - 감정 관리 관련 기능
+// public/js/appr-admin/appraisals.js - 감정 관리 관련 기능 (완전 개선 버전)
 
 // 전역 변수
 let currentAppraisalPage = 1;
@@ -6,7 +6,10 @@ let appraisalSearchQuery = "";
 let appraisalStatusFilter = "all";
 let appraisalResultFilter = "all";
 let bulkDeleteMode = false;
-let imagesToDelete = []; // 삭제 예정 이미지 목록 추가
+let bulkChangeMode = false; // 일괄 변경 모드 추가
+let imagesToDelete = []; // 삭제 예정 이미지 목록
+let userSearchTimeout = null; // 실시간 사용자 검색 디바운싱
+let uploadedImages = []; // 감정 생성 시 업로드된 이미지 목록
 
 // 페이지 로드 시 이벤트 리스너 설정
 document.addEventListener("DOMContentLoaded", function () {
@@ -48,7 +51,7 @@ document.addEventListener("DOMContentLoaded", function () {
       loadAppraisalList();
     });
 
-  // 감정 생성 관련 이벤트 리스너 추가
+  // 감정 생성 관련 이벤트 리스너
   document
     .getElementById("create-appraisal-btn")
     .addEventListener("click", function () {
@@ -68,6 +71,7 @@ document.addEventListener("DOMContentLoaded", function () {
       submitCreateAppraisal();
     });
 
+  // 일괄 작업 관련 이벤트 리스너
   document
     .getElementById("bulk-delete-btn")
     .addEventListener("click", toggleBulkDeleteMode);
@@ -80,45 +84,273 @@ document.addEventListener("DOMContentLoaded", function () {
   document
     .getElementById("appraisals-list")
     .addEventListener("change", function (e) {
-      if (e.target.classList.contains("bulk-select-checkbox"))
-        updateBulkDeleteButton();
+      if (e.target.classList.contains("bulk-select-checkbox")) {
+        updateBulkActionButtons();
+      }
     });
 
-  // 이미지 선택 시 미리보기 표시를 위한 이벤트 리스너
+  // 실시간 사용자 검색 이벤트 리스너
   setTimeout(() => {
-    const imageInput = document.getElementById("create-appraisal-images");
-    const previewContainer = document.getElementById("create-images-preview");
-
-    if (imageInput && previewContainer) {
-      imageInput.addEventListener("change", function (e) {
-        previewContainer.innerHTML = "";
-
-        const files = e.target.files;
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
-          const reader = new FileReader();
-
-          reader.onload = function (e) {
-            const imgDiv = document.createElement("div");
-            imgDiv.style.cssText =
-              "position: relative; width: 100px; height: 100px; margin-bottom: 10px;";
-            imgDiv.innerHTML = `
-              <img src="${
-                e.target.result
-              }" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px; border: 1px solid #e2e8f0;">
-              <div style="position: absolute; bottom: 2px; left: 2px; background: rgba(0,0,0,0.7); color: white; padding: 1px 4px; border-radius: 2px; font-size: 0.7rem;">
-                ${i + 1}
-              </div>
-            `;
-            previewContainer.appendChild(imgDiv);
-          };
-
-          reader.readAsDataURL(file);
-        }
+    const userIdInput = document.getElementById("create-user-id");
+    if (userIdInput) {
+      userIdInput.addEventListener("input", function (e) {
+        handleUserIdInput(e.target.value);
       });
+    }
+
+    // 감정 생성 시 이미지 업로드 이벤트 리스너
+    const imageInput = document.getElementById("create-appraisal-images");
+    if (imageInput) {
+      imageInput.addEventListener("change", handleImageUpload);
     }
   }, 100);
 });
+
+// 실시간 사용자 검색 처리
+function handleUserIdInput(query) {
+  const resultsContainer = document.getElementById("user-search-results");
+
+  // 디바운싱: 이전 타이머 취소
+  if (userSearchTimeout) {
+    clearTimeout(userSearchTimeout);
+  }
+
+  // 검색어가 비어있으면 결과 숨김
+  if (!query.trim()) {
+    resultsContainer.innerHTML = "";
+    resultsContainer.style.display = "none";
+    return;
+  }
+
+  // 300ms 후에 검색 실행
+  userSearchTimeout = setTimeout(() => {
+    searchUsersRealtime(query.trim());
+  }, 300);
+}
+
+// 실시간 사용자 검색 실행
+function searchUsersRealtime(query) {
+  const resultsContainer = document.getElementById("user-search-results");
+
+  if (query.length < 2) {
+    resultsContainer.innerHTML = "";
+    resultsContainer.style.display = "none";
+    return;
+  }
+
+  resultsContainer.innerHTML =
+    '<div style="padding: 10px; text-align: center; color: #666;">검색 중...</div>';
+  resultsContainer.style.display = "block";
+
+  fetch(`/api/appr/admin/users?search=${encodeURIComponent(query)}&limit=5`)
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.success && data.users.length > 0) {
+        let html =
+          '<div style="border: 1px solid #e2e8f0; border-radius: 6px; background: white; max-height: 200px; overflow-y: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">';
+
+        data.users.forEach((user, index) => {
+          html += `
+            <div style="padding: 10px; border-bottom: ${
+              index < data.users.length - 1 ? "1px solid #f1f5f9" : "none"
+            }; cursor: pointer; transition: background-color 0.2s;" 
+                 onclick="selectUserFromSearch('${user.id}', '${
+            user.email
+          }', '${user.company_name || ""}')"
+                 onmouseover="this.style.backgroundColor='#f8fafc'" 
+                 onmouseout="this.style.backgroundColor='white'">
+              <div style="font-weight: 500; color: #1a2a3a;">${user.id}</div>
+              <div style="font-size: 0.875rem; color: #666;">${user.email}</div>
+              ${
+                user.company_name
+                  ? `<div style="font-size: 0.75rem; color: #999;">${user.company_name}</div>`
+                  : ""
+              }
+            </div>
+          `;
+        });
+
+        html += "</div>";
+        resultsContainer.innerHTML = html;
+      } else {
+        resultsContainer.innerHTML =
+          '<div style="padding: 10px; text-align: center; color: #999; font-style: italic;">검색 결과가 없습니다.</div>';
+      }
+    })
+    .catch((error) => {
+      console.error("사용자 검색 오류:", error);
+      resultsContainer.innerHTML =
+        '<div style="padding: 10px; text-align: center; color: #dc2626;">검색 중 오류가 발생했습니다.</div>';
+    });
+}
+
+// 실시간 검색에서 사용자 선택
+function selectUserFromSearch(userId, userEmail, companyName) {
+  document.getElementById("create-user-id").value = userId;
+  const resultsContainer = document.getElementById("user-search-results");
+
+  resultsContainer.innerHTML = `
+    <div style="padding: 10px; background-color: #f0f9ff; border-radius: 4px; border: 1px solid #0ea5e9; margin-top: 5px;">
+      <div style="font-weight: 500; color: #1a2a3a;">선택된 사용자: ${userId}</div>
+      <div style="font-size: 0.875rem; color: #666;">${userEmail}</div>
+      ${
+        companyName
+          ? `<div style="font-size: 0.75rem; color: #999;">${companyName}</div>`
+          : ""
+      }
+    </div>
+  `;
+  resultsContainer.style.display = "block";
+}
+
+// 감정 생성 시 이미지 업로드 처리 (순서 관리 + 삭제 기능)
+function handleImageUpload(e) {
+  const files = Array.from(e.target.files);
+  const previewContainer = document.getElementById("create-images-preview");
+
+  files.forEach((file, index) => {
+    const imageId = Date.now() + "-" + index;
+    const imageObj = {
+      id: imageId,
+      file: file,
+      order: uploadedImages.length,
+    };
+
+    uploadedImages.push(imageObj);
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const imageDiv = document.createElement("div");
+      imageDiv.className = "uploaded-image-item";
+      imageDiv.dataset.imageId = imageId;
+      imageDiv.style.cssText = `
+        position: relative; 
+        width: 120px; 
+        height: 120px; 
+        margin: 5px; 
+        display: inline-block;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        overflow: hidden;
+        background: white;
+      `;
+
+      imageDiv.innerHTML = `
+        <img src="${e.target.result}" style="width: 100%; height: 100%; object-fit: cover;">
+        <div style="position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75rem; font-weight: 500;">
+          ${uploadedImages.length}
+        </div>
+        <button type="button" onclick="removeUploadedImage('${imageId}')" 
+                style="position: absolute; top: 5px; right: 5px; width: 24px; height: 24px; border-radius: 50%; background: rgba(220, 38, 38, 0.9); color: white; border: none; cursor: pointer; font-size: 16px; line-height: 1; display: flex; align-items: center; justify-content: center;"
+                title="이미지 삭제">
+          ×
+        </button>
+        <div style="position: absolute; bottom: 5px; right: 5px; display: flex; gap: 2px;">
+          <button type="button" onclick="moveImageUp('${imageId}')" 
+                  style="width: 20px; height: 20px; border-radius: 3px; background: rgba(0,0,0,0.7); color: white; border: none; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center;"
+                  title="앞으로 이동">
+            ↑
+          </button>
+          <button type="button" onclick="moveImageDown('${imageId}')" 
+                  style="width: 20px; height: 20px; border-radius: 3px; background: rgba(0,0,0,0.7); color: white; border: none; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center;"
+                  title="뒤로 이동">
+            ↓
+          </button>
+        </div>
+      `;
+
+      previewContainer.appendChild(imageDiv);
+    };
+
+    reader.readAsDataURL(file);
+  });
+
+  // 파일 입력 초기화 (같은 파일을 다시 선택할 수 있도록)
+  e.target.value = "";
+}
+
+// 업로드된 이미지 삭제
+function removeUploadedImage(imageId) {
+  // 배열에서 제거
+  uploadedImages = uploadedImages.filter((img) => img.id !== imageId);
+
+  // DOM에서 제거
+  const imageElement = document.querySelector(`[data-image-id="${imageId}"]`);
+  if (imageElement) {
+    imageElement.remove();
+  }
+
+  // 순서 번호 재정렬
+  reorderImageNumbers();
+}
+
+// 이미지 순서 위로 이동
+function moveImageUp(imageId) {
+  const imageIndex = uploadedImages.findIndex((img) => img.id === imageId);
+  if (imageIndex > 0) {
+    // 배열에서 순서 변경
+    [uploadedImages[imageIndex], uploadedImages[imageIndex - 1]] = [
+      uploadedImages[imageIndex - 1],
+      uploadedImages[imageIndex],
+    ];
+
+    // DOM에서 순서 변경
+    const container = document.getElementById("create-images-preview");
+    const currentElement = document.querySelector(
+      `[data-image-id="${imageId}"]`
+    );
+    const previousElement = currentElement.previousElementSibling;
+
+    if (previousElement) {
+      container.insertBefore(currentElement, previousElement);
+    }
+
+    reorderImageNumbers();
+  }
+}
+
+// 이미지 순서 아래로 이동
+function moveImageDown(imageId) {
+  const imageIndex = uploadedImages.findIndex((img) => img.id === imageId);
+  if (imageIndex < uploadedImages.length - 1) {
+    // 배열에서 순서 변경
+    [uploadedImages[imageIndex], uploadedImages[imageIndex + 1]] = [
+      uploadedImages[imageIndex + 1],
+      uploadedImages[imageIndex],
+    ];
+
+    // DOM에서 순서 변경
+    const container = document.getElementById("create-images-preview");
+    const currentElement = document.querySelector(
+      `[data-image-id="${imageId}"]`
+    );
+    const nextElement = currentElement.nextElementSibling;
+
+    if (nextElement && nextElement.nextElementSibling) {
+      container.insertBefore(currentElement, nextElement.nextElementSibling);
+    } else {
+      container.appendChild(currentElement);
+    }
+
+    reorderImageNumbers();
+  }
+}
+
+// 이미지 순서 번호 재정렬
+function reorderImageNumbers() {
+  const imageElements = document.querySelectorAll(".uploaded-image-item");
+  imageElements.forEach((element, index) => {
+    const numberElement = element.querySelector("div:first-child");
+    if (numberElement) {
+      numberElement.textContent = index + 1;
+    }
+  });
+
+  // 배열의 order 속성도 업데이트
+  uploadedImages.forEach((img, index) => {
+    img.order = index;
+  });
+}
 
 // 감정 목록 로드 함수
 function loadAppraisalList() {
@@ -165,7 +397,7 @@ function loadAppraisalList() {
     });
 }
 
-// displayAppraisalList 함수 수정 (목록에서 삭제 버튼 제거)
+// displayAppraisalList 함수 수정 (일괄 변경 기능 추가)
 function displayAppraisalList(appraisals, pagination) {
   const tableBody = document.getElementById("appraisals-list");
 
@@ -183,7 +415,7 @@ function displayAppraisalList(appraisals, pagination) {
     html += `<tr>
             <td>
                 ${
-                  bulkDeleteMode
+                  bulkDeleteMode || bulkChangeMode
                     ? `<input type="checkbox" class="bulk-select-checkbox" value="${appraisal.id}" style="margin-right: 8px;">`
                     : ""
                 }
@@ -219,7 +451,7 @@ function displayAppraisalList(appraisals, pagination) {
   );
 }
 
-// 간단한 삭제 함수 추가
+// 간단한 삭제 함수
 function deleteAppraisal(appraisalId, certificateNumber, brand, modelName) {
   if (
     confirm(
@@ -1045,7 +1277,9 @@ function openCreateAppraisalModal() {
   // 폼 초기화 및 검색 결과 클리어
   document.getElementById("create-appraisal-form").reset();
   document.getElementById("user-search-results").innerHTML = "";
+  document.getElementById("user-search-results").style.display = "none";
   document.getElementById("create-images-preview").innerHTML = "";
+  uploadedImages = []; // 업로드된 이미지 목록 초기화
   toggleAppraisalTypeFields("");
   // 구성품 입력 필드 초기화
   document.getElementById("components-container").innerHTML = `
@@ -1098,14 +1332,14 @@ function removeComponentInput(button) {
   button.parentElement.remove();
 }
 
-// 사용자 검색 모달 열기 함수
+// 사용자 검색 모달 열기 함수 (기존 방식 - 필요시 사용)
 function searchUsers() {
   document.getElementById("user-search-list").innerHTML = "";
   document.getElementById("user-search-input").value = "";
   openModal("user-search-modal");
 }
 
-// 사용자 검색 실행 함수
+// 사용자 검색 실행 함수 (기존 방식)
 function performUserSearch() {
   const query = document.getElementById("user-search-input").value.trim();
   const resultContainer = document.getElementById("user-search-list");
@@ -1150,7 +1384,7 @@ function performUserSearch() {
     });
 }
 
-// 사용자 선택 함수
+// 사용자 선택 함수 (기존 방식)
 function selectUser(userId, userEmail) {
   document.getElementById("create-user-id").value = userId;
   document.getElementById("user-search-results").innerHTML = `
@@ -1237,10 +1471,12 @@ function submitCreateAppraisal() {
     }
   }
 
-  const imageFiles = document.getElementById("create-appraisal-images").files;
-  for (let i = 0; i < imageFiles.length; i++) {
-    formData.append("images", imageFiles[i]);
-  }
+  // 업로드된 이미지들을 순서대로 추가
+  uploadedImages
+    .sort((a, b) => a.order - b.order)
+    .forEach((imageObj) => {
+      formData.append("images", imageObj.file);
+    });
 
   if (!formData.get("user_id")) {
     showAlert("사용자 ID를 입력해주세요.", "error");
@@ -1273,14 +1509,143 @@ function submitCreateAppraisal() {
 
 // 다중 삭제 모드 토글 함수
 function toggleBulkDeleteMode() {
+  // 다른 모드가 활성화되어 있으면 해제
+  if (bulkChangeMode) {
+    toggleBulkChangeMode();
+  }
+
   bulkDeleteMode = !bulkDeleteMode;
   const button = document.getElementById("bulk-delete-btn");
   button.textContent = bulkDeleteMode ? "다중 삭제 취소" : "다중 삭제";
   button.style.backgroundColor = bulkDeleteMode ? "#dc2626" : "#1a2a3a";
+
   document.getElementById("select-all-container").style.display = bulkDeleteMode
     ? "block"
     : "none";
+
+  // 일괄 변경 UI 숨기기/보이기
+  document.getElementById("bulk-change-container").style.display = "none";
+
   loadAppraisalList();
+}
+
+// 일괄 변경 모드 토글 함수 (새로 추가)
+function toggleBulkChangeMode() {
+  // 다른 모드가 활성화되어 있으면 해제
+  if (bulkDeleteMode) {
+    toggleBulkDeleteMode();
+  }
+
+  bulkChangeMode = !bulkChangeMode;
+  const button = document.getElementById("bulk-change-btn");
+  if (!button) {
+    // 버튼이 없으면 생성
+    createBulkChangeButton();
+    return;
+  }
+
+  button.textContent = bulkChangeMode ? "일괄 변경 취소" : "일괄 변경";
+  button.style.backgroundColor = bulkChangeMode ? "#dc2626" : "#1a2a3a";
+
+  document.getElementById("select-all-container").style.display = bulkChangeMode
+    ? "block"
+    : "none";
+
+  // 일괄 변경 UI 보이기/숨기기
+  toggleBulkChangeUI();
+
+  loadAppraisalList();
+}
+
+// 일괄 변경 버튼 생성 (HTML에 없는 경우)
+function createBulkChangeButton() {
+  const bulkDeleteBtn = document.getElementById("bulk-delete-btn");
+  if (bulkDeleteBtn && !document.getElementById("bulk-change-btn")) {
+    const bulkChangeBtn = document.createElement("button");
+    bulkChangeBtn.id = "bulk-change-btn";
+    bulkChangeBtn.className = "btn";
+    bulkChangeBtn.textContent = "일괄 변경";
+    bulkChangeBtn.style.marginLeft = "10px";
+    bulkChangeBtn.addEventListener("click", toggleBulkChangeMode);
+
+    bulkDeleteBtn.parentNode.insertBefore(
+      bulkChangeBtn,
+      bulkDeleteBtn.nextSibling
+    );
+
+    // 일괄 변경 UI 컨테이너도 생성
+    createBulkChangeUI();
+  }
+}
+
+// 일괄 변경 UI 생성
+function createBulkChangeUI() {
+  const selectAllContainer = document.getElementById("select-all-container");
+  if (selectAllContainer && !document.getElementById("bulk-change-container")) {
+    const bulkChangeContainer = document.createElement("div");
+    bulkChangeContainer.id = "bulk-change-container";
+    bulkChangeContainer.style.cssText = `
+      display: none;
+      margin-bottom: 15px;
+      padding: 15px;
+      background-color: #f8fafc;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+    `;
+
+    bulkChangeContainer.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+        <div style="font-weight: 500; color: #1a2a3a;">선택된 항목 일괄 변경:</div>
+        
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <label style="font-weight: 500;">상태 변경:</label>
+          <select id="bulk-status-select" class="form-select" style="width: auto; min-width: 120px;">
+            <option value="">선택</option>
+            <option value="pending">접수완료</option>
+            <option value="in_review">감정중</option>
+            <option value="completed">완료</option>
+            <option value="cancelled">취소</option>
+          </select>
+          <button type="button" class="btn btn-outline" onclick="executeBulkStatusChange()" style="padding: 6px 12px;">
+            상태 변경
+          </button>
+        </div>
+        
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <label style="font-weight: 500;">결과 변경:</label>
+          <select id="bulk-result-select" class="form-select" style="width: auto; min-width: 120px;">
+            <option value="">선택</option>
+            <option value="pending">감정대기</option>
+            <option value="authentic">정품</option>
+            <option value="fake">가품</option>
+            <option value="uncertain">판단불가</option>
+          </select>
+          <input type="text" id="bulk-result-notes" class="form-input" placeholder="결과 소견 (선택사항)" style="width: 200px;">
+          <button type="button" class="btn btn-outline" onclick="executeBulkResultChange()" style="padding: 6px 12px;">
+            결과 변경
+          </button>
+        </div>
+      </div>
+      
+      <div style="margin-top: 10px; font-size: 0.875rem; color: #666;">
+        <span id="bulk-selected-count">0</span>개 항목이 선택되었습니다. 
+        변경하고 싶은 항목을 선택한 후 해당 버튼을 클릭하세요.
+      </div>
+    `;
+
+    selectAllContainer.parentNode.insertBefore(
+      bulkChangeContainer,
+      selectAllContainer.nextSibling
+    );
+  }
+}
+
+// 일괄 변경 UI 토글
+function toggleBulkChangeUI() {
+  const container = document.getElementById("bulk-change-container");
+  if (container) {
+    container.style.display = bulkChangeMode ? "block" : "none";
+  }
 }
 
 // 전체 선택 토글 함수
@@ -1290,18 +1655,164 @@ function toggleSelectAll() {
   itemCheckboxes.forEach(
     (checkbox) => (checkbox.checked = selectAllCheckbox.checked)
   );
-  updateBulkDeleteButton();
+  updateBulkActionButtons();
 }
 
-// 다중 삭제 버튼 업데이트 함수
-function updateBulkDeleteButton() {
+// 일괄 작업 버튼 업데이트 함수 (기존 함수명 변경)
+function updateBulkActionButtons() {
   const selectedItems = document.querySelectorAll(
     ".bulk-select-checkbox:checked"
   );
-  const executeButton = document.getElementById("execute-bulk-delete-btn");
-  executeButton.style.display =
-    selectedItems.length > 0 ? "inline-block" : "none";
-  executeButton.textContent = `${selectedItems.length}개 선택된 항목 삭제`;
+  const selectedCount = selectedItems.length;
+
+  // 삭제 버튼 업데이트
+  const executeDeleteButton = document.getElementById(
+    "execute-bulk-delete-btn"
+  );
+  if (executeDeleteButton) {
+    executeDeleteButton.style.display =
+      bulkDeleteMode && selectedCount > 0 ? "inline-block" : "none";
+    executeDeleteButton.textContent = `${selectedCount}개 선택된 항목 삭제`;
+  }
+
+  // 일괄 변경 카운트 업데이트
+  const bulkSelectedCount = document.getElementById("bulk-selected-count");
+  if (bulkSelectedCount) {
+    bulkSelectedCount.textContent = selectedCount;
+  }
+}
+
+// 일괄 상태 변경 실행
+function executeBulkStatusChange() {
+  const selectedCheckboxes = document.querySelectorAll(
+    ".bulk-select-checkbox:checked"
+  );
+  const selectedIds = Array.from(selectedCheckboxes).map(
+    (checkbox) => checkbox.value
+  );
+  const newStatus = document.getElementById("bulk-status-select").value;
+
+  if (selectedIds.length === 0) {
+    showAlert("변경할 감정을 선택해주세요.", "error");
+    return;
+  }
+
+  if (!newStatus) {
+    showAlert("변경할 상태를 선택해주세요.", "error");
+    return;
+  }
+
+  const statusNames = {
+    pending: "접수완료",
+    in_review: "감정중",
+    completed: "완료",
+    cancelled: "취소",
+  };
+
+  if (
+    confirm(
+      `정말로 선택된 ${selectedIds.length}개의 감정 상태를 "${statusNames[newStatus]}"로 변경하시겠습니까?`
+    )
+  ) {
+    fetch("/api/appr/admin/appraisals/bulk-status", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: selectedIds, status: newStatus }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          return response.json().then((data) => {
+            throw new Error(data.message || "상태 변경에 실패했습니다.");
+          });
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (data.success) {
+          showAlert(data.message, "success");
+          document.getElementById("bulk-status-select").value = "";
+          loadAppraisalList();
+        } else {
+          throw new Error(data.message || "상태 변경에 실패했습니다.");
+        }
+      })
+      .catch((error) => showAlert(error.message, "error"));
+  }
+}
+
+// 일괄 결과 변경 실행
+function executeBulkResultChange() {
+  const selectedCheckboxes = document.querySelectorAll(
+    ".bulk-select-checkbox:checked"
+  );
+  const selectedIds = Array.from(selectedCheckboxes).map(
+    (checkbox) => checkbox.value
+  );
+  const newResult = document.getElementById("bulk-result-select").value;
+  const resultNotes = document.getElementById("bulk-result-notes").value;
+
+  if (selectedIds.length === 0) {
+    showAlert("변경할 감정을 선택해주세요.", "error");
+    return;
+  }
+
+  if (!newResult) {
+    showAlert("변경할 결과를 선택해주세요.", "error");
+    return;
+  }
+
+  const resultNames = {
+    pending: "감정대기",
+    authentic: "정품",
+    fake: "가품",
+    uncertain: "판단불가",
+  };
+
+  let confirmMessage = `정말로 선택된 ${selectedIds.length}개의 감정 결과를 "${resultNames[newResult]}"로 변경하시겠습니까?`;
+
+  if (newResult !== "pending") {
+    confirmMessage += `\n\n※ 퀵링크 감정의 경우 크레딧이 차감됩니다.`;
+  }
+
+  if (confirm(confirmMessage)) {
+    const requestBody = {
+      ids: selectedIds,
+      result: newResult,
+    };
+
+    if (resultNotes.trim()) {
+      requestBody.result_notes = resultNotes.trim();
+    }
+
+    fetch("/api/appr/admin/appraisals/bulk-result", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          return response.json().then((data) => {
+            throw new Error(data.message || "결과 변경에 실패했습니다.");
+          });
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (data.success) {
+          let message = data.message;
+          if (data.summary.credit_deducted_count > 0) {
+            message += ` (${data.summary.credit_deducted_count}개 계정의 크레딧이 차감되었습니다.)`;
+          }
+          showAlert(message, "success");
+          document.getElementById("bulk-result-select").value = "";
+          document.getElementById("bulk-result-notes").value = "";
+          loadAppraisalList();
+        } else {
+          throw new Error(data.message || "결과 변경에 실패했습니다.");
+        }
+      })
+      .catch((error) => showAlert(error.message, "error"));
+  }
 }
 
 // 다중 삭제 실행 함수
@@ -1346,3 +1857,11 @@ function executeBulkDelete() {
       .catch((error) => showAlert(error.message, "error"));
   }
 }
+
+// 페이지 로드 완료 후 일괄 변경 버튼 생성
+document.addEventListener("DOMContentLoaded", function () {
+  // 기존 코드 실행 후 일괄 변경 기능 초기화
+  setTimeout(() => {
+    createBulkChangeButton();
+  }, 100);
+});
