@@ -345,6 +345,27 @@ class AxiosCrawler {
     this.cookieJar = new tough.CookieJar();
 
     // axios 인스턴스 설정
+    this.initializeAxiosClient();
+
+    // 로그인 관련 상태 변수들
+    this.isLoggedIn = false;
+    this.loginTime = null;
+    this.sessionTimeout = 1000 * 60 * 60 * 3; // 3시간
+    this.maxRetries = 3;
+    this.retryDelay = 1000;
+
+    // 로그인 중복 방지를 위한 변수들
+    this.loginInProgress = false;
+    this.loginPromise = null;
+
+    // 로그인 체크 캐싱을 위한 변수
+    this.lastLoginCheck = null;
+    this.lastLoginCheckResult = false;
+    this.loginCheckInterval = 1000 * 60 * 5; // 5분
+  }
+
+  // axios 클라이언트 초기화/재초기화
+  initializeAxiosClient() {
     this.client = wrapper(
       axios.create({
         jar: this.cookieJar,
@@ -358,29 +379,36 @@ class AxiosCrawler {
         maxRedirects: 5,
       })
     );
+  }
 
+  // 강제 로그아웃 - 모든 세션 정보 초기화
+  forceLogout() {
+    console.log("Forcing logout and clearing all session data...");
+
+    // cookieJar 재설정
+    this.cookieJar = new tough.CookieJar();
+    this.initializeAxiosClient();
+
+    // 로그인 상태 초기화
     this.isLoggedIn = false;
     this.loginTime = null;
-    this.sessionTimeout = 1000 * 60 * 60 * 3;
-    this.maxRetries = 3;
-    this.retryDelay = 1000;
-
-    // 로그인 중복 방지를 위한 변수들 추가
     this.loginInProgress = false;
     this.loginPromise = null;
 
-    // 로그인 체크 캐싱을 위한 변수 추가
+    // 로그인 체크 캐시 초기화
     this.lastLoginCheck = null;
     this.lastLoginCheckResult = false;
-    this.loginCheckInterval = 1000 * 60 * 5; // 5분
+
+    console.log("Session data cleared successfully");
   }
 
+  // 세션 유효성 검사
   isSessionValid() {
     if (!this.loginTime) return false;
     return Date.now() - this.loginTime < this.sessionTimeout;
   }
 
-  // 로그인 체크 기본 메서드 (각 크롤러에서 오버라이드)
+  // 로그인 체크 (캐싱 포함)
   async loginCheck() {
     // 마지막 로그인 체크 시간이 5분 이내면 캐시된 결과 반환
     if (
@@ -395,14 +423,12 @@ class AxiosCrawler {
     // 5분이 지났거나 처음 체크하는 경우, 실제 체크 수행
     return this.retryOperation(async () => {
       try {
-        // this.config.loginCheckUrls에서 하나씩
         const responses = await Promise.all(
           this.config.loginCheckUrls.map((url) => this.client.get(url))
         );
 
         // 결과 캐싱
         this.lastLoginCheck = Date.now();
-        // responses의 status가 모두 200일 때만 true
         this.lastLoginCheckResult = responses.every(
           (response) => response.status === 200
         );
@@ -417,23 +443,68 @@ class AxiosCrawler {
     });
   }
 
-  async login() {
-    // 이미 로그인되어 있고, 세션이 유효하면 재로그인 안함
-    if ((await this.loginCheck()) && this.isSessionValid()) {
-      console.log("Already logged in, session is valid");
-      this.isLoggedIn = true;
-      return true;
-    }
+  // 메인 로그인 메서드 - 모든 로직을 부모 클래스에서 처리
+  async login(forceLogin = false) {
+    try {
+      // 강제 로그인이 요청된 경우 세션 초기화
+      if (forceLogin) {
+        console.log("Force login requested - clearing session");
+        this.forceLogout();
+      }
 
-    // 이미 로그인 중이면 진행 중인 로그인 Promise 반환
-    if (this.loginInProgress && this.loginPromise) {
-      console.log("Login already in progress, waiting for completion");
-      return this.loginPromise;
-    }
+      // 이미 로그인되어 있고 세션이 유효한 경우
+      if (!forceLogin && this.isLoggedIn && this.isSessionValid()) {
+        // 서버 측 로그인 상태도 확인
+        const serverLoginValid = await this.loginCheck();
+        if (serverLoginValid) {
+          console.log("Already logged in, session is valid");
+          return true;
+        } else {
+          console.log("Server session expired, need to re-login");
+          this.forceLogout();
+        }
+      }
 
-    // 에러를 발생시키지 않고 false 반환
-    // 자식 클래스에서 이 반환값을 확인하고 로그인 로직 실행
-    return false;
+      // 이미 로그인 진행 중인 경우 대기
+      if (this.loginInProgress && this.loginPromise) {
+        console.log("Login already in progress, waiting for completion");
+        return await this.loginPromise;
+      }
+
+      // 로그인 시작
+      console.log("Starting login process...");
+      this.loginInProgress = true;
+
+      // 실제 로그인 수행 (자식 클래스에서 구현)
+      this.loginPromise = this.performLogin();
+
+      const result = await this.loginPromise;
+
+      if (result) {
+        // 로그인 성공 시 상태 업데이트
+        this.isLoggedIn = true;
+        this.loginTime = Date.now();
+        console.log("Login successful - session established");
+      } else {
+        console.log("Login failed");
+        this.forceLogout();
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Login process failed:", error.message);
+      this.forceLogout();
+      return false;
+    } finally {
+      // 로그인 진행 상태 해제
+      this.loginInProgress = false;
+      this.loginPromise = null;
+    }
+  }
+
+  // 실제 로그인 로직 - 자식 클래스에서 오버라이드해야 함
+  async performLogin() {
+    throw new Error("performLogin method must be implemented by child class");
   }
 
   async retryOperation(

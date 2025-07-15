@@ -128,78 +128,53 @@ class StarAucCrawler extends AxiosCrawler {
     this.currentBidType = "live"; // StarAuc는 전체가 'live'
   }
 
-  async login() {
-    // 부모 클래스(AxiosCrawler)의 login 메서드 호출
-    // 이미 로그인 되어있는지, 다른 로그인 진행중인지 등을 체크
-    const shouldContinue = await super.login();
+  async performLogin() {
+    return this.retryOperation(async () => {
+      console.log("Logging in to Star Auction...");
 
-    // 부모 메서드에서 이미 로그인 되어있다고 판단되면 종료
-    if (shouldContinue === true) {
-      return true;
-    }
+      // 로그인 페이지 가져오기
+      const response = await this.client.get(this.config.loginPageUrl);
 
-    // 다른 로그인 진행중이면 해당 Promise를 반환
-    if (shouldContinue instanceof Promise) {
-      return shouldContinue;
-    }
+      // CSRF 토큰 추출
+      const $ = cheerio.load(response.data);
+      const csrfToken = $(this.config.signinSelectors.csrfToken).attr(
+        "content"
+      );
 
-    // 실제 로그인 로직 구현
-    this.loginPromise = this.retryOperation(async () => {
-      try {
-        console.log("Logging in to Star Auction...");
+      if (!csrfToken) {
+        throw new Error("CSRF token not found");
+      }
 
-        // 로그인 페이지 가져오기
-        const response = await this.client.get(this.config.loginPageUrl);
+      // 폼 데이터 준비
+      const formData = new URLSearchParams();
+      formData.append("email", this.config.loginData.userId);
+      formData.append("password", this.config.loginData.password);
+      formData.append("_token", csrfToken);
 
-        // CSRF 토큰 추출
-        const $ = cheerio.load(response.data);
-        const csrfToken = $(this.config.signinSelectors.csrfToken).attr(
-          "content"
-        );
-
-        if (!csrfToken) {
-          throw new Error("CSRF token not found");
+      // 로그인 요청
+      const loginResponse = await this.client.post(
+        this.config.loginPostUrl,
+        formData,
+        {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Referer: this.config.loginPageUrl,
+            "X-CSRF-TOKEN": csrfToken,
+          },
+          maxRedirects: 5,
+          validateStatus: function (status) {
+            return status >= 200 && status < 400;
+          },
         }
+      );
 
-        // 폼 데이터 준비
-        const formData = new URLSearchParams();
-        formData.append("email", this.config.loginData.userId);
-        formData.append("password", this.config.loginData.password);
-        formData.append("_token", csrfToken);
-
-        // 로그인 요청
-        const loginResponse = await this.client.post(
-          this.config.loginPostUrl,
-          formData,
-          {
-            headers: {
-              "Content-Type": "application/x-www-form-urlencoded",
-              Referer: this.config.loginPageUrl,
-              "X-CSRF-TOKEN": csrfToken,
-            },
-            maxRedirects: 5,
-            validateStatus: function (status) {
-              return status >= 200 && status < 400; // 300-399 리다이렉트 허용
-            },
-          }
-        );
-
-        // 로그인 후 검증
-        if (loginResponse.status === 200 && (await this.loginCheck())) {
-          console.log("Login successful");
-          this.isLoggedIn = true;
-          this.loginTime = Date.now();
-          return true;
-        } else {
-          throw new Error("Login failed");
-        }
-      } finally {
-        // 성공 또는 실패 상관없이 로그인 Lock 해제
-        this.loginInProgress = false;
+      // 로그인 후 검증
+      if (loginResponse.status === 200 && (await this.loginCheck())) {
+        return true;
+      } else {
+        throw new Error("Login verification failed");
       }
     });
-
-    return this.loginPromise;
   }
 
   // 스크립트에서 데이터 파싱
@@ -702,78 +677,53 @@ class StarAucValueCrawler extends AxiosCrawler {
     this.config.currentCategoryId = null; // 현재 크롤링 중인 카테고리 ID
   }
 
-  async login() {
-    // 부모 클래스(AxiosCrawler)의 login 메서드 호출
-    // 이미 로그인 되어있는지, 다른 로그인 진행중인지 등을 체크
-    const shouldContinue = await super.login();
+  async performLogin() {
+    return this.retryOperation(async () => {
+      console.log("Logging in to Star Auction Value...");
 
-    // 부모 메서드에서 이미 로그인 되어있다고 판단되면 종료
-    if (shouldContinue === true) {
-      return true;
-    }
+      // 로그인 페이지 가져오기
+      const response = await this.client.get(this.config.loginPageUrl);
 
-    // 다른 로그인 진행중이면 해당 Promise를 반환
-    if (shouldContinue instanceof Promise) {
-      return shouldContinue;
-    }
+      // CSRF 토큰 추출
+      const $ = cheerio.load(response.data);
+      const csrfToken = $(this.config.signinSelectors.csrfToken).attr(
+        "content"
+      );
 
-    // 실제 로그인 로직 구현
-    this.loginPromise = this.retryOperation(async () => {
-      try {
-        console.log("Logging in to Star Auction Value...");
+      if (!csrfToken) {
+        throw new Error("CSRF token not found");
+      }
 
-        // 로그인 페이지 가져오기
-        const response = await this.client.get(this.config.loginPageUrl);
+      // 폼 데이터 준비
+      const formData = new URLSearchParams();
+      formData.append("email", this.config.loginData.userId);
+      formData.append("password", this.config.loginData.password);
+      formData.append("_token", csrfToken);
 
-        // CSRF 토큰 추출
-        const $ = cheerio.load(response.data);
-        const csrfToken = $(this.config.signinSelectors.csrfToken).attr(
-          "content"
-        );
-
-        if (!csrfToken) {
-          throw new Error("CSRF token not found");
+      // 로그인 요청
+      const loginResponse = await this.client.post(
+        this.config.loginPostUrl,
+        formData,
+        {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Referer: this.config.loginPageUrl,
+            "X-CSRF-TOKEN": csrfToken,
+          },
+          maxRedirects: 5,
+          validateStatus: function (status) {
+            return status >= 200 && status < 400;
+          },
         }
+      );
 
-        // 폼 데이터 준비
-        const formData = new URLSearchParams();
-        formData.append("email", this.config.loginData.userId);
-        formData.append("password", this.config.loginData.password);
-        formData.append("_token", csrfToken);
-
-        // 로그인 요청
-        const loginResponse = await this.client.post(
-          this.config.loginPostUrl,
-          formData,
-          {
-            headers: {
-              "Content-Type": "application/x-www-form-urlencoded",
-              Referer: this.config.loginPageUrl,
-              "X-CSRF-TOKEN": csrfToken,
-            },
-            maxRedirects: 5,
-            validateStatus: function (status) {
-              return status >= 200 && status < 400; // 300-399 리다이렉트 허용
-            },
-          }
-        );
-
-        // 로그인 후 검증
-        if (loginResponse.status === 200 && (await this.loginCheck())) {
-          console.log("Login successful");
-          this.isLoggedIn = true;
-          this.loginTime = Date.now();
-          return true;
-        } else {
-          throw new Error("Login failed");
-        }
-      } finally {
-        // 성공 또는 실패 상관없이 로그인 Lock 해제
-        this.loginInProgress = false;
+      // 로그인 후 검증
+      if (loginResponse.status === 200 && (await this.loginCheck())) {
+        return true;
+      } else {
+        throw new Error("Login verification failed");
       }
     });
-
-    return this.loginPromise;
   }
 
   // 스크립트에서 데이터 파싱
