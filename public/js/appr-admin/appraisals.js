@@ -76,6 +76,9 @@ document.addEventListener("DOMContentLoaded", function () {
     .getElementById("bulk-delete-btn")
     .addEventListener("click", toggleBulkDeleteMode);
   document
+    .getElementById("bulk-change-btn")
+    .addEventListener("click", toggleBulkChangeMode);
+  document
     .getElementById("execute-bulk-delete-btn")
     .addEventListener("click", executeBulkDelete);
   document
@@ -103,6 +106,9 @@ document.addEventListener("DOMContentLoaded", function () {
     if (imageInput) {
       imageInput.addEventListener("change", handleImageUpload);
     }
+
+    // 페이지 로드 시 감정 목록 초기 로드
+    loadAppraisalList();
   }, 100);
 });
 
@@ -1538,11 +1544,6 @@ function toggleBulkChangeMode() {
 
   bulkChangeMode = !bulkChangeMode;
   const button = document.getElementById("bulk-change-btn");
-  if (!button) {
-    // 버튼이 없으면 생성
-    createBulkChangeButton();
-    return;
-  }
 
   button.textContent = bulkChangeMode ? "일괄 변경 취소" : "일괄 변경";
   button.style.backgroundColor = bulkChangeMode ? "#dc2626" : "#1a2a3a";
@@ -1557,86 +1558,11 @@ function toggleBulkChangeMode() {
   loadAppraisalList();
 }
 
-// 일괄 변경 버튼 생성 (HTML에 없는 경우)
-function createBulkChangeButton() {
-  const bulkDeleteBtn = document.getElementById("bulk-delete-btn");
-  if (bulkDeleteBtn && !document.getElementById("bulk-change-btn")) {
-    const bulkChangeBtn = document.createElement("button");
-    bulkChangeBtn.id = "bulk-change-btn";
-    bulkChangeBtn.className = "btn";
-    bulkChangeBtn.textContent = "일괄 변경";
-    bulkChangeBtn.style.marginLeft = "10px";
-    bulkChangeBtn.addEventListener("click", toggleBulkChangeMode);
-
-    bulkDeleteBtn.parentNode.insertBefore(
-      bulkChangeBtn,
-      bulkDeleteBtn.nextSibling
-    );
-
-    // 일괄 변경 UI 컨테이너도 생성
-    createBulkChangeUI();
-  }
-}
-
-// 일괄 변경 UI 생성
-function createBulkChangeUI() {
-  const selectAllContainer = document.getElementById("select-all-container");
-  if (selectAllContainer && !document.getElementById("bulk-change-container")) {
-    const bulkChangeContainer = document.createElement("div");
-    bulkChangeContainer.id = "bulk-change-container";
-    bulkChangeContainer.style.cssText = `
-      display: none;
-      margin-bottom: 15px;
-      padding: 15px;
-      background-color: #f8fafc;
-      border-radius: 6px;
-      border: 1px solid #e2e8f0;
-    `;
-
-    bulkChangeContainer.innerHTML = `
-      <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-        <div style="font-weight: 500; color: #1a2a3a;">선택된 항목 일괄 변경:</div>
-        
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <label style="font-weight: 500;">상태 변경:</label>
-          <select id="bulk-status-select" class="form-select" style="width: auto; min-width: 120px;">
-            <option value="">선택</option>
-            <option value="pending">접수완료</option>
-            <option value="in_review">감정중</option>
-            <option value="completed">완료</option>
-            <option value="cancelled">취소</option>
-          </select>
-          <button type="button" class="btn btn-outline" onclick="executeBulkStatusChange()" style="padding: 6px 12px;">
-            상태 변경
-          </button>
-        </div>
-        
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <label style="font-weight: 500;">결과 변경:</label>
-          <select id="bulk-result-select" class="form-select" style="width: auto; min-width: 120px;">
-            <option value="">선택</option>
-            <option value="pending">감정대기</option>
-            <option value="authentic">정품</option>
-            <option value="fake">가품</option>
-            <option value="uncertain">판단불가</option>
-          </select>
-          <input type="text" id="bulk-result-notes" class="form-input" placeholder="결과 소견 (선택사항)" style="width: 200px;">
-          <button type="button" class="btn btn-outline" onclick="executeBulkResultChange()" style="padding: 6px 12px;">
-            결과 변경
-          </button>
-        </div>
-      </div>
-      
-      <div style="margin-top: 10px; font-size: 0.875rem; color: #666;">
-        <span id="bulk-selected-count">0</span>개 항목이 선택되었습니다. 
-        변경하고 싶은 항목을 선택한 후 해당 버튼을 클릭하세요.
-      </div>
-    `;
-
-    selectAllContainer.parentNode.insertBefore(
-      bulkChangeContainer,
-      selectAllContainer.nextSibling
-    );
+// 일괄 변경 UI 토글
+function toggleBulkChangeUI() {
+  const container = document.getElementById("bulk-change-container");
+  if (container) {
+    container.style.display = bulkChangeMode ? "block" : "none";
   }
 }
 
@@ -1857,11 +1783,3 @@ function executeBulkDelete() {
       .catch((error) => showAlert(error.message, "error"));
   }
 }
-
-// 페이지 로드 완료 후 일괄 변경 버튼 생성
-document.addEventListener("DOMContentLoaded", function () {
-  // 기존 코드 실행 후 일괄 변경 기능 초기화
-  setTimeout(() => {
-    createBulkChangeButton();
-  }, 100);
-});
