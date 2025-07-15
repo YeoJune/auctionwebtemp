@@ -343,7 +343,10 @@ function displayFilters(brands, categories, dates, ranks, aucNums) {
   displayCategoryFilters(categories);
   displayDateFilters(dates);
   displayRankFilters(ranks);
+  // --- TEMP BEGIN ---
+  aucNums = [{ auc_num: "1" }, { auc_num: "2" }, { auc_num: "3" }];
   displayAucNumFilters(aucNums);
+  // --- TEMP END ---
 }
 
 function displayBrandFilters(brands) {
