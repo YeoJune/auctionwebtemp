@@ -383,7 +383,8 @@ class BrandAucCrawler extends AxiosCrawler {
     const processedItems = await processImagesInChunks(
       filteredItems,
       "products",
-      3
+      3,
+      "brand"
     );
 
     return processedItems;
@@ -1206,7 +1207,8 @@ class BrandAucValueCrawler extends AxiosCrawler {
     const processedItems = await processImagesInChunks(
       filteredItems,
       "values",
-      3
+      3,
+      "brand"
     );
 
     return processedItems;
