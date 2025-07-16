@@ -113,22 +113,52 @@ function calculateCustomsDuty(amountKRW, category) {
     return Math.round(amountKRW * 0.13);
   }
 
-  // 그 외 카테고리 (가방/악세서리/소품/귀금속/시계 등)
+  // 가방/시계: 200만원 기준
+  if (["가방", "시계"].includes(category)) {
+    if (amountKRW <= 2000000) {
+      // 200만원 이하: 8% 관세
+      return Math.round(amountKRW * 0.08);
+    } else if (amountKRW < 1000000000) {
+      // 200만원 초과 10억 미만: 복합관세
+      return calculateComplexCustomsDuty(amountKRW, 2000000);
+    }
+  }
+
+  // 악세서리/귀금속: 500만원 기준
+  if (["악세서리", "귀금속", "쥬얼리", "보석"].includes(category)) {
+    if (amountKRW <= 5000000) {
+      // 500만원 이하: 8% 관세
+      return Math.round(amountKRW * 0.08);
+    } else if (amountKRW < 1000000000) {
+      // 500만원 초과 10억 미만: 복합관세
+      return calculateComplexCustomsDuty(amountKRW, 5000000);
+    }
+  }
+
+  // 기타 카테고리: 기존 로직 (200만원 기준)
   if (amountKRW <= 2000000) {
-    // 200만원 이하: 8% 관세
     return Math.round(amountKRW * 0.08);
   } else if (amountKRW < 1000000000) {
-    // 200만원 초과 10억 미만에 대한 복합 관세 계산 (부가세 제외)
-    const baseCustoms = amountKRW * 0.08; // 기본 관세 8%
-    const amount = amountKRW; // 원금
-    const excess = (baseCustoms + amount - 2000000) * 0.2; // 200만원 초과분에 대한 20%
-    const superExcess = excess * 0.3; // 추가세에 대한 30%
-
-    // 복합관세 = 기본관세 + 추가세 + 할증 (부가세 제외)
-    return Math.round(baseCustoms + excess + superExcess);
+    return calculateComplexCustomsDuty(amountKRW, 2000000);
   }
 
   return 0; // 10억 이상
+}
+
+/**
+ * 복합관세 계산 함수
+ * @param {number} amountKRW - 원화 금액
+ * @param {number} threshold - 기준 금액 (200만원 또는 500만원)
+ * @returns {number} 계산된 복합관세 (부가세 제외)
+ */
+function calculateComplexCustomsDuty(amountKRW, threshold) {
+  const baseCustoms = amountKRW * 0.08; // 기본관세 8%
+  const amount = amountKRW; // 원금
+  const excess = (baseCustoms + amount - threshold) * 0.2; // 기준금액 초과분에 대한 20%
+  const superExcess = excess * 0.3; // 추가세에 대한 30%
+
+  // 복합관세 = 기본관세 + 추가세 + 할증 (부가세 제외)
+  return Math.round(baseCustoms + excess + superExcess);
 }
 
 /**

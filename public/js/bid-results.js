@@ -1,5 +1,7 @@
 // public/js/bid-results.js
 
+const MINIMUM_FEE = 10000; // 최소 수수료 (₩)
+
 // 상태 관리
 window.state = {
   dateRange: 30, // 날짜 범위(일)
@@ -284,7 +286,15 @@ function groupResultsByDate() {
       day.pendingItems.length;
 
     // 일별 수수료 계산 (성공한 상품만)
-    day.feeAmount = calculateFee(day.totalKoreanPrice);
+    const calculatedFee = calculateFee(day.totalKoreanPrice);
+
+    // 성공한 상품이 있는 경우만 최소 수수료 적용
+    if (day.itemCount > 0) {
+      day.feeAmount = Math.max(calculatedFee, MINIMUM_FEE);
+    } else {
+      day.feeAmount = 0; // 성공한 상품이 없으면 수수료 없음
+    }
+
     day.vatAmount = Math.round((day.feeAmount / 1.1) * 0.1);
 
     // 일별 감정서 수수료 계산
