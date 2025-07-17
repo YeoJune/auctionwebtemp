@@ -791,7 +791,7 @@ router.post("/:id/request-appraisal", async (req, res) => {
           title: bid.title,
           category: bid.category,
           image: bid.image,
-          additional_images: bid.additional_images,
+          additional_images: bid?.additional_images,
         },
         userId
       );
