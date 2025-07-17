@@ -738,7 +738,7 @@ function createAppraisalButton(item) {
   button.className = "appraisal-btn small-button";
 
   if (item.appr_id) {
-    button.textContent = "감정서 발급 완료";
+    button.textContent = "요청 완료";
     button.classList.add("success-button");
     button.onclick = () => {};
   } else {
