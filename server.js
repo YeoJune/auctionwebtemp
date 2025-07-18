@@ -8,6 +8,7 @@ const MySQLStore = require("express-mysql-session")(session);
 const bodyParser = require("body-parser");
 const path = require("path");
 const pool = require("./utils/DB"); // DB 연결 풀
+const favicon = require("serve-favicon");
 const { isAuthenticated } = require("./utils/middleware"); // 인증 미들웨어
 
 // --- 사이트맵 라우트 ---
@@ -53,6 +54,9 @@ app.use(
 );
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
+
+// favicon 서빙 (PNG 사용)
+app.use(favicon(path.join(__dirname, "public", "images", "favicon.png")));
 
 const sessionStore = new MySQLStore(
   {
