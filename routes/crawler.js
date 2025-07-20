@@ -990,4 +990,6 @@ if (process.env.ENV === "development") {
   loginAll();
 }
 
+DBManager.deleteItemsWithout([]);
+
 module.exports = { router, initializeSocket, notifyClientsOfChanges };
