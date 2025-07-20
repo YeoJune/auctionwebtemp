@@ -1,6 +1,7 @@
 const cheerio = require("cheerio");
 const { AxiosCrawler } = require("./baseCrawler");
 const { processImagesInChunks } = require("../utils/processImage");
+const FormData = require("form-data");
 
 let pLimit;
 (async () => {
@@ -125,56 +126,221 @@ class StarAucCrawler extends AxiosCrawler {
   constructor(config) {
     super(config);
     this.config.currentCategoryId = null; // 현재 크롤링 중인 카테고리 ID
-    this.currentBidType = "live"; // StarAuc는 전체가 'live'
+    this.currentBidType = "direct"; // live에서 direct로 변경
   }
 
-  async performLogin() {
-    return this.retryOperation(async () => {
-      console.log("Logging in to Star Auction...");
+  async login() {
+    // 부모 클래스(AxiosCrawler)의 login 메서드 호출
+    // 이미 로그인 되어있는지, 다른 로그인 진행중인지 등을 체크
+    const shouldContinue = await super.login();
 
-      // 로그인 페이지 가져오기
-      const response = await this.client.get(this.config.loginPageUrl);
+    // 부모 메서드에서 이미 로그인 되어있다고 판단되면 종료
+    if (shouldContinue === true) {
+      return true;
+    }
 
-      // CSRF 토큰 추출
-      const $ = cheerio.load(response.data);
-      const csrfToken = $(this.config.signinSelectors.csrfToken).attr(
-        "content"
+    // 다른 로그인 진행중이면 해당 Promise를 반환
+    if (shouldContinue instanceof Promise) {
+      return shouldContinue;
+    }
+
+    // 실제 로그인 로직 구현
+    this.loginPromise = this.retryOperation(async () => {
+      try {
+        console.log("Logging in to Star Auction...");
+
+        // 로그인 페이지 가져오기
+        const response = await this.client.get(this.config.loginPageUrl);
+
+        // CSRF 토큰 추출
+        const $ = cheerio.load(response.data);
+        const csrfToken = $(this.config.signinSelectors.csrfToken).attr(
+          "content"
+        );
+
+        if (!csrfToken) {
+          throw new Error("CSRF token not found");
+        }
+
+        // 폼 데이터 준비
+        const formData = new URLSearchParams();
+        formData.append("email", this.config.loginData.userId);
+        formData.append("password", this.config.loginData.password);
+        formData.append("_token", csrfToken);
+
+        // 로그인 요청
+        const loginResponse = await this.client.post(
+          this.config.loginPostUrl,
+          formData,
+          {
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+              Referer: this.config.loginPageUrl,
+              "X-CSRF-TOKEN": csrfToken,
+            },
+            maxRedirects: 5,
+            validateStatus: function (status) {
+              return status >= 200 && status < 400; // 300-399 리다이렉트 허용
+            },
+          }
+        );
+
+        // 로그인 후 검증
+        if (loginResponse.status === 200 && (await this.loginCheck())) {
+          console.log("Login successful");
+          this.isLoggedIn = true;
+          this.loginTime = Date.now();
+          return true;
+        } else {
+          throw new Error("Login failed");
+        }
+      } finally {
+        // 성공 또는 실패 상관없이 로그인 Lock 해제
+        this.loginInProgress = false;
+      }
+    });
+
+    return this.loginPromise;
+  }
+
+  // Direct bid 메서드 구현
+  async directBid(item_id, price) {
+    try {
+      console.log(
+        `Placing direct bid for item ${item_id} with price ${price}...`
       );
 
-      if (!csrfToken) {
-        throw new Error("CSRF token not found");
+      // 로그인 확인
+      await this.login();
+
+      // 쿠키에서 XSRF 토큰 추출
+      const cookies = await this.cookieJar.getCookies(
+        "https://www.starbuyers-global-auction.com"
+      );
+      const xsrfToken = cookies.find(
+        (cookie) => cookie.key === "XSRF-TOKEN"
+      )?.value;
+
+      if (!xsrfToken) {
+        throw new Error("XSRF token not found in cookies");
       }
 
-      // 폼 데이터 준비
-      const formData = new URLSearchParams();
-      formData.append("email", this.config.loginData.userId);
-      formData.append("password", this.config.loginData.password);
-      formData.append("_token", csrfToken);
+      // FormData 생성
+      const formData = new FormData();
+      formData.append(`bids[${item_id}]`, price.toString());
 
-      // 로그인 요청
-      const loginResponse = await this.client.post(
-        this.config.loginPostUrl,
+      // 입찰 요청
+      const bidResponse = await this.client.post(
+        "https://www.starbuyers-global-auction.com/front_api/item/bid",
         formData,
         {
           headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            Referer: this.config.loginPageUrl,
-            "X-CSRF-TOKEN": csrfToken,
-          },
-          maxRedirects: 5,
-          validateStatus: function (status) {
-            return status >= 200 && status < 400;
+            ...formData.getHeaders(),
+            "X-XSRF-TOKEN": xsrfToken,
+            Accept: "application/json, text/plain, */*",
+            Origin: "https://www.starbuyers-global-auction.com",
+            Referer: `https://www.starbuyers-global-auction.com/item/${item_id}`,
           },
         }
       );
 
-      // 로그인 후 검증
-      if (loginResponse.status === 200 && (await this.loginCheck())) {
-        return true;
+      // 응답 처리
+      if (bidResponse.status === 200 && bidResponse.data.status) {
+        const result = bidResponse.data.results.find(
+          (r) => r.itemId == item_id
+        );
+
+        if (result && !result.isFailed) {
+          return {
+            success: true,
+            message: result.message,
+            data: {
+              currentBid: result.currentBid,
+              highestBid: result.highestBid,
+              becameHighestBidder: result.becameHighestBidder,
+              endAt: result.endAt,
+              timeRemaining: result.timeRemaining,
+            },
+          };
+        } else {
+          return {
+            success: false,
+            message: result?.message || "Bid failed",
+            error: result,
+          };
+        }
       } else {
-        throw new Error("Login verification failed");
+        throw new Error(`Bid request failed with status ${bidResponse.status}`);
       }
-    });
+    } catch (error) {
+      console.error(`Error placing bid for item ${item_id}:`, error.message);
+      return {
+        success: false,
+        message: "Bid failed",
+        error: error.message,
+      };
+    }
+  }
+
+  // 배치 입찰 메서드 (보너스 기능)
+  async batchDirectBid(bidItems) {
+    try {
+      console.log(`Placing batch bid for ${bidItems.length} items...`);
+
+      await this.login();
+
+      const cookies = await this.cookieJar.getCookies(
+        "https://www.starbuyers-global-auction.com"
+      );
+      const xsrfToken = cookies.find(
+        (cookie) => cookie.key === "XSRF-TOKEN"
+      )?.value;
+
+      if (!xsrfToken) {
+        throw new Error("XSRF token not found in cookies");
+      }
+
+      // 여러 아이템의 입찰 데이터 생성
+      const formData = new FormData();
+      bidItems.forEach(({ item_id, price }) => {
+        formData.append(`bids[${item_id}]`, price.toString());
+      });
+
+      const bidResponse = await this.client.post(
+        "https://www.starbuyers-global-auction.com/front_api/item/bid",
+        formData,
+        {
+          headers: {
+            ...formData.getHeaders(),
+            "X-XSRF-TOKEN": xsrfToken,
+            Accept: "application/json, text/plain, */*",
+            Origin: "https://www.starbuyers-global-auction.com",
+          },
+        }
+      );
+
+      if (bidResponse.status === 200 && bidResponse.data.status) {
+        return {
+          success: true,
+          results: bidResponse.data.results.map((result) => ({
+            item_id: result.itemId,
+            success: !result.isFailed,
+            message: result.message,
+            currentBid: result.currentBid,
+            becameHighestBidder: result.becameHighestBidder,
+          })),
+        };
+      } else {
+        throw new Error("Batch bid failed");
+      }
+    } catch (error) {
+      console.error("Error in batch bid:", error.message);
+      return {
+        success: false,
+        message: "Batch bid failed",
+        error: error.message,
+      };
+    }
   }
 
   // 스크립트에서 데이터 파싱
@@ -405,13 +571,8 @@ class StarAucCrawler extends AxiosCrawler {
     // 원래 날짜 정보 보존
     const original_scheduled_date = item.scheduled_date;
 
-    // live 경매에 맞게 전날 18:00로 설정
-    const scheduled_date = this.getPreviousDayAt18(original_scheduled_date);
-
-    // 이미 지난 경매는 필터링
-    if (!this.isAuctionTimeValid(scheduled_date)) {
-      return null;
-    }
+    // direct bid이므로 날짜 처리 방식 변경 (전날 18시 변환 제거)
+    const scheduled_date = original_scheduled_date;
 
     // 기본 정보 추출
     const result = {
@@ -425,7 +586,7 @@ class StarAucCrawler extends AxiosCrawler {
       starting_price: parseInt(scriptData.startingPrice, 10),
       image: scriptData.thumbnailUrl,
       category: this.config.categoryTable[this.config.currentCategoryId],
-      bid_type: this.currentBidType, // 'live'로 고정
+      bid_type: "direct", // live에서 direct로 변경
       auc_num: "3",
       lotNo: scriptData.lotNo,
 
@@ -586,6 +747,199 @@ class StarAucCrawler extends AxiosCrawler {
     }
   }
 
+  // Update 관련 메서드들 구현
+  async crawlUpdates() {
+    try {
+      const limit = pLimit(5);
+      const startTime = Date.now();
+      console.log(
+        `Starting StarAuc updates crawl at ${new Date().toISOString()}`
+      );
+
+      await this.login();
+
+      const allCrawledItems = [];
+
+      // 모든 카테고리에 대해 업데이트 수행
+      for (const categoryId of this.config.categoryIds) {
+        console.log(`Starting update crawl for category ${categoryId}`);
+        this.config.currentCategoryId = categoryId;
+
+        const totalPages = await this.getTotalPages(categoryId);
+        console.log(`Total pages for category ${categoryId}: ${totalPages}`);
+
+        // 페이지 병렬 처리
+        const pagePromises = [];
+        for (let page = 1; page <= totalPages; page++) {
+          pagePromises.push(
+            limit(async () => {
+              console.log(
+                `Crawling update page ${page} of ${totalPages} for category ${categoryId}`
+              );
+              return await this.crawlUpdatePage(categoryId, page);
+            })
+          );
+        }
+
+        const pageResults = await Promise.all(pagePromises);
+
+        // 결과 병합
+        pageResults.forEach((pageItems) => {
+          if (pageItems && pageItems.length > 0) {
+            allCrawledItems.push(...pageItems);
+          }
+        });
+      }
+
+      console.log(`Total update items processed: ${allCrawledItems.length}`);
+
+      const endTime = Date.now();
+      const executionTime = endTime - startTime;
+      console.log(
+        `StarAuc update crawl operation completed in ${this.formatExecutionTime(
+          executionTime
+        )}`
+      );
+
+      return allCrawledItems;
+    } catch (error) {
+      console.error("StarAuc update crawl failed:", error.message);
+      return [];
+    }
+  }
+
+  async crawlUpdatePage(categoryId, page) {
+    return this.retryOperation(async () => {
+      console.log(`Crawling update page ${page} for category ${categoryId}...`);
+      const url =
+        this.config.searchUrl + this.config.searchParams(categoryId, page);
+
+      const response = await this.client.get(url);
+      const $ = cheerio.load(response.data);
+
+      // 스크립트 데이터에서 아이템 정보 추출
+      const scriptData = await this.parseScriptData(
+        response.data,
+        this.config.crawlSelectors.scriptData
+      );
+
+      if (!scriptData || !scriptData.data) {
+        console.log(`No script data found on page ${page}`);
+        return [];
+      }
+
+      const updateItems = [];
+
+      for (const item of scriptData.data) {
+        const updateItem = this.extractUpdateItemInfo(item);
+        if (updateItem) {
+          updateItems.push(updateItem);
+        }
+      }
+
+      console.log(
+        `Processed ${updateItems.length} update items from page ${page}`
+      );
+      return updateItems;
+    });
+  }
+
+  extractUpdateItemInfo(scriptData) {
+    try {
+      const itemId = scriptData.id.toString();
+
+      // 현재 가격 정보 (현재 입찰가 또는 시작가)
+      const currentPrice =
+        scriptData.currentBiddingPrice || scriptData.startingPrice || 0;
+
+      // 경매 종료 시간
+      const scheduledDate = this.extractDate(
+        scriptData.endAt || scriptData.ended_at
+      );
+
+      return {
+        item_id: itemId,
+        starting_price: parseInt(currentPrice, 10),
+        scheduled_date: scheduledDate,
+      };
+    } catch (error) {
+      console.error("Error extracting update item info:", error);
+      return null;
+    }
+  }
+
+  async crawlUpdateWithId(itemId) {
+    return this.retryOperation(async () => {
+      console.log(`Crawling update info for item ${itemId}...`);
+      await this.login();
+
+      const url = this.config.detailUrl(itemId);
+      const response = await this.client.get(url);
+      const $ = cheerio.load(response.data);
+
+      // 스크립트 데이터에서 현재 정보 추출
+      const scriptData = await this.parseScriptData(
+        response.data,
+        this.config.crawlDetailSelectors.scriptData
+      );
+
+      if (!scriptData) {
+        throw new Error(`No script data found for item ${itemId}`);
+      }
+
+      // 현재 가격과 종료 시간 추출
+      const currentPrice =
+        scriptData.currentBiddingPrice || scriptData.startingPrice || 0;
+      const scheduledDate = this.extractDate(
+        scriptData.endAt || scriptData.ended_at
+      );
+
+      return {
+        item_id: itemId,
+        starting_price: parseInt(currentPrice, 10),
+        scheduled_date: scheduledDate,
+      };
+    });
+  }
+
+  async crawlUpdateWithIds(itemIds) {
+    try {
+      console.log(`Starting update crawl for ${itemIds.length} items...`);
+
+      await this.login();
+
+      const results = [];
+      const limit = pLimit(5);
+
+      // 병렬 처리
+      const promises = itemIds.map((itemId) =>
+        limit(async () => {
+          try {
+            const result = await this.crawlUpdateWithId(itemId);
+            if (result) {
+              results.push(result);
+            }
+            return result;
+          } catch (error) {
+            console.error(
+              `Error crawling update for item ${itemId}:`,
+              error.message
+            );
+            return null;
+          }
+        })
+      );
+
+      await Promise.all(promises);
+
+      console.log(`Update crawl completed for ${results.length} items`);
+      return results;
+    } catch (error) {
+      console.error("Update crawl with IDs failed:", error.message);
+      return [];
+    }
+  }
+
   async crawlInvoices() {
     try {
       console.log("Starting to crawl Star Auction invoices...");
@@ -677,53 +1031,78 @@ class StarAucValueCrawler extends AxiosCrawler {
     this.config.currentCategoryId = null; // 현재 크롤링 중인 카테고리 ID
   }
 
-  async performLogin() {
-    return this.retryOperation(async () => {
-      console.log("Logging in to Star Auction Value...");
+  async login() {
+    // 부모 클래스(AxiosCrawler)의 login 메서드 호출
+    // 이미 로그인 되어있는지, 다른 로그인 진행중인지 등을 체크
+    const shouldContinue = await super.login();
 
-      // 로그인 페이지 가져오기
-      const response = await this.client.get(this.config.loginPageUrl);
+    // 부모 메서드에서 이미 로그인 되어있다고 판단되면 종료
+    if (shouldContinue === true) {
+      return true;
+    }
 
-      // CSRF 토큰 추출
-      const $ = cheerio.load(response.data);
-      const csrfToken = $(this.config.signinSelectors.csrfToken).attr(
-        "content"
-      );
+    // 다른 로그인 진행중이면 해당 Promise를 반환
+    if (shouldContinue instanceof Promise) {
+      return shouldContinue;
+    }
 
-      if (!csrfToken) {
-        throw new Error("CSRF token not found");
-      }
+    // 실제 로그인 로직 구현
+    this.loginPromise = this.retryOperation(async () => {
+      try {
+        console.log("Logging in to Star Auction Value...");
 
-      // 폼 데이터 준비
-      const formData = new URLSearchParams();
-      formData.append("email", this.config.loginData.userId);
-      formData.append("password", this.config.loginData.password);
-      formData.append("_token", csrfToken);
+        // 로그인 페이지 가져오기
+        const response = await this.client.get(this.config.loginPageUrl);
 
-      // 로그인 요청
-      const loginResponse = await this.client.post(
-        this.config.loginPostUrl,
-        formData,
-        {
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            Referer: this.config.loginPageUrl,
-            "X-CSRF-TOKEN": csrfToken,
-          },
-          maxRedirects: 5,
-          validateStatus: function (status) {
-            return status >= 200 && status < 400;
-          },
+        // CSRF 토큰 추출
+        const $ = cheerio.load(response.data);
+        const csrfToken = $(this.config.signinSelectors.csrfToken).attr(
+          "content"
+        );
+
+        if (!csrfToken) {
+          throw new Error("CSRF token not found");
         }
-      );
 
-      // 로그인 후 검증
-      if (loginResponse.status === 200 && (await this.loginCheck())) {
-        return true;
-      } else {
-        throw new Error("Login verification failed");
+        // 폼 데이터 준비
+        const formData = new URLSearchParams();
+        formData.append("email", this.config.loginData.userId);
+        formData.append("password", this.config.loginData.password);
+        formData.append("_token", csrfToken);
+
+        // 로그인 요청
+        const loginResponse = await this.client.post(
+          this.config.loginPostUrl,
+          formData,
+          {
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+              Referer: this.config.loginPageUrl,
+              "X-CSRF-TOKEN": csrfToken,
+            },
+            maxRedirects: 5,
+            validateStatus: function (status) {
+              return status >= 200 && status < 400; // 300-399 리다이렉트 허용
+            },
+          }
+        );
+
+        // 로그인 후 검증
+        if (loginResponse.status === 200 && (await this.loginCheck())) {
+          console.log("Login successful");
+          this.isLoggedIn = true;
+          this.loginTime = Date.now();
+          return true;
+        } else {
+          throw new Error("Login failed");
+        }
+      } finally {
+        // 성공 또는 실패 상관없이 로그인 Lock 해제
+        this.loginInProgress = false;
       }
     });
+
+    return this.loginPromise;
   }
 
   // 스크립트에서 데이터 파싱

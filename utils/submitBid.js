@@ -1,6 +1,10 @@
 // utils/submitBid.js
 const pool = require("./DB");
-const { ecoAucCrawler, brandAucCrawler } = require("../crawlers/index");
+const {
+  ecoAucCrawler,
+  brandAucCrawler,
+  starAucCrawler,
+} = require("../crawlers/index");
 
 /**
  * Submit a bid to the appropriate auction platform
@@ -51,6 +55,12 @@ async function submitBid(bidData, item) {
       `Submitting bid to BrandAuc platform for item ${item.item_id} with price ${price}`
     );
     bidResult = await brandAucCrawler.directBid(item.item_id, price);
+  } else if (item.auc_num == 3) {
+    // StarAuc 경매
+    console.log(
+      `Submitting bid to StarAuc platform for item ${item.item_id} with price ${price}`
+    );
+    bidResult = await starAucCrawler.directBid(item.item_id, price);
   } else {
     console.log(`Unknown auction platform: ${item.auc_num}`);
     await connection.rollback();

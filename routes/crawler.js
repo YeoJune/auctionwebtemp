@@ -237,14 +237,21 @@ async function crawlAllUpdates() {
     console.log(`Starting update crawl at ${new Date().toISOString()}`);
 
     try {
-      // 웹에서 데이터 크롤링 (기존과 동일)
+      // 웹에서 데이터 크롤링
+
       let ecoAucUpdates = await ecoAucCrawler.crawlUpdates();
       let brandAucUpdates = await brandAucCrawler.crawlUpdates();
+      let starAucUpdates = await starAucCrawler.crawlUpdates();
 
       if (!ecoAucUpdates) ecoAucUpdates = [];
       if (!brandAucUpdates) brandAucUpdates = [];
+      if (!starAucUpdates) starAucUpdates = [];
 
-      const allUpdates = [...ecoAucUpdates, ...brandAucUpdates];
+      const allUpdates = [
+        ...ecoAucUpdates,
+        ...brandAucUpdates,
+        ...starAucUpdates,
+      ];
 
       // DB에서 기존 데이터 가져오기
       const itemIds = allUpdates.map((item) => item.item_id);
@@ -320,6 +327,7 @@ async function crawlAllUpdates() {
       return {
         ecoAucCount: ecoAucUpdates.length,
         brandAucCount: brandAucUpdates.length,
+        starAucCount: starAucUpdates.length,
         changedItemsCount: changedItems.length,
         executionTime: formatExecutionTime(executionTime),
       };
@@ -989,7 +997,5 @@ if (process.env.ENV === "development") {
   // scheduleExpiredBidsProcessing();
   loginAll();
 }
-
-DBManager.deleteItemsWithout([], "crawled_items");
 
 module.exports = { router, initializeSocket, notifyClientsOfChanges };
