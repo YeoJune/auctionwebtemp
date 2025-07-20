@@ -51,6 +51,142 @@ window.BidManager = (function () {
   }
 
   /**
+   * 경매장별 입찰 옵션 정보 가져오기
+   * @param {string} itemId - 상품 ID
+   * @param {number} auctionNum - 경매장 번호
+   * @param {number} currentPrice - 현재 가격
+   * @returns {Promise<Object>} 입찰 옵션 정보
+   */
+  async function getBidOptions(itemId, auctionNum, currentPrice) {
+    try {
+      const response = await API.fetchAPI(`/direct-bids/bid-options/${itemId}`);
+      return response;
+    } catch (error) {
+      console.error("입찰 옵션 정보를 가져오는데 실패했습니다:", error);
+      return null;
+    }
+  }
+
+  /**
+   * 브랜드옥션 입찰가 검증
+   * @param {number} bidPrice - 입찰 가격 (실제 엔화)
+   * @param {boolean} isFirstBid - 첫 입찰 여부
+   * @returns {Object} 검증 결과
+   */
+  function validateBrandAuctionBid(bidPrice, isFirstBid) {
+    if (isFirstBid) {
+      if (bidPrice % 1000 !== 0) {
+        return {
+          valid: false,
+          message: "첫 입찰은 1,000엔 단위로만 가능합니다.",
+        };
+      }
+    } else {
+      if (bidPrice % 500 !== 0) {
+        return {
+          valid: false,
+          message: "이후 입찰은 500엔 단위로만 가능합니다.",
+        };
+      }
+    }
+    return { valid: true };
+  }
+
+  /**
+   * 경매장별 빠른 입찰 버튼 HTML 생성
+   * @param {string} itemId - 상품 ID
+   * @param {number} auctionNum - 경매장 번호
+   * @param {string} bidType - 입찰 타입
+   * @param {boolean} isExpired - 마감 여부
+   * @param {boolean} isFirstBid - 첫 입찰 여부 (브랜드옥션용)
+   * @returns {string} 빠른 입찰 버튼 HTML
+   */
+  function getQuickBidButtonsHTML(
+    itemId,
+    auctionNum,
+    bidType,
+    isExpired,
+    isFirstBid = false
+  ) {
+    if (isExpired) {
+      return `<div class="quick-bid-buttons">
+        <button class="quick-bid-btn" disabled>마감됨</button>
+      </div>`;
+    }
+
+    switch (auctionNum) {
+      case 1: // 에코옥션 - 기존 1000원 단위
+        return `<div class="quick-bid-buttons">
+          <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 1, '${bidType}')">+1,000¥</button>
+          <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 5, '${bidType}')">+5,000¥</button>
+          <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 10, '${bidType}')">+10,000¥</button>
+        </div>`;
+
+      case 2: // 브랜드옥션 - 첫 입찰 1000엔 단위, 이후 500엔 단위
+        const increment500Disabled = isFirstBid
+          ? 'disabled title="첫 입찰은 1,000엔, 이후 입찰은 500엔 단위로 입찰 가능합니다."'
+          : "";
+
+        return `<div class="quick-bid-buttons brand-auction">
+          <button class="quick-bid-btn increment-500" ${increment500Disabled} onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 0.5, '${bidType}')">+500¥</button>
+          <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 1, '${bidType}')">+1,000¥</button>
+          <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 2, '${bidType}')">+2,000¥</button>
+          ${
+            isFirstBid
+              ? '<div class="bid-info-tooltip">첫 입찰은 1,000엔, 이후 입찰은 500엔 단위로 입찰 가능합니다.</div>'
+              : ""
+          }
+        </div>`;
+
+      case 3: // 스타옥션 - 자동 최소금액 입찰만
+        return `<div class="quick-bid-buttons star-auction">
+          <button class="auto-minimum-bid-btn" onclick="event.stopPropagation(); BidManager.handleStarAuctionBid('${itemId}')">최소금액 입찰</button>
+        </div>`;
+
+      default:
+        return "";
+    }
+  }
+
+  /**
+   * 스타옥션 자동 최소금액 입찰 처리
+   * @param {string} itemId - 상품 ID
+   */
+  async function handleStarAuctionBid(itemId) {
+    if (!_state.isAuthenticated) {
+      alert("입찰하려면 로그인이 필요합니다.");
+      return;
+    }
+
+    // 마감 시간 확인
+    const item = _state.currentData.find((item) => item.item_id === itemId);
+    if (item) {
+      const timer = getRemainingTime(item.scheduled_date, "first");
+      if (!timer) {
+        alert("마감된 상품입니다. 입찰이 불가능합니다.");
+        return;
+      }
+    }
+
+    try {
+      // 서버에서 자동 계산된 최소금액으로 입찰
+      const bidOptions = await getBidOptions(itemId, 3, item.starting_price);
+
+      if (!bidOptions || !bidOptions.nextValidBid) {
+        alert("입찰 가능한 금액을 계산할 수 없습니다.");
+        return;
+      }
+
+      const autoCalculatedPrice = bidOptions.nextValidBid;
+
+      // 직접 경매 입찰 제출
+      await handleDirectBidSubmit(autoCalculatedPrice / 1000, itemId); // 1000으로 나눠서 전달 (UI 표시용)
+    } catch (error) {
+      alert(`자동 입찰 중 오류가 발생했습니다: ${error.message}`);
+    }
+  }
+
+  /**
    * 현장 경매 입찰 섹션 HTML 생성 (전체)
    * @param {object} bidInfo - 입찰 정보 객체
    * @param {string} itemId - 상품 ID
@@ -178,17 +314,7 @@ window.BidManager = (function () {
     }">${isExpired ? "마감됨" : "입찰"}</button>
       </div>
       <div class="price-details-container"></div>
-      <div class="quick-bid-buttons">
-        <button class="quick-bid-btn" ${
-          isExpired ? "disabled" : ""
-        } onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 1, 'live')">+1,000¥</button>
-        <button class="quick-bid-btn" ${
-          isExpired ? "disabled" : ""
-        } onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 5, 'live')">+5,000¥</button>
-        <button class="quick-bid-btn" ${
-          isExpired ? "disabled" : ""
-        } onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 10, 'live')">+10,000¥</button>
-      </div>
+      ${getQuickBidButtonsHTML(itemId, aucNum, "live", isExpired)}
     </div>
   </div>`;
 
@@ -217,6 +343,9 @@ window.BidManager = (function () {
 
     // 현재 내 입찰가
     const currentPrice = bidInfo?.current_price || 0;
+
+    // 첫 입찰 여부 확인 (브랜드옥션에서 사용)
+    const isFirstBid = !bidInfo || !bidInfo.current_price;
 
     // 나의 입찰가와 실시간 가격 비교
     const hasHigherBid =
@@ -282,17 +411,13 @@ window.BidManager = (function () {
     }">${isExpired ? "마감됨" : "입찰"}</button>
         </div>
         <div class="price-details-container"></div>
-        <div class="quick-bid-buttons">
-          <button class="quick-bid-btn" ${
-            isExpired ? "disabled" : ""
-          } onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 1, 'direct')">+1,000¥</button>
-          <button class="quick-bid-btn" ${
-            isExpired ? "disabled" : ""
-          } onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 5, 'direct')">+5,000¥</button>
-          <button class="quick-bid-btn" ${
-            isExpired ? "disabled" : ""
-          } onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 10, 'direct')">+10,000¥</button>
-        </div>
+        ${getQuickBidButtonsHTML(
+          itemId,
+          aucNum,
+          "direct",
+          isExpired,
+          isFirstBid
+        )}
       </div>
     </div>`;
 
@@ -485,7 +610,7 @@ window.BidManager = (function () {
    * @param {number} amount - 추가할 금액 (천원 단위)
    * @param {string} bidType - 경매 유형 ('live' 또는 'direct')
    */
-  function quickAddBid(itemId, amount, bidType) {
+  async function quickAddBid(itemId, amount, bidType) {
     // 이벤트 버블링과 기본 동작 방지
     if (typeof event !== "undefined" && event) {
       event.stopPropagation();
@@ -494,6 +619,19 @@ window.BidManager = (function () {
 
     const item = _state.currentData.find((item) => item.item_id === itemId);
     if (!item) return;
+
+    // 브랜드옥션(2번)에서 500엔 버튼 클릭 시 첫 입찰 여부 확인
+    if (item.auc_num === 2 && amount === 0.5) {
+      try {
+        const bidOptions = await getBidOptions(itemId, 2, item.starting_price);
+        if (bidOptions && bidOptions.isFirstBid) {
+          alert("첫 입찰은 1,000엔 단위로만 가능합니다.");
+          return;
+        }
+      } catch (error) {
+        console.error("입찰 옵션 확인 실패:", error);
+      }
+    }
 
     // 클릭된 버튼의 상위 컨테이너 찾기
     let container = null;
@@ -910,7 +1048,13 @@ window.BidManager = (function () {
     // 입찰 처리 함수
     handleLiveBidSubmit,
     handleDirectBidSubmit,
+    handleStarAuctionBid,
     quickAddBid,
+
+    // 검증 및 옵션 함수
+    getBidOptions,
+    validateBrandAuctionBid,
+    getQuickBidButtonsHTML,
 
     // 기타 유틸리티
     initializePriceCalculators,
@@ -918,8 +1062,59 @@ window.BidManager = (function () {
   };
 })();
 
+/**
+ * 모바일 툴팁 기능 설정
+ */
+function setupMobileBidTooltips() {
+  // 브랜드옥션 500엔 버튼 터치 이벤트
+  document.addEventListener("touchstart", function (e) {
+    if (e.target.classList.contains("increment-500") && e.target.disabled) {
+      // 모바일에서는 물음표 아이콘 표시
+      showMobileTooltip(
+        e.target,
+        "첫 입찰은 1,000엔, 이후 입찰은 500엔 단위로 입찰 가능합니다."
+      );
+    }
+  });
+}
+
+function showMobileTooltip(element, message) {
+  // 기존 툴팁 제거
+  const existingTooltip = document.querySelector(".mobile-tooltip");
+  if (existingTooltip) {
+    existingTooltip.remove();
+  }
+
+  // 새 툴팁 생성
+  const tooltip = document.createElement("div");
+  tooltip.className = "mobile-tooltip";
+  tooltip.innerHTML = `
+    <div class="tooltip-content">
+      <span class="tooltip-icon">❓</span>
+      <span class="tooltip-message">${message}</span>
+    </div>
+  `;
+
+  // 위치 계산 및 표시
+  const rect = element.getBoundingClientRect();
+  tooltip.style.position = "fixed";
+  tooltip.style.top = rect.top - 60 + "px";
+  tooltip.style.left = rect.left + rect.width / 2 + "px";
+  tooltip.style.transform = "translateX(-50%)";
+
+  document.body.appendChild(tooltip);
+
+  // 3초 후 자동 제거
+  setTimeout(() => {
+    tooltip.remove();
+  }, 3000);
+}
+
 // DOM 로드 완료 시 초기화
 document.addEventListener("DOMContentLoaded", function () {
   // 인증 상태는 products.js에서 설정됨
   // BidManager.initialize()는 products.js에서 호출됨
+
+  // 모바일 툴팁 설정
+  setupMobileBidTooltips();
 });

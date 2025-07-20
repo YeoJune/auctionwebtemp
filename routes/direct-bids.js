@@ -3,6 +3,7 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../utils/DB");
 const submitBid = require("../utils/submitBid");
+const { validateBidByAuction } = require("../utils/submitBid");
 const {
   ecoAucCrawler,
   brandAucCrawler,
@@ -238,6 +239,119 @@ router.get("/", async (req, res) => {
   }
 });
 
+// 입찰 옵션 정보 제공 API
+router.get("/bid-options/:itemId", async (req, res) => {
+  const { itemId } = req.params;
+
+  if (!req.session.user) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const userId = req.session.user.id;
+  const connection = await pool.getConnection();
+
+  try {
+    // 1. 아이템 정보 조회
+    const [items] = await connection.query(
+      "SELECT * FROM crawled_items WHERE item_id = ?",
+      [itemId]
+    );
+
+    if (items.length === 0) {
+      return res.status(404).json({ message: "Item not found" });
+    }
+
+    const item = items[0];
+
+    // 2. 사용자의 현재 입찰 확인
+    const [userBids] = await connection.query(
+      "SELECT * FROM direct_bids WHERE item_id = ? AND user_id = ? AND status = 'active'",
+      [itemId, userId]
+    );
+
+    const isFirstBid = userBids.length === 0;
+    const currentBid = userBids.length > 0 ? userBids[0] : null;
+
+    // 3. 경매장별 다음 유효 입찰가 계산
+    let nextValidBid = null;
+    let minIncrement = 1000; // 기본값
+
+    switch (item.auc_num) {
+      case 1: // 에코옥션 - 1000원 단위
+        minIncrement = 1000;
+        nextValidBid =
+          Math.ceil((parseFloat(item.starting_price) + minIncrement) / 1000) *
+          1000;
+        break;
+
+      case 2: // 브랜드옥션 - 첫 입찰 1000엔, 이후 500엔
+        if (isFirstBid) {
+          minIncrement = 1000;
+          nextValidBid =
+            Math.ceil((parseFloat(item.starting_price) + minIncrement) / 1000) *
+            1000;
+        } else {
+          minIncrement = 500;
+          const currentPrice = currentBid
+            ? parseFloat(currentBid.current_price)
+            : parseFloat(item.starting_price);
+          nextValidBid = Math.ceil((currentPrice + minIncrement) / 500) * 500;
+        }
+        break;
+
+      case 3: // 스타옥션 - 자동 최소금액 계산
+        const currentPrice = currentBid
+          ? parseFloat(currentBid.current_price)
+          : parseFloat(item.starting_price);
+        const getIncrement = (price) => {
+          if (price >= 1 && price <= 999) return 100;
+          if (price >= 1000 && price <= 9999) return 500;
+          if (price >= 10000 && price <= 29999) return 1000;
+          if (price >= 30000 && price <= 49999) return 2000;
+          if (price >= 50000 && price <= 99999) return 3000;
+          if (price >= 100000 && price <= 299999) return 5000;
+          if (price >= 300000 && price <= 999999) return 10000;
+          return 30000; // 1,000,000엔 이상
+        };
+
+        minIncrement = getIncrement(currentPrice);
+        nextValidBid = currentPrice + minIncrement;
+        break;
+
+      default:
+        minIncrement = 1000;
+        nextValidBid =
+          Math.ceil((parseFloat(item.starting_price) + minIncrement) / 1000) *
+          1000;
+    }
+
+    res.status(200).json({
+      itemId: itemId,
+      auctionNum: item.auc_num,
+      isFirstBid: isFirstBid,
+      currentPrice: item.starting_price,
+      currentBid: currentBid ? currentBid.current_price : null,
+      nextValidBid: nextValidBid,
+      minIncrement: minIncrement,
+      rules: {
+        1: { description: "1,000엔 단위 입찰", unit: 1000 },
+        2: {
+          description: isFirstBid
+            ? "첫 입찰: 1,000엔 단위"
+            : "이후 입찰: 500엔 단위",
+          unit: isFirstBid ? 1000 : 500,
+        },
+        3: { description: "자동 최소금액 계산", unit: minIncrement },
+      }[item.auc_num],
+    });
+  } catch (err) {
+    console.error("Error getting bid options:", err);
+    res.status(500).json({ message: "Error getting bid options" });
+  } finally {
+    connection.release();
+  }
+});
+
 // 사용자의 입찰 (자동 생성/업데이트) - 자동 제출 기능 추가
 router.post("/", async (req, res) => {
   const { itemId, currentPrice, autoSubmit = true } = req.body;
@@ -250,11 +364,6 @@ router.post("/", async (req, res) => {
 
   if (!itemId || !currentPrice) {
     return res.status(400).json({ message: "Item ID and price are required" });
-  }
-
-  // 가격이 1000단위인지 확인
-  if (currentPrice % 1000 !== 0) {
-    return res.status(400).json({ message: "Price must be in units of 1000" });
   }
 
   const connection = await pool.getConnection();
@@ -380,6 +489,24 @@ router.post("/", async (req, res) => {
       "SELECT * FROM direct_bids WHERE item_id = ? AND user_id = ?",
       [itemId, userId]
     );
+
+    // 2-1. 첫 입찰 여부 확인
+    const isFirstBid = userBids.length === 0;
+
+    // 2-2. 경매장별 입찰가 검증
+    const validation = validateBidByAuction(
+      item.auc_num,
+      currentPrice,
+      item.starting_price,
+      isFirstBid
+    );
+
+    if (!validation.valid) {
+      await connection.rollback();
+      return res.status(400).json({
+        message: validation.message,
+      });
+    }
 
     let bidId;
 
