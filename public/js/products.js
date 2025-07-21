@@ -324,11 +324,44 @@ function handleIconHover(e) {
     // 툴팁 표시
     tooltipContainer.style.display = "block";
   }
+
+  // 입찰 정보 툴팁 아이콘에 마우스를 올렸을 때
+  if (e.target.closest(".bid-info-tooltip-trigger")) {
+    const icon = e.target.closest(".bid-info-tooltip-trigger");
+    let tooltipText = "";
+
+    // 브랜드옥션과 스타옥션에 따라 다른 메시지
+    if (icon.closest(".brand-auction")) {
+      tooltipText =
+        "첫 입찰은 1,000엔, 이후 입찰은 500엔 단위로 입찰 가능합니다.";
+    } else if (icon.closest(".star-auction")) {
+      tooltipText = "스타옥션은 자동으로 계산된 최소금액으로 입찰됩니다.";
+    }
+
+    if (tooltipText) {
+      // 툴팁 내용 설정
+      tooltipContainer.textContent = tooltipText;
+
+      // 아이콘 위치 계산
+      const iconRect = icon.getBoundingClientRect();
+
+      // 툴팁 위치 설정 (아이콘 위)
+      tooltipContainer.style.left = iconRect.left + iconRect.width / 2 + "px";
+      tooltipContainer.style.top = iconRect.top - 10 + "px";
+      tooltipContainer.style.transform = "translate(-50%, -100%)";
+
+      // 툴팁 표시
+      tooltipContainer.style.display = "block";
+    }
+  }
 }
 
 // 툴팁 숨기기
 function hideTooltip(e) {
-  if (!e.target.closest(".timer-info-icon")) {
+  if (
+    !e.target.closest(".timer-info-icon") &&
+    !e.target.closest(".bid-info-tooltip-trigger")
+  ) {
     tooltipContainer.style.display = "none";
   }
 }
