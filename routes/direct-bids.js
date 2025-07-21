@@ -304,7 +304,7 @@ router.get("/bid-options/:itemId", async (req, res) => {
           ? parseFloat(currentBid.current_price)
           : parseFloat(item.starting_price);
         const getIncrement = (price) => {
-          if (price >= 1 && price <= 999) return 100;
+          if (price >= 0 && price <= 999) return 100;
           if (price >= 1000 && price <= 9999) return 500;
           if (price >= 10000 && price <= 29999) return 1000;
           if (price >= 30000 && price <= 49999) return 2000;

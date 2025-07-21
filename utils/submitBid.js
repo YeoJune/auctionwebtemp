@@ -15,6 +15,7 @@ const {
  * @returns {Object} - { valid: boolean, message: string }
  */
 function validateBidByAuction(auctionNum, bidPrice, currentPrice, isFirstBid) {
+  currentPrice = parseFloat(currentPrice);
   switch (auctionNum) {
     case "1": // 에코옥션 - 기존 1000원 단위
       if (bidPrice % 1000 !== 0) {
@@ -45,7 +46,7 @@ function validateBidByAuction(auctionNum, bidPrice, currentPrice, isFirstBid) {
 
     case "3": // 스타옥션 - 자동 최소금액 계산
       const getIncrement = (price) => {
-        if (price >= 1 && price <= 999) return 100;
+        if (price >= 0 && price <= 999) return 100;
         if (price >= 1000 && price <= 9999) return 500;
         if (price >= 10000 && price <= 29999) return 1000;
         if (price >= 30000 && price <= 49999) return 2000;
