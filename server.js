@@ -8,7 +8,7 @@ const MySQLStore = require("express-mysql-session")(session);
 const bodyParser = require("body-parser");
 const path = require("path");
 const pool = require("./utils/DB"); // DB 연결 풀
-const favicon = require("serve-favicon");
+const fs = require("fs");
 const { isAuthenticated } = require("./utils/middleware"); // 인증 미들웨어
 
 // --- 사이트맵 라우트 ---
@@ -55,8 +55,34 @@ app.use(
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 
-// favicon 서빙 (PNG 사용)
-app.use(favicon(path.join(__dirname, "public", "images", "favicon.png")));
+app.use("/favicon.ico", (req, res) => {
+  const host = req.headers.host;
+  let faviconPath;
+
+  if (host === "cassystem.com" || host === "www.cassystem.com") {
+    faviconPath = path.join(
+      __dirname,
+      "public",
+      "images",
+      "favicon-cassystem.png"
+    );
+  } else {
+    faviconPath = path.join(
+      __dirname,
+      "public",
+      "images",
+      "favicon-casastrade.png"
+    );
+  }
+
+  // favicon 파일이 존재하는지 확인
+  if (fs.existsSync(faviconPath)) {
+    res.sendFile(faviconPath);
+  } else {
+    // 파일이 없으면 기본 favicon 사용
+    res.sendFile(path.join(__dirname, "public", "images", "favicon.png"));
+  }
+});
 
 const sessionStore = new MySQLStore(
   {
