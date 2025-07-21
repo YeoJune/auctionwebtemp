@@ -615,10 +615,13 @@ window.BidManager = (function () {
           }
         } else if (item.auc_num == 2) {
           // 브랜드옥션 - 첫 입찰 1000엔, 이후 500엔
-          const validation = validateBrandAuctionBid(
-            numericValue,
-            bidOptions?.isFirstBid || false
+          // 나의 입찰이 존재하면 첫 입찰이 아님
+          const myBidInfo = _state.directBidData.find(
+            (bid) => bid.item_id === itemId
           );
+          const isFirstBid = !myBidInfo || !myBidInfo.current_price;
+
+          const validation = validateBrandAuctionBid(numericValue, isFirstBid);
           if (!validation.valid) {
             alert(validation.message);
             return;
@@ -704,14 +707,15 @@ window.BidManager = (function () {
 
     // 브랜드옥션(2번)에서 500엔 버튼 클릭 시 첫 입찰 여부 확인
     if (item.auc_num == 2 && amount === 0.5) {
-      try {
-        const bidOptions = await getBidOptions(itemId, 2, item.starting_price);
-        if (bidOptions && bidOptions.isFirstBid) {
-          alert("첫 입찰은 1,000엔 단위로만 가능합니다.");
-          return;
-        }
-      } catch (error) {
-        console.error("입찰 옵션 확인 실패:", error);
+      // 나의 입찰이 존재하면 첫 입찰이 아님
+      const myBidInfo = _state.directBidData.find(
+        (bid) => bid.item_id === itemId
+      );
+      const isFirstBid = !myBidInfo || !myBidInfo.current_price;
+
+      if (isFirstBid) {
+        alert("첫 입찰은 1,000엔 단위로만 가능합니다.");
+        return;
       }
     }
 
