@@ -863,8 +863,11 @@ class StarAucCrawler extends AxiosCrawler {
       }
 
       // 현재 가격과 종료 시간 추출
-      const currentPrice =
-        scriptData.currentBiddingPrice || scriptData.startingPrice || 0;
+      let currentPrice = 0;
+      if (scriptData.current_bidding_price > currentPrice)
+        currentPrice = scriptData.current_bidding_price;
+      if (scriptData.starting_price > currentPrice)
+        currentPrice = scriptData.starting_price;
       const scheduledDate = this.extractDate(
         scriptData.endAt || scriptData.ended_at
       );
