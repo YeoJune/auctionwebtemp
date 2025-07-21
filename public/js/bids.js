@@ -158,12 +158,10 @@ window.BidManager = (function () {
   }
 
   /**
-   * 스타옥션 최소금액을 input에 설정
+   * 스타옥션 2단계 입찰: 최소금액을 input에 설정
    * @param {string} itemId - 상품 ID
    */
   async function setStarAuctionMinimumBid(itemId) {
-    console.log("setStarAuctionMinimumBid 호출됨, itemId:", itemId);
-
     // 이벤트 버블링과 기본 동작 방지
     if (typeof event !== "undefined" && event) {
       event.stopPropagation();
@@ -177,8 +175,6 @@ window.BidManager = (function () {
 
     // 마감 시간 확인
     const item = _state.currentData.find((item) => item.item_id === itemId);
-    console.log("찾은 아이템:", item);
-
     if (item) {
       const timer = getRemainingTime(item.scheduled_date, "first");
       if (!timer) {
@@ -189,9 +185,7 @@ window.BidManager = (function () {
 
     try {
       // 서버에서 자동 계산된 최소금액 가져오기
-      console.log("getBidOptions 호출 중...");
       const bidOptions = await getBidOptions(itemId, 3, item.starting_price);
-      console.log("bidOptions 결과:", bidOptions);
 
       if (!bidOptions || !bidOptions.nextValidBid) {
         alert("입찰 가능한 금액을 계산할 수 없습니다.");
@@ -199,7 +193,6 @@ window.BidManager = (function () {
       }
 
       const autoCalculatedPrice = bidOptions.nextValidBid;
-      console.log("자동 계산된 가격:", autoCalculatedPrice);
 
       // 클릭된 버튼의 상위 컨테이너 찾기
       let container = null;
@@ -227,10 +220,8 @@ window.BidManager = (function () {
         container = modalContainer || cardContainer || resultItemContainer;
       }
 
-      console.log("찾은 컨테이너:", container);
-
       if (!container) {
-        console.error("컨테이너를 찾을 수 없습니다");
+        alert("입찰 영역을 찾을 수 없습니다.");
         return;
       }
 
@@ -239,16 +230,13 @@ window.BidManager = (function () {
         `.bid-input[data-item-id="${itemId}"][data-bid-type="direct"]`
       );
 
-      console.log("찾은 input 요소:", inputElement);
-
       if (!inputElement) {
-        console.error("input 요소를 찾을 수 없습니다");
+        alert("입찰 입력창을 찾을 수 없습니다.");
         return;
       }
 
       // 계산된 최소금액을 input에 설정 (1000으로 나눠서 표시)
       inputElement.value = autoCalculatedPrice / 1000;
-      console.log("input에 설정한 값:", autoCalculatedPrice / 1000);
 
       // 가격 표시 업데이트
       updateBidValueDisplay(inputElement);
@@ -257,17 +245,18 @@ window.BidManager = (function () {
       inputElement.dispatchEvent(new Event("input"));
 
       // 버튼 텍스트 업데이트로 사용자에게 피드백 제공
-      const button = event.target;
-      const originalText = button.textContent;
-      button.textContent = "설정 완료!";
-      button.classList.add("success");
+      if (typeof event !== "undefined" && event && event.target) {
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = "설정 완료!";
+        button.classList.add("success");
 
-      setTimeout(() => {
-        button.textContent = originalText;
-        button.classList.remove("success");
-      }, 1500);
+        setTimeout(() => {
+          button.textContent = originalText;
+          button.classList.remove("success");
+        }, 1500);
+      }
     } catch (error) {
-      console.error("최소금액 계산 오류:", error);
       alert(`최소금액 계산 중 오류가 발생했습니다: ${error.message}`);
     }
   }
@@ -419,8 +408,6 @@ window.BidManager = (function () {
    * @returns {string} 입찰 섹션 HTML
    */
   function getDirectBidSectionHTML(bidInfo, itemId, aucNum, category) {
-    console.log("getDirectBidSectionHTML 호출됨", { itemId, aucNum, bidInfo });
-
     const item = _state.currentData.find((item) => item.item_id === itemId);
     if (!item) return "";
 
@@ -486,13 +473,12 @@ window.BidManager = (function () {
         </div>`;
     }
 
-    // 스타옥션(auc_num=3)의 경우 입력창 UI 제공하되 readonly로 설정
+    // 스타옥션: 2단계 입찰 프로세스 (최소금액 설정 → 확인 → 입찰)
     if (aucNum == 3) {
-      // 스타옥션: 읽기 전용 입력창과 최소금액 설정 버튼, 입찰 버튼 제공
       html += `
-        <div class="bid-input-container star-auction-container">
+        <div class="bid-input-container">
           <div class="bid-input-group">
-            <input type="number" placeholder="최소금액 설정 버튼을 눌러주세요" class="bid-input star-auction-input" data-item-id="${itemId}" data-bid-type="direct" readonly>
+            <input type="number" placeholder="나의 입찰 금액" class="bid-input" data-item-id="${itemId}" data-bid-type="direct" readonly>
             <span class="bid-value-display">000</span>
             <span class="bid-currency">¥</span>
             <button class="bid-button" ${
@@ -967,12 +953,12 @@ window.BidManager = (function () {
       isFirstBid = !bidInfo || !bidInfo.first_price;
     }
 
-    // 스타옥션(auc_num=3) 직접경매의 경우 새로운 2단계 UI
+    // 스타옥션(auc_num=3) 직접경매의 경우 readonly input과 2단계 버튼
     if (bidType === "direct" && item.auc_num == 3) {
       return `
-        <div class="bid-input-container star-auction-container">
+        <div class="bid-input-container">
           <div class="bid-input-group">
-            <input type="number" placeholder="최소금액 설정 버튼을 눌러주세요" class="bid-input star-auction-input" data-item-id="${
+            <input type="number" placeholder="나의 입찰 금액" class="bid-input" data-item-id="${
               item.item_id
             }" data-bid-type="direct" readonly>
             <span class="bid-value-display">000</span>
@@ -986,16 +972,13 @@ window.BidManager = (function () {
       }">${isExpired ? "마감됨" : "입찰"}</button>
           </div>
           <div class="price-details-container"></div>
-          <div class="quick-bid-buttons star-auction">
-            <button class="quick-bid-btn star-minimum-btn" ${
-              isExpired ? "disabled" : ""
-            } onclick="event.stopPropagation(); ${
-        isExpired
-          ? ""
-          : `BidManager.setStarAuctionMinimumBid('${item.item_id}')`
-      }">${isExpired ? "마감됨" : "최소금액 설정"}</button>
-            <span class="bid-info-tooltip-trigger"><i class="fas fa-question-circle"></i></span>
-          </div>
+          ${getQuickBidButtonsHTML(
+            item.item_id,
+            item.auc_num,
+            bidType,
+            isExpired,
+            isFirstBid
+          )}
         </div>
       `;
     }

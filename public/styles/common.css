@@ -444,7 +444,7 @@ input[type="time"]:focus {
   transform: none;
 }
 
-/* 브랜드옥션 quick-bid-buttons 정렬 */
+/* 브랜드옥션, 스타옥션 quick-bid-buttons 정렬 */
 .quick-bid-buttons.brand-auction,
 .quick-bid-buttons.star-auction {
   display: flex;
@@ -453,15 +453,15 @@ input[type="time"]:focus {
   gap: var(--spacing-xs);
 }
 
-/* 스타옥션 입력창 스타일 */
-.bid-input.star-auction-input {
+/* readonly 입력창 스타일 */
+.bid-input[readonly] {
   background-color: #f5f5f5;
   border: 2px solid #ddd;
   color: #666;
   cursor: not-allowed;
 }
 
-.bid-input.star-auction-input:focus {
+.bid-input[readonly]:focus {
   outline: none;
   border-color: #007bff;
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);

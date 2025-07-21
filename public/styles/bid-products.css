@@ -1002,41 +1002,6 @@
   cursor: not-allowed;
 }
 
-/* 스타옥션 컨테이너 스타일 */
-.star-auction-container {
-  padding: 15px;
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  margin-top: 10px;
-}
-
-.star-auction-info {
-  text-align: center;
-  margin-bottom: 15px;
-}
-
-.star-auction-info p {
-  margin: 0;
-  color: #495057;
-  font-size: 14px;
-  line-height: 1.4;
-}
-
-/* 스타옥션 입력창 스타일 */
-.bid-input.star-auction-input {
-  background-color: #f5f5f5;
-  border: 2px solid #ddd;
-  color: #666;
-  cursor: not-allowed;
-}
-
-.bid-input.star-auction-input:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-}
-
 /* 최소금액 설정 버튼 스타일 */
 .quick-bid-btn.star-minimum-btn {
   background: linear-gradient(135deg, #28a745, #20c997);
