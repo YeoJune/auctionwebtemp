@@ -21,7 +21,6 @@ const DBManager = require("./DBManager");
  * @param {boolean} returnData - If true, returns the item data instead of sending response.
  * @param {number|string|null} userId - The ID of the user to fetch bid data for (optional).
  * @param {number} priority - Processing priority (1-3, default: 2).
- * @param {string|null} cropType - Image crop type (null for original, 'brand' for brand crop).
  * @returns {Promise<object|null>} - Item data if returnData is true, otherwise null.
  */
 async function processItem(
@@ -30,8 +29,7 @@ async function processItem(
   res,
   returnData = false,
   userId = null,
-  priority = 2,
-  cropType = null
+  priority = 2
 ) {
   try {
     const tableName = isValue ? "values_items" : "crawled_items";
@@ -49,6 +47,11 @@ async function processItem(
     }
 
     let item = items[0];
+
+    let cropType = null;
+    if (item.auc_num === 2) {
+      cropType = "brand"; // BrandAuc items use brand crop
+    }
 
     // --- Fetch User Bid Data ---
     let userBids = { live: null, direct: null };
