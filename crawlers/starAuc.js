@@ -192,13 +192,14 @@ class StarAucCrawler extends AxiosCrawler {
       const cookies = await this.cookieJar.getCookies(
         "https://www.starbuyers-global-auction.com"
       );
-      const xsrfToken = cookies.find(
-        (cookie) => cookie.key === "XSRF-TOKEN"
-      )?.value;
+      const xsrfCookie = cookies.find((cookie) => cookie.key === "XSRF-TOKEN");
 
-      if (!xsrfToken) {
+      if (!xsrfCookie) {
         throw new Error("XSRF token not found in cookies");
       }
+
+      // URL 디코드된 토큰 값 사용
+      const xsrfToken = decodeURIComponent(xsrfCookie.value);
 
       // FormData 생성
       const formData = new FormData();
@@ -215,33 +216,49 @@ class StarAucCrawler extends AxiosCrawler {
             Accept: "application/json, text/plain, */*",
             Origin: "https://www.starbuyers-global-auction.com",
             Referer: `https://www.starbuyers-global-auction.com/item/${item_id}`,
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+          },
+          validateStatus: function (status) {
+            return status >= 200 && status < 400;
           },
         }
       );
 
       // 응답 처리
-      if (bidResponse.status === 200 && bidResponse.data.status) {
-        const result = bidResponse.data.results.find(
-          (r) => r.itemId == item_id
-        );
+      if (bidResponse.status === 200) {
+        const responseData = bidResponse.data;
 
-        if (result && !result.isFailed) {
-          return {
-            success: true,
-            message: result.message,
-            data: {
-              currentBid: result.currentBid,
-              highestBid: result.highestBid,
-              becameHighestBidder: result.becameHighestBidder,
-              endAt: result.endAt,
-              timeRemaining: result.timeRemaining,
-            },
-          };
+        // 응답 구조 확인
+        if (responseData && responseData.status) {
+          const result = responseData.results?.find((r) => r.itemId == item_id);
+
+          if (result && !result.isFailed) {
+            return {
+              success: true,
+              message: result.message,
+              data: {
+                currentBid: result.currentBid,
+                highestBid: result.highestBid,
+                becameHighestBidder: result.becameHighestBidder,
+                endAt: result.endAt,
+                timeRemaining: result.timeRemaining,
+              },
+            };
+          } else {
+            return {
+              success: false,
+              message: result?.message || "Bid failed",
+              error: result,
+            };
+          }
         } else {
+          // 응답 구조가 예상과 다른 경우
+          console.log("Unexpected response structure:", responseData);
           return {
             success: false,
-            message: result?.message || "Bid failed",
-            error: result,
+            message: "Unexpected response format",
+            error: responseData,
           };
         }
       } else {
@@ -249,6 +266,13 @@ class StarAucCrawler extends AxiosCrawler {
       }
     } catch (error) {
       console.error(`Error placing bid for item ${item_id}:`, error.message);
+
+      // 상세 에러 정보 로깅
+      if (error.response) {
+        console.error("Response status:", error.response.status);
+        console.error("Response data:", error.response.data);
+      }
+
       return {
         success: false,
         message: "Bid failed",
@@ -267,13 +291,13 @@ class StarAucCrawler extends AxiosCrawler {
       const cookies = await this.cookieJar.getCookies(
         "https://www.starbuyers-global-auction.com"
       );
-      const xsrfToken = cookies.find(
-        (cookie) => cookie.key === "XSRF-TOKEN"
-      )?.value;
+      const xsrfCookie = cookies.find((cookie) => cookie.key === "XSRF-TOKEN");
 
-      if (!xsrfToken) {
+      if (!xsrfCookie) {
         throw new Error("XSRF token not found in cookies");
       }
+
+      const xsrfToken = decodeURIComponent(xsrfCookie.value);
 
       // 여러 아이템의 입찰 데이터 생성
       const formData = new FormData();
@@ -290,11 +314,16 @@ class StarAucCrawler extends AxiosCrawler {
             "X-XSRF-TOKEN": xsrfToken,
             Accept: "application/json, text/plain, */*",
             Origin: "https://www.starbuyers-global-auction.com",
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+          },
+          validateStatus: function (status) {
+            return status >= 200 && status < 400;
           },
         }
       );
 
-      if (bidResponse.status === 200 && bidResponse.data.status) {
+      if (bidResponse.status === 200 && bidResponse.data?.status) {
         return {
           success: true,
           results: bidResponse.data.results.map((result) => ({
@@ -306,10 +335,20 @@ class StarAucCrawler extends AxiosCrawler {
           })),
         };
       } else {
-        throw new Error("Batch bid failed");
+        console.log("Batch bid response:", bidResponse.data);
+        return {
+          success: false,
+          message: "Batch bid failed",
+          error: bidResponse.data,
+        };
       }
     } catch (error) {
       console.error("Error in batch bid:", error.message);
+      if (error.response) {
+        console.error("Response status:", error.response.status);
+        console.error("Response data:", error.response.data);
+      }
+
       return {
         success: false,
         message: "Batch bid failed",
