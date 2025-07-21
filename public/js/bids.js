@@ -967,16 +967,33 @@ window.BidManager = (function () {
       isFirstBid = !bidInfo || !bidInfo.first_price;
     }
 
-    // 스타옥션(auc_num=3) 직접경매의 경우 특별한 UI
+    // 스타옥션(auc_num=3) 직접경매의 경우 새로운 2단계 UI
     if (bidType === "direct" && item.auc_num == 3) {
       return `
         <div class="bid-input-container star-auction-container">
-          <div class="quick-bid-buttons star-auction">
-            <button class="quick-bid-btn star-auction-btn" ${
+          <div class="bid-input-group">
+            <input type="number" placeholder="최소금액 설정 버튼을 눌러주세요" class="bid-input star-auction-input" data-item-id="${
+              item.item_id
+            }" data-bid-type="direct" readonly>
+            <span class="bid-value-display">000</span>
+            <span class="bid-currency">¥</span>
+            <button class="bid-button" ${
               isExpired ? "disabled" : ""
             } onclick="event.stopPropagation(); ${
-        isExpired ? "" : `BidManager.handleStarAuctionBid('${item.item_id}')`
-      }">${isExpired ? "마감됨" : "최소금액 입찰"}</button>
+        isExpired
+          ? ""
+          : `BidManager.handleDirectBidSubmit(this.parentElement.querySelector('.bid-input').value, '${item.item_id}')`
+      }">${isExpired ? "마감됨" : "입찰"}</button>
+          </div>
+          <div class="price-details-container"></div>
+          <div class="quick-bid-buttons star-auction">
+            <button class="quick-bid-btn star-minimum-btn" ${
+              isExpired ? "disabled" : ""
+            } onclick="event.stopPropagation(); ${
+        isExpired
+          ? ""
+          : `BidManager.setStarAuctionMinimumBid('${item.item_id}')`
+      }">${isExpired ? "마감됨" : "최소금액 설정"}</button>
             <span class="bid-info-tooltip-trigger"><i class="fas fa-question-circle"></i></span>
           </div>
         </div>
