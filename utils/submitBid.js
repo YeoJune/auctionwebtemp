@@ -16,7 +16,7 @@ const {
  */
 function validateBidByAuction(auctionNum, bidPrice, currentPrice, isFirstBid) {
   switch (auctionNum) {
-    case 1: // 에코옥션 - 기존 1000원 단위
+    case "1": // 에코옥션 - 기존 1000원 단위
       if (bidPrice % 1000 !== 0) {
         return {
           valid: false,
@@ -25,7 +25,7 @@ function validateBidByAuction(auctionNum, bidPrice, currentPrice, isFirstBid) {
       }
       break;
 
-    case 2: // 브랜드옥션 - 첫 입찰 1000엔 단위, 이후 500엔 단위
+    case "2": // 브랜드옥션 - 첫 입찰 1000엔 단위, 이후 500엔 단위
       if (isFirstBid) {
         if (bidPrice % 1000 !== 0) {
           return {
@@ -43,7 +43,7 @@ function validateBidByAuction(auctionNum, bidPrice, currentPrice, isFirstBid) {
       }
       break;
 
-    case 3: // 스타옥션 - 자동 최소금액 계산
+    case "3": // 스타옥션 - 자동 최소금액 계산
       const getIncrement = (price) => {
         if (price >= 1 && price <= 999) return 100;
         if (price >= 1000 && price <= 9999) return 500;

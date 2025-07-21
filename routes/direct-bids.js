@@ -277,14 +277,14 @@ router.get("/bid-options/:itemId", async (req, res) => {
     let minIncrement = 1000; // 기본값
 
     switch (item.auc_num) {
-      case 1: // 에코옥션 - 1000원 단위
+      case "1": // 에코옥션 - 1000원 단위
         minIncrement = 1000;
         nextValidBid =
           Math.ceil((parseFloat(item.starting_price) + minIncrement) / 1000) *
           1000;
         break;
 
-      case 2: // 브랜드옥션 - 첫 입찰 1000엔, 이후 500엔
+      case "2": // 브랜드옥션 - 첫 입찰 1000엔, 이후 500엔
         if (isFirstBid) {
           minIncrement = 1000;
           nextValidBid =
@@ -299,7 +299,7 @@ router.get("/bid-options/:itemId", async (req, res) => {
         }
         break;
 
-      case 3: // 스타옥션 - 자동 최소금액 계산
+      case "3": // 스타옥션 - 자동 최소금액 계산
         const currentPrice = currentBid
           ? parseFloat(currentBid.current_price)
           : parseFloat(item.starting_price);
