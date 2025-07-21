@@ -339,3 +339,46 @@ input[type="time"]:focus {
     padding: var(--spacing-xs);
   }
 }
+
+/* 스타옥션 전용 스타일 */
+.star-auction-container {
+  text-align: center;
+  padding: var(--spacing-md);
+}
+
+.star-auction-info {
+  margin-bottom: var(--spacing-md);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.star-auction-button-container {
+  display: flex;
+  justify-content: center;
+}
+
+.star-auction-bid-button {
+  background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+  color: white;
+  border: none;
+  padding: var(--spacing-md) var(--spacing-xl);
+  border-radius: var(--border-radius-md);
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+}
+
+.star-auction-bid-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ff5252, #ff7979);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+}
+
+.star-auction-bid-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}

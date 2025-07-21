@@ -114,8 +114,18 @@ window.BidManager = (function () {
       </div>`;
     }
 
+    // 현장 경매(live)는 경매장 번호에 관계없이 기존과 동일한 버튼
+    if (bidType === "live") {
+      return `<div class="quick-bid-buttons">
+        <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 1, '${bidType}')">+1,000¥</button>
+        <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 5, '${bidType}')">+5,000¥</button>
+        <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 10, '${bidType}')">+10,000¥</button>
+      </div>`;
+    }
+
+    // 직접 경매(direct)만 경매장별로 다른 버튼
     switch (auctionNum) {
-      case 1: // 에코옥션 - 기존 1000원 단위
+      case 1: // 에코옥션 - 1000원 단위
         return `<div class="quick-bid-buttons">
           <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 1, '${bidType}')">+1,000¥</button>
           <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 5, '${bidType}')">+5,000¥</button>
@@ -144,7 +154,11 @@ window.BidManager = (function () {
         </div>`;
 
       default:
-        return "";
+        return `<div class="quick-bid-buttons">
+          <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 1, '${bidType}')">+1,000¥</button>
+          <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 5, '${bidType}')">+5,000¥</button>
+          <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 10, '${bidType}')">+10,000¥</button>
+        </div>`;
     }
   }
 
@@ -267,6 +281,9 @@ window.BidManager = (function () {
       </div>
     </div>`;
 
+    // 현장 경매에서 첫 입찰 여부 확인 (빠른 입찰 버튼용)
+    const isFirstBid = !bidInfo || !bidInfo.first_price;
+
     if (bidInfo?.first_price || bidInfo?.second_price) {
       // 1차 입찰이 있는 경우
       if (bidInfo.first_price) {
@@ -314,7 +331,7 @@ window.BidManager = (function () {
     }">${isExpired ? "마감됨" : "입찰"}</button>
       </div>
       <div class="price-details-container"></div>
-      ${getQuickBidButtonsHTML(itemId, aucNum, "live", isExpired)}
+      ${getQuickBidButtonsHTML(itemId, aucNum, "live", isExpired, isFirstBid)}
     </div>
   </div>`;
 
@@ -584,22 +601,39 @@ window.BidManager = (function () {
     // 경매장별 입찰 가격 검증
     if (item && item.auc_num) {
       try {
-        const bidOptions = await getBidOptions(itemId, item.auc_num, numericValue);
-        
-        if (item.auc_num === 1) { // 에코옥션 - 1000엔 단위
+        const bidOptions = await getBidOptions(
+          itemId,
+          item.auc_num,
+          numericValue
+        );
+
+        if (item.auc_num === 1) {
+          // 에코옥션 - 1000엔 단위
           if (numericValue % 1000 !== 0) {
             alert("에코옥션은 1,000엔 단위로만 입찰 가능합니다.");
             return;
           }
-        } else if (item.auc_num === 2) { // 브랜드옥션 - 첫 입찰 1000엔, 이후 500엔
-          const validation = validateBrandAuctionBid(numericValue, bidOptions?.isFirstBid || false);
+        } else if (item.auc_num === 2) {
+          // 브랜드옥션 - 첫 입찰 1000엔, 이후 500엔
+          const validation = validateBrandAuctionBid(
+            numericValue,
+            bidOptions?.isFirstBid || false
+          );
           if (!validation.valid) {
             alert(validation.message);
             return;
           }
-        } else if (item.auc_num === 3) { // 스타옥션 - 자동 계산된 최소금액만
-          if (bidOptions?.nextValidBid && numericValue !== bidOptions.nextValidBid) {
-            alert(`스타옥션은 자동 계산된 최소금액(${cleanNumberFormat(bidOptions.nextValidBid)}엔)으로만 입찰 가능합니다.`);
+        } else if (item.auc_num === 3) {
+          // 스타옥션 - 자동 계산된 최소금액만
+          if (
+            bidOptions?.nextValidBid &&
+            numericValue !== bidOptions.nextValidBid
+          ) {
+            alert(
+              `스타옥션은 자동 계산된 최소금액(${cleanNumberFormat(
+                bidOptions.nextValidBid
+              )}엔)으로만 입찰 가능합니다.`
+            );
             return;
           }
         }
@@ -852,13 +886,13 @@ window.BidManager = (function () {
           <div class="star-auction-info">
             <p>스타옥션은 자동으로 계산된 최소금액으로 입찰됩니다.</p>
           </div>
-          ${getQuickBidButtonsHTML(
-            item.item_id,
-            item.auc_num,
-            bidType,
-            isExpired,
-            isFirstBid
-          )}
+          <div class="star-auction-button-container">
+            <button class="star-auction-bid-button" ${
+              isExpired ? "disabled" : ""
+            } onclick="event.stopPropagation(); ${
+        isExpired ? "" : `BidManager.handleStarAuctionBid('${item.item_id}')`
+      }">${isExpired ? "마감됨" : "최소금액 입찰"}</button>
+          </div>
         </div>
       `;
     }
