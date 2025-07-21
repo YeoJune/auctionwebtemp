@@ -725,7 +725,7 @@ class StarAucCrawler extends AxiosCrawler {
   // Update 관련 메서드들 구현
   async crawlUpdates() {
     try {
-      const limit = pLimit(5);
+      const limit = pLimit(3);
       const startTime = Date.now();
       console.log(
         `Starting StarAuc updates crawl at ${new Date().toISOString()}`
