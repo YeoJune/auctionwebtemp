@@ -15,6 +15,7 @@ window.state = {
   totalItems: 0, // 전체 아이템 수
   totalPages: 0, // 전체 페이지 수
   isAuthenticated: false, // 인증 상태
+  isAdmin: false, // 관리자 권한
   totalStats: {
     itemCount: 0,
     japaneseAmount: 0,
@@ -100,10 +101,28 @@ async function checkAuthStatus() {
   try {
     const response = await API.fetchAPI("/auth/user");
     state.isAuthenticated = !!response.user;
+
+    // 현재 사용자 정보 가져오기 (관리자 권한 체크)
+    if (state.isAuthenticated) {
+      await checkAdminStatus();
+    }
+
     updateAuthUI();
   } catch (error) {
     state.isAuthenticated = false;
+    state.isAdmin = false;
     updateAuthUI();
+  }
+}
+
+// 관리자 권한 체크
+async function checkAdminStatus() {
+  try {
+    const response = await API.fetchAPI("/users/current");
+    state.isAdmin = response.id === "admin";
+  } catch (error) {
+    console.error("관리자 상태 확인 중 오류:", error);
+    state.isAdmin = false;
   }
 }
 
@@ -116,6 +135,9 @@ function updateAuthUI() {
   if (state.isAuthenticated) {
     signinBtn.style.display = "none";
     signoutBtn.style.display = "inline-block";
+
+    // 관리자 권한에 따른 총 합계 표시/숨김
+    updateSummaryStatsVisibility();
   } else {
     signinBtn.style.display = "inline-block";
     signoutBtn.style.display = "none";
@@ -197,6 +219,9 @@ async function fetchCompletedBids() {
 
     // 페이지네이션 업데이트
     updatePagination();
+
+    // 관리자 권한에 따른 UI 업데이트
+    updateSummaryStatsVisibility();
 
     // 정렬 버튼 UI 업데이트
     updateSortButtonsUI();
@@ -319,6 +344,7 @@ function groupResultsByDate() {
 
 // 총 통계 업데이트 함수
 function updateTotalStats() {
+  // 초기화
   state.totalStats = {
     itemCount: 0,
     totalItemCount: 0,
@@ -332,37 +358,27 @@ function updateTotalStats() {
     appraisalCount: 0,
   };
 
-  // 기존 통계 계산
+  // 데일리 합계의 정확한 합산
   state.dailyResults.forEach((day) => {
-    state.totalStats.itemCount += Number(day.itemCount);
+    state.totalStats.itemCount += Number(day.itemCount || 0);
     state.totalStats.totalItemCount += Number(day.totalItemCount || 0);
-    state.totalStats.japaneseAmount += Number(day.totalJapanesePrice);
-    state.totalStats.koreanAmount += Number(day.totalKoreanPrice);
-    state.totalStats.feeAmount += Number(day.feeAmount);
-    state.totalStats.vatAmount += Number(day.vatAmount);
+    state.totalStats.japaneseAmount += Number(day.totalJapanesePrice || 0);
+    state.totalStats.koreanAmount += Number(day.totalKoreanPrice || 0);
+    state.totalStats.feeAmount += Number(day.feeAmount || 0);
+    state.totalStats.vatAmount += Number(day.vatAmount || 0);
     state.totalStats.appraisalFee += Number(day.appraisalFee || 0);
     state.totalStats.appraisalVat += Number(day.appraisalVat || 0);
     state.totalStats.appraisalCount += Number(day.appraisalCount || 0);
-    state.totalStats.grandTotalAmount += Number(day.grandTotal);
   });
 
-  // 감정서 수수료 계산
-  let appraisalCount = 0;
-  state.dailyResults.forEach((day) => {
-    day.successItems.forEach((item) => {
-      if (item.appr_id) {
-        appraisalCount++;
-      }
-    });
-  });
+  // 총액 계산 (상품 총액 + 총 수수료 + 총 감정서 수수료)
+  state.totalStats.grandTotalAmount =
+    state.totalStats.koreanAmount +
+    state.totalStats.feeAmount +
+    state.totalStats.appraisalFee;
 
-  const appraisalFee = appraisalCount * 16500; // VAT 포함 16,500원
-  const appraisalVat = Math.round(appraisalFee / 11); // VAT 부분 (16500/11 = 1500)
-
-  state.totalStats.appraisalFee = appraisalFee;
-  state.totalStats.appraisalVat = appraisalVat;
-  state.totalStats.appraisalCount = appraisalCount;
-  state.totalStats.grandTotalAmount += appraisalFee;
+  // 관리자만 총 합계 표시, 일반 사용자는 숨김
+  updateSummaryStatsVisibility();
 
   // UI 업데이트
   document.getElementById("totalItemCount").textContent = `${formatNumber(
@@ -385,6 +401,18 @@ function updateTotalStats() {
 
   document.getElementById("grandTotalAmount").textContent =
     formatNumber(state.totalStats.grandTotalAmount) + " ₩";
+}
+
+// 총 합계 표시/숨김 제어
+function updateSummaryStatsVisibility() {
+  const summaryStats = document.querySelector(".summary-stats");
+  if (summaryStats) {
+    if (state.isAdmin) {
+      summaryStats.style.display = "flex";
+    } else {
+      summaryStats.style.display = "none";
+    }
+  }
 }
 
 // 일별 결과 정렬
