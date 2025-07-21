@@ -300,9 +300,8 @@ router.get("/bid-options/:itemId", async (req, res) => {
         break;
 
       case "3": // 스타옥션 - 자동 최소금액 계산
-        const currentPrice = currentBid
-          ? parseFloat(currentBid.current_price)
-          : parseFloat(item.starting_price);
+        // 스타옥션은 현재 최고가(starting_price가 실시간으로 업데이트됨)를 기준으로 계산
+        const currentPrice = parseFloat(item.starting_price);
         const getIncrement = (price) => {
           if (price >= 0 && price <= 999) return 100;
           if (price >= 1000 && price <= 9999) return 500;
@@ -494,10 +493,12 @@ router.post("/", async (req, res) => {
     const isFirstBid = userBids.length === 0;
 
     // 2-2. 경매장별 입찰가 검증
+    // 스타옥션의 경우 starting_price가 실시간 최고가를 의미함
+    const currentHighestPrice = item.starting_price;
     const validation = validateBidByAuction(
       item.auc_num,
       currentPrice,
-      item.starting_price,
+      currentHighestPrice,
       isFirstBid
     );
 

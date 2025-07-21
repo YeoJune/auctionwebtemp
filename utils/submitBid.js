@@ -16,7 +16,8 @@ const {
  */
 function validateBidByAuction(auctionNum, bidPrice, currentPrice, isFirstBid) {
   currentPrice = parseFloat(currentPrice);
-  switch (auctionNum) {
+  bidPrice = parseFloat(bidPrice);
+  switch (String(auctionNum)) {
     case "1": // 에코옥션 - 기존 1000원 단위
       if (bidPrice % 1000 !== 0) {
         return {
