@@ -162,6 +162,8 @@ window.BidManager = (function () {
    * @param {string} itemId - 상품 ID
    */
   async function setStarAuctionMinimumBid(itemId) {
+    console.log("setStarAuctionMinimumBid 호출됨, itemId:", itemId);
+
     // 이벤트 버블링과 기본 동작 방지
     if (typeof event !== "undefined" && event) {
       event.stopPropagation();
@@ -175,6 +177,8 @@ window.BidManager = (function () {
 
     // 마감 시간 확인
     const item = _state.currentData.find((item) => item.item_id === itemId);
+    console.log("찾은 아이템:", item);
+
     if (item) {
       const timer = getRemainingTime(item.scheduled_date, "first");
       if (!timer) {
@@ -185,7 +189,9 @@ window.BidManager = (function () {
 
     try {
       // 서버에서 자동 계산된 최소금액 가져오기
+      console.log("getBidOptions 호출 중...");
       const bidOptions = await getBidOptions(itemId, 3, item.starting_price);
+      console.log("bidOptions 결과:", bidOptions);
 
       if (!bidOptions || !bidOptions.nextValidBid) {
         alert("입찰 가능한 금액을 계산할 수 없습니다.");
@@ -193,6 +199,7 @@ window.BidManager = (function () {
       }
 
       const autoCalculatedPrice = bidOptions.nextValidBid;
+      console.log("자동 계산된 가격:", autoCalculatedPrice);
 
       // 클릭된 버튼의 상위 컨테이너 찾기
       let container = null;
@@ -220,17 +227,28 @@ window.BidManager = (function () {
         container = modalContainer || cardContainer || resultItemContainer;
       }
 
-      if (!container) return;
+      console.log("찾은 컨테이너:", container);
+
+      if (!container) {
+        console.error("컨테이너를 찾을 수 없습니다");
+        return;
+      }
 
       // 해당 컨테이너 내에서만 입력 요소 찾기
       const inputElement = container.querySelector(
         `.bid-input[data-item-id="${itemId}"][data-bid-type="direct"]`
       );
 
-      if (!inputElement) return;
+      console.log("찾은 input 요소:", inputElement);
+
+      if (!inputElement) {
+        console.error("input 요소를 찾을 수 없습니다");
+        return;
+      }
 
       // 계산된 최소금액을 input에 설정 (1000으로 나눠서 표시)
       inputElement.value = autoCalculatedPrice / 1000;
+      console.log("input에 설정한 값:", autoCalculatedPrice / 1000);
 
       // 가격 표시 업데이트
       updateBidValueDisplay(inputElement);
@@ -249,6 +267,7 @@ window.BidManager = (function () {
         button.classList.remove("success");
       }, 1500);
     } catch (error) {
+      console.error("최소금액 계산 오류:", error);
       alert(`최소금액 계산 중 오류가 발생했습니다: ${error.message}`);
     }
   }
@@ -400,6 +419,8 @@ window.BidManager = (function () {
    * @returns {string} 입찰 섹션 HTML
    */
   function getDirectBidSectionHTML(bidInfo, itemId, aucNum, category) {
+    console.log("getDirectBidSectionHTML 호출됨", { itemId, aucNum, bidInfo });
+
     const item = _state.currentData.find((item) => item.item_id === itemId);
     if (!item) return "";
 
