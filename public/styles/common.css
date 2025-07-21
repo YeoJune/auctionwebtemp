@@ -409,7 +409,7 @@ input[type="time"]:focus {
 .bid-info-tooltip-trigger[title]:hover::after {
   content: attr(title);
   position: absolute;
-  bottom: 120%;
+  bottom: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%);
   background: rgba(0, 0, 0, 0.9);
@@ -417,21 +417,39 @@ input[type="time"]:focus {
   padding: var(--spacing-xs) var(--spacing-sm);
   border-radius: var(--border-radius-sm);
   font-size: var(--font-size-xs);
-  white-space: nowrap;
-  z-index: 1000;
+  z-index: 10000;
   pointer-events: none;
+  max-width: 200px;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.3;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .bid-info-tooltip-trigger[title]:hover::before {
   content: "";
   position: absolute;
-  bottom: 110%;
+  bottom: calc(100% + 2px);
   left: 50%;
   transform: translateX(-50%);
   border: 4px solid transparent;
   border-top-color: rgba(0, 0, 0, 0.9);
-  z-index: 1000;
+  z-index: 10000;
   pointer-events: none;
+}
+
+/* 툴팁이 잘리지 않도록 부모 컨테이너 설정 */
+.quick-bid-buttons {
+  position: relative;
+  overflow: visible;
+}
+
+.product-card {
+  overflow: visible;
+}
+
+.bid-input-container {
+  overflow: visible;
 }
 
 /* 스타옥션 버튼 스타일 통일 */

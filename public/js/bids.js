@@ -133,9 +133,7 @@ window.BidManager = (function () {
         </div>`;
 
       case "2": // 브랜드옥션 - 첫 입찰 1000엔 단위, 이후 500엔 단위
-        const increment500Disabled = isFirstBid
-          ? 'disabled title="첫 입찰은 1,000엔, 이후 입찰은 500엔 단위로 입찰 가능합니다."'
-          : "";
+        const increment500Disabled = isFirstBid ? "disabled" : "";
 
         return `<div class="quick-bid-buttons brand-auction">
           <button class="quick-bid-btn increment-500" ${increment500Disabled} onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 0.5, '${bidType}')">+500¥</button>
