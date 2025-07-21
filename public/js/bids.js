@@ -789,6 +789,14 @@ window.BidManager = (function () {
       return "";
     }
 
+    // 첫 입찰 여부 확인 (브랜드옥션용)
+    let isFirstBid = false;
+    if (bidType === "direct") {
+      isFirstBid = !bidInfo || !bidInfo.current_price;
+    } else if (bidType === "live") {
+      isFirstBid = !bidInfo || !bidInfo.first_price;
+    }
+
     let bidInputLabel = "";
     if (bidType === "live") {
       bidInputLabel = bidInfo?.first_price
@@ -822,23 +830,13 @@ window.BidManager = (function () {
     }">${isExpired ? "마감됨" : "입찰"}</button>
         </div>
         <div class="price-details-container"></div>
-        <div class="quick-bid-buttons">
-          <button class="quick-bid-btn" ${
-            isExpired ? "disabled" : ""
-          } onclick="event.stopPropagation(); BidManager.quickAddBid('${
-      item.item_id
-    }', 1, '${bidType}')">+1,000￥</button>
-          <button class="quick-bid-btn" ${
-            isExpired ? "disabled" : ""
-          } onclick="event.stopPropagation(); BidManager.quickAddBid('${
-      item.item_id
-    }', 5, '${bidType}')">+5,000￥</button>
-          <button class="quick-bid-btn" ${
-            isExpired ? "disabled" : ""
-          } onclick="event.stopPropagation(); BidManager.quickAddBid('${
-      item.item_id
-    }', 10, '${bidType}')">+10,000￥</button>
-        </div>
+        ${getQuickBidButtonsHTML(
+          item.item_id,
+          item.auc_num,
+          bidType,
+          isExpired,
+          isFirstBid
+        )}
       </div>
     `;
   }
