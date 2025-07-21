@@ -49,7 +49,7 @@ async function processItem(
     let item = items[0];
 
     let cropType = null;
-    if (item.auc_num === 2) {
+    if (item.auc_num == 2) {
       cropType = "brand"; // BrandAuc items use brand crop
     }
 
