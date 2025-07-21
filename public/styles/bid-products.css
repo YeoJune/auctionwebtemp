@@ -1002,6 +1002,27 @@
   cursor: not-allowed;
 }
 
+/* 스타옥션 컨테이너 스타일 */
+.star-auction-container {
+  padding: 15px;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+.star-auction-info {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.star-auction-info p {
+  margin: 0;
+  color: #495057;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
 /* 모바일 툴팁 스타일 */
 .mobile-tooltip {
   position: fixed;

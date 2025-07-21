@@ -395,31 +395,50 @@ window.BidManager = (function () {
         </div>`;
     }
 
-    // 입찰 입력 UI - 마감 여부에 따라 버튼 상태 변경
-    html += `
-      <div class="bid-input-container">
-        <div class="bid-input-group">
-          <input type="number" placeholder="나의 입찰 금액" class="bid-input" data-item-id="${itemId}" data-bid-type="direct">
-          <span class="bid-value-display">000</span>
-          <span class="bid-currency">¥</span>
-          <button class="bid-button" ${
-            isExpired ? "disabled" : ""
-          } onclick="event.stopPropagation(); ${
-      isExpired
-        ? ""
-        : `BidManager.handleDirectBidSubmit(this.parentElement.querySelector('.bid-input').value, '${itemId}')`
-    }">${isExpired ? "마감됨" : "입찰"}</button>
+    // 스타옥션(auc_num=3)의 경우 완전히 다른 UI 제공
+    if (aucNum === 3) {
+      // 스타옥션: 입력창 없이 자동 최소금액 입찰 버튼만
+      html += `
+        <div class="bid-input-container star-auction-container">
+          <div class="star-auction-info">
+            <p>스타옥션은 자동으로 계산된 최소금액으로 입찰됩니다.</p>
+          </div>
+          ${getQuickBidButtonsHTML(
+            itemId,
+            aucNum,
+            "direct",
+            isExpired,
+            isFirstBid
+          )}
         </div>
-        <div class="price-details-container"></div>
-        ${getQuickBidButtonsHTML(
-          itemId,
-          aucNum,
-          "direct",
-          isExpired,
-          isFirstBid
-        )}
-      </div>
-    </div>`;
+      </div>`;
+    } else {
+      // 에코옥션, 브랜드옥션: 기존 입력창 UI
+      html += `
+        <div class="bid-input-container">
+          <div class="bid-input-group">
+            <input type="number" placeholder="나의 입찰 금액" class="bid-input" data-item-id="${itemId}" data-bid-type="direct">
+            <span class="bid-value-display">000</span>
+            <span class="bid-currency">¥</span>
+            <button class="bid-button" ${
+              isExpired ? "disabled" : ""
+            } onclick="event.stopPropagation(); ${
+        isExpired
+          ? ""
+          : `BidManager.handleDirectBidSubmit(this.parentElement.querySelector('.bid-input').value, '${itemId}')`
+      }">${isExpired ? "마감됨" : "입찰"}</button>
+          </div>
+          <div class="price-details-container"></div>
+          ${getQuickBidButtonsHTML(
+            itemId,
+            aucNum,
+            "direct",
+            isExpired,
+            isFirstBid
+          )}
+        </div>
+      </div>`;
+    }
 
     return html;
   }
@@ -560,6 +579,37 @@ window.BidManager = (function () {
       return;
     }
 
+    const numericValue = parseFloat(value) * 1000; // 1000 곱하기
+
+    // 경매장별 입찰 가격 검증
+    if (item && item.auc_num) {
+      try {
+        const bidOptions = await getBidOptions(itemId, item.auc_num, numericValue);
+        
+        if (item.auc_num === 1) { // 에코옥션 - 1000엔 단위
+          if (numericValue % 1000 !== 0) {
+            alert("에코옥션은 1,000엔 단위로만 입찰 가능합니다.");
+            return;
+          }
+        } else if (item.auc_num === 2) { // 브랜드옥션 - 첫 입찰 1000엔, 이후 500엔
+          const validation = validateBrandAuctionBid(numericValue, bidOptions?.isFirstBid || false);
+          if (!validation.valid) {
+            alert(validation.message);
+            return;
+          }
+        } else if (item.auc_num === 3) { // 스타옥션 - 자동 계산된 최소금액만
+          if (bidOptions?.nextValidBid && numericValue !== bidOptions.nextValidBid) {
+            alert(`스타옥션은 자동 계산된 최소금액(${cleanNumberFormat(bidOptions.nextValidBid)}엔)으로만 입찰 가능합니다.`);
+            return;
+          }
+        }
+      } catch (error) {
+        console.error("입찰 검증 중 오류:", error);
+        alert("입찰 검증 중 오류가 발생했습니다. 다시 시도해주세요.");
+        return;
+      }
+    }
+
     // 입찰 버튼 찾기
     const buttonElement =
       event?.target ||
@@ -574,8 +624,6 @@ window.BidManager = (function () {
     if (window.bidLoadingUI && buttonElement) {
       window.bidLoadingUI.showBidLoading(buttonElement);
     }
-
-    const numericValue = parseFloat(value) * 1000; // 1000 곱하기
 
     try {
       await API.fetchAPI("/direct-bids", {
@@ -795,6 +843,24 @@ window.BidManager = (function () {
       isFirstBid = !bidInfo || !bidInfo.current_price;
     } else if (bidType === "live") {
       isFirstBid = !bidInfo || !bidInfo.first_price;
+    }
+
+    // 스타옥션(auc_num=3) 직접경매의 경우 특별한 UI
+    if (bidType === "direct" && item.auc_num === 3) {
+      return `
+        <div class="bid-input-container star-auction-container">
+          <div class="star-auction-info">
+            <p>스타옥션은 자동으로 계산된 최소금액으로 입찰됩니다.</p>
+          </div>
+          ${getQuickBidButtonsHTML(
+            item.item_id,
+            item.auc_num,
+            bidType,
+            isExpired,
+            isFirstBid
+          )}
+        </div>
+      `;
     }
 
     let bidInputLabel = "";
