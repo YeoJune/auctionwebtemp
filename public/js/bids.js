@@ -141,16 +141,13 @@ window.BidManager = (function () {
           <button class="quick-bid-btn increment-500" ${increment500Disabled} onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 0.5, '${bidType}')">+500¥</button>
           <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 1, '${bidType}')">+1,000¥</button>
           <button class="quick-bid-btn" onclick="event.stopPropagation(); BidManager.quickAddBid('${itemId}', 2, '${bidType}')">+2,000¥</button>
-          ${
-            isFirstBid
-              ? '<div class="bid-info-tooltip">첫 입찰은 1,000엔, 이후 입찰은 500엔 단위로 입찰 가능합니다.</div>'
-              : ""
-          }
+          <span class="bid-info-tooltip-trigger" title="첫 입찰은 1,000엔, 이후 입찰은 500엔 단위로 입찰 가능합니다.">?</span>
         </div>`;
 
       case "3": // 스타옥션 - 자동 최소금액 입찰만
         return `<div class="quick-bid-buttons star-auction">
-          <button class="auto-minimum-bid-btn" onclick="event.stopPropagation(); BidManager.handleStarAuctionBid('${itemId}')">최소금액 입찰</button>
+          <button class="quick-bid-btn star-auction-btn" onclick="event.stopPropagation(); BidManager.handleStarAuctionBid('${itemId}')">최소금액 입찰</button>
+          <span class="bid-info-tooltip-trigger" title="스타옥션은 자동으로 계산된 최소금액으로 입찰됩니다.">?</span>
         </div>`;
 
       default:
@@ -417,9 +414,6 @@ window.BidManager = (function () {
       // 스타옥션: 입력창 없이 자동 최소금액 입찰 버튼만
       html += `
         <div class="bid-input-container star-auction-container">
-          <div class="star-auction-info">
-            <p>스타옥션은 자동으로 계산된 최소금액으로 입찰됩니다.</p>
-          </div>
           ${getQuickBidButtonsHTML(
             itemId,
             aucNum,
@@ -887,15 +881,13 @@ window.BidManager = (function () {
     if (bidType === "direct" && item.auc_num == 3) {
       return `
         <div class="bid-input-container star-auction-container">
-          <div class="star-auction-info">
-            <p>스타옥션은 자동으로 계산된 최소금액으로 입찰됩니다.</p>
-          </div>
-          <div class="star-auction-button-container">
-            <button class="star-auction-bid-button" ${
+          <div class="quick-bid-buttons star-auction">
+            <button class="quick-bid-btn star-auction-btn" ${
               isExpired ? "disabled" : ""
             } onclick="event.stopPropagation(); ${
         isExpired ? "" : `BidManager.handleStarAuctionBid('${item.item_id}')`
       }">${isExpired ? "마감됨" : "최소금액 입찰"}</button>
+            <span class="bid-info-tooltip-trigger" title="스타옥션은 자동으로 계산된 최소금액으로 입찰됩니다.">?</span>
           </div>
         </div>
       `;
