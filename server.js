@@ -55,39 +55,8 @@ app.use(
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 
-app.use((req, res, next) => {
-  const host = req.headers.host;
-  let faviconPath;
-
-  if (host === "cassystem.com" || host === "www.cassystem.com") {
-    faviconPath = path.join(
-      __dirname,
-      "public",
-      "images",
-      "favicon-cassystem.png"
-    );
-  } else {
-    faviconPath = path.join(
-      __dirname,
-      "public",
-      "images",
-      "favicon-casastrade.png"
-    );
-  }
-
-  // 동적으로 favicon 미들웨어 적용
-  const fs = require("fs");
-  if (fs.existsSync(faviconPath)) {
-    favicon(faviconPath)(req, res, next);
-  } else {
-    // 기본 favicon 사용
-    favicon(path.join(__dirname, "public", "images", "favicon.png"))(
-      req,
-      res,
-      next
-    );
-  }
-});
+// favicon 서빙 (PNG 사용)
+app.use(favicon(path.join(__dirname, "public", "images", "favicon.png")));
 
 const sessionStore = new MySQLStore(
   {
