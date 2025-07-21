@@ -144,7 +144,7 @@ window.BidManager = (function () {
 
       case "3": // 스타옥션 - 최소금액 자동 설정 버튼
         return `<div class="quick-bid-buttons star-auction">
-          <button class="quick-bid-btn star-minimum-btn" onclick="event.stopPropagation(); BidManager.setStarAuctionMinimumBid('${itemId}')">최소금액 설정</button>
+          <button class="quick-bid-btn star-minimum-btn" onclick="event.stopPropagation(); BidManager.setStarAuctionMinimumBid('${itemId}')">최소금액 입력</button>
           <span class="bid-info-tooltip-trigger"><i class="fas fa-question-circle"></i></span>
         </div>`;
 
@@ -473,7 +473,7 @@ window.BidManager = (function () {
         </div>`;
     }
 
-    // 스타옥션: 2단계 입찰 프로세스 (최소금액 설정 → 확인 → 입찰)
+    // 스타옥션: 2단계 입찰 프로세스 (최소금액 입력 → 확인 → 입찰)
     if (aucNum == 3) {
       html += `
         <div class="bid-input-container">
