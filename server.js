@@ -59,8 +59,6 @@ app.use("/favicon.ico", (req, res) => {
   const host = req.headers.host;
   let faviconPath;
 
-  console.log(`Favicon requested for host: ${host}`);
-
   if (host === "cassystem.com" || host === "www.cassystem.com") {
     faviconPath = path.join(
       __dirname,
