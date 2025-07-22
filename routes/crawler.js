@@ -932,7 +932,12 @@ const scheduleUpdateCrawlingWithId = () => {
   setInterval(async () => {
     console.log("Running scheduled update crawling with ID task");
     try {
-      if (!isCrawling && !isValueCrawling && !isUpdateCrawlingWithId) {
+      if (
+        !isUpdateCrawling &&
+        !isCrawling &&
+        !isValueCrawling &&
+        !isUpdateCrawlingWithId
+      ) {
         const result = await crawlAllUpdatesWithId();
         console.log(
           "Scheduled update crawling with ID completed successfully",
