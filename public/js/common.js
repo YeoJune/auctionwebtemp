@@ -584,7 +584,15 @@ function displayDateFilters(dates) {
 
   dates.forEach((date) => {
     if (date.Date) {
-      const normalizedDate = new Date(date.Date).toISOString().split("T")[0];
+      const normalizedDate = kstDate
+        .toLocaleDateString("ko-KR", {
+          timeZone: "Asia/Seoul",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        })
+        .replace(/\. /g, "-")
+        .replace(".", "");
       const dateItem = createFilterItem(
         normalizedDate,
         "date",
