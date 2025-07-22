@@ -584,6 +584,7 @@ function displayDateFilters(dates) {
 
   dates.forEach((date) => {
     if (date.Date) {
+      const kstDate = new Date(date.Date);
       const normalizedDate = kstDate
         .toLocaleDateString("ko-KR", {
           timeZone: "Asia/Seoul",
