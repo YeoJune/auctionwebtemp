@@ -2,9 +2,6 @@ const cheerio = require("cheerio");
 const { AxiosCrawler } = require("./baseCrawler");
 const { processImagesInChunks } = require("../utils/processImage");
 const FormData = require("form-data");
-const axios = require("axios");
-const tough = require("tough-cookie");
-const { wrapper } = require("axios-cookiejar-support");
 
 let pLimit;
 (async () => {
@@ -126,146 +123,13 @@ const starAucValueConfig = {
 };
 
 class StarAucCrawler extends AxiosCrawler {
-  constructor(config, sessionCount = 3) {
+  constructor(config) {
     super(config);
     this.config.currentCategoryId = null; // 현재 크롤링 중인 카테고리 ID
     this.currentBidType = "direct"; // live에서 direct로 변경
-
-    // 다중 세션 추가
-    this.sessionCount = sessionCount;
-    this.sessions = [];
-    this.currentSessionIndex = 0;
-    this.isSessionsInitialized = false;
-  }
-
-  // 다중 세션 초기화 (한 번만 실행)
-  async initializeSessions() {
-    if (this.isSessionsInitialized) return;
-
-    console.log(`Initializing ${this.sessionCount} sessions...`);
-
-    // 세션별로 다른 User-Agent
-    const userAgents = [
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0",
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15",
-    ];
-
-    // 세션들 생성 및 로그인
-    for (let i = 0; i < this.sessionCount; i++) {
-      try {
-        const sessionCookieJar = new tough.CookieJar();
-        const sessionClient = wrapper(
-          axios.create({
-            jar: sessionCookieJar,
-            withCredentials: true,
-            headers: {
-              "User-Agent": userAgents[i % userAgents.length],
-              "Accept-Language": "en-US,en;q=0.9",
-              Accept:
-                "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-            },
-            maxRedirects: 5,
-            timeout: 30000,
-          })
-        );
-
-        // 세션 로그인
-        await this.sleep(i * 1000); // 동시 로그인 방지
-        const loginSuccess = await this.performLoginForSession(sessionClient);
-
-        if (loginSuccess) {
-          this.sessions.push({
-            client: sessionClient,
-            cookieJar: sessionCookieJar,
-            id: i,
-            requestCount: 0,
-          });
-          console.log(`Session ${i} initialized successfully`);
-        } else {
-          console.log(`Session ${i} login failed`);
-        }
-      } catch (error) {
-        console.error(`Failed to initialize session ${i}:`, error.message);
-      }
-    }
-
-    if (this.sessions.length === 0) {
-      throw new Error("No sessions could be initialized");
-    }
-
-    console.log(`${this.sessions.length} sessions ready`);
-    this.isSessionsInitialized = true;
-  }
-
-  // 세션별 로그인 (기존 performLogin과 동일)
-  async performLoginForSession(client) {
-    try {
-      const response = await client.get(this.config.loginPageUrl);
-      const $ = cheerio.load(response.data);
-      const csrfToken = $(this.config.signinSelectors.csrfToken).attr(
-        "content"
-      );
-
-      if (!csrfToken) {
-        throw new Error("CSRF token not found");
-      }
-
-      const formData = new URLSearchParams();
-      formData.append("email", this.config.loginData.userId);
-      formData.append("password", this.config.loginData.password);
-      formData.append("_token", csrfToken);
-
-      const loginResponse = await client.post(
-        this.config.loginPostUrl,
-        formData,
-        {
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            Referer: this.config.loginPageUrl,
-            "X-CSRF-TOKEN": csrfToken,
-          },
-          validateStatus: function (status) {
-            return status >= 200 && status < 400;
-          },
-        }
-      );
-
-      // 로그인 확인
-      const checkResponse = await client.get(this.config.loginCheckUrls[0]);
-      return checkResponse.status === 200;
-    } catch (error) {
-      console.error("Session login error:", error.message);
-      return false;
-    }
-  }
-
-  // RR 방식으로 다음 세션 선택
-  getNextSession() {
-    if (!this.isSessionsInitialized || this.sessions.length === 0) {
-      return this.client; // 세션이 없으면 기본 클라이언트 사용
-    }
-
-    const session = this.sessions[this.currentSessionIndex];
-    this.currentSessionIndex =
-      (this.currentSessionIndex + 1) % this.sessions.length;
-
-    session.requestCount++;
-    console.log(
-      `Using session ${session.id} (requests: ${session.requestCount})`
-    );
-
-    return session.client;
   }
 
   async performLogin() {
-    // 첫 로그인 시 세션들 초기화
-    if (!this.isSessionsInitialized) {
-      await this.initializeSessions();
-    }
-
     return this.retryOperation(async () => {
       console.log("Logging in to Star Auction...");
 
@@ -324,19 +188,10 @@ class StarAucCrawler extends AxiosCrawler {
       // 로그인 확인
       await this.login();
 
-      // 세션 클라이언트 사용
-      const client = this.getNextSession();
-
       // 쿠키에서 XSRF 토큰 추출
-      const currentSession = this.sessions.find((s) => s.client === client);
-      const cookies = currentSession
-        ? await currentSession.cookieJar.getCookies(
-            "https://www.starbuyers-global-auction.com"
-          )
-        : await this.cookieJar.getCookies(
-            "https://www.starbuyers-global-auction.com"
-          );
-
+      const cookies = await this.cookieJar.getCookies(
+        "https://www.starbuyers-global-auction.com"
+      );
       const xsrfCookie = cookies.find((cookie) => cookie.key === "XSRF-TOKEN");
 
       if (!xsrfCookie) {
@@ -351,7 +206,7 @@ class StarAucCrawler extends AxiosCrawler {
       formData.append(`bids[${item_id}]`, price.toString());
 
       // 입찰 요청
-      const bidResponse = await client.post(
+      const bidResponse = await this.client.post(
         "https://www.starbuyers-global-auction.com/front_api/item/bid",
         formData,
         {
@@ -433,18 +288,9 @@ class StarAucCrawler extends AxiosCrawler {
 
       await this.login();
 
-      // 세션 클라이언트 사용
-      const client = this.getNextSession();
-
-      const currentSession = this.sessions.find((s) => s.client === client);
-      const cookies = currentSession
-        ? await currentSession.cookieJar.getCookies(
-            "https://www.starbuyers-global-auction.com"
-          )
-        : await this.cookieJar.getCookies(
-            "https://www.starbuyers-global-auction.com"
-          );
-
+      const cookies = await this.cookieJar.getCookies(
+        "https://www.starbuyers-global-auction.com"
+      );
       const xsrfCookie = cookies.find((cookie) => cookie.key === "XSRF-TOKEN");
 
       if (!xsrfCookie) {
@@ -459,7 +305,7 @@ class StarAucCrawler extends AxiosCrawler {
         formData.append(`bids[${item_id}]`, price.toString());
       });
 
-      const bidResponse = await client.post(
+      const bidResponse = await this.client.post(
         "https://www.starbuyers-global-auction.com/front_api/item/bid",
         formData,
         {
@@ -616,9 +462,7 @@ class StarAucCrawler extends AxiosCrawler {
       const url =
         this.config.searchUrl + this.config.searchParams(categoryId, 1);
 
-      // 세션 클라이언트 사용
-      const client = this.getNextSession();
-      const response = await client.get(url);
+      const response = await this.client.get(url);
       const $ = cheerio.load(response.data);
 
       // 방법 1: HTML에서 pagination 요소 찾기
@@ -692,9 +536,7 @@ class StarAucCrawler extends AxiosCrawler {
       const url =
         this.config.searchUrl + this.config.searchParams(categoryId, page);
 
-      // 세션 클라이언트 사용
-      const client = this.getNextSession();
-      const response = await client.get(url);
+      const response = await this.client.get(url);
       const $ = cheerio.load(response.data);
 
       // 스크립트 데이터에서 아이템 정보 추출
@@ -780,9 +622,7 @@ class StarAucCrawler extends AxiosCrawler {
       await this.login();
       const url = this.config.detailUrl(itemId);
 
-      // 세션 클라이언트 사용
-      const client = this.getNextSession();
-      const response = await client.get(url);
+      const response = await this.client.get(url);
       const $ = cheerio.load(response.data);
 
       // 스크립트 데이터 추출
@@ -924,8 +764,7 @@ class StarAucCrawler extends AxiosCrawler {
   // Update 관련 메서드들 구현
   async crawlUpdates() {
     try {
-      const concurrency = this.isSessionsInitialized ? this.sessions.length : 1;
-      const limit = pLimit(concurrency);
+      const limit = pLimit(1);
       const startTime = Date.now();
       console.log(
         `Starting StarAuc updates crawl at ${new Date().toISOString()}`
@@ -989,9 +828,7 @@ class StarAucCrawler extends AxiosCrawler {
       const url =
         this.config.searchUrl + this.config.searchParams(categoryId, page);
 
-      // 세션 클라이언트 사용
-      const client = this.getNextSession();
-      const response = await client.get(url);
+      const response = await this.client.get(url);
       const $ = cheerio.load(response.data);
 
       // 스크립트 데이터에서 아이템 정보 추출
@@ -1051,10 +888,7 @@ class StarAucCrawler extends AxiosCrawler {
       await this.login();
 
       const url = this.config.detailUrl(itemId);
-
-      // 세션 클라이언트 사용
-      const client = this.getNextSession();
-      const response = await client.get(url);
+      const response = await this.client.get(url);
       const $ = cheerio.load(response.data);
 
       // 스크립트 데이터에서 현재 정보 추출
@@ -1092,8 +926,7 @@ class StarAucCrawler extends AxiosCrawler {
       await this.login();
 
       const results = [];
-      const concurrency = this.isSessionsInitialized ? this.sessions.length : 5;
-      const limit = pLimit(concurrency);
+      const limit = pLimit(1);
 
       // 병렬 처리
       const promises = itemIds.map((itemId) =>
@@ -1206,24 +1039,6 @@ class StarAucCrawler extends AxiosCrawler {
       console.error("Error crawling Star Auction invoices:", error);
       return [];
     }
-  }
-
-  // 세션 통계 출력
-  printSessionStats() {
-    if (!this.isSessionsInitialized) {
-      console.log("Sessions not initialized");
-      return;
-    }
-
-    console.log("Session Usage Stats:");
-    this.sessions.forEach((session) => {
-      console.log(`Session ${session.id}: ${session.requestCount} requests`);
-    });
-  }
-
-  // 유틸리티 메서드: sleep
-  sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
 
@@ -1646,7 +1461,7 @@ class StarAucValueCrawler extends AxiosCrawler {
   }
 }
 
-const starAucCrawler = new StarAucCrawler(starAucConfig, 3); // 3개 세션으로 초기화
+const starAucCrawler = new StarAucCrawler(starAucConfig);
 const starAucValueCrawler = new StarAucValueCrawler(starAucValueConfig);
 
 module.exports = { starAucCrawler, starAucValueCrawler };

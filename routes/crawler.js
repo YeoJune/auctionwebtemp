@@ -237,12 +237,15 @@ async function crawlAllUpdates() {
     console.log(`Starting update crawl at ${new Date().toISOString()}`);
 
     try {
-      // 웹에서 데이터 크롤링
+      // 웹에서 데이터 크롤링 (병렬 처리)
+      const [ecoAucUpdates, brandAucUpdates, starAucUpdates] =
+        await Promise.all([
+          ecoAucCrawler.crawlUpdates(),
+          brandAucCrawler.crawlUpdates(),
+          starAucCrawler.crawlUpdates(),
+        ]);
 
-      let ecoAucUpdates = await ecoAucCrawler.crawlUpdates();
-      let brandAucUpdates = await brandAucCrawler.crawlUpdates();
-      let starAucUpdates = await starAucCrawler.crawlUpdates();
-
+      // null 체크 및 기본값 설정
       if (!ecoAucUpdates) ecoAucUpdates = [];
       if (!brandAucUpdates) brandAucUpdates = [];
       if (!starAucUpdates) starAucUpdates = [];
@@ -341,7 +344,12 @@ async function crawlAllUpdates() {
 }
 
 async function crawlAllUpdatesWithId() {
-  if (isUpdateCrawlingWithId || isCrawling || isValueCrawling) {
+  if (
+    isUpdateCrawling ||
+    isUpdateCrawlingWithId ||
+    isCrawling ||
+    isValueCrawling
+  ) {
     throw new Error("Another crawling process is already in progress");
   } else {
     isUpdateCrawlingWithId = true;
@@ -408,22 +416,31 @@ async function crawlAllUpdatesWithId() {
         3: "StarAuc",
       };
 
-      // 각 경매사별 업데이트 수행
-      for (const aucNum in itemsByAuction) {
+      // 각 경매사별 업데이트 병렬 수행
+      const updatePromises = Object.keys(itemsByAuction).map(async (aucNum) => {
         const itemIds = itemsByAuction[aucNum];
-        if (itemIds.length > 0) {
-          const crawlerName = crawlerNames[aucNum];
-          const resultsKey = `${crawlerName.toLowerCase()}Updates`;
+        const crawlerName = crawlerNames[aucNum];
+        const resultsKey = `${crawlerName.toLowerCase()}Updates`;
 
+        if (itemIds.length > 0) {
           console.log(`Updating ${itemIds.length} ${crawlerName} items`);
 
           // 크롤러 호출 (itemInfoMaps 전달 없이)
           const crawler = crawlers[aucNum];
-          updateResults[resultsKey] = await crawler.crawlUpdateWithIds(itemIds);
+          const result = await crawler.crawlUpdateWithIds(itemIds);
+          return { key: resultsKey, result };
         } else {
-          updateResults[`${crawlerNames[aucNum].toLowerCase()}Updates`] = [];
+          return { key: resultsKey, result: [] };
         }
-      }
+      });
+
+      // 모든 병렬 작업 완료 대기
+      const updateResultsArray = await Promise.all(updatePromises);
+
+      // 결과를 updateResults 객체에 저장
+      updateResultsArray.forEach(({ key, result }) => {
+        updateResults[key] = result;
+      });
 
       // 모든 업데이트 결과 합치기
       const allUpdates = [
