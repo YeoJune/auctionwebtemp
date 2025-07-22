@@ -263,6 +263,82 @@ router.get("/bid-options/:itemId", async (req, res) => {
 
     const item = items[0];
 
+    // 1-1. 3번 사이트(스타옥션)의 경우 crawlUpdateWithId로 최신 가격 확인
+    if (item.auc_num == 3) {
+      try {
+        const crawler = starAucCrawler;
+
+        if (crawler && crawler.crawlUpdateWithId) {
+          console.log(
+            `Checking latest price for item ${itemId} (auc_num=${item.auc_num})`
+          );
+          const latestItemInfo = await crawler.crawlUpdateWithId(itemId, item);
+
+          // 최신 정보가 있고 가격이나 날짜가 다르면 DB 업데이트
+          if (latestItemInfo) {
+            let needsUpdate = false;
+            const updates = [];
+            const updateValues = [];
+
+            // 가격 업데이트 확인
+            if (
+              latestItemInfo.starting_price !== undefined &&
+              parseFloat(latestItemInfo.starting_price) !==
+                parseFloat(item.starting_price)
+            ) {
+              console.log(
+                `Price changed for item ${itemId}: ${item.starting_price} -> ${latestItemInfo.starting_price}`
+              );
+              updates.push("starting_price = ?");
+              updateValues.push(latestItemInfo.starting_price);
+              needsUpdate = true;
+
+              // item 객체 업데이트
+              item.starting_price = latestItemInfo.starting_price;
+            }
+
+            // 날짜 업데이트 확인
+            if (latestItemInfo.scheduled_date) {
+              // 날짜를 Date 객체로 변환하여 비교
+              const latestDate = new Date(latestItemInfo.scheduled_date);
+              const currentDate = new Date(item.scheduled_date);
+
+              // 시간 값(timestamp)으로 비교
+              if (latestDate.getTime() !== currentDate.getTime()) {
+                console.log(
+                  `Scheduled date changed for item ${itemId}: ${item.scheduled_date} -> ${latestItemInfo.scheduled_date}`
+                );
+                updates.push("scheduled_date = ?");
+                updateValues.push(latestItemInfo.scheduled_date);
+                needsUpdate = true;
+
+                // item 객체 업데이트
+                item.scheduled_date = latestItemInfo.scheduled_date;
+              }
+            }
+
+            // DB 업데이트가 필요하면 실행
+            if (needsUpdate) {
+              updateValues.push(itemId);
+              pool.query(
+                `UPDATE crawled_items SET ${updates.join(
+                  ", "
+                )} WHERE item_id = ?`,
+                updateValues
+              );
+              console.log(
+                `Updated item ${itemId} in database with latest info`
+              );
+              notifyClientsOfChanges([{ item_id: itemId }]);
+            }
+          }
+        }
+      } catch (error) {
+        // 크롤링에 실패해도 기존 가격으로 진행
+        console.error(`Error checking latest price for item ${itemId}:`, error);
+      }
+    }
+
     // 2. 사용자의 현재 입찰 확인
     const [userBids] = await connection.query(
       "SELECT * FROM direct_bids WHERE item_id = ? AND user_id = ? AND status = 'active'",
