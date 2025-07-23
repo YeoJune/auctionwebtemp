@@ -680,7 +680,7 @@ window.BidManager = (function () {
         if (item.auc_num == 1) {
           // 에코옥션 - 1000엔 단위
           if (numericValue % 1000 !== 0) {
-            alert("에코옥션은 1,000엔 단위로만 입찰 가능합니다.");
+            alert("1번 경매장은 1,000엔 단위로만 입찰 가능합니다.");
             return;
           }
         } else if (item.auc_num == 2) {
@@ -703,7 +703,7 @@ window.BidManager = (function () {
             numericValue !== bidOptions.nextValidBid
           ) {
             alert(
-              `스타옥션은 자동 계산된 최소금액(${cleanNumberFormat(
+              `3번 경매장은 자동 계산된 최소금액(${cleanNumberFormat(
                 bidOptions.nextValidBid
               )}엔)으로만 입찰 가능합니다.`
             );

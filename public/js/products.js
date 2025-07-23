@@ -335,7 +335,7 @@ function handleIconHover(e) {
       tooltipText =
         "첫 입찰은 1,000엔, 이후 입찰은 500엔 단위로 입찰 가능합니다.";
     } else if (icon.closest(".star-auction")) {
-      tooltipText = "스타옥션은 자동으로 계산된 최소금액으로 입찰됩니다.";
+      tooltipText = "3번 경매장은 자동으로 계산된 최소금액으로 입찰됩니다.";
     }
 
     if (tooltipText) {
