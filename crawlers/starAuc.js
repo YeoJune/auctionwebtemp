@@ -155,7 +155,7 @@ class StarAucCrawler extends AxiosCrawler {
     return proxyIPsString.split(",").map((ip) => ip.trim());
   }
 
-  async initializeClients() {
+  initializeClients() {
     // 첫 번째: 직접 연결 (http-cookie-agent 사용)
     const directCookieJar = new tough.CookieJar();
     const directClient = axios.create({
@@ -189,22 +189,25 @@ class StarAucCrawler extends AxiosCrawler {
       useProxy: false,
     });
 
-    // 나머지: 프록시 클라이언트들 (createCookieAgent 사용)
+    // 나머지: 프록시 클라이언트들
     this.proxyIPs.forEach((ip, index) => {
       const cookieJar = new tough.CookieJar();
 
-      // 프록시 에이전트와 쿠키 에이전트 결합
       const HttpProxyCookieAgent = createCookieAgent(HttpProxyAgent);
       const HttpsProxyCookieAgent = createCookieAgent(HttpsProxyAgent);
 
       const proxyClient = axios.create({
         httpAgent: new HttpProxyCookieAgent({
           cookies: { jar: cookieJar },
-          proxy: `http://${ip}:3128`,
+          host: ip,
+          port: 3128,
+          protocol: "http:",
         }),
         httpsAgent: new HttpsProxyCookieAgent({
           cookies: { jar: cookieJar },
-          proxy: `http://${ip}:3128`,
+          host: ip,
+          port: 3128,
+          protocol: "http:",
         }),
         headers: {
           "User-Agent":
