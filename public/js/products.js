@@ -410,9 +410,7 @@ function addTooltipIconsToCard(card, item) {
   });
 
   // 1. 관부가세 포함 금액 설명 (모든 price-detail)
-  const priceDetails = card.querySelectorAll(
-    ".price-detail, .info-price-detail, .price-details-container"
-  );
+  const priceDetails = card.querySelectorAll(".price-detail");
   priceDetails.forEach((element) => {
     if (!element.querySelector(".tooltip-icon")) {
       addTooltipIcon(element, "price-detail");
