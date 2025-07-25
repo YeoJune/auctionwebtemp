@@ -13,13 +13,6 @@ let pLimit;
   pLimit = (await import("p-limit")).default;
 })();
 
-let _createCookieAgent;
-(async () => {
-  // ESM 전용 모듈을 동적으로 import
-  const { createCookieAgent } = await import("http-cookie-agent/http");
-  _createCookieAgent = createCookieAgent;
-})();
-
 const starAucConfig = {
   name: "StarAuc",
   baseUrl: "https://www.starbuyers-global-auction.com",
@@ -144,9 +137,9 @@ class StarAucCrawler extends AxiosCrawler {
     this.proxyIPs = this.loadProxyIPs();
     this.clients = [];
     this.currentClientIndex = 0;
-    setTimeout(() => {
-      this.initializeClients();
-    }, 1000);
+
+    this.initializeClients();
+    this._createCookieAgent = null;
   }
 
   loadProxyIPs() {
@@ -158,7 +151,7 @@ class StarAucCrawler extends AxiosCrawler {
     return proxyIPsString.split(",").map((ip) => ip.trim());
   }
 
-  initializeClients() {
+  async initializeClients() {
     // 첫 번째: 직접 연결 (기존 AxiosCrawler 방식)
     this.clients.push({
       index: 0,
@@ -170,14 +163,20 @@ class StarAucCrawler extends AxiosCrawler {
       useProxy: false,
     });
 
+    if (!this._createCookieAgent) {
+      // ESM 전용 모듈을 동적으로 import
+      const { createCookieAgent } = await import("http-cookie-agent/http");
+      this._createCookieAgent = createCookieAgent;
+    }
+
     // 기존 코드를 이것으로 교체:
     this.proxyIPs.forEach((ip, index) => {
       const proxyUrl = `http://${ip}:3128`;
       const cookieJar = new tough.CookieJar();
 
       // http-cookie-agent 사용
-      const HttpProxyCookieAgent = _createCookieAgent(HttpProxyAgent);
-      const HttpsProxyCookieAgent = _createCookieAgent(HttpsProxyAgent);
+      const HttpProxyCookieAgent = this._createCookieAgent(HttpProxyAgent);
+      const HttpsProxyCookieAgent = this._createCookieAgent(HttpsProxyAgent);
 
       const proxyClient = wrapper(
         axios.create({
