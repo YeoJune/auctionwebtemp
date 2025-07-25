@@ -7,8 +7,11 @@ const { wrapper } = require("axios-cookiejar-support");
 const axios = require("axios");
 const { HttpsProxyAgent } = require("https-proxy-agent");
 const { HttpProxyAgent } = require("http-proxy-agent");
-const { HttpCookieAgent, HttpsCookieAgent } = require("http-cookie-agent/http");
-const { createCookieAgent } = require("http-cookie-agent");
+const {
+  HttpCookieAgent,
+  HttpsCookieAgent,
+  createCookieAgent,
+} = require("http-cookie-agent/http");
 
 let pLimit;
 (async () => {
@@ -219,7 +222,7 @@ class StarAucCrawler extends AxiosCrawler {
     return proxyIPsString.split(",").map((ip) => ip.trim());
   }
 
-  initializeClients() {
+  async initializeClients() {
     // 첫 번째: 직접 연결 (http-cookie-agent 사용)
     const directCookieJar = new tough.CookieJar();
     const directClient = axios.create({
