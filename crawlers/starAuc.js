@@ -230,7 +230,7 @@ class StarAucCrawler extends AxiosCrawler {
     });
 
     this.proxyIPs.forEach((ip, index) => {
-      const proxyUrl = `http://${ip}:3128`; // proxyUrl 먼저 정의
+      const proxyUrl = `http://${ip}:3128`;
 
       const proxyClient = axios.create({
         httpsAgent: new HttpsProxyAgent(proxyUrl),
@@ -249,7 +249,7 @@ class StarAucCrawler extends AxiosCrawler {
         },
       });
 
-      // 수동 쿠키 관리
+      // 수동 쿠키 관리 (작동하는 코드와 동일)
       const cookies = new Map();
 
       proxyClient.interceptors.response.use((response) => {
