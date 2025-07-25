@@ -901,6 +901,7 @@ const scheduleUpdateCrawling = () => {
         console.log("Scheduled update crawling completed successfully", {
           ecoAucCount: result.ecoAucCount,
           brandAucCount: result.brandAucCount,
+          starAucCount: result.starAucCount,
           changedItemsCount: result.changedItemsCount,
           executionTime: result.executionTime,
         });
