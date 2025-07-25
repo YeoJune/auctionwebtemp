@@ -344,12 +344,7 @@ async function crawlAllUpdates() {
 }
 
 async function crawlAllUpdatesWithId() {
-  if (
-    isUpdateCrawling ||
-    isUpdateCrawlingWithId ||
-    isCrawling ||
-    isValueCrawling
-  ) {
+  if (isUpdateCrawlingWithId || isCrawling || isValueCrawling) {
     throw new Error("Another crawling process is already in progress");
   } else {
     isUpdateCrawlingWithId = true;
@@ -932,12 +927,7 @@ const scheduleUpdateCrawlingWithId = () => {
   setInterval(async () => {
     console.log("Running scheduled update crawling with ID task");
     try {
-      if (
-        !isUpdateCrawling &&
-        !isCrawling &&
-        !isValueCrawling &&
-        !isUpdateCrawlingWithId
-      ) {
+      if (!isCrawling && !isValueCrawling && !isUpdateCrawlingWithId) {
         const result = await crawlAllUpdatesWithId();
         console.log(
           "Scheduled update crawling with ID completed successfully",

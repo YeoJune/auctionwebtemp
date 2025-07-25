@@ -53,8 +53,10 @@ const starAucConfig = {
     accessories: ".p-def-list dt:contains('Accessories') + dd",
     scriptData: "script:contains(window.item_data)",
   },
-  searchParams: (categoryId, page) =>
-    `?sub_categories%5B0%5D=${categoryId}&limit=100&page=${page}`,
+  searchParams: (categoryId, page) => {
+    if (!categoryId) return `limit=100&page=${page}`;
+    else return `?sub_categories%5B0%5D=${categoryId}&limit=100&page=${page}`;
+  },
   detailUrl: (itemId) =>
     `https://www.starbuyers-global-auction.com/item/${itemId}`,
 };
@@ -774,36 +776,30 @@ class StarAucCrawler extends AxiosCrawler {
 
       const allCrawledItems = [];
 
-      // 모든 카테고리에 대해 업데이트 수행
-      for (const categoryId of this.config.categoryIds) {
-        console.log(`Starting update crawl for category ${categoryId}`);
-        this.config.currentCategoryId = categoryId;
+      console.log(`Starting update crawl for Update`);
 
-        const totalPages = await this.getTotalPages(categoryId);
-        console.log(`Total pages for category ${categoryId}: ${totalPages}`);
+      const totalPages = await this.getTotalPages(null);
+      console.log(`Total pages: ${totalPages}`);
 
-        // 페이지 병렬 처리
-        const pagePromises = [];
-        for (let page = 1; page <= totalPages; page++) {
-          pagePromises.push(
-            limit(async () => {
-              console.log(
-                `Crawling update page ${page} of ${totalPages} for category ${categoryId}`
-              );
-              return await this.crawlUpdatePage(categoryId, page);
-            })
-          );
-        }
-
-        const pageResults = await Promise.all(pagePromises);
-
-        // 결과 병합
-        pageResults.forEach((pageItems) => {
-          if (pageItems && pageItems.length > 0) {
-            allCrawledItems.push(...pageItems);
-          }
-        });
+      // 페이지 병렬 처리
+      const pagePromises = [];
+      for (let page = 1; page <= totalPages; page++) {
+        pagePromises.push(
+          limit(async () => {
+            console.log(`Crawling update page ${page} of ${totalPages}`);
+            return await this.crawlUpdatePage(page);
+          })
+        );
       }
+
+      const pageResults = await Promise.all(pagePromises);
+
+      // 결과 병합
+      pageResults.forEach((pageItems) => {
+        if (pageItems && pageItems.length > 0) {
+          allCrawledItems.push(...pageItems);
+        }
+      });
 
       console.log(`Total update items processed: ${allCrawledItems.length}`);
 
@@ -822,11 +818,10 @@ class StarAucCrawler extends AxiosCrawler {
     }
   }
 
-  async crawlUpdatePage(categoryId, page) {
+  async crawlUpdatePage(page) {
     return this.retryOperation(async () => {
-      console.log(`Crawling update page ${page} for category ${categoryId}...`);
-      const url =
-        this.config.searchUrl + this.config.searchParams(categoryId, page);
+      console.log(`Crawling update page ${page}`);
+      const url = this.config.searchUrl + this.config.searchParams(null, page);
 
       const response = await this.client.get(url);
       const $ = cheerio.load(response.data);
