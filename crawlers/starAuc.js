@@ -2,6 +2,11 @@ const cheerio = require("cheerio");
 const { AxiosCrawler } = require("./baseCrawler");
 const { processImagesInChunks } = require("../utils/processImage");
 const FormData = require("form-data");
+const tough = require("tough-cookie");
+const { wrapper } = require("axios-cookiejar-support");
+const axios = require("axios");
+const { HttpsProxyAgent } = require("https-proxy-agent");
+const { HttpProxyAgent } = require("http-proxy-agent");
 
 let pLimit;
 (async () => {
@@ -11,9 +16,9 @@ let pLimit;
 const starAucConfig = {
   name: "StarAuc",
   baseUrl: "https://www.starbuyers-global-auction.com",
-  loginCheckUrls: ["https://www.starbuyers-global-auction.com/home"], // 로그인 체크 URL
+  loginCheckUrls: ["https://www.starbuyers-global-auction.com/home"],
   loginPageUrl: "https://www.starbuyers-global-auction.com/login",
-  loginPostUrl: "https://www.starbuyers-global-auction.com/login", // POST 요청 URL
+  loginPostUrl: "https://www.starbuyers-global-auction.com/login",
   searchUrl: "https://www.starbuyers-global-auction.com/item",
   loginData: {
     userId: process.env.CRAWLER_EMAIL3,
@@ -110,12 +115,10 @@ const starAucValueConfig = {
     scriptData: "script:contains(window.item_data)",
   },
   searchParams: (categoryId, page, months = 3) => {
-    // 현재 날짜 기준으로 지정된 개월 수 만큼 이전 날짜 계산
     const today = new Date();
     const pastDate = new Date();
     pastDate.setMonth(today.getMonth() - months);
 
-    // YYYY-MM-DD 형식으로 변환
     const fromDate = pastDate.toISOString().split("T")[0];
 
     return `?sort=exhibit_date&direction=desc&limit=100&item_category=${categoryId}&page=${page}&exhibit_date_from=${fromDate}`;
@@ -127,16 +130,132 @@ const starAucValueConfig = {
 class StarAucCrawler extends AxiosCrawler {
   constructor(config) {
     super(config);
-    this.config.currentCategoryId = null; // 현재 크롤링 중인 카테고리 ID
-    this.currentBidType = "direct"; // live에서 direct로 변경
+    this.config.currentCategoryId = null;
+    this.currentBidType = "direct";
+
+    // 라운드 로빈 프록시 설정
+    this.proxyIPs = this.loadProxyIPs();
+    this.clients = [];
+    this.currentClientIndex = 0;
+
+    this.initializeClients();
   }
 
-  async performLogin() {
+  loadProxyIPs() {
+    const proxyIPsString = process.env.PROXY_IPS;
+    if (!proxyIPsString) {
+      console.log("No PROXY_IPS found, using direct connection only");
+      return [];
+    }
+    return proxyIPsString.split(",").map((ip) => ip.trim());
+  }
+
+  initializeClients() {
+    // 첫 번째: 직접 연결 (기존 AxiosCrawler 방식)
+    this.clients.push({
+      index: 0,
+      name: "직접연결",
+      client: this.client, // 부모 클래스의 client 사용
+      cookieJar: this.cookieJar,
+      isLoggedIn: false,
+      loginTime: null,
+      useProxy: false,
+    });
+
+    // 나머지: 프록시 클라이언트들 (수동 쿠키 관리)
+    this.proxyIPs.forEach((ip, index) => {
+      const proxyUrl = `http://${ip}:3128`;
+
+      const proxyClient = axios.create({
+        httpsAgent: new HttpsProxyAgent(proxyUrl),
+        httpAgent: new HttpProxyAgent(proxyUrl),
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15",
+          "Accept-Language": "en-US,en;q=0.9",
+          Accept:
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+        },
+        maxRedirects: 5,
+        timeout: 30000,
+        validateStatus: function (status) {
+          return status >= 200 && status < 500;
+        },
+      });
+
+      const cookies = new Map();
+
+      // 수동 쿠키 관리
+      proxyClient.interceptors.response.use((response) => {
+        const setCookieHeaders = response.headers["set-cookie"];
+        if (setCookieHeaders) {
+          setCookieHeaders.forEach((cookieString) => {
+            const [cookiePair] = cookieString.split(";");
+            const [name, value] = cookiePair.split("=");
+            if (name && value) {
+              cookies.set(name.trim(), value.trim());
+            }
+          });
+        }
+        return response;
+      });
+
+      proxyClient.interceptors.request.use((config) => {
+        const cookieArray = [];
+        for (const [name, value] of cookies) {
+          cookieArray.push(`${name}=${value}`);
+        }
+        if (cookieArray.length > 0) {
+          config.headers.Cookie = cookieArray.join("; ");
+        }
+        return config;
+      });
+
+      this.clients.push({
+        index: index + 1,
+        name: `프록시${index + 1}(${ip})`,
+        client: proxyClient,
+        cookies: cookies,
+        isLoggedIn: false,
+        loginTime: null,
+        useProxy: true,
+      });
+    });
+
+    console.log(
+      `${this.clients.length}개 클라이언트 초기화 완료 (직접 1개 + 프록시 ${this.proxyIPs.length}개)`
+    );
+  }
+
+  // 라운드 로빈으로 다음 클라이언트 선택
+  getNextClient() {
+    const client = this.clients[this.currentClientIndex];
+    this.currentClientIndex =
+      (this.currentClientIndex + 1) % this.clients.length;
+    return client;
+  }
+
+  // 특정 클라이언트로 로그인 체크
+  async loginCheckWithClient(clientInfo) {
     return this.retryOperation(async () => {
-      console.log("Logging in to Star Auction...");
+      try {
+        const responses = await Promise.all(
+          this.config.loginCheckUrls.map((url) => clientInfo.client.get(url))
+        );
+        return responses.every((response) => response.status === 200);
+      } catch (error) {
+        return false;
+      }
+    });
+  }
+
+  // 특정 클라이언트로 로그인
+  async performLoginWithClient(clientInfo) {
+    return this.retryOperation(async () => {
+      console.log(`${clientInfo.name} 로그인 중...`);
 
       // 로그인 페이지 가져오기
-      const response = await this.client.get(this.config.loginPageUrl);
+      const response = await clientInfo.client.get(this.config.loginPageUrl);
 
       // CSRF 토큰 추출
       const $ = cheerio.load(response.data);
@@ -155,7 +274,7 @@ class StarAucCrawler extends AxiosCrawler {
       formData.append("_token", csrfToken);
 
       // 로그인 요청
-      const loginResponse = await this.client.post(
+      const loginResponse = await clientInfo.client.post(
         this.config.loginPostUrl,
         formData,
         {
@@ -172,7 +291,10 @@ class StarAucCrawler extends AxiosCrawler {
       );
 
       // 로그인 후 검증
-      if (loginResponse.status === 200 && (await this.loginCheck())) {
+      if (
+        loginResponse.status === 200 &&
+        (await this.loginCheckWithClient(clientInfo))
+      ) {
         return true;
       } else {
         throw new Error("Login verification failed");
@@ -180,14 +302,53 @@ class StarAucCrawler extends AxiosCrawler {
     });
   }
 
-  // Direct bid 메서드 구현
+  async loginWithClient(clientInfo) {
+    if (clientInfo.isLoggedIn && this.isSessionValid(clientInfo.loginTime)) {
+      return true;
+    }
+
+    try {
+      const result = await this.performLoginWithClient(clientInfo);
+      if (result) {
+        clientInfo.isLoggedIn = true;
+        clientInfo.loginTime = Date.now();
+        console.log(`✅ ${clientInfo.name} 로그인 성공`);
+      }
+      return result;
+    } catch (error) {
+      console.error(`❌ ${clientInfo.name} 로그인 실패:`, error.message);
+      return false;
+    }
+  }
+
+  isSessionValid(loginTime) {
+    if (!loginTime) return false;
+    return Date.now() - loginTime < 1000 * 60 * 60 * 3; // 3시간
+  }
+
+  // 모든 클라이언트 로그인
+  async loginAllClients() {
+    console.log("\n=== 모든 클라이언트 로그인 ===");
+    for (const clientInfo of this.clients) {
+      await this.loginWithClient(clientInfo);
+    }
+  }
+
+  // 기존 performLogin 오버라이드 (부모 클래스 호환성)
+  async performLogin() {
+    // 첫 번째 클라이언트(직접 연결)로 로그인
+    const directClient = this.clients[0];
+    return await this.performLoginWithClient(directClient);
+  }
+
+  // Direct bid 메서드 구현 (직접 연결만 사용)
   async directBid(item_id, price) {
     try {
       console.log(
         `Placing direct bid for item ${item_id} with price ${price}...`
       );
 
-      // 로그인 확인
+      // 로그인 확인 (직접 연결 클라이언트)
       await this.login();
 
       // 쿠키에서 XSRF 토큰 추출
@@ -207,7 +368,7 @@ class StarAucCrawler extends AxiosCrawler {
       const formData = new FormData();
       formData.append(`bids[${item_id}]`, price.toString());
 
-      // 입찰 요청
+      // 입찰 요청 (직접 연결 클라이언트 사용)
       const bidResponse = await this.client.post(
         "https://www.starbuyers-global-auction.com/front_api/item/bid",
         formData,
@@ -255,7 +416,6 @@ class StarAucCrawler extends AxiosCrawler {
             };
           }
         } else {
-          // 응답 구조가 예상과 다른 경우
           console.log("Unexpected response structure:", responseData);
           return {
             success: false,
@@ -269,7 +429,6 @@ class StarAucCrawler extends AxiosCrawler {
     } catch (error) {
       console.error(`Error placing bid for item ${item_id}:`, error.message);
 
-      // 상세 에러 정보 로깅
       if (error.response) {
         console.error("Response status:", error.response.status);
         console.error("Response data:", error.response.data);
@@ -283,7 +442,7 @@ class StarAucCrawler extends AxiosCrawler {
     }
   }
 
-  // 배치 입찰 메서드 (보너스 기능)
+  // 배치 입찰 메서드
   async batchDirectBid(bidItems) {
     try {
       console.log(`Placing batch bid for ${bidItems.length} items...`);
@@ -374,7 +533,6 @@ class StarAucCrawler extends AxiosCrawler {
         );
 
         if (dataMatch && dataMatch[1]) {
-          // 이스케이프된 문자 한번에 처리
           const jsonString = dataMatch[1]
             .replace(/\\u0022/g, '"')
             .replace(/\\\//g, "/")
@@ -401,22 +559,18 @@ class StarAucCrawler extends AxiosCrawler {
         }
 
         if (dataMatch && dataMatch[1]) {
-          // 객체 리터럴 텍스트에서 중첩된 JSON.parse 처리
           let objectLiteral = dataMatch[1].trim();
 
-          // JSON.parse 문자열 찾아서 처리
           const jsonParseMatches = objectLiteral.match(
             /JSON\.parse\('(.+?)'\)/g
           );
           if (jsonParseMatches) {
             for (const jsonParseMatch of jsonParseMatches) {
               try {
-                // 원본 JSON.parse 문자열 추출
                 const innerMatch = jsonParseMatch.match(
                   /JSON\.parse\('(.+?)'\)/
                 );
                 if (innerMatch && innerMatch[1]) {
-                  // 이스케이프된 문자 처리
                   const innerJsonString = innerMatch[1]
                     .replace(/\\u0022/g, '"')
                     .replace(/\\\//g, "/")
@@ -424,9 +578,7 @@ class StarAucCrawler extends AxiosCrawler {
                     .replace(/\\'/g, "'")
                     .replace(/\\\\/g, "\\");
 
-                  // 중첩된 JSON 파싱
                   const parsedValue = JSON.parse(innerJsonString);
-                  // 원본 JSON.parse 문을 파싱된 값의 문자열로 대체
                   objectLiteral = objectLiteral.replace(
                     jsonParseMatch,
                     JSON.stringify(parsedValue)
@@ -439,10 +591,7 @@ class StarAucCrawler extends AxiosCrawler {
           }
 
           try {
-            // 백틱으로 둘러싸인 문자열 처리 (memo 등)
             objectLiteral = objectLiteral.replace(/`([^`]*)`/g, '""');
-
-            // 전체 객체 파싱
             const dataObj = eval(`(${objectLiteral})`);
             return dataObj;
           } catch (error) {
@@ -460,14 +609,16 @@ class StarAucCrawler extends AxiosCrawler {
   }
 
   async getTotalPages(categoryId) {
+    const clientInfo = this.getNextClient();
+    await this.loginWithClient(clientInfo);
+
     return this.retryOperation(async () => {
       const url =
         this.config.searchUrl + this.config.searchParams(categoryId, 1);
 
-      const response = await this.client.get(url);
+      const response = await clientInfo.client.get(url);
       const $ = cheerio.load(response.data);
 
-      // 방법 1: HTML에서 pagination 요소 찾기
       const paginationExists =
         $(this.config.crawlSelectors.paginationLast).length > 0;
 
@@ -482,7 +633,6 @@ class StarAucCrawler extends AxiosCrawler {
         }
       }
 
-      // 방법 2: 스크립트 데이터에서 총 페이지 수 가져오기
       try {
         const scriptData = await this.parseScriptData(
           response.data,
@@ -496,14 +646,12 @@ class StarAucCrawler extends AxiosCrawler {
         console.error("스크립트에서 페이지 정보 추출 실패:", error);
       }
 
-      // 페이지 정보를 찾지 못한 경우, 아이템이 있으면 최소 1페이지로 계산
       const itemExists = $(this.config.crawlSelectors.itemContainer).length > 0;
       return itemExists ? 1 : 0;
     });
   }
 
   filterHandles($, scriptItems, existingIds) {
-    // 스크립트 데이터에서 아이템 ID와 날짜 추출
     const filteredScriptItems = [];
     const remainItems = [];
 
@@ -514,8 +662,6 @@ class StarAucCrawler extends AxiosCrawler {
 
     for (const item of scriptItems.data) {
       const itemId = item.id.toString();
-
-      // 스크립트에서 날짜 정보 가져오기 (endAt 또는 ended_at 필드)
       const scheduledDate = item.endAt || item.ended_at || null;
       const parsedDate = this.extractDate(scheduledDate);
 
@@ -525,7 +671,7 @@ class StarAucCrawler extends AxiosCrawler {
         filteredScriptItems.push({
           item_id: itemId,
           scheduled_date: parsedDate,
-          scriptData: item, // 스크립트 데이터 전체 보존
+          scriptData: item,
         });
       }
     }
@@ -533,15 +679,19 @@ class StarAucCrawler extends AxiosCrawler {
   }
 
   async crawlPage(categoryId, page, existingIds = new Set()) {
+    const clientInfo = this.getNextClient();
+    await this.loginWithClient(clientInfo);
+
     return this.retryOperation(async () => {
-      console.log(`Crawling page ${page} in category ${categoryId}...`);
+      console.log(
+        `Crawling page ${page} in category ${categoryId} with ${clientInfo.name}...`
+      );
       const url =
         this.config.searchUrl + this.config.searchParams(categoryId, page);
 
-      const response = await this.client.get(url);
+      const response = await clientInfo.client.get(url);
       const $ = cheerio.load(response.data);
 
-      // 스크립트 데이터에서 아이템 정보 추출
       const scriptData = await this.parseScriptData(
         response.data,
         this.config.crawlSelectors.scriptData
@@ -552,7 +702,6 @@ class StarAucCrawler extends AxiosCrawler {
         return [];
       }
 
-      // 필터링 - 이미 존재하는 아이템 제외
       const [filteredItems, remainItems] = this.filterHandles(
         $,
         scriptData,
@@ -568,7 +717,9 @@ class StarAucCrawler extends AxiosCrawler {
         .map((item) => this.extractItemInfo($, item))
         .filter((item) => item !== null);
 
-      console.log(`${pageItems.length}개 아이템 추출 완료, 페이지 ${page}`);
+      console.log(
+        `${pageItems.length}개 아이템 추출 완료, 페이지 ${page} (${clientInfo.name})`
+      );
 
       const processedItems = await processImagesInChunks(
         pageItems,
@@ -583,14 +734,9 @@ class StarAucCrawler extends AxiosCrawler {
   extractItemInfo($, item) {
     const scriptData = item.scriptData;
     const title = this.removeLeadingBrackets(scriptData.name);
-
-    // 원래 날짜 정보 보존
     const original_scheduled_date = item.scheduled_date;
-
-    // direct bid이므로 날짜 처리 방식 변경 (전날 18시 변환 제거)
     const scheduled_date = original_scheduled_date;
 
-    // 기본 정보 추출
     const result = {
       item_id: item.item_id,
       original_scheduled_date: original_scheduled_date,
@@ -602,15 +748,13 @@ class StarAucCrawler extends AxiosCrawler {
       starting_price: parseInt(scriptData.startingPrice, 10),
       image: scriptData.thumbnailUrl,
       category: this.config.categoryTable[this.config.currentCategoryId],
-      bid_type: "direct", // live에서 direct로 변경
+      bid_type: "direct",
       auc_num: "3",
       lotNo: scriptData.lotNo,
-
       kaijoCd: 0,
       kaisaiKaisu: 0,
     };
 
-    // 현재 입찰가가 있으면 추가
     if (scriptData.currentBiddingPrice) {
       result.current_price = parseInt(scriptData.currentBiddingPrice, 10);
     }
@@ -619,15 +763,18 @@ class StarAucCrawler extends AxiosCrawler {
   }
 
   async crawlItemDetails(itemId) {
+    const clientInfo = this.getNextClient();
+    await this.loginWithClient(clientInfo);
+
     return this.retryOperation(async () => {
-      console.log(`Crawling details for item ${itemId}...`);
-      await this.login();
+      console.log(
+        `Crawling details for item ${itemId} with ${clientInfo.name}...`
+      );
       const url = this.config.detailUrl(itemId);
 
-      const response = await this.client.get(url);
+      const response = await clientInfo.client.get(url);
       const $ = cheerio.load(response.data);
 
-      // 스크립트 데이터 추출
       const scriptData = await this.parseScriptData(
         response.data,
         this.config.crawlDetailSelectors.scriptData
@@ -638,16 +785,13 @@ class StarAucCrawler extends AxiosCrawler {
         return { description: "-" };
       }
 
-      // image_urls 필드 처리
       let images = [];
       if (scriptData.image_urls) {
-        // 이미 파싱된 배열인 경우
         if (Array.isArray(scriptData.image_urls)) {
           images = scriptData.image_urls;
         }
       }
 
-      // 백업: 이미지를 찾지 못한 경우 HTML에서 추출
       if (images.length === 0) {
         $(this.config.crawlDetailSelectors.images).each((i, element) => {
           const src = $(element).attr("src");
@@ -655,17 +799,14 @@ class StarAucCrawler extends AxiosCrawler {
         });
       }
 
-      // 브랜드 추출
       const brand =
         $(this.config.crawlDetailSelectors.brand).text().trim() ||
         (scriptData.name ? scriptData.name.split(" ")[0] : "");
 
-      // 부속품 정보 추출
       const accessories = $(this.config.crawlDetailSelectors.accessories)
         .text()
         .trim();
 
-      // 세부 설명 추출 - 모든 설명 항목을 수집
       let description = "";
       const $dl = $(this.config.crawlDetailSelectors.description);
 
@@ -710,12 +851,10 @@ class StarAucCrawler extends AxiosCrawler {
       const startTime = Date.now();
       console.log(`Starting StarAuc crawl at ${new Date().toISOString()}`);
 
-      // 로그인
-      await this.login();
+      await this.loginAllClients();
 
       const allCrawledItems = [];
 
-      // 모든 카테고리 순회
       for (const categoryId of this.config.categoryIds) {
         const categoryItems = [];
 
@@ -725,7 +864,6 @@ class StarAucCrawler extends AxiosCrawler {
         const totalPages = await this.getTotalPages(categoryId);
         console.log(`Total pages in category ${categoryId}: ${totalPages}`);
 
-        // 모든 페이지 크롤링
         for (let page = 1; page <= totalPages; page++) {
           const pageItems = await this.crawlPage(categoryId, page, existingIds);
           categoryItems.push(...pageItems);
@@ -763,16 +901,15 @@ class StarAucCrawler extends AxiosCrawler {
     }
   }
 
-  // Update 관련 메서드들 구현
   async crawlUpdates() {
     try {
-      const limit = pLimit(1);
+      const limit = pLimit(3);
       const startTime = Date.now();
       console.log(
         `Starting StarAuc updates crawl at ${new Date().toISOString()}`
       );
 
-      await this.login();
+      await this.loginAllClients();
 
       const allCrawledItems = [];
 
@@ -781,7 +918,6 @@ class StarAucCrawler extends AxiosCrawler {
       const totalPages = await this.getTotalPages(null);
       console.log(`Total pages: ${totalPages}`);
 
-      // 페이지 병렬 처리
       const pagePromises = [];
       for (let page = 1; page <= totalPages; page++) {
         pagePromises.push(
@@ -794,7 +930,6 @@ class StarAucCrawler extends AxiosCrawler {
 
       const pageResults = await Promise.all(pagePromises);
 
-      // 결과 병합
       pageResults.forEach((pageItems) => {
         if (pageItems && pageItems.length > 0) {
           allCrawledItems.push(...pageItems);
@@ -819,13 +954,15 @@ class StarAucCrawler extends AxiosCrawler {
   }
 
   async crawlUpdatePage(page) {
+    const clientInfo = this.getNextClient();
+    await this.loginWithClient(clientInfo);
+
     return this.retryOperation(async () => {
-      console.log(`Crawling update page ${page}`);
+      console.log(`Crawling update page ${page} with ${clientInfo.name}`);
       const url = this.config.searchUrl + this.config.searchParams(null, page);
 
-      const response = await this.client.get(url);
+      const response = await clientInfo.client.get(url);
 
-      // 스크립트 데이터에서 아이템 정보 추출
       const scriptData = await this.parseScriptData(
         response.data,
         this.config.crawlSelectors.scriptData
@@ -846,7 +983,7 @@ class StarAucCrawler extends AxiosCrawler {
       }
 
       console.log(
-        `Processed ${updateItems.length} update items from page ${page}`
+        `Processed ${updateItems.length} update items from page ${page} (${clientInfo.name})`
       );
       return updateItems;
     });
@@ -855,12 +992,8 @@ class StarAucCrawler extends AxiosCrawler {
   extractUpdateItemInfo(scriptData) {
     try {
       const itemId = scriptData.id.toString();
-
-      // 현재 가격 정보 (현재 입찰가 또는 시작가)
       const currentPrice =
         scriptData.currentBiddingPrice || scriptData.startingPrice || 0;
-
-      // 경매 종료 시간
       const scheduledDate = this.extractDate(
         scriptData.endAt || scriptData.ended_at
       );
@@ -877,14 +1010,17 @@ class StarAucCrawler extends AxiosCrawler {
   }
 
   async crawlUpdateWithId(itemId) {
+    const clientInfo = this.getNextClient();
+    await this.loginWithClient(clientInfo);
+
     return this.retryOperation(async () => {
-      console.log(`Crawling update info for item ${itemId}...`);
-      await this.login();
+      console.log(
+        `Crawling update info for item ${itemId} with ${clientInfo.name}...`
+      );
 
       const url = this.config.detailUrl(itemId);
-      const response = await this.client.get(url);
+      const response = await clientInfo.client.get(url);
 
-      // 스크립트 데이터에서 현재 정보 추출
       const scriptData = await this.parseScriptData(
         response.data,
         this.config.crawlDetailSelectors.scriptData
@@ -894,7 +1030,6 @@ class StarAucCrawler extends AxiosCrawler {
         throw new Error(`No script data found for item ${itemId}`);
       }
 
-      // 현재 가격과 종료 시간 추출
       let currentPrice = 0;
       if (scriptData.current_bidding_price > currentPrice)
         currentPrice = scriptData.current_bidding_price;
@@ -916,12 +1051,11 @@ class StarAucCrawler extends AxiosCrawler {
     try {
       console.log(`Starting update crawl for ${itemIds.length} items...`);
 
-      await this.login();
+      await this.loginAllClients();
 
       const results = [];
-      const limit = pLimit(1);
+      const limit = pLimit(3);
 
-      // 병렬 처리
       const promises = itemIds.map((itemId) =>
         limit(async () => {
           try {
@@ -954,15 +1088,12 @@ class StarAucCrawler extends AxiosCrawler {
     try {
       console.log("Starting to crawl Star Auction invoices...");
 
-      // 로그인 확인
       await this.login();
 
-      // 청구서 페이지 요청
       const url = "https://www.starbuyers-global-auction.com/purchase_report";
       const response = await this.client.get(url);
       const $ = cheerio.load(response.data);
 
-      // 아이템 컨테이너 찾기
       const invoiceElements = $(".p-item-list__body");
       console.log(`Found ${invoiceElements.length} invoice records`);
 
@@ -973,24 +1104,20 @@ class StarAucCrawler extends AxiosCrawler {
 
       const invoices = [];
 
-      // 각 청구서 항목 처리
       invoiceElements.each((index, element) => {
         const $element = $(element);
 
-        // 날짜 추출 (발행일)
         const issueDateText = $element
           .find('[data-head="Issue date"]')
           .text()
           .trim();
         const date = this.extractDate(issueDateText);
 
-        // 청구 카테고리 확인 (경매인지 확인)
         const billingCategory = $element
           .find('[data-head="Billing category"]')
           .text()
           .trim();
 
-        // 금액 추출
         const amountText = $element
           .find(
             '[data-head="Successful bid total price / Amount"] p:first-child'
@@ -999,23 +1126,17 @@ class StarAucCrawler extends AxiosCrawler {
           .trim();
         const amount = this.currencyToInt(amountText);
 
-        // 상태는 별도로 표시되지 않아 기본값으로 설정
-        // 실제 상태는 별도 API나 상세 페이지에서 확인이 필요할 수 있음
         const status = "paid";
 
-        // 카테고리 정보
         const category = $element.find('[data-head="Category"]').text().trim();
 
-        // 상세 링크 추출 (필요시 사용)
         const detailLink = $element
           .find("a.p-text-link, a.p-button-small")
           .attr("href");
         const reportId = detailLink ? detailLink.split("/").pop() : null;
 
-        // auc_num은 3으로 고정 (StarAuc의 식별자)
         const auc_num = "3";
 
-        // 결과 객체 생성
         invoices.push({
           date,
           auc_num,
