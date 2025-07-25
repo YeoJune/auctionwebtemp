@@ -5,8 +5,6 @@ const FormData = require("form-data");
 const tough = require("tough-cookie");
 const { wrapper } = require("axios-cookiejar-support");
 const axios = require("axios");
-const { HttpsProxyAgent } = require("https-proxy-agent");
-const { HttpProxyAgent } = require("http-proxy-agent");
 
 let pLimit;
 (async () => {
@@ -139,7 +137,6 @@ class StarAucCrawler extends AxiosCrawler {
     this.currentClientIndex = 0;
 
     this.initializeClients();
-    this._createCookieAgent = null;
   }
 
   loadProxyIPs() {
@@ -151,8 +148,8 @@ class StarAucCrawler extends AxiosCrawler {
     return proxyIPsString.split(",").map((ip) => ip.trim());
   }
 
-  async initializeClients() {
-    // 첫 번째: 직접 연결 (기존 AxiosCrawler 방식)
+  initializeClients() {
+    // 첫 번째: 직접 연결 (기존 AxiosCrawler 방식 그대로)
     this.clients.push({
       index: 0,
       name: "직접연결",
@@ -163,35 +160,14 @@ class StarAucCrawler extends AxiosCrawler {
       useProxy: false,
     });
 
-    if (!this._createCookieAgent) {
-      // ESM 전용 모듈을 동적으로 import
-      const { createCookieAgent } = await import("http-cookie-agent/http");
-      this._createCookieAgent = createCookieAgent;
-    }
-
-    // 기존 코드를 이것으로 교체:
+    // 나머지: 프록시 클라이언트들 (axios-cookiejar-support + proxy 옵션)
     this.proxyIPs.forEach((ip, index) => {
-      const proxyUrl = `http://${ip}:3128`;
       const cookieJar = new tough.CookieJar();
-
-      // http-cookie-agent 사용
-      const HttpProxyCookieAgent = this._createCookieAgent(HttpProxyAgent);
-      const HttpsProxyCookieAgent = this._createCookieAgent(HttpsProxyAgent);
 
       const proxyClient = wrapper(
         axios.create({
           jar: cookieJar,
           withCredentials: true,
-          httpAgent: new HttpProxyCookieAgent({
-            jar: cookieJar,
-            hostname: ip,
-            port: 3128,
-          }),
-          httpsAgent: new HttpsProxyCookieAgent({
-            jar: cookieJar,
-            hostname: ip,
-            port: 3128,
-          }),
           headers: {
             "User-Agent":
               "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15",
@@ -204,6 +180,12 @@ class StarAucCrawler extends AxiosCrawler {
           validateStatus: function (status) {
             return status >= 200 && status < 500;
           },
+          // 프록시 설정
+          proxy: {
+            protocol: "http",
+            host: ip,
+            port: 3128,
+          },
         })
       );
 
@@ -211,7 +193,7 @@ class StarAucCrawler extends AxiosCrawler {
         index: index + 1,
         name: `프록시${index + 1}(${ip})`,
         client: proxyClient,
-        cookieJar: cookieJar, // Map 대신 cookieJar 사용
+        cookieJar: cookieJar, // tough-cookie 사용
         isLoggedIn: false,
         loginTime: null,
         useProxy: true,
