@@ -1,7 +1,7 @@
 // routes/restoration.js
 const express = require("express");
 const router = express.Router();
-const pool = require("../utils/DB");
+const { pool } = require("../utils/DB");
 const { v4: uuidv4 } = require("uuid");
 
 // 미들웨어 (위 appraisal.js 또는 certificate.js 와 동일하게 사용)

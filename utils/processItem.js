@@ -1,5 +1,5 @@
 // utils/processItem.js
-const pool = require("./DB"); // Assuming DB.js exports the pool
+const { pool } = require("./DB"); // Assuming DB.js exports the pool
 const { processImagesInChunks } = require("./processImage");
 const {
   ecoAucCrawler,

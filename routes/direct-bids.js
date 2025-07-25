@@ -1,7 +1,7 @@
 // routes/direct-bids.js - 직접 경매(고전적인 경매) 라우터
 const express = require("express");
 const router = express.Router();
-const pool = require("../utils/DB");
+const { pool } = require("../utils/DB");
 const submitBid = require("../utils/submitBid");
 const { validateBidByAuction } = require("../utils/submitBid");
 const {

@@ -1,7 +1,7 @@
 // routes/auth.js
 const express = require("express");
 const router = express.Router();
-const pool = require("../utils/DB");
+const { pool } = require("../utils/DB");
 const crypto = require("crypto");
 
 function hashPassword(password) {

@@ -1,7 +1,7 @@
 // routes/certificate.js
 const express = require("express");
 const router = express.Router();
-const pool = require("../utils/DB");
+const { pool } = require("../utils/DB");
 const { v4: uuidv4 } = require("uuid");
 const PDFDocument = require("pdfkit"); // PDF 생성을 위해
 const QRCode = require("qrcode"); // QR 코드 생성을 위해

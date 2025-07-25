@@ -1,5 +1,5 @@
 // utils/submitBid.js
-const pool = require("./DB");
+const { pool } = require("./DB");
 const {
   ecoAucCrawler,
   brandAucCrawler,

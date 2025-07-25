@@ -1,5 +1,5 @@
 // utils/filterDB.js
-const pool = require("./DB");
+const { pool } = require("./DB");
 
 async function getFilterSettings() {
   const conn = await pool.getConnection();

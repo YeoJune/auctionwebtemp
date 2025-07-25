@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const MyGoogleSheetsManager = require("../utils/googleSheets");
-const pool = require("../utils/DB");
+const { pool } = require("../utils/DB");
 
 function formatDate(dateString) {
   const date = new Date(dateString);

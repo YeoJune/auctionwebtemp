@@ -1,7 +1,7 @@
 // routes/wishlist.js
 const express = require("express");
 const router = express.Router();
-const pool = require("../utils/DB");
+const { pool } = require("../utils/DB");
 
 // Add item to wishlist with favorite number
 router.post("/", async (req, res) => {

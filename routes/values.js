@@ -1,7 +1,7 @@
 // routes/values.js
 const express = require("express");
 const router = express.Router();
-const pool = require("../utils/DB");
+const { pool } = require("../utils/DB");
 const { processItem } = require("../utils/processItem");
 
 let pLimit;

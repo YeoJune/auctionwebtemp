@@ -5,7 +5,7 @@ dotenv.config();
 const express = require("express");
 const router = express.Router();
 const axios = require("axios");
-const pool = require("../utils/DB");
+const { pool } = require("../utils/DB");
 const { processItem } = require("../utils/processItem");
 
 let pLimit;

@@ -1,7 +1,7 @@
 // routes/dashboard.js - 대시보드 API 라우터
 const express = require("express");
 const router = express.Router();
-const pool = require("../utils/DB");
+const { pool } = require("../utils/DB");
 
 // 관리자 권한 확인 미들웨어
 const isAdmin = (req, res, next) => {

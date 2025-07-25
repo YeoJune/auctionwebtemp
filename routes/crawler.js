@@ -10,7 +10,7 @@ const {
   starAucValueCrawler,
 } = require("../crawlers/index");
 const DBManager = require("../utils/DBManager");
-const pool = require("../utils/DB");
+const { pool } = require("../utils/DB");
 const cron = require("node-cron");
 const { getAdminSettings } = require("../utils/adminDB");
 const { initializeFilterSettings } = require("../utils/filterDB");

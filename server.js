@@ -7,7 +7,7 @@ const session = require("express-session");
 const MySQLStore = require("express-mysql-session")(session);
 const bodyParser = require("body-parser");
 const path = require("path");
-const pool = require("./utils/DB"); // DB 연결 풀
+const { pool, sessionPool } = require("./utils/DB");
 const fs = require("fs");
 const { isAuthenticated } = require("./utils/middleware"); // 인증 미들웨어
 
@@ -92,9 +92,11 @@ const sessionStore = new MySQLStore(
     password: process.env.DB_PASSWORD,
     database: process.env.DB_DATABASE,
     clearExpired: true,
-    checkExpirationInterval: 900000,
-    expiration: 86400000,
+    checkExpirationInterval: 900000, // 15분마다 만료된 세션 정리
+    expiration: 86400000, // 24시간
     createDatabaseTable: false,
+    connectionLimit: 3, // 세션 스토어 내부 연결 제한
+    reconnect: true, // 자동 재연결
     schema: {
       tableName: "sessions",
       columnNames: {
@@ -104,7 +106,7 @@ const sessionStore = new MySQLStore(
       },
     },
   },
-  pool
+  sessionPool // 수정: 별도 세션 풀 사용
 );
 
 const sessionMiddleware = session({
@@ -113,6 +115,7 @@ const sessionMiddleware = session({
   store: sessionStore,
   resave: false,
   saveUninitialized: false,
+  rolling: true, // 요청마다 세션 만료 시간 갱신
   cookie: {
     maxAge: 24 * 60 * 60 * 1000,
     secure: process.env.NODE_ENV === "production",
@@ -176,6 +179,35 @@ app.get("/naver113e5904aa2153fc24ab52f90746a797.html", (req, res) => {
     path.join(__dirname, "public", "naver113e5904aa2153fc24ab52f90746a797.html")
   );
 });
+
+if (process.env.NODE_ENV !== "production") {
+  app.get("/api/debug/connections", async (req, res) => {
+    try {
+      const [maxConn] = await pool.query(
+        "SHOW VARIABLES LIKE 'max_connections'"
+      );
+      const [currentConn] = await pool.query(
+        "SHOW STATUS LIKE 'Threads_connected'"
+      );
+      const [processList] = await pool.query("SHOW PROCESSLIST");
+
+      res.json({
+        maxConnections: maxConn[0].Value,
+        currentConnections: currentConn[0].Value,
+        activeProcesses: processList.length,
+        poolStatus: {
+          all: pool.pool._allConnections.length,
+          free: pool.pool._freeConnections.length,
+          acquired:
+            pool.pool._allConnections.length -
+            pool.pool._freeConnections.length,
+        },
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+}
 
 app.get("/", (req, res) => {
   res.redirect("/productPage");

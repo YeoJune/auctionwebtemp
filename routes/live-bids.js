@@ -1,7 +1,7 @@
 // routes/live-bids.js - 현장 경매(1차->2차->최종) 라우터
 const express = require("express");
 const router = express.Router();
-const pool = require("../utils/DB");
+const { pool } = require("../utils/DB");
 const { createAppraisalFromAuction } = require("../utils/appr");
 
 const isAdmin = (req, res, next) => {
