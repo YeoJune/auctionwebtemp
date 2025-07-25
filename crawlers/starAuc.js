@@ -4,14 +4,15 @@ const { processImagesInChunks } = require("../utils/processImage");
 const FormData = require("form-data");
 const tough = require("tough-cookie");
 const { wrapper } = require("axios-cookiejar-support");
-const { createCookieAgent } = require("http-cookie-agent");
 const axios = require("axios");
 const { HttpsProxyAgent } = require("https-proxy-agent");
 const { HttpProxyAgent } = require("http-proxy-agent");
 
 let pLimit;
+let createCookieAgent;
 (async () => {
   pLimit = (await import("p-limit")).default;
+  createCookieAgent = (await import("http-cookie-agent")).createCookieAgent;
 })();
 
 const starAucConfig = {
