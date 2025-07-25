@@ -7,6 +7,8 @@ const { wrapper } = require("axios-cookiejar-support");
 const axios = require("axios");
 const { HttpsProxyAgent } = require("https-proxy-agent");
 const { HttpProxyAgent } = require("http-proxy-agent");
+const { HttpCookieAgent, HttpsCookieAgent } = require("http-cookie-agent/http");
+const { createCookieAgent } = require("http-cookie-agent");
 
 let pLimit;
 (async () => {
@@ -218,23 +220,56 @@ class StarAucCrawler extends AxiosCrawler {
   }
 
   initializeClients() {
-    // 첫 번째: 직접 연결 (기존 AxiosCrawler 방식 그대로)
+    // 첫 번째: 직접 연결 (http-cookie-agent 사용)
+    const directCookieJar = new tough.CookieJar();
+    const directClient = axios.create({
+      httpAgent: new HttpCookieAgent({
+        cookies: { jar: directCookieJar },
+      }),
+      httpsAgent: new HttpsCookieAgent({
+        cookies: { jar: directCookieJar },
+      }),
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15",
+        "Accept-Language": "en-US,en;q=0.9",
+        Accept:
+          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      },
+      maxRedirects: 5,
+      timeout: 30000,
+      validateStatus: function (status) {
+        return status >= 200 && status < 500;
+      },
+    });
+
     this.clients.push({
       index: 0,
       name: "직접연결",
-      client: this.client, // 부모 클래스의 client 사용
-      cookieJar: this.cookieJar,
+      client: directClient,
+      cookieJar: directCookieJar,
       isLoggedIn: false,
       loginTime: null,
       useProxy: false,
     });
 
+    // 나머지: 프록시 클라이언트들 (createCookieAgent 사용)
     this.proxyIPs.forEach((ip, index) => {
-      const proxyUrl = `http://${ip}:3128`;
+      const cookieJar = new tough.CookieJar();
+
+      // 프록시 에이전트와 쿠키 에이전트 결합
+      const HttpProxyCookieAgent = createCookieAgent(HttpProxyAgent);
+      const HttpsProxyCookieAgent = createCookieAgent(HttpsProxyAgent);
 
       const proxyClient = axios.create({
-        httpsAgent: new HttpsProxyAgent(proxyUrl),
-        httpAgent: new HttpProxyAgent(proxyUrl),
+        httpAgent: new HttpProxyCookieAgent({
+          cookies: { jar: cookieJar },
+          proxy: `http://${ip}:3128`,
+        }),
+        httpsAgent: new HttpsProxyCookieAgent({
+          cookies: { jar: cookieJar },
+          proxy: `http://${ip}:3128`,
+        }),
         headers: {
           "User-Agent":
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15",
@@ -249,39 +284,11 @@ class StarAucCrawler extends AxiosCrawler {
         },
       });
 
-      // 수동 쿠키 관리 (작동하는 코드와 동일)
-      const cookies = new Map();
-
-      proxyClient.interceptors.response.use((response) => {
-        const setCookieHeaders = response.headers["set-cookie"];
-        if (setCookieHeaders) {
-          setCookieHeaders.forEach((cookieString) => {
-            const [cookiePair] = cookieString.split(";");
-            const [name, value] = cookiePair.split("=");
-            if (name && value) {
-              cookies.set(name.trim(), value.trim());
-            }
-          });
-        }
-        return response;
-      });
-
-      proxyClient.interceptors.request.use((config) => {
-        const cookieArray = [];
-        for (const [name, value] of cookies) {
-          cookieArray.push(`${name}=${value}`);
-        }
-        if (cookieArray.length > 0) {
-          config.headers.Cookie = cookieArray.join("; ");
-        }
-        return config;
-      });
-
       this.clients.push({
         index: index + 1,
         name: `프록시${index + 1}(${ip})`,
         client: proxyClient,
-        cookies: cookies, // Map으로 쿠키 저장
+        cookieJar: cookieJar,
         isLoggedIn: false,
         loginTime: null,
         useProxy: true,
