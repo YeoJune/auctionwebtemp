@@ -13,11 +13,11 @@ let pLimit;
   pLimit = (await import("p-limit")).default;
 })();
 
-let createCookieAgent;
+let _createCookieAgent;
 (async () => {
   // ESM 전용 모듈을 동적으로 import
   const { createCookieAgent } = await import("http-cookie-agent/http");
-  createCookieAgent = createCookieAgent;
+  _createCookieAgent = createCookieAgent;
 })();
 
 const starAucConfig = {
@@ -144,8 +144,9 @@ class StarAucCrawler extends AxiosCrawler {
     this.proxyIPs = this.loadProxyIPs();
     this.clients = [];
     this.currentClientIndex = 0;
-
-    this.initializeClients();
+    setTimeout(() => {
+      this.initializeClients();
+    }, 1000);
   }
 
   loadProxyIPs() {
@@ -175,8 +176,8 @@ class StarAucCrawler extends AxiosCrawler {
       const cookieJar = new tough.CookieJar();
 
       // http-cookie-agent 사용
-      const HttpProxyCookieAgent = createCookieAgent(HttpProxyAgent);
-      const HttpsProxyCookieAgent = createCookieAgent(HttpsProxyAgent);
+      const HttpProxyCookieAgent = _createCookieAgent(HttpProxyAgent);
+      const HttpsProxyCookieAgent = _createCookieAgent(HttpsProxyAgent);
 
       const proxyClient = wrapper(
         axios.create({
