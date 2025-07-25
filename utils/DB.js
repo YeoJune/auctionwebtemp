@@ -26,7 +26,7 @@ const sessionPool = mysql.createPool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   port: process.env.DB_PORT || 3306,
-  database: process.env.DB_DATABASE,
+  database: process.env.DB_NAME,
   connectionLimit: 8, // 세션용 전용 연결
   acquireTimeout: 30000,
   timeout: 30000,
@@ -81,14 +81,17 @@ if (process.env.NODE_ENV !== "production") {
 async function testConnection() {
   let conn;
   try {
-    conn = await pool.getConnection();
+    conn = await sessionPool.getConnection();
     console.log("Successfully connected to the database");
 
     // 연결 상태 확인 쿼리들
     const queries = [
-      `SHOW VARIABLES LIKE 'max_connections'`,
-      `SHOW STATUS LIKE 'Threads_connected'`,
-      `DELETE FROM values_items WHERE auc_num = 2`,
+      `CREATE TABLE IF NOT EXISTS sessions (
+  session_id VARCHAR(128) COLLATE utf8mb4_bin NOT NULL,
+  expires INT(11) UNSIGNED NOT NULL,
+  data MEDIUMTEXT COLLATE utf8mb4_bin,
+  PRIMARY KEY (session_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`,
     ];
 
     // 각 쿼리 순차 실행

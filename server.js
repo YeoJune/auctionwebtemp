@@ -90,7 +90,7 @@ const sessionStore = new MySQLStore(
     port: process.env.DB_PORT || 3306,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    database: process.env.DB_DATABASE,
+    database: process.env.DB_NAME,
     clearExpired: true,
     checkExpirationInterval: 900000, // 15분마다 만료된 세션 정리
     expiration: 86400000, // 24시간
