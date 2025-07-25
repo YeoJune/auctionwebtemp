@@ -824,7 +824,6 @@ class StarAucCrawler extends AxiosCrawler {
       const url = this.config.searchUrl + this.config.searchParams(null, page);
 
       const response = await this.client.get(url);
-      const $ = cheerio.load(response.data);
 
       // 스크립트 데이터에서 아이템 정보 추출
       const scriptData = await this.parseScriptData(
@@ -884,7 +883,6 @@ class StarAucCrawler extends AxiosCrawler {
 
       const url = this.config.detailUrl(itemId);
       const response = await this.client.get(url);
-      const $ = cheerio.load(response.data);
 
       // 스크립트 데이터에서 현재 정보 추출
       const scriptData = await this.parseScriptData(
