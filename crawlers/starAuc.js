@@ -230,13 +230,58 @@ class StarAucCrawler extends AxiosCrawler {
     });
 
     this.proxyIPs.forEach((ip, index) => {
-      const proxyClient = new ProxyAxiosClient(ip); // IP만 전달
+      const proxyUrl = `http://${ip}:3128`; // proxyUrl 먼저 정의
+
+      const proxyClient = axios.create({
+        httpsAgent: new HttpsProxyAgent(proxyUrl),
+        httpAgent: new HttpProxyAgent(proxyUrl),
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15",
+          "Accept-Language": "en-US,en;q=0.9",
+          Accept:
+            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        },
+        maxRedirects: 5,
+        timeout: 30000,
+        validateStatus: function (status) {
+          return status >= 200 && status < 500;
+        },
+      });
+
+      // 수동 쿠키 관리
+      const cookies = new Map();
+
+      proxyClient.interceptors.response.use((response) => {
+        const setCookieHeaders = response.headers["set-cookie"];
+        if (setCookieHeaders) {
+          setCookieHeaders.forEach((cookieString) => {
+            const [cookiePair] = cookieString.split(";");
+            const [name, value] = cookiePair.split("=");
+            if (name && value) {
+              cookies.set(name.trim(), value.trim());
+            }
+          });
+        }
+        return response;
+      });
+
+      proxyClient.interceptors.request.use((config) => {
+        const cookieArray = [];
+        for (const [name, value] of cookies) {
+          cookieArray.push(`${name}=${value}`);
+        }
+        if (cookieArray.length > 0) {
+          config.headers.Cookie = cookieArray.join("; ");
+        }
+        return config;
+      });
 
       this.clients.push({
         index: index + 1,
         name: `프록시${index + 1}(${ip})`,
         client: proxyClient,
-        cookieJar: null,
+        cookies: cookies, // Map으로 쿠키 저장
         isLoggedIn: false,
         loginTime: null,
         useProxy: true,
