@@ -1,7 +1,7 @@
 // utils/googleSheets.js
 const { google } = require("googleapis");
 const path = require("path");
-const pool = require("./DB");
+const { pool } = require("./DB");
 const crypto = require("crypto");
 
 function hashPassword(password) {
