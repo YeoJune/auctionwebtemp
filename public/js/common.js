@@ -990,6 +990,299 @@ function closeMobileMenu(navContainer, menuToggle) {
   menuToggle.classList.remove("active");
 }
 
+// common.js에 추가할 툴팁 매니저
+
+window.TooltipManager = (function () {
+  let tooltipContainer = null;
+  let currentTooltip = null;
+  let hideTimeout = null;
+  let conditionalTooltips = new Map();
+
+  /**
+   * 툴팁 매니저 초기화
+   */
+  function init() {
+    // 기존 툴팁 컨테이너가 있으면 제거
+    if (tooltipContainer) {
+      tooltipContainer.remove();
+    }
+
+    // 새 툴팁 컨테이너 생성
+    tooltipContainer = document.createElement("div");
+    tooltipContainer.className = "tooltip-container";
+    tooltipContainer.style.cssText = `
+      position: fixed;
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      line-height: 1.4;
+      max-width: 250px;
+      word-wrap: break-word;
+      white-space: pre-line;
+      z-index: 10000;
+      display: none;
+      pointer-events: none;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      transform: translateX(-50%);
+      transition: opacity 0.2s ease;
+    `;
+
+    document.body.appendChild(tooltipContainer);
+    setupEventListeners();
+
+    console.log("TooltipManager 초기화 완료");
+  }
+
+  /**
+   * 툴팁 표시
+   * @param {HTMLElement} element - 기준 요소
+   * @param {string} message - 툴팁 메시지
+   * @param {string} position - 위치 ('top', 'bottom', 'left', 'right')
+   */
+  function show(element, message, position = "top") {
+    if (!tooltipContainer || !element || !message) return;
+
+    // 기존 타이머 클리어
+    if (hideTimeout) {
+      clearTimeout(hideTimeout);
+      hideTimeout = null;
+    }
+
+    // 툴팁 내용 설정
+    tooltipContainer.textContent = message;
+    tooltipContainer.style.display = "block";
+    tooltipContainer.style.opacity = "1";
+
+    // 위치 계산 및 설정
+    positionTooltip(element, position);
+
+    currentTooltip = element;
+  }
+
+  /**
+   * 툴팁 숨기기
+   * @param {number} delay - 지연 시간 (ms)
+   */
+  function hide(delay = 0) {
+    if (!tooltipContainer) return;
+
+    if (hideTimeout) {
+      clearTimeout(hideTimeout);
+    }
+
+    if (delay > 0) {
+      hideTimeout = setTimeout(() => {
+        tooltipContainer.style.display = "none";
+        tooltipContainer.style.opacity = "0";
+        currentTooltip = null;
+      }, delay);
+    } else {
+      tooltipContainer.style.display = "none";
+      tooltipContainer.style.opacity = "0";
+      currentTooltip = null;
+    }
+  }
+
+  /**
+   * 툴팁 위치 계산 및 설정
+   * @param {HTMLElement} element - 기준 요소
+   * @param {string} position - 위치
+   */
+  function positionTooltip(element, position) {
+    const rect = element.getBoundingClientRect();
+    const tooltipRect = tooltipContainer.getBoundingClientRect();
+    const viewport = {
+      width: window.innerWidth,
+      height: window.innerHeight,
+    };
+
+    let left, top;
+
+    switch (position) {
+      case "bottom":
+        left = rect.left + rect.width / 2;
+        top = rect.bottom + 8;
+        tooltipContainer.style.transform = "translateX(-50%)";
+        break;
+
+      case "left":
+        left = rect.left - tooltipRect.width - 8;
+        top = rect.top + rect.height / 2 - tooltipRect.height / 2;
+        tooltipContainer.style.transform = "none";
+        break;
+
+      case "right":
+        left = rect.right + 8;
+        top = rect.top + rect.height / 2 - tooltipRect.height / 2;
+        tooltipContainer.style.transform = "none";
+        break;
+
+      case "top":
+      default:
+        left = rect.left + rect.width / 2;
+        top = rect.top - tooltipRect.height - 8;
+        tooltipContainer.style.transform = "translateX(-50%)";
+        break;
+    }
+
+    // 뷰포트 경계 체크 및 조정
+    if (position === "top" || position === "bottom") {
+      // 좌우 경계 체크
+      if (left - tooltipRect.width / 2 < 10) {
+        left = tooltipRect.width / 2 + 10;
+      } else if (left + tooltipRect.width / 2 > viewport.width - 10) {
+        left = viewport.width - tooltipRect.width / 2 - 10;
+      }
+
+      // 상하 경계 체크 (top/bottom 전환)
+      if (position === "top" && top < 10) {
+        top = rect.bottom + 8;
+      } else if (
+        position === "bottom" &&
+        top + tooltipRect.height > viewport.height - 10
+      ) {
+        top = rect.top - tooltipRect.height - 8;
+      }
+    }
+
+    tooltipContainer.style.left = left + "px";
+    tooltipContainer.style.top = top + "px";
+  }
+
+  /**
+   * 조건부 툴팁 등록
+   * @param {string} selector - CSS 선택자
+   * @param {function} conditionFn - 조건 함수 (element) => boolean
+   * @param {function} messageFn - 메시지 함수 (element) => string
+   * @param {string} position - 툴팁 위치
+   */
+  function registerConditionalTooltip(
+    selector,
+    conditionFn,
+    messageFn,
+    position = "top"
+  ) {
+    conditionalTooltips.set(selector, {
+      condition: conditionFn,
+      message: messageFn,
+      position: position,
+    });
+  }
+
+  /**
+   * 조건부 툴팁 제거
+   * @param {string} selector - CSS 선택자
+   */
+  function unregisterConditionalTooltip(selector) {
+    conditionalTooltips.delete(selector);
+  }
+
+  /**
+   * 모든 조건부 툴팁 클리어
+   */
+  function clearConditionalTooltips() {
+    conditionalTooltips.clear();
+  }
+
+  /**
+   * 이벤트 리스너 설정
+   */
+  function setupEventListeners() {
+    // 마우스 이벤트 (데스크톱)
+    document.addEventListener("mouseover", handleMouseOver);
+    document.addEventListener("mouseout", handleMouseOut);
+
+    // 터치 이벤트 (모바일)
+    document.addEventListener("touchstart", handleTouchStart);
+    document.addEventListener("touchend", handleTouchEnd);
+  }
+
+  /**
+   * 마우스 오버 이벤트 핸들러
+   */
+  function handleMouseOver(e) {
+    // 조건부 툴팁 체크
+    for (const [selector, config] of conditionalTooltips) {
+      const element = e.target.closest(selector);
+      if (element && config.condition(element)) {
+        const message = config.message(element);
+        if (message) {
+          show(element, message, config.position);
+          break;
+        }
+      }
+    }
+  }
+
+  /**
+   * 마우스 아웃 이벤트 핸들러
+   */
+  function handleMouseOut(e) {
+    // 툴팁이 표시된 요소에서 벗어났는지 체크
+    if (currentTooltip && !currentTooltip.contains(e.relatedTarget)) {
+      hide(100); // 100ms 지연 후 숨기기
+    }
+  }
+
+  /**
+   * 터치 시작 이벤트 핸들러 (모바일)
+   */
+  function handleTouchStart(e) {
+    // 조건부 툴팁 체크
+    for (const [selector, config] of conditionalTooltips) {
+      const element = e.target.closest(selector);
+      if (element && config.condition(element)) {
+        const message = config.message(element);
+        if (message) {
+          show(element, message, config.position);
+          break;
+        }
+      }
+    }
+  }
+
+  /**
+   * 터치 종료 이벤트 핸들러 (모바일)
+   */
+  function handleTouchEnd(e) {
+    // 3초 후 자동으로 툴팁 숨기기
+    hide(3000);
+  }
+
+  /**
+   * 직접 툴팁 표시 (기존 호환성)
+   * @param {HTMLElement} element - 기준 요소
+   * @param {string} message - 메시지
+   */
+  function showTooltip(element, message) {
+    show(element, message, "top");
+  }
+
+  /**
+   * 직접 툴팁 숨기기 (기존 호환성)
+   */
+  function hideTooltip() {
+    hide();
+  }
+
+  // 공개 API
+  return {
+    init,
+    show,
+    hide,
+    showTooltip, // 기존 호환성
+    hideTooltip, // 기존 호환성
+    registerConditionalTooltip,
+    unregisterConditionalTooltip,
+    clearConditionalTooltips,
+
+    // 디버깅용
+    getRegisteredTooltips: () => Array.from(conditionalTooltips.keys()),
+  };
+})();
+
 // 페이지 로드 시 초기화
 document.addEventListener("DOMContentLoaded", function () {
   setupMobileMenu();

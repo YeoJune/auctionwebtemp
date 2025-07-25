@@ -90,16 +90,17 @@ function displayData(data) {
   data.forEach((item) => {
     const card = createProductCard(item);
     dataBody.appendChild(card);
+
+    // 카드 생성 후 툴팁 아이콘 추가
+    addTooltipIconsToCard(card, item);
   });
 
-  // BidManager에 현재 데이터 전달
   BidManager.updateCurrentData(state.currentData);
-
-  // 가격 계산기 초기화
   BidManager.initializePriceCalculators();
-
-  // 타이머 업데이트 시작
   BidManager.startTimerUpdates();
+
+  // 툴팁 시스템 재설정
+  setupTooltips();
 }
 
 // 제품 카드 생성
@@ -281,89 +282,327 @@ function getBidInputHTML(bidInfo, item, bidType) {
   return BidManager.getBidInputHTML(bidInfo, item, bidType);
 }
 
-// 전역 변수로 툴팁 컨테이너 추가
-let tooltipContainer;
+/**
+ * 기존 툴팁 리팩토링
+ */
+function setupExistingTooltips() {
+  // 1. 타이머 정보 아이콘 (에코옥션, 스타옥션만)
+  TooltipManager.registerConditionalTooltip(
+    ".timer-info-icon",
+    (element) => {
+      const itemId = getItemIdFromElement(element);
+      const item = state.currentData.find((item) => item.item_id === itemId);
+      return item && (item.auc_num == 1 || item.auc_num == 3);
+    },
+    () =>
+      "마감 전 5분 입찰 발생 시\n5분씩 자동 연장\n\n추가 입찰 없을 시\n마지막 입찰 금액 낙찰",
+    "top"
+  );
 
-// 페이지 로드 시 툴팁 컨테이너 생성
-document.addEventListener("DOMContentLoaded", function () {
-  // 툴팁 컨테이너가 없으면 생성
-  if (!document.querySelector(".tooltip-container")) {
-    tooltipContainer = document.createElement("div");
-    tooltipContainer.className = "tooltip-container";
-    document.body.appendChild(tooltipContainer);
-  } else {
-    tooltipContainer = document.querySelector(".tooltip-container");
+  // 2. 스타옥션 입찰 정보
+  TooltipManager.registerConditionalTooltip(
+    ".quick-bid-buttons.star-auction .bid-info-tooltip-trigger",
+    (element) => {
+      const itemId = getItemIdFromElement(element);
+      const item = state.currentData.find((item) => item.item_id === itemId);
+      return item && item.auc_num == 3;
+    },
+    () => "해당 상품은 금액대별 최소금액으로 입찰됩니다.",
+    "top"
+  );
+}
+
+/**
+ * 새로운 툴팁 등록
+ */
+function setupNewTooltips() {
+  // 관부가세 포함 금액 설명 (모든 price-detail)
+  TooltipManager.registerConditionalTooltip(
+    '.tooltip-icon[data-tooltip="price-detail"]',
+    () => true,
+    () =>
+      "까사트레이드 수수료를 제외한 모든비용\n(관부가세, 출품사수수료, 현지세금)이\n반영된 실시간 원화 금액입니다.",
+    "top"
+  );
+
+  // 직접경매 실시간 금액 설명
+  TooltipManager.registerConditionalTooltip(
+    '.tooltip-icon[data-tooltip="direct-realtime"]',
+    () => true,
+    () => "실시간 경쟁 입찰가입니다.\n마감이 가까울수록 급변할 수 있습니다.",
+    "top"
+  );
+
+  // 현장경매 시작 금액 설명
+  TooltipManager.registerConditionalTooltip(
+    '.tooltip-icon[data-tooltip="live-starting"]',
+    () => true,
+    () =>
+      "표시 금액은 사전입찰 시작가이며,\n실제 현장 낙찰가는 경합 정도에 따라\n크게 달라질 수 있습니다.",
+    "top"
+  );
+
+  // 현장경매 1차 입찰 프로세스
+  TooltipManager.registerConditionalTooltip(
+    '.tooltip-icon[data-tooltip="live-first-bid"]',
+    () => true,
+    () =>
+      "1차 입찰가를 입력하시면,\n해당 경매 담당자가 데이터·경쟁도 분석을\n통해 2차 제안가를 안내드립니다.",
+    "top"
+  );
+
+  // 현장경매 2차 제안 설명
+  TooltipManager.registerConditionalTooltip(
+    '.tooltip-icon[data-tooltip="live-second-proposal"]',
+    () => true,
+    () =>
+      "1차 입찰가 입력 후, 최근 낙찰가·경쟁도\n데이터를 분석해 산출한 '낙찰 확률 높은'\n제안 금액입니다.\n*1차금액 입력 후 영업시간 기준\n2시간 이내에 작성됩니다.",
+    "top"
+  );
+
+  // 현장경매 최종 입찰 설명
+  TooltipManager.registerConditionalTooltip(
+    '.tooltip-icon[data-tooltip="live-final-bid"]',
+    () => true,
+    () => "2차 제안금액 참고 후\n해당상품에 지불 가능한 최대금액 입력",
+    "top"
+  );
+
+  // 현장경매 최대금액 입력 설명
+  TooltipManager.registerConditionalTooltip(
+    '.tooltip-icon[data-tooltip="live-max-amount"]',
+    () => true,
+    () => "해당 상품에 지불 가능한 최대 금액 입력",
+    "top"
+  );
+}
+
+/**
+ * 요소에서 아이템 ID 추출
+ */
+function getItemIdFromElement(element) {
+  const card =
+    element.closest(".product-card") || element.closest(".modal-content");
+  if (!card) return null;
+
+  return (
+    card.dataset?.itemId ||
+    card.querySelector("[data-item-id]")?.dataset?.itemId ||
+    card.querySelector(".modal-title")?.dataset?.itemId
+  );
+}
+
+/**
+ * 카드에 조건부 툴팁 아이콘 추가
+ */
+function addTooltipIconsToCard(card, item) {
+  const itemId = item.item_id;
+  const bidInfo = getBidInfoForItem(itemId, item.bid_type);
+
+  // 기존 툴팁 아이콘 제거
+  card.querySelectorAll(".tooltip-icon").forEach((icon) => {
+    if (
+      !icon.closest(".timer-info-icon") &&
+      !icon.closest(".bid-info-tooltip-trigger")
+    ) {
+      icon.remove();
+    }
+  });
+
+  // 1. 관부가세 포함 금액 설명 (모든 price-detail)
+  const priceDetails = card.querySelectorAll(
+    ".price-detail, .info-price-detail, .price-details-container"
+  );
+  priceDetails.forEach((element) => {
+    if (!element.querySelector(".tooltip-icon")) {
+      addTooltipIcon(element, "price-detail");
+    }
+  });
+
+  // 2. 직접경매 - 실시간 금액 라벨
+  if (item.bid_type === "direct") {
+    const realtimeLabel = card.querySelector(
+      ".info-cell:nth-child(2) .info-label"
+    );
+    if (realtimeLabel && realtimeLabel.textContent.includes("실시간")) {
+      addTooltipIcon(realtimeLabel, "direct-realtime");
+    }
   }
 
-  // 모든 타이머 정보 아이콘에 이벤트 리스너 추가
-  document.addEventListener("mouseover", handleIconHover);
-  document.addEventListener("mouseout", hideTooltip);
-});
-
-// 아이콘 호버 이벤트 핸들러
-function handleIconHover(e) {
-  // 타이머 정보 아이콘에 마우스를 올렸을 때
-  if (e.target.closest(".timer-info-icon")) {
-    const icon = e.target.closest(".timer-info-icon");
-
-    // 툴팁 내용 설정
-    tooltipContainer.textContent = `마감 전 5분 입찰 발생 시
-5분씩 자동 연장
-
-추가 입찰 없을 시
-마지막 입찰 금액 낙찰`;
-
-    // 아이콘 위치 계산
-    const iconRect = icon.getBoundingClientRect();
-
-    // 툴팁 위치 설정 (아이콘 위)
-    tooltipContainer.style.left = iconRect.left + iconRect.width / 2 + "px";
-    tooltipContainer.style.top = iconRect.top - 10 + "px";
-    tooltipContainer.style.transform = "translate(-50%, -100%)";
-
-    // 툴팁 표시
-    tooltipContainer.style.display = "block";
-  }
-
-  // 입찰 정보 툴팁 아이콘에 마우스를 올렸을 때
-  if (e.target.closest(".bid-info-tooltip-trigger")) {
-    const icon = e.target.closest(".bid-info-tooltip-trigger");
-    let tooltipText = "";
-
-    // 브랜드옥션과 스타옥션에 따라 다른 메시지
-    if (icon.closest(".brand-auction")) {
-      tooltipText =
-        "첫 입찰은 1,000엔, 이후 입찰은 500엔 단위로 입찰 가능합니다.";
-    } else if (icon.closest(".star-auction")) {
-      tooltipText = "3번 경매장은 자동으로 계산된 최소금액으로 입찰됩니다.";
+  // 3. 현장경매 - 시작 금액 라벨 (모든 현장경매)
+  if (item.bid_type === "live") {
+    const startingLabel = card.querySelector(
+      ".info-cell:nth-child(2) .info-label"
+    );
+    if (startingLabel && startingLabel.textContent.includes("시작 금액")) {
+      addTooltipIcon(startingLabel, "live-starting");
     }
 
-    if (tooltipText) {
-      // 툴팁 내용 설정
-      tooltipContainer.textContent = tooltipText;
+    // 4. 현장경매 입찰 단계별 툴팁
+    addLiveBidStageTooltips(card, bidInfo);
+  }
+}
 
-      // 아이콘 위치 계산
-      const iconRect = icon.getBoundingClientRect();
+/**
+ * 현장경매 입찰 단계별 툴팁 추가
+ */
+function addLiveBidStageTooltips(card, bidInfo) {
+  // 입찰전 단계 - 1차 입찰 프로세스 설명
+  if (!bidInfo?.first_price) {
+    const firstBidLabel = card.querySelector(".bid-input-label");
+    if (firstBidLabel && firstBidLabel.textContent.includes("1차금액 입력")) {
+      addTooltipIcon(firstBidLabel, "live-first-bid");
+    }
+  }
 
-      // 툴팁 위치 설정 (아이콘 위)
-      tooltipContainer.style.left = iconRect.left + iconRect.width / 2 + "px";
-      tooltipContainer.style.top = iconRect.top - 10 + "px";
-      tooltipContainer.style.transform = "translate(-50%, -100%)";
+  // 2차 제안 단계 - 데이터 분석 기반 제안 설명
+  if (bidInfo?.first_price && !bidInfo?.final_price) {
+    const secondProposalLabel = card.querySelector(
+      ".info-cell:nth-child(3) .info-label"
+    );
+    if (
+      secondProposalLabel &&
+      secondProposalLabel.textContent.includes("2차 제안")
+    ) {
+      addTooltipIcon(secondProposalLabel, "live-second-proposal");
+    }
+  }
 
-      // 툴팁 표시
-      tooltipContainer.style.display = "block";
+  // 최종 입찰 단계 - 최대금액 입력 안내
+  if (bidInfo?.first_price && bidInfo?.second_price && !bidInfo?.final_price) {
+    // info-label에 최대금액 설명
+    const finalBidLabel = card.querySelector(
+      ".info-cell:nth-child(3) .info-label"
+    );
+    if (finalBidLabel && finalBidLabel.textContent.includes("2차 제안")) {
+      addTooltipIcon(finalBidLabel, "live-max-amount");
+    }
+
+    // bid-input-label에 최종입찰 설명
+    const finalInputLabel = card.querySelector(".bid-input-label");
+    if (
+      finalInputLabel &&
+      finalInputLabel.textContent.includes("최종입찰 금액")
+    ) {
+      addTooltipIcon(finalInputLabel, "live-final-bid");
     }
   }
 }
 
-// 툴팁 숨기기
-function hideTooltip(e) {
-  if (
-    !e.target.closest(".timer-info-icon") &&
-    !e.target.closest(".bid-info-tooltip-trigger")
-  ) {
-    tooltipContainer.style.display = "none";
+/**
+ * 모달에 조건부 툴팁 아이콘 추가
+ */
+function addTooltipIconsToModal(modal, item) {
+  const itemId = item.item_id;
+  const bidInfo = getBidInfoForItem(itemId, item.bid_type);
+
+  // 기존 툴팁 아이콘 제거
+  modal.querySelectorAll(".tooltip-icon").forEach((icon) => {
+    if (
+      !icon.closest(".timer-info-icon") &&
+      !icon.closest(".bid-info-tooltip-trigger")
+    ) {
+      icon.remove();
+    }
+  });
+
+  // 관부가세 포함 금액 설명
+  const priceDetails = modal.querySelectorAll(
+    ".price-detail, .info-price-detail, .price-details-container"
+  );
+  priceDetails.forEach((element) => {
+    if (!element.querySelector(".tooltip-icon")) {
+      addTooltipIcon(element, "price-detail");
+    }
+  });
+
+  // 입찰 섹션의 툴팁들
+  const bidSection = modal.querySelector(".bid-info-holder");
+  if (bidSection && item.bid_type === "live") {
+    addLiveBidStageTooltipsToModal(bidSection, bidInfo);
+  } else if (bidSection && item.bid_type === "direct") {
+    addDirectBidTooltipsToModal(bidSection);
   }
+}
+
+/**
+ * 모달 현장경매 입찰 툴팁 추가
+ */
+function addLiveBidStageTooltipsToModal(bidSection, bidInfo) {
+  // 시작 금액 라벨
+  const startingLabels = bidSection.querySelectorAll("p");
+  startingLabels.forEach((label) => {
+    if (label.textContent.includes("시작 금액")) {
+      addTooltipIcon(label, "live-starting");
+    }
+  });
+
+  // 입찰 단계별
+  if (!bidInfo?.first_price) {
+    const firstBidLabel = bidSection.querySelector(".bid-input-label");
+    if (firstBidLabel) {
+      addTooltipIcon(firstBidLabel, "live-first-bid");
+    }
+  }
+
+  if (bidInfo?.first_price && !bidInfo?.final_price) {
+    const secondProposalLabels = bidSection.querySelectorAll("p");
+    secondProposalLabels.forEach((label) => {
+      if (label.textContent.includes("2차 제안금액")) {
+        addTooltipIcon(label, "live-second-proposal");
+      }
+    });
+  }
+
+  if (bidInfo?.first_price && bidInfo?.second_price && !bidInfo?.final_price) {
+    const finalInputLabel = bidSection.querySelector(".bid-input-label");
+    if (finalInputLabel) {
+      addTooltipIcon(finalInputLabel, "live-final-bid");
+    }
+  }
+}
+
+/**
+ * 모달 직접경매 툴팁 추가
+ */
+function addDirectBidTooltipsToModal(bidSection) {
+  const realtimeLabels = bidSection.querySelectorAll("p");
+  realtimeLabels.forEach((label) => {
+    if (label.textContent.includes("실시간 금액")) {
+      addTooltipIcon(label, "direct-realtime");
+    }
+  });
+}
+
+/**
+ * 툴팁 아이콘 생성 및 추가
+ */
+function addTooltipIcon(element, tooltipType) {
+  if (element.querySelector(".tooltip-icon")) return; // 이미 있으면 추가하지 않음
+
+  const icon = document.createElement("i");
+  icon.className = "fas fa-question-circle tooltip-icon";
+  icon.dataset.tooltip = tooltipType;
+  icon.style.cssText = `
+    margin-left: 4px;
+    color: #999;
+    cursor: pointer;
+    font-size: 12px;
+  `;
+
+  element.appendChild(icon);
+}
+
+/**
+ * 아이템의 입찰 정보 가져오기
+ */
+function getBidInfoForItem(itemId, bidType) {
+  if (bidType === "live") {
+    return state.liveBidData.find((bid) => bid.item_id === itemId);
+  } else if (bidType === "direct") {
+    return state.directBidData.find((bid) => bid.item_id === itemId);
+  }
+  return null;
 }
 
 // 직접 경매 카드 HTML
@@ -779,14 +1018,13 @@ async function handleSignout() {
 }
 
 // 상세 정보 표시
+
 async function showDetails(itemId) {
   const modalManager = setupModal("detailModal");
   if (!modalManager) return;
 
-  // 현재 데이터에서 아이템 찾기
   let item = state.currentData.find((data) => data.item_id == itemId);
 
-  // 데이터 없는 경우 API 요청
   if (!item) {
     try {
       item = await API.fetchAPI(`/detail/item-details/${itemId}`, {
@@ -810,34 +1048,28 @@ async function showDetails(itemId) {
     }
   }
 
-  // 기본 정보로 모달 초기화
   initializeModal(item);
   modalManager.show();
-
-  // 이미지 네비게이션 이벤트 리스너 설정
   setupImageNavigation();
-
-  // 로딩 표시
   showLoadingInModal();
 
   try {
-    // 상세 정보 가져오기
     const updatedItem = await API.fetchAPI(`/detail/item-details/${itemId}`, {
       method: "POST",
     });
 
-    // 상세 정보 업데이트
     updateModalWithDetails(updatedItem);
 
-    // 추가 이미지가 있다면 업데이트
     if (updatedItem.additional_images) {
       initializeImages([
         updatedItem.image,
         ...JSON.parse(updatedItem.additional_images),
       ]);
-      // 이미지가 업데이트된 후 네비게이션 리스너 재설정
       setupImageNavigation();
     }
+
+    // 모달에 툴팁 아이콘 추가
+    addTooltipIconsToModal(modalManager.element, updatedItem);
   } catch (error) {
     console.error("Failed to fetch item details:", error);
   } finally {
@@ -1376,6 +1608,14 @@ window.bidLoadingUI = {
   },
 };
 
+function setupTooltips() {
+  TooltipManager.init();
+  TooltipManager.clearConditionalTooltips();
+  setupExistingTooltips();
+  setupNewTooltips();
+  console.log("툴팁 시스템 설정 완료");
+}
+
 // 초기화 함수
 function initialize() {
   state.itemsPerPage = 20; // 기본 20개씩 표시
@@ -1390,6 +1630,7 @@ function initialize() {
     setupMobileMenu();
     // 모바일 필터 설정
     setupMobileFilters();
+    setupTooltips();
   });
 
   window.addEventListener("load", function () {
