@@ -125,6 +125,79 @@ const starAucValueConfig = {
     `https://www.starbuyers-global-auction.com/market_price/${itemId}`,
 };
 
+class ProxyAxiosClient {
+  constructor(proxyConfig) {
+    this.proxyConfig = proxyConfig;
+    this.cookies = new Map();
+    this.client = axios.create({
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15",
+        "Accept-Language": "en-US,en;q=0.9",
+        Accept:
+          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+      },
+      maxRedirects: 5,
+      timeout: 30000,
+      validateStatus: function (status) {
+        return status >= 200 && status < 500;
+      },
+      proxy: proxyConfig,
+    });
+
+    // 요청 인터셉터: 쿠키 자동 추가
+    this.client.interceptors.request.use((config) => {
+      const cookieHeader = this.getCookieHeader();
+      if (cookieHeader) {
+        config.headers.Cookie = cookieHeader;
+      }
+      return config;
+    });
+
+    // 응답 인터셉터: 쿠키 자동 저장
+    this.client.interceptors.response.use((response) => {
+      this.handleResponseCookies(response);
+      return response;
+    });
+  }
+
+  getCookieHeader() {
+    const cookieArray = [];
+    for (const [name, value] of this.cookies) {
+      cookieArray.push(`${name}=${value}`);
+    }
+    return cookieArray.join("; ");
+  }
+
+  handleResponseCookies(response) {
+    const setCookieHeaders = response.headers["set-cookie"];
+    if (setCookieHeaders && Array.isArray(setCookieHeaders)) {
+      for (const cookieHeader of setCookieHeaders) {
+        this.parseCookieString(cookieHeader);
+      }
+    }
+  }
+
+  parseCookieString(cookieString) {
+    if (cookieString) {
+      const [nameValue] = cookieString.split(";");
+      const [name, ...valueParts] = nameValue.trim().split("=");
+      if (name && valueParts.length > 0) {
+        this.cookies.set(name.trim(), valueParts.join("=").trim());
+      }
+    }
+  }
+
+  // axios 메서드들 프록시
+  async get(url, config = {}) {
+    return this.client.get(url, config);
+  }
+
+  async post(url, data, config = {}) {
+    return this.client.post(url, data, config);
+  }
+}
+
 class StarAucCrawler extends AxiosCrawler {
   constructor(config) {
     super(config);
@@ -160,40 +233,19 @@ class StarAucCrawler extends AxiosCrawler {
       useProxy: false,
     });
 
-    // 나머지: 프록시 클라이언트들 (axios-cookiejar-support + proxy 옵션)
+    // 나머지: 프록시 클라이언트들 (ProxyAxiosClient 사용)
     this.proxyIPs.forEach((ip, index) => {
-      const cookieJar = new tough.CookieJar();
-
-      const proxyClient = wrapper(
-        axios.create({
-          jar: cookieJar,
-          withCredentials: true,
-          headers: {
-            "User-Agent":
-              "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15",
-            "Accept-Language": "en-US,en;q=0.9",
-            Accept:
-              "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-          },
-          maxRedirects: 5,
-          timeout: 30000,
-          validateStatus: function (status) {
-            return status >= 200 && status < 500;
-          },
-          // 프록시 설정
-          proxy: {
-            protocol: "http",
-            host: ip,
-            port: 3128,
-          },
-        })
-      );
+      const proxyClient = new ProxyAxiosClient({
+        protocol: "http",
+        host: ip,
+        port: 3128,
+      });
 
       this.clients.push({
         index: index + 1,
         name: `프록시${index + 1}(${ip})`,
         client: proxyClient,
-        cookieJar: cookieJar, // tough-cookie 사용
+        cookieJar: null, // 프록시는 쿠키자 사용 안함
         isLoggedIn: false,
         loginTime: null,
         useProxy: true,
