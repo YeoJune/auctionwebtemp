@@ -10,9 +10,6 @@ const pool = mysql.createPool({
   port: process.env.DB_PORT || 3306,
   database: process.env.DB_NAME,
   connectionLimit: 15, // 30의 50% (세션 스토어용 여유 확보)
-  acquireTimeout: 30000, // 30초 대기 후 타임아웃
-  timeout: 30000, // 쿼리 타임아웃
-  reconnect: true, // 연결 끊김 시 자동 재연결
   charset: "utf8mb4",
   connectTimeout: 10000,
   // 추가 안정성 설정
@@ -28,9 +25,6 @@ const sessionPool = mysql.createPool({
   port: process.env.DB_PORT || 3306,
   database: process.env.DB_NAME,
   connectionLimit: 8, // 세션용 전용 연결
-  acquireTimeout: 30000,
-  timeout: 30000,
-  reconnect: true,
   charset: "utf8mb4",
   connectTimeout: 10000,
   idleTimeout: 300000,
@@ -81,28 +75,18 @@ if (process.env.NODE_ENV !== "production") {
 async function testConnection() {
   let conn;
   try {
-    conn = await sessionPool.getConnection();
+    conn = await pool.getConnection();
     console.log("Successfully connected to the database");
 
     // 연결 상태 확인 쿼리들
-    const queries = [
-      `CREATE TABLE IF NOT EXISTS sessions (
-  session_id VARCHAR(128) COLLATE utf8mb4_bin NOT NULL,
-  expires INT(11) UNSIGNED NOT NULL,
-  data MEDIUMTEXT COLLATE utf8mb4_bin,
-  PRIMARY KEY (session_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`,
-    ];
+    const queries = [`SELECT * FROM crawled_items LIMIT 10`];
 
     // 각 쿼리 순차 실행
     for (const query of queries) {
       const [rows, fields] = await conn.query(query);
       console.log(`Executed: ${query}`);
-      if (query.includes("SHOW")) {
-        console.log("Result:", rows);
-      } else {
-        console.log(`Affected rows: ${rows.affectedRows}`);
-      }
+      console.log("Result:", rows);
+      console.log(`Affected rows: ${rows.affectedRows}`);
     }
   } catch (err) {
     if (err.code === "ER_ACCESS_DENIED_ERROR") {
