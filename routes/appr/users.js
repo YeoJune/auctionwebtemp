@@ -1,7 +1,7 @@
 // routes/appr/users.js
 const express = require("express");
 const router = express.Router();
-const pool = require("../../utils/DB");
+const { pool } = require("../../utils/DB");
 const { isAuthenticated } = require("../../utils/middleware");
 
 // 회원 프로필 및 멤버십 정보 조회 - GET /api/appr/users/profile

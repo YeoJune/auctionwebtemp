@@ -1,7 +1,7 @@
 // routes/appr/payments.js
 const express = require("express");
 const router = express.Router();
-const pool = require("../../utils/DB");
+const { pool } = require("../../utils/DB");
 const { isAuthenticated, isAdmin } = require("../../utils/middleware");
 const { v4: uuidv4 } = require("uuid");
 const crypto = require("crypto");

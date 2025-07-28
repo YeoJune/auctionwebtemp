@@ -1,7 +1,7 @@
 // routes/appr/admin.js
 const express = require("express");
 const router = express.Router();
-const pool = require("../../utils/DB");
+const { pool } = require("../../utils/DB");
 const { isAuthenticated, isAdmin } = require("../../utils/middleware");
 const multer = require("multer");
 const path = require("path");
