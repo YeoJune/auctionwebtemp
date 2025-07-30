@@ -822,457 +822,6 @@ router.get("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
   }
 });
 
-// 감정 상세 정보 조회 - GET /api/appr/admin/appraisals/:id
-router.get("/appraisals/:id", isAuthenticated, isAdmin, async (req, res) => {
-  let conn;
-  try {
-    const appraisal_id = req.params.id;
-
-    conn = await pool.getConnection();
-
-    const [rows] = await conn.query(
-      `SELECT a.*, u.email as user_email, u.company_name
-      FROM appraisals a
-      JOIN users u ON a.user_id = u.id
-      WHERE a.id = ?`,
-      [appraisal_id]
-    );
-
-    if (rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "해당 감정 정보를 찾을 수 없습니다.",
-      });
-    }
-
-    // JSON 데이터 파싱
-    const appraisal = rows[0];
-    if (appraisal.components_included) {
-      appraisal.components_included = JSON.parse(appraisal.components_included);
-    }
-    if (appraisal.delivery_info) {
-      appraisal.delivery_info = JSON.parse(appraisal.delivery_info);
-    }
-    if (appraisal.images) {
-      appraisal.images = JSON.parse(appraisal.images);
-    }
-
-    res.json({
-      success: true,
-      appraisal,
-    });
-  } catch (err) {
-    console.error("감정 상세 조회 중 오류 발생:", err);
-    res.status(500).json({
-      success: false,
-      message: "감정 상세 조회 중 서버 오류가 발생했습니다.",
-    });
-  } finally {
-    if (conn) conn.release();
-  }
-});
-
-// 감정 결과 및 상태 업데이트 - PUT /api/appr/admin/appraisals/:id
-router.put(
-  "/appraisals/:id",
-  isAuthenticated,
-  isAdmin,
-  appraisalUpload.fields([
-    { name: "images", maxCount: 20 },
-    { name: "pdf", maxCount: 1 },
-  ]),
-  async (req, res) => {
-    let conn;
-    try {
-      const appraisal_id = req.params.id;
-      const {
-        // 기본 정보 필드들 추가
-        brand,
-        model_name,
-        category,
-        appraisal_type,
-        product_link,
-        platform,
-        purchase_year,
-        components_included,
-        delivery_info,
-        remarks,
-        certificate_number,
-        // 기존 감정 결과 필드들
-        result,
-        result_notes,
-        suggested_restoration_services,
-      } = req.body;
-
-      conn = await pool.getConnection();
-
-      // 감정 정보 조회
-      const [appraisalRows] = await conn.query(
-        "SELECT * FROM appraisals WHERE id = ?",
-        [appraisal_id]
-      );
-
-      if (appraisalRows.length === 0) {
-        return res.status(404).json({
-          success: false,
-          message: "해당 감정 정보를 찾을 수 없습니다.",
-        });
-      }
-
-      const appraisal = appraisalRows[0];
-
-      // 인증서 번호 변경 시 중복 확인
-      if (
-        certificate_number &&
-        certificate_number !== appraisal.certificate_number
-      ) {
-        const normalizedNumber = certificate_number.toLowerCase();
-
-        // 형식 검증
-        const certPattern = /^cas\d+$/i;
-        if (!certPattern.test(normalizedNumber)) {
-          return res.status(400).json({
-            success: false,
-            message: "감정 번호는 CAS + 숫자 형식이어야 합니다. (예: CAS04312)",
-          });
-        }
-
-        // 중복 확인
-        const [existing] = await conn.query(
-          "SELECT certificate_number FROM appraisals WHERE certificate_number = ? AND id != ?",
-          [normalizedNumber, appraisal_id]
-        );
-
-        if (existing.length > 0) {
-          return res.status(400).json({
-            success: false,
-            message: "이미 존재하는 감정 번호입니다.",
-          });
-        }
-      }
-
-      let existingImages = appraisal.images ? JSON.parse(appraisal.images) : [];
-      let qrcode_url = appraisal.qrcode_url;
-      let qr_access_key = appraisal.qr_access_key;
-      let certificate_url = appraisal.certificate_url;
-
-      // 이미지 처리 - 퀵링크와 오프라인 모두 지원
-      if (req.files && req.files.images) {
-        const newImages = await processUploadedImages(
-          req.files.images,
-          path.join(__dirname, "../../public/images/appraisals"),
-          { skipExisting: true }
-        );
-        existingImages = [...existingImages, ...newImages];
-      }
-
-      // PDF 처리
-      if (req.files && req.files.pdf && req.files.pdf.length > 0) {
-        certificate_url = `/images/appraisals/${req.files.pdf[0].filename}`;
-      }
-
-      // QR 코드 생성 (인증서 번호가 있고 QR 코드가 없는 경우)
-      const finalCertificateNumber =
-        certificate_number || appraisal.certificate_number;
-      if (finalCertificateNumber && !qrcode_url) {
-        // 공통 함수로 QR 코드 생성
-        qrcode_url = await generateQRCode(finalCertificateNumber);
-      }
-
-      // 감정 정보 업데이트 필드 구성
-      const updateData = {};
-      const updateFields = [];
-      const updateValues = [];
-
-      // 기본 정보 업데이트 필드들
-      if (brand !== undefined) {
-        updateFields.push("brand = ?");
-        updateValues.push(brand);
-        updateData.brand = brand;
-      }
-
-      if (model_name !== undefined) {
-        updateFields.push("model_name = ?");
-        updateValues.push(model_name);
-        updateData.model_name = model_name;
-      }
-
-      if (category !== undefined) {
-        updateFields.push("category = ?");
-        updateValues.push(category);
-        updateData.category = category;
-      }
-
-      if (appraisal_type !== undefined) {
-        updateFields.push("appraisal_type = ?");
-        updateValues.push(appraisal_type);
-        updateData.appraisal_type = appraisal_type;
-      }
-
-      if (product_link !== undefined) {
-        updateFields.push("product_link = ?");
-        updateValues.push(product_link);
-        updateData.product_link = product_link;
-      }
-
-      if (platform !== undefined) {
-        updateFields.push("platform = ?");
-        updateValues.push(platform);
-        updateData.platform = platform;
-      }
-
-      if (purchase_year !== undefined) {
-        updateFields.push("purchase_year = ?");
-        updateValues.push(purchase_year ? parseInt(purchase_year) : null);
-        updateData.purchase_year = purchase_year
-          ? parseInt(purchase_year)
-          : null;
-      }
-
-      if (components_included !== undefined) {
-        updateFields.push("components_included = ?");
-        updateValues.push(
-          components_included ? JSON.stringify(components_included) : null
-        );
-        updateData.components_included = components_included;
-      }
-
-      if (delivery_info !== undefined) {
-        updateFields.push("delivery_info = ?");
-        updateValues.push(delivery_info ? JSON.stringify(delivery_info) : null);
-        updateData.delivery_info = delivery_info;
-      }
-
-      if (remarks !== undefined) {
-        updateFields.push("remarks = ?");
-        updateValues.push(remarks);
-        updateData.remarks = remarks;
-      }
-
-      if (certificate_number !== undefined) {
-        updateFields.push("certificate_number = ?");
-        updateValues.push(
-          certificate_number ? certificate_number.toLowerCase() : null
-        );
-        updateData.certificate_number = certificate_number
-          ? certificate_number.toLowerCase()
-          : null;
-      }
-
-      // 기존 감정 결과 필드들
-      if (result) {
-        updateFields.push("result = ?");
-        updateValues.push(result);
-        updateData.result = result;
-
-        // 결과가 설정되면 status를 자동으로 변경
-        if (result !== "pending") {
-          updateFields.push("status = 'completed'");
-          updateData.status = "completed";
-        } else {
-          // 결과가 pending이면 status는 in_review로 설정
-          updateFields.push("status = 'in_review'");
-          updateData.status = "in_review";
-        }
-      } else {
-        // 결과가 없으면 status는 in_review로 설정
-        updateFields.push("status = 'in_review'");
-        updateData.status = "in_review";
-      }
-
-      if (result_notes !== undefined) {
-        updateFields.push("result_notes = ?");
-        updateValues.push(result_notes);
-        updateData.result_notes = result_notes;
-      }
-
-      if (existingImages.length > 0) {
-        updateFields.push("images = ?");
-        updateValues.push(JSON.stringify(existingImages));
-        updateData.images = existingImages;
-      }
-
-      if (certificate_url) {
-        updateFields.push("certificate_url = ?");
-        updateValues.push(certificate_url);
-        updateData.certificate_url = certificate_url;
-      }
-
-      if (qrcode_url) {
-        updateFields.push("qrcode_url = ?");
-        updateValues.push(qrcode_url);
-        updateData.qrcode_url = qrcode_url;
-      }
-
-      // 제안된 복원 서비스가 있는 경우 저장
-      if (suggested_restoration_services) {
-        try {
-          // JSON 문자열인지 확인하고 파싱
-          const serviceIds =
-            typeof suggested_restoration_services === "string"
-              ? JSON.parse(suggested_restoration_services)
-              : suggested_restoration_services;
-
-          updateFields.push("suggested_restoration_services = ?");
-          updateValues.push(JSON.stringify(serviceIds));
-          updateData.suggested_restoration_services = serviceIds;
-        } catch (error) {
-          console.error("복원 서비스 JSON 파싱 오류:", error);
-        }
-      }
-
-      // 크레딧 차감 처리 (결과가 pending이 아니고, status가 completed로 변경되는 경우)
-      let creditInfo = { deducted: false, remaining: 0 };
-
-      if (result && result !== "pending" && !appraisal.credit_deducted) {
-        // 퀵링크 감정인 경우에만 크레딧 차감
-        if (appraisal.appraisal_type === "quicklink") {
-          const [userRows] = await conn.query(
-            "SELECT * FROM appr_users WHERE user_id = ?",
-            [appraisal.user_id]
-          );
-
-          if (userRows.length > 0) {
-            const user = userRows[0];
-            const newCredits = Math.max(
-              0,
-              user.quick_link_credits_remaining - 1
-            );
-
-            await conn.query(
-              "UPDATE appr_users SET quick_link_credits_remaining = ? WHERE user_id = ?",
-              [newCredits, appraisal.user_id]
-            );
-
-            creditInfo = {
-              deducted: true,
-              remaining: newCredits,
-            };
-
-            // 크레딧 차감 여부 업데이트
-            updateFields.push("credit_deducted = ?");
-            updateValues.push(true);
-            updateData.credit_deducted = true;
-          }
-        }
-
-        // 감정 완료 시간도 설정
-        updateFields.push("appraised_at = ?");
-        updateValues.push(new Date());
-        updateData.appraised_at = new Date();
-      }
-
-      if (updateFields.length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: "업데이트할 정보가 없습니다.",
-        });
-      }
-
-      // 업데이트 쿼리 실행
-      const query = `UPDATE appraisals SET ${updateFields.join(
-        ", "
-      )} WHERE id = ?`;
-      updateValues.push(appraisal_id);
-
-      await conn.query(query, updateValues);
-
-      res.json({
-        success: true,
-        appraisal: {
-          id: appraisal_id,
-          certificate_number: finalCertificateNumber,
-          ...updateData,
-        },
-        credit_info: creditInfo,
-      });
-    } catch (err) {
-      console.error("감정 정보 업데이트 중 오류 발생:", err);
-      res.status(500).json({
-        success: false,
-        message:
-          err.message || "감정 정보 업데이트 중 서버 오류가 발생했습니다.",
-      });
-    } finally {
-      if (conn) conn.release();
-    }
-  }
-);
-
-// 감정 이미지 삭제 - DELETE /api/appr/admin/appraisals/:id/images
-router.delete(
-  "/appraisals/:id/images",
-  isAuthenticated,
-  isAdmin,
-  async (req, res) => {
-    let conn;
-    try {
-      const appraisal_id = req.params.id;
-      const { image_url } = req.body;
-
-      if (!image_url) {
-        return res.status(400).json({
-          success: false,
-          message: "삭제할 이미지 URL이 필요합니다.",
-        });
-      }
-
-      conn = await pool.getConnection();
-
-      // 감정 정보 조회
-      const [appraisalRows] = await conn.query(
-        "SELECT images FROM appraisals WHERE id = ?",
-        [appraisal_id]
-      );
-
-      if (appraisalRows.length === 0) {
-        return res.status(404).json({
-          success: false,
-          message: "해당 감정 정보를 찾을 수 없습니다.",
-        });
-      }
-
-      const appraisal = appraisalRows[0];
-      let images = appraisal.images ? JSON.parse(appraisal.images) : [];
-
-      // 이미지 목록에서 해당 URL 제거
-      const updatedImages = images.filter((img) => img !== image_url);
-
-      // DB 업데이트
-      await conn.query("UPDATE appraisals SET images = ? WHERE id = ?", [
-        updatedImages.length > 0 ? JSON.stringify(updatedImages) : null,
-        appraisal_id,
-      ]);
-
-      // 실제 파일 삭제 (비동기로 처리)
-      setImmediate(() => {
-        try {
-          const filePath = path.join(__dirname, "../../public", image_url);
-          if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-          }
-        } catch (fileError) {
-          console.error(`이미지 파일 삭제 중 오류 (${image_url}):`, fileError);
-        }
-      });
-
-      res.json({
-        success: true,
-        message: "이미지가 성공적으로 삭제되었습니다.",
-        remaining_images: updatedImages,
-      });
-    } catch (err) {
-      console.error("이미지 삭제 중 오류 발생:", err);
-      res.status(500).json({
-        success: false,
-        message: "이미지 삭제 중 서버 오류가 발생했습니다.",
-      });
-    } finally {
-      if (conn) conn.release();
-    }
-  }
-);
-
 // 감정 삭제 - DELETE /api/appr/admin/appraisals (다중/단일 삭제 통합)
 router.delete("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
   let conn;
@@ -2942,6 +2491,457 @@ router.put(
         success: false,
         message:
           err.message || "감정 결과 일괄 변경 중 서버 오류가 발생했습니다.",
+      });
+    } finally {
+      if (conn) conn.release();
+    }
+  }
+);
+
+// 감정 상세 정보 조회 - GET /api/appr/admin/appraisals/:id
+router.get("/appraisals/:id", isAuthenticated, isAdmin, async (req, res) => {
+  let conn;
+  try {
+    const appraisal_id = req.params.id;
+
+    conn = await pool.getConnection();
+
+    const [rows] = await conn.query(
+      `SELECT a.*, u.email as user_email, u.company_name
+      FROM appraisals a
+      JOIN users u ON a.user_id = u.id
+      WHERE a.id = ?`,
+      [appraisal_id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "해당 감정 정보를 찾을 수 없습니다.",
+      });
+    }
+
+    // JSON 데이터 파싱
+    const appraisal = rows[0];
+    if (appraisal.components_included) {
+      appraisal.components_included = JSON.parse(appraisal.components_included);
+    }
+    if (appraisal.delivery_info) {
+      appraisal.delivery_info = JSON.parse(appraisal.delivery_info);
+    }
+    if (appraisal.images) {
+      appraisal.images = JSON.parse(appraisal.images);
+    }
+
+    res.json({
+      success: true,
+      appraisal,
+    });
+  } catch (err) {
+    console.error("감정 상세 조회 중 오류 발생:", err);
+    res.status(500).json({
+      success: false,
+      message: "감정 상세 조회 중 서버 오류가 발생했습니다.",
+    });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
+// 감정 결과 및 상태 업데이트 - PUT /api/appr/admin/appraisals/:id
+router.put(
+  "/appraisals/:id",
+  isAuthenticated,
+  isAdmin,
+  appraisalUpload.fields([
+    { name: "images", maxCount: 20 },
+    { name: "pdf", maxCount: 1 },
+  ]),
+  async (req, res) => {
+    let conn;
+    try {
+      const appraisal_id = req.params.id;
+      const {
+        // 기본 정보 필드들 추가
+        brand,
+        model_name,
+        category,
+        appraisal_type,
+        product_link,
+        platform,
+        purchase_year,
+        components_included,
+        delivery_info,
+        remarks,
+        certificate_number,
+        // 기존 감정 결과 필드들
+        result,
+        result_notes,
+        suggested_restoration_services,
+      } = req.body;
+
+      conn = await pool.getConnection();
+
+      // 감정 정보 조회
+      const [appraisalRows] = await conn.query(
+        "SELECT * FROM appraisals WHERE id = ?",
+        [appraisal_id]
+      );
+
+      if (appraisalRows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "해당 감정 정보를 찾을 수 없습니다.",
+        });
+      }
+
+      const appraisal = appraisalRows[0];
+
+      // 인증서 번호 변경 시 중복 확인
+      if (
+        certificate_number &&
+        certificate_number !== appraisal.certificate_number
+      ) {
+        const normalizedNumber = certificate_number.toLowerCase();
+
+        // 형식 검증
+        const certPattern = /^cas\d+$/i;
+        if (!certPattern.test(normalizedNumber)) {
+          return res.status(400).json({
+            success: false,
+            message: "감정 번호는 CAS + 숫자 형식이어야 합니다. (예: CAS04312)",
+          });
+        }
+
+        // 중복 확인
+        const [existing] = await conn.query(
+          "SELECT certificate_number FROM appraisals WHERE certificate_number = ? AND id != ?",
+          [normalizedNumber, appraisal_id]
+        );
+
+        if (existing.length > 0) {
+          return res.status(400).json({
+            success: false,
+            message: "이미 존재하는 감정 번호입니다.",
+          });
+        }
+      }
+
+      let existingImages = appraisal.images ? JSON.parse(appraisal.images) : [];
+      let qrcode_url = appraisal.qrcode_url;
+      let qr_access_key = appraisal.qr_access_key;
+      let certificate_url = appraisal.certificate_url;
+
+      // 이미지 처리 - 퀵링크와 오프라인 모두 지원
+      if (req.files && req.files.images) {
+        const newImages = await processUploadedImages(
+          req.files.images,
+          path.join(__dirname, "../../public/images/appraisals"),
+          { skipExisting: true }
+        );
+        existingImages = [...existingImages, ...newImages];
+      }
+
+      // PDF 처리
+      if (req.files && req.files.pdf && req.files.pdf.length > 0) {
+        certificate_url = `/images/appraisals/${req.files.pdf[0].filename}`;
+      }
+
+      // QR 코드 생성 (인증서 번호가 있고 QR 코드가 없는 경우)
+      const finalCertificateNumber =
+        certificate_number || appraisal.certificate_number;
+      if (finalCertificateNumber && !qrcode_url) {
+        // 공통 함수로 QR 코드 생성
+        qrcode_url = await generateQRCode(finalCertificateNumber);
+      }
+
+      // 감정 정보 업데이트 필드 구성
+      const updateData = {};
+      const updateFields = [];
+      const updateValues = [];
+
+      // 기본 정보 업데이트 필드들
+      if (brand !== undefined) {
+        updateFields.push("brand = ?");
+        updateValues.push(brand);
+        updateData.brand = brand;
+      }
+
+      if (model_name !== undefined) {
+        updateFields.push("model_name = ?");
+        updateValues.push(model_name);
+        updateData.model_name = model_name;
+      }
+
+      if (category !== undefined) {
+        updateFields.push("category = ?");
+        updateValues.push(category);
+        updateData.category = category;
+      }
+
+      if (appraisal_type !== undefined) {
+        updateFields.push("appraisal_type = ?");
+        updateValues.push(appraisal_type);
+        updateData.appraisal_type = appraisal_type;
+      }
+
+      if (product_link !== undefined) {
+        updateFields.push("product_link = ?");
+        updateValues.push(product_link);
+        updateData.product_link = product_link;
+      }
+
+      if (platform !== undefined) {
+        updateFields.push("platform = ?");
+        updateValues.push(platform);
+        updateData.platform = platform;
+      }
+
+      if (purchase_year !== undefined) {
+        updateFields.push("purchase_year = ?");
+        updateValues.push(purchase_year ? parseInt(purchase_year) : null);
+        updateData.purchase_year = purchase_year
+          ? parseInt(purchase_year)
+          : null;
+      }
+
+      if (components_included !== undefined) {
+        updateFields.push("components_included = ?");
+        updateValues.push(
+          components_included ? JSON.stringify(components_included) : null
+        );
+        updateData.components_included = components_included;
+      }
+
+      if (delivery_info !== undefined) {
+        updateFields.push("delivery_info = ?");
+        updateValues.push(delivery_info ? JSON.stringify(delivery_info) : null);
+        updateData.delivery_info = delivery_info;
+      }
+
+      if (remarks !== undefined) {
+        updateFields.push("remarks = ?");
+        updateValues.push(remarks);
+        updateData.remarks = remarks;
+      }
+
+      if (certificate_number !== undefined) {
+        updateFields.push("certificate_number = ?");
+        updateValues.push(
+          certificate_number ? certificate_number.toLowerCase() : null
+        );
+        updateData.certificate_number = certificate_number
+          ? certificate_number.toLowerCase()
+          : null;
+      }
+
+      // 기존 감정 결과 필드들
+      if (result) {
+        updateFields.push("result = ?");
+        updateValues.push(result);
+        updateData.result = result;
+
+        // 결과가 설정되면 status를 자동으로 변경
+        if (result !== "pending") {
+          updateFields.push("status = 'completed'");
+          updateData.status = "completed";
+        } else {
+          // 결과가 pending이면 status는 in_review로 설정
+          updateFields.push("status = 'in_review'");
+          updateData.status = "in_review";
+        }
+      } else {
+        // 결과가 없으면 status는 in_review로 설정
+        updateFields.push("status = 'in_review'");
+        updateData.status = "in_review";
+      }
+
+      if (result_notes !== undefined) {
+        updateFields.push("result_notes = ?");
+        updateValues.push(result_notes);
+        updateData.result_notes = result_notes;
+      }
+
+      if (existingImages.length > 0) {
+        updateFields.push("images = ?");
+        updateValues.push(JSON.stringify(existingImages));
+        updateData.images = existingImages;
+      }
+
+      if (certificate_url) {
+        updateFields.push("certificate_url = ?");
+        updateValues.push(certificate_url);
+        updateData.certificate_url = certificate_url;
+      }
+
+      if (qrcode_url) {
+        updateFields.push("qrcode_url = ?");
+        updateValues.push(qrcode_url);
+        updateData.qrcode_url = qrcode_url;
+      }
+
+      // 제안된 복원 서비스가 있는 경우 저장
+      if (suggested_restoration_services) {
+        try {
+          // JSON 문자열인지 확인하고 파싱
+          const serviceIds =
+            typeof suggested_restoration_services === "string"
+              ? JSON.parse(suggested_restoration_services)
+              : suggested_restoration_services;
+
+          updateFields.push("suggested_restoration_services = ?");
+          updateValues.push(JSON.stringify(serviceIds));
+          updateData.suggested_restoration_services = serviceIds;
+        } catch (error) {
+          console.error("복원 서비스 JSON 파싱 오류:", error);
+        }
+      }
+
+      // 크레딧 차감 처리 (결과가 pending이 아니고, status가 completed로 변경되는 경우)
+      let creditInfo = { deducted: false, remaining: 0 };
+
+      if (result && result !== "pending" && !appraisal.credit_deducted) {
+        // 퀵링크 감정인 경우에만 크레딧 차감
+        if (appraisal.appraisal_type === "quicklink") {
+          const [userRows] = await conn.query(
+            "SELECT * FROM appr_users WHERE user_id = ?",
+            [appraisal.user_id]
+          );
+
+          if (userRows.length > 0) {
+            const user = userRows[0];
+            const newCredits = Math.max(
+              0,
+              user.quick_link_credits_remaining - 1
+            );
+
+            await conn.query(
+              "UPDATE appr_users SET quick_link_credits_remaining = ? WHERE user_id = ?",
+              [newCredits, appraisal.user_id]
+            );
+
+            creditInfo = {
+              deducted: true,
+              remaining: newCredits,
+            };
+
+            // 크레딧 차감 여부 업데이트
+            updateFields.push("credit_deducted = ?");
+            updateValues.push(true);
+            updateData.credit_deducted = true;
+          }
+        }
+
+        // 감정 완료 시간도 설정
+        updateFields.push("appraised_at = ?");
+        updateValues.push(new Date());
+        updateData.appraised_at = new Date();
+      }
+
+      if (updateFields.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "업데이트할 정보가 없습니다.",
+        });
+      }
+
+      // 업데이트 쿼리 실행
+      const query = `UPDATE appraisals SET ${updateFields.join(
+        ", "
+      )} WHERE id = ?`;
+      updateValues.push(appraisal_id);
+
+      await conn.query(query, updateValues);
+
+      res.json({
+        success: true,
+        appraisal: {
+          id: appraisal_id,
+          certificate_number: finalCertificateNumber,
+          ...updateData,
+        },
+        credit_info: creditInfo,
+      });
+    } catch (err) {
+      console.error("감정 정보 업데이트 중 오류 발생:", err);
+      res.status(500).json({
+        success: false,
+        message:
+          err.message || "감정 정보 업데이트 중 서버 오류가 발생했습니다.",
+      });
+    } finally {
+      if (conn) conn.release();
+    }
+  }
+);
+
+// 감정 이미지 삭제 - DELETE /api/appr/admin/appraisals/:id/images
+router.delete(
+  "/appraisals/:id/images",
+  isAuthenticated,
+  isAdmin,
+  async (req, res) => {
+    let conn;
+    try {
+      const appraisal_id = req.params.id;
+      const { image_url } = req.body;
+
+      if (!image_url) {
+        return res.status(400).json({
+          success: false,
+          message: "삭제할 이미지 URL이 필요합니다.",
+        });
+      }
+
+      conn = await pool.getConnection();
+
+      // 감정 정보 조회
+      const [appraisalRows] = await conn.query(
+        "SELECT images FROM appraisals WHERE id = ?",
+        [appraisal_id]
+      );
+
+      if (appraisalRows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "해당 감정 정보를 찾을 수 없습니다.",
+        });
+      }
+
+      const appraisal = appraisalRows[0];
+      let images = appraisal.images ? JSON.parse(appraisal.images) : [];
+
+      // 이미지 목록에서 해당 URL 제거
+      const updatedImages = images.filter((img) => img !== image_url);
+
+      // DB 업데이트
+      await conn.query("UPDATE appraisals SET images = ? WHERE id = ?", [
+        updatedImages.length > 0 ? JSON.stringify(updatedImages) : null,
+        appraisal_id,
+      ]);
+
+      // 실제 파일 삭제 (비동기로 처리)
+      setImmediate(() => {
+        try {
+          const filePath = path.join(__dirname, "../../public", image_url);
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+          }
+        } catch (fileError) {
+          console.error(`이미지 파일 삭제 중 오류 (${image_url}):`, fileError);
+        }
+      });
+
+      res.json({
+        success: true,
+        message: "이미지가 성공적으로 삭제되었습니다.",
+        remaining_images: updatedImages,
+      });
+    } catch (err) {
+      console.error("이미지 삭제 중 오류 발생:", err);
+      res.status(500).json({
+        success: false,
+        message: "이미지 삭제 중 서버 오류가 발생했습니다.",
       });
     } finally {
       if (conn) conn.release();
