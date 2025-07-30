@@ -6,24 +6,42 @@ let highestOnly = false;
 let currentPage = 1;
 let itemsPerPage = 10;
 let totalPages = 1;
-let currentSortBy = "updated_at"; // 기본 정렬 필드
-let currentSortOrder = "desc"; // 기본 정렬 방향
-let fromDate = ""; // 시작 날짜 필터
-let toDate = ""; // 종료 날짜 필터
+let currentSortBy = "original_scheduled_date"; // 기본값 변경
+let currentSortOrder = "desc";
+let fromDate = "";
+let toDate = "";
+let currentSearch = ""; // 검색어 추가
+
+// 검색 디바운스 타이머
+let searchTimeout = null;
 
 // 페이지 로드 시 실행
 document.addEventListener("DOMContentLoaded", function () {
   // 초기 데이터 로드
   loadDirectBids();
 
-  // 필터 탭 이벤트는 common.js에서 처리
+  // 검색 관련 이벤트
+  document
+    .getElementById("searchInput")
+    .addEventListener("input", handleSearchInput);
+  document
+    .getElementById("searchBtn")
+    .addEventListener("click", handleSearchSubmit);
+  document
+    .getElementById("clearSearchBtn")
+    .addEventListener("click", handleSearchClear);
+
+  // 빠른 날짜 필터 이벤트
+  document.querySelectorAll("[data-range]").forEach((button) => {
+    button.addEventListener("click", handleQuickDateFilter);
+  });
 
   // 필터 토글 이벤트
   document
     .getElementById("toggleHighestOnly")
     .addEventListener("change", function () {
       highestOnly = this.checked;
-      currentPage = 1; // 필터 변경 시 첫 페이지로 리셋
+      currentPage = 1;
       loadDirectBids();
     });
 
@@ -50,21 +68,21 @@ document.addEventListener("DOMContentLoaded", function () {
   // 페이지 크기 변경 이벤트
   document.getElementById("pageSize")?.addEventListener("change", function () {
     itemsPerPage = parseInt(this.value);
-    currentPage = 1; // 페이지 크기 변경 시 첫 페이지로 리셋
+    currentPage = 1;
     loadDirectBids();
   });
 
   // 정렬 옵션 변경 이벤트
   document.getElementById("sortBy")?.addEventListener("change", function () {
     currentSortBy = this.value;
-    currentPage = 1; // 정렬 변경 시 첫 페이지로 리셋
+    currentPage = 1;
     loadDirectBids();
   });
 
   // 정렬 방향 변경 이벤트
   document.getElementById("sortOrder")?.addEventListener("change", function () {
     currentSortOrder = this.value;
-    currentPage = 1; // 정렬 방향 변경 시 첫 페이지로 리셋
+    currentPage = 1;
     loadDirectBids();
   });
 
@@ -74,7 +92,7 @@ document.addEventListener("DOMContentLoaded", function () {
     ?.addEventListener("click", function () {
       fromDate = document.getElementById("fromDate").value;
       toDate = document.getElementById("toDate").value;
-      currentPage = 1; // 날짜 필터 변경 시 첫 페이지로 리셋
+      currentPage = 1;
       loadDirectBids();
     });
 
@@ -86,11 +104,11 @@ document.addEventListener("DOMContentLoaded", function () {
       document.getElementById("toDate").value = "";
       fromDate = "";
       toDate = "";
-      currentPage = 1; // 날짜 필터 초기화 시 첫 페이지로 리셋
+      currentPage = 1;
       loadDirectBids();
     });
 
-  // Add event listeners for bulk actions
+  // 일괄 작업 이벤트
   document
     .getElementById("bulkCompleteBtn")
     ?.addEventListener("click", openBulkCompleteModal);
@@ -117,10 +135,79 @@ document.addEventListener("DOMContentLoaded", function () {
     ?.addEventListener("click", submitEditBid);
 });
 
+// 검색 관련 함수들
+function handleSearchInput() {
+  const searchValue = document.getElementById("searchInput").value.trim();
+
+  // 디바운스 적용 (300ms 후 검색 실행)
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    if (currentSearch !== searchValue) {
+      currentSearch = searchValue;
+      currentPage = 1;
+      loadDirectBids();
+    }
+  }, 300);
+}
+
+function handleSearchSubmit() {
+  const searchValue = document.getElementById("searchInput").value.trim();
+  if (currentSearch !== searchValue) {
+    currentSearch = searchValue;
+    currentPage = 1;
+    loadDirectBids();
+  }
+}
+
+function handleSearchClear() {
+  document.getElementById("searchInput").value = "";
+  if (currentSearch !== "") {
+    currentSearch = "";
+    currentPage = 1;
+    loadDirectBids();
+  }
+}
+
+// 빠른 날짜 필터 함수
+function handleQuickDateFilter(event) {
+  const range = event.target.dataset.range;
+  const today = new Date();
+  let startDate, endDate;
+
+  switch (range) {
+    case "today":
+      startDate = endDate = today.toISOString().split("T")[0];
+      break;
+    case "week":
+      const weekStart = new Date(today);
+      weekStart.setDate(today.getDate() - today.getDay());
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      startDate = weekStart.toISOString().split("T")[0];
+      endDate = weekEnd.toISOString().split("T")[0];
+      break;
+    case "month":
+      startDate = new Date(today.getFullYear(), today.getMonth(), 1)
+        .toISOString()
+        .split("T")[0];
+      endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+        .toISOString()
+        .split("T")[0];
+      break;
+  }
+
+  document.getElementById("fromDate").value = startDate;
+  document.getElementById("toDate").value = endDate;
+  fromDate = startDate;
+  toDate = endDate;
+  currentPage = 1;
+  loadDirectBids();
+}
+
 // 필터 상태에 따라 데이터 로드
 async function filterByStatus(status) {
   currentStatus = status;
-  currentPage = 1; // 필터 변경 시 첫 페이지로 리셋
+  currentPage = 1;
   await loadDirectBids();
 }
 
@@ -144,7 +231,8 @@ async function loadDirectBids() {
       currentSortBy,
       currentSortOrder,
       fromDate,
-      toDate
+      toDate,
+      currentSearch // 검색어 추가
     );
 
     if (!directBids?.bids || directBids.count === 0) {
@@ -433,11 +521,10 @@ function openCompleteModal(bidId) {
   document.getElementById("priceComparisonMessage").textContent = "";
   document.getElementById("priceComparisonMessage").className =
     "price-comparison";
-
   openModal("completeModal");
 }
 
-// 관부가세 포함 가격 업데이트 (수정: 데이터 속성 접근 방식 수정)
+// 관부가세 포함 가격 업데이트
 function updateWinningPriceKRW() {
   const bidId = document.getElementById("completeBidId").value;
   const winningPrice = parseFloat(
@@ -456,7 +543,6 @@ function updateWinningPriceKRW() {
   );
   if (!checkbox) return;
 
-  // 수정: 데이터 속성 접근 방식 통일
   const auc_num = parseInt(checkbox.getAttribute("data-auc-num")) || 1;
   const category = checkbox.getAttribute("data-category") || "기타";
   const currentPrice =
@@ -484,7 +570,7 @@ function updateWinningPriceKRW() {
   }
 }
 
-// 입찰 완료 제출 (수정: 데이터 타입 변환 추가)
+// 입찰 완료 제출
 async function submitCompleteBid() {
   const bidId = parseInt(document.getElementById("completeBidId").value);
   const winningPriceValue = document.getElementById("winningPrice").value;
@@ -501,8 +587,6 @@ async function submitCompleteBid() {
     await completeDirectBid(bidId, winningPrice);
     closeAllModals();
     showAlert("입찰이 완료되었습니다.", "success");
-
-    // 데이터 새로고침
     await loadDirectBids();
   } catch (error) {
     handleError(error, "입찰 완료 처리 중 오류가 발생했습니다.");
@@ -515,7 +599,7 @@ function openCancelModal(bidId) {
   openModal("cancelModal");
 }
 
-// 낙찰 실패 제출 (수정: 데이터 타입 변환 추가)
+// 낙찰 실패 제출
 async function submitCancelBid() {
   const bidId = parseInt(document.getElementById("cancelBidId").value);
 
@@ -528,8 +612,6 @@ async function submitCancelBid() {
     await cancelDirectBid(bidId);
     closeAllModals();
     showAlert("낙찰 실패로 처리되었습니다.", "success");
-
-    // 데이터 새로고침
     await loadDirectBids();
   } catch (error) {
     handleError(error, "낙찰 실패 처리 중 오류가 발생했습니다.");
@@ -542,7 +624,7 @@ function openMarkAsSubmittedModal(bidId) {
   openModal("markAsSubmittedModal");
 }
 
-// 플랫폼 반영 완료 표시 처리 (수정: 데이터 타입 변환 추가)
+// 플랫폼 반영 완료 표시 처리
 async function markAsSubmitted() {
   const bidId = parseInt(document.getElementById("markSubmittedBidId").value);
 
@@ -555,14 +637,13 @@ async function markAsSubmitted() {
     await markDirectBidAsSubmitted(bidId);
     closeAllModals();
     showAlert("플랫폼 반영 완료로 표시되었습니다.", "success");
-    // 데이터 새로고침
     await loadDirectBids();
   } catch (error) {
     handleError(error, "반영 완료 표시 중 오류가 발생했습니다.");
   }
 }
 
-// Bulk action modals and submissions
+// 일괄 작업 모달 및 제출 함수들
 function openBulkCompleteModal() {
   const count = document.querySelectorAll(".bid-checkbox:checked").length;
   if (count === 0) return;
@@ -591,7 +672,7 @@ function updateBulkWinningPriceKRW() {
   ).textContent = `관부가세 포함: ${formatCurrency(totalPrice, "KRW")}`;
 }
 
-// 일괄 낙찰 완료 제출 (수정: 데이터 타입 변환 추가)
+// 일괄 낙찰 완료 제출
 async function submitBulkComplete() {
   const checkedBids = document.querySelectorAll(".bid-checkbox:checked");
   if (checkedBids.length === 0) {
@@ -600,12 +681,10 @@ async function submitBulkComplete() {
   }
 
   try {
-    // 체크된 입찰 ID 추출 및 숫자로 변환
     const bidIds = Array.from(checkedBids).map((checkbox) =>
       parseInt(checkbox.dataset.bidId)
     );
 
-    // 낙찰 금액 추출 및 변환
     const winningPriceValue = document.getElementById("bulkWinningPrice").value;
     const winningPrice = winningPriceValue
       ? parseFloat(winningPriceValue)
@@ -615,8 +694,6 @@ async function submitBulkComplete() {
 
     closeAllModals();
     showAlert(`${bidIds.length}개 입찰이 완료되었습니다.`, "success");
-
-    // 데이터 새로고침
     await loadDirectBids();
   } catch (error) {
     handleError(error, "일괄 입찰 완료 처리 중 오류가 발생했습니다.");
@@ -630,7 +707,7 @@ function openBulkCancelModal() {
   openModal("bulkCancelModal");
 }
 
-// 일괄 낙찰 실패 제출 (수정: 데이터 타입 변환 추가)
+// 일괄 낙찰 실패 제출
 async function submitBulkCancel() {
   const checkedBids = document.querySelectorAll(".bid-checkbox:checked");
   if (checkedBids.length === 0) {
@@ -639,7 +716,6 @@ async function submitBulkCancel() {
   }
 
   try {
-    // 체크된 입찰 ID 추출 및 숫자로 변환
     const bidIds = Array.from(checkedBids).map((checkbox) =>
       parseInt(checkbox.dataset.bidId)
     );
@@ -651,8 +727,6 @@ async function submitBulkCancel() {
       `${bidIds.length}개 입찰이 낙찰 실패로 처리되었습니다.`,
       "success"
     );
-
-    // 데이터 새로고침
     await loadDirectBids();
   } catch (error) {
     handleError(error, "일괄 입찰 취소 처리 중 오류가 발생했습니다.");
@@ -666,7 +740,7 @@ function openBulkMarkAsSubmittedModal() {
   openModal("bulkMarkAsSubmittedModal");
 }
 
-// 일괄 플랫폼 반영 완료 제출 (수정: 데이터 타입 변환 추가)
+// 일괄 플랫폼 반영 완료 제출
 async function submitBulkMarkAsSubmitted() {
   const checkedBids = document.querySelectorAll(".bid-checkbox:checked");
   if (checkedBids.length === 0) {
@@ -675,7 +749,6 @@ async function submitBulkMarkAsSubmitted() {
   }
 
   try {
-    // 체크된 입찰 ID 추출 및 숫자로 변환
     const bidIds = Array.from(checkedBids).map((checkbox) =>
       parseInt(checkbox.dataset.bidId)
     );
@@ -687,8 +760,6 @@ async function submitBulkMarkAsSubmitted() {
       `${bidIds.length}개 입찰이 플랫폼 반영 완료로 표시되었습니다.`,
       "success"
     );
-
-    // 데이터 새로고침
     await loadDirectBids();
   } catch (error) {
     handleError(error, "일괄 반영 완료 표시 중 오류가 발생했습니다.");
@@ -697,23 +768,19 @@ async function submitBulkMarkAsSubmitted() {
 
 // 수정 모달 열기
 function openEditBidModal(bidId) {
-  // 현재 입찰 데이터 찾기
   const tableBody = document.getElementById("directBidsTableBody");
   const rows = tableBody.querySelectorAll("tr");
   let currentBid = null;
 
-  // 테이블에서 해당 입찰 찾기 (간단한 방법)
   for (let row of rows) {
     const checkbox = row.querySelector(".bid-checkbox");
     if (checkbox && checkbox.dataset.bidId == bidId) {
-      // 현재 표시된 데이터에서 값 추출
       const cells = row.querySelectorAll("td");
       const currentPriceText = cells[4]?.textContent || "";
       const winningPriceText = cells[5]?.textContent || "";
       const statusText = cells[8]?.textContent || "";
       const submittedText = cells[9]?.textContent || "";
 
-      // 가격에서 숫자만 추출
       const currentPriceMatch = currentPriceText.match(/현지가:\s*¥([\d,]+)/);
       const winningPriceMatch = winningPriceText.match(/현지가:\s*¥([\d,]+)/);
 
@@ -754,7 +821,7 @@ function openEditBidModal(bidId) {
   openModal("editBidModal");
 }
 
-// 수정 제출 (수정: 데이터 타입 변환 추가)
+// 수정 제출
 async function submitEditBid() {
   const bidId = parseInt(document.getElementById("editBidId").value);
   const currentPriceValue = document.getElementById("editCurrentPrice").value;
@@ -783,8 +850,6 @@ async function submitEditBid() {
 
     closeAllModals();
     showAlert("입찰 정보가 수정되었습니다.", "success");
-
-    // 데이터 새로고침
     await loadDirectBids();
   } catch (error) {
     handleError(error, "입찰 수정 중 오류가 발생했습니다.");

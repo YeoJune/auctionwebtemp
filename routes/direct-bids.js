@@ -25,13 +25,14 @@ const isAdmin = (req, res, next) => {
 // Updated GET endpoint for direct-bids.js
 router.get("/", async (req, res) => {
   const {
+    search,
     status,
     highestOnly,
     page = 1,
     limit = 10,
     fromDate,
     toDate,
-    sortBy = "updated_at",
+    sortBy = "original_scheduled_date",
     sortOrder = "desc",
   } = req.query;
 
@@ -98,6 +99,16 @@ router.get("/", async (req, res) => {
       `;
     }
 
+    // 검색 조건 추가
+    if (search) {
+      const searchTerm = `%${search}%`;
+      countQuery +=
+        " AND (d.item_id LIKE ? OR i.original_title LIKE ? OR i.brand LIKE ?)";
+      mainQuery +=
+        " AND (d.item_id LIKE ? OR i.original_title LIKE ? OR i.brand LIKE ?)";
+      queryParams.push(searchTerm, searchTerm, searchTerm);
+    }
+
     // 상태 필터 추가
     if (status) {
       // 콤마로 구분된 상태 값 처리
@@ -144,21 +155,14 @@ router.get("/", async (req, res) => {
       case "original_scheduled_date":
         orderByColumn = "i.original_scheduled_date";
         break;
-      case "scheduled_date":
-        orderByColumn = "i.scheduled_date";
+      case "updated_at":
+        orderByColumn = "d.updated_at";
         break;
       case "original_title":
         orderByColumn = "i.original_title";
         break;
-      case "current_price":
-        orderByColumn = "d.current_price";
-        break;
-      case "created_at":
-        orderByColumn = "d.created_at";
-        break;
-      case "updated_at":
       default:
-        orderByColumn = "d.updated_at";
+        orderByColumn = "i.original_scheduled_date"; // 기본값
         break;
     }
 

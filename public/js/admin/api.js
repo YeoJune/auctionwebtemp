@@ -115,16 +115,21 @@ async function fetchLiveBids(
   status = "",
   page = 1,
   limit = 10,
-  sortBy = "updated_at",
+  sortBy = "original_scheduled_date", // 기본값 변경
   sortOrder = "desc",
   fromDate = "",
-  toDate = ""
+  toDate = "",
+  search = "" // 새로 추가
 ) {
   const params = new URLSearchParams({
     status: status,
     page: page,
     limit: limit,
   });
+
+  if (search) {
+    params.append("search", search);
+  }
 
   if (sortBy) {
     params.append("sortBy", sortBy);
@@ -198,10 +203,11 @@ async function fetchDirectBids(
   highestOnly = true,
   page = 1,
   limit = 10,
-  sortBy = "updated_at",
+  sortBy = "original_scheduled_date", // 기본값 변경
   sortOrder = "desc",
   fromDate = "",
-  toDate = ""
+  toDate = "",
+  search = "" // 새로 추가
 ) {
   const params = new URLSearchParams({
     status: status,
@@ -209,6 +215,10 @@ async function fetchDirectBids(
     page: page,
     limit: limit,
   });
+
+  if (search) {
+    params.append("search", search);
+  }
 
   if (sortBy) {
     params.append("sortBy", sortBy);

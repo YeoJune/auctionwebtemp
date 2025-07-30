@@ -17,12 +17,13 @@ const isAdmin = (req, res, next) => {
 // Updated GET endpoint for live-bids.js
 router.get("/", async (req, res) => {
   const {
+    search,
     status,
     page = 1,
     limit = 10,
     fromDate,
     toDate,
-    sortBy = "updated_at",
+    sortBy = "original_scheduled_date",
     sortOrder = "desc",
   } = req.query;
 
@@ -39,6 +40,15 @@ router.get("/", async (req, res) => {
   // Prepare base query
   let queryConditions = ["1=1"];
   let queryParams = [];
+
+  // 검색 조건 추가
+  if (search) {
+    const searchTerm = `%${search}%`;
+    queryConditions.push(
+      "(b.item_id LIKE ? OR i.original_title LIKE ? OR i.brand LIKE ?)"
+    );
+    queryParams.push(searchTerm, searchTerm, searchTerm);
+  }
 
   // Add status filter if provided
   if (status) {
@@ -96,30 +106,20 @@ router.get("/", async (req, res) => {
     WHERE ${whereClause}
   `;
 
-  // 정렬 설정
+  // 정렬 기준 설정
   let orderByColumn;
   switch (sortBy) {
     case "original_scheduled_date":
       orderByColumn = "i.original_scheduled_date";
       break;
-    case "scheduled_date":
-      orderByColumn = "i.scheduled_date";
+    case "updated_at":
+      orderByColumn = "b.updated_at";
       break;
     case "original_title":
       orderByColumn = "i.original_title";
       break;
-    case "first_price":
-      orderByColumn = "b.first_price";
-      break;
-    case "final_price":
-      orderByColumn = "b.final_price";
-      break;
-    case "created_at":
-      orderByColumn = "b.created_at";
-      break;
-    case "updated_at":
     default:
-      orderByColumn = "b.updated_at";
+      orderByColumn = "i.original_scheduled_date"; // 기본값
       break;
   }
 

@@ -41,6 +41,20 @@
           </div>
         </div>
 
+        <!-- 검색 영역 -->
+        <div class="search-section">
+          <div class="search-input-group">
+            <input
+              type="text"
+              id="searchInput"
+              placeholder="상품ID, 제목, 브랜드 검색..." />
+            <button id="searchBtn" class="btn">검색</button>
+            <button id="clearSearchBtn" class="btn btn-secondary">
+              초기화
+            </button>
+          </div>
+        </div>
+
         <!-- 필터 탭 -->
         <div class="filter-tabs">
           <div class="filter-tab active" data-status="">전체</div>
@@ -51,7 +65,7 @@
           <div class="filter-tab" data-status="cancelled">낙찰 실패</div>
         </div>
 
-        <!-- 일괄 처리 버튼 추가 -->
+        <!-- 일괄 처리 버튼 -->
         <div class="bulk-actions">
           <button id="bulkCompleteBtn" class="btn" disabled>
             선택 항목 낙찰 완료
@@ -61,19 +75,16 @@
           </button>
         </div>
 
-        <!-- 페이지 크기 선택 옵션 추가 -->
+        <!-- 필터 및 정렬 옵션 -->
         <div class="filter-options">
-          <!-- 정렬 옵션 추가 -->
+          <!-- 정렬 옵션 -->
           <div class="sort-options">
             <div class="sort-field">
               <label for="sortBy">정렬 기준:</label>
               <select id="sortBy" class="form-control form-control-sm">
+                <option value="original_scheduled_date">예정일</option>
                 <option value="updated_at">변경일</option>
                 <option value="original_title">제목</option>
-                <option value="original_scheduled_date">예정일</option>
-                <option value="first_price">1차 입찰가</option>
-                <option value="final_price">최종 입찰가</option>
-                <option value="created_at">생성일</option>
               </select>
             </div>
             <div class="sort-order">
@@ -85,8 +96,13 @@
             </div>
           </div>
 
-          <!-- 날짜 필터 추가 -->
+          <!-- 개선된 날짜 필터 -->
           <div class="date-filter">
+            <div class="quick-dates">
+              <button class="btn btn-sm" data-range="today">오늘</button>
+              <button class="btn btn-sm" data-range="week">이번주</button>
+              <button class="btn btn-sm" data-range="month">이번달</button>
+            </div>
             <div class="date-inputs">
               <div class="date-field">
                 <label for="fromDate">시작일:</label>
@@ -151,7 +167,7 @@
           </table>
         </div>
 
-        <!-- 페이지네이션 추가 -->
+        <!-- 페이지네이션 -->
         <div id="pagination" class="pagination"></div>
       </div>
     </div>
@@ -193,7 +209,7 @@
           <p>선택한 입찰을 낙찰 완료 처리하시겠습니까?</p>
           <p>완료 후에는 취소할 수 없습니다.</p>
 
-          <!-- 낙찰 금액 입력 필드 추가 -->
+          <!-- 낙찰 금액 입력 필드 -->
           <div class="form-group">
             <label class="form-label" for="winningPrice"
               >낙찰 금액 (엔화)</label
