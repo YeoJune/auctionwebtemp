@@ -571,12 +571,6 @@
   letter-spacing: 0.5px;
 }
 
-.filter-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 10px;
-}
-
 /* 모달 (설정 페이지 전용) */
 .modal {
   display: none;
@@ -700,10 +694,6 @@
 
   .item-image {
     margin: 0 auto 10px auto;
-  }
-
-  .filter-grid {
-    grid-template-columns: 1fr;
   }
 
   .modal-content {
