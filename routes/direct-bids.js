@@ -62,6 +62,7 @@ router.get("/", async (req, res) => {
           WHERE status = 'active'
           GROUP BY item_id
         ) m ON d.item_id = m.item_id AND d.current_price = m.max_price
+        LEFT JOIN crawled_items i ON d.item_id = i.item_id
         WHERE 1=1
       `;
 
@@ -85,6 +86,7 @@ router.get("/", async (req, res) => {
       countQuery = `
         SELECT COUNT(*) as total 
         FROM direct_bids d
+        LEFT JOIN crawled_items i ON d.item_id = i.item_id
         WHERE 1=1
       `;
 

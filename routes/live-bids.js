@@ -91,6 +91,7 @@ router.get("/", async (req, res) => {
   const countQuery = `
     SELECT COUNT(*) as total 
     FROM live_bids b
+    LEFT JOIN crawled_items i ON b.item_id = i.item_id
     WHERE ${whereClause}
   `;
 
