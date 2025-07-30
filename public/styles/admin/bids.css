@@ -350,6 +350,7 @@ input[type="checkbox"] {
 }
 
 .status-card {
+  background: #667eea;
   color: white;
   padding: 20px;
   border-radius: 10px;
