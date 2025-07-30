@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>통합 경매 관리</title>
+    <link rel="stylesheet" href="/styles/admin/common.css" />
+  </head>
+  <body>
+    <div class="admin-layout">
+      <!-- 사이드바 -->
+      <div class="sidebar">
+        <div class="sidebar-logo">
+          <h2>경매 관리자</h2>
+        </div>
+        <div class="sidebar-menu">
+          <a href="/admin">대시보드</a>
+          <a href="/admin/live-bids">현장 경매 관리</a>
+          <a href="/admin/direct-bids">직접 경매 관리</a>
+          <a href="/admin/all-bids" class="active">통합 경매 관리</a>
+          <a href="/admin/invoices">인보이스 관리</a>
+          <a href="/admin/users">회원 관리</a>
+          <a href="/admin/settings">관리자 설정</a>
+        </div>
+      </div>
+
+      <!-- 메인 콘텐츠 -->
+      <div class="main-content">
+        <div class="main-header">
+          <h1>통합 경매 관리</h1>
+          <div class="user-info" style="display: flex; align-items: center">
+            <!-- 간단한 토글 버튼 -->
+            <div class="admin-switch">
+              <a href="#" class="active">경매 관리</a>
+              <a href="https://cassystem.com/admin" class="inactive"
+                >명품감정</a
+              >
+            </div>
+
+            관리자
+            <button id="logoutBtn" class="btn btn-secondary">로그아웃</button>
+          </div>
+        </div>
+
+        <!-- 대시보드 영역 -->
+        <div class="dashboard-section">
+          <!-- 입찰 현황 카드들 -->
+          <div class="status-cards">
+            <div class="status-card" id="liveStatusCard">
+              <h3>현장 경매</h3>
+              <div class="card-stats">
+                <div class="stat-item">
+                  <span class="stat-label">진행중</span>
+                  <span class="stat-value" id="liveActiveCount">-</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">완료</span>
+                  <span class="stat-value" id="liveCompletedCount">-</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">실패</span>
+                  <span class="stat-value" id="liveCancelledCount">-</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="status-card" id="directStatusCard">
+              <h3>직접 경매</h3>
+              <div class="card-stats">
+                <div class="stat-item">
+                  <span class="stat-label">활성</span>
+                  <span class="stat-value" id="directActiveCount">-</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">완료</span>
+                  <span class="stat-value" id="directCompletedCount">-</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">실패</span>
+                  <span class="stat-value" id="directCancelledCount">-</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 긴급 처리 항목들 -->
+          <div class="urgent-section">
+            <div class="urgent-card">
+              <div class="urgent-header">
+                <h4>오늘 마감 예정</h4>
+                <span class="urgent-count" id="todayDeadlineCount">-</span>
+              </div>
+              <div class="urgent-list" id="todayDeadlineList">
+                <div class="loading">데이터를 불러오는 중...</div>
+              </div>
+              <button class="urgent-view-all" onclick="showTodayDeadlines()">
+                전체 보기
+              </button>
+            </div>
+
+            <div class="urgent-card">
+              <div class="urgent-header">
+                <h4>플랫폼 미반영</h4>
+                <span class="urgent-count" id="unsubmittedCount">-</span>
+              </div>
+              <div class="urgent-list" id="unsubmittedList">
+                <div class="loading">데이터를 불러오는 중...</div>
+              </div>
+              <button class="urgent-view-all" onclick="showUnsubmitted()">
+                전체 보기
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 통합 검색 & 빠른 작업 -->
+        <div class="search-section">
+          <!-- 통합 검색 -->
+          <div class="unified-search">
+            <div class="search-input-group">
+              <input
+                type="text"
+                id="unifiedSearchInput"
+                placeholder="모든 경매에서 검색 (상품ID, 제목, 브랜드)..." />
+              <button id="unifiedSearchBtn" class="btn">검색</button>
+              <button id="clearUnifiedSearchBtn" class="btn btn-secondary">
+                초기화
+              </button>
+            </div>
+          </div>
+
+          <!-- 빠른 작업 버튼들 -->
+          <div class="quick-actions">
+            <button onclick="showTodayDeadlines()" class="quick-btn urgent">
+              <span class="quick-icon">📅</span>
+              <span>오늘 마감</span>
+              <span class="quick-count" id="quickTodayCount">-</span>
+            </button>
+            <button onclick="showUnsubmitted()" class="quick-btn warning">
+              <span class="quick-icon">❗</span>
+              <span>미반영</span>
+              <span class="quick-count" id="quickUnsubmittedCount">-</span>
+            </button>
+            <button onclick="showSecondProposals()" class="quick-btn info">
+              <span class="quick-icon">💬</span>
+              <span>2차 제안 대기</span>
+              <span class="quick-count" id="quickSecondCount">-</span>
+            </button>
+            <button onclick="showHighValue()" class="quick-btn success">
+              <span class="quick-icon">💰</span>
+              <span>고액 입찰</span>
+              <span class="quick-count" id="quickHighValueCount">-</span>
+            </button>
+            <button onclick="showCompleted()" class="quick-btn secondary">
+              <span class="quick-icon">✅</span>
+              <span>완료 항목</span>
+            </button>
+            <button onclick="resetFilters()" class="quick-btn reset">
+              <span class="quick-icon">🔄</span>
+              <span>전체 보기</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 결과 영역 -->
+        <div class="results-section">
+          <!-- 결과 헤더 -->
+          <div class="results-header">
+            <div class="results-info">
+              <span id="resultsCount">전체 결과를 불러오는 중...</span>
+            </div>
+            <div class="result-tabs">
+              <div class="result-tab active" data-type="all">
+                전체 <span id="allResultCount">-</span>
+              </div>
+              <div class="result-tab" data-type="live">
+                현장 <span id="liveResultCount">-</span>
+              </div>
+              <div class="result-tab" data-type="direct">
+                직접 <span id="directResultCount">-</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 통합 테이블 -->
+          <div class="unified-table-container">
+            <table class="unified-table" id="unifiedTable">
+              <thead>
+                <tr>
+                  <th>타입</th>
+                  <th>상품 정보</th>
+                  <th>고객</th>
+                  <th>입찰 현황</th>
+                  <th>상태</th>
+                  <th>마감/수정일</th>
+                  <th>빠른 작업</th>
+                </tr>
+              </thead>
+              <tbody id="unifiedResults">
+                <tr>
+                  <td colspan="7" class="text-center">
+                    데이터를 불러오는 중입니다...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 로딩 더보기 -->
+          <div class="load-more-section">
+            <button
+              id="loadMoreBtn"
+              class="btn btn-secondary"
+              style="display: none">
+              더 많은 결과 보기
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 빠른 작업 모달들 -->
+
+    <!-- 간단한 확인 모달 -->
+    <div class="modal-overlay" id="quickActionModal">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3 class="modal-title" id="quickActionTitle">작업 확인</h3>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p id="quickActionMessage">이 작업을 수행하시겠습니까?</p>
+          <div id="quickActionDetails"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary close-modal">취소</button>
+          <button class="btn" id="confirmQuickAction">확인</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 스크립트 로드 -->
+    <script src="/js/admin/common.js"></script>
+    <script src="/js/admin/api.js"></script>
+    <script src="/js/admin/all-bids.js"></script>
+    <script src="/js/calculate-fee.js"></script>
+  </body>
+</html>
