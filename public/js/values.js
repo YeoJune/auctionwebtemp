@@ -81,13 +81,11 @@ function createProductCard(item) {
           parseInt(item.final_price || 0)
         )} ¥
         ${
-          state.isAdmin ? (
-            <button class="edit-price-icon">
+          state.isAdmin
+            ? `<button class="edit-price-icon">
               <i class="fas fa-edit"></i>
-            </button>
-          ) : (
-            <div></div>
-          )
+            </button>`
+            : `<div></div>`
         }
         </div>
       </div>
