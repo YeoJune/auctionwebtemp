@@ -5,6 +5,7 @@ const multer = require("multer");
 const path = require("path");
 const { v4: uuidv4 } = require("uuid");
 const sharp = require("sharp");
+const pool = require("../utils/DB");
 const {
   getAdminSettings,
   updateAdminSettings,
@@ -507,7 +508,6 @@ router.get("/invoices", isAdmin, async (req, res) => {
     const countParams = queryParams.slice(0, queryParams.length - 2);
 
     // DB 연결 및 쿼리 실행
-    const pool = require("../utils/DB");
     const [rows] = await pool.query(query, queryParams);
     const [countResult] = await pool.query(countQuery, countParams);
 

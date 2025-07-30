@@ -19,10 +19,10 @@
 .search-input-group input[type="text"] {
   flex: 1;
   min-width: 300px;
-  padding: 12px 16px;
+  padding: 14px 18px;
   border: 2px solid #e9ecef;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 15px;
   transition: all 0.3s ease;
 }
 
@@ -49,7 +49,7 @@
 }
 
 .filter-tab {
-  padding: 10px 20px;
+  padding: 12px 24px;
   background-color: #f8f9fa;
   border: 2px solid #e9ecef;
   border-radius: 6px;
@@ -57,7 +57,7 @@
   transition: all 0.3s ease;
   font-weight: 500;
   color: #495057;
-  min-width: 80px;
+  font-size: 14px;
   text-align: center;
 }
 
@@ -74,7 +74,7 @@
   box-shadow: 0 3px 6px rgba(52, 152, 219, 0.3);
 }
 
-/* ========== 일괄 작업 영역 ========== */
+/* ========== 일괄 작업 & 필터 옵션 ========== */
 .bulk-actions {
   display: flex;
   gap: 10px;
@@ -85,12 +85,6 @@
   border: 1px solid #e9ecef;
 }
 
-.bulk-actions .btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-/* ========== 필터 옵션 ========== */
 .filter-options {
   display: flex;
   flex-wrap: wrap;
@@ -104,40 +98,19 @@
   border: 1px solid #e9ecef;
 }
 
-.filter-options > div {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
 .filter-options label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: #6c757d;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-/* 정렬 옵션 */
 .sort-options {
   display: flex;
   gap: 15px;
-  align-items: flex-end;
 }
 
-.sort-field,
-.sort-order {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.sort-field select,
-.sort-order select {
-  min-width: 120px;
-}
-
-/* 날짜 필터 */
 .date-filter {
   display: flex;
   flex-direction: column;
@@ -150,20 +123,14 @@
 }
 
 .quick-dates .btn {
-  padding: 6px 12px;
-  font-size: 11px;
+  padding: 8px 14px;
+  font-size: 12px;
   background-color: #6c757d;
-  border-radius: 4px;
-}
-
-.quick-dates .btn:hover {
-  background-color: #495057;
 }
 
 .date-inputs {
   display: flex;
   gap: 10px;
-  align-items: flex-end;
 }
 
 .date-field {
@@ -172,27 +139,6 @@
   gap: 5px;
 }
 
-.date-field input {
-  min-width: 140px;
-}
-
-.date-buttons {
-  display: flex;
-  gap: 5px;
-}
-
-/* 페이지 크기 선택기 */
-.page-size-selector {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.page-size-selector select {
-  min-width: 80px;
-}
-
-/* 토글 스위치 */
 .toggle-switch {
   display: flex;
   align-items: center;
@@ -238,6 +184,7 @@ input[type="checkbox"] {
 .toggle-label {
   font-weight: 500;
   color: #495057;
+  font-size: 14px;
 }
 
 /* ========== 페이지네이션 ========== */
@@ -254,9 +201,10 @@ input[type="checkbox"] {
 
 .pagination-info {
   margin-bottom: 15px;
-  font-size: 14px;
+  font-size: 15px;
   color: #6c757d;
   text-align: center;
+  font-weight: 500;
 }
 
 .pagination-controls {
@@ -269,41 +217,23 @@ input[type="checkbox"] {
 .pagination-controls .btn {
   min-width: 40px;
   height: 38px;
-  padding: 0 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  font-size: 14px;
   border: 1px solid #e9ecef;
   background-color: #fff;
   color: #495057;
-}
-
-.pagination-controls .btn:hover:not(.disabled) {
-  background-color: #f8f9fa;
-  border-color: #3498db;
 }
 
 .pagination-controls .btn.active {
   background-color: #3498db;
   color: white;
   border-color: #2980b9;
-  box-shadow: 0 2px 4px rgba(52, 152, 219, 0.3);
 }
 
-.pagination-controls .btn.disabled {
-  background-color: #f8f9fa;
-  color: #adb5bd;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-/* ========== 상품 정보 스타일 ========== */
+/* ========== 상품 정보 & 가격 표시 ========== */
 .item-info {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  max-width: 100%;
 }
 
 .item-thumbnail {
@@ -323,6 +253,7 @@ input[type="checkbox"] {
 
 .item-details > div:first-child {
   font-weight: 600;
+  font-size: 14px;
   margin-bottom: 4px;
 }
 
@@ -331,53 +262,33 @@ input[type="checkbox"] {
   text-decoration: none;
 }
 
-.item-details > div:first-child a:hover {
-  text-decoration: underline;
-}
-
 .item-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 6px;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .item-meta span {
   background-color: #f8f9fa;
-  padding: 2px 6px;
+  padding: 3px 7px;
   border-radius: 4px;
   color: #6c757d;
   border: 1px solid #e9ecef;
 }
 
-/* 테이블 상품 정보 컬럼 너비 */
-.data-table th:nth-child(3),
-.data-table td:nth-child(3) {
-  width: 320px;
-  max-width: 320px;
-}
-
-/* ========== 가격 표시 ========== */
 .price-info,
 .bid-prices {
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.4;
-}
-
-.price-item {
-  margin-bottom: 3px;
-}
-
-.price-item:last-child {
-  margin-bottom: 0;
 }
 
 .total-price {
   margin-top: 4px;
   font-weight: 600;
   color: #2980b9;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .price-item.winning {
@@ -385,33 +296,27 @@ input[type="checkbox"] {
   color: #27ae60;
 }
 
-.price-item.total {
-  font-weight: 600;
-  color: #e67e22;
-}
-
 .platform-status {
   margin-top: 6px;
 }
 
-/* ========== 모달 내 가격 표시 ========== */
 .price-display,
 .price-preview {
   margin-top: 8px;
-  padding: 8px 12px;
+  padding: 10px 14px;
   background-color: #f8f9fa;
   border: 1px solid #e9ecef;
   border-radius: 4px;
   font-weight: 600;
   color: #2980b9;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .price-comparison {
   margin-top: 8px;
-  padding: 6px 10px;
+  padding: 8px 12px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
 }
 
@@ -427,16 +332,7 @@ input[type="checkbox"] {
   border: 1px solid #c3e6cb;
 }
 
-.note {
-  font-size: 12px;
-  color: #6c757d;
-  margin-top: 8px;
-  font-style: italic;
-}
-
-/* ========== 통합 경매 관리 스타일 ========== */
-
-/* 대시보드 영역 */
+/* ========== 통합 경매 관리 ========== */
 .dashboard-section {
   background-color: #fff;
   padding: 25px;
@@ -446,7 +342,6 @@ input[type="checkbox"] {
   border: 1px solid #e9ecef;
 }
 
-/* 상태 카드 */
 .status-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -468,8 +363,8 @@ input[type="checkbox"] {
 }
 
 .status-card h3 {
+  font-size: 1.2rem;
   margin-bottom: 15px;
-  font-size: 1.1rem;
   opacity: 0.9;
 }
 
@@ -479,13 +374,9 @@ input[type="checkbox"] {
   align-items: center;
 }
 
-.stat-item {
-  text-align: center;
-}
-
 .stat-label {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   opacity: 0.8;
   margin-bottom: 4px;
   text-transform: uppercase;
@@ -493,12 +384,11 @@ input[type="checkbox"] {
 }
 
 .stat-value {
-  font-size: 1.8rem;
+  font-size: 2rem;
   font-weight: 700;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
-/* 긴급 처리 영역 */
 .urgent-section {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
@@ -513,66 +403,38 @@ input[type="checkbox"] {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.urgent-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #f8f9fa;
-}
-
 .urgent-header h4 {
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 600;
   color: #2c3e50;
-  margin: 0;
 }
 
 .urgent-count {
   background-color: #e74c3c;
   color: white;
-  padding: 3px 8px;
+  padding: 4px 10px;
   border-radius: 12px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  min-width: 20px;
-  text-align: center;
-}
-
-.urgent-list {
-  max-height: 200px;
-  overflow-y: auto;
-  margin-bottom: 15px;
 }
 
 .urgent-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 0;
+  padding: 10px 0;
   border-bottom: 1px solid #f8f9fa;
-}
-
-.urgent-item:last-child {
-  border-bottom: none;
-}
-
-.urgent-item-info {
-  flex: 1;
-  min-width: 0;
 }
 
 .urgent-item-id {
   font-weight: 600;
   color: #3498db;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .urgent-item-title {
   color: #6c757d;
-  font-size: 11px;
-  display: block;
+  font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -580,9 +442,9 @@ input[type="checkbox"] {
 }
 
 .urgent-item-time {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
-  padding: 2px 6px;
+  padding: 3px 8px;
   border-radius: 4px;
   white-space: nowrap;
 }
@@ -591,45 +453,15 @@ input[type="checkbox"] {
   background-color: #fee;
   color: #c53030;
 }
-
 .urgent-item-time.warning {
   background-color: #fffbeb;
   color: #d69e2e;
 }
-
 .urgent-item-time.expired {
   background-color: #fed7d7;
   color: #9b2c2c;
 }
 
-.urgent-view-all {
-  width: 100%;
-  padding: 8px;
-  background-color: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 4px;
-  color: #6c757d;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.urgent-view-all:hover {
-  background-color: #e9ecef;
-  color: #495057;
-}
-
-/* 통합 검색 영역 */
-.unified-search {
-  margin-bottom: 20px;
-}
-
-.unified-search .search-input-group input {
-  font-size: 15px;
-  padding: 14px 18px;
-}
-
-/* 빠른 작업 버튼 */
 .quick-actions {
   display: flex;
   flex-wrap: wrap;
@@ -645,13 +477,13 @@ input[type="checkbox"] {
 .quick-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 14px;
+  gap: 8px;
+  padding: 12px 16px;
   border-radius: 6px;
   border: 1px solid #e9ecef;
   background-color: #fff;
   color: #495057;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -667,72 +499,57 @@ input[type="checkbox"] {
   border-color: #e74c3c;
   color: #e74c3c;
 }
-
 .quick-btn.urgent:hover {
   background-color: #e74c3c;
   color: white;
 }
-
 .quick-btn.warning {
   border-color: #f39c12;
   color: #f39c12;
 }
-
 .quick-btn.warning:hover {
   background-color: #f39c12;
   color: white;
 }
-
 .quick-btn.info {
   border-color: #3498db;
   color: #3498db;
 }
-
 .quick-btn.info:hover {
   background-color: #3498db;
   color: white;
 }
-
 .quick-btn.success {
   border-color: #27ae60;
   color: #27ae60;
 }
-
 .quick-btn.success:hover {
   background-color: #27ae60;
   color: white;
 }
-
 .quick-btn.secondary {
   border-color: #6c757d;
   color: #6c757d;
 }
-
 .quick-btn.secondary:hover {
   background-color: #6c757d;
   color: white;
 }
-
 .quick-btn.reset {
   border-color: #9b59b6;
   color: #9b59b6;
 }
-
 .quick-btn.reset:hover {
   background-color: #9b59b6;
   color: white;
 }
 
-.quick-icon {
-  font-size: 14px;
-}
-
 .quick-count {
   background-color: #f8f9fa;
   color: #495057;
-  padding: 2px 6px;
+  padding: 3px 7px;
   border-radius: 8px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   min-width: 18px;
   text-align: center;
@@ -743,7 +560,6 @@ input[type="checkbox"] {
   color: inherit;
 }
 
-/* 결과 영역 */
 .results-section {
   background-color: #fff;
   border-radius: 8px;
@@ -762,7 +578,7 @@ input[type="checkbox"] {
 }
 
 .results-info {
-  font-size: 14px;
+  font-size: 15px;
   color: #6c757d;
   font-weight: 500;
 }
@@ -773,15 +589,15 @@ input[type="checkbox"] {
 }
 
 .result-tab {
-  padding: 6px 12px;
+  padding: 8px 14px;
   background-color: #fff;
   border: 1px solid #e9ecef;
   border-radius: 4px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   color: #6c757d;
+  transition: all 0.3s ease;
 }
 
 .result-tab:hover {
@@ -798,9 +614,9 @@ input[type="checkbox"] {
 .result-tab span {
   background-color: #f8f9fa;
   color: #6c757d;
-  padding: 1px 6px;
+  padding: 2px 7px;
   border-radius: 8px;
-  font-size: 10px;
+  font-size: 11px;
   margin-left: 4px;
 }
 
@@ -809,13 +625,8 @@ input[type="checkbox"] {
   color: white;
 }
 
-/* 통합 테이블 */
-.unified-table-container {
-  overflow-x: auto;
-}
-
-.unified-table {
-  margin-bottom: 0;
+.unified-table td {
+  font-size: 13px;
 }
 
 .live-bid-row {
@@ -827,29 +638,26 @@ input[type="checkbox"] {
 }
 
 .date-info {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.3;
 }
 
 .time-remaining {
   margin-top: 2px;
   font-weight: 500;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .time-remaining.urgent {
   color: #e74c3c;
 }
-
 .time-remaining.warning {
   color: #f39c12;
 }
-
 .time-remaining.expired {
   color: #95a5a6;
 }
 
-/* 빠른 작업 셀 */
 .quick-actions-cell {
   display: flex;
   flex-wrap: wrap;
@@ -857,169 +665,42 @@ input[type="checkbox"] {
 }
 
 .quick-actions-cell .btn {
-  padding: 4px 8px;
-  font-size: 10px;
+  padding: 6px 10px;
+  font-size: 11px;
   min-width: auto;
 }
 
-/* 더보기 섹션 */
-.load-more-section {
-  padding: 20px;
-  text-align: center;
-  background-color: #f8f9fa;
-  border-top: 1px solid #e9ecef;
-}
-
 /* ========== 반응형 디자인 ========== */
-@media (max-width: 1200px) {
+@media (max-width: 768px) {
   .filter-options {
     flex-direction: column;
-    align-items: stretch;
   }
 
-  .filter-options > div {
-    width: 100%;
-  }
-
-  .sort-options,
-  .date-inputs {
-    flex-wrap: wrap;
-  }
-
-  .status-cards {
-    grid-template-columns: 1fr;
-  }
-
-  .urgent-section {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 768px) {
   .search-input-group {
     flex-direction: column;
-  }
-
-  .search-input-group input {
-    min-width: auto;
   }
 
   .filter-tabs {
     flex-wrap: wrap;
   }
 
-  .bulk-actions {
-    flex-direction: column;
-  }
-
   .quick-actions {
     flex-direction: column;
   }
 
-  .quick-btn {
-    justify-content: center;
-  }
-
-  .pagination-controls {
-    justify-content: center;
+  .status-cards,
+  .urgent-section {
+    grid-template-columns: 1fr;
   }
 
   .results-header {
     flex-direction: column;
     gap: 15px;
-    align-items: stretch;
-    text-align: center;
-  }
-
-  .result-tabs {
-    justify-content: center;
   }
 
   .item-info {
     flex-direction: column;
     align-items: center;
     text-align: center;
-  }
-
-  .item-thumbnail {
-    width: 80px;
-    height: 80px;
-  }
-
-  .quick-actions-cell {
-    flex-direction: column;
-  }
-
-  .quick-actions-cell .btn {
-    width: 100%;
-    justify-content: center;
-  }
-}
-
-/* ========== 스크롤바 스타일 ========== */
-.urgent-list::-webkit-scrollbar,
-.unified-table-container::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-.urgent-list::-webkit-scrollbar-track,
-.unified-table-container::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
-}
-
-.urgent-list::-webkit-scrollbar-thumb,
-.unified-table-container::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
-}
-
-.urgent-list::-webkit-scrollbar-thumb:hover,
-.unified-table-container::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
-
-/* ========== 접근성 향상 ========== */
-.btn:focus,
-.form-control:focus,
-.filter-tab:focus,
-.quick-btn:focus {
-  outline: 2px solid #3498db;
-  outline-offset: 2px;
-}
-
-.urgent-item:focus-within {
-  background-color: #f8f9fa;
-  border-radius: 4px;
-}
-
-/* ========== 인쇄 스타일 ========== */
-@media print {
-  .search-section,
-  .filter-tabs,
-  .bulk-actions,
-  .quick-actions,
-  .pagination,
-  .urgent-view-all {
-    display: none !important;
-  }
-
-  .dashboard-section {
-    page-break-after: always;
-  }
-
-  .results-section {
-    box-shadow: none;
-    border: 1px solid #000;
-  }
-
-  .unified-table {
-    font-size: 10px;
-  }
-
-  .live-bid-row,
-  .direct-bid-row {
-    border-left: none;
   }
 }
