@@ -262,6 +262,13 @@ app.get("/admin/direct-bids", (req, res) => {
     res.redirect("/signinPage");
   }
 });
+app.get("/admin/all-bids", (req, res) => {
+  if (req.session.user && req.session.user.id === "admin") {
+    res.sendFile(path.join(mainPagesPath, "admin", "all-bids.html"));
+  } else {
+    res.redirect("/signinPage");
+  }
+});
 app.get("/admin/invoices", (req, res) => {
   if (req.session.user && req.session.user.id === "admin") {
     res.sendFile(path.join(mainPagesPath, "admin", "invoices.html"));
