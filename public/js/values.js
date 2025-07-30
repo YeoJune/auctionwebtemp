@@ -86,7 +86,7 @@ function createProductCard(item) {
               <i class="fas fa-edit"></i>
             </button>
           ) : (
-            ""
+            <div></div>
           )
         }
         </div>
