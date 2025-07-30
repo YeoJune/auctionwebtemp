@@ -153,15 +153,6 @@ async function handlePriceEdit(itemId, priceSpan) {
           parseInt(newPrice)
         )} ¥ <button class="edit-price-icon"><i class="fas fa-edit"></i></button>`;
 
-        // 카드의 가격 정보도 업데이트
-        const card = priceSpan.closest(".product-card");
-        const infoValue = card.querySelector(
-          ".info-cell:nth-child(3) .info-value"
-        );
-        if (infoValue) {
-          infoValue.textContent = `${formatNumber(parseInt(newPrice))} ¥`;
-        }
-
         // 새로운 수정 버튼에 이벤트 리스너 다시 추가
         const newEditIcon = priceSpan.querySelector(".edit-price-icon");
         if (newEditIcon) {
