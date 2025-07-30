@@ -50,24 +50,6 @@ function createProductCard(item) {
   const card = createElement("div", "product-card");
   card.dataset.itemId = item.item_id;
 
-  // 관리자인 경우 가격 수정 UI 추가
-  const priceDisplay = state.isAdmin
-    ? `<div class="price-info">
-         <span class="price-label">최종가격</span>
-         <span class="price-value" data-item-id="${item.item_id}">
-           ${formatNumber(parseInt(item.final_price || 0))} ¥
-           <button class="edit-price-icon">
-             <i class="fas fa-edit"></i>
-           </button>
-         </span>
-       </div>`
-    : `<div class="price-info">
-         <span class="price-label">최종가격</span>
-         <span class="price-value">${formatNumber(
-           parseInt(item.final_price || 0)
-         )} ¥</span>
-       </div>`;
-
   card.innerHTML = `
     <div class="product-header">
       <div class="product-brand">${item.brand || ""}</div>
@@ -97,10 +79,19 @@ function createProductCard(item) {
         <div class="info-label">가격</div>
         <div class="info-value">${formatNumber(
           parseInt(item.final_price || 0)
-        )} ¥</div>
+        )} ¥
+        ${
+          state.isAdmin ? (
+            <button class="edit-price-icon">
+              <i class="fas fa-edit"></i>
+            </button>
+          ) : (
+            ""
+          )
+        }
+        </div>
       </div>
     </div>
-    ${priceDisplay}
   `;
 
   // 카드 클릭 이벤트 (수정 버튼 제외)
@@ -116,7 +107,7 @@ function createProductCard(item) {
     if (editIcon) {
       editIcon.addEventListener("click", (e) => {
         e.stopPropagation();
-        handlePriceEdit(item.item_id, editIcon.closest(".price-value"));
+        handlePriceEdit(item.item_id, editIcon.closest(".info-value"));
       });
     }
   }
