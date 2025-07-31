@@ -1129,6 +1129,17 @@ function updateAppraisal() {
   );
   formData.append("deleted_image_ids", JSON.stringify(deletedIds));
 
+  formData.append(
+    "final_image_order",
+    JSON.stringify(
+      imageList.map((img, index) => ({
+        id: img.id,
+        order: index,
+        isNew: img.isNew,
+      }))
+    )
+  );
+
   // 유효성 검사
   const brand = formData.get("brand");
   const modelName = formData.get("model_name");
@@ -1380,11 +1391,13 @@ function submitCreateAppraisal() {
   }
 
   // 이미지 추가
-  imageList
+  const sortedImages = imageList
     .filter((img) => img.isNew)
-    .forEach((img) => {
-      formData.append("images", img.file);
-    });
+    .sort((a, b) => a.order - b.order);
+
+  sortedImages.forEach((img) => {
+    formData.append("images", img.file);
+  });
 
   // 유효성 검사
   if (!formData.get("user_id")) {

@@ -2696,6 +2696,7 @@ router.put(
         // 새로운 이미지 처리 필드
         deleted_image_ids,
         image_order,
+        final_image_order,
       } = req.body;
 
       conn = await pool.getConnection();
@@ -2734,15 +2735,58 @@ router.put(
           newImages = processedNewImages.map((url, index) => ({
             id: `new-${Date.now()}-${index}`,
             url: url,
-            order: existingImages.length + index,
+            order: index,
           }));
         }
 
-        finalImages = calculateFinalImageOrder(
-          existingImages,
-          deletedIds,
-          newImages
-        );
+        // ✅ 새 로직: final_image_order가 있으면 이를 우선 적용
+        if (final_image_order) {
+          try {
+            const orderInfo = JSON.parse(final_image_order);
+
+            // 기존 이미지 맵 생성 (삭제되지 않은 것만)
+            const existingImageMap = new Map();
+            existingImages
+              .filter((img) => !deletedIds.includes(img.id))
+              .forEach((img) => existingImageMap.set(img.id, img));
+
+            // 새 이미지 맵 생성
+            const newImageMap = new Map();
+            newImages.forEach((img) => newImageMap.set(img.id, img));
+
+            // orderInfo 순서대로 최종 이미지 배열 구성
+            finalImages = orderInfo
+              .map((orderItem, index) => {
+                if (orderItem.isNew && newImageMap.has(orderItem.id)) {
+                  const img = newImageMap.get(orderItem.id);
+                  return { ...img, order: index };
+                } else if (
+                  !orderItem.isNew &&
+                  existingImageMap.has(orderItem.id)
+                ) {
+                  const img = existingImageMap.get(orderItem.id);
+                  return { ...img, order: index };
+                }
+                return null;
+              })
+              .filter(Boolean);
+          } catch (error) {
+            console.error("이미지 순서 정보 파싱 오류:", error);
+            // 파싱 실패 시 기존 로직으로 폴백
+            finalImages = calculateFinalImageOrder(
+              existingImages,
+              deletedIds,
+              newImages
+            );
+          }
+        } else {
+          // final_image_order가 없으면 기존 로직 사용
+          finalImages = calculateFinalImageOrder(
+            existingImages,
+            deletedIds,
+            newImages
+          );
+        }
 
         // 삭제된 이미지 파일들 실제 삭제
         setImmediate(() => {
