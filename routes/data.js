@@ -212,14 +212,13 @@ router.get("/", async (req, res) => {
     let conditions = [];
 
     if (excludeExpired === "true") {
-      console.log("Excluding expired items");
       // 현장경매는 scheduled_date 당일 22:00 KST (13:00 UTC)까지,
       // 직접경매는 scheduled_date까지만 입찰 가능
       conditions.push(`
-        (ci.bid_type = 'direct' AND ci.scheduled_date > NOW()) OR
+        (ci.bid_type = 'direct' AND ci.scheduled_date > UTC_TIMESTAMP()) OR
         (ci.bid_type = 'live' AND 
-        (ci.scheduled_date > NOW() OR 
-          (DATE(ci.scheduled_date) = DATE(NOW()) AND HOUR(NOW()) < 13)))
+        (ci.scheduled_date > UTC_TIMESTAMP() OR 
+          (DATE(ci.scheduled_date) = DATE(UTC_TIMESTAMP()) AND HOUR(UTC_TIMESTAMP()) < 13)))
       `);
     }
 
