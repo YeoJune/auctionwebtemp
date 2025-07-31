@@ -211,7 +211,7 @@ router.get("/", async (req, res) => {
     const queryParams = [];
     let conditions = [];
 
-    if (excludeExpired === "true") {
+    if (excludeExpired == "true") {
       // 현장경매는 scheduled_date 당일 22:00 KST (13:00 UTC)까지,
       // 직접경매는 scheduled_date까지만 입찰 가능
       conditions.push(`
