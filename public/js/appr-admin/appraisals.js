@@ -157,49 +157,93 @@ function moveImage(imageId, direction) {
 }
 
 function renderImages() {
-  const container =
-    document.getElementById("create-images-preview") ||
-    document.getElementById("current-images-container");
-  if (!container) return;
+  let container = null;
 
-  container.querySelectorAll('img[src^="blob:"]').forEach((img) => {
-    URL.revokeObjectURL(img.src);
-  });
+  // 1. 열려있는 모달 감지하고 해당 컨테이너 찾기
+  const createModal = document.getElementById("create-appraisal-modal");
+  const detailModal = document.getElementById("appraisal-detail-modal");
+
+  if (createModal && createModal.style.display === "flex") {
+    // 감정 생성 모달이 열려있는 경우
+    container = document.getElementById("create-images-preview");
+    console.log("감정 생성 모달에 이미지 렌더링");
+  } else if (detailModal && detailModal.style.display === "flex") {
+    // 감정 상세/수정 모달이 열려있는 경우
+    container =
+      document.getElementById("current-images-container") ||
+      document.getElementById("appraisal-detail-images-container");
+    console.log("감정 수정 모달에 이미지 렌더링");
+  } else {
+    // 모달이 안 열려있으면 기본 컨테이너들 순서대로 시도
+    container =
+      document.getElementById("create-images-preview") ||
+      document.getElementById("current-images-container") ||
+      document.getElementById("appraisal-detail-images-container");
+    console.log("기본 컨테이너에 이미지 렌더링");
+  }
+
+  if (!container) {
+    console.error("이미지 컨테이너를 찾을 수 없습니다");
+    return;
+  }
+
+  console.log(
+    "이미지 렌더링:",
+    imageList.length,
+    "개",
+    "컨테이너:",
+    container.id
+  );
 
   if (imageList.length === 0) {
     container.innerHTML =
-      '<p style="color: #666; text-align: center;">업로드된 이미지가 없습니다.</p>';
+      '<p style="color: #666; text-align: center; padding: 20px;">업로드된 이미지가 없습니다.</p>';
     return;
   }
+
+  // 기존 blob URL 정리 (메모리 누수 방지)
+  container.querySelectorAll('img[src^="blob:"]').forEach((img) => {
+    URL.revokeObjectURL(img.src);
+  });
 
   container.innerHTML = imageList
     .map((img, index) => {
       const src = img.isNew ? URL.createObjectURL(img.file) : img.url;
       return `
-      <div style="position: relative; width: 150px; height: 150px; margin: 5px; display: inline-block; border: 2px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-        <img src="${src}" style="width: 100%; height: 100%; object-fit: cover;">
-        <div style="position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75rem;">${
+      <div style="position: relative; width: 150px; height: 150px; margin: 5px; display: inline-block; border: 2px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: white;">
+        <img src="${src}" style="width: 100%; height: 100%; object-fit: cover;" 
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div style="display: none; width: 100%; height: 100%; background: #f3f4f6; align-items: center; justify-content: center; color: #9ca3af; font-size: 0.8rem;">
+          이미지 로드 실패
+        </div>
+        <div style="position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75rem; font-weight: 500;">${
           index + 1
         }</div>
         ${
           img.isNew
-            ? '<div style="position: absolute; top: 5px; right: 35px; background: rgba(34, 197, 94, 0.9); color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.65rem;">NEW</div>'
+            ? '<div style="position: absolute; top: 5px; right: 35px; background: rgba(34, 197, 94, 0.9); color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.65rem; font-weight: 500;">NEW</div>'
             : ""
         }
-        <button onclick="removeImage('${
-          img.id
-        }')" style="position: absolute; top: 5px; right: 5px; width: 24px; height: 24px; border-radius: 50%; background: rgba(220, 38, 38, 0.9); color: white; border: none; cursor: pointer;">×</button>
+        <button onclick="removeImage('${img.id}')" 
+                style="position: absolute; top: 5px; right: 5px; width: 24px; height: 24px; border-radius: 50%; background: rgba(220, 38, 38, 0.9); color: white; border: none; cursor: pointer; font-size: 16px; line-height: 1; display: flex; align-items: center; justify-content: center;"
+                title="이미지 삭제">×</button>
         <div style="position: absolute; bottom: 5px; right: 5px; display: flex; gap: 2px;">
-          <button onclick="moveImage('${
-            img.id
-          }', 'up')" style="width: 20px; height: 20px; background: rgba(0,0,0,0.7); color: white; border: none; cursor: pointer; font-size: 12px;" ${
-        index === 0 ? 'disabled style="opacity: 0.3;"' : ""
-      }>↑</button>
-          <button onclick="moveImage('${
-            img.id
-          }', 'down')" style="width: 20px; height: 20px; background: rgba(0,0,0,0.7); color: white; border: none; cursor: pointer; font-size: 12px;" ${
-        index === imageList.length - 1 ? 'disabled style="opacity: 0.3;"' : ""
-      }>↓</button>
+          <button onclick="moveImage('${img.id}', 'up')" 
+                  style="width: 20px; height: 20px; border-radius: 3px; background: rgba(0,0,0,0.7); color: white; border: none; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; ${
+                    index === 0 ? "opacity: 0.3; cursor: not-allowed;" : ""
+                  }"
+                  title="앞으로 이동" ${
+                    index === 0 ? "disabled" : ""
+                  }>↑</button>
+          <button onclick="moveImage('${img.id}', 'down')" 
+                  style="width: 20px; height: 20px; border-radius: 3px; background: rgba(0,0,0,0.7); color: white; border: none; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; ${
+                    index === imageList.length - 1
+                      ? "opacity: 0.3; cursor: not-allowed;"
+                      : ""
+                  }"
+                  title="뒤로 이동" ${
+                    index === imageList.length - 1 ? "disabled" : ""
+                  }>↓</button>
         </div>
       </div>
     `;
