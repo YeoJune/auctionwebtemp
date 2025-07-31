@@ -482,9 +482,6 @@ function storeOriginalImageIds(images) {
 
 // 감정 상세 정보 표시 함수
 function displayAppraisalDetail(appraisal) {
-  // 기존 이미지 로드
-  initImages(appraisal.images || []);
-
   // 기존 HTML 생성 로직은 그대로 유지하되, 이미지 부분만 수정
   const container = document.getElementById("appraisal-detail-content");
   let html = `
@@ -850,6 +847,10 @@ function displayAppraisalDetail(appraisal) {
     `;
 
   container.innerHTML = html;
+
+  // 기존 이미지 로드
+  initImages(appraisal.images || []);
+  storeOriginalImageIds(appraisal.images || []);
 }
 
 // 편집 취소 함수
