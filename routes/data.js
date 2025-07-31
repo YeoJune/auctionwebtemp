@@ -172,6 +172,7 @@ router.get("/", async (req, res) => {
     bidsOnly = "false",
     sortBy = "scheduled_date",
     sortOrder = "asc",
+    excludeExpired = "true",
   } = req.query;
   const offset = (page - 1) * limit;
   const userId = req.session.user?.id;
@@ -209,6 +210,17 @@ router.get("/", async (req, res) => {
     let query = "SELECT ci.* FROM crawled_items ci";
     const queryParams = [];
     let conditions = [];
+
+    if (excludeExpired === "true") {
+      // 현장경매는 scheduled_date 당일 22:00 KST (13:00 UTC)까지,
+      // 직접경매는 scheduled_date까지만 입찰 가능
+      conditions.push(`
+        (ci.bid_type = 'direct' AND ci.scheduled_date > UTC_TIMESTAMP()) OR
+        (ci.bid_type = 'live' AND 
+        (ci.scheduled_date > UTC_TIMESTAMP() OR 
+          (DATE(ci.scheduled_date) = DATE(UTC_TIMESTAMP()) AND HOUR(UTC_TIMESTAMP()) < 13)))
+      `);
+    }
 
     if (favoriteNumbers && userId) {
       const favoriteNumbersList = favoriteNumbers.split(",").map(Number);

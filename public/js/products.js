@@ -24,6 +24,7 @@ window.state = {
   isAuthenticated: false,
   selectedFavoriteNumbers: [], // 선택된 즐겨찾기 번호 [1, 2, 3]
   showBidItemsOnly: false, // 입찰 항목만 표시 여부
+  excludeExpired: true, // 새로 추가: 기본값 true
 };
 
 let fetchDataDebounceTimer = null;
@@ -869,6 +870,7 @@ async function fetchData(showLoading = true) {
       bidsOnly: state.showBidItemsOnly, // 파라미터 수정
       sortBy: state.sortBy, // 정렬 기준 필드 추가
       sortOrder: state.sortOrder, // 정렬 방향 추가
+      excludeExpired: state.excludeExpired, // 새로 추가
     };
 
     const queryString = API.createURLParams(params);
@@ -953,6 +955,7 @@ async function fetchDetailedData() {
       bidsOnly: state.showBidItemsOnly,
       sortBy: state.sortBy,
       sortOrder: state.sortOrder,
+      excludeExpired: state.excludeExpired, // 새로 추가
     };
 
     const queryString = API.createURLParams(params);
@@ -1323,6 +1326,12 @@ function setupFilters() {
       state.showBidItemsOnly = this.checked;
     });
 
+  document
+    .getElementById("exclude-expired")
+    ?.addEventListener("change", function () {
+      state.excludeExpired = this.checked;
+    });
+
   // 필터 적용 버튼
   document
     .getElementById("applyFiltersBtn")
@@ -1343,6 +1352,7 @@ function setupFilters() {
       state.selectedAuctionTypes = [];
       state.selectedFavoriteNumbers = [];
       state.showBidItemsOnly = false;
+      state.excludeExpired = true; // 새로 추가: 리셋 시에도 기본값 true
 
       // 체크박스 초기화
       document
@@ -1351,6 +1361,9 @@ function setupFilters() {
 
       // 입찰항목만 표기 체크박스 초기화
       document.getElementById("bid-items-only").checked = false;
+
+      // 마감 항목 제외 체크박스 초기화 (기본값 true이므로 checked)
+      document.getElementById("exclude-expired").checked = true;
 
       document
         .querySelectorAll("#brandCheckboxes input[type='checkbox']")
