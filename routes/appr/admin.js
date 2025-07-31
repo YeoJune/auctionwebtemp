@@ -138,6 +138,102 @@ const bannerUpload = multer({
   },
 });
 
+/**
+ * 기존 이미지 데이터를 새 구조로 정규화
+ * @param {string} images - JSON 문자열
+ * @returns {Array} 정규화된 이미지 배열
+ */
+function normalizeImageData(images) {
+  if (!images) return [];
+
+  try {
+    const parsed = JSON.parse(images);
+
+    // 이미 새 구조인 경우
+    if (
+      Array.isArray(parsed) &&
+      parsed.length > 0 &&
+      typeof parsed[0] === "object" &&
+      parsed[0].id
+    ) {
+      return parsed;
+    }
+
+    // 기존 구조인 경우 런타임에 변환
+    if (Array.isArray(parsed)) {
+      return parsed.map((url, index) => ({
+        id: `legacy-${Date.now()}-${index}`,
+        url: url,
+        order: index,
+      }));
+    }
+
+    return [];
+  } catch (error) {
+    console.error("이미지 데이터 파싱 오류:", error);
+    return [];
+  }
+}
+
+/**
+ * 이미지 객체 배열을 JSON 문자열로 직렬화
+ * @param {Array} imageObjects - 이미지 객체 배열
+ * @returns {string} JSON 문자열
+ */
+function serializeImageData(imageObjects) {
+  if (!Array.isArray(imageObjects)) return "[]";
+
+  // order로 정렬
+  const sortedImages = imageObjects.sort(
+    (a, b) => (a.order || 0) - (b.order || 0)
+  );
+
+  return JSON.stringify(sortedImages);
+}
+
+/**
+ * 최종 이미지 순서 계산 (수정 시 사용)
+ * @param {Array} existingImages - 기존 이미지 (정규화된)
+ * @param {Array} deletedIds - 삭제할 이미지 ID들
+ * @param {Array} newImages - 새로 업로드된 이미지들
+ * @returns {Array} 최종 이미지 배열
+ */
+function calculateFinalImageOrder(
+  existingImages,
+  deletedIds = [],
+  newImages = []
+) {
+  // 삭제되지 않은 기존 이미지
+  const remainingImages = existingImages.filter(
+    (img) => !deletedIds.includes(img.id)
+  );
+
+  // 새 이미지에 ID와 order 부여
+  const processedNewImages = newImages.map((img, index) => ({
+    id: img.id || `new-${uuidv4()}`,
+    url: img.url,
+    order: remainingImages.length + index,
+  }));
+
+  // 전체 병합 및 정렬
+  const finalImages = [...remainingImages, ...processedNewImages];
+  return finalImages.sort((a, b) => a.order - b.order);
+}
+
+/**
+ * 이미지 URL들만 추출 (기존 API 호환성)
+ * @param {Array} imageObjects - 이미지 객체 배열
+ * @returns {Array} URL 문자열 배열
+ */
+function extractImageUrls(imageObjects) {
+  if (!Array.isArray(imageObjects)) return [];
+
+  return imageObjects
+    .sort((a, b) => (a.order || 0) - (b.order || 0))
+    .map((img) => img.url)
+    .filter(Boolean);
+}
+
 // 배너 목록 조회 - GET /api/appr/admin/banners
 router.get("/banners", isAuthenticated, isAdmin, async (req, res) => {
   let conn;
@@ -641,12 +737,22 @@ router.post(
         });
       }
 
-      // 워터마크 적용된 이미지 처리
-      const images = await processUploadedImages(
-        req.files,
-        path.join(__dirname, "../../public/images/appraisals"),
-        { skipExisting: true }
-      );
+      // ✅ 새 구조로 이미지 처리
+      let finalImages = [];
+      if (req.files && req.files.length > 0) {
+        const imageUrls = await processUploadedImages(
+          req.files,
+          path.join(__dirname, "../../public/images/appraisals"),
+          { skipExisting: true }
+        );
+
+        // 새 구조로 변환
+        finalImages = imageUrls.map((url, index) => ({
+          id: `img-${Date.now()}-${index}`,
+          url: url,
+          order: index,
+        }));
+      }
 
       const finalCertificateNumber = await generateCertificateNumber(
         conn,
@@ -675,7 +781,8 @@ router.post(
           "pending",
           "pending",
           finalCertificateNumber,
-          images.length > 0 ? JSON.stringify(images) : null,
+          // ✅ 새 구조로 저장
+          finalImages.length > 0 ? serializeImageData(finalImages) : null,
         ]
       );
 
@@ -718,7 +825,7 @@ router.get("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
         a.id, a.user_id, a.appraisal_type, a.status, a.brand, a.model_name,
         a.category, a.result, a.certificate_number, a.created_at,
         u.email as user_email, u.company_name as company_name,
-        JSON_EXTRACT(a.images, '$[0]') as representative_image
+        a.images
       FROM appraisals a
       JOIN users u ON a.user_id = u.id
       WHERE 1=1
@@ -726,7 +833,7 @@ router.get("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
 
     const queryParams = [];
 
-    // 필터 적용
+    // 필터 적용 (기존과 동일)
     if (status) {
       query += " AND a.status = ?";
       queryParams.push(status);
@@ -742,7 +849,6 @@ router.get("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
       queryParams.push(type);
     }
 
-    // 검색 조건 추가
     if (search) {
       query +=
         " AND (a.brand LIKE ? OR a.model_name LIKE ? OR a.user_id LIKE ? OR a.certificate_number LIKE ?)";
@@ -755,13 +861,22 @@ router.get("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
       );
     }
 
-    // 최신순 정렬 및 페이지네이션
     query += " ORDER BY a.created_at DESC LIMIT ? OFFSET ?";
     queryParams.push(parseInt(limit), offset);
 
     const [rows] = await conn.query(query, queryParams);
 
-    // 전체 개수 조회
+    // ✅ 대표 이미지 추출 시 호환성 처리
+    const processedRows = rows.map((row) => {
+      const normalizedImages = normalizeImageData(row.images);
+      return {
+        ...row,
+        representative_image:
+          normalizedImages.length > 0 ? normalizedImages[0] : null,
+      };
+    });
+
+    // 전체 개수 조회 (기존과 동일)
     let countQuery = "SELECT COUNT(*) as total FROM appraisals a WHERE 1=1";
     const countParams = [];
 
@@ -795,15 +910,9 @@ router.get("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
     const [countResult] = await conn.query(countQuery, countParams);
     const total = countResult[0].total;
 
-    // 결과 반환
     res.json({
       success: true,
-      appraisals: rows.map((row) => ({
-        ...row,
-        representative_image: row.representative_image
-          ? JSON.parse(row.representative_image)
-          : null,
-      })),
+      appraisals: processedRows,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / parseInt(limit)),
@@ -936,14 +1045,16 @@ router.delete("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
         // 이미지 파일들
         if (appraisal.images) {
           try {
-            const images = JSON.parse(appraisal.images);
-            images.forEach((imagePath) => {
-              filesToDelete.push(
-                path.join(__dirname, "../../public", imagePath)
-              );
+            const normalizedImages = normalizeImageData(appraisal.images);
+            normalizedImages.forEach((img) => {
+              if (img.url) {
+                filesToDelete.push(
+                  path.join(__dirname, "../../public", img.url)
+                );
+              }
             });
           } catch (error) {
-            console.error("이미지 JSON 파싱 오류:", error);
+            console.error("이미지 처리 오류:", error);
           }
         }
 
@@ -2521,7 +2632,7 @@ router.get("/appraisals/:id", isAuthenticated, isAdmin, async (req, res) => {
       });
     }
 
-    // JSON 데이터 파싱
+    // JSON 데이터 파싱 및 호환성 처리
     const appraisal = rows[0];
     if (appraisal.components_included) {
       appraisal.components_included = JSON.parse(appraisal.components_included);
@@ -2529,8 +2640,12 @@ router.get("/appraisals/:id", isAuthenticated, isAdmin, async (req, res) => {
     if (appraisal.delivery_info) {
       appraisal.delivery_info = JSON.parse(appraisal.delivery_info);
     }
+
+    // 이미지 데이터 정규화
     if (appraisal.images) {
-      appraisal.images = JSON.parse(appraisal.images);
+      appraisal.images = normalizeImageData(appraisal.images);
+    } else {
+      appraisal.images = [];
     }
 
     res.json({
@@ -2562,7 +2677,7 @@ router.put(
     try {
       const appraisal_id = req.params.id;
       const {
-        // 기본 정보 필드들 추가
+        // 기본 정보 필드들
         brand,
         model_name,
         category,
@@ -2574,10 +2689,13 @@ router.put(
         delivery_info,
         remarks,
         certificate_number,
-        // 기존 감정 결과 필드들
+        // 감정 결과 필드들
         result,
         result_notes,
         suggested_restoration_services,
+        // 새로운 이미지 처리 필드
+        deleted_image_ids,
+        image_order,
       } = req.body;
 
       conn = await pool.getConnection();
@@ -2597,14 +2715,58 @@ router.put(
 
       const appraisal = appraisalRows[0];
 
-      // 인증서 번호 변경 시 중복 확인
+      // 이미지 처리 로직
+      let finalImages = [];
+      if (appraisal.images) {
+        const existingImages = normalizeImageData(appraisal.images);
+        const deletedIds = deleted_image_ids
+          ? JSON.parse(deleted_image_ids)
+          : [];
+
+        let newImages = [];
+        if (req.files && req.files.images) {
+          const processedNewImages = await processUploadedImages(
+            req.files.images,
+            path.join(__dirname, "../../public/images/appraisals"),
+            { skipExisting: true }
+          );
+
+          newImages = processedNewImages.map((url, index) => ({
+            id: `new-${Date.now()}-${index}`,
+            url: url,
+            order: existingImages.length + index,
+          }));
+        }
+
+        finalImages = calculateFinalImageOrder(
+          existingImages,
+          deletedIds,
+          newImages
+        );
+
+        // 삭제된 이미지 파일들 실제 삭제
+        setImmediate(() => {
+          existingImages
+            .filter((img) => deletedIds.includes(img.id))
+            .forEach((img) => {
+              try {
+                const filePath = path.join(__dirname, "../../public", img.url);
+                if (fs.existsSync(filePath)) {
+                  fs.unlinkSync(filePath);
+                }
+              } catch (error) {
+                console.error(`파일 삭제 오류 (${img.url}):`, error);
+              }
+            });
+        });
+      }
+
+      // 인증서 번호 검증 (기존과 동일)
       if (
         certificate_number &&
         certificate_number !== appraisal.certificate_number
       ) {
         const normalizedNumber = certificate_number.toLowerCase();
-
-        // 형식 검증
         const certPattern = /^cas\d+$/i;
         if (!certPattern.test(normalizedNumber)) {
           return res.status(400).json({
@@ -2613,7 +2775,6 @@ router.put(
           });
         }
 
-        // 중복 확인
         const [existing] = await conn.query(
           "SELECT certificate_number FROM appraisals WHERE certificate_number = ? AND id != ?",
           [normalizedNumber, appraisal_id]
@@ -2627,40 +2788,26 @@ router.put(
         }
       }
 
-      let existingImages = appraisal.images ? JSON.parse(appraisal.images) : [];
+      // QR 코드 및 PDF 처리
       let qrcode_url = appraisal.qrcode_url;
-      let qr_access_key = appraisal.qr_access_key;
       let certificate_url = appraisal.certificate_url;
 
-      // 이미지 처리 - 퀵링크와 오프라인 모두 지원
-      if (req.files && req.files.images) {
-        const newImages = await processUploadedImages(
-          req.files.images,
-          path.join(__dirname, "../../public/images/appraisals"),
-          { skipExisting: true }
-        );
-        existingImages = [...existingImages, ...newImages];
-      }
-
-      // PDF 처리
       if (req.files && req.files.pdf && req.files.pdf.length > 0) {
         certificate_url = `/images/appraisals/${req.files.pdf[0].filename}`;
       }
 
-      // QR 코드 생성 (인증서 번호가 있고 QR 코드가 없는 경우)
       const finalCertificateNumber =
         certificate_number || appraisal.certificate_number;
       if (finalCertificateNumber && !qrcode_url) {
-        // 공통 함수로 QR 코드 생성
         qrcode_url = await generateQRCode(finalCertificateNumber);
       }
 
-      // 감정 정보 업데이트 필드 구성
+      // ✅ 업데이트 필드 구성 (누락된 필드들 추가)
       const updateData = {};
       const updateFields = [];
       const updateValues = [];
 
-      // 기본 정보 업데이트 필드들
+      // 기본 정보 업데이트
       if (brand !== undefined) {
         updateFields.push("brand = ?");
         updateValues.push(brand);
@@ -2735,25 +2882,19 @@ router.put(
           : null;
       }
 
-      // 기존 감정 결과 필드들
+      // 감정 결과 필드들
       if (result) {
         updateFields.push("result = ?");
         updateValues.push(result);
         updateData.result = result;
 
-        // 결과가 설정되면 status를 자동으로 변경
         if (result !== "pending") {
           updateFields.push("status = 'completed'");
           updateData.status = "completed";
         } else {
-          // 결과가 pending이면 status는 in_review로 설정
           updateFields.push("status = 'in_review'");
           updateData.status = "in_review";
         }
-      } else {
-        // 결과가 없으면 status는 in_review로 설정
-        updateFields.push("status = 'in_review'");
-        updateData.status = "in_review";
       }
 
       if (result_notes !== undefined) {
@@ -2762,10 +2903,11 @@ router.put(
         updateData.result_notes = result_notes;
       }
 
-      if (existingImages.length > 0) {
+      // 이미지 필드 업데이트
+      if (finalImages.length >= 0) {
         updateFields.push("images = ?");
-        updateValues.push(JSON.stringify(existingImages));
-        updateData.images = existingImages;
+        updateValues.push(serializeImageData(finalImages));
+        updateData.images = finalImages;
       }
 
       if (certificate_url) {
@@ -2780,10 +2922,8 @@ router.put(
         updateData.qrcode_url = qrcode_url;
       }
 
-      // 제안된 복원 서비스가 있는 경우 저장
       if (suggested_restoration_services) {
         try {
-          // JSON 문자열인지 확인하고 파싱
           const serviceIds =
             typeof suggested_restoration_services === "string"
               ? JSON.parse(suggested_restoration_services)
@@ -2797,11 +2937,10 @@ router.put(
         }
       }
 
-      // 크레딧 차감 처리 (결과가 pending이 아니고, status가 completed로 변경되는 경우)
+      // 크레딧 차감 처리
       let creditInfo = { deducted: false, remaining: 0 };
 
       if (result && result !== "pending" && !appraisal.credit_deducted) {
-        // 퀵링크 감정인 경우에만 크레딧 차감
         if (appraisal.appraisal_type === "quicklink") {
           const [userRows] = await conn.query(
             "SELECT * FROM appr_users WHERE user_id = ?",
@@ -2820,19 +2959,13 @@ router.put(
               [newCredits, appraisal.user_id]
             );
 
-            creditInfo = {
-              deducted: true,
-              remaining: newCredits,
-            };
-
-            // 크레딧 차감 여부 업데이트
+            creditInfo = { deducted: true, remaining: newCredits };
             updateFields.push("credit_deducted = ?");
             updateValues.push(true);
             updateData.credit_deducted = true;
           }
         }
 
-        // 감정 완료 시간도 설정
         updateFields.push("appraised_at = ?");
         updateValues.push(new Date());
         updateData.appraised_at = new Date();
@@ -2868,80 +3001,6 @@ router.put(
         success: false,
         message:
           err.message || "감정 정보 업데이트 중 서버 오류가 발생했습니다.",
-      });
-    } finally {
-      if (conn) conn.release();
-    }
-  }
-);
-
-// 감정 이미지 삭제 - DELETE /api/appr/admin/appraisals/:id/images
-router.delete(
-  "/appraisals/:id/images",
-  isAuthenticated,
-  isAdmin,
-  async (req, res) => {
-    let conn;
-    try {
-      const appraisal_id = req.params.id;
-      const { image_url } = req.body;
-
-      if (!image_url) {
-        return res.status(400).json({
-          success: false,
-          message: "삭제할 이미지 URL이 필요합니다.",
-        });
-      }
-
-      conn = await pool.getConnection();
-
-      // 감정 정보 조회
-      const [appraisalRows] = await conn.query(
-        "SELECT images FROM appraisals WHERE id = ?",
-        [appraisal_id]
-      );
-
-      if (appraisalRows.length === 0) {
-        return res.status(404).json({
-          success: false,
-          message: "해당 감정 정보를 찾을 수 없습니다.",
-        });
-      }
-
-      const appraisal = appraisalRows[0];
-      let images = appraisal.images ? JSON.parse(appraisal.images) : [];
-
-      // 이미지 목록에서 해당 URL 제거
-      const updatedImages = images.filter((img) => img !== image_url);
-
-      // DB 업데이트
-      await conn.query("UPDATE appraisals SET images = ? WHERE id = ?", [
-        updatedImages.length > 0 ? JSON.stringify(updatedImages) : null,
-        appraisal_id,
-      ]);
-
-      // 실제 파일 삭제 (비동기로 처리)
-      setImmediate(() => {
-        try {
-          const filePath = path.join(__dirname, "../../public", image_url);
-          if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-          }
-        } catch (fileError) {
-          console.error(`이미지 파일 삭제 중 오류 (${image_url}):`, fileError);
-        }
-      });
-
-      res.json({
-        success: true,
-        message: "이미지가 성공적으로 삭제되었습니다.",
-        remaining_images: updatedImages,
-      });
-    } catch (err) {
-      console.error("이미지 삭제 중 오류 발생:", err);
-      res.status(500).json({
-        success: false,
-        message: "이미지 삭제 중 서버 오류가 발생했습니다.",
       });
     } finally {
       if (conn) conn.release();

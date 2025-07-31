@@ -7,9 +7,8 @@ let appraisalStatusFilter = "all";
 let appraisalResultFilter = "all";
 let bulkDeleteMode = false;
 let bulkChangeMode = false; // 일괄 변경 모드 추가
-let imagesToDelete = []; // 삭제 예정 이미지 목록
-let userSearchTimeout = null; // 실시간 사용자 검색 디바운싱
-let uploadedImages = []; // 감정 생성 시 업로드된 이미지 목록
+let imageList = [];
+let userSearchTimeout = null;
 
 // 페이지 로드 시 이벤트 리스너 설정
 document.addEventListener("DOMContentLoaded", function () {
@@ -112,6 +111,102 @@ document.addEventListener("DOMContentLoaded", function () {
   }, 100);
 });
 
+function initImages(existingImages = []) {
+  imageList = existingImages.map((img, index) => ({
+    id: img.id || `existing-${Date.now()}-${index}`,
+    url: img.url,
+    file: null,
+    order: index,
+    isNew: false,
+  }));
+  renderImages();
+}
+
+function addImages(files) {
+  Array.from(files).forEach((file, index) => {
+    imageList.push({
+      id: `new-${Date.now()}-${index}`,
+      url: null,
+      file: file,
+      order: imageList.length,
+      isNew: true,
+    });
+  });
+  renderImages();
+}
+
+function removeImage(imageId) {
+  imageList = imageList.filter((img) => img.id !== imageId);
+  imageList.forEach((img, index) => (img.order = index));
+  renderImages();
+}
+
+function moveImage(imageId, direction) {
+  const index = imageList.findIndex((img) => img.id === imageId);
+  if (index === -1) return;
+
+  const targetIndex = direction === "up" ? index - 1 : index + 1;
+  if (targetIndex < 0 || targetIndex >= imageList.length) return;
+
+  [imageList[index], imageList[targetIndex]] = [
+    imageList[targetIndex],
+    imageList[index],
+  ];
+  imageList.forEach((img, i) => (img.order = i));
+  renderImages();
+}
+
+function renderImages() {
+  const container =
+    document.getElementById("create-images-preview") ||
+    document.getElementById("current-images-container");
+  if (!container) return;
+
+  container.querySelectorAll('img[src^="blob:"]').forEach((img) => {
+    URL.revokeObjectURL(img.src);
+  });
+
+  if (imageList.length === 0) {
+    container.innerHTML =
+      '<p style="color: #666; text-align: center;">업로드된 이미지가 없습니다.</p>';
+    return;
+  }
+
+  container.innerHTML = imageList
+    .map((img, index) => {
+      const src = img.isNew ? URL.createObjectURL(img.file) : img.url;
+      return `
+      <div style="position: relative; width: 150px; height: 150px; margin: 5px; display: inline-block; border: 2px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+        <img src="${src}" style="width: 100%; height: 100%; object-fit: cover;">
+        <div style="position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75rem;">${
+          index + 1
+        }</div>
+        ${
+          img.isNew
+            ? '<div style="position: absolute; top: 5px; right: 35px; background: rgba(34, 197, 94, 0.9); color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.65rem;">NEW</div>'
+            : ""
+        }
+        <button onclick="removeImage('${
+          img.id
+        }')" style="position: absolute; top: 5px; right: 5px; width: 24px; height: 24px; border-radius: 50%; background: rgba(220, 38, 38, 0.9); color: white; border: none; cursor: pointer;">×</button>
+        <div style="position: absolute; bottom: 5px; right: 5px; display: flex; gap: 2px;">
+          <button onclick="moveImage('${
+            img.id
+          }', 'up')" style="width: 20px; height: 20px; background: rgba(0,0,0,0.7); color: white; border: none; cursor: pointer; font-size: 12px;" ${
+        index === 0 ? 'disabled style="opacity: 0.3;"' : ""
+      }>↑</button>
+          <button onclick="moveImage('${
+            img.id
+          }', 'down')" style="width: 20px; height: 20px; background: rgba(0,0,0,0.7); color: white; border: none; cursor: pointer; font-size: 12px;" ${
+        index === imageList.length - 1 ? 'disabled style="opacity: 0.3;"' : ""
+      }>↓</button>
+        </div>
+      </div>
+    `;
+    })
+    .join("");
+}
+
 // 실시간 사용자 검색 처리
 function handleUserIdInput(query) {
   const resultsContainer = document.getElementById("user-search-results");
@@ -207,155 +302,6 @@ function selectUserFromSearch(userId, userEmail, companyName) {
     </div>
   `;
   resultsContainer.style.display = "block";
-}
-
-// 감정 생성 시 이미지 업로드 처리 (순서 관리 + 삭제 기능)
-function handleImageUpload(e) {
-  const files = Array.from(e.target.files);
-  const previewContainer = document.getElementById("create-images-preview");
-
-  files.forEach((file, index) => {
-    const imageId = Date.now() + "-" + index;
-    const imageObj = {
-      id: imageId,
-      file: file,
-      order: uploadedImages.length,
-    };
-
-    uploadedImages.push(imageObj);
-
-    const reader = new FileReader();
-    reader.onload = function (e) {
-      const imageDiv = document.createElement("div");
-      imageDiv.className = "uploaded-image-item";
-      imageDiv.dataset.imageId = imageId;
-      imageDiv.style.cssText = `
-        position: relative; 
-        width: 120px; 
-        height: 120px; 
-        margin: 5px; 
-        display: inline-block;
-        border: 2px solid #e2e8f0;
-        border-radius: 8px;
-        overflow: hidden;
-        background: white;
-      `;
-
-      imageDiv.innerHTML = `
-        <img src="${e.target.result}" style="width: 100%; height: 100%; object-fit: cover;">
-        <div style="position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75rem; font-weight: 500;">
-          ${uploadedImages.length}
-        </div>
-        <button type="button" onclick="removeUploadedImage('${imageId}')" 
-                style="position: absolute; top: 5px; right: 5px; width: 24px; height: 24px; border-radius: 50%; background: rgba(220, 38, 38, 0.9); color: white; border: none; cursor: pointer; font-size: 16px; line-height: 1; display: flex; align-items: center; justify-content: center;"
-                title="이미지 삭제">
-          ×
-        </button>
-        <div style="position: absolute; bottom: 5px; right: 5px; display: flex; gap: 2px;">
-          <button type="button" onclick="moveImageUp('${imageId}')" 
-                  style="width: 20px; height: 20px; border-radius: 3px; background: rgba(0,0,0,0.7); color: white; border: none; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center;"
-                  title="앞으로 이동">
-            ↑
-          </button>
-          <button type="button" onclick="moveImageDown('${imageId}')" 
-                  style="width: 20px; height: 20px; border-radius: 3px; background: rgba(0,0,0,0.7); color: white; border: none; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center;"
-                  title="뒤로 이동">
-            ↓
-          </button>
-        </div>
-      `;
-
-      previewContainer.appendChild(imageDiv);
-    };
-
-    reader.readAsDataURL(file);
-  });
-
-  // 파일 입력 초기화 (같은 파일을 다시 선택할 수 있도록)
-  e.target.value = "";
-}
-
-// 업로드된 이미지 삭제
-function removeUploadedImage(imageId) {
-  // 배열에서 제거
-  uploadedImages = uploadedImages.filter((img) => img.id !== imageId);
-
-  // DOM에서 제거
-  const imageElement = document.querySelector(`[data-image-id="${imageId}"]`);
-  if (imageElement) {
-    imageElement.remove();
-  }
-
-  // 순서 번호 재정렬
-  reorderImageNumbers();
-}
-
-// 이미지 순서 위로 이동
-function moveImageUp(imageId) {
-  const imageIndex = uploadedImages.findIndex((img) => img.id === imageId);
-  if (imageIndex > 0) {
-    // 배열에서 순서 변경
-    [uploadedImages[imageIndex], uploadedImages[imageIndex - 1]] = [
-      uploadedImages[imageIndex - 1],
-      uploadedImages[imageIndex],
-    ];
-
-    // DOM에서 순서 변경
-    const container = document.getElementById("create-images-preview");
-    const currentElement = document.querySelector(
-      `[data-image-id="${imageId}"]`
-    );
-    const previousElement = currentElement.previousElementSibling;
-
-    if (previousElement) {
-      container.insertBefore(currentElement, previousElement);
-    }
-
-    reorderImageNumbers();
-  }
-}
-
-// 이미지 순서 아래로 이동
-function moveImageDown(imageId) {
-  const imageIndex = uploadedImages.findIndex((img) => img.id === imageId);
-  if (imageIndex < uploadedImages.length - 1) {
-    // 배열에서 순서 변경
-    [uploadedImages[imageIndex], uploadedImages[imageIndex + 1]] = [
-      uploadedImages[imageIndex + 1],
-      uploadedImages[imageIndex],
-    ];
-
-    // DOM에서 순서 변경
-    const container = document.getElementById("create-images-preview");
-    const currentElement = document.querySelector(
-      `[data-image-id="${imageId}"]`
-    );
-    const nextElement = currentElement.nextElementSibling;
-
-    if (nextElement && nextElement.nextElementSibling) {
-      container.insertBefore(currentElement, nextElement.nextElementSibling);
-    } else {
-      container.appendChild(currentElement);
-    }
-
-    reorderImageNumbers();
-  }
-}
-
-// 이미지 순서 번호 재정렬
-function reorderImageNumbers() {
-  const imageElements = document.querySelectorAll(".uploaded-image-item");
-  imageElements.forEach((element, index) => {
-    const numberElement = element.querySelector("div:first-child");
-    if (numberElement) {
-      numberElement.textContent = index + 1;
-    }
-  });
-
-  // 배열의 order 속성도 업데이트
-  uploadedImages.forEach((img, index) => {
-    img.order = index;
-  });
 }
 
 // 감정 목록 로드 함수
@@ -500,9 +446,6 @@ function deleteAppraisal(appraisalId, certificateNumber, brand, modelName) {
 
 // 감정 상세 조회 함수
 function viewAppraisalDetail(appraisalId) {
-  // 삭제 예정 이미지 목록 초기화
-  imagesToDelete = [];
-
   // 모달 내용 초기화
   document.getElementById("appraisal-detail-content").innerHTML =
     '<p style="text-align: center;">감정 정보를 불러오는 중...</p>';
@@ -532,11 +475,20 @@ function viewAppraisalDetail(appraisalId) {
     });
 }
 
-// 감정 상세 정보 표시 함수 - 기본 정보도 수정 가능하도록 개선
-function displayAppraisalDetail(appraisal) {
-  const container = document.getElementById("appraisal-detail-content");
+function storeOriginalImageIds(images) {
+  const ids = (images || []).map((img) => img.id);
+  localStorage.setItem("originalImageIds", JSON.stringify(ids));
+}
 
-  // 감정 기본 정보 수정 폼
+// 감정 상세 정보 표시 함수
+function displayAppraisalDetail(appraisal) {
+  // 기존 이미지 로드
+  initImages(appraisal.images || []);
+
+  storeOriginalImageIds(appraisal.images || []);
+
+  // 기존 HTML 생성 로직은 그대로 유지하되, 이미지 부분만 수정
+  const container = document.getElementById("appraisal-detail-content");
   let html = `
     <form id="appraisal-update-form" enctype="multipart/form-data">
         <input type="hidden" id="appraisal-id" value="${appraisal.id}">
@@ -872,46 +824,14 @@ function displayAppraisalDetail(appraisal) {
             </div>
             
             <div class="form-group">
-                <label for="appraisal-images" class="form-label">새 이미지 업로드 (여러 장 선택 가능)</label>
-                <input type="file" id="appraisal-images" multiple accept="image/*">
-                <small style="color: #666; display: block; margin-top: 5px;">
-                    ${
-                      appraisal.appraisal_type === "quicklink"
-                        ? "퀵링크"
-                        : "오프라인"
-                    } 감정 이미지를 업로드할 수 있습니다.
-                </small>
+                <label class="form-label">새 이미지 업로드</label>
+                <input type="file" id="appraisal-images" multiple accept="image/*" onchange="handleImageUpload(event)">
             </div>
             
-            <div id="appraisal-images-preview" style="margin-top: 15px;">
-                <h4 style="margin-bottom: 10px; font-size: 1rem; color: #1a2a3a;">현재 업로드된 이미지</h4>
-                <div id="current-images-container" style="display: flex; flex-wrap: wrap; gap: 10px;">
-                ${
-                  appraisal.images && appraisal.images.length > 0
-                    ? appraisal.images
-                        .map(
-                          (img, index) => `
-                        <div class="image-item" data-image-url="${img}" style="position: relative; width: 150px; height: 150px; margin-bottom: 10px;">
-                            <img src="${img}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px; border: 1px solid #e2e8f0;">
-                            <div style="position: absolute; bottom: 5px; left: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75rem;">
-                                ${index + 1}
-                            </div>
-                            <button type="button" onclick="markImageForDeletion('${img}')" 
-                                    class="image-delete-btn"
-                                    style="position: absolute; top: 5px; right: 5px; width: 24px; height: 24px; border-radius: 50%; background: rgba(220, 38, 38, 0.9); color: white; border: none; cursor: pointer; font-size: 16px; line-height: 1; display: flex; align-items: center; justify-content: center;"
-                                    title="삭제 예정으로 표시">
-                                ×
-                            </button>
-                        </div>
-                    `
-                        )
-                        .join("")
-                    : "<p style='color: #666; font-style: italic;'>업로드된 이미지가 없습니다.</p>"
-                }
-                </div>
+            <div id="current-images-container" style="margin-top: 15px;">
+                <!-- renderImages()로 렌더링됨 -->
             </div>
         </div>
-        
         
         <div style="margin-top: 20px; display: flex; justify-content: space-between;">
             <div>
@@ -934,58 +854,8 @@ function displayAppraisalDetail(appraisal) {
   container.innerHTML = html;
 }
 
-// 이미지 삭제 예정 표시 함수
-function markImageForDeletion(imageUrl) {
-  if (!imagesToDelete.includes(imageUrl)) {
-    imagesToDelete.push(imageUrl);
-  }
-
-  // 이미지 아이템을 찾아서 삭제 예정 스타일 적용
-  const imageItem = document.querySelector(`[data-image-url="${imageUrl}"]`);
-  if (imageItem) {
-    imageItem.style.opacity = "0.5";
-    imageItem.style.border = "2px solid #dc2626";
-
-    // 버튼 텍스트와 스타일 변경
-    const deleteBtn = imageItem.querySelector(".image-delete-btn");
-    if (deleteBtn) {
-      deleteBtn.style.background = "rgba(34, 197, 94, 0.9)";
-      deleteBtn.innerHTML = "↶";
-      deleteBtn.title = "삭제 취소";
-      deleteBtn.onclick = () => unmarkImageForDeletion(imageUrl);
-    }
-  }
-}
-
-// 이미지 삭제 예정 취소 함수
-function unmarkImageForDeletion(imageUrl) {
-  const index = imagesToDelete.indexOf(imageUrl);
-  if (index > -1) {
-    imagesToDelete.splice(index, 1);
-  }
-
-  // 스타일 원복
-  const imageItem = document.querySelector(`[data-image-url="${imageUrl}"]`);
-  if (imageItem) {
-    imageItem.style.opacity = "1";
-    imageItem.style.border = "1px solid #e2e8f0";
-
-    // 버튼 스타일 원복
-    const deleteBtn = imageItem.querySelector(".image-delete-btn");
-    if (deleteBtn) {
-      deleteBtn.style.background = "rgba(220, 38, 38, 0.9)";
-      deleteBtn.innerHTML = "×";
-      deleteBtn.title = "삭제 예정으로 표시";
-      deleteBtn.onclick = () => markImageForDeletion(imageUrl);
-    }
-  }
-}
-
 // 편집 취소 함수
 function cancelAppraisalEdit() {
-  // 삭제 예정 이미지 목록 초기화
-  imagesToDelete = [];
-
   // 모달 닫기
   closeModal("appraisal-detail-modal");
 }
@@ -1199,11 +1069,22 @@ function updateAppraisal() {
     formData.append("pdf", pdfFile);
   }
 
-  // 이미지 파일이 선택되었으면 추가
-  const imageFiles = document.getElementById("appraisal-images").files;
-  for (let i = 0; i < imageFiles.length; i++) {
-    formData.append("images", imageFiles[i]);
-  }
+  imageList
+    .filter((img) => img.isNew)
+    .forEach((img) => {
+      formData.append("images", img.file);
+    });
+
+  const originalImageIds = JSON.parse(
+    localStorage.getItem("originalImageIds") || "[]"
+  );
+  const currentImageIds = imageList
+    .filter((img) => !img.isNew)
+    .map((img) => img.id);
+  const deletedIds = originalImageIds.filter(
+    (id) => !currentImageIds.includes(id)
+  );
+  formData.append("deleted_image_ids", JSON.stringify(deletedIds));
 
   // 유효성 검사
   const brand = formData.get("brand");
@@ -1223,37 +1104,15 @@ function updateAppraisal() {
     }
   }
 
-  // 로딩 표시
-  const submitButton = document.querySelector(
-    'button[onclick="updateAppraisal()"]'
-  );
-  const originalText = submitButton.textContent;
-  submitButton.textContent = "업데이트 중...";
-  submitButton.disabled = true;
-
-  // 먼저 삭제 예정 이미지들을 삭제
-  Promise.all(
-    imagesToDelete.map((imageUrl) =>
-      fetch(`/api/appr/admin/appraisals/${appraisalId}/images`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ image_url: imageUrl }),
-      })
-    )
-  )
-    .then(() => {
-      // 모든 이미지 삭제가 완료된 후 감정 정보 업데이트
-      return fetch(`/api/appr/admin/appraisals/${appraisalId}`, {
-        method: "PUT",
-        body: formData,
-      });
-    })
+  // API 호출
+  fetch(`/api/appr/admin/appraisals/${appraisalId}`, {
+    method: "PUT",
+    body: formData,
+  })
     .then((response) => {
       if (!response.ok) {
         return response.json().then((data) => {
-          throw new Error(data.message || "감정 정보 업데이트에 실패했습니다.");
+          throw new Error(data.message || "업데이트에 실패했습니다.");
         });
       }
       return response.json();
@@ -1261,39 +1120,37 @@ function updateAppraisal() {
     .then((data) => {
       if (data.success) {
         showAlert("감정 정보가 성공적으로 업데이트되었습니다.", "success");
-        imagesToDelete = []; // 삭제 예정 목록 초기화
         closeModal("appraisal-detail-modal");
-        loadAppraisalList(); // 목록 새로고침
+        loadAppraisalList();
       } else {
-        throw new Error(data.message || "감정 정보 업데이트에 실패했습니다.");
+        throw new Error(data.message || "업데이트에 실패했습니다.");
       }
     })
-    .catch((error) => {
-      showAlert(error.message, "error");
-    })
-    .finally(() => {
-      // 버튼 상태 복원
-      submitButton.textContent = originalText;
-      submitButton.disabled = false;
-    });
+    .catch((error) => showAlert(error.message, "error"));
 }
 
 // 감정 생성 모달 열기
 function openCreateAppraisalModal() {
-  // 폼 초기화 및 검색 결과 클리어
   document.getElementById("create-appraisal-form").reset();
   document.getElementById("user-search-results").innerHTML = "";
   document.getElementById("user-search-results").style.display = "none";
-  document.getElementById("create-images-preview").innerHTML = "";
-  uploadedImages = []; // 업로드된 이미지 목록 초기화
+
+  // 이미지 초기화
+  initImages([]);
+
   toggleAppraisalTypeFields("");
-  // 구성품 입력 필드 초기화
   document.getElementById("components-container").innerHTML = `
     <div style="margin-bottom: 10px;">
       <input type="text" class="form-input component-input" placeholder="구성품 입력 (예: 본체, 더스트백, 보증서 등)" style="margin-bottom: 5px;" />
     </div>`;
-
   openModal("create-appraisal-modal");
+}
+
+function handleImageUpload(e) {
+  if (e.target.files.length > 0) {
+    addImages(e.target.files);
+  }
+  e.target.value = "";
 }
 
 // 감정 유형에 따른 필드 표시/숨김 함수
@@ -1405,6 +1262,7 @@ function selectUser(userId, userEmail) {
 function submitCreateAppraisal() {
   const formData = new FormData();
 
+  // 기본 정보 (기존과 동일)
   formData.append("user_id", document.getElementById("create-user-id").value);
   formData.append(
     "appraisal_type",
@@ -1418,6 +1276,7 @@ function submitCreateAppraisal() {
   formData.append("category", document.getElementById("create-category").value);
   formData.append("remarks", document.getElementById("create-remarks").value);
 
+  // 인증서 번호
   const certificateNumber = document.getElementById(
     "create-certificate-number"
   ).value;
@@ -1425,6 +1284,7 @@ function submitCreateAppraisal() {
     formData.append("certificate_number", certificateNumber);
   }
 
+  // 감정 유형별 필드 (기존과 동일)
   const appraisalType = document.getElementById("create-appraisal-type").value;
   if (appraisalType === "quicklink") {
     formData.append(
@@ -1436,19 +1296,18 @@ function submitCreateAppraisal() {
       document.getElementById("create-platform").value
     );
   } else if (appraisalType === "offline") {
+    // 구매연도, 구성품, 배송정보 등 기존 로직 유지
     const purchaseYear = document.getElementById("create-purchase-year").value;
-    if (purchaseYear) {
-      formData.append("purchase_year", purchaseYear);
-    }
+    if (purchaseYear) formData.append("purchase_year", purchaseYear);
 
     const componentInputs = document.querySelectorAll(".component-input");
     const components = Array.from(componentInputs)
       .map((input) => input.value.trim())
       .filter((value) => value);
-    if (components.length > 0) {
+    if (components.length > 0)
       formData.append("components_included", JSON.stringify(components));
-    }
 
+    // 배송정보 처리 (기존 로직)
     const deliveryName = document.getElementById("create-delivery-name").value;
     const deliveryPhone = document.getElementById(
       "create-delivery-phone"
@@ -1477,23 +1336,24 @@ function submitCreateAppraisal() {
     }
   }
 
-  // 업로드된 이미지들을 순서대로 추가
-  uploadedImages
-    .sort((a, b) => a.order - b.order)
-    .forEach((imageObj) => {
-      formData.append("images", imageObj.file);
+  // 이미지 추가
+  imageList
+    .filter((img) => img.isNew)
+    .forEach((img) => {
+      formData.append("images", img.file);
     });
 
+  // 유효성 검사
   if (!formData.get("user_id")) {
     showAlert("사용자 ID를 입력해주세요.", "error");
     return;
   }
-
   if (appraisalType === "quicklink" && !formData.get("product_link")) {
     showAlert("퀵링크 감정에는 상품 링크가 필요합니다.", "error");
     return;
   }
 
+  // API 호출
   fetch("/api/appr/admin/appraisals", {
     method: "POST",
     body: formData,
@@ -1505,12 +1365,10 @@ function submitCreateAppraisal() {
         closeModal("create-appraisal-modal");
         loadAppraisalList();
       } else {
-        throw new Error(data.message || "감정 생성에 실패했습니다.");
+        throw new Error(data.message);
       }
     })
-    .catch((error) => {
-      showAlert(error.message, "error");
-    });
+    .catch((error) => showAlert(error.message, "error"));
 }
 
 // 다중 삭제 모드 토글 함수
