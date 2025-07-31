@@ -485,8 +485,6 @@ function displayAppraisalDetail(appraisal) {
   // 기존 이미지 로드
   initImages(appraisal.images || []);
 
-  storeOriginalImageIds(appraisal.images || []);
-
   // 기존 HTML 생성 로직은 그대로 유지하되, 이미지 부분만 수정
   const container = document.getElementById("appraisal-detail-content");
   let html = `
