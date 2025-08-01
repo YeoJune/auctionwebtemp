@@ -236,12 +236,14 @@ router.get("/", async (req, res) => {
 
     // 5. 기본 조건들
 
-    // 만료 제외 조건 (MariaDB 호환)
+    // 만료 제외 조건 (원본과 동일)
     if (excludeExpired === "true") {
+      // 현장경매는 scheduled_date 당일 22:00 KST (13:00 UTC)까지,
+      // 직접경매는 scheduled_date까지만 입찰 가능
       conditions.push(`
         (ci.bid_type = 'direct' AND ci.scheduled_date > NOW()) OR
         (ci.bid_type = 'live' AND 
-         (ci.scheduled_date > NOW() OR 
+        (ci.scheduled_date > NOW() OR 
           (DATE(ci.scheduled_date) = DATE(NOW()) AND HOUR(NOW()) < 13)))
       `);
     }
