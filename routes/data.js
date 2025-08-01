@@ -331,12 +331,9 @@ router.get("/", async (req, res) => {
       const hasNull = selectedDates.includes("null");
       const actualDates = selectedDates.filter((date) => date !== "null");
 
-      console.log(enabledDates, "enda");
-      console.log(selectedDates, "selda");
-
       if (hasNull && actualDates.length > 0) {
         const dateIntersection = actualDates.filter((date) =>
-          enabledDates.includes(date)
+          enabledDates.some((enabledDate) => enabledDate.includes(date))
         );
         if (dateIntersection.length > 0) {
           conditions.push(
