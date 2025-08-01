@@ -150,7 +150,9 @@ async function buildBaseFilterConditions() {
 
   if (enabledDates.length > 0) {
     conditions.push(
-      `DATE(ci.scheduled_date) IN (${enabledDates.map(() => "?").join(",")})`
+      `DATE(CONVERT_TZ(ci.scheduled_date, '+00:00', '+09:00')) IN (${enabledDates
+        .map(() => "?")
+        .join(",")})`
     );
     queryParams.push(...enabledDates);
   }
