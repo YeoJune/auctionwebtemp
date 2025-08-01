@@ -1,4 +1,4 @@
-// routes/data.js - MariaDB 호환 버전
+// routes/data.js
 const dotenv = require("dotenv");
 dotenv.config();
 
@@ -15,82 +15,147 @@ let pLimit;
 
 const apiUrl = `https://api.currencyfreaks.com/v2.0/rates/latest?apikey=${process.env.CURRENCY_API_KEY}`;
 
-// ===== 캐시 설정 =====
-const CACHE_DURATION = 60 * 60 * 1000; // 1시간
+// ===== 캐싱 관련 설정 =====
+const CACHE_DURATION = 60 * 60 * 1000;
 
 const cache = {
-  exchange: { data: null, lastFetched: null },
-  enabledFilters: { data: null, lastFetched: null },
-  stats: {
-    brands: { data: null, lastFetched: null },
-    dates: { data: null, lastFetched: null },
-    aucNums: { data: null, lastFetched: null },
-    ranks: { data: null, lastFetched: null },
-    auctionTypes: { data: null, lastFetched: null },
+  exchange: {
+    data: null,
+    lastFetched: null,
+  },
+  filters: {
+    enabled: {
+      brands: { data: null, lastFetched: null },
+      categories: { data: null, lastFetched: null },
+      dates: { data: null, lastFetched: null },
+    },
+    withStats: {
+      brands: { data: null, lastFetched: null },
+      dates: { data: null, lastFetched: null },
+      aucNums: { data: null, lastFetched: null },
+      ranks: { data: null, lastFetched: null },
+      auctionTypes: { data: null, lastFetched: null },
+    },
   },
 };
 
-// ===== 캐시 헬퍼 함수 =====
 function isCacheValid(cacheItem) {
+  const currentTime = new Date().getTime();
   return (
     cacheItem.data !== null &&
     cacheItem.lastFetched !== null &&
-    Date.now() - cacheItem.lastFetched < CACHE_DURATION
+    currentTime - cacheItem.lastFetched < CACHE_DURATION
   );
 }
 
 function updateCache(cacheItem, data) {
   cacheItem.data = data;
-  cacheItem.lastFetched = Date.now();
+  cacheItem.lastFetched = new Date().getTime();
 }
 
-function invalidateAllCache() {
-  Object.keys(cache).forEach((key) => {
-    if (cache[key].data !== undefined) {
-      cache[key].data = null;
-      cache[key].lastFetched = null;
-    } else {
-      Object.keys(cache[key]).forEach((subKey) => {
-        cache[key][subKey].data = null;
-        cache[key][subKey].lastFetched = null;
+function invalidateCache(type, subType = null) {
+  if (type === "all") {
+    Object.keys(cache).forEach((key) => {
+      if (typeof cache[key] === "object") {
+        if (cache[key].data !== undefined) {
+          cache[key].data = null;
+          cache[key].lastFetched = null;
+        } else {
+          Object.keys(cache[key]).forEach((subKey) => {
+            Object.keys(cache[key][subKey]).forEach((item) => {
+              cache[key][subKey][item].data = null;
+              cache[key][subKey][item].lastFetched = null;
+            });
+          });
+        }
+      }
+    });
+  } else if (type === "filters") {
+    if (subType === null) {
+      Object.keys(cache.filters).forEach((category) => {
+        Object.keys(cache.filters[category]).forEach((item) => {
+          cache.filters[category][item].data = null;
+          cache.filters[category][item].lastFetched = null;
+        });
       });
+    } else if (cache.filters.enabled[subType]) {
+      cache.filters.enabled[subType].data = null;
+      cache.filters.enabled[subType].lastFetched = null;
+
+      if (cache.filters.withStats[subType]) {
+        cache.filters.withStats[subType].data = null;
+        cache.filters.withStats[subType].lastFetched = null;
+      }
     }
-  });
+  } else if (type === "exchange") {
+    cache.exchange.data = null;
+    cache.exchange.lastFetched = null;
+  }
 }
 
-// ===== 활성화된 필터 조회 =====
-async function getEnabledFilters() {
-  if (isCacheValid(cache.enabledFilters)) {
-    return cache.enabledFilters.data;
-  }
-
-  // 각 필터 타입별로 개별 쿼리 실행 (기본 SQL)
-  const [brandResults] = await pool.query(`
-    SELECT filter_value FROM filter_settings 
-    WHERE filter_type = 'brand' AND is_enabled = 1
-  `);
-
-  const [categoryResults] = await pool.query(`
-    SELECT filter_value FROM filter_settings 
-    WHERE filter_type = 'category' AND is_enabled = 1
-  `);
-
-  const [dateResults] = await pool.query(`
-    SELECT filter_value FROM filter_settings 
-    WHERE filter_type = 'date' AND is_enabled = 1
-  `);
-
-  const enabledFilters = {
-    brand: brandResults.map((row) => row.filter_value),
-    category: categoryResults.map((row) => row.filter_value),
-    date: dateResults.map((row) => row.filter_value),
+async function getEnabledFilters(filterType) {
+  const cacheMapping = {
+    brand: cache.filters.enabled.brands,
+    category: cache.filters.enabled.categories,
+    date: cache.filters.enabled.dates,
   };
 
-  updateCache(cache.enabledFilters, enabledFilters);
-  return enabledFilters;
+  const cacheItem = cacheMapping[filterType];
+
+  if (cacheItem && isCacheValid(cacheItem)) {
+    return cacheItem.data;
+  }
+
+  const [enabled] = await pool.query(
+    `SELECT filter_value FROM filter_settings WHERE filter_type = ? AND is_enabled = 1`,
+    [filterType]
+  );
+
+  const result = enabled.map((item) => item.filter_value);
+
+  if (cacheItem) {
+    updateCache(cacheItem, result);
+  }
+
+  return result;
 }
 
-// ===== 메인 데이터 조회 =====
+async function buildBaseFilterConditions() {
+  const [enabledBrands, enabledCategories, enabledDates] = await Promise.all([
+    getEnabledFilters("brand"),
+    getEnabledFilters("category"),
+    getEnabledFilters("date"),
+  ]);
+
+  const conditions = [];
+  const queryParams = [];
+
+  if (enabledBrands.length > 0) {
+    conditions.push(`ci.brand IN (${enabledBrands.map(() => "?").join(",")})`);
+    queryParams.push(...enabledBrands);
+  } else {
+    conditions.push("1=0");
+  }
+
+  if (enabledCategories.length > 0) {
+    conditions.push(
+      `ci.category IN (${enabledCategories.map(() => "?").join(",")})`
+    );
+    queryParams.push(...enabledCategories);
+  } else {
+    conditions.push("1=0");
+  }
+
+  if (enabledDates.length > 0) {
+    conditions.push(
+      `DATE(ci.scheduled_date) IN (${enabledDates.map(() => "?").join(",")})`
+    );
+    queryParams.push(...enabledDates);
+  }
+
+  return { conditions, queryParams };
+}
+
 router.get("/", async (req, res) => {
   const {
     page = 1,
@@ -109,264 +174,219 @@ router.get("/", async (req, res) => {
     sortOrder = "asc",
     excludeExpired = "true",
   } = req.query;
-
-  const offset = (parseInt(page) - 1) * parseInt(limit);
+  const offset = (page - 1) * limit;
   const userId = req.session.user?.id;
 
   try {
-    // 활성화된 필터 조회
-    const enabledFilters = await getEnabledFilters();
+    const [enabledBrands, enabledCategories, enabledDates] = await Promise.all([
+      getEnabledFilters("brand"),
+      getEnabledFilters("category"),
+      getEnabledFilters("date"),
+    ]);
 
-    // 사용자 입찰 데이터 조회
+    let bidData = [];
     let userBidItemIds = [];
-    let bidDataMap = {};
 
     if (userId) {
-      const [bidResults] = await pool.query(
-        `
-        SELECT 'live' as bid_type, item_id, first_price, second_price, final_price, status, id
-        FROM live_bids WHERE user_id = ?
-        UNION ALL
-        SELECT 'direct' as bid_type, item_id, current_price as first_price, 
-               NULL as second_price, NULL as final_price, status, id
-        FROM direct_bids WHERE user_id = ?
-      `,
-        [userId, userId]
+      const [liveBids] = await pool.query(
+        `SELECT 'live' as bid_type, lb.id, lb.item_id, lb.first_price, lb.second_price, lb.final_price, lb.status
+         FROM live_bids lb WHERE lb.user_id = ?`,
+        [userId]
       );
 
-      bidResults.forEach((bid) => {
-        if (!bidDataMap[bid.item_id]) {
-          bidDataMap[bid.item_id] = {};
-        }
-        bidDataMap[bid.item_id][bid.bid_type] = bid;
-        userBidItemIds.push(bid.item_id);
-      });
-    }
+      const [directBids] = await pool.query(
+        `SELECT 'direct' as bid_type, db.id, db.item_id, db.current_price, db.status
+         FROM direct_bids db WHERE db.user_id = ?`,
+        [userId]
+      );
 
-    // 쿼리 구성
-    let query = "SELECT ci.* FROM crawled_items ci";
-    const joins = [];
-    const conditions = [];
-    const params = [];
+      bidData = [...liveBids, ...directBids];
 
-    // 즐겨찾기 JOIN
-    if (favoriteNumbers && userId) {
-      const favNumbers = favoriteNumbers
-        .split(",")
-        .map((n) => parseInt(n))
-        .filter((n) => !isNaN(n));
-      if (favNumbers.length > 0) {
-        joins.push("INNER JOIN wishlists w ON ci.item_id = w.item_id");
-        conditions.push("w.user_id = ?");
-        conditions.push(
-          `w.favorite_number IN (${favNumbers.map(() => "?").join(",")})`
-        );
-        params.push(userId, ...favNumbers);
+      if (bidsOnly === "true") {
+        userBidItemIds = bidData.map((bid) => bid.item_id);
       }
     }
 
-    // 기본 조건들
+    let query = "SELECT ci.* FROM crawled_items ci";
+    const queryParams = [];
+    let conditions = [];
+
     if (excludeExpired === "true") {
-      conditions.push(`(
+      conditions.push(`
         (ci.bid_type = 'direct' AND ci.scheduled_date > NOW()) OR
-        (ci.bid_type = 'live' AND (
-          ci.scheduled_date > NOW() OR 
-          (DATE(ci.scheduled_date) = CURDATE() AND HOUR(NOW()) < 13)
-        ))
-      )`);
+        (ci.bid_type = 'live' AND 
+        (ci.scheduled_date > NOW() OR 
+          (DATE(ci.scheduled_date) = DATE(NOW()) AND HOUR(NOW()) < 13)))
+      `);
     }
 
-    // 입찰한 아이템만
+    if (favoriteNumbers && userId) {
+      const favoriteNumbersList = favoriteNumbers.split(",").map(Number);
+      if (favoriteNumbersList.length > 0) {
+        query +=
+          " INNER JOIN wishlists w ON ci.item_id = w.item_id AND w.user_id = ?";
+        queryParams.push(userId);
+        query += ` AND w.favorite_number IN (${favoriteNumbersList
+          .map(() => "?")
+          .join(",")})`;
+        queryParams.push(...favoriteNumbersList);
+      }
+    } else {
+      query += " WHERE 1=1";
+    }
+
     if (bidsOnly === "true" && userId) {
       if (userBidItemIds.length > 0) {
-        const uniqueItemIds = [...new Set(userBidItemIds)];
         conditions.push(
-          `ci.item_id IN (${uniqueItemIds.map(() => "?").join(",")})`
+          `ci.item_id IN (${userBidItemIds.map(() => "?").join(",")})`
         );
-        params.push(...uniqueItemIds);
+        queryParams.push(...userBidItemIds);
       } else {
-        return res.json({
-          data: [],
-          wishlist: [],
-          page: parseInt(page),
-          limit: parseInt(limit),
-          totalItems: 0,
-          totalPages: 0,
-        });
+        conditions.push("1=0");
       }
     }
 
-    // 검색
     if (search && search.trim()) {
       const searchTerms = search.trim().split(/\s+/);
-      conditions.push(
-        `(${searchTerms.map(() => "ci.title LIKE ?").join(" AND ")})`
-      );
-      searchTerms.forEach((term) => params.push(`%${term}%`));
-    }
-
-    // 브랜드 필터
-    let effectiveBrands = enabledFilters.brand;
-    if (brands) {
-      const selectedBrands = brands.split(",");
-      effectiveBrands = selectedBrands.filter((b) =>
-        enabledFilters.brand.includes(b)
-      );
-    }
-    if (effectiveBrands.length > 0) {
-      conditions.push(
-        `ci.brand IN (${effectiveBrands.map(() => "?").join(",")})`
-      );
-      params.push(...effectiveBrands);
-    } else {
-      return res.json({
-        data: [],
-        wishlist: [],
-        page: parseInt(page),
-        limit: parseInt(limit),
-        totalItems: 0,
-        totalPages: 0,
+      const searchConditions = searchTerms
+        .map(() => "ci.title LIKE ?")
+        .join(" AND ");
+      conditions.push(`(${searchConditions})`);
+      searchTerms.forEach((term) => {
+        queryParams.push(`%${term}%`);
       });
     }
 
-    // 카테고리 필터
-    let effectiveCategories = enabledFilters.category;
-    if (categories) {
-      const selectedCategories = categories.split(",");
-      effectiveCategories = selectedCategories.filter((c) =>
-        enabledFilters.category.includes(c)
-      );
-    }
-    if (effectiveCategories.length > 0) {
-      conditions.push(
-        `ci.category IN (${effectiveCategories.map(() => "?").join(",")})`
-      );
-      params.push(...effectiveCategories);
-    } else {
-      return res.json({
-        data: [],
-        wishlist: [],
-        page: parseInt(page),
-        limit: parseInt(limit),
-        totalItems: 0,
-        totalPages: 0,
-      });
-    }
-
-    // 날짜 필터
-    if (scheduledDates) {
-      const dateList = scheduledDates.split(",");
-      const hasNull = dateList.includes("null");
-      const actualDates = dateList.filter((d) => d !== "null");
-
-      if (hasNull && actualDates.length > 0) {
-        const validDates = actualDates.filter((d) =>
-          enabledFilters.date.includes(d)
-        );
-        if (validDates.length > 0) {
-          conditions.push(
-            `(ci.scheduled_date IS NULL OR DATE(ci.scheduled_date) IN (${validDates
-              .map(() => "?")
-              .join(",")}))`
-          );
-          params.push(...validDates);
-        } else {
-          conditions.push("ci.scheduled_date IS NULL");
-        }
-      } else if (hasNull) {
-        conditions.push("ci.scheduled_date IS NULL");
-      } else if (actualDates.length > 0) {
-        const validDates = actualDates.filter((d) =>
-          enabledFilters.date.includes(d)
-        );
-        if (validDates.length > 0) {
-          conditions.push(
-            `DATE(ci.scheduled_date) IN (${validDates
-              .map(() => "?")
-              .join(",")})`
-          );
-          params.push(...validDates);
-        } else {
-          return res.json({
-            data: [],
-            wishlist: [],
-            page: parseInt(page),
-            limit: parseInt(limit),
-            totalItems: 0,
-            totalPages: 0,
-          });
-        }
-      }
-    } else if (enabledFilters.date.length > 0) {
-      conditions.push(
-        `DATE(ci.scheduled_date) IN (${enabledFilters.date
-          .map(() => "?")
-          .join(",")})`
-      );
-      params.push(...enabledFilters.date);
-    }
-
-    // 기타 필터들
     if (ranks) {
       const rankList = ranks.split(",");
       conditions.push(`ci.rank IN (${rankList.map(() => "?").join(",")})`);
-      params.push(...rankList);
+      queryParams.push(...rankList);
     }
 
     if (auctionTypes) {
-      const typeList = auctionTypes.split(",");
-      conditions.push(`ci.bid_type IN (${typeList.map(() => "?").join(",")})`);
-      params.push(...typeList);
+      const auctionTypeList = auctionTypes.split(",");
+      if (auctionTypeList.length > 0) {
+        conditions.push(
+          `ci.bid_type IN (${auctionTypeList.map(() => "?").join(",")})`
+        );
+        queryParams.push(...auctionTypeList);
+      }
+    }
+
+    if (enabledBrands.length > 0) {
+      conditions.push(
+        `ci.brand IN (${enabledBrands.map(() => "?").join(",")})`
+      );
+      queryParams.push(...enabledBrands);
+    } else {
+      conditions.push("1=0");
+    }
+
+    if (enabledCategories.length > 0) {
+      conditions.push(
+        `ci.category IN (${enabledCategories.map(() => "?").join(",")})`
+      );
+      queryParams.push(...enabledCategories);
+    } else {
+      conditions.push("1=0");
+    }
+
+    if (enabledDates.length > 0) {
+      conditions.push(
+        `DATE(ci.scheduled_date) IN (${enabledDates.map(() => "?").join(",")})`
+      );
+      queryParams.push(...enabledDates);
+    }
+
+    if (brands) {
+      const brandList = brands
+        .split(",")
+        .filter((brand) => enabledBrands.includes(brand));
+      if (brandList.length > 0) {
+        conditions.push(`ci.brand IN (${brandList.map(() => "?").join(",")})`);
+        queryParams.push(...brandList);
+      }
+    }
+
+    if (categories) {
+      const categoryList = categories
+        .split(",")
+        .filter((category) => enabledCategories.includes(category));
+      if (categoryList.length > 0) {
+        conditions.push(
+          `ci.category IN (${categoryList.map(() => "?").join(",")})`
+        );
+        queryParams.push(...categoryList);
+      }
+    }
+
+    if (scheduledDates) {
+      const dateList = scheduledDates.split(",");
+      if (dateList.length > 0) {
+        const dateConds = [];
+        dateList.forEach((date) => {
+          if (date == "null") {
+            dateConds.push("ci.scheduled_date IS NULL");
+          } else {
+            dateConds.push(`DATE(ci.scheduled_date) = ?`);
+            queryParams.push(date);
+          }
+        });
+        if (dateConds.length > 0) {
+          conditions.push(`(${dateConds.join(" OR ")})`);
+        }
+      }
     }
 
     if (aucNums) {
-      const numList = aucNums.split(",");
-      conditions.push(`ci.auc_num IN (${numList.map(() => "?").join(",")})`);
-      params.push(...numList);
+      const aucNumList = aucNums.split(",");
+      if (aucNumList.length > 0) {
+        conditions.push(
+          `ci.auc_num IN (${aucNumList.map(() => "?").join(",")})`
+        );
+        queryParams.push(...aucNumList);
+      }
     }
 
-    // 쿼리 완성
-    if (joins.length > 0) {
-      query += " " + joins.join(" ");
-    }
     if (conditions.length > 0) {
-      query += " WHERE " + conditions.join(" AND ");
+      query += " AND " + conditions.join(" AND ");
     }
 
-    // 정렬 (FIELD 함수 제거)
-    let orderBy = "ci.scheduled_date";
+    let orderByClause = "";
     switch (sortBy) {
       case "title":
-        orderBy = "ci.title";
+        orderByClause = "ci.title";
         break;
       case "rank":
-        orderBy = "ci.rank"; // 기본 정렬
+        orderByClause = "ci.rank";
+        break;
+      case "scheduled_date":
+        orderByClause = "ci.scheduled_date";
         break;
       case "starting_price":
-        orderBy = "ci.starting_price";
+        orderByClause = "ci.starting_price";
         break;
       default:
-        orderBy = "ci.scheduled_date";
+        orderByClause = "ci.title";
     }
 
-    const direction = sortOrder.toLowerCase() === "desc" ? "DESC" : "ASC";
-    query += ` ORDER BY ${orderBy} ${direction}`;
-
-    // 총 개수 쿼리
-    const countQuery = `SELECT COUNT(*) as total FROM (${query}) as subquery`;
-
-    // 페이징
+    const sortDirection = sortOrder.toLowerCase() === "desc" ? "DESC" : "ASC";
+    query += ` ORDER BY ${orderByClause} ${sortDirection}`;
     query += " LIMIT ? OFFSET ?";
-    params.push(parseInt(limit), offset);
+    queryParams.push(parseInt(limit), offset);
 
-    // 쿼리 실행
-    const [items] = await pool.query(query, params);
-    const [countResult] = await pool.query(countQuery, params.slice(0, -2));
+    const countQuery = `SELECT COUNT(*) as total FROM (${
+      query.split("ORDER BY")[0]
+    }) as subquery`;
 
+    const [items] = await pool.query(query, queryParams);
+    const [countResult] = await pool.query(
+      countQuery,
+      queryParams.slice(0, -2)
+    );
     const totalItems = countResult[0].total;
-    const totalPages = Math.ceil(totalItems / parseInt(limit));
+    const totalPages = Math.ceil(totalItems / limit);
 
-    // 위시리스트 조회
     let wishlist = [];
     if (userId) {
       [wishlist] = await pool.query(
@@ -375,179 +395,192 @@ router.get("/", async (req, res) => {
       );
     }
 
-    // 상세 정보 처리
-    let finalItems = items;
-    if (withDetails === "true") {
-      const processingLimit = pLimit(5);
-      const processPromises = items.map((item) =>
-        processingLimit(() => processItem(item.item_id, false, null, true, 2))
-      );
-      const processedItems = await Promise.all(processPromises);
-      finalItems = processedItems.filter((item) => item !== null);
+    const itemBidMap = {};
+    if (bidData.length > 0) {
+      for (const bid of bidData) {
+        if (!itemBidMap[bid.item_id]) {
+          itemBidMap[bid.item_id] = {};
+        }
+        itemBidMap[bid.item_id][bid.bid_type] = bid;
+      }
     }
 
-    // 입찰 정보 추가
-    const itemsWithBids = finalItems.map((item) => ({
-      ...item,
-      bids: {
-        live: bidDataMap[item.item_id]?.live || null,
-        direct: bidDataMap[item.item_id]?.direct || null,
-      },
-    }));
+    if (withDetails === "true") {
+      const limit = pLimit(5);
+      const processItemsInBatches = async (items) => {
+        const promises = items.map((item) =>
+          limit(() => processItem(item.item_id, false, null, true, 2))
+        );
+        const processedItems = await Promise.all(promises);
+        return processedItems.filter((item) => item !== null);
+      };
 
-    res.json({
-      data: itemsWithBids,
-      wishlist,
-      page: parseInt(page),
-      limit: parseInt(limit),
-      totalItems,
-      totalPages,
-    });
+      const detailedItems = await processItemsInBatches(items);
+      const itemsWithBids = detailedItems.map((item) => {
+        const itemBids = itemBidMap[item.item_id] || {};
+        return {
+          ...item,
+          bids: {
+            live: itemBids.live || null,
+            direct: itemBids.direct || null,
+          },
+        };
+      });
+
+      res.json({
+        data: itemsWithBids,
+        wishlist,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalItems,
+        totalPages,
+      });
+    } else {
+      const itemsWithBids = items.map((item) => {
+        const itemBids = itemBidMap[item.item_id] || {};
+        return {
+          ...item,
+          bids: {
+            live: itemBids.live || null,
+            direct: itemBids.direct || null,
+          },
+        };
+      });
+
+      res.json({
+        data: itemsWithBids,
+        wishlist,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalItems,
+        totalPages,
+      });
+    }
   } catch (error) {
-    console.error("Error fetching data:", error);
-    res.status(500).json({ message: "데이터 조회 중 오류가 발생했습니다." });
+    console.error("Error fetching data from database:", error);
+    res.status(500).json({ message: "Error fetching data" });
   }
 });
 
-// ===== 통계 API들 =====
 router.get("/brands-with-count", async (req, res) => {
   try {
-    if (isCacheValid(cache.stats.brands)) {
-      return res.json(cache.stats.brands.data);
+    if (isCacheValid(cache.filters.withStats.brands)) {
+      return res.json(cache.filters.withStats.brands.data);
     }
 
-    // 기본 SQL 쿼리 사용
-    const [results] = await pool.query(`
-      SELECT brand, COUNT(*) as count
-      FROM crawled_items
-      WHERE brand IS NOT NULL
-      GROUP BY brand
-      ORDER BY count DESC, brand ASC
-    `);
+    const { conditions, queryParams } = await buildBaseFilterConditions();
 
-    updateCache(cache.stats.brands, results);
+    const [results] = await pool.query(
+      `SELECT ci.brand, COUNT(*) as count
+       FROM crawled_items ci
+       WHERE ${conditions.join(" AND ")}
+       GROUP BY ci.brand
+       ORDER BY count DESC, ci.brand ASC`,
+      queryParams
+    );
+
+    updateCache(cache.filters.withStats.brands, results);
     res.json(results);
   } catch (error) {
     console.error("Error fetching brands with count:", error);
-    res
-      .status(500)
-      .json({ message: "브랜드 통계 조회 중 오류가 발생했습니다." });
+    res.status(500).json({ message: "Error fetching brands with count" });
   }
 });
 
 router.get("/auction-types", async (req, res) => {
   try {
-    if (isCacheValid(cache.stats.auctionTypes)) {
-      return res.json(cache.stats.auctionTypes.data);
+    if (isCacheValid(cache.filters.withStats.auctionTypes)) {
+      return res.json(cache.filters.withStats.auctionTypes.data);
     }
 
-    // 기본 SQL 쿼리 사용
-    const [results] = await pool.query(`
-      SELECT bid_type, COUNT(*) as count
-      FROM crawled_items
-      WHERE bid_type IS NOT NULL
-      GROUP BY bid_type
-      ORDER BY count DESC
-    `);
+    const { conditions, queryParams } = await buildBaseFilterConditions();
 
-    updateCache(cache.stats.auctionTypes, results);
+    const [results] = await pool.query(
+      `SELECT ci.bid_type, COUNT(*) as count
+       FROM crawled_items ci
+       WHERE ${conditions.join(" AND ")} AND ci.bid_type IS NOT NULL
+       GROUP BY ci.bid_type
+       ORDER BY count DESC`,
+      queryParams
+    );
+
+    updateCache(cache.filters.withStats.auctionTypes, results);
     res.json(results);
   } catch (error) {
     console.error("Error fetching auction types:", error);
-    res.status(500).json({ message: "경매 타입 조회 중 오류가 발생했습니다." });
+    res.status(500).json({ message: "Error fetching auction types" });
   }
 });
 
 router.get("/scheduled-dates-with-count", async (req, res) => {
   try {
-    if (isCacheValid(cache.stats.dates)) {
-      return res.json(cache.stats.dates.data);
+    if (isCacheValid(cache.filters.withStats.dates)) {
+      return res.json(cache.filters.withStats.dates.data);
     }
 
-    // 기본 SQL 쿼리 사용
-    const [results] = await pool.query(`
-      SELECT DATE(scheduled_date) as Date, COUNT(*) as count
-      FROM crawled_items
-      WHERE scheduled_date IS NOT NULL
-      GROUP BY DATE(scheduled_date)
-      ORDER BY Date ASC
-    `);
+    const { conditions, queryParams } = await buildBaseFilterConditions();
 
-    updateCache(cache.stats.dates, results);
+    const [results] = await pool.query(
+      `SELECT DATE(ci.scheduled_date) as Date, COUNT(*) as count
+       FROM crawled_items ci
+       WHERE ${conditions.join(" AND ")}
+       GROUP BY DATE(ci.scheduled_date)
+       ORDER BY Date ASC`,
+      queryParams
+    );
+
+    updateCache(cache.filters.withStats.dates, results);
     res.json(results);
   } catch (error) {
-    console.error("Error fetching dates with count:", error);
-    res.status(500).json({ message: "날짜 통계 조회 중 오류가 발생했습니다." });
+    console.error("Error fetching scheduled dates with count:", error);
+    res
+      .status(500)
+      .json({ message: "Error fetching scheduled dates with count" });
   }
 });
 
 router.get("/brands", async (req, res) => {
   try {
-    const enabledFilters = await getEnabledFilters();
-    res.json(enabledFilters.brand);
+    const enabledBrands = await getEnabledFilters("brand");
+    res.json(enabledBrands);
   } catch (error) {
     console.error("Error fetching brands:", error);
-    res
-      .status(500)
-      .json({ message: "브랜드 목록 조회 중 오류가 발생했습니다." });
-  }
-});
-
-router.get("/categories", async (req, res) => {
-  try {
-    const enabledFilters = await getEnabledFilters();
-    res.json(enabledFilters.category);
-  } catch (error) {
-    console.error("Error fetching categories:", error);
-    res
-      .status(500)
-      .json({ message: "카테고리 목록 조회 중 오류가 발생했습니다." });
+    res.status(500).json({ message: "Error fetching brands" });
   }
 });
 
 router.get("/auc-nums", async (req, res) => {
   try {
-    if (isCacheValid(cache.stats.aucNums)) {
-      return res.json(cache.stats.aucNums.data);
+    if (isCacheValid(cache.filters.withStats.aucNums)) {
+      return res.json(cache.filters.withStats.aucNums.data);
     }
 
-    // 기본 SQL 쿼리 사용
-    const [results] = await pool.query(`
-      SELECT auc_num, COUNT(*) as count
-      FROM crawled_items
-      WHERE auc_num IS NOT NULL
-      GROUP BY auc_num
-      ORDER BY auc_num ASC
-    `);
+    const { conditions, queryParams } = await buildBaseFilterConditions();
 
-    updateCache(cache.stats.aucNums, results);
+    const [results] = await pool.query(
+      `SELECT ci.auc_num, COUNT(*) as count
+       FROM crawled_items ci
+       WHERE ${conditions.join(" AND ")} AND ci.auc_num IS NOT NULL
+       GROUP BY ci.auc_num
+       ORDER BY ci.auc_num ASC`,
+      queryParams
+    );
+
+    updateCache(cache.filters.withStats.aucNums, results);
     res.json(results);
   } catch (error) {
     console.error("Error fetching auction numbers:", error);
-    res.status(500).json({ message: "경매번호 조회 중 오류가 발생했습니다." });
+    res.status(500).json({ message: "Error fetching auction numbers" });
   }
 });
 
-router.get("/ranks", async (req, res) => {
+router.get("/categories", async (req, res) => {
   try {
-    if (isCacheValid(cache.stats.ranks)) {
-      return res.json(cache.stats.ranks.data);
-    }
-
-    // 기본 SQL 쿼리 사용 (FIELD 함수 제거)
-    const [results] = await pool.query(`
-      SELECT rank, COUNT(*) as count
-      FROM crawled_items
-      WHERE rank IS NOT NULL
-      GROUP BY rank
-      ORDER BY rank ASC
-    `);
-
-    updateCache(cache.stats.ranks, results);
-    res.json(results);
+    const enabledCategories = await getEnabledFilters("category");
+    res.json(enabledCategories);
   } catch (error) {
-    console.error("Error fetching ranks:", error);
-    res.status(500).json({ message: "등급 통계 조회 중 오류가 발생했습니다." });
+    console.error("Error fetching categories:", error);
+    res.status(500).json({ message: "Error fetching categories" });
   }
 });
 
@@ -569,25 +602,54 @@ router.get("/exchange-rate", async (req, res) => {
       return res.json({
         rate: cache.exchange.data,
         cached: true,
-        error: "최신 환율을 가져올 수 없어 캐시된 데이터를 사용합니다.",
+        error: "Failed to fetch new exchange rate, using cached data",
       });
     }
 
-    res.status(500).json({ error: "환율 조회에 실패했습니다." });
+    res.status(500).json({ error: "Failed to fetch exchange rate" });
+  }
+});
+
+router.get("/ranks", async (req, res) => {
+  try {
+    if (isCacheValid(cache.filters.withStats.ranks)) {
+      return res.json(cache.filters.withStats.ranks.data);
+    }
+
+    const { conditions, queryParams } = await buildBaseFilterConditions();
+
+    const [results] = await pool.query(
+      `SELECT ci.rank, COUNT(*) as count
+       FROM crawled_items ci
+       WHERE ${conditions.join(" AND ")}
+       GROUP BY ci.rank
+       ORDER BY ci.rank ASC`,
+      queryParams
+    );
+
+    updateCache(cache.filters.withStats.ranks, results);
+    res.json(results);
+  } catch (error) {
+    console.error("Error fetching ranks:", error);
+    res.status(500).json({ message: "Error fetching ranks" });
   }
 });
 
 router.post("/invalidate-cache", (req, res) => {
   try {
+    const { type, subType } = req.body;
+
     if (!req.session.user?.isAdmin) {
-      return res.status(403).json({ message: "관리자 권한이 필요합니다." });
+      return res
+        .status(403)
+        .json({ message: "Unauthorized: Admin access required" });
     }
 
-    invalidateAllCache();
-    res.json({ message: "캐시가 성공적으로 무효화되었습니다." });
+    invalidateCache(type, subType);
+    res.json({ message: "Cache invalidated successfully" });
   } catch (error) {
     console.error("Error invalidating cache:", error);
-    res.status(500).json({ message: "캐시 무효화 중 오류가 발생했습니다." });
+    res.status(500).json({ message: "Error invalidating cache" });
   }
 });
 
