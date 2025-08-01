@@ -1010,6 +1010,34 @@
       let currentCertificateNumber = null;
       let currentAppraisalId = null;
 
+      function processImages(imagesData) {
+        let imageUrls = [];
+
+        if (imagesData) {
+          if (typeof imagesData === "string") {
+            try {
+              imageUrls = JSON.parse(imagesData);
+            } catch (e) {
+              imageUrls = [];
+            }
+          } else if (Array.isArray(imagesData)) {
+            if (
+              imagesData.length > 0 &&
+              typeof imagesData[0] === "object" &&
+              imagesData[0].url
+            ) {
+              imageUrls = imagesData
+                .sort((a, b) => (a.order || 0) - (b.order || 0))
+                .map((img) => img.url);
+            } else {
+              imageUrls = imagesData;
+            }
+          }
+        }
+
+        return imageUrls;
+      }
+
       function goBack() {
         window.history.back();
       }
@@ -1271,14 +1299,7 @@
                 )
                 .join("");
 
-              let imagesToDisplay = appraisal.images;
-              if (imagesToDisplay && typeof imagesToDisplay === "string") {
-                try {
-                  imagesToDisplay = JSON.parse(imagesToDisplay);
-                } catch (e) {
-                  imagesToDisplay = [];
-                }
-              }
+              let imagesToDisplay = processImages(appraisal.images);
               displayCertImages(
                 imagesToDisplay || [],
                 mainProductImageEl,

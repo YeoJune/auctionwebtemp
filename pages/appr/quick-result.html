@@ -978,6 +978,34 @@
     <script>
       let currentAppraisalId = null; // 현재 페이지의 감정 ID 저장
 
+      function processImages(imagesData) {
+        let imageUrls = [];
+
+        if (imagesData) {
+          if (typeof imagesData === "string") {
+            try {
+              imageUrls = JSON.parse(imagesData);
+            } catch (e) {
+              imageUrls = [];
+            }
+          } else if (Array.isArray(imagesData)) {
+            if (
+              imagesData.length > 0 &&
+              typeof imagesData[0] === "object" &&
+              imagesData[0].url
+            ) {
+              imageUrls = imagesData
+                .sort((a, b) => (a.order || 0) - (b.order || 0))
+                .map((img) => img.url);
+            } else {
+              imageUrls = imagesData;
+            }
+          }
+        }
+
+        return imageUrls;
+      }
+
       function goBack() {
         window.history.back();
       }
@@ -1221,14 +1249,7 @@
               let resultText = "";
               let badgeClass = "";
               let notes = appraisal.result_notes || "";
-              let images = appraisal.images || [];
-              if (appraisal.images && typeof appraisal.images === "string") {
-                try {
-                  images = JSON.parse(appraisal.images);
-                } catch (e) {
-                  images = [];
-                }
-              }
+              let images = processImages(appraisal.images);
 
               // 상태에 따른 처리
               if (appraisal.status === "pending") {
