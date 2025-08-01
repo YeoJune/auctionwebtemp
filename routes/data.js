@@ -236,12 +236,9 @@ router.get("/", async (req, res) => {
 
     // 5. 기본 조건들
     if (excludeExpired === "true") {
-      conditions.push(`(
-        (ci.bid_type = 'direct' AND ci.scheduled_date > NOW()) OR
-        (ci.bid_type = 'live' AND 
-        (ci.scheduled_date > NOW() OR 
-          (DATE(ci.scheduled_date) = DATE(NOW()) AND HOUR(NOW()) < 13)))
-      )`);
+      conditions.push(`
+        ci.original_scheduled_date > NOW()
+      `);
     }
 
     // 입찰한 아이템만 보기
@@ -575,10 +572,10 @@ router.get("/scheduled-dates-with-count", async (req, res) => {
     const { conditions, queryParams } = await buildBaseFilterConditions();
 
     const [results] = await pool.query(
-      `SELECT DATE(CONVERT_TZ(ci.scheduled_date, '+00:00', '+09:00')) as Date, COUNT(*) as count
+      `SELECT DATE(ci.scheduled_date) as Date, COUNT(*) as count
        FROM crawled_items ci
        WHERE ${conditions.join(" AND ")}
-       GROUP BY DATE(CONVERT_TZ(ci.scheduled_date, '+00:00', '+09:00'))
+       GROUP BY DATE(ci.scheduled_date)
        ORDER BY Date ASC`,
       queryParams
     );
