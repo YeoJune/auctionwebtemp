@@ -349,7 +349,7 @@ router.get("/", async (req, res) => {
         conditions.push("ci.scheduled_date IS NULL");
       } else if (actualDates.length > 0) {
         const effectiveDates = actualDates.filter((date) =>
-          enabledDates.includes(date)
+          enabledDates.includes(date + " 00:00:00")
         );
         if (effectiveDates.length > 0) {
           conditions.push(
