@@ -280,7 +280,7 @@ router.get("/", async (req, res) => {
     if (brands) {
       const selectedBrands = brands.split(",");
       effectiveBrands = selectedBrands.filter((brand) =>
-        enabledBrands.includes(brand)
+        enabledBrands.map((b) => b.toLowerCase()).includes(brand.toLowerCase())
       );
     }
 
