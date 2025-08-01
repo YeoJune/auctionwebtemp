@@ -1,4 +1,4 @@
-// routes/data.js
+// routes/data.js - MariaDB 호환 버전
 const dotenv = require("dotenv");
 dotenv.config();
 
@@ -65,7 +65,7 @@ async function getEnabledFilters() {
   }
 
   const [results] = await pool.query(`
-    SELECT filter_type, GROUP_CONCAT(filter_value SEPARATOR ',') as values
+    SELECT filter_type, GROUP_CONCAT(filter_value) as values
     FROM filter_settings 
     WHERE is_enabled = 1
     GROUP BY filter_type
