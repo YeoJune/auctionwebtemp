@@ -94,24 +94,30 @@ async function getEnabledFilters() {
     return cache.filters.enabled.data;
   }
 
-  const [results] = await pool.query(`
-    SELECT filter_type, GROUP_CONCAT(filter_value) as values
+  // GROUP_CONCAT 대신 개별 쿼리로 변경 (MariaDB 호환성)
+  const [brandResults] = await pool.query(`
+    SELECT filter_value
     FROM filter_settings 
-    WHERE is_enabled = 1 
-    GROUP BY filter_type
+    WHERE filter_type = 'brand' AND is_enabled = 1
+  `);
+
+  const [categoryResults] = await pool.query(`
+    SELECT filter_value
+    FROM filter_settings 
+    WHERE filter_type = 'category' AND is_enabled = 1
+  `);
+
+  const [dateResults] = await pool.query(`
+    SELECT filter_value
+    FROM filter_settings 
+    WHERE filter_type = 'date' AND is_enabled = 1
   `);
 
   const enabledMap = {
-    brand: [],
-    category: [],
-    date: [],
+    brand: brandResults.map((row) => row.filter_value),
+    category: categoryResults.map((row) => row.filter_value),
+    date: dateResults.map((row) => row.filter_value),
   };
-
-  results.forEach((row) => {
-    if (row.values) {
-      enabledMap[row.filter_type] = row.values.split(",");
-    }
-  });
 
   updateCache(cache.filters.enabled, enabledMap);
   return enabledMap;
