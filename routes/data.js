@@ -211,34 +211,34 @@ router.get("/", async (req, res) => {
     const queryParams = [];
     let conditions = [];
 
-    if (excludeExpired === "true") {
-      if (userId) {
-        // 사용자별 현장경매 입찰 상태를 JOIN으로 가져와서 조건 적용
-        query = `
-        SELECT ci.*, lb.first_price, lb.final_price
-        FROM crawled_items ci
-        LEFT JOIN live_bids lb ON ci.item_id = lb.item_id AND lb.user_id = ?
-      `;
-        queryParams.push(userId);
+    // if (excludeExpired === "true") {
+    //   if (userId) {
+    //     // 사용자별 현장경매 입찰 상태를 JOIN으로 가져와서 조건 적용
+    //     query = `
+    //     SELECT ci.*, lb.first_price, lb.final_price
+    //     FROM crawled_items ci
+    //     LEFT JOIN live_bids lb ON ci.item_id = lb.item_id AND lb.user_id = ?
+    //   `;
+    //     queryParams.push(userId);
 
-        conditions.push(`
-        (ci.bid_type = 'direct' AND ci.scheduled_date > NOW()) OR
-        (ci.bid_type = 'live' AND (
-          (lb.first_price IS NULL AND ci.scheduled_date > NOW()) OR
-          (lb.first_price IS NOT NULL AND lb.final_price IS NULL AND 
-           (ci.scheduled_date > NOW() OR 
-            (DATE(ci.scheduled_date) = DATE(NOW()) AND HOUR(NOW()) < 13))) OR
-          (lb.final_price IS NOT NULL AND FALSE)
-        ))
-      `);
-      } else {
-        // 비로그인 사용자는 1차 입찰 단계로 간주
-        conditions.push(`
-        (ci.bid_type = 'direct' AND ci.scheduled_date > NOW()) OR
-        (ci.bid_type = 'live' AND ci.scheduled_date > NOW())
-      `);
-      }
-    }
+    //     conditions.push(`
+    //     (ci.bid_type = 'direct' AND ci.scheduled_date > NOW()) OR
+    //     (ci.bid_type = 'live' AND (
+    //       (lb.first_price IS NULL AND ci.scheduled_date > NOW()) OR
+    //       (lb.first_price IS NOT NULL AND lb.final_price IS NULL AND 
+    //        (ci.scheduled_date > NOW() OR 
+    //         (DATE(ci.scheduled_date) = DATE(NOW()) AND HOUR(NOW()) < 13))) OR
+    //       (lb.final_price IS NOT NULL AND FALSE)
+    //     ))
+    //   `);
+    //   } else {
+    //     // 비로그인 사용자는 1차 입찰 단계로 간주
+    //     conditions.push(`
+    //     (ci.bid_type = 'direct' AND ci.scheduled_date > NOW()) OR
+    //     (ci.bid_type = 'live' AND ci.scheduled_date > NOW())
+    //   `);
+    //   }
+    // }
 
     if (favoriteNumbers && userId) {
       const favoriteNumbersList = favoriteNumbers.split(",").map(Number);
