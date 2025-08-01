@@ -333,10 +333,7 @@ router.get("/", async (req, res) => {
 
       if (hasNull && actualDates.length > 0) {
         const dateIntersection = actualDates.filter((date) =>
-          enabledDates.some(
-            (enabledDate) =>
-              enabledDate.includes(date) || date.includes(enabledDate)
-          )
+          enabledDates.includes(date + " 00:00:00")
         );
         if (dateIntersection.length > 0) {
           conditions.push(
