@@ -64,24 +64,27 @@ async function getEnabledFilters() {
     return cache.enabledFilters.data;
   }
 
-  const [results] = await pool.query(`
-    SELECT filter_type, GROUP_CONCAT(filter_value) as values
-    FROM filter_settings 
-    WHERE is_enabled = 1
-    GROUP BY filter_type
+  // 각 필터 타입별로 개별 쿼리 실행 (기본 SQL)
+  const [brandResults] = await pool.query(`
+    SELECT filter_value FROM filter_settings 
+    WHERE filter_type = 'brand' AND is_enabled = 1
+  `);
+
+  const [categoryResults] = await pool.query(`
+    SELECT filter_value FROM filter_settings 
+    WHERE filter_type = 'category' AND is_enabled = 1
+  `);
+
+  const [dateResults] = await pool.query(`
+    SELECT filter_value FROM filter_settings 
+    WHERE filter_type = 'date' AND is_enabled = 1
   `);
 
   const enabledFilters = {
-    brand: [],
-    category: [],
-    date: [],
+    brand: brandResults.map((row) => row.filter_value),
+    category: categoryResults.map((row) => row.filter_value),
+    date: dateResults.map((row) => row.filter_value),
   };
-
-  results.forEach((row) => {
-    if (row.values) {
-      enabledFilters[row.filter_type] = row.values.split(",");
-    }
-  });
 
   updateCache(cache.enabledFilters, enabledFilters);
   return enabledFilters;
@@ -330,18 +333,17 @@ router.get("/", async (req, res) => {
       query += " WHERE " + conditions.join(" AND ");
     }
 
-    // 정렬
+    // 정렬 (FIELD 함수 제거)
     let orderBy = "ci.scheduled_date";
     switch (sortBy) {
       case "title":
         orderBy = "ci.title";
         break;
       case "rank":
-        orderBy =
-          "FIELD(ci.rank, 'N', 'S', 'A', 'AB', 'B', 'BC', 'C', 'D', 'E', 'F')";
+        orderBy = "ci.rank"; // 기본 정렬
         break;
       case "starting_price":
-        orderBy = "ci.starting_price + 0";
+        orderBy = "ci.starting_price";
         break;
       default:
         orderBy = "ci.scheduled_date";
@@ -414,44 +416,14 @@ router.get("/brands-with-count", async (req, res) => {
       return res.json(cache.stats.brands.data);
     }
 
-    const enabledFilters = await getEnabledFilters();
-    const conditions = [];
-    const params = [];
-
-    if (enabledFilters.brand.length > 0) {
-      conditions.push(
-        `ci.brand IN (${enabledFilters.brand.map(() => "?").join(",")})`
-      );
-      params.push(...enabledFilters.brand);
-    }
-    if (enabledFilters.category.length > 0) {
-      conditions.push(
-        `ci.category IN (${enabledFilters.category.map(() => "?").join(",")})`
-      );
-      params.push(...enabledFilters.category);
-    }
-    if (enabledFilters.date.length > 0) {
-      conditions.push(
-        `DATE(ci.scheduled_date) IN (${enabledFilters.date
-          .map(() => "?")
-          .join(",")})`
-      );
-      params.push(...enabledFilters.date);
-    }
-
-    const whereClause =
-      conditions.length > 0 ? "WHERE " + conditions.join(" AND ") : "";
-
-    const [results] = await pool.query(
-      `
-      SELECT ci.brand, COUNT(*) as count
-      FROM crawled_items ci
-      ${whereClause}
-      GROUP BY ci.brand
-      ORDER BY count DESC, ci.brand ASC
-    `,
-      params
-    );
+    // 기본 SQL 쿼리 사용
+    const [results] = await pool.query(`
+      SELECT brand, COUNT(*) as count
+      FROM crawled_items
+      WHERE brand IS NOT NULL
+      GROUP BY brand
+      ORDER BY count DESC, brand ASC
+    `);
 
     updateCache(cache.stats.brands, results);
     res.json(results);
@@ -469,11 +441,12 @@ router.get("/auction-types", async (req, res) => {
       return res.json(cache.stats.auctionTypes.data);
     }
 
+    // 기본 SQL 쿼리 사용
     const [results] = await pool.query(`
-      SELECT ci.bid_type, COUNT(*) as count
-      FROM crawled_items ci
-      WHERE ci.bid_type IS NOT NULL
-      GROUP BY ci.bid_type
+      SELECT bid_type, COUNT(*) as count
+      FROM crawled_items
+      WHERE bid_type IS NOT NULL
+      GROUP BY bid_type
       ORDER BY count DESC
     `);
 
@@ -491,11 +464,12 @@ router.get("/scheduled-dates-with-count", async (req, res) => {
       return res.json(cache.stats.dates.data);
     }
 
+    // 기본 SQL 쿼리 사용
     const [results] = await pool.query(`
-      SELECT DATE(ci.scheduled_date) as Date, COUNT(*) as count
-      FROM crawled_items ci
-      WHERE ci.scheduled_date IS NOT NULL
-      GROUP BY DATE(ci.scheduled_date)
+      SELECT DATE(scheduled_date) as Date, COUNT(*) as count
+      FROM crawled_items
+      WHERE scheduled_date IS NOT NULL
+      GROUP BY DATE(scheduled_date)
       ORDER BY Date ASC
     `);
 
@@ -537,12 +511,13 @@ router.get("/auc-nums", async (req, res) => {
       return res.json(cache.stats.aucNums.data);
     }
 
+    // 기본 SQL 쿼리 사용
     const [results] = await pool.query(`
-      SELECT ci.auc_num, COUNT(*) as count
-      FROM crawled_items ci
-      WHERE ci.auc_num IS NOT NULL
-      GROUP BY ci.auc_num
-      ORDER BY ci.auc_num ASC
+      SELECT auc_num, COUNT(*) as count
+      FROM crawled_items
+      WHERE auc_num IS NOT NULL
+      GROUP BY auc_num
+      ORDER BY auc_num ASC
     `);
 
     updateCache(cache.stats.aucNums, results);
@@ -559,12 +534,13 @@ router.get("/ranks", async (req, res) => {
       return res.json(cache.stats.ranks.data);
     }
 
+    // 기본 SQL 쿼리 사용 (FIELD 함수 제거)
     const [results] = await pool.query(`
-      SELECT ci.rank, COUNT(*) as count
-      FROM crawled_items ci
-      WHERE ci.rank IS NOT NULL
-      GROUP BY ci.rank
-      ORDER BY FIELD(ci.rank, 'N', 'S', 'A', 'AB', 'B', 'BC', 'C', 'D', 'E', 'F')
+      SELECT rank, COUNT(*) as count
+      FROM crawled_items
+      WHERE rank IS NOT NULL
+      GROUP BY rank
+      ORDER BY rank ASC
     `);
 
     updateCache(cache.stats.ranks, results);
