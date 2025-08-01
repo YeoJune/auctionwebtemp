@@ -24,7 +24,11 @@ const cache = {
     lastFetched: null,
   },
   filters: {
-    enabled: { data: null, lastFetched: null },
+    enabled: {
+      brands: { data: null, lastFetched: null },
+      categories: { data: null, lastFetched: null },
+      dates: { data: null, lastFetched: null },
+    },
     withStats: {
       brands: { data: null, lastFetched: null },
       dates: { data: null, lastFetched: null },
@@ -35,7 +39,6 @@ const cache = {
   },
 };
 
-// ===== 캐시 헬퍼 함수들 =====
 function isCacheValid(cacheItem) {
   const currentTime = new Date().getTime();
   return (
@@ -68,19 +71,21 @@ function invalidateCache(type, subType = null) {
       }
     });
   } else if (type === "filters") {
-    cache.filters.enabled.data = null;
-    cache.filters.enabled.lastFetched = null;
+    if (subType === null) {
+      Object.keys(cache.filters).forEach((category) => {
+        Object.keys(cache.filters[category]).forEach((item) => {
+          cache.filters[category][item].data = null;
+          cache.filters[category][item].lastFetched = null;
+        });
+      });
+    } else if (cache.filters.enabled[subType]) {
+      cache.filters.enabled[subType].data = null;
+      cache.filters.enabled[subType].lastFetched = null;
 
-    if (subType) {
       if (cache.filters.withStats[subType]) {
         cache.filters.withStats[subType].data = null;
         cache.filters.withStats[subType].lastFetched = null;
       }
-    } else {
-      Object.keys(cache.filters.withStats).forEach((item) => {
-        cache.filters.withStats[item].data = null;
-        cache.filters.withStats[item].lastFetched = null;
-      });
     }
   } else if (type === "exchange") {
     cache.exchange.data = null;
@@ -88,46 +93,39 @@ function invalidateCache(type, subType = null) {
   }
 }
 
-// ===== 최적화된 필터 조회 함수 =====
-async function getEnabledFilters() {
-  if (isCacheValid(cache.filters.enabled)) {
-    return cache.filters.enabled.data;
-  }
-
-  // GROUP_CONCAT 대신 개별 쿼리로 변경 (MariaDB 호환성)
-  const [brandResults] = await pool.query(`
-    SELECT filter_value
-    FROM filter_settings 
-    WHERE filter_type = 'brand' AND is_enabled = 1
-  `);
-
-  const [categoryResults] = await pool.query(`
-    SELECT filter_value
-    FROM filter_settings 
-    WHERE filter_type = 'category' AND is_enabled = 1
-  `);
-
-  const [dateResults] = await pool.query(`
-    SELECT filter_value
-    FROM filter_settings 
-    WHERE filter_type = 'date' AND is_enabled = 1
-  `);
-
-  const enabledMap = {
-    brand: brandResults.map((row) => row.filter_value),
-    category: categoryResults.map((row) => row.filter_value),
-    date: dateResults.map((row) => row.filter_value),
+async function getEnabledFilters(filterType) {
+  const cacheMapping = {
+    brand: cache.filters.enabled.brands,
+    category: cache.filters.enabled.categories,
+    date: cache.filters.enabled.dates,
   };
 
-  updateCache(cache.filters.enabled, enabledMap);
-  return enabledMap;
+  const cacheItem = cacheMapping[filterType];
+
+  if (cacheItem && isCacheValid(cacheItem)) {
+    return cacheItem.data;
+  }
+
+  const [enabled] = await pool.query(
+    `SELECT filter_value FROM filter_settings WHERE filter_type = ? AND is_enabled = TRUE`,
+    [filterType]
+  );
+
+  const result = enabled.map((item) => item.filter_value);
+
+  if (cacheItem) {
+    updateCache(cacheItem, result);
+  }
+
+  return result;
 }
 
 async function buildBaseFilterConditions() {
-  const enabledFilters = await getEnabledFilters();
-  const enabledBrands = enabledFilters.brand || [];
-  const enabledCategories = enabledFilters.category || [];
-  const enabledDates = enabledFilters.date || [];
+  const [enabledBrands, enabledCategories, enabledDates] = await Promise.all([
+    getEnabledFilters("brand"),
+    getEnabledFilters("category"),
+    getEnabledFilters("date"),
+  ]);
 
   const conditions = [];
   const queryParams = [];
@@ -150,9 +148,7 @@ async function buildBaseFilterConditions() {
 
   if (enabledDates.length > 0) {
     conditions.push(
-      `DATE(CONVERT_TZ(ci.scheduled_date, '+00:00', '+09:00')) IN (${enabledDates
-        .map(() => "?")
-        .join(",")})`
+      `DATE(ci.scheduled_date) IN (${enabledDates.map(() => "?").join(",")})`
     );
     queryParams.push(...enabledDates);
   }
@@ -160,7 +156,6 @@ async function buildBaseFilterConditions() {
   return { conditions, queryParams };
 }
 
-// ===== 메인 데이터 조회 라우터 =====
 router.get("/", async (req, res) => {
   const {
     page = 1,
@@ -179,66 +174,43 @@ router.get("/", async (req, res) => {
     sortOrder = "asc",
     excludeExpired = "true",
   } = req.query;
-
   const offset = (page - 1) * limit;
   const userId = req.session.user?.id;
 
   try {
-    // 1. 활성화된 필터 조회
-    const enabledFilters = await getEnabledFilters();
-    const enabledBrands = enabledFilters.brand || [];
-    const enabledCategories = enabledFilters.category || [];
-    const enabledDates = enabledFilters.date || [];
+    const [enabledBrands, enabledCategories, enabledDates] = await Promise.all([
+      getEnabledFilters("brand"),
+      getEnabledFilters("category"),
+      getEnabledFilters("date"),
+    ]);
 
-    // 2. 사용자 입찰 데이터 조회 (통합 쿼리)
     let bidData = [];
     let userBidItemIds = [];
 
     if (userId) {
-      const [userBids] = await pool.query(
-        `
-        SELECT 'live' as bid_type, item_id, first_price, second_price, final_price, status, id
-        FROM live_bids WHERE user_id = ?
-        UNION ALL
-        SELECT 'direct' as bid_type, item_id, current_price as first_price, 
-               NULL as second_price, NULL as final_price, status, id
-        FROM direct_bids WHERE user_id = ?
-      `,
-        [userId, userId]
+      const [liveBids] = await pool.query(
+        `SELECT 'live' as bid_type, lb.id, lb.item_id, lb.first_price, lb.second_price, lb.final_price, lb.status
+         FROM live_bids lb WHERE lb.user_id = ?`,
+        [userId]
       );
 
-      bidData = userBids;
+      const [directBids] = await pool.query(
+        `SELECT 'direct' as bid_type, db.id, db.item_id, db.current_price, db.status
+         FROM direct_bids db WHERE db.user_id = ?`,
+        [userId]
+      );
+
+      bidData = [...liveBids, ...directBids];
+
       if (bidsOnly === "true") {
         userBidItemIds = bidData.map((bid) => bid.item_id);
       }
     }
 
-    // 3. 쿼리 구성 시작
-    let baseQuery = "SELECT ci.* FROM crawled_items ci";
-    const joins = [];
-    const conditions = [];
+    let query = "SELECT ci.* FROM crawled_items ci";
     const queryParams = [];
+    let conditions = [];
 
-    // 4. 즐겨찾기 필터 (JOIN 추가)
-    if (favoriteNumbers && userId) {
-      const favoriteNumbersList = favoriteNumbers.split(",").map(Number);
-      if (favoriteNumbersList.length > 0) {
-        joins.push(
-          "INNER JOIN wishlists w ON ci.item_id = w.item_id AND w.user_id = ?"
-        );
-        queryParams.push(userId);
-        conditions.push(
-          `w.favorite_number IN (${favoriteNumbersList
-            .map(() => "?")
-            .join(",")})`
-        );
-        queryParams.push(...favoriteNumbersList);
-      }
-    }
-
-    // 5. 기본 조건들
-
-    // 만료 제외 조건 (원본과 동일)
     if (excludeExpired === "true") {
       // 현장경매는 scheduled_date 당일 22:00 KST (13:00 UTC)까지,
       // 직접경매는 scheduled_date까지만 입찰 가능
@@ -250,7 +222,21 @@ router.get("/", async (req, res) => {
       `);
     }
 
-    // 입찰한 아이템만 보기
+    if (favoriteNumbers && userId) {
+      const favoriteNumbersList = favoriteNumbers.split(",").map(Number);
+      if (favoriteNumbersList.length > 0) {
+        query +=
+          " INNER JOIN wishlists w ON ci.item_id = w.item_id AND w.user_id = ?";
+        queryParams.push(userId);
+        query += ` AND w.favorite_number IN (${favoriteNumbersList
+          .map(() => "?")
+          .join(",")})`;
+        queryParams.push(...favoriteNumbersList);
+      }
+    } else {
+      query += " WHERE 1=1";
+    }
+
     if (bidsOnly === "true" && userId) {
       if (userBidItemIds.length > 0) {
         conditions.push(
@@ -258,18 +244,10 @@ router.get("/", async (req, res) => {
         );
         queryParams.push(...userBidItemIds);
       } else {
-        return res.json({
-          data: [],
-          wishlist: [],
-          page: parseInt(page),
-          limit: parseInt(limit),
-          totalItems: 0,
-          totalPages: 0,
-        });
+        conditions.push("1=0");
       }
     }
 
-    // 6. 검색 조건
     if (search && search.trim()) {
       const searchTerms = search.trim().split(/\s+/);
       const searchConditions = searchTerms
@@ -281,187 +259,163 @@ router.get("/", async (req, res) => {
       });
     }
 
-    // 7. 브랜드 필터 (활성화된 브랜드와 사용자 선택의 교집합)
-    let effectiveBrands = enabledBrands;
-    if (brands) {
-      const selectedBrands = brands.split(",");
-      effectiveBrands = selectedBrands.filter((brand) =>
-        enabledBrands.includes(brand)
-      );
-    }
-
-    if (effectiveBrands.length > 0) {
-      conditions.push(
-        `ci.brand IN (${effectiveBrands.map(() => "?").join(",")})`
-      );
-      queryParams.push(...effectiveBrands);
-    } else {
-      return res.json({
-        data: [],
-        wishlist: [],
-        page: parseInt(page),
-        limit: parseInt(limit),
-        totalItems: 0,
-        totalPages: 0,
-      });
-    }
-
-    // 8. 카테고리 필터
-    let effectiveCategories = enabledCategories;
-    if (categories) {
-      const selectedCategories = categories.split(",");
-      effectiveCategories = selectedCategories.filter((cat) =>
-        enabledCategories.includes(cat)
-      );
-    }
-
-    if (effectiveCategories.length > 0) {
-      conditions.push(
-        `ci.category IN (${effectiveCategories.map(() => "?").join(",")})`
-      );
-      queryParams.push(...effectiveCategories);
-    } else {
-      return res.json({
-        data: [],
-        wishlist: [],
-        page: parseInt(page),
-        limit: parseInt(limit),
-        totalItems: 0,
-        totalPages: 0,
-      });
-    }
-
-    // 9. 날짜 필터
-    if (scheduledDates) {
-      const selectedDates = scheduledDates.split(",");
-      const hasNull = selectedDates.includes("null");
-      const actualDates = selectedDates.filter((date) => date !== "null");
-
-      if (hasNull && actualDates.length > 0) {
-        const dateIntersection = actualDates.filter((date) =>
-          enabledDates.includes(date)
-        );
-        if (dateIntersection.length > 0) {
-          conditions.push(
-            `(ci.scheduled_date IS NULL OR DATE(ci.scheduled_date) IN (${dateIntersection
-              .map(() => "?")
-              .join(",")}))`
-          );
-          queryParams.push(...dateIntersection);
-        } else {
-          conditions.push("ci.scheduled_date IS NULL");
-        }
-      } else if (hasNull) {
-        conditions.push("ci.scheduled_date IS NULL");
-      } else if (actualDates.length > 0) {
-        const effectiveDates = actualDates.filter((date) =>
-          enabledDates.includes(date)
-        );
-        if (effectiveDates.length > 0) {
-          conditions.push(
-            `DATE(ci.scheduled_date) IN (${effectiveDates
-              .map(() => "?")
-              .join(",")})`
-          );
-          queryParams.push(...effectiveDates);
-        } else {
-          return res.json({
-            data: [],
-            wishlist: [],
-            page: parseInt(page),
-            limit: parseInt(limit),
-            totalItems: 0,
-            totalPages: 0,
-          });
-        }
-      }
-    } else {
-      // 사용자가 날짜를 선택하지 않았으면 활성화된 모든 날짜 허용
-      if (enabledDates.length > 0) {
-        conditions.push(
-          `DATE(ci.scheduled_date) IN (${enabledDates
-            .map(() => "?")
-            .join(",")})`
-        );
-        queryParams.push(...enabledDates);
-      }
-    }
-
-    // 10. 기타 필터들
     if (ranks) {
       const rankList = ranks.split(",");
-      conditions.push(`ci.rank IN (${rankList.map(() => "?").join(",")})`);
-      queryParams.push(...rankList);
+      if (rankList.length > 0) {
+        const rankConditions = rankList.map((rank) => {
+          switch (rank) {
+            case "N":
+              return "ci.rank = 'N'";
+            case "S":
+              return "ci.rank = 'S'";
+            case "AB":
+              return "ci.rank = 'AB'";
+            case "A":
+              return "ci.rank = 'A'";
+            case "BC":
+              return "ci.rank = 'BC'";
+            case "B":
+              return "ci.rank = 'B'";
+            case "C":
+              return "ci.rank = 'C'";
+            case "D":
+              return "ci.rank = 'D'";
+            case "E":
+              return "ci.rank = 'E'";
+            case "F":
+              return "ci.rank = 'F'";
+            default:
+              return `ci.rank = '${rank}'`;
+          }
+        });
+        conditions.push(`(${rankConditions.join(" OR ")})`);
+      }
     }
 
     if (auctionTypes) {
       const auctionTypeList = auctionTypes.split(",");
+      if (auctionTypeList.length > 0) {
+        conditions.push(
+          `ci.bid_type IN (${auctionTypeList.map(() => "?").join(",")})`
+        );
+        queryParams.push(...auctionTypeList);
+      }
+    }
+
+    if (enabledBrands.length > 0) {
       conditions.push(
-        `ci.bid_type IN (${auctionTypeList.map(() => "?").join(",")})`
+        `ci.brand IN (${enabledBrands.map(() => "?").join(",")})`
       );
-      queryParams.push(...auctionTypeList);
+      queryParams.push(...enabledBrands);
+    } else {
+      conditions.push("1=0");
+    }
+
+    if (enabledCategories.length > 0) {
+      conditions.push(
+        `ci.category IN (${enabledCategories.map(() => "?").join(",")})`
+      );
+      queryParams.push(...enabledCategories);
+    } else {
+      conditions.push("1=0");
+    }
+
+    if (enabledDates.length > 0) {
+      conditions.push(
+        `DATE(ci.scheduled_date) IN (${enabledDates.map(() => "?").join(",")})`
+      );
+      queryParams.push(...enabledDates);
+    }
+
+    if (brands) {
+      const brandList = brands
+        .split(",")
+        .filter((brand) => enabledBrands.includes(brand));
+      if (brandList.length > 0) {
+        conditions.push(`ci.brand IN (${brandList.map(() => "?").join(",")})`);
+        queryParams.push(...brandList);
+      }
+    }
+
+    if (categories) {
+      const categoryList = categories
+        .split(",")
+        .filter((category) => enabledCategories.includes(category));
+      if (categoryList.length > 0) {
+        conditions.push(
+          `ci.category IN (${categoryList.map(() => "?").join(",")})`
+        );
+        queryParams.push(...categoryList);
+      }
+    }
+
+    if (scheduledDates) {
+      const dateList = scheduledDates.split(",");
+      if (dateList.length > 0) {
+        const dateConds = [];
+        dateList.forEach((date) => {
+          if (date == "null") {
+            dateConds.push("ci.scheduled_date IS NULL");
+          } else {
+            dateConds.push(`DATE(ci.scheduled_date) = ?`);
+            queryParams.push(date);
+          }
+        });
+        if (dateConds.length > 0) {
+          conditions.push(`(${dateConds.join(" OR ")})`);
+        }
+      }
     }
 
     if (aucNums) {
       const aucNumList = aucNums.split(",");
-      conditions.push(`ci.auc_num IN (${aucNumList.map(() => "?").join(",")})`);
-      queryParams.push(...aucNumList);
-    }
-
-    // 11. 최종 쿼리 조립
-    let finalQuery = baseQuery;
-
-    if (joins.length > 0) {
-      finalQuery += " " + joins.join(" ");
+      if (aucNumList.length > 0) {
+        conditions.push(
+          `ci.auc_num IN (${aucNumList.map(() => "?").join(",")})`
+        );
+        queryParams.push(...aucNumList);
+      }
     }
 
     if (conditions.length > 0) {
-      finalQuery += " WHERE " + conditions.join(" AND ");
+      query += " AND " + conditions.join(" AND ");
     }
 
-    // 12. 정렬 (MariaDB 호환)
-    let orderByClause;
+    let orderByClause = "";
     switch (sortBy) {
       case "title":
         orderByClause = "ci.title";
         break;
       case "rank":
-        // MariaDB 호환 FIELD 사용
-        orderByClause =
-          "FIELD(ci.rank, 'N', 'S', 'A', 'AB', 'B', 'BC', 'C', 'D', 'E', 'F')";
+        orderByClause = "ci.rank";
         break;
       case "scheduled_date":
         orderByClause = "ci.scheduled_date";
         break;
       case "starting_price":
-        // MariaDB 호환 숫자 변환
         orderByClause = "ci.starting_price + 0";
         break;
       default:
-        orderByClause = "ci.scheduled_date";
+        orderByClause = "ci.title";
     }
 
     const sortDirection = sortOrder.toLowerCase() === "desc" ? "DESC" : "ASC";
-    finalQuery += ` ORDER BY ${orderByClause} ${sortDirection}`;
-
-    // 13. 카운트 쿼리 (LIMIT 전에)
-    const countQuery = `SELECT COUNT(*) as total FROM (${finalQuery}) as subquery`;
-
-    // 14. 페이징 추가
-    finalQuery += " LIMIT ? OFFSET ?";
+    query += ` ORDER BY ${orderByClause} ${sortDirection}`;
+    query += " LIMIT ? OFFSET ?";
     queryParams.push(parseInt(limit), offset);
 
-    // 15. 쿼리 실행
-    const [items] = await pool.query(finalQuery, queryParams);
+    const countQuery = `SELECT COUNT(*) as total FROM (${
+      query.split("ORDER BY")[0]
+    }) as subquery`;
+
+    const [items] = await pool.query(query, queryParams);
     const [countResult] = await pool.query(
       countQuery,
       queryParams.slice(0, -2)
     );
-
     const totalItems = countResult[0].total;
     const totalPages = Math.ceil(totalItems / limit);
 
-    // 16. 위시리스트 조회
     let wishlist = [];
     if (userId) {
       [wishlist] = await pool.query(
@@ -470,17 +424,16 @@ router.get("/", async (req, res) => {
       );
     }
 
-    // 17. 입찰 정보 매핑
     const itemBidMap = {};
-    bidData.forEach((bid) => {
-      if (!itemBidMap[bid.item_id]) {
-        itemBidMap[bid.item_id] = {};
+    if (bidData.length > 0) {
+      for (const bid of bidData) {
+        if (!itemBidMap[bid.item_id]) {
+          itemBidMap[bid.item_id] = {};
+        }
+        itemBidMap[bid.item_id][bid.bid_type] = bid;
       }
-      itemBidMap[bid.item_id][bid.bid_type] = bid;
-    });
+    }
 
-    // 18. 상세 정보 처리 (필요시)
-    let finalItems = items;
     if (withDetails === "true") {
       const limit = pLimit(5);
       const processItemsInBatches = async (items) => {
@@ -490,36 +443,54 @@ router.get("/", async (req, res) => {
         const processedItems = await Promise.all(promises);
         return processedItems.filter((item) => item !== null);
       };
-      finalItems = await processItemsInBatches(items);
+
+      const detailedItems = await processItemsInBatches(items);
+      const itemsWithBids = detailedItems.map((item) => {
+        const itemBids = itemBidMap[item.item_id] || {};
+        return {
+          ...item,
+          bids: {
+            live: itemBids.live || null,
+            direct: itemBids.direct || null,
+          },
+        };
+      });
+
+      res.json({
+        data: itemsWithBids,
+        wishlist,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalItems,
+        totalPages,
+      });
+    } else {
+      const itemsWithBids = items.map((item) => {
+        const itemBids = itemBidMap[item.item_id] || {};
+        return {
+          ...item,
+          bids: {
+            live: itemBids.live || null,
+            direct: itemBids.direct || null,
+          },
+        };
+      });
+
+      res.json({
+        data: itemsWithBids,
+        wishlist,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalItems,
+        totalPages,
+      });
     }
-
-    // 19. 최종 응답 구성
-    const itemsWithBids = finalItems.map((item) => {
-      const itemBids = itemBidMap[item.item_id] || {};
-      return {
-        ...item,
-        bids: {
-          live: itemBids.live || null,
-          direct: itemBids.direct || null,
-        },
-      };
-    });
-
-    res.json({
-      data: itemsWithBids,
-      wishlist,
-      page: parseInt(page),
-      limit: parseInt(limit),
-      totalItems,
-      totalPages,
-    });
   } catch (error) {
     console.error("Error fetching data from database:", error);
     res.status(500).json({ message: "Error fetching data" });
   }
 });
 
-// ===== 통계와 함께 브랜드 조회 (enabled만) =====
 router.get("/brands-with-count", async (req, res) => {
   try {
     if (isCacheValid(cache.filters.withStats.brands)) {
@@ -545,7 +516,6 @@ router.get("/brands-with-count", async (req, res) => {
   }
 });
 
-// ===== 경매 타입 조회 (enabled만) =====
 router.get("/auction-types", async (req, res) => {
   try {
     if (isCacheValid(cache.filters.withStats.auctionTypes)) {
@@ -571,7 +541,6 @@ router.get("/auction-types", async (req, res) => {
   }
 });
 
-// ===== 통계와 함께 날짜 조회 (enabled만) =====
 router.get("/scheduled-dates-with-count", async (req, res) => {
   try {
     if (isCacheValid(cache.filters.withStats.dates)) {
@@ -599,28 +568,16 @@ router.get("/scheduled-dates-with-count", async (req, res) => {
   }
 });
 
-// ===== 단순 필터 조회 API들 (enabled만) =====
 router.get("/brands", async (req, res) => {
   try {
-    const enabledFilters = await getEnabledFilters();
-    res.json(enabledFilters.brand || []);
+    const enabledBrands = await getEnabledFilters("brand");
+    res.json(enabledBrands);
   } catch (error) {
     console.error("Error fetching brands:", error);
     res.status(500).json({ message: "Error fetching brands" });
   }
 });
 
-router.get("/categories", async (req, res) => {
-  try {
-    const enabledFilters = await getEnabledFilters();
-    res.json(enabledFilters.category || []);
-  } catch (error) {
-    console.error("Error fetching categories:", error);
-    res.status(500).json({ message: "Error fetching categories" });
-  }
-});
-
-// ===== 경매번호 조회 (enabled만) =====
 router.get("/auc-nums", async (req, res) => {
   try {
     if (isCacheValid(cache.filters.withStats.aucNums)) {
@@ -646,7 +603,16 @@ router.get("/auc-nums", async (req, res) => {
   }
 });
 
-// ===== 환율 조회 =====
+router.get("/categories", async (req, res) => {
+  try {
+    const enabledCategories = await getEnabledFilters("category");
+    res.json(enabledCategories);
+  } catch (error) {
+    console.error("Error fetching categories:", error);
+    res.status(500).json({ message: "Error fetching categories" });
+  }
+});
+
 router.get("/exchange-rate", async (req, res) => {
   try {
     if (isCacheValid(cache.exchange)) {
@@ -673,7 +639,6 @@ router.get("/exchange-rate", async (req, res) => {
   }
 });
 
-// ===== 등급 조회 (enabled만) =====
 router.get("/ranks", async (req, res) => {
   try {
     if (isCacheValid(cache.filters.withStats.ranks)) {
@@ -683,11 +648,39 @@ router.get("/ranks", async (req, res) => {
     const { conditions, queryParams } = await buildBaseFilterConditions();
 
     const [results] = await pool.query(
-      `SELECT ci.rank, COUNT(*) as count
+      `SELECT DISTINCT 
+         CASE 
+           WHEN ci.rank = 'N' THEN 'N'
+           WHEN ci.rank = 'S' THEN 'S'
+           WHEN ci.rank = 'AB' THEN 'AB'
+           WHEN ci.rank = 'A' THEN 'A'
+           WHEN ci.rank = 'BC' THEN 'BC'
+           WHEN ci.rank = 'B' THEN 'B'
+           WHEN ci.rank = 'C' THEN 'C'
+           WHEN ci.rank = 'D' THEN 'D'
+           WHEN ci.rank = 'E' THEN 'E'
+           WHEN ci.rank = 'F' THEN 'F'
+           ELSE 'N'
+         END as rank,
+         COUNT(*) as count
        FROM crawled_items ci
        WHERE ${conditions.join(" AND ")}
-       GROUP BY ci.rank
-       ORDER BY FIELD(ci.rank, 'N', 'S', 'A', 'AB', 'B', 'BC', 'C', 'D', 'E', 'F')`,
+       GROUP BY 
+         CASE 
+           WHEN ci.rank = 'N' THEN 'N'
+           WHEN ci.rank = 'S' THEN 'S'
+           WHEN ci.rank = 'AB' THEN 'AB'
+           WHEN ci.rank = 'A' THEN 'A'
+           WHEN ci.rank = 'BC' THEN 'BC'
+           WHEN ci.rank = 'B' THEN 'B'
+           WHEN ci.rank = 'C' THEN 'C'
+           WHEN ci.rank = 'D' THEN 'D'
+           WHEN ci.rank = 'E' THEN 'E'
+           WHEN ci.rank = 'F' THEN 'F'
+           ELSE 'N'
+         END
+       ORDER BY 
+         FIELD(rank, 'N', 'S', 'A', 'AB', 'B', 'BC', 'C', 'D', 'E', 'F')`,
       queryParams
     );
 
@@ -699,7 +692,6 @@ router.get("/ranks", async (req, res) => {
   }
 });
 
-// ===== 캐시 무효화 =====
 router.post("/invalidate-cache", (req, res) => {
   try {
     const { type, subType } = req.body;
