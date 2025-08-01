@@ -9,46 +9,70 @@ let pLimit;
   pLimit = (await import("p-limit")).default;
 })();
 
-// ===== 캐시 설정 =====
-const CACHE_DURATION = 60 * 60 * 1000; // 1시간
+// ===== 캐싱 관련 설정 =====
+const CACHE_DURATION = 60 * 60 * 1000;
 
 const cache = {
   filters: {
-    brands: { data: null, lastFetched: null },
-    categories: { data: null, lastFetched: null },
-  },
-  stats: {
-    brands: { data: null, lastFetched: null },
-    dates: { data: null, lastFetched: null },
-    aucNums: { data: null, lastFetched: null },
-    ranks: { data: null, lastFetched: null },
+    lists: {
+      brands: { data: null, lastFetched: null },
+      categories: { data: null, lastFetched: null },
+    },
+    withStats: {
+      brands: { data: null, lastFetched: null },
+      dates: { data: null, lastFetched: null },
+      aucNums: { data: null, lastFetched: null },
+      ranks: { data: null, lastFetched: null },
+    },
   },
 };
 
-// ===== 캐시 헬퍼 함수 =====
 function isCacheValid(cacheItem) {
+  const currentTime = new Date().getTime();
   return (
     cacheItem.data !== null &&
     cacheItem.lastFetched !== null &&
-    Date.now() - cacheItem.lastFetched < CACHE_DURATION
+    currentTime - cacheItem.lastFetched < CACHE_DURATION
   );
 }
 
 function updateCache(cacheItem, data) {
   cacheItem.data = data;
-  cacheItem.lastFetched = Date.now();
+  cacheItem.lastFetched = new Date().getTime();
 }
 
-function invalidateAllCache() {
-  Object.keys(cache).forEach((category) => {
-    Object.keys(cache[category]).forEach((item) => {
-      cache[category][item].data = null;
-      cache[category][item].lastFetched = null;
+function invalidateCache(type, subType = null) {
+  if (type === "all") {
+    Object.keys(cache.filters).forEach((category) => {
+      Object.keys(cache.filters[category]).forEach((item) => {
+        cache.filters[category][item].data = null;
+        cache.filters[category][item].lastFetched = null;
+      });
     });
-  });
+  } else if (type === "filters") {
+    if (subType === null) {
+      Object.keys(cache.filters).forEach((category) => {
+        Object.keys(cache.filters[category]).forEach((item) => {
+          cache.filters[category][item].data = null;
+          cache.filters[category][item].lastFetched = null;
+        });
+      });
+    } else if (cache.filters.lists[subType]) {
+      cache.filters.lists[subType].data = null;
+      cache.filters.lists[subType].lastFetched = null;
+
+      if (cache.filters.withStats[subType]) {
+        cache.filters.withStats[subType].data = null;
+        cache.filters.withStats[subType].lastFetched = null;
+      }
+    } else if (cache.filters.withStats[subType]) {
+      cache.filters.withStats[subType].data = null;
+      cache.filters.withStats[subType].lastFetched = null;
+    }
+  }
 }
 
-// ===== 메인 데이터 조회 =====
+// ===== 메인 데이터 조회 라우터 =====
 router.get("/", async (req, res) => {
   const {
     page = 1,
@@ -63,149 +87,163 @@ router.get("/", async (req, res) => {
     sortBy = "scheduled_date",
     sortOrder = "asc",
   } = req.query;
-
-  const offset = (parseInt(page) - 1) * parseInt(limit);
+  const offset = (page - 1) * limit;
 
   try {
-    // 쿼리 구성
     let query = "SELECT * FROM values_items";
-    const conditions = [];
-    const params = [];
+    const queryParams = [];
+    let conditions = [];
 
-    // 검색 조건
+    // 검색 조건 (원본과 동일)
     if (search && search.trim()) {
       const searchTerms = search.trim().split(/\s+/);
-      conditions.push(
-        `(${searchTerms.map(() => "title LIKE ?").join(" AND ")})`
-      );
-      searchTerms.forEach((term) => params.push(`%${term}%`));
+      const searchConditions = searchTerms.map(() => "title LIKE ?");
+      conditions.push(`(${searchConditions.join(" AND ")})`);
+      searchTerms.forEach((term) => {
+        queryParams.push(`%${term}%`);
+      });
     }
 
-    // 등급 필터
+    // 등급 필터 (최적화: 간단한 IN 절 사용)
     if (ranks) {
-      const rankList = ranks.split(",").filter((r) => r.trim());
-      if (rankList.length > 0) {
-        conditions.push(`rank IN (${rankList.map(() => "?").join(",")})`);
-        params.push(...rankList);
-      }
+      const rankList = ranks.split(",");
+      conditions.push(`rank IN (${rankList.map(() => "?").join(",")})`);
+      queryParams.push(...rankList);
     }
 
     // 브랜드 필터
     if (brands) {
-      const brandList = brands.split(",").filter((b) => b.trim());
+      const brandList = brands.split(",");
       if (brandList.length > 0) {
         conditions.push(`brand IN (${brandList.map(() => "?").join(",")})`);
-        params.push(...brandList);
+        queryParams.push(...brandList);
       }
     }
 
     // 카테고리 필터
     if (categories) {
-      const categoryList = categories.split(",").filter((c) => c.trim());
+      const categoryList = categories.split(",");
       if (categoryList.length > 0) {
         conditions.push(
           `category IN (${categoryList.map(() => "?").join(",")})`
         );
-        params.push(...categoryList);
+        queryParams.push(...categoryList);
       }
     }
 
-    // 날짜 필터
+    // 날짜 필터 (원본과 동일)
     if (scheduledDates) {
-      const dateList = scheduledDates.split(",").filter((d) => d.trim());
+      const dateList = scheduledDates.split(",");
       if (dateList.length > 0) {
-        conditions.push(
-          `DATE(scheduled_date) IN (${dateList.map(() => "?").join(",")})`
-        );
-        params.push(...dateList);
+        const dateConds = [];
+        dateList.forEach((date) => {
+          dateConds.push(`DATE(scheduled_date) = ?`);
+          queryParams.push(date);
+        });
+        if (dateConds.length > 0) {
+          conditions.push(`(${dateConds.join(" OR ")})`);
+        }
       }
     }
 
     // 경매번호 필터
     if (aucNums) {
-      const aucNumList = aucNums.split(",").filter((a) => a.trim());
+      const aucNumList = aucNums.split(",");
       if (aucNumList.length > 0) {
         conditions.push(`auc_num IN (${aucNumList.map(() => "?").join(",")})`);
-        params.push(...aucNumList);
+        queryParams.push(...aucNumList);
       }
     }
 
-    // WHERE 절 추가
     if (conditions.length > 0) {
       query += " WHERE " + conditions.join(" AND ");
     }
 
-    // 정렬
-    let orderBy = "scheduled_date";
+    const countQuery = `SELECT COUNT(*) as total FROM (${query}) as subquery`;
+
+    // 정렬 (원본과 동일하지만 MariaDB 호환성 고려)
+    let orderByClause = "";
     switch (sortBy) {
       case "title":
-        orderBy = "title";
+        orderByClause = "title";
         break;
       case "rank":
-        orderBy =
+        // MariaDB 호환 FIELD 사용
+        orderByClause =
           "FIELD(rank, 'N', 'S', 'A', 'AB', 'B', 'BC', 'C', 'D', 'E', 'F')";
+        break;
+      case "scheduled_date":
+        orderByClause = "scheduled_date";
         break;
       case "starting_price":
       case "final_price":
-        orderBy = "final_price + 0";
+        // MariaDB 호환 숫자 변환
+        orderByClause = "final_price + 0";
         break;
       default:
-        orderBy = "scheduled_date";
+        orderByClause = "title";
     }
 
-    const direction = sortOrder.toLowerCase() === "desc" ? "DESC" : "ASC";
-    query += ` ORDER BY ${orderBy} ${direction}`;
+    const sortDirection = sortOrder.toLowerCase() === "desc" ? "DESC" : "ASC";
+    query += ` ORDER BY ${orderByClause} ${sortDirection}`;
 
-    // 보조 정렬 (동일한 값일 때 item_id로 정렬)
-    if (orderBy !== "item_id") {
+    // 원본과 동일한 보조 정렬
+    if (orderByClause !== "item_id") {
       query += ", item_id DESC";
     }
 
-    // 총 개수 쿼리
-    const countQuery = `SELECT COUNT(*) as total FROM (${query}) as subquery`;
-
-    // 페이징
     query += " LIMIT ? OFFSET ?";
-    params.push(parseInt(limit), offset);
+    queryParams.push(parseInt(limit), offset);
 
-    // 쿼리 실행
-    const [items] = await pool.query(query, params);
-    const [countResult] = await pool.query(countQuery, params.slice(0, -2));
-
+    const [items] = await pool.query(query, queryParams);
+    const [countResult] = await pool.query(
+      countQuery,
+      queryParams.slice(0, -2)
+    );
     const totalItems = countResult[0].total;
-    const totalPages = Math.ceil(totalItems / parseInt(limit));
+    const totalPages = Math.ceil(totalItems / limit);
 
-    // 상세 정보 처리 (필요시)
-    let finalItems = items;
+    // 상세 정보 처리 (87만 개 데이터 고려해서 동시 처리 수 조정)
     if (withDetails === "true") {
-      const processingLimit = pLimit(3); // 대용량 데이터이므로 3으로 제한
+      const limit = pLimit(3); // 기존 5 → 3으로 조정 (대용량 데이터 최적화)
 
-      const processPromises = items.map((item) =>
-        processingLimit(() => processItem(item.item_id, true, null, true, 2))
-      );
+      const processItemsInBatches = async (items) => {
+        const promises = items.map((item) =>
+          limit(() => processItem(item.item_id, true, null, true, 2))
+        );
+        const processedItems = await Promise.all(promises);
+        return processedItems.filter((item) => item !== null);
+      };
 
-      const processedItems = await Promise.all(processPromises);
-      finalItems = processedItems.filter((item) => item !== null);
+      const detailedItems = await processItemsInBatches(items);
+
+      res.json({
+        data: detailedItems.filter((item) => item !== null),
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalItems,
+        totalPages,
+      });
+    } else {
+      res.json({
+        data: items,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalItems,
+        totalPages,
+      });
     }
-
-    res.json({
-      data: finalItems,
-      page: parseInt(page),
-      limit: parseInt(limit),
-      totalItems,
-      totalPages,
-    });
   } catch (error) {
-    console.error("Error fetching values data:", error);
-    res.status(500).json({ message: "데이터 조회 중 오류가 발생했습니다." });
+    console.error("Error fetching data from database:", error);
+    res.status(500).json({ message: "Error fetching data" });
   }
 });
 
-// ===== 브랜드 통계 =====
+// ===== 통계와 함께 브랜드 조회 =====
 router.get("/brands-with-count", async (req, res) => {
   try {
-    if (isCacheValid(cache.stats.brands)) {
-      return res.json(cache.stats.brands.data);
+    if (isCacheValid(cache.filters.withStats.brands)) {
+      return res.json(cache.filters.withStats.brands.data);
     }
 
     const [results] = await pool.query(`
@@ -216,44 +254,44 @@ router.get("/brands-with-count", async (req, res) => {
       ORDER BY count DESC, brand ASC
     `);
 
-    updateCache(cache.stats.brands, results);
+    updateCache(cache.filters.withStats.brands, results);
     res.json(results);
   } catch (error) {
     console.error("Error fetching brands with count:", error);
-    res
-      .status(500)
-      .json({ message: "브랜드 통계 조회 중 오류가 발생했습니다." });
+    res.status(500).json({ message: "Error fetching brands with count" });
   }
 });
 
-// ===== 날짜 통계 =====
+// ===== 통계와 함께 날짜 조회 (원본과 동일한 시간대 처리) =====
 router.get("/scheduled-dates-with-count", async (req, res) => {
   try {
-    if (isCacheValid(cache.stats.dates)) {
-      return res.json(cache.stats.dates.data);
+    if (isCacheValid(cache.filters.withStats.dates)) {
+      return res.json(cache.filters.withStats.dates.data);
     }
 
     const [results] = await pool.query(`
-      SELECT DATE(scheduled_date) as Date, COUNT(*) as count
+      SELECT DATE(CONVERT_TZ(scheduled_date, '+00:00', '+09:00')) as Date, COUNT(*) as count
       FROM values_items
       WHERE scheduled_date IS NOT NULL
-      GROUP BY DATE(scheduled_date)
+      GROUP BY DATE(CONVERT_TZ(scheduled_date, '+00:00', '+09:00'))
       ORDER BY Date ASC
     `);
 
-    updateCache(cache.stats.dates, results);
+    updateCache(cache.filters.withStats.dates, results);
     res.json(results);
   } catch (error) {
-    console.error("Error fetching dates with count:", error);
-    res.status(500).json({ message: "날짜 통계 조회 중 오류가 발생했습니다." });
+    console.error("Error fetching scheduled dates with count:", error);
+    res
+      .status(500)
+      .json({ message: "Error fetching scheduled dates with count" });
   }
 });
 
-// ===== 브랜드 목록 =====
+// ===== 브랜드 목록 조회 =====
 router.get("/brands", async (req, res) => {
   try {
-    if (isCacheValid(cache.filters.brands)) {
-      return res.json(cache.filters.brands.data);
+    if (isCacheValid(cache.filters.lists.brands)) {
+      return res.json(cache.filters.lists.brands.data);
     }
 
     const [results] = await pool.query(`
@@ -264,21 +302,19 @@ router.get("/brands", async (req, res) => {
     `);
 
     const brandsList = results.map((row) => row.brand);
-    updateCache(cache.filters.brands, brandsList);
+    updateCache(cache.filters.lists.brands, brandsList);
     res.json(brandsList);
   } catch (error) {
     console.error("Error fetching brands:", error);
-    res
-      .status(500)
-      .json({ message: "브랜드 목록 조회 중 오류가 발생했습니다." });
+    res.status(500).json({ message: "Error fetching brands" });
   }
 });
 
-// ===== 카테고리 목록 =====
+// ===== 카테고리 목록 조회 =====
 router.get("/categories", async (req, res) => {
   try {
-    if (isCacheValid(cache.filters.categories)) {
-      return res.json(cache.filters.categories.data);
+    if (isCacheValid(cache.filters.lists.categories)) {
+      return res.json(cache.filters.lists.categories.data);
     }
 
     const [results] = await pool.query(`
@@ -289,21 +325,19 @@ router.get("/categories", async (req, res) => {
     `);
 
     const categoriesList = results.map((row) => row.category);
-    updateCache(cache.filters.categories, categoriesList);
+    updateCache(cache.filters.lists.categories, categoriesList);
     res.json(categoriesList);
   } catch (error) {
     console.error("Error fetching categories:", error);
-    res
-      .status(500)
-      .json({ message: "카테고리 목록 조회 중 오류가 발생했습니다." });
+    res.status(500).json({ message: "Error fetching categories" });
   }
 });
 
-// ===== 등급 통계 =====
+// ===== 등급 조회 (최적화: 복잡한 CASE문 제거) =====
 router.get("/ranks", async (req, res) => {
   try {
-    if (isCacheValid(cache.stats.ranks)) {
-      return res.json(cache.stats.ranks.data);
+    if (isCacheValid(cache.filters.withStats.ranks)) {
+      return res.json(cache.filters.withStats.ranks.data);
     }
 
     const [results] = await pool.query(`
@@ -314,19 +348,19 @@ router.get("/ranks", async (req, res) => {
       ORDER BY FIELD(rank, 'N', 'S', 'A', 'AB', 'B', 'BC', 'C', 'D', 'E', 'F')
     `);
 
-    updateCache(cache.stats.ranks, results);
+    updateCache(cache.filters.withStats.ranks, results);
     res.json(results);
   } catch (error) {
     console.error("Error fetching ranks:", error);
-    res.status(500).json({ message: "등급 통계 조회 중 오류가 발생했습니다." });
+    res.status(500).json({ message: "Error fetching ranks" });
   }
 });
 
-// ===== 경매번호 통계 =====
+// ===== 경매번호 조회 =====
 router.get("/auc-nums", async (req, res) => {
   try {
-    if (isCacheValid(cache.stats.aucNums)) {
-      return res.json(cache.stats.aucNums.data);
+    if (isCacheValid(cache.filters.withStats.aucNums)) {
+      return res.json(cache.filters.withStats.aucNums.data);
     }
 
     const [results] = await pool.query(`
@@ -337,26 +371,30 @@ router.get("/auc-nums", async (req, res) => {
       ORDER BY auc_num ASC
     `);
 
-    updateCache(cache.stats.aucNums, results);
+    updateCache(cache.filters.withStats.aucNums, results);
     res.json(results);
   } catch (error) {
     console.error("Error fetching auction numbers:", error);
-    res.status(500).json({ message: "경매번호 조회 중 오류가 발생했습니다." });
+    res.status(500).json({ message: "Error fetching auction numbers" });
   }
 });
 
 // ===== 캐시 무효화 =====
 router.post("/invalidate-cache", (req, res) => {
   try {
+    const { type, subType } = req.body;
+
     if (!req.session.user?.isAdmin) {
-      return res.status(403).json({ message: "관리자 권한이 필요합니다." });
+      return res
+        .status(403)
+        .json({ message: "Unauthorized: Admin access required" });
     }
 
-    invalidateAllCache();
-    res.json({ message: "캐시가 성공적으로 무효화되었습니다." });
+    invalidateCache(type, subType);
+    res.json({ message: "Cache invalidated successfully" });
   } catch (error) {
     console.error("Error invalidating cache:", error);
-    res.status(500).json({ message: "캐시 무효화 중 오류가 발생했습니다." });
+    res.status(500).json({ message: "Error invalidating cache" });
   }
 });
 
