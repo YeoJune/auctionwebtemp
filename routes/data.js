@@ -327,59 +327,20 @@ router.get("/", async (req, res) => {
 
     // 9. 날짜 필터
     if (scheduledDates) {
-      const selectedDates = scheduledDates.split(",");
-      const hasNull = selectedDates.includes("null");
-      const actualDates = selectedDates
-        .filter((date) => date !== "null")
-        .map((date) => date + " 00:00:00");
-
-      if (hasNull && actualDates.length > 0) {
-        const dateIntersection = actualDates.filter((date) =>
-          enabledDates.includes(date)
-        );
-        if (dateIntersection.length > 0) {
-          conditions.push(
-            `(ci.scheduled_date IS NULL OR DATE(ci.scheduled_date) IN (${dateIntersection
-              .map(() => "?")
-              .join(",")}))`
-          );
-          queryParams.push(...dateIntersection);
-        } else {
-          conditions.push("ci.scheduled_date IS NULL");
+      const dateList = scheduledDates.split(",");
+      if (dateList.length > 0) {
+        const dateConds = [];
+        dateList.forEach((date) => {
+          if (date == "null") {
+            dateConds.push("ci.scheduled_date IS NULL");
+          } else {
+            dateConds.push(`DATE(ci.scheduled_date) = ?`);
+            queryParams.push(date);
+          }
+        });
+        if (dateConds.length > 0) {
+          conditions.push(`(${dateConds.join(" OR ")})`);
         }
-      } else if (hasNull) {
-        conditions.push("ci.scheduled_date IS NULL");
-      } else if (actualDates.length > 0) {
-        const effectiveDates = actualDates.filter((date) =>
-          enabledDates.includes(date)
-        );
-        if (effectiveDates.length > 0) {
-          conditions.push(
-            `DATE(ci.scheduled_date) IN (${effectiveDates
-              .map(() => "?")
-              .join(",")})`
-          );
-          queryParams.push(...effectiveDates);
-        } else {
-          return res.json({
-            data: [],
-            wishlist: [],
-            page: parseInt(page),
-            limit: parseInt(limit),
-            totalItems: 0,
-            totalPages: 0,
-          });
-        }
-      }
-    } else {
-      // 사용자가 날짜를 선택하지 않았으면 활성화된 모든 날짜 허용
-      if (enabledDates.length > 0) {
-        conditions.push(
-          `DATE(ci.scheduled_date) IN (${enabledDates
-            .map(() => "?")
-            .join(",")})`
-        );
-        queryParams.push(...enabledDates);
       }
     }
 
