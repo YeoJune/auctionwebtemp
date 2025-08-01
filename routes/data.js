@@ -329,11 +329,13 @@ router.get("/", async (req, res) => {
     if (scheduledDates) {
       const selectedDates = scheduledDates.split(",");
       const hasNull = selectedDates.includes("null");
-      const actualDates = selectedDates.filter((date) => date !== "null");
+      const actualDates = selectedDates
+        .filter((date) => date !== "null")
+        .map((date) => date + " 00:00:00");
 
       if (hasNull && actualDates.length > 0) {
         const dateIntersection = actualDates.filter((date) =>
-          enabledDates.includes(date + " 00:00:00")
+          enabledDates.includes(date)
         );
         if (dateIntersection.length > 0) {
           conditions.push(
@@ -349,7 +351,7 @@ router.get("/", async (req, res) => {
         conditions.push("ci.scheduled_date IS NULL");
       } else if (actualDates.length > 0) {
         const effectiveDates = actualDates.filter((date) =>
-          enabledDates.includes(date + " 00:00:00")
+          enabledDates.includes(date)
         );
         if (effectiveDates.length > 0) {
           conditions.push(
