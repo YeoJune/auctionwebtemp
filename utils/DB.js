@@ -2,19 +2,19 @@
 require("dotenv").config();
 const mysql = require("mysql2/promise");
 
-// 메인 애플리케이션용 연결 풀 (AWS RDS max_connections=30 고려)
+// 메인 애플리케이션용 연결 풀
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   port: process.env.DB_PORT || 3306,
   database: process.env.DB_NAME,
-  connectionLimit: 15, // 30의 50% (세션 스토어용 여유 확보)
+  connectionLimit: 35,
   charset: "utf8mb4",
   connectTimeout: 10000,
   // 추가 안정성 설정
   idleTimeout: 300000, // 5분 후 유휴 연결 해제
-  maxIdle: 5, // 최대 유휴 연결 수
+  maxIdle: 15, // 최대 유휴 연결 수
 });
 
 // 세션 스토어 전용 연결 풀 (별도 관리)
@@ -24,11 +24,11 @@ const sessionPool = mysql.createPool({
   password: process.env.DB_PASSWORD,
   port: process.env.DB_PORT || 3306,
   database: process.env.DB_NAME,
-  connectionLimit: 8, // 세션용 전용 연결
+  connectionLimit: 15, // 세션용 전용 연결
   charset: "utf8mb4",
   connectTimeout: 10000,
-  idleTimeout: 300000,
-  maxIdle: 2,
+  idleTimeout: 120000, // 2분 후 유휴 연결 해제
+  maxIdle: 5,
 });
 
 // 연결 상태 모니터링 함수
