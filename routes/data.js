@@ -558,7 +558,7 @@ router.get("/scheduled-dates-with-count", async (req, res) => {
     const { conditions, queryParams } = await buildBaseFilterConditions();
 
     const [results] = await pool.query(
-      `SELECT DATE(CONVERT_TZ(ci.scheduled_date, '+00:00', '+09:00')) as Date, COUNT(*) as count
+      `SELECT DATE(ci.scheduled_date) as Date, COUNT(*) as count
        FROM crawled_items ci
        WHERE ${conditions.join(" AND ")}
        GROUP BY DATE(CONVERT_TZ(ci.scheduled_date, '+00:00', '+09:00'))
