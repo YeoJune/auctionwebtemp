@@ -326,14 +326,19 @@ router.get("/", async (req, res) => {
     }
 
     // 9. 날짜 필터
-    let effectiveDates = enabledDates;
+    // 9. 날짜 필터
+    let effectiveDates = enabledDates.map((date) => {
+      // filter_settings의 datetime을 YYYY-MM-DD 형식으로 변환
+      return date.substring(0, 10);
+    });
+
     if (scheduledDates) {
       const selectedDates = scheduledDates.split(",");
       effectiveDates = selectedDates.filter((date) => {
         if (date === "null") {
           return true;
         }
-        return enabledDates.includes(date);
+        return effectiveDates.includes(date);
       });
     }
 
@@ -343,7 +348,10 @@ router.get("/", async (req, res) => {
         if (date === "null") {
           dateConds.push("ci.scheduled_date IS NULL");
         } else {
-          dateConds.push(`DATE(ci.scheduled_date) = ?`);
+          // UTC를 KST로 변환하여 날짜 비교 (기존 scheduled-dates-with-count와 동일)
+          dateConds.push(
+            `DATE(CONVERT_TZ(ci.scheduled_date, '+00:00', '+09:00')) = ?`
+          );
           queryParams.push(date);
         }
       });
