@@ -561,7 +561,7 @@ router.get("/scheduled-dates-with-count", async (req, res) => {
       `SELECT DATE(ci.scheduled_date) as Date, COUNT(*) as count
        FROM crawled_items ci
        WHERE ${conditions.join(" AND ")}
-       GROUP BY DATE(CONVERT_TZ(ci.scheduled_date, '+00:00', '+09:00'))
+       GROUP BY DATE(ci.scheduled_date)
        ORDER BY Date ASC`,
       queryParams
     );
