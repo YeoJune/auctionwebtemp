@@ -657,15 +657,11 @@ router.get("/ranks", async (req, res) => {
       return res.json(cache.filters.withStats.ranks.data);
     }
 
-    const { conditions, queryParams } = await buildBaseFilterConditions();
-
     const [results] = await pool.query(
       `SELECT ci.rank, COUNT(*) as count
        FROM crawled_items ci
-       WHERE ${conditions.join(" AND ")}
        GROUP BY ci.rank
-       ORDER BY FIELD(ci.rank, 'N', 'S', 'AB', 'A', 'BC', 'B', 'C', 'D', 'E', 'F')`,
-      queryParams
+       ORDER BY FIELD(ci.rank, 'N', 'S', 'A', 'AB', 'B', 'BC', 'C', 'D', 'E', 'F')`
     );
 
     updateCache(cache.filters.withStats.ranks, results);

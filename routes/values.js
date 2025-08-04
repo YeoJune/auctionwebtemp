@@ -270,10 +270,10 @@ router.get("/scheduled-dates-with-count", async (req, res) => {
     }
 
     const [results] = await pool.query(`
-      SELECT DATE(CONVERT_TZ(scheduled_date, '+00:00', '+09:00')) as Date, COUNT(*) as count
+      SELECT DATE(scheduled_date) as Date, COUNT(*) as count
       FROM values_items
       WHERE scheduled_date IS NOT NULL
-      GROUP BY DATE(CONVERT_TZ(scheduled_date, '+00:00', '+09:00'))
+      GROUP BY DATE(scheduled_date)
       ORDER BY Date ASC
     `);
 
