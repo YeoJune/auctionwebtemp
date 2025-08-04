@@ -664,7 +664,7 @@ router.get("/ranks", async (req, res) => {
        FROM crawled_items ci
        WHERE ${conditions.join(" AND ")}
        GROUP BY ci.rank
-       ORDER BY FIELD(ci.rank, 'N', 'S', 'A', 'AB', 'B', 'BC', 'C', 'D', 'E', 'F')`,
+       ORDER BY FIELD(ci.rank, 'N', 'S', 'AB', 'A', 'BC', 'B', 'C', 'D', 'E', 'F')`,
       queryParams
     );
 
