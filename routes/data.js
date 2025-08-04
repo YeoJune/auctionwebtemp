@@ -326,22 +326,37 @@ router.get("/", async (req, res) => {
     }
 
     // 9. 날짜 필터
+    let effectiveDates = enabledDates;
     if (scheduledDates) {
-      const dateList = scheduledDates.split(",");
-      if (dateList.length > 0) {
-        const dateConds = [];
-        dateList.forEach((date) => {
-          if (date == "null") {
-            dateConds.push("ci.scheduled_date IS NULL");
-          } else {
-            dateConds.push(`DATE(ci.scheduled_date) = ?`);
-            queryParams.push(date);
-          }
-        });
-        if (dateConds.length > 0) {
-          conditions.push(`(${dateConds.join(" OR ")})`);
+      const selectedDates = scheduledDates.split(",");
+      effectiveDates = selectedDates.filter((date) => {
+        if (date === "null") {
+          return true;
         }
-      }
+        return enabledDates.includes(date);
+      });
+    }
+
+    if (effectiveDates.length > 0) {
+      const dateConds = [];
+      effectiveDates.forEach((date) => {
+        if (date === "null") {
+          dateConds.push("ci.scheduled_date IS NULL");
+        } else {
+          dateConds.push(`DATE(ci.scheduled_date) = ?`);
+          queryParams.push(date);
+        }
+      });
+      conditions.push(`(${dateConds.join(" OR ")})`);
+    } else {
+      return res.json({
+        data: [],
+        wishlist: [],
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalItems: 0,
+        totalPages: 0,
+      });
     }
 
     // 10. 기타 필터들
