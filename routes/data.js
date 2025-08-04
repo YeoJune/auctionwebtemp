@@ -348,10 +348,7 @@ router.get("/", async (req, res) => {
         if (date === "null") {
           dateConds.push("ci.scheduled_date IS NULL");
         } else {
-          // UTC를 KST로 변환하여 날짜 비교 (기존 scheduled-dates-with-count와 동일)
-          dateConds.push(
-            `DATE(CONVERT_TZ(ci.scheduled_date, '+00:00', '+09:00')) = ?`
-          );
+          dateConds.push(`DATE(ci.scheduled_date) = ?`);
           queryParams.push(date);
         }
       });
