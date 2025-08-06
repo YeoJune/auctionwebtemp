@@ -25,8 +25,14 @@ sudo apt install squid -y
 시스템 전체 제한 변경:
 
 ```bash
-sudo bash -c 'echo "fs.file-max = 1048576" >> /etc/sysctl.conf'
-sudo sysctl -p
+sudo nano /etc/security/limits.conf
+```
+
+다음 추가:
+
+```
+* soft nofile 65535
+* hard nofile 65535
 ```
 
 Squid 서비스 제한 변경:
@@ -45,6 +51,8 @@ LimitNOFILE=65535
 
 ```bash
 sudo systemctl daemon-reexec
+
+ulimit -n
 ```
 
 ---
@@ -52,19 +60,24 @@ sudo systemctl daemon-reexec
 ## 4️⃣ Squid 보안 설정
 
 ```bash
+sudo rm /etc/squid/squid.conf
 sudo nano /etc/squid/squid.conf
 ```
 
 ### 설정 예시:
 
 ```conf
-# 포트
 http_port 3128
-
-# IP 제한
-acl allowed src <내_공인_IP>
-http_access allow allowed
+acl localnet src <내_공인_IP>
+http_access allow localnet
 http_access deny all
+
+# 파일 디스크립터 충분히 사용
+max_filedescriptors 65535
+
+# 불필요한 연결 제한 (CPU 부담 줄이기)
+client_idle_pconn_timeout 30 seconds
+pipeline_prefetch off
 ```
 
 > `<내_공인_IP>` 자리에 본인 PC의 공인 IP를 입력
