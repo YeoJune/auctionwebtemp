@@ -234,15 +234,19 @@ router.get("/", async (req, res) => {
       }
     }
 
-    // // 5. 기본 조건들
-    // if (excludeExpired === "true") {
-    //   conditions.push(`
-    //     ci.original_scheduled_date > NOW()) OR
-    //     (ci.bid_type = 'live' AND
-    //     (ci.scheduled_date > NOW() OR
-    //       (DATE(ci.scheduled_date) = DATE(NOW()) AND HOUR(NOW()) < 13)))
-    //   `);
-    // }
+    // 5. 기본 조건들
+    if (excludeExpired === "true") {
+      conditions.push(`
+      (
+        (ci.bid_type = 'direct' AND ci.original_scheduled_date > NOW()) OR
+        (ci.bid_type = 'live' AND
+          (ci.scheduled_date > NOW() OR
+            (DATE(ci.scheduled_date) = DATE(NOW()) AND HOUR(NOW()) < 13)
+          )
+        )
+      )
+      `);
+    }
 
     // 입찰한 아이템만 보기
     if (bidsOnly === "true" && userId) {
