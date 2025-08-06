@@ -458,12 +458,6 @@ async function crawlAllUpdatesWithId() {
           const newDate = new Date(newItem.scheduled_date);
           const originalDate = new Date(originalItem.scheduled_date);
           dateChanged = newDate.getTime() !== originalDate.getTime();
-
-          if (dateChanged) {
-            console.log(
-              `Date changed for ${newItem.item_id}: ${originalItem.scheduled_date} -> ${newItem.scheduled_date}`
-            );
-          }
         }
 
         // 가격 변경 확인
@@ -475,12 +469,6 @@ async function crawlAllUpdatesWithId() {
           const newPrice = parseFloat(newItem.starting_price) || 0;
           const originalPrice = parseFloat(originalItem.starting_price) || 0;
           priceChanged = Math.abs(newPrice - originalPrice) > 0.01;
-
-          if (priceChanged) {
-            console.log(
-              `Price changed for ${newItem.item_id}: ${originalItem.starting_price} -> ${newItem.starting_price}`
-            );
-          }
         }
 
         return dateChanged || priceChanged;
