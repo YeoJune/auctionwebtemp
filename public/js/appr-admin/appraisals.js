@@ -897,12 +897,14 @@ function displayAppraisalDetail(appraisal) {
   storeOriginalImageIds(appraisal.images || []);
 
   // 이미지 업로드 이벤트 리스너를 동적으로 추가
-  const imageInput = document.getElementById("appraisal-images-edit");
-  if (imageInput) {
-    imageInput.addEventListener("change", function (e) {
-      handleImageUpload(e);
-    });
-  }
+  setTimeout(() => {
+    const imageInput = document.getElementById("appraisal-images-edit");
+    if (imageInput) {
+      imageInput.addEventListener("change", function (e) {
+        handleImageUpload(e);
+      });
+    }
+  }, 100);
 }
 
 // 편집 취소 함수
