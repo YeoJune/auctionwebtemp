@@ -280,12 +280,6 @@ async function crawlAllUpdates() {
           const newDate = new Date(newItem.scheduled_date);
           const existingDate = new Date(existingItem.scheduled_date);
           dateChanged = newDate.getTime() !== existingDate.getTime();
-
-          if (dateChanged) {
-            console.log(
-              `Date changed for ${newItem.item_id}: ${existingItem.scheduled_date} -> ${newItem.scheduled_date}`
-            );
-          }
         }
 
         // ✅ 가격 비교 개선
@@ -297,12 +291,6 @@ async function crawlAllUpdates() {
           const newPrice = parseFloat(newItem.starting_price) || 0;
           const existingPrice = parseFloat(existingItem.starting_price) || 0;
           priceChanged = Math.abs(newPrice - existingPrice) > 0.01; // 부동소수점 오차 고려
-
-          if (priceChanged) {
-            console.log(
-              `Price changed for ${newItem.item_id}: ${existingItem.starting_price} -> ${newItem.starting_price}`
-            );
-          }
         }
 
         return dateChanged || priceChanged;
