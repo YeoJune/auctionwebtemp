@@ -608,8 +608,9 @@ class BrandAucCrawler extends AxiosCrawler {
       const auctionDates = auctionInfoResponse.data.nyuShimeYmdList;
       this.auctionKaisu = auctionInfoResponse.data.kaisaiKaisu;
 
-      if (auctionDates.length === 0) {
-        throw new Error("Failed to get auction dates");
+      // 경매가 열리지 않은 경우
+      if (auctionDates?.length == 0) {
+        return [];
       }
 
       this.auctionDate = auctionDates[0];
