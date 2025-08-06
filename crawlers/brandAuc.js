@@ -576,8 +576,7 @@ class BrandAucCrawler extends AxiosCrawler {
 
   async crawlUpdates() {
     try {
-      const limit = pLimit(5); // 최대 5개의 병렬 요청을 허용
-
+      const limit = pLimit(10);
       const startTime = Date.now();
       console.log(`Starting updates crawl at ${new Date().toISOString()}`);
 
@@ -1015,7 +1014,7 @@ class BrandAucCrawler extends AxiosCrawler {
       await this.login();
 
       const results = [];
-      const limit = pLimit(5); // 병렬 처리를 위한 제한 설정
+      const limit = pLimit(10); // 병렬 처리를 위한 제한 설정
 
       // 병렬 처리
       const promises = itemIds.map((itemId) =>
