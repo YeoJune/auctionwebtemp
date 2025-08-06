@@ -100,12 +100,6 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     }
 
-    // 감정 생성 시 이미지 업로드 이벤트 리스너
-    const imageInput = document.getElementById("create-appraisal-images");
-    if (imageInput) {
-      imageInput.addEventListener("change", handleImageUpload);
-    }
-
     // 페이지 로드 시 감정 목록 초기 로드
     loadAppraisalList();
   }, 100);
@@ -864,7 +858,7 @@ function displayAppraisalDetail(appraisal) {
             
             <div class="form-group">
                 <label class="form-label">새 이미지 업로드</label>
-                <input type="file" id="appraisal-images-edit" multiple accept="image/*">
+                <input type="file" id="appraisal-images-update" multiple accept="image/*">
             </div>
             
             <div id="current-images-container" style="margin-top: 15px;">
@@ -896,13 +890,16 @@ function displayAppraisalDetail(appraisal) {
   initImages(appraisal.images || []);
   storeOriginalImageIds(appraisal.images || []);
 
-  // 이미지 업로드 이벤트 리스너를 동적으로 추가
   setTimeout(() => {
-    const imageInput = document.getElementById("appraisal-images-edit");
+    const imageInput = document.getElementById("appraisal-images-update");
     if (imageInput) {
-      imageInput.addEventListener("change", function (e) {
-        handleImageUpload(e);
-      });
+      // 기존 이벤트 리스너가 있다면 제거
+      imageInput.removeEventListener("change", handleImageUpload);
+      // 새로운 이벤트 리스너 추가
+      imageInput.addEventListener("change", handleImageUpload);
+      console.log("✅ 감정 수정 모달 이미지 업로드 이벤트 리스너 연결 완료");
+    } else {
+      console.error("❌ appraisal-images-update 요소를 찾을 수 없습니다");
     }
   }, 100);
 }
@@ -1211,14 +1208,9 @@ function openCreateAppraisalModal() {
 }
 
 function handleImageUpload(e) {
-  console.log("이미지 업로드 이벤트 발생:", e.target.files.length, "개 파일");
-
   if (e.target.files.length > 0) {
     addImages(e.target.files);
-    console.log("이미지 추가 완료, 현재 총", imageList.length, "개");
   }
-
-  // 파일 입력 초기화 (같은 파일을 다시 선택할 수 있도록)
   e.target.value = "";
 }
 
