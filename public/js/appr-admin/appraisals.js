@@ -895,6 +895,14 @@ function displayAppraisalDetail(appraisal) {
   // 기존 이미지 로드
   initImages(appraisal.images || []);
   storeOriginalImageIds(appraisal.images || []);
+
+  // 이미지 업로드 이벤트 리스너를 동적으로 추가
+  const imageInput = document.getElementById("appraisal-images-edit");
+  if (imageInput) {
+    imageInput.addEventListener("change", function (e) {
+      handleImageUpload(e);
+    });
+  }
 }
 
 // 편집 취소 함수
@@ -1201,9 +1209,14 @@ function openCreateAppraisalModal() {
 }
 
 function handleImageUpload(e) {
+  console.log("이미지 업로드 이벤트 발생:", e.target.files.length, "개 파일");
+
   if (e.target.files.length > 0) {
     addImages(e.target.files);
+    console.log("이미지 추가 완료, 현재 총", imageList.length, "개");
   }
+
+  // 파일 입력 초기화 (같은 파일을 다시 선택할 수 있도록)
   e.target.value = "";
 }
 
