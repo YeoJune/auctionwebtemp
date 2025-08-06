@@ -2664,7 +2664,6 @@ router.get("/appraisals/:id", isAuthenticated, isAdmin, async (req, res) => {
 });
 
 // 감정 결과 및 상태 업데이트 - PUT /api/appr/admin/appraisals/:id
-// PUT /api/appr/admin/appraisals/:id - 간단 버전 (생성과 동일하게)
 router.put(
   "/appraisals/:id",
   isAuthenticated,
@@ -2692,6 +2691,8 @@ router.put(
         result,
         result_notes,
         suggested_restoration_services,
+        deleted_image_ids,
+        final_image_order,
       } = req.body;
 
       conn = await pool.getConnection();
@@ -2711,8 +2712,19 @@ router.put(
 
       const appraisal = appraisalRows[0];
 
-      // ✅ 이미지 처리 - 생성과 완전히 동일하게
+      // 이미지 처리 로직
       let finalImages = [];
+
+      // 1. 기존 이미지 정규화
+      const existingImages = appraisal.images
+        ? normalizeImageData(appraisal.images)
+        : [];
+
+      // 2. 삭제할 이미지 ID 파싱
+      const deletedIds = deleted_image_ids ? JSON.parse(deleted_image_ids) : [];
+
+      // 3. 새로 업로드된 이미지 처리 (생성과 동일한 방식)
+      let newImages = [];
       if (req.files && req.files.images && req.files.images.length > 0) {
         const imageUrls = await processUploadedImages(
           req.files.images,
@@ -2720,15 +2732,134 @@ router.put(
           { skipExisting: true }
         );
 
-        // 새 구조로 변환 - 생성과 완전히 동일
-        finalImages = imageUrls.map((url, index) => ({
+        // 새 구조로 변환 (생성과 동일)
+        newImages = imageUrls.map((url, index) => ({
           id: `img-${Date.now()}-${index}`,
           url: url,
           order: index,
         }));
       }
 
-      // 업데이트 필드 구성
+      // 4. 최종 이미지 순서 계산
+      if (final_image_order) {
+        try {
+          const orderInfo = JSON.parse(final_image_order);
+
+          // 기존 이미지 맵 생성 (삭제되지 않은 것만)
+          const existingImageMap = new Map();
+          existingImages
+            .filter((img) => !deletedIds.includes(img.id))
+            .forEach((img) => existingImageMap.set(img.id, img));
+
+          // 새 이미지 맵 생성
+          const newImageMap = new Map();
+          newImages.forEach((img) => {
+            // final_image_order의 ID와 매칭하기 위해 프론트엔드 ID도 매핑
+            newImageMap.set(img.id, img);
+          });
+
+          // orderInfo의 순서를 사용하되, 실제 이미지와 매칭
+          finalImages = [];
+          let newImageIndex = 0;
+
+          orderInfo.forEach((orderItem, finalIndex) => {
+            if (orderItem.isNew) {
+              // 새 이미지의 경우 순서대로 매칭
+              if (newImageIndex < newImages.length) {
+                const newImg = newImages[newImageIndex];
+                finalImages.push({
+                  ...newImg,
+                  order: finalIndex,
+                });
+                newImageIndex++;
+              }
+            } else {
+              // 기존 이미지의 경우 ID로 매칭
+              if (existingImageMap.has(orderItem.id)) {
+                const existingImg = existingImageMap.get(orderItem.id);
+                finalImages.push({
+                  ...existingImg,
+                  order: finalIndex,
+                });
+              }
+            }
+          });
+        } catch (error) {
+          console.error("이미지 순서 정보 파싱 오류:", error);
+          // 파싱 실패 시 기본 로직 (기존 + 새로운 순서)
+          finalImages = [
+            ...existingImages.filter((img) => !deletedIds.includes(img.id)),
+            ...newImages,
+          ].map((img, index) => ({ ...img, order: index }));
+        }
+      } else {
+        // final_image_order가 없으면 기본 로직
+        finalImages = [
+          ...existingImages.filter((img) => !deletedIds.includes(img.id)),
+          ...newImages,
+        ].map((img, index) => ({ ...img, order: index }));
+      }
+
+      // 5. 삭제된 이미지 파일들 실제 삭제
+      if (deletedIds.length > 0) {
+        setImmediate(() => {
+          existingImages
+            .filter((img) => deletedIds.includes(img.id))
+            .forEach((img) => {
+              try {
+                const filePath = path.join(__dirname, "../../public", img.url);
+                if (fs.existsSync(filePath)) {
+                  fs.unlinkSync(filePath);
+                }
+              } catch (error) {
+                console.error(`파일 삭제 오류 (${img.url}):`, error);
+              }
+            });
+        });
+      }
+
+      // 인증서 번호 검증 (기존과 동일)
+      if (
+        certificate_number &&
+        certificate_number !== appraisal.certificate_number
+      ) {
+        const normalizedNumber = certificate_number.toLowerCase();
+        const certPattern = /^cas\d+$/i;
+        if (!certPattern.test(normalizedNumber)) {
+          return res.status(400).json({
+            success: false,
+            message: "감정 번호는 CAS + 숫자 형식이어야 합니다. (예: CAS04312)",
+          });
+        }
+
+        const [existing] = await conn.query(
+          "SELECT certificate_number FROM appraisals WHERE certificate_number = ? AND id != ?",
+          [normalizedNumber, appraisal_id]
+        );
+
+        if (existing.length > 0) {
+          return res.status(400).json({
+            success: false,
+            message: "이미 존재하는 감정 번호입니다.",
+          });
+        }
+      }
+
+      // QR 코드 및 PDF 처리
+      let qrcode_url = appraisal.qrcode_url;
+      let certificate_url = appraisal.certificate_url;
+
+      if (req.files && req.files.pdf && req.files.pdf.length > 0) {
+        certificate_url = `/images/appraisals/${req.files.pdf[0].filename}`;
+      }
+
+      const finalCertificateNumber =
+        certificate_number || appraisal.certificate_number;
+      if (finalCertificateNumber && !qrcode_url) {
+        qrcode_url = await generateQRCode(finalCertificateNumber);
+      }
+
+      // 업데이트 필드 구성 (기존과 동일)
       const updateData = {};
       const updateFields = [];
       const updateValues = [];
@@ -2827,12 +2958,24 @@ router.put(
         updateData.result_notes = result_notes;
       }
 
-      // ✅ 이미지 필드 업데이트 - 생성과 동일하게
+      // 이미지 필드 업데이트
       updateFields.push("images = ?");
       updateValues.push(
         finalImages.length > 0 ? serializeImageData(finalImages) : null
       );
       updateData.images = finalImages;
+
+      if (certificate_url) {
+        updateFields.push("certificate_url = ?");
+        updateValues.push(certificate_url);
+        updateData.certificate_url = certificate_url;
+      }
+
+      if (qrcode_url) {
+        updateFields.push("qrcode_url = ?");
+        updateValues.push(qrcode_url);
+        updateData.qrcode_url = qrcode_url;
+      }
 
       if (suggested_restoration_services) {
         try {
@@ -2849,7 +2992,7 @@ router.put(
         }
       }
 
-      // 크레딧 차감 처리
+      // 크레딧 차감 처리 (기존과 동일)
       let creditInfo = { deducted: false, remaining: 0 };
 
       if (result && result !== "pending" && !appraisal.credit_deducted) {
@@ -2902,8 +3045,7 @@ router.put(
         success: true,
         appraisal: {
           id: appraisal_id,
-          certificate_number:
-            certificate_number || appraisal.certificate_number,
+          certificate_number: finalCertificateNumber,
           ...updateData,
         },
         credit_info: creditInfo,
