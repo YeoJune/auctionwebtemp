@@ -864,7 +864,7 @@ function displayAppraisalDetail(appraisal) {
             
             <div class="form-group">
                 <label class="form-label">새 이미지 업로드</label>
-                <input type="file" id="appraisal-images" multiple accept="image/*" onchange="handleImageUpload(event)">
+                <input type="file" id="appraisal-images" multiple accept="image/*">
             </div>
             
             <div id="current-images-container" style="margin-top: 15px;">
