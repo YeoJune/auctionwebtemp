@@ -19,6 +19,7 @@ const ecoAucConfig = {
     userId: process.env.CRAWLER_EMAIL1,
     password: process.env.CRAWLER_PASSWORD1,
   },
+  useMultipleClients: true, // 추가
   categoryIds: ["1", "2", "3", "4", "5", "8", "9", "27"],
   categoryTable: {
     1: "시계",
@@ -77,6 +78,7 @@ const ecoAucValueConfig = {
     userId: process.env.CRAWLER_EMAIL1,
     password: process.env.CRAWLER_PASSWORD1,
   },
+  useMultipleClients: true, // 추가
   categoryIds: ["1", "2", "3", "4", "5", "8", "9", "27"],
   categoryTable: {
     1: "시계",
@@ -131,12 +133,13 @@ class EcoAucCrawler extends AxiosCrawler {
     this.config.currentCategoryId = null; // 현재 크롤링 중인 카테고리 ID
   }
 
-  async performLogin() {
+  // performLoginWithClient 구현 (부모 클래스에서 호출)
+  async performLoginWithClient(clientInfo) {
     return this.retryOperation(async () => {
-      console.log("Logging in to Eco Auction...");
+      console.log(`${clientInfo.name} Eco Auction 로그인 중...`);
 
       // 로그인 페이지 가져오기
-      const response = await this.client.get(this.config.loginPageUrl);
+      const response = await clientInfo.client.get(this.config.loginPageUrl);
 
       // CSRF 토큰 추출
       const $ = cheerio.load(response.data);
@@ -153,7 +156,7 @@ class EcoAucCrawler extends AxiosCrawler {
       formData.append("_csrfToken", csrfToken);
 
       // 로그인 요청
-      const loginResponse = await this.client.post(
+      const loginResponse = await clientInfo.client.post(
         this.config.loginPostUrl,
         formData,
         {
@@ -169,12 +172,22 @@ class EcoAucCrawler extends AxiosCrawler {
       );
 
       // 로그인 후 검증
-      if (loginResponse.status === 200 && (await this.loginCheck())) {
+      if (
+        loginResponse.status === 200 &&
+        (await this.loginCheckWithClient(clientInfo))
+      ) {
         return true;
       } else {
         throw new Error("Login verification failed");
       }
     });
+  }
+
+  // 기존 performLogin 오버라이드 (부모 클래스 호환성)
+  async performLogin() {
+    // 직접 연결 클라이언트로 로그인
+    const directClient = this.getDirectClient();
+    return await this.performLoginWithClient(directClient);
   }
 
   async crawlAllItems(existingIds = new Set()) {
@@ -262,12 +275,17 @@ class EcoAucCrawler extends AxiosCrawler {
   }
 
   async crawlPage(categoryId, page, existingIds = new Set()) {
+    const clientInfo = this.getClient();
+    await this.loginWithClient(clientInfo);
+
     return this.retryOperation(async () => {
-      console.log(`Crawling page ${page} in category ${categoryId}...`);
+      console.log(
+        `Crawling page ${page} in category ${categoryId} with ${clientInfo.name}...`
+      );
       const url =
         this.config.searchUrl + this.config.searchParams(categoryId, page);
 
-      const response = await this.client.get(url);
+      const response = await clientInfo.client.get(url);
       const $ = cheerio.load(response.data);
 
       // 아이템 컨테이너 선택
@@ -306,20 +324,26 @@ class EcoAucCrawler extends AxiosCrawler {
         3
       );
 
-      console.log(`Crawled ${processedItems.length} items from page ${page}`);
+      console.log(
+        `Crawled ${processedItems.length} items from page ${page} (${clientInfo.name})`
+      );
       return [...processedItems, ...remainItems];
     });
   }
 
   async crawlItemDetails(itemId, item0) {
+    const clientInfo = this.getClient();
+    await this.loginWithClient(clientInfo);
+
     return this.retryOperation(async () => {
-      console.log(`Crawling details for item ${itemId}...`);
-      await this.login();
+      console.log(
+        `Crawling details for item ${itemId} with ${clientInfo.name}...`
+      );
 
       const bidType = item0?.bid_type || this.currentBidType;
       const url = this.config.detailUrl(itemId, bidType);
 
-      const response = await this.client.get(url);
+      const response = await clientInfo.client.get(url);
       const $ = cheerio.load(response.data);
 
       // 추가 이미지 추출
@@ -367,12 +391,17 @@ class EcoAucCrawler extends AxiosCrawler {
   }
 
   async getTotalPages(categoryId) {
+    const clientInfo = this.getClient();
+    await this.loginWithClient(clientInfo);
+
     return this.retryOperation(async () => {
-      console.log(`Getting total pages for category ${categoryId}...`);
+      console.log(
+        `Getting total pages for category ${categoryId} with ${clientInfo.name}...`
+      );
       const url =
         this.config.searchUrl + this.config.searchParams(categoryId, 1);
 
-      const response = await this.client.get(url);
+      const response = await clientInfo.client.get(url);
       const $ = cheerio.load(response.data);
 
       const paginationExists =
@@ -622,12 +651,17 @@ class EcoAucCrawler extends AxiosCrawler {
   }
 
   async getTotalPagesForAllCategories() {
+    const clientInfo = this.getClient();
+    await this.loginWithClient(clientInfo);
+
     return this.retryOperation(async () => {
-      console.log(`Getting total pages for all categories...`);
+      console.log(
+        `Getting total pages for all categories with ${clientInfo.name}...`
+      );
       const url =
         this.config.searchUrl + this.config.searchParamsAllCategories(1);
 
-      const response = await this.client.get(url);
+      const response = await clientInfo.client.get(url);
       const $ = cheerio.load(response.data);
 
       const paginationExists =
@@ -650,12 +684,17 @@ class EcoAucCrawler extends AxiosCrawler {
   }
 
   async crawlUpdatePage(page) {
+    const clientInfo = this.getClient();
+    await this.loginWithClient(clientInfo);
+
     return this.retryOperation(async () => {
-      console.log(`Crawling update page ${page} for all categories...`);
+      console.log(
+        `Crawling update page ${page} for all categories with ${clientInfo.name}...`
+      );
       const url =
         this.config.searchUrl + this.config.searchParamsAllCategories(page);
 
-      const response = await this.client.get(url);
+      const response = await clientInfo.client.get(url);
       const $ = cheerio.load(response.data);
 
       // 아이템 컨테이너 선택
@@ -741,17 +780,16 @@ class EcoAucCrawler extends AxiosCrawler {
         `Placing direct bid for item ${item_id} with price ${price}...`
       );
 
-      // 클라이언트 확인
-      if (!this.client) {
-        console.log("HTTP client not initialized. Creating new client.");
-        this.initializeClient();
-      }
-
       // 로그인 확인
       await this.login();
 
+      // 직접 연결 클라이언트 사용
+      const directClient = this.getDirectClient();
+
       // CSRF 토큰 가져오기 - 메인 페이지에서
-      const mainPageResponse = await this.client.get(ecoAucConfig.searchUrl);
+      const mainPageResponse = await directClient.client.get(
+        ecoAucConfig.searchUrl
+      );
       const $ = cheerio.load(mainPageResponse.data);
       const csrfToken = $('[name="_csrfToken"]').attr("value");
 
@@ -778,7 +816,7 @@ class EcoAucCrawler extends AxiosCrawler {
       const bidUrl = "https://www.ecoauc.com/client/timelimit-auctions/bid";
       console.log(`Sending bid request to: ${bidUrl}`);
 
-      const bidResponse = await this.client.post(bidUrl, bidData, {
+      const bidResponse = await directClient.client.post(bidUrl, bidData, {
         headers: {
           "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
           Referer: "https://www.ecoauc.com/client/timelimit-auctions",
@@ -813,14 +851,17 @@ class EcoAucCrawler extends AxiosCrawler {
 
   async crawlInvoices() {
     try {
-      console.log("Starting to crawl invoices...");
+      console.log(`Starting to crawl invoices...`);
 
       // 로그인 확인
       await this.login();
 
+      // 직접 연결 클라이언트 사용
+      const directClient = this.getDirectClient();
+
       // 청구서 페이지 요청
       const url = "https://www.ecoauc.com/client/bids/bidwin";
-      const response = await this.client.get(url);
+      const response = await directClient.client.get(url);
       const $ = cheerio.load(response.data);
 
       // 테이블 행 추출
@@ -896,14 +937,18 @@ class EcoAucCrawler extends AxiosCrawler {
   }
 
   async crawlUpdateWithId(itemId) {
+    const clientInfo = this.getClient();
+    await this.loginWithClient(clientInfo);
+
     return this.retryOperation(async () => {
-      console.log(`Crawling update info for item ${itemId}...`);
-      await this.login();
+      console.log(
+        `Crawling update info for item ${itemId} with ${clientInfo.name}...`
+      );
 
       const bidType = "direct";
       const url = this.config.detailUrl(itemId, bidType);
 
-      const response = await this.client.get(url);
+      const response = await clientInfo.client.get(url);
       const $ = cheerio.load(response.data);
 
       // Price 추출
@@ -970,12 +1015,12 @@ class EcoAucValueCrawler extends AxiosCrawler {
     this.config.currentCategoryId = null; // 현재 크롤링 중인 카테고리 ID
   }
 
-  async performLogin() {
+  async performLoginWithClient(clientInfo) {
     return this.retryOperation(async () => {
-      console.log("Logging in to Eco Auction Value...");
+      console.log(`Logging in to Eco Auction Value with ${clientInfo.name}...`);
 
       // 로그인 페이지 가져오기
-      const response = await this.client.get(this.config.loginPageUrl);
+      const response = await clientInfo.client.get(this.config.loginPageUrl);
 
       // CSRF 토큰 추출
       const $ = cheerio.load(response.data);
@@ -992,7 +1037,7 @@ class EcoAucValueCrawler extends AxiosCrawler {
       formData.append("_csrfToken", csrfToken);
 
       // 로그인 요청
-      const loginResponse = await this.client.post(
+      const loginResponse = await clientInfo.client.post(
         this.config.loginPostUrl,
         formData,
         {
@@ -1008,7 +1053,10 @@ class EcoAucValueCrawler extends AxiosCrawler {
       );
 
       // 로그인 후 검증
-      if (loginResponse.status === 200 && (await this.loginCheck())) {
+      if (
+        loginResponse.status === 200 &&
+        (await this.loginCheckWithClient(clientInfo))
+      ) {
         return true;
       } else {
         throw new Error("Login verification failed");
@@ -1016,13 +1064,24 @@ class EcoAucValueCrawler extends AxiosCrawler {
     });
   }
 
+  async performLogin() {
+    // 직접 연결 클라이언트로 로그인
+    const directClient = this.getDirectClient();
+    return await this.performLoginWithClient(directClient);
+  }
+
   async getTotalPages(categoryId, months = 3) {
+    const clientInfo = this.getClient();
+    await this.loginWithClient(clientInfo);
+
     return this.retryOperation(async () => {
-      console.log(`Getting total pages for category ${categoryId}...`);
+      console.log(
+        `Getting total pages for category ${categoryId} with ${clientInfo.name}...`
+      );
       const url =
         this.config.searchUrl + this.config.searchParams(categoryId, 1, months);
 
-      const response = await this.client.get(url);
+      const response = await clientInfo.client.get(url);
       const $ = cheerio.load(response.data);
 
       const paginationExists =
@@ -1112,13 +1171,18 @@ class EcoAucValueCrawler extends AxiosCrawler {
   }
 
   async crawlPage(categoryId, page, existingIds = new Set(), months = 3) {
+    const clientInfo = this.getClient();
+    await this.loginWithClient(clientInfo);
+
     return this.retryOperation(async () => {
-      console.log(`Crawling page ${page} in category ${categoryId}...`);
+      console.log(
+        `Crawling page ${page} in category ${categoryId} with ${clientInfo.name}...`
+      );
       const url =
         this.config.searchUrl +
         this.config.searchParams(categoryId, page, months);
 
-      const response = await this.client.get(url);
+      const response = await clientInfo.client.get(url);
       const $ = cheerio.load(response.data);
 
       // 아이템 컨테이너 선택
@@ -1212,12 +1276,16 @@ class EcoAucValueCrawler extends AxiosCrawler {
   }
 
   async crawlItemDetails(itemId) {
+    const clientInfo = this.getClient();
+    await this.loginWithClient(clientInfo);
+
     return this.retryOperation(async () => {
-      console.log(`Crawling details for item ${itemId}...`);
-      await this.login();
+      console.log(
+        `Crawling details for item ${itemId} with ${clientInfo.name}...`
+      );
       const url = this.config.detailUrl(itemId);
 
-      const response = await this.client.get(url);
+      const response = await clientInfo.client.get(url);
       const $ = cheerio.load(response.data);
 
       // 추가 이미지 추출

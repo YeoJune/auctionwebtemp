@@ -25,6 +25,7 @@ const brandAucConfig = {
     userId: process.env.CRAWLER_EMAIL2,
     password: process.env.CRAWLER_PASSWORD2,
   },
+  useMultipleClients: true, // 추가
   categoryTable: {
     Watch: "시계",
     Bag: "가방",
@@ -52,6 +53,7 @@ const brandAucValueConfig = {
     userId: process.env.CRAWLER_EMAIL2,
     password: process.env.CRAWLER_PASSWORD2,
   },
+  useMultipleClients: true, // 추가
   categoryTable: {
     Watch: "시계",
     Bag: "가방",
@@ -71,12 +73,13 @@ class BrandAucCrawler extends AxiosCrawler {
     this.currentLocale = "en"; // 언어 설정(영어)
   }
 
-  async performLogin() {
+  // performLoginWithClient 구현 (부모 클래스에서 호출)
+  async performLoginWithClient(clientInfo) {
     return this.retryOperation(async () => {
-      console.log("Logging in to Brand Auction...");
+      console.log(`${clientInfo.name} Brand Auction 로그인 중...`);
 
       // 로그인 페이지 가져오기
-      const response = await this.client.get(this.config.loginPageUrl);
+      const response = await clientInfo.client.get(this.config.loginPageUrl);
 
       // CSRF 토큰 추출
       const $ = cheerio.load(response.data);
@@ -96,7 +99,7 @@ class BrandAucCrawler extends AxiosCrawler {
       formData.append("asbLogin", "on");
 
       // 로그인 요청
-      await this.client.post(this.config.loginPageUrl, formData, {
+      await clientInfo.client.post(this.config.loginPageUrl, formData, {
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
           Referer: this.config.loginPageUrl,
@@ -108,7 +111,7 @@ class BrandAucCrawler extends AxiosCrawler {
       });
 
       // 2. bid 로그인
-      console.log("Logging in to bid.brand-auc.com system...");
+      console.log(`${clientInfo.name} bid.brand-auc.com 시스템 로그인 중...`);
       const bidLoginUrl = "https://bid.brand-auc.com/loginPage";
       const bidFormData = new URLSearchParams();
       bidFormData.append("username", this.config.loginData.userId);
@@ -117,7 +120,7 @@ class BrandAucCrawler extends AxiosCrawler {
       bidFormData.append("client_id", "brandVpaMember");
       bidFormData.append("loginType", "vpaLogin");
 
-      await this.client.post(
+      await clientInfo.client.post(
         "https://member.brand-auc.com/login",
         bidFormData,
         {
@@ -133,16 +136,23 @@ class BrandAucCrawler extends AxiosCrawler {
       );
 
       // bid 로그인 페이지 가져오기
-      await this.client.get("https://member.brand-auc.com/auth/success");
+      await clientInfo.client.get("https://member.brand-auc.com/auth/success");
 
       // 로그인 후 검증
-      const isValid = await this.loginCheck();
+      const isValid = await this.loginCheckWithClient(clientInfo);
       if (!isValid) {
         throw new Error("Login verification failed");
       }
 
       return true;
     });
+  }
+
+  // 기존 performLogin 오버라이드 (부모 클래스 호환성)
+  async performLogin() {
+    // 직접 연결 클라이언트로 로그인
+    const directClient = this.getDirectClient();
+    return await this.performLoginWithClient(directClient);
   }
 
   async crawlAllItems(existingIds = new Set()) {
@@ -170,7 +180,10 @@ class BrandAucCrawler extends AxiosCrawler {
 
         if (bidConfig.type === "live") {
           // 기존 Live 경매 크롤링 방식
-          const firstPageResponse = await this.client.get(
+          const clientInfo = this.getClient();
+          await this.loginWithClient(clientInfo);
+
+          const firstPageResponse = await clientInfo.client.get(
             this.config.previewItemsApiUrl,
             {
               params: {
@@ -208,7 +221,10 @@ class BrandAucCrawler extends AxiosCrawler {
               }`
             );
 
-            const response = await this.client.get(
+            const pageClientInfo = this.getClient();
+            await this.loginWithClient(pageClientInfo);
+
+            const response = await pageClientInfo.client.get(
               this.config.previewItemsApiUrl,
               {
                 params: {
@@ -232,18 +248,24 @@ class BrandAucCrawler extends AxiosCrawler {
               allCrawledItems.push(...pageItems);
 
               console.log(
-                `Processed ${pageItems.length} items from page ${page + 1}`
+                `Processed ${pageItems.length} items from page ${
+                  page + 1
+                } with ${pageClientInfo.name}`
               );
             }
           }
         } else if (bidConfig.type === "direct") {
-          await this.cookieJar.setCookie(
+          // Direct 경매 크롤링
+          const clientInfo = this.getClient();
+          await this.loginWithClient(clientInfo);
+
+          await clientInfo.cookieJar.setCookie(
             "brand_language=en",
             "https://bid.brand-auc.com"
           );
-          // 새로운 Direct 경매 크롤링 방식
-          // 먼저 경매 정보 가져오기
-          const auctionInfoResponse = await this.client.get(
+
+          // 경매 정보 가져오기
+          const auctionInfoResponse = await clientInfo.client.get(
             "https://bid.brand-auc.com/api/v1/brand-bid/com/auction-info",
             {
               headers: {
@@ -265,7 +287,7 @@ class BrandAucCrawler extends AxiosCrawler {
           this.auctionDate = auctionDates[0];
 
           // Direct 아이템 가져오기
-          const firstPageResponse = await this.client.get(
+          const firstPageResponse = await clientInfo.client.get(
             "https://bid.brand-auc.com/api/v1/brand-bid/items/list",
             {
               params: {
@@ -302,7 +324,10 @@ class BrandAucCrawler extends AxiosCrawler {
           for (let page = 1; page < totalPages; page++) {
             console.log(`Crawling direct page ${page + 1} of ${totalPages}`);
 
-            const response = await this.client.get(
+            const pageClientInfo = this.getClient();
+            await this.loginWithClient(pageClientInfo);
+
+            const response = await pageClientInfo.client.get(
               "https://bid.brand-auc.com/api/v1/brand-bid/items/list",
               {
                 params: {
@@ -331,7 +356,7 @@ class BrandAucCrawler extends AxiosCrawler {
               console.log(
                 `Processed ${pageItems.length} direct items from page ${
                   page + 1
-                }`
+                } with ${pageClientInfo.name}`
               );
             }
           }
@@ -478,7 +503,9 @@ class BrandAucCrawler extends AxiosCrawler {
 
   async crawlItemDetails(itemId, item) {
     try {
-      await this.login();
+      const clientInfo = this.getClient();
+      await this.loginWithClient(clientInfo);
+
       const kaisaiKaisu = item.kaisaiKaisu;
       const kaijoCd = item.kaijoCd || 1;
 
@@ -486,7 +513,7 @@ class BrandAucCrawler extends AxiosCrawler {
       const detailUrl = `https://u.brand-auc.com/api/v1/auction/auctionItems/bag/${kaijoCd}/${kaisaiKaisu}/${itemId}/B02-01`;
 
       // 상세 정보 요청
-      const response = await this.client.get(detailUrl, {
+      const response = await clientInfo.client.get(detailUrl, {
         headers: {
           Accept: "application/json, text/plain, */*",
           "Accept-Language": "en-US,en;q=0.9",
@@ -558,13 +585,16 @@ class BrandAucCrawler extends AxiosCrawler {
       await this.login();
 
       // auctionDate 설정 (기존 crawlAllItems에서 가져온 로직)
-      await this.cookieJar.setCookie(
+      const clientInfo = this.getClient();
+      await this.loginWithClient(clientInfo);
+
+      await clientInfo.cookieJar.setCookie(
         "brand_language=en",
         "https://bid.brand-auc.com"
       );
 
       // 경매 정보 가져오기
-      const auctionInfoResponse = await this.client.get(
+      const auctionInfoResponse = await clientInfo.client.get(
         "https://bid.brand-auc.com/api/v1/brand-bid/com/auction-info",
         {
           headers: {
@@ -591,7 +621,7 @@ class BrandAucCrawler extends AxiosCrawler {
       console.log(`Starting update crawl for direct auctions`);
 
       // 첫 페이지 요청
-      const firstPageResponse = await this.client.get(
+      const firstPageResponse = await clientInfo.client.get(
         "https://bid.brand-auc.com/api/v1/brand-bid/items/list",
         {
           params: {
@@ -636,7 +666,10 @@ class BrandAucCrawler extends AxiosCrawler {
           limit(async () => {
             console.log(`Crawling update page ${page + 1} of ${totalPages}`);
 
-            const response = await this.client.get(
+            const pageClientInfo = this.getClient();
+            await this.loginWithClient(pageClientInfo);
+
+            const response = await pageClientInfo.client.get(
               "https://bid.brand-auc.com/api/v1/brand-bid/items/list",
               {
                 params: {
@@ -662,7 +695,7 @@ class BrandAucCrawler extends AxiosCrawler {
               console.log(
                 `Processed ${pageItems.length} update items from page ${
                   page + 1
-                }`
+                } with ${pageClientInfo.name}`
               );
 
               return pageItems;
@@ -758,8 +791,11 @@ class BrandAucCrawler extends AxiosCrawler {
       // 로그인 상태 확인
       await this.login();
 
+      // 직접 연결 클라이언트 사용
+      const directClient = this.getDirectClient();
+
       // XSRF 토큰 추출 (쿠키에서)
-      const cookies = await this.cookieJar.getCookies(
+      const cookies = await directClient.cookieJar.getCookies(
         "https://bid.brand-auc.com"
       );
       const xsrfToken = cookies.find(
@@ -772,7 +808,7 @@ class BrandAucCrawler extends AxiosCrawler {
 
       try {
         // 첫 번째 API 호출 시도 (기존 방식)
-        const response = await this.client.post(
+        const response = await directClient.client.post(
           "https://bid.brand-auc.com/api/v1/brand-bid/jizen-nyusatsu/",
           {
             uketsukeBng: item_id,
@@ -804,7 +840,7 @@ class BrandAucCrawler extends AxiosCrawler {
         console.log("First API failed, trying alternative endpoint...");
 
         // 두 번째 API 호출 시도 (대체 API)
-        const altResponse = await this.client.post(
+        const altResponse = await directClient.client.post(
           "https://bid.brand-auc.com/api/v1/brand-bid/com/bid?gamenId=B201-01&viewType=1",
           {
             uketsukeBng: item_id,
@@ -854,9 +890,12 @@ class BrandAucCrawler extends AxiosCrawler {
       // 로그인 확인
       await this.login();
 
+      // 직접 연결 클라이언트 사용
+      const directClient = this.getDirectClient();
+
       // 청구서 페이지 요청
       const url = "https://u.brand-auc.com/api/v1/auction/cal/calList";
-      const response = await this.client.get(url, {
+      const response = await directClient.client.get(url, {
         params: {
           sort: "",
           pageNumber: 0,
@@ -934,12 +973,14 @@ class BrandAucCrawler extends AxiosCrawler {
   async crawlUpdateWithId(itemId) {
     return this.retryOperation(async () => {
       console.log(`Crawling update info for item ${itemId}...`);
-      await this.login();
+
+      const clientInfo = this.getClient();
+      await this.loginWithClient(clientInfo);
 
       // 상세 정보 URL 구성 (원본 아이템의 정보 사용)
       const detailUrl = `https://bid.brand-auc.com/api/v1/brand-bid/items/detail?uketsukeBng=${itemId}`;
 
-      const response = await this.client.get(detailUrl, {
+      const response = await clientInfo.client.get(detailUrl, {
         headers: {
           Accept: "application/json, text/plain, */*",
           "Accept-Language": "en-US,en;q=0.9",
@@ -1013,12 +1054,13 @@ class BrandAucValueCrawler extends AxiosCrawler {
     this.currentLocale = "en"; // 언어 설정(영어)
   }
 
-  async performLogin() {
+  // performLoginWithClient 구현 (부모 클래스에서 호출)
+  async performLoginWithClient(clientInfo) {
     return this.retryOperation(async () => {
-      console.log("Logging in to Brand Auction Value...");
+      console.log(`${clientInfo.name} Brand Auction Value 로그인 중...`);
 
       // 로그인 페이지 가져오기
-      const response = await this.client.get(this.config.loginPageUrl);
+      const response = await clientInfo.client.get(this.config.loginPageUrl);
 
       // CSRF 토큰 추출
       const $ = cheerio.load(response.data);
@@ -1037,7 +1079,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
       formData.append("loginType", "eaucLogin");
 
       // 로그인 요청
-      await this.client.post(this.config.loginPostUrl, formData, {
+      await clientInfo.client.post(this.config.loginPostUrl, formData, {
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
           Referer: this.config.loginPostUrl,
@@ -1049,13 +1091,20 @@ class BrandAucValueCrawler extends AxiosCrawler {
       });
 
       // 로그인 후 검증
-      const isValid = await this.loginCheck();
+      const isValid = await this.loginCheckWithClient(clientInfo);
       if (!isValid) {
         throw new Error("Login verification failed");
       }
 
       return true;
     });
+  }
+
+  // 기존 performLogin 오버라이드 (부모 클래스 호환성)
+  async performLogin() {
+    // 직접 연결 클라이언트로 로그인
+    const directClient = this.getDirectClient();
+    return await this.performLoginWithClient(directClient);
   }
 
   async crawlAllItems(existingIds = new Set(), months = 3) {
@@ -1071,7 +1120,10 @@ class BrandAucValueCrawler extends AxiosCrawler {
       const size = 1000; // 한 페이지당 항목 수 (API 제한에 따라 조정)
 
       // 최근 경매 회차 정보 가져오기
-      const auctionInfoResponse = await this.client.get(
+      const clientInfo = this.getClient();
+      await this.loginWithClient(clientInfo);
+
+      const auctionInfoResponse = await clientInfo.client.get(
         "https://e-auc.brand-auc.com/api/v1/marketprice/marketpriceItems/searchHeaders/kakoKaisaiInfo",
         {
           headers: {
@@ -1107,7 +1159,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
       );
 
       // 첫 페이지 요청으로 총 페이지 수 확인
-      const firstPageResponse = await this.client.get(
+      const firstPageResponse = await clientInfo.client.get(
         this.config.marketPriceApiUrl,
         {
           params: {
@@ -1140,22 +1192,28 @@ class BrandAucValueCrawler extends AxiosCrawler {
       for (let page = 1; page < totalPages; page++) {
         console.log(`Crawling value page ${page + 1} of ${totalPages}`);
 
-        const response = await this.client.get(this.config.marketPriceApiUrl, {
-          params: {
-            kaisaiKaisuFrom: kaisaiKaisuFrom,
-            kaisaiKaisuTo: kaisaiKaisuTo,
-            page: page,
-            size: size,
-            getKbn: 3,
-            kaijoKbn: 0,
-          },
-          headers: {
-            Accept: "application/json, text/plain, */*",
-            "Accept-Language": "en-US,en;q=0.9",
-            Referer: "https://e-auc.brand-auc.com/",
-            "X-Requested-With": "XMLHttpRequest",
-          },
-        });
+        const pageClientInfo = this.getClient();
+        await this.loginWithClient(pageClientInfo);
+
+        const response = await pageClientInfo.client.get(
+          this.config.marketPriceApiUrl,
+          {
+            params: {
+              kaisaiKaisuFrom: kaisaiKaisuFrom,
+              kaisaiKaisuTo: kaisaiKaisuTo,
+              page: page,
+              size: size,
+              getKbn: 3,
+              kaijoKbn: 0,
+            },
+            headers: {
+              Accept: "application/json, text/plain, */*",
+              "Accept-Language": "en-US,en;q=0.9",
+              Referer: "https://e-auc.brand-auc.com/",
+              "X-Requested-With": "XMLHttpRequest",
+            },
+          }
+        );
 
         if (response.data && response.data.content) {
           const pageItems = await this.processItemsPage(
@@ -1166,7 +1224,9 @@ class BrandAucValueCrawler extends AxiosCrawler {
           allCrawledItems.push(...pageItems);
 
           console.log(
-            `Processed ${pageItems.length} value items from page ${page + 1}`
+            `Processed ${pageItems.length} value items from page ${
+              page + 1
+            } with ${pageClientInfo.name}`
           );
         }
       }
@@ -1244,7 +1304,9 @@ class BrandAucValueCrawler extends AxiosCrawler {
 
   async crawlItemDetails(itemId, item) {
     try {
-      await this.login();
+      const clientInfo = this.getClient();
+      await this.loginWithClient(clientInfo);
+
       const kaisaiKaisu = item.kaisaiKaisu;
       const kaijoCd = item.kaijoCd || 1;
 
@@ -1252,7 +1314,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
       const detailUrl = `https://e-auc.brand-auc.com/api/v1/marketprice/marketpriceItems/detail/${kaijoCd}/${kaisaiKaisu}/${itemId}`;
 
       // 상세 정보 요청
-      const response = await this.client.get(detailUrl, {
+      const response = await clientInfo.client.get(detailUrl, {
         headers: {
           Accept: "application/json, text/plain, */*",
           "Accept-Language": "en-US,en;q=0.9",

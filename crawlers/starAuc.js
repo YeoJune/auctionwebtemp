@@ -2,16 +2,6 @@ const cheerio = require("cheerio");
 const { AxiosCrawler } = require("./baseCrawler");
 const { processImagesInChunks } = require("../utils/processImage");
 const FormData = require("form-data");
-const tough = require("tough-cookie");
-const { wrapper } = require("axios-cookiejar-support");
-const axios = require("axios");
-const { HttpsProxyAgent } = require("https-proxy-agent");
-const { HttpProxyAgent } = require("http-proxy-agent");
-const {
-  HttpCookieAgent,
-  HttpsCookieAgent,
-  createCookieAgent,
-} = require("http-cookie-agent/http");
 
 let pLimit;
 (async () => {
@@ -29,6 +19,7 @@ const starAucConfig = {
     userId: process.env.CRAWLER_EMAIL3,
     password: process.env.CRAWLER_PASSWORD3,
   },
+  useMultipleClients: true, // 추가
   categoryIds: [1, 2, 3, 5, 6, 7, 8, 9],
   categoryTable: {
     1: "시계",
@@ -82,6 +73,7 @@ const starAucValueConfig = {
     userId: process.env.CRAWLER_EMAIL3,
     password: process.env.CRAWLER_PASSWORD3,
   },
+  useMultipleClients: true, // 추가
   categoryIds: [1, 2, 3, 5, 6, 7, 8],
   categoryTable: {
     1: "시계",
@@ -137,131 +129,9 @@ class StarAucCrawler extends AxiosCrawler {
     super(config);
     this.config.currentCategoryId = null;
     this.currentBidType = "direct";
-
-    // 라운드 로빈 프록시 설정
-    this.proxyIPs = this.loadProxyIPs();
-    this.clients = [];
-    this.currentClientIndex = 0;
-
-    this.initializeClients();
   }
 
-  loadProxyIPs() {
-    const proxyIPsString = process.env.PROXY_IPS;
-    if (!proxyIPsString) {
-      console.log("No PROXY_IPS found, using direct connection only");
-      return [];
-    }
-    return proxyIPsString.split(",").map((ip) => ip.trim());
-  }
-
-  initializeClients() {
-    // 첫 번째: 직접 연결 (http-cookie-agent 사용)
-    const directCookieJar = new tough.CookieJar();
-    const directClient = axios.create({
-      httpAgent: new HttpCookieAgent({
-        cookies: { jar: directCookieJar },
-      }),
-      httpsAgent: new HttpsCookieAgent({
-        cookies: { jar: directCookieJar },
-      }),
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15",
-        "Accept-Language": "en-US,en;q=0.9",
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      },
-      maxRedirects: 5,
-      timeout: 30000,
-      validateStatus: function (status) {
-        return status >= 200 && status < 500;
-      },
-    });
-
-    this.clients.push({
-      index: 0,
-      name: "직접연결",
-      client: directClient,
-      cookieJar: directCookieJar,
-      isLoggedIn: false,
-      loginTime: null,
-      useProxy: false,
-    });
-
-    // 나머지: 프록시 클라이언트들
-    this.proxyIPs.forEach((ip, index) => {
-      const cookieJar = new tough.CookieJar();
-
-      const HttpProxyCookieAgent = createCookieAgent(HttpProxyAgent);
-      const HttpsProxyCookieAgent = createCookieAgent(HttpsProxyAgent);
-
-      const proxyClient = axios.create({
-        httpAgent: new HttpProxyCookieAgent({
-          cookies: { jar: cookieJar },
-          host: ip,
-          port: 3128,
-          protocol: "http:",
-        }),
-        httpsAgent: new HttpsProxyCookieAgent({
-          cookies: { jar: cookieJar },
-          host: ip,
-          port: 3128,
-          protocol: "http:",
-        }),
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15",
-          "Accept-Language": "en-US,en;q=0.9",
-          Accept:
-            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        },
-        maxRedirects: 5,
-        timeout: 30000,
-        validateStatus: function (status) {
-          return status >= 200 && status < 500;
-        },
-      });
-
-      this.clients.push({
-        index: index + 1,
-        name: `프록시${index + 1}(${ip})`,
-        client: proxyClient,
-        cookieJar: cookieJar,
-        isLoggedIn: false,
-        loginTime: null,
-        useProxy: true,
-      });
-    });
-
-    console.log(
-      `${this.clients.length}개 클라이언트 초기화 완료 (직접 1개 + 프록시 ${this.proxyIPs.length}개)`
-    );
-  }
-
-  // 라운드 로빈으로 다음 클라이언트 선택
-  getNextClient() {
-    const client = this.clients[this.currentClientIndex];
-    this.currentClientIndex =
-      (this.currentClientIndex + 1) % this.clients.length;
-    return client;
-  }
-
-  // 특정 클라이언트로 로그인 체크
-  async loginCheckWithClient(clientInfo) {
-    return this.retryOperation(async () => {
-      try {
-        const responses = await Promise.all(
-          this.config.loginCheckUrls.map((url) => clientInfo.client.get(url))
-        );
-        return responses.every((response) => response.status === 200);
-      } catch (error) {
-        return false;
-      }
-    });
-  }
-
-  // 특정 클라이언트로 로그인
+  // 특정 클라이언트로 로그인 (부모 클래스에서 호출)
   async performLoginWithClient(clientInfo) {
     return this.retryOperation(async () => {
       console.log(`${clientInfo.name} 로그인 중...`);
@@ -314,42 +184,10 @@ class StarAucCrawler extends AxiosCrawler {
     });
   }
 
-  async loginWithClient(clientInfo) {
-    if (clientInfo.isLoggedIn && this.isSessionValid(clientInfo.loginTime)) {
-      return true;
-    }
-
-    try {
-      const result = await this.performLoginWithClient(clientInfo);
-      if (result) {
-        clientInfo.isLoggedIn = true;
-        clientInfo.loginTime = Date.now();
-        console.log(`✅ ${clientInfo.name} 로그인 성공`);
-      }
-      return result;
-    } catch (error) {
-      console.error(`❌ ${clientInfo.name} 로그인 실패:`, error.message);
-      return false;
-    }
-  }
-
-  isSessionValid(loginTime) {
-    if (!loginTime) return false;
-    return Date.now() - loginTime < 1000 * 60 * 60 * 3; // 3시간
-  }
-
-  // 모든 클라이언트 로그인
-  async loginAllClients() {
-    console.log("\n=== 모든 클라이언트 로그인 ===");
-    for (const clientInfo of this.clients) {
-      await this.loginWithClient(clientInfo);
-    }
-  }
-
   // 기존 performLogin 오버라이드 (부모 클래스 호환성)
   async performLogin() {
     // 첫 번째 클라이언트(직접 연결)로 로그인
-    const directClient = this.clients[0];
+    const directClient = this.getDirectClient();
     return await this.performLoginWithClient(directClient);
   }
 
@@ -360,11 +198,14 @@ class StarAucCrawler extends AxiosCrawler {
         `Placing direct bid for item ${item_id} with price ${price}...`
       );
 
-      // 로그인 확인 (직접 연결 클라이언트)
+      // 로그인 확인
       await this.login();
 
+      // 직접 연결 클라이언트 사용
+      const directClient = this.getDirectClient();
+
       // 쿠키에서 XSRF 토큰 추출
-      const cookies = await this.cookieJar.getCookies(
+      const cookies = await directClient.cookieJar.getCookies(
         "https://www.starbuyers-global-auction.com"
       );
       const xsrfCookie = cookies.find((cookie) => cookie.key === "XSRF-TOKEN");
@@ -381,7 +222,7 @@ class StarAucCrawler extends AxiosCrawler {
       formData.append(`bids[${item_id}]`, price.toString());
 
       // 입찰 요청 (직접 연결 클라이언트 사용)
-      const bidResponse = await this.client.post(
+      const bidResponse = await directClient.client.post(
         "https://www.starbuyers-global-auction.com/front_api/item/bid",
         formData,
         {
@@ -454,14 +295,17 @@ class StarAucCrawler extends AxiosCrawler {
     }
   }
 
-  // 배치 입찰 메서드
+  // 배치 입찰 메서드 (직접 연결 사용)
   async batchDirectBid(bidItems) {
     try {
       console.log(`Placing batch bid for ${bidItems.length} items...`);
 
       await this.login();
 
-      const cookies = await this.cookieJar.getCookies(
+      // 직접 연결 클라이언트 사용
+      const directClient = this.getDirectClient();
+
+      const cookies = await directClient.cookieJar.getCookies(
         "https://www.starbuyers-global-auction.com"
       );
       const xsrfCookie = cookies.find((cookie) => cookie.key === "XSRF-TOKEN");
@@ -478,7 +322,7 @@ class StarAucCrawler extends AxiosCrawler {
         formData.append(`bids[${item_id}]`, price.toString());
       });
 
-      const bidResponse = await this.client.post(
+      const bidResponse = await directClient.client.post(
         "https://www.starbuyers-global-auction.com/front_api/item/bid",
         formData,
         {
@@ -621,7 +465,7 @@ class StarAucCrawler extends AxiosCrawler {
   }
 
   async getTotalPages(categoryId) {
-    const clientInfo = this.getNextClient();
+    const clientInfo = this.getClient();
     await this.loginWithClient(clientInfo);
 
     return this.retryOperation(async () => {
@@ -691,7 +535,7 @@ class StarAucCrawler extends AxiosCrawler {
   }
 
   async crawlPage(categoryId, page, existingIds = new Set()) {
-    const clientInfo = this.getNextClient();
+    const clientInfo = this.getClient();
     await this.loginWithClient(clientInfo);
 
     return this.retryOperation(async () => {
@@ -775,7 +619,7 @@ class StarAucCrawler extends AxiosCrawler {
   }
 
   async crawlItemDetails(itemId) {
-    const clientInfo = this.getNextClient();
+    const clientInfo = this.getClient();
     await this.loginWithClient(clientInfo);
 
     return this.retryOperation(async () => {
@@ -863,7 +707,7 @@ class StarAucCrawler extends AxiosCrawler {
       const startTime = Date.now();
       console.log(`Starting StarAuc crawl at ${new Date().toISOString()}`);
 
-      await this.loginAllClients();
+      await this.login();
 
       const allCrawledItems = [];
 
@@ -921,7 +765,7 @@ class StarAucCrawler extends AxiosCrawler {
         `Starting StarAuc updates crawl at ${new Date().toISOString()}`
       );
 
-      await this.loginAllClients();
+      await this.login();
 
       const allCrawledItems = [];
 
@@ -966,7 +810,7 @@ class StarAucCrawler extends AxiosCrawler {
   }
 
   async crawlUpdatePage(page) {
-    const clientInfo = this.getNextClient();
+    const clientInfo = this.getClient();
     await this.loginWithClient(clientInfo);
 
     return this.retryOperation(async () => {
@@ -1022,7 +866,7 @@ class StarAucCrawler extends AxiosCrawler {
   }
 
   async crawlUpdateWithId(itemId) {
-    const clientInfo = this.getNextClient();
+    const clientInfo = this.getClient();
     await this.loginWithClient(clientInfo);
 
     return this.retryOperation(async () => {
@@ -1063,7 +907,7 @@ class StarAucCrawler extends AxiosCrawler {
     try {
       console.log(`Starting update crawl for ${itemIds.length} items...`);
 
-      await this.loginAllClients();
+      await this.login();
 
       const results = [];
       const limit = pLimit(3);
@@ -1102,8 +946,11 @@ class StarAucCrawler extends AxiosCrawler {
 
       await this.login();
 
+      // 직접 연결 클라이언트 사용
+      const directClient = this.getDirectClient();
+
       const url = "https://www.starbuyers-global-auction.com/purchase_report";
-      const response = await this.client.get(url);
+      const response = await directClient.client.get(url);
       const $ = cheerio.load(response.data);
 
       const invoiceElements = $(".p-item-list__body");
@@ -1174,12 +1021,13 @@ class StarAucValueCrawler extends AxiosCrawler {
     this.config.currentCategoryId = null; // 현재 크롤링 중인 카테고리 ID
   }
 
-  async performLogin() {
+  // performLoginWithClient 구현 (부모 클래스에서 호출)
+  async performLoginWithClient(clientInfo) {
     return this.retryOperation(async () => {
-      console.log("Logging in to Star Auction Value...");
+      console.log(`${clientInfo.name} Star Auction Value 로그인 중...`);
 
       // 로그인 페이지 가져오기
-      const response = await this.client.get(this.config.loginPageUrl);
+      const response = await clientInfo.client.get(this.config.loginPageUrl);
 
       // CSRF 토큰 추출
       const $ = cheerio.load(response.data);
@@ -1198,7 +1046,7 @@ class StarAucValueCrawler extends AxiosCrawler {
       formData.append("_token", csrfToken);
 
       // 로그인 요청
-      const loginResponse = await this.client.post(
+      const loginResponse = await clientInfo.client.post(
         this.config.loginPostUrl,
         formData,
         {
@@ -1215,12 +1063,22 @@ class StarAucValueCrawler extends AxiosCrawler {
       );
 
       // 로그인 후 검증
-      if (loginResponse.status === 200 && (await this.loginCheck())) {
+      if (
+        loginResponse.status === 200 &&
+        (await this.loginCheckWithClient(clientInfo))
+      ) {
         return true;
       } else {
         throw new Error("Login verification failed");
       }
     });
+  }
+
+  // 기존 performLogin 오버라이드 (부모 클래스 호환성)
+  async performLogin() {
+    // 직접 연결 클라이언트로 로그인
+    const directClient = this.getDirectClient();
+    return await this.performLoginWithClient(directClient);
   }
 
   // 스크립트에서 데이터 파싱
@@ -1302,11 +1160,14 @@ class StarAucValueCrawler extends AxiosCrawler {
   }
 
   async getTotalPages(categoryId, months = 3) {
+    const clientInfo = this.getClient();
+    await this.loginWithClient(clientInfo);
+
     return this.retryOperation(async () => {
       const url =
         this.config.searchUrl + this.config.searchParams(categoryId, 1, months);
 
-      const response = await this.client.get(url);
+      const response = await clientInfo.client.get(url);
       const $ = cheerio.load(response.data);
 
       // 방법 1: HTML에서 pagination 요소 찾기
@@ -1331,13 +1192,18 @@ class StarAucValueCrawler extends AxiosCrawler {
   }
 
   async crawlPage(categoryId, page, existingIds = new Set(), months = 3) {
+    const clientInfo = this.getClient();
+    await this.loginWithClient(clientInfo);
+
     return this.retryOperation(async () => {
-      console.log(`Crawling page ${page} in category ${categoryId}...`);
+      console.log(
+        `Crawling page ${page} in category ${categoryId} with ${clientInfo.name}...`
+      );
       const url =
         this.config.searchUrl +
         this.config.searchParams(categoryId, page, months);
 
-      const response = await this.client.get(url);
+      const response = await clientInfo.client.get(url);
       const $ = cheerio.load(response.data);
 
       // 아이템 컨테이너 선택
@@ -1357,7 +1223,9 @@ class StarAucValueCrawler extends AxiosCrawler {
         }
       });
 
-      console.log(`Extracted ${pageItems.length} items from page ${page}`);
+      console.log(
+        `Extracted ${pageItems.length} items from page ${page} (${clientInfo.name})`
+      );
 
       // 이미지 처리
       const processedItems = await processImagesInChunks(
@@ -1445,12 +1313,16 @@ class StarAucValueCrawler extends AxiosCrawler {
   }
 
   async crawlItemDetails(itemId) {
+    const clientInfo = this.getClient();
+    await this.loginWithClient(clientInfo);
+
     return this.retryOperation(async () => {
-      console.log(`Crawling details for item ${itemId}...`);
-      await this.login();
+      console.log(
+        `Crawling details for item ${itemId} with ${clientInfo.name}...`
+      );
       const url = this.config.detailUrl(itemId);
 
-      const response = await this.client.get(url);
+      const response = await clientInfo.client.get(url);
       const $ = cheerio.load(response.data);
 
       // 스크립트 데이터 추출
