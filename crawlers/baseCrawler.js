@@ -732,8 +732,8 @@ class AxiosCrawler {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  // 나머지 유틸리티 메서드들은 기존과 동일
   removeLeadingBrackets(title) {
+    // 앞쪽의 대괄호와 소괄호 제거
     return title.replace(/^[\[\(][^\]\)]*[\]\)]\s*/, "");
   }
 
@@ -751,7 +751,8 @@ class AxiosCrawler {
 
   convertToKST(utcString) {
     const date = new Date(utcString);
-    const offset = 9 * 60;
+    // 한국 표준시는 UTC+9
+    const offset = 9 * 60; // 분 단위
     const kstDate = new Date(date.getTime() + offset * 60 * 1000);
     return kstDate.toISOString().replace("Z", "+09:00");
   }
@@ -759,6 +760,7 @@ class AxiosCrawler {
   extractDate(text) {
     if (!text) return null;
 
+    // 월 이름과 숫자 매핑
     const monthNames = {
       jan: "01",
       january: "01",
@@ -785,61 +787,85 @@ class AxiosCrawler {
       december: "12",
     };
 
+    // 텍스트 전처리: 모든 문자를 소문자로 변환
     const lowerText = text.toLowerCase();
 
-    // 다양한 날짜 패턴 매칭
-    const patterns = [
-      /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|june|july|august|september|october|november|december)[,\s.-]*(\d{1,2})[,\s.-]*(\d{4}).*?(\d{1,2})[：:\s]*(\d{2})/i,
-      /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|june|july|august|september|october|november|december)[,\s.-]*(\d{1,2})[,\s.-]*(\d{4})/i,
-      /(\d{4})[-./](\d{1,2})[-./](\d{1,2}).*?(\d{1,2})[：:\s]*(\d{2})/,
-      /(\d{4})[-./](\d{1,2})[-./](\d{1,2})/,
-      /(\d{1,2})[-./](\d{1,2})[-./](\d{4}).*?(\d{1,2})[：:\s]*(\d{2})/,
-      /(\d{1,2})[-./](\d{1,2})[-./](\d{4})/,
-    ];
+    // 패턴 1: 영문 월 + 일 + 연도 + 시간 (예: May 14, 2025 18:00)
+    const pattern1 =
+      /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|june|july|august|september|october|november|december)[,\s.-]*(\d{1,2})[,\s.-]*(\d{4}).*?(\d{1,2})[：:\s]*(\d{2})/i;
+    const match1 = lowerText.match(pattern1);
 
-    for (const pattern of patterns) {
-      const match = (
-        pattern.toString().includes("jan|feb") ? lowerText : text
-      ).match(pattern);
-      if (match) {
-        if (pattern.toString().includes("jan|feb")) {
-          // 영문 월 패턴
-          const month = monthNames[match[1]];
-          const day = match[2].padStart(2, "0");
-          const year = match[3];
-          if (match[4] && match[5]) {
-            const hour = match[4].padStart(2, "0");
-            const minute = match[5].padStart(2, "0");
-            return `${year}-${month}-${day} ${hour}:${minute}:00`;
-          } else {
-            return `${year}-${month}-${day} 00:00:00`;
-          }
-        } else if (match[0].includes("-") && match[1].length === 4) {
-          // YYYY-MM-DD 패턴
-          const year = match[1];
-          const month = match[2].padStart(2, "0");
-          const day = match[3].padStart(2, "0");
-          if (match[4] && match[5]) {
-            const hour = match[4].padStart(2, "0");
-            const minute = match[5].padStart(2, "0");
-            return `${year}-${month}-${day} ${hour}:${minute}:00`;
-          } else {
-            return `${year}-${month}-${day} 00:00:00`;
-          }
-        } else {
-          // MM/DD/YYYY 패턴 (미국식)
-          const month = match[1].padStart(2, "0");
-          const day = match[2].padStart(2, "0");
-          const year = match[3];
-          if (match[4] && match[5]) {
-            const hour = match[4].padStart(2, "0");
-            const minute = match[5].padStart(2, "0");
-            return `${year}-${month}-${day} ${hour}:${minute}:00`;
-          } else {
-            return `${year}-${month}-${day} 00:00:00`;
-          }
-        }
-      }
+    if (match1) {
+      const month = monthNames[match1[1]];
+      const day = match1[2].padStart(2, "0");
+      const year = match1[3];
+      const hour = match1[4].padStart(2, "0");
+      const minute = match1[5].padStart(2, "0");
+      return `${year}-${month}-${day} ${hour}:${minute}:00`;
+    }
+
+    // 패턴 2: 영문 월 + 일 + 연도 (시간 없음) (예: May 14, 2025)
+    const pattern2 =
+      /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|june|july|august|september|october|november|december)[,\s.-]*(\d{1,2})[,\s.-]*(\d{4})/i;
+    const match2 = lowerText.match(pattern2);
+
+    if (match2) {
+      const month = monthNames[match2[1]];
+      const day = match2[2].padStart(2, "0");
+      const year = match2[3];
+      return `${year}-${month}-${day} 00:00:00`;
+    }
+
+    // 패턴 3: YYYY-MM-DD HH:MM 형식 (예: 2025-05-14 18:00)
+    const pattern3 =
+      /(\d{4})[-./](\d{1,2})[-./](\d{1,2}).*?(\d{1,2})[：:\s]*(\d{2})/;
+    const match3 = text.match(pattern3);
+
+    if (match3) {
+      const year = match3[1];
+      const month = match3[2].padStart(2, "0");
+      const day = match3[3].padStart(2, "0");
+      const hour = match3[4].padStart(2, "0");
+      const minute = match3[5].padStart(2, "0");
+      return `${year}-${month}-${day} ${hour}:${minute}:00`;
+    }
+
+    // 패턴 4: YYYY-MM-DD 형식 (시간 없음) (예: 2025-05-14)
+    const pattern4 = /(\d{4})[-./](\d{1,2})[-./](\d{1,2})/;
+    const match4 = text.match(pattern4);
+
+    if (match4) {
+      const year = match4[1];
+      const month = match4[2].padStart(2, "0");
+      const day = match4[3].padStart(2, "0");
+      return `${year}-${month}-${day} 00:00:00`;
+    }
+
+    // 패턴 5: MM/DD/YYYY HH:MM 형식 (미국식) (예: 05/14/2025 18:00)
+    const pattern5 =
+      /(\d{1,2})[-./](\d{1,2})[-./](\d{4}).*?(\d{1,2})[：:\s]*(\d{2})/;
+    const match5 = text.match(pattern5);
+
+    if (match5) {
+      // 미국식(MM/DD/YYYY)으로 가정
+      const month = match5[1].padStart(2, "0");
+      const day = match5[2].padStart(2, "0");
+      const year = match5[3];
+      const hour = match5[4].padStart(2, "0");
+      const minute = match5[5].padStart(2, "0");
+      return `${year}-${month}-${day} ${hour}:${minute}:00`;
+    }
+
+    // 패턴 6: MM/DD/YYYY 형식 (시간 없음) (예: 05/14/2025)
+    const pattern6 = /(\d{1,2})[-./](\d{1,2})[-./](\d{4})/;
+    const match6 = text.match(pattern6);
+
+    if (match6) {
+      // 미국식(MM/DD/YYYY)으로 가정
+      const month = match6[1].padStart(2, "0");
+      const day = match6[2].padStart(2, "0");
+      const year = match6[3];
+      return `${year}-${month}-${day} 00:00:00`;
     }
 
     return null;
@@ -848,7 +874,7 @@ class AxiosCrawler {
   isCollectionDay(date) {
     if (!date) return true;
     const day = new Date(date).getDay();
-    return ![2, 4].includes(day);
+    return ![2, 4].includes(day); // 화요일, 목요일 제외
   }
 
   convertFullWidthToAscii(str) {
@@ -880,6 +906,7 @@ class AxiosCrawler {
   }
 
   getPreviousDayAt18(scheduledDate) {
+    // scheduledDate를 기준으로 전날 18시를 계산
     const scheduleDate = new Date(scheduledDate);
     const previousDay = new Date(scheduleDate);
     previousDay.setDate(previousDay.getDate() - 1);
@@ -887,6 +914,7 @@ class AxiosCrawler {
     return this.extractDate(this.convertToKST(previousDay.toISOString()));
   }
 
+  // 경매 시간이 이미 지났는지 확인
   isAuctionTimeValid(scheduledDate) {
     if (!scheduledDate) return false;
     const auctionDate = new Date(scheduledDate + "+09:00");
