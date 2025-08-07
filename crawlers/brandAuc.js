@@ -605,8 +605,8 @@ class BrandAucCrawler extends AxiosCrawler {
       );
 
       // 경매 날짜 정보 저장
-      const auctionDates = auctionInfoResponse.data.nyuShimeYmdList;
-      this.auctionKaisu = auctionInfoResponse.data.kaisaiKaisu;
+      const auctionDates = auctionInfoResponse?.data?.nyuShimeYmdList;
+      this.auctionKaisu = auctionInfoResponse?.data?.kaisaiKaisu;
 
       // 경매가 열리지 않은 경우
       if (auctionDates?.length == 0) {
@@ -722,7 +722,7 @@ class BrandAucCrawler extends AxiosCrawler {
 
       return allCrawledItems;
     } catch (error) {
-      console.error("Update crawl failed:", error.message);
+      console.error("Update crawl failed:", error);
       return [];
     }
   }
