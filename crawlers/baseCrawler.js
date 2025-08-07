@@ -362,9 +362,15 @@ class AxiosCrawler {
     this.maxRetries = 3;
     this.retryDelay = 1000;
 
-    // 로그인 중복 방지를 위한 변수들
+    // 로그인 중복 방지를 위한 변수들 (단일 클라이언트용)
     this.loginInProgress = false;
     this.loginPromise = null;
+
+    // 다중 클라이언트용 로그인 관리 변수들
+    this.clientLoginPromises = new Map(); // clientIndex -> Promise
+    this.clientLoginInProgress = new Map(); // clientIndex -> boolean
+    this.clientLastLoginCheck = new Map(); // clientIndex -> timestamp
+    this.clientLastLoginCheckResult = new Map(); // clientIndex -> boolean
 
     // 로그인 체크 캐싱을 위한 변수
     this.lastLoginCheck = null;
@@ -520,15 +526,41 @@ class AxiosCrawler {
     }
   }
 
-  // 특정 클라이언트로 로그인 체크
+  // 특정 클라이언트의 로그인 체크 (캐싱 포함)
   async loginCheckWithClient(clientInfo) {
+    const clientIndex = clientInfo.index;
+
+    // 마지막 로그인 체크 시간이 5분 이내면 캐시된 결과 반환
+    const lastCheck = this.clientLastLoginCheck.get(clientIndex);
+    const lastResult = this.clientLastLoginCheckResult.get(clientIndex);
+
+    if (
+      lastCheck &&
+      Date.now() - lastCheck < this.loginCheckInterval &&
+      lastResult !== false
+    ) {
+      console.log(`Using cached login check result for ${clientInfo.name}`);
+      return lastResult;
+    }
+
+    // 5분이 지났거나 처음 체크하는 경우, 실제 체크 수행
     return this.retryOperation(async () => {
       try {
         const responses = await Promise.all(
           this.config.loginCheckUrls.map((url) => clientInfo.client.get(url))
         );
-        return responses.every((response) => response.status === 200);
+
+        const result = responses.every((response) => response.status === 200);
+
+        // 결과 캐싱
+        this.clientLastLoginCheck.set(clientIndex, Date.now());
+        this.clientLastLoginCheckResult.set(clientIndex, result);
+
+        return result;
       } catch (error) {
+        // 에러 발생시 캐싱 업데이트
+        this.clientLastLoginCheck.set(clientIndex, Date.now());
+        this.clientLastLoginCheckResult.set(clientIndex, false);
         return false;
       }
     });
@@ -541,31 +573,141 @@ class AxiosCrawler {
     );
   }
 
-  async loginWithClient(clientInfo) {
-    if (clientInfo.isLoggedIn && this.isSessionValid(clientInfo.loginTime)) {
-      return true;
-    }
+  // 개선된 단일 클라이언트 로그인 - 중복 방지와 Promise 관리 포함
+  async loginWithClient(clientInfo, forceLogin = false) {
+    const clientIndex = clientInfo.index;
 
     try {
-      const result = await this.performLoginWithClient(clientInfo);
+      // 강제 로그인이 아니고 세션이 유효한 경우
+      if (
+        !forceLogin &&
+        clientInfo.isLoggedIn &&
+        this.isSessionValid(clientInfo.loginTime)
+      ) {
+        const serverLoginValid = await this.loginCheckWithClient(clientInfo);
+        if (serverLoginValid) {
+          console.log(
+            `${clientInfo.name} - Already logged in, session is valid`
+          );
+          return true;
+        } else {
+          console.log(
+            `${clientInfo.name} - Server session expired, need to re-login`
+          );
+          this.forceLogoutClient(clientInfo);
+        }
+      }
+
+      // 강제 로그아웃 처리
+      if (forceLogin) {
+        console.log(
+          `${clientInfo.name} - Force login requested - clearing session`
+        );
+        this.forceLogoutClient(clientInfo);
+      }
+
+      // 이미 로그인이 진행 중인 경우 기다림
+      if (
+        this.clientLoginInProgress.get(clientIndex) &&
+        this.clientLoginPromises.has(clientIndex)
+      ) {
+        console.log(
+          `${clientInfo.name} - Login already in progress, waiting for completion`
+        );
+        return await this.clientLoginPromises.get(clientIndex);
+      }
+
+      console.log(`${clientInfo.name} - Starting login process...`);
+      this.clientLoginInProgress.set(clientIndex, true);
+
+      // 로그인 Promise 생성 및 저장
+      const loginPromise = this.performLoginWithClient(clientInfo);
+      this.clientLoginPromises.set(clientIndex, loginPromise);
+
+      const result = await loginPromise;
+
       if (result) {
         clientInfo.isLoggedIn = true;
         clientInfo.loginTime = Date.now();
         console.log(`✅ ${clientInfo.name} 로그인 성공`);
+      } else {
+        console.log(`❌ ${clientInfo.name} 로그인 실패`);
+        this.forceLogoutClient(clientInfo);
       }
+
       return result;
     } catch (error) {
-      console.error(`❌ ${clientInfo.name} 로그인 실패:`, error.message);
+      console.error(`❌ ${clientInfo.name} 로그인 과정 실패:`, error.message);
+      this.forceLogoutClient(clientInfo);
       return false;
+    } finally {
+      // 로그인 상태 정리
+      this.clientLoginInProgress.set(clientIndex, false);
+      this.clientLoginPromises.delete(clientIndex);
     }
   }
 
-  // 모든 클라이언트 로그인
-  async loginAllClients() {
+  // 특정 클라이언트 강제 로그아웃
+  forceLogoutClient(clientInfo) {
+    const clientIndex = clientInfo.index;
+
+    console.log(
+      `Forcing logout for ${clientInfo.name} and clearing session data...`
+    );
+
+    // 클라이언트별 세션 정보 초기화
+    clientInfo.isLoggedIn = false;
+    clientInfo.loginTime = null;
+
+    // 로그인 진행 상태 초기화
+    this.clientLoginInProgress.set(clientIndex, false);
+    this.clientLoginPromises.delete(clientIndex);
+
+    // 로그인 체크 캐시 초기화
+    this.clientLastLoginCheck.delete(clientIndex);
+    this.clientLastLoginCheckResult.delete(clientIndex);
+
+    console.log(`Session data cleared for ${clientInfo.name}`);
+  }
+
+  // 모든 클라이언트 로그인 - 동시 실행 지원
+  async loginAllClients(forceLogin = false) {
     console.log("\n=== 모든 클라이언트 로그인 ===");
-    for (const clientInfo of this.clients) {
-      await this.loginWithClient(clientInfo);
+
+    // 모든 클라이언트에 대해 동시에 로그인 시도
+    const loginTasks = this.clients.map((clientInfo) =>
+      this.loginWithClient(clientInfo, forceLogin)
+    );
+
+    const results = await Promise.all(loginTasks);
+
+    const successCount = results.filter((result) => result).length;
+    console.log(`로그인 완료: ${successCount}/${this.clients.length} 성공`);
+
+    return results;
+  }
+
+  // 로그인된 클라이언트 반환
+  getLoggedInClients() {
+    return this.clients.filter(
+      (client) => client.isLoggedIn && this.isSessionValid(client.loginTime)
+    );
+  }
+
+  // 사용 가능한 클라이언트 반환 (로그인 상태 및 세션 유효성 확인)
+  async getAvailableClient() {
+    const loggedInClients = this.getLoggedInClients();
+
+    if (loggedInClients.length === 0) {
+      console.log(
+        "No logged in clients available, attempting to login all clients"
+      );
+      await this.loginAllClients();
+      return this.getLoggedInClients()[0] || null;
     }
+
+    // 라운드 로빈으로 선택
+    return this.getNextClient();
   }
 
   // 강제 로그아웃 - 모든 세션 정보 초기화
@@ -575,29 +717,28 @@ class AxiosCrawler {
     if (this.useMultipleClients) {
       // 다중 클라이언트의 경우 각각 초기화
       this.clients.forEach((clientInfo) => {
-        clientInfo.isLoggedIn = false;
-        clientInfo.loginTime = null;
+        this.forceLogoutClient(clientInfo);
       });
     } else {
       // 단일 클라이언트의 경우 기존 로직
       this.cookieJar = new tough.CookieJar();
       this.initializeAxiosClient();
+
+      // 로그인 상태 초기화
+      this.isLoggedIn = false;
+      this.loginTime = null;
+      this.loginInProgress = false;
+      this.loginPromise = null;
+
+      // 로그인 체크 캐시 초기화
+      this.lastLoginCheck = null;
+      this.lastLoginCheckResult = false;
     }
-
-    // 로그인 상태 초기화
-    this.isLoggedIn = false;
-    this.loginTime = null;
-    this.loginInProgress = false;
-    this.loginPromise = null;
-
-    // 로그인 체크 캐시 초기화
-    this.lastLoginCheck = null;
-    this.lastLoginCheckResult = false;
 
     console.log("Session data cleared successfully");
   }
 
-  // 세션 유효성 검사 (단일 클라이언트용)
+  // 세션 유효성 검사
   isSessionValid(loginTime = this.loginTime) {
     if (!loginTime) return false;
     return Date.now() - loginTime < this.sessionTimeout;
@@ -638,13 +779,13 @@ class AxiosCrawler {
     });
   }
 
-  // 메인 로그인 메서드 - 모든 로직을 부모 클래스에서 처리
+  // 메인 로그인 메서드 - 통합된 로직
   async login(forceLogin = false) {
     try {
       if (this.useMultipleClients) {
         // 다중 클라이언트인 경우 모든 클라이언트 로그인
-        await this.loginAllClients();
-        return true;
+        const results = await this.loginAllClients(forceLogin);
+        return results.some((result) => result); // 하나라도 성공하면 true
       }
 
       // 단일 클라이언트인 경우 기존 로직
