@@ -180,6 +180,10 @@ router.get("/", async (req, res) => {
         // MariaDB 호환 숫자 변환
         orderByClause = "final_price + 0";
         break;
+      case "brand":
+        // 브랜드
+        orderByClause = "ci.brand";
+        break;
       default:
         orderByClause = "title";
     }

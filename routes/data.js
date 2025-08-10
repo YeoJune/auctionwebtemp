@@ -330,7 +330,6 @@ router.get("/", async (req, res) => {
     }
 
     // 9. 날짜 필터
-    // 9. 날짜 필터
     let effectiveDates = enabledDates.map((date) => {
       // filter_settings의 datetime을 YYYY-MM-DD 형식으로 변환
       return date.substring(0, 10);
@@ -417,6 +416,9 @@ router.get("/", async (req, res) => {
       case "starting_price":
         // MariaDB 호환 숫자 변환
         orderByClause = "ci.starting_price + 0";
+        break;
+      case "brand":
+        orderByClause = "ci.brand";
         break;
       default:
         orderByClause = "ci.scheduled_date";
