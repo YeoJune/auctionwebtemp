@@ -182,7 +182,7 @@ router.get("/", async (req, res) => {
         break;
       case "brand":
         // 브랜드
-        orderByClause = "ci.brand";
+        orderByClause = "brand";
         break;
       default:
         orderByClause = "title";
