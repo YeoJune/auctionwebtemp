@@ -168,7 +168,7 @@ window.BidManager = (function () {
       event.preventDefault();
     }
 
-    if (!_state.isAuthenticated) {
+    if (!window.AuthManager?.isAuthenticated()) {
       alert("입찰하려면 로그인이 필요합니다.");
       return;
     }
@@ -549,7 +549,7 @@ window.BidManager = (function () {
    * @returns {Promise<void>}
    */
   async function handleLiveBidSubmit(value, itemId) {
-    if (!_state.isAuthenticated) {
+    if (!window.AuthManager?.isAuthenticated()) {
       alert("입찰하려면 로그인이 필요합니다.");
       return;
     }
@@ -647,7 +647,7 @@ window.BidManager = (function () {
    * @returns {Promise<void>}
    */
   async function handleDirectBidSubmit(value, itemId) {
-    if (!_state.isAuthenticated) {
+    if (!window.AuthManager?.isAuthenticated()) {
       alert("입찰하려면 로그인이 필요합니다.");
       return;
     }
