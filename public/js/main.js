@@ -543,6 +543,32 @@ window.ProductListController = (function () {
 
       showDetails(item.item_id);
     });
+
+    // 위시리스트 버튼 이벤트 (상품 페이지용)
+    if (config.features.wishlist) {
+      const wishlistBtns = card.querySelectorAll(".wishlist-btn");
+      wishlistBtns.forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const favoriteNumber = parseInt(btn.dataset.favorite);
+          if (window.toggleWishlist) {
+            window.toggleWishlist(item.item_id, favoriteNumber);
+          }
+        });
+      });
+    }
+
+    // 관리자 수정 버튼 이벤트 (시세 페이지용)
+    if (config.features.adminEdit) {
+      const editBtn = card.querySelector(".edit-price-icon");
+      if (editBtn && window.handlePriceEdit) {
+        editBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const priceValue = editBtn.closest(".info-value");
+          window.handlePriceEdit(item.item_id, priceValue);
+        });
+      }
+    }
   }
 
   /**
