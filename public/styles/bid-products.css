@@ -203,13 +203,13 @@
   grid-template-columns: 100px 1fr 280px 200px;
   grid-template-areas: "image info bid-section status";
   gap: 20px;
-  padding: 20px;
+  padding: 16px;
   border-bottom: 1px solid #f0f0f0;
   cursor: pointer;
   transition: background-color 0.2s ease;
   position: relative;
   align-items: start;
-  min-height: 120px;
+  min-height: 100px;
 }
 
 .bid-result-item:hover {
@@ -379,7 +379,7 @@
 /* 입찰 액션 영역 */
 .bid-action {
   margin: 0;
-  padding: 12px;
+  padding: 8px;
   background-color: #f8f9fa;
   border-radius: 6px;
   border: 1px solid #e9ecef;
@@ -388,7 +388,7 @@
 .bid-action.expanded {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   background: none;
   padding: 0;
   border: none;
@@ -398,7 +398,7 @@
   flex: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .bid-action .bid-input-container {
@@ -407,7 +407,7 @@
 
 /* 입찰 정보 영역 */
 .bid-info {
-  padding: 12px;
+  padding: 8px;
   background-color: #f8f9fa;
   border-radius: 6px;
   border: 1px solid #e9ecef;
@@ -417,14 +417,14 @@
 .price-stages {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .price-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .price-label {
@@ -444,18 +444,18 @@
 
 .winning-price {
   background-color: #e8f5e9;
-  padding: 8px;
+  padding: 6px;
   border-radius: 6px;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 /* 타이머 스타일 */
 .bid-timer {
   background-color: #e3f2fd;
   color: var(--primary-color);
-  padding: 8px 12px;
+  padding: 6px 10px;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   text-align: center;
 }
@@ -671,11 +671,11 @@
   }
 
   .bid-action.expanded {
-    gap: 10px;
+    gap: 6px;
   }
 
   .bid-info {
-    padding: 10px;
+    padding: 6px;
   }
 }
 
