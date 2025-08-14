@@ -173,7 +173,8 @@ function setupModal(modalId) {
 
   if (closeBtn) {
     closeBtn.onclick = () => {
-      modal.style.display = "none";
+      modal.classList.remove("modal-show");
+      modal.classList.add("modal-hide");
 
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.has("item_id")) {
@@ -188,13 +189,20 @@ function setupModal(modalId) {
 
   window.onclick = (event) => {
     if (event.target === modal) {
-      modal.style.display = "none";
+      modal.classList.remove("modal-show");
+      modal.classList.add("modal-hide");
     }
   };
 
   return {
-    show: () => (modal.style.display = "flex"),
-    hide: () => (modal.style.display = "none"),
+    show: () => {
+      modal.classList.remove("modal-hide");
+      modal.classList.add("modal-show");
+    },
+    hide: () => {
+      modal.classList.remove("modal-show");
+      modal.classList.add("modal-hide");
+    },
     element: modal,
   };
 }
@@ -203,7 +211,13 @@ function setupModal(modalId) {
 function toggleLoading(show) {
   const loadingMsg = document.getElementById("loadingMsg");
   if (loadingMsg) {
-    loadingMsg.style.display = show ? "block" : "none";
+    if (show) {
+      loadingMsg.classList.remove("loading-hidden");
+      loadingMsg.classList.add("loading-visible");
+    } else {
+      loadingMsg.classList.remove("loading-visible");
+      loadingMsg.classList.add("loading-hidden");
+    }
   }
 }
 
@@ -265,17 +279,15 @@ window.AuthManager = (function () {
    * 인증 UI 업데이트
    */
   function updateAuthUI() {
-    const signinBtn = document.getElementById("signinBtn");
-    const signoutBtn = document.getElementById("signoutBtn");
-
-    if (!signinBtn || !signoutBtn) return;
+    const authContainer = document.querySelector(".auth-container");
+    if (!authContainer) return;
 
     if (isAuthenticated) {
-      signinBtn.style.display = "none";
-      signoutBtn.style.display = "inline-block";
+      authContainer.classList.remove("auth-unauthenticated");
+      authContainer.classList.add("auth-authenticated");
     } else {
-      signinBtn.style.display = "inline-block";
-      signoutBtn.style.display = "none";
+      authContainer.classList.remove("auth-authenticated");
+      authContainer.classList.add("auth-unauthenticated");
     }
   }
 
@@ -358,8 +370,8 @@ function setupMobileMenu() {
 
   // 모바일 메뉴 닫기 함수 전역 등록
   window.mobileMenuFunctions.closeMobileMenu = function () {
-    navContainer.classList.remove("active");
-    document.body.style.overflow = ""; // 배경 스크롤 복원
+    navContainer.classList.remove("mobile-menu-active");
+    document.body.classList.remove("no-scroll");
 
     // X 아이콘을 햄버거 아이콘으로 변경
     const icon = menuToggle.querySelector("i");
@@ -381,8 +393,8 @@ function setupMobileMenu() {
 
   // 모바일 메뉴 열기 함수 전역 등록
   window.mobileMenuFunctions.openMobileMenu = function () {
-    navContainer.classList.add("active");
-    document.body.style.overflow = "hidden"; // 배경 스크롤 방지
+    navContainer.classList.add("mobile-menu-active");
+    document.body.classList.add("no-scroll");
 
     // 햄버거 아이콘을 X 아이콘으로 변경
     const icon = menuToggle.querySelector("i");
@@ -405,7 +417,7 @@ function setupMobileMenu() {
     e.stopPropagation();
 
     // 모바일 메뉴 상태에 따라 토글
-    if (navContainer.classList.contains("active")) {
+    if (navContainer.classList.contains("mobile-menu-active")) {
       window.mobileMenuFunctions.closeMobileMenu();
     } else {
       window.mobileMenuFunctions.openMobileMenu();
@@ -429,7 +441,7 @@ function setupMobileMenu() {
   document.addEventListener("click", function (e) {
     if (
       window.innerWidth <= 768 &&
-      navContainer.classList.contains("active") &&
+      navContainer.classList.contains("mobile-menu-active") &&
       !navContainer.contains(e.target) &&
       !menuToggleClone.contains(e.target)
     ) {
@@ -442,7 +454,7 @@ function setupMobileMenu() {
     if (
       e.key === "Escape" &&
       window.innerWidth <= 768 &&
-      navContainer.classList.contains("active")
+      navContainer.classList.contains("mobile-menu-active")
     ) {
       window.mobileMenuFunctions.closeMobileMenu();
     }
@@ -476,16 +488,6 @@ function setupMobileFilters() {
   if (!backdrop) {
     backdrop = document.createElement("div");
     backdrop.className = "filter-backdrop";
-    backdrop.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.5);
-      z-index: 899;
-      display: none;
-    `;
     document.body.appendChild(backdrop);
   }
 
@@ -496,12 +498,12 @@ function setupMobileFilters() {
 
   window.mobileFilterFunctions.closeFilter = function () {
     if (filtersContainer) {
-      filtersContainer.classList.remove("active");
+      filtersContainer.classList.remove("filter-active");
     }
     if (backdrop) {
-      backdrop.style.display = "none";
+      backdrop.classList.remove("filter-backdrop-visible");
     }
-    document.body.style.overflow = "";
+    document.body.classList.remove("no-scroll");
     console.log("필터 닫기 함수 실행됨");
   };
 
@@ -544,9 +546,9 @@ function setupMobileFilters() {
   filterBtnClone.addEventListener("click", function (e) {
     e.preventDefault();
     e.stopPropagation();
-    filtersContainer.classList.add("active");
-    backdrop.style.display = "block";
-    document.body.style.overflow = "hidden";
+    filtersContainer.classList.add("filter-active");
+    backdrop.classList.add("filter-backdrop-visible");
+    document.body.classList.add("no-scroll");
   });
 
   // 백드롭 이벤트 리스너 추가
@@ -556,7 +558,7 @@ function setupMobileFilters() {
 
   // ESC 키 이벤트 리스너
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape" && filtersContainer.classList.contains("active")) {
+    if (e.key === "Escape" && filtersContainer.classList.contains("filter-active")) {
       window.mobileFilterFunctions.closeFilter();
     }
   });
@@ -569,13 +571,15 @@ async function showNoticeSection() {
 
   if (!noticeSection || !showNoticesBtn) return;
 
-  if (noticeSection.style.display === "none") {
-    noticeSection.style.display = "block";
+  if (noticeSection.classList.contains("notice-hidden")) {
+    noticeSection.classList.remove("notice-hidden");
+    noticeSection.classList.add("notice-visible");
     showNoticesBtn.innerHTML =
       '<i class="fas fa-bullhorn fa-lg"></i> 공지사항 닫기';
     await fetchNotices();
   } else {
-    noticeSection.style.display = "none";
+    noticeSection.classList.remove("notice-visible");
+    noticeSection.classList.add("notice-hidden");
     showNoticesBtn.innerHTML =
       '<i class="fas fa-bullhorn fa-lg"></i> 공지사항 보기';
   }
@@ -617,17 +621,21 @@ function showNoticeDetail(notice) {
   // 이미지 처리
   if (notice.image_url) {
     image.src = notice.image_url;
-    image.style.display = "block";
+    image.classList.remove("hidden");
+    image.classList.add("show");
   } else {
-    image.style.display = "none";
+    image.classList.remove("show");
+    image.classList.add("hidden");
   }
 
   // 모달 표시 및 닫기 버튼 이벤트 설정
-  modal.style.display = "block";
+  modal.classList.remove("modal-hide");
+  modal.classList.add("modal-show");
 
   const closeBtn = modal.querySelector(".close");
   const closeModal = () => {
-    modal.style.display = "none";
+    modal.classList.remove("modal-show");
+    modal.classList.add("modal-hide");
   };
 
   // 기존 이벤트 리스너 제거 후 새로 추가
