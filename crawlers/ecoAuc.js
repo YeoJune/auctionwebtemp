@@ -276,7 +276,6 @@ class EcoAucCrawler extends AxiosCrawler {
 
   async crawlPage(categoryId, page, existingIds = new Set()) {
     const clientInfo = this.getClient();
-    await this.loginWithClient(clientInfo);
 
     return this.retryOperation(async () => {
       console.log(
@@ -392,7 +391,6 @@ class EcoAucCrawler extends AxiosCrawler {
 
   async getTotalPages(categoryId) {
     const clientInfo = this.getClient();
-    await this.loginWithClient(clientInfo);
 
     return this.retryOperation(async () => {
       console.log(
@@ -652,7 +650,6 @@ class EcoAucCrawler extends AxiosCrawler {
 
   async getTotalPagesForAllCategories() {
     const clientInfo = this.getClient();
-    await this.loginWithClient(clientInfo);
 
     return this.retryOperation(async () => {
       console.log(
@@ -685,7 +682,6 @@ class EcoAucCrawler extends AxiosCrawler {
 
   async crawlUpdatePage(page) {
     const clientInfo = this.getClient();
-    await this.loginWithClient(clientInfo);
 
     return this.retryOperation(async () => {
       console.log(
@@ -938,7 +934,6 @@ class EcoAucCrawler extends AxiosCrawler {
 
   async crawlUpdateWithId(itemId) {
     const clientInfo = this.getClient();
-    await this.loginWithClient(clientInfo);
 
     return this.retryOperation(async () => {
       console.log(
@@ -1072,7 +1067,6 @@ class EcoAucValueCrawler extends AxiosCrawler {
 
   async getTotalPages(categoryId, months = 3) {
     const clientInfo = this.getClient();
-    await this.loginWithClient(clientInfo);
 
     return this.retryOperation(async () => {
       console.log(
@@ -1172,7 +1166,6 @@ class EcoAucValueCrawler extends AxiosCrawler {
 
   async crawlPage(categoryId, page, existingIds = new Set(), months = 3) {
     const clientInfo = this.getClient();
-    await this.loginWithClient(clientInfo);
 
     return this.retryOperation(async () => {
       console.log(

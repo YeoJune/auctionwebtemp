@@ -466,7 +466,6 @@ class StarAucCrawler extends AxiosCrawler {
 
   async getTotalPages(categoryId) {
     const clientInfo = this.getClient();
-    await this.loginWithClient(clientInfo);
 
     return this.retryOperation(async () => {
       const url =
@@ -536,7 +535,6 @@ class StarAucCrawler extends AxiosCrawler {
 
   async crawlPage(categoryId, page, existingIds = new Set()) {
     const clientInfo = this.getClient();
-    await this.loginWithClient(clientInfo);
 
     return this.retryOperation(async () => {
       console.log(
@@ -759,7 +757,7 @@ class StarAucCrawler extends AxiosCrawler {
 
   async crawlUpdates() {
     try {
-      const limit = pLimit(10);
+      const limit = pLimit(20);
       const startTime = Date.now();
       console.log(
         `Starting StarAuc updates crawl at ${new Date().toISOString()}`
@@ -811,7 +809,6 @@ class StarAucCrawler extends AxiosCrawler {
 
   async crawlUpdatePage(page) {
     const clientInfo = this.getClient();
-    await this.loginWithClient(clientInfo);
 
     return this.retryOperation(async () => {
       console.log(`Crawling update page ${page} with ${clientInfo.name}`);
@@ -867,7 +864,6 @@ class StarAucCrawler extends AxiosCrawler {
 
   async crawlUpdateWithId(itemId) {
     const clientInfo = this.getClient();
-    await this.loginWithClient(clientInfo);
 
     return this.retryOperation(async () => {
       console.log(
@@ -1161,7 +1157,6 @@ class StarAucValueCrawler extends AxiosCrawler {
 
   async getTotalPages(categoryId, months = 3) {
     const clientInfo = this.getClient();
-    await this.loginWithClient(clientInfo);
 
     return this.retryOperation(async () => {
       const url =
@@ -1193,7 +1188,6 @@ class StarAucValueCrawler extends AxiosCrawler {
 
   async crawlPage(categoryId, page, existingIds = new Set(), months = 3) {
     const clientInfo = this.getClient();
-    await this.loginWithClient(clientInfo);
 
     return this.retryOperation(async () => {
       console.log(

@@ -181,7 +181,6 @@ class BrandAucCrawler extends AxiosCrawler {
         if (bidConfig.type === "live") {
           // 기존 Live 경매 크롤링 방식
           const clientInfo = this.getClient();
-          await this.loginWithClient(clientInfo);
 
           const firstPageResponse = await clientInfo.client.get(
             this.config.previewItemsApiUrl,
@@ -222,7 +221,6 @@ class BrandAucCrawler extends AxiosCrawler {
             );
 
             const pageClientInfo = this.getClient();
-            await this.loginWithClient(pageClientInfo);
 
             const response = await pageClientInfo.client.get(
               this.config.previewItemsApiUrl,
@@ -257,7 +255,6 @@ class BrandAucCrawler extends AxiosCrawler {
         } else if (bidConfig.type === "direct") {
           // Direct 경매 크롤링
           const clientInfo = this.getClient();
-          await this.loginWithClient(clientInfo);
 
           await clientInfo.cookieJar.setCookie(
             "brand_language=en",
@@ -325,7 +322,6 @@ class BrandAucCrawler extends AxiosCrawler {
             console.log(`Crawling direct page ${page + 1} of ${totalPages}`);
 
             const pageClientInfo = this.getClient();
-            await this.loginWithClient(pageClientInfo);
 
             const response = await pageClientInfo.client.get(
               "https://bid.brand-auc.com/api/v1/brand-bid/items/list",
@@ -585,7 +581,6 @@ class BrandAucCrawler extends AxiosCrawler {
 
       // auctionDate 설정 (기존 crawlAllItems에서 가져온 로직)
       const clientInfo = this.getClient();
-      await this.loginWithClient(clientInfo);
 
       await clientInfo.cookieJar.setCookie(
         "brand_language=en",
@@ -667,7 +662,6 @@ class BrandAucCrawler extends AxiosCrawler {
             console.log(`Crawling update page ${page + 1} of ${totalPages}`);
 
             const pageClientInfo = this.getClient();
-            await this.loginWithClient(pageClientInfo);
 
             const response = await pageClientInfo.client.get(
               "https://bid.brand-auc.com/api/v1/brand-bid/items/list",
@@ -975,7 +969,6 @@ class BrandAucCrawler extends AxiosCrawler {
       console.log(`Crawling update info for item ${itemId}...`);
 
       const clientInfo = this.getClient();
-      await this.loginWithClient(clientInfo);
 
       // 상세 정보 URL 구성 (원본 아이템의 정보 사용)
       const detailUrl = `https://bid.brand-auc.com/api/v1/brand-bid/items/detail?uketsukeBng=${itemId}`;
@@ -1121,7 +1114,6 @@ class BrandAucValueCrawler extends AxiosCrawler {
 
       // 최근 경매 회차 정보 가져오기
       const clientInfo = this.getClient();
-      await this.loginWithClient(clientInfo);
 
       const auctionInfoResponse = await clientInfo.client.get(
         "https://e-auc.brand-auc.com/api/v1/marketprice/marketpriceItems/searchHeaders/kakoKaisaiInfo",
@@ -1193,7 +1185,6 @@ class BrandAucValueCrawler extends AxiosCrawler {
         console.log(`Crawling value page ${page + 1} of ${totalPages}`);
 
         const pageClientInfo = this.getClient();
-        await this.loginWithClient(pageClientInfo);
 
         const response = await pageClientInfo.client.get(
           this.config.marketPriceApiUrl,
