@@ -358,7 +358,7 @@ class AxiosCrawler {
     // 로그인 관련 상태 변수들
     this.isLoggedIn = false;
     this.loginTime = null;
-    this.sessionTimeout = 1000 * 60 * 60 * 3; // 3시간
+    this.sessionTimeout = 1000 * 60; // 1분 (테스트용)
     this.maxRetries = 3;
     this.retryDelay = 1000;
 
