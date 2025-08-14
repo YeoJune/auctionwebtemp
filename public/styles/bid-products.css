@@ -200,16 +200,15 @@
 /* 입찰 결과 아이템 */
 .bid-result-item {
   display: grid;
-  grid-template-columns: 100px 1fr auto;
-  grid-template-areas:
-    "image info status"
-    "image bid-action bid-action";
-  gap: 16px;
+  grid-template-columns: 100px 1fr 280px;
+  grid-template-areas: "image info status-bid";
+  gap: 20px;
   padding: 20px;
   border-bottom: 1px solid #f0f0f0;
   cursor: pointer;
   transition: background-color 0.2s ease;
   position: relative;
+  align-items: start;
 }
 
 .bid-result-item:hover {
@@ -285,14 +284,20 @@
   color: var(--text-secondary);
 }
 
-/* 상태 영역 */
+/* 상태 및 입찰 영역 */
 .result-status {
-  grid-area: status;
+  grid-area: status-bid;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-  min-width: 120px;
+  gap: 12px;
+  min-width: 280px;
+}
+
+.status-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
 }
 
 .bid-type {
@@ -314,12 +319,11 @@
 }
 
 .status-badge {
-  padding: 6px 12px;
+  padding: 4px 10px;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   text-align: center;
-  min-width: 80px;
 }
 
 /* 상태별 스타일 */
@@ -365,71 +369,106 @@
 
 /* 입찰 액션 영역 */
 .bid-action {
-  grid-area: bid-action;
-  margin-top: 16px;
+  margin-top: 0;
 }
 
 .bid-action.expanded {
-  display: flex;
-  gap: 20px;
   background-color: #f8f9fa;
-  padding: 16px;
-  border-radius: 8px;
+  padding: 12px;
+  border-radius: 6px;
   border: 1px solid #e9ecef;
 }
 
 .bid-action-left {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.bid-action-left .bid-timer {
+  margin-bottom: 8px;
+}
+
+.bid-action-left .real-time-price,
+.bid-action-left .bid-price-info,
+.bid-action-left .final-price {
+  margin-bottom: 6px;
+  font-size: 13px;
 }
 
 .bid-action .bid-input-container {
-  flex: 0 0 300px;
+  margin-top: 8px;
+}
+
+.bid-action .bid-input-group {
+  height: 32px;
+}
+
+.bid-action .bid-input {
+  font-size: 13px;
+  padding: 6px 8px;
+}
+
+.bid-action .bid-button {
+  padding: 6px 12px;
+  font-size: 13px;
+  height: 32px;
+}
+
+.bid-action .quick-bid-buttons {
+  margin-top: 6px;
+  gap: 4px;
+}
+
+.bid-action .quick-bid-btn {
+  padding: 4px 8px;
+  font-size: 11px;
+  min-height: 24px;
 }
 
 /* 입찰 정보 영역 */
 .bid-info {
-  padding: 16px;
   background-color: #f8f9fa;
-  border-radius: 8px;
+  padding: 12px;
+  border-radius: 6px;
   border: 1px solid #e9ecef;
+  font-size: 13px;
 }
 
 .price-stages {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .price-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .price-label {
   color: var(--text-secondary);
   font-weight: 500;
+  font-size: 12px;
 }
 
 .price-value {
   font-weight: 600;
   color: var(--text-primary);
+  font-size: 13px;
 }
 
 .price-korean {
   color: var(--primary-color);
   font-weight: 600;
+  font-size: 12px;
 }
 
 .winning-price {
   background-color: #e8f5e9;
-  padding: 8px;
-  border-radius: 6px;
-  margin-top: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  margin-top: 6px;
 }
 
 /* 타이머 스타일 */
@@ -553,9 +592,7 @@
     grid-template-columns: 80px 1fr;
     grid-template-areas:
       "image info"
-      "image status"
-      "bid-info bid-info"
-      "bid-action bid-action";
+      "status-bid status-bid";
     gap: 12px;
     padding: 15px;
   }
@@ -566,22 +603,21 @@
   }
 
   .result-status {
-    align-items: flex-start;
-    margin-top: 8px;
+    min-width: auto;
+    gap: 10px;
   }
 
-  .bid-info {
-    grid-area: bid-info;
-    margin-top: 12px;
+  .status-header {
+    justify-content: flex-start;
+    gap: 12px;
   }
 
   .bid-action.expanded {
-    flex-direction: column;
-    gap: 16px;
+    padding: 10px;
   }
 
-  .bid-action .bid-input-container {
-    flex: none;
+  .bid-action-left {
+    margin-bottom: 8px;
   }
 
   /* 모바일 필터 */
@@ -663,7 +699,26 @@
   }
 
   .bid-action.expanded {
-    padding: 12px;
+    padding: 8px;
+  }
+
+  .result-status {
+    gap: 8px;
+  }
+
+  .status-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .bid-type {
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+
+  .status-badge {
+    font-size: 11px;
+    padding: 3px 8px;
   }
 }
 
@@ -689,5 +744,9 @@
   .secondary-button {
     padding: 8px 16px;
     font-size: 13px;
+  }
+
+  .result-status {
+    gap: 6px;
   }
 }
