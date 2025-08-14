@@ -848,11 +848,29 @@ window.ProductListController = (function () {
     const searchInput = document.getElementById("searchInput");
     state.searchTerm = searchInput.value;
     state.currentPage = 1;
+
+    // 모바일 필터가 열려있으면 닫기
+    if (
+      window.mobileFilterFunctions &&
+      window.mobileFilterFunctions.closeFilter
+    ) {
+      window.mobileFilterFunctions.closeFilter();
+    }
+
     fetchData();
   }
 
   function handleApplyFilters() {
     state.currentPage = 1;
+
+    // 모바일 필터가 열려있으면 닫기
+    if (
+      window.mobileFilterFunctions &&
+      window.mobileFilterFunctions.closeFilter
+    ) {
+      window.mobileFilterFunctions.closeFilter();
+    }
+
     fetchData();
   }
 
@@ -906,6 +924,14 @@ window.ProductListController = (function () {
     // 선택된 항목 수 업데이트
     updateSelectedCount("brand");
     updateSelectedCount("category");
+
+    // 모바일 필터가 열려있으면 닫기
+    if (
+      window.mobileFilterFunctions &&
+      window.mobileFilterFunctions.closeFilter
+    ) {
+      window.mobileFilterFunctions.closeFilter();
+    }
 
     fetchData();
   }

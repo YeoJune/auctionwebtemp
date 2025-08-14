@@ -558,7 +558,10 @@ function setupMobileFilters() {
 
   // ESC 키 이벤트 리스너
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape" && filtersContainer.classList.contains("filter-active")) {
+    if (
+      e.key === "Escape" &&
+      filtersContainer.classList.contains("filter-active")
+    ) {
       window.mobileFilterFunctions.closeFilter();
     }
   });
@@ -708,7 +711,8 @@ window.TooltipManager = (function () {
 
     // 툴팁 내용 설정
     tooltipContainer.textContent = message;
-    tooltipContainer.style.display = "block";
+    tooltipContainer.classList.remove("hidden");
+    tooltipContainer.classList.add("show");
     tooltipContainer.style.opacity = "1";
 
     // 위치 계산 및 설정
@@ -729,12 +733,14 @@ window.TooltipManager = (function () {
 
     if (delay > 0) {
       hideTimeout = setTimeout(() => {
-        tooltipContainer.style.display = "none";
+        tooltipContainer.classList.remove("show");
+        tooltipContainer.classList.add("hidden");
         tooltipContainer.style.opacity = "0";
         currentTooltip = null;
       }, delay);
     } else {
-      tooltipContainer.style.display = "none";
+      tooltipContainer.classList.remove("show");
+      tooltipContainer.classList.add("hidden");
       tooltipContainer.style.opacity = "0";
       currentTooltip = null;
     }

@@ -21,13 +21,17 @@ async function loadNotices() {
 
     // 공지사항이 없으면 섹션 숨김
     if (!notices || notices.length === 0) {
-      document.querySelector(".notice-section").style.display = "none";
+      const noticeSection = document.querySelector(".notice-section");
+      noticeSection.classList.remove("notice-visible");
+      noticeSection.classList.add("notice-hidden");
       return;
     }
 
     // 공지사항 표시
     displayNotices(notices);
-    document.querySelector(".notice-section").style.display = "block";
+    const noticeSection = document.querySelector(".notice-section");
+    noticeSection.classList.remove("notice-hidden");
+    noticeSection.classList.add("notice-visible");
 
     // 첫 번째 슬라이드 이미지가 로드된 후 공지사항 컨테이너의 높이를 설정
     if (notices.length > 0) {
@@ -52,7 +56,9 @@ async function loadNotices() {
     }
   } catch (error) {
     console.error("공지사항을 불러오는 중 오류가 발생했습니다:", error);
-    document.querySelector(".notice-section").style.display = "none";
+    const noticeSection = document.querySelector(".notice-section");
+    noticeSection.classList.remove("notice-visible");
+    noticeSection.classList.add("notice-hidden");
   }
 }
 
@@ -91,7 +97,11 @@ function displayNotices(notices) {
   notices.forEach((notice, index) => {
     const noticeItem = document.createElement("div");
     noticeItem.className = "notice-item";
-    noticeItem.style.display = index === 0 ? "block" : "none";
+    if (index === 0) {
+      noticeItem.classList.add("show");
+    } else {
+      noticeItem.classList.add("hidden");
+    }
 
     // 이미지와 링크 생성
     if (notice.targetUrl) {
@@ -252,7 +262,8 @@ function goToSlide(index) {
   sliderWrapper.style.height = sliderHeight + "px";
 
   // 애니메이션 전 준비
-  nextItem.style.display = "block";
+  nextItem.classList.remove("hidden");
+  nextItem.classList.add("show");
 
   // 현재 슬라이드 위치
   currentItem.style.position = "absolute";

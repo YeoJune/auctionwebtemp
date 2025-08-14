@@ -47,14 +47,23 @@
     "Malgun Gothic", sans-serif;
 
   /* ⭐ Z-INDEX 계층 구조 (일관된 관리) */
+  --z-base: 1;
+  --z-base-secondary: 2;
+  --z-content: 10;
+  --z-content-secondary: 100;
+  --z-content-tertiary: 101;
+  --z-content-hover: 110;
+  --z-content-overlay: 950;
+  --z-backdrop: 900;
   --z-header: 1000;
-  --z-mobile-menu: 1010;
+  --z-header-secondary: 1010;
   --z-filter-backdrop: 1015;
   --z-filter-container: 1020;
   --z-filter-header: 1025;
   --z-filter-actions: 1025;
   --z-filter-close: 1030;
   --z-dropdown: 1050;
+  --z-mobile-menu: 1100;
   --z-modal: 2000;
   --z-tooltip: 10000;
 }
@@ -119,7 +128,7 @@ button:disabled {
   width: 100%;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
-  z-index: 2000;
+  z-index: var(--z-modal);
   overflow: hidden;
   justify-content: center;
   align-items: center;
@@ -217,7 +226,7 @@ input[type="time"]:focus {
   background-color: var(--background-light);
   min-width: 180px;
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-  z-index: 101;
+  z-index: var(--z-content-tertiary);
   border-radius: var(--border-radius-sm);
   overflow: hidden;
 }
@@ -297,7 +306,7 @@ input[type="time"]:focus {
   bottom: 0;
   width: 100%;
   background-color: var(--blue-dark);
-  z-index: 1050;
+  z-index: var(--z-dropdown);
   flex-direction: column;
   padding: 20px;
   overflow-y: auto;

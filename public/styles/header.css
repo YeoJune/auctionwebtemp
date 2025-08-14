@@ -26,7 +26,7 @@
   display: flex;
   align-items: center;
   position: relative;
-  z-index: 110;
+  z-index: var(--z-dropdown);
 }
 
 .logo-container img {
@@ -108,27 +108,27 @@ button.auth-button:hover {
   background-color: rgba(255, 255, 255, 0.1);
 }
 
-  /* 햄버거 메뉴 버튼 스타일 */
-  .mobile-menu-toggle {
-    display: none; /* 기본적으로 숨김 */
-    background-color: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: white;
-    border-radius: var(--border-radius-sm);
-    width: 42px;
-    height: 42px;
-    padding: 0;
-    font-size: 1.5rem;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: calc(var(--z-mobile-menu) + 10);
-    transition: all 0.2s ease;
-  }
+/* 햄버거 메뉴 버튼 스타일 */
+.mobile-menu-toggle {
+  display: none; /* 기본적으로 숨김 */
+  background-color: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  border-radius: var(--border-radius-sm);
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  font-size: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: calc(var(--z-mobile-menu) + 10);
+  transition: all 0.2s ease;
+}
 
-  .mobile-menu-toggle:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-  }
+.mobile-menu-toggle:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
 
 /* 햄버거 버튼 활성화 스타일 */
 .mobile-menu-toggle.active {
@@ -150,23 +150,24 @@ button.auth-button:hover {
   position: relative;
 }
 
-  /* 드롭다운 메뉴 스타일 */
-  .dropdown-content {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    min-width: 180px;
-    background-color: var(--background-light);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-    border-radius: var(--border-radius-sm);
-    z-index: var(--z-dropdown);
-    display: none;
-    opacity: 0;
-    transform: translateY(-10px);
-    transition: opacity 0.2s ease, transform 0.2s ease;
-    overflow: hidden;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-  }.dropdown-content.active {
+/* 드롭다운 메뉴 스타일 */
+.dropdown-content {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 180px;
+  background-color: var(--background-light);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  border-radius: var(--border-radius-sm);
+  z-index: var(--z-dropdown);
+  display: none;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+.dropdown-content.active {
   display: block;
   opacity: 1;
   transform: translateY(0);
@@ -194,7 +195,7 @@ button.auth-button:hover {
   width: 100%;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.3);
-  z-index: 1000;
+  z-index: var(--z-header);
   display: none;
 }
 
@@ -206,7 +207,7 @@ button.auth-button:hover {
   width: 100%;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
-  z-index: 90;
+  z-index: calc(var(--z-header) - 100);
   display: none;
 }
 
@@ -251,7 +252,7 @@ button.auth-button:hover {
     right: 10px;
     top: 50%;
     transform: translateY(-50%);
-    z-index: 1100;
+    z-index: var(--z-mobile-menu);
   }
 
   /* 모바일에서 인증 버튼 위치 조정 */
@@ -274,7 +275,7 @@ button.auth-button:hover {
     bottom: 0;
     width: 100%;
     background-color: var(--blue-dark);
-    z-index: 110;
+    z-index: var(--z-content-hover);
     flex-direction: column;
     padding: 20px;
     overflow-y: auto;
@@ -333,7 +334,7 @@ button.auth-button:hover {
     max-height: 70vh;
     border-radius: 15px 15px 0 0;
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
-    z-index: 1050;
+    z-index: var(--z-dropdown);
     background-color: var(--background-light);
     color: var(--text-primary);
     overflow-y: auto;
@@ -360,7 +361,9 @@ button.auth-button:hover {
     transition: transform 0.2s ease;
   }
 
-  .nav-container.mobile-menu-active .dropdown-container .nav-button.active::after {
+  .nav-container.mobile-menu-active
+    .dropdown-container
+    .nav-button.active::after {
     content: "▲";
   }
 }
