@@ -105,6 +105,11 @@ window.AdminPriceManager = (function () {
           }
 
           alert("가격이 성공적으로 수정되었습니다.");
+
+          // 성공적으로 저장된 경우 현재 페이지 상태 유지하면서 데이터 새로고침
+          if (window.ProductListController) {
+            window.ProductListController.fetchData(false); // 로딩 표시 없이 새로고침
+          }
         } else {
           throw new Error(response?.message || "서버 응답 오류");
         }

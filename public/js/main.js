@@ -5,6 +5,90 @@ window.ProductListController = (function () {
   let config = null;
   let state = {};
 
+  // URL에 포함할 상태 키들 (페이지별로 다름)
+  const getUrlStateKeys = () => {
+    const baseKeys = [
+      "selectedBrands",
+      "selectedCategories",
+      "selectedRanks",
+      "selectedAucNums",
+      "sortBy",
+      "sortOrder",
+      "currentPage",
+      "itemsPerPage",
+      "searchTerm",
+    ];
+
+    // 페이지별 추가 키들
+    if (config.features.auctionTypes) {
+      baseKeys.push("selectedAuctionTypes");
+    }
+    if (config.features.wishlist) {
+      baseKeys.push("selectedFavoriteNumbers");
+    }
+    if (config.features.scheduledDates) {
+      baseKeys.push("selectedDates");
+    }
+    if (config.features.bidItemsOnly) {
+      baseKeys.push("showBidItemsOnly");
+    }
+    if (config.features.excludeExpired) {
+      baseKeys.push("excludeExpired");
+    }
+
+    return baseKeys;
+  };
+
+  /**
+   * URL에서 상태 로드
+   */
+  function loadStateFromURL() {
+    if (!window.URLStateManager) return;
+
+    const urlStateKeys = getUrlStateKeys();
+    const urlState = window.URLStateManager.loadFromURL(state, urlStateKeys);
+
+    // URL 상태를 현재 상태에 머지
+    Object.assign(state, urlState);
+
+    console.log("URL에서 상태 로드됨:", urlState);
+  }
+
+  /**
+   * 상태를 URL에 저장
+   */
+  function saveStateToURL() {
+    if (!window.URLStateManager) return;
+
+    // 기본값 정의 (페이지별로 다름)
+    const defaultValues = {
+      selectedBrands: [],
+      selectedCategories: [],
+      selectedRanks: [],
+      selectedAucNums: [],
+      sortBy: config.initialState.sortBy,
+      sortOrder: config.initialState.sortOrder,
+      currentPage: 1,
+      itemsPerPage: 20,
+      searchTerm: "",
+      selectedAuctionTypes: [],
+      selectedFavoriteNumbers: [],
+      selectedDates: [],
+      showBidItemsOnly: false,
+      excludeExpired: true,
+    };
+
+    // 현재 상태에서 URL에 포함할 부분만 추출
+    const urlState = {};
+    getUrlStateKeys().forEach((key) => {
+      if (state.hasOwnProperty(key)) {
+        urlState[key] = state[key];
+      }
+    });
+
+    window.URLStateManager.updateURL(urlState, defaultValues);
+  }
+
   /**
    * 페이지 초기화
    * @param {Object} pageConfig - 페이지별 설정
@@ -29,10 +113,13 @@ window.ProductListController = (function () {
       // 1. 인증 상태 확인
       await window.AuthManager.checkAuthStatus();
 
-      // 2. 필터 데이터 로드
+      // 2. URL에서 상태 로드 (필터 데이터 로드 전에)
+      loadStateFromURL();
+
+      // 3. 필터 데이터 로드
       await loadFilters();
 
-      // 3. UI 설정
+      // 4. UI 설정
       setupEventListeners();
       setupFilters();
       setupSearch();
@@ -40,18 +127,140 @@ window.ProductListController = (function () {
       setupViewControls();
       setupPagination();
 
-      // 4. 페이지별 특수 기능 초기화
+      // 5. UI를 상태에 맞게 업데이트
+      updateUIFromState();
+
+      // 6. 페이지별 특수 기능 초기화
       if (config.features.realtime) initializeSocket();
 
-      // 5. 초기 데이터 로드
+      // 7. 초기 데이터 로드
       await fetchData();
 
-      // 6. URL 파라미터 처리 (상세 모달)
+      // 8. URL 파라미터 처리 (상세 모달)
       handleUrlParameters();
     } catch (error) {
       console.error("페이지 초기화 중 오류:", error);
       alert("페이지 초기화 중 오류가 발생했습니다.");
     }
+  }
+
+  /**
+   * UI를 상태에 맞게 업데이트
+   */
+  function updateUIFromState() {
+    // 검색어
+    const searchInput = document.getElementById("searchInput");
+    if (searchInput && state.searchTerm) {
+      searchInput.value = state.searchTerm;
+    }
+
+    // 정렬 옵션
+    const sortOption = document.getElementById("sortOption");
+    if (sortOption) {
+      sortOption.value = `${state.sortBy}-${state.sortOrder}`;
+    }
+
+    // 페이지당 항목 수
+    const itemsPerPage = document.getElementById("itemsPerPage");
+    if (itemsPerPage) {
+      itemsPerPage.value = state.itemsPerPage;
+    }
+
+    // 체크박스 필터들 업데이트
+    updateCheckboxFilters();
+
+    // 특수 필터들
+    if (config.features.bidItemsOnly) {
+      const bidItemsOnly = document.getElementById("bid-items-only");
+      if (bidItemsOnly) {
+        bidItemsOnly.checked = state.showBidItemsOnly || false;
+      }
+    }
+
+    if (config.features.excludeExpired) {
+      const excludeExpired = document.getElementById("exclude-expired");
+      if (excludeExpired) {
+        excludeExpired.checked = state.excludeExpired !== false; // 기본값 true
+      }
+    }
+  }
+
+  /**
+   * 체크박스 필터들 상태 업데이트
+   */
+  function updateCheckboxFilters() {
+    // 브랜드 체크박스들
+    updateFilterCheckboxes("brand", state.selectedBrands);
+
+    // 카테고리 체크박스들
+    updateFilterCheckboxes("category", state.selectedCategories);
+
+    // 랭크 체크박스들
+    updateFilterCheckboxes("rank", state.selectedRanks);
+
+    // 출품사 체크박스들
+    state.selectedAucNums.forEach((aucNum) => {
+      const checkbox = document.getElementById(`aucNum-${aucNum}`);
+      if (checkbox) checkbox.checked = true;
+    });
+
+    // 경매 타입 체크박스들 (상품 페이지만)
+    if (config.features.auctionTypes) {
+      const liveCheckbox = document.getElementById("auction-type-live");
+      const directCheckbox = document.getElementById("auction-type-direct");
+
+      if (liveCheckbox) {
+        liveCheckbox.checked = state.selectedAuctionTypes.includes("live");
+      }
+      if (directCheckbox) {
+        directCheckbox.checked = state.selectedAuctionTypes.includes("direct");
+      }
+    }
+
+    // 즐겨찾기 체크박스들 (상품 페이지만)
+    if (config.features.wishlist) {
+      for (let i = 1; i <= 3; i++) {
+        const checkbox = document.getElementById(`favorite-${i}`);
+        if (checkbox) {
+          checkbox.checked = state.selectedFavoriteNumbers.includes(i);
+        }
+      }
+    }
+
+    // 날짜 체크박스들 (상품 페이지만)
+    if (config.features.scheduledDates && state.selectedDates) {
+      state.selectedDates.forEach((date) => {
+        const checkbox = document.querySelector(`input[value="${date}"]`);
+        if (checkbox) checkbox.checked = true;
+      });
+    }
+  }
+
+  /**
+   * 특정 타입의 필터 체크박스들 업데이트
+   */
+  function updateFilterCheckboxes(type, selectedValues) {
+    if (!selectedValues || selectedValues.length === 0) return;
+
+    selectedValues.forEach((value) => {
+      // 다양한 ID 패턴으로 시도
+      const possibleIds = [
+        `${type}-${value}`,
+        `${type}-${value.replace(/\s+/g, "-")}`,
+        value.replace(/\s+/g, "-"),
+      ];
+
+      for (const id of possibleIds) {
+        const checkbox = document.getElementById(id);
+        if (checkbox) {
+          checkbox.checked = true;
+          break;
+        }
+      }
+    });
+
+    // 선택된 항목 수 업데이트
+    updateSelectedCount(type);
   }
 
   /**
@@ -288,6 +497,9 @@ window.ProductListController = (function () {
 
       // 페이지네이션 생성
       createPagination(state.currentPage, state.totalPages, handlePageChange);
+
+      // URL 상태 저장
+      saveStateToURL();
     } catch (error) {
       console.error("데이터 로드 실패:", error);
       if (showLoading) {
@@ -759,7 +971,7 @@ window.ProductListController = (function () {
       window.mobileFilterFunctions.closeFilter();
     }
 
-    fetchData();
+    fetchData(); // fetchData에서 URL 업데이트 처리
   }
 
   function handleApplyFilters() {
@@ -773,7 +985,7 @@ window.ProductListController = (function () {
       window.mobileFilterFunctions.closeFilter();
     }
 
-    fetchData();
+    fetchData(); // fetchData에서 URL 업데이트 처리
   }
 
   function handleResetFilters() {
@@ -835,7 +1047,7 @@ window.ProductListController = (function () {
       window.mobileFilterFunctions.closeFilter();
     }
 
-    fetchData();
+    fetchData(); // fetchData에서 URL 업데이트 처리
   }
 
   function handleSortChange() {
@@ -844,19 +1056,19 @@ window.ProductListController = (function () {
     state.sortBy = sortBy;
     state.sortOrder = sortOrder;
     state.currentPage = 1;
-    fetchData();
+    fetchData(); // fetchData에서 URL 업데이트 처리
   }
 
   function handleItemsPerPageChange() {
     const itemsPerPage = document.getElementById("itemsPerPage");
     state.itemsPerPage = parseInt(itemsPerPage.value);
     state.currentPage = 1;
-    fetchData();
+    fetchData(); // fetchData에서 URL 업데이트 처리
   }
 
   function handlePageChange(page) {
     state.currentPage = page;
-    fetchData();
+    fetchData(); // fetchData에서 URL 업데이트 처리
   }
 
   function setViewType(type) {
@@ -1227,5 +1439,8 @@ window.ProductListController = (function () {
     showDetails,
     getState: () => state,
     getConfig: () => config,
+    loadStateFromURL,
+    saveStateToURL,
+    updateUIFromState,
   };
 })();
