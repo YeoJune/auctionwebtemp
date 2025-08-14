@@ -133,14 +133,16 @@ function updateAuthUI() {
   if (!signinBtn || !signoutBtn) return;
 
   if (state.isAuthenticated) {
-    signinBtn.style.display = "none";
-    signoutBtn.style.display = "inline-block";
+    signinBtn.classList.add("hidden");
+    signoutBtn.classList.remove("hidden");
+    signoutBtn.classList.add("show-inline-block");
 
     // 관리자 권한에 따른 총 합계 표시/숨김
     updateSummaryStatsVisibility();
   } else {
-    signinBtn.style.display = "inline-block";
-    signoutBtn.style.display = "none";
+    signinBtn.classList.remove("hidden");
+    signinBtn.classList.add("show-inline-block");
+    signoutBtn.classList.add("hidden");
     // 로그인되지 않은 경우 로그인 페이지로 리다이렉트
     window.location.href = "/signinPage";
   }
@@ -408,9 +410,10 @@ function updateSummaryStatsVisibility() {
   const summaryStats = document.querySelector(".summary-stats");
   if (summaryStats) {
     if (state.isAdmin) {
-      summaryStats.style.display = "flex";
+      summaryStats.classList.remove("hidden");
+      summaryStats.classList.add("show-flex");
     } else {
-      summaryStats.style.display = "none";
+      summaryStats.classList.add("hidden");
     }
   }
 }
@@ -628,8 +631,7 @@ function createDailyResultRow(dayResult) {
 
   // 상세 정보 (접혀있는 상태)
   const details = document.createElement("div");
-  details.className = "date-details";
-  details.style.display = "none";
+  details.className = "date-details hidden";
 
   const detailsTable = document.createElement("table");
   detailsTable.className = "details-table";
@@ -674,8 +676,13 @@ function createDailyResultRow(dayResult) {
 
   // 토글 버튼 이벤트
   toggleButton.addEventListener("click", function () {
-    const isExpanded = details.style.display !== "none";
-    details.style.display = isExpanded ? "none" : "block";
+    const isExpanded = !details.classList.contains("hidden");
+    if (isExpanded) {
+      details.classList.add("hidden");
+    } else {
+      details.classList.remove("hidden");
+      details.classList.add("show");
+    }
     this.innerHTML = isExpanded
       ? '<i class="fas fa-chevron-down"></i>'
       : '<i class="fas fa-chevron-up"></i>';

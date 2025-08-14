@@ -46,22 +46,10 @@
     Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR",
     "Malgun Gothic", sans-serif;
 
-  /* ⭐ Z-INDEX 계층 구조 (일관된 관리) */
+  /* ⭐ Z-INDEX 계층 구조 (간단한 관리) */
   --z-base: 1;
-  --z-base-secondary: 2;
   --z-content: 10;
-  --z-content-secondary: 100;
-  --z-content-tertiary: 101;
-  --z-content-hover: 110;
-  --z-content-overlay: 950;
-  --z-backdrop: 900;
   --z-header: 1000;
-  --z-header-secondary: 1010;
-  --z-filter-backdrop: 1015;
-  --z-filter-container: 1020;
-  --z-filter-header: 1025;
-  --z-filter-actions: 1025;
-  --z-filter-close: 1030;
   --z-dropdown: 1050;
   --z-mobile-menu: 1100;
   --z-modal: 2000;

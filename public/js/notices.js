@@ -406,7 +406,7 @@ function handleNoticeVisibility() {
   const noticeSection = document.querySelector(".notice-section");
 
   // 이미 숨겨진 상태이면 처리하지 않음
-  if (noticeSection.style.display === "none") return;
+  if (noticeSection.classList.contains("hidden")) return;
 }
 
 // 공지사항 상세 모달 표시 함수 (선택적 구현)
@@ -421,11 +421,13 @@ function showNoticeDetail(notice) {
     }
     if (document.getElementById("noticeImage")) {
       document.getElementById("noticeImage").src = notice.imageUrl;
-      document.getElementById("noticeImage").style.display = "block";
+      document.getElementById("noticeImage").classList.remove("hidden");
+      document.getElementById("noticeImage").classList.add("show");
     }
 
     // 모달 표시
-    modal.style.display = "block";
+    modal.classList.remove("hidden");
+    modal.classList.add("show");
   }
 }
 
