@@ -757,7 +757,7 @@ class StarAucCrawler extends AxiosCrawler {
 
   async crawlUpdates() {
     try {
-      const limit = pLimit(20);
+      const limit = pLimit(10);
       const startTime = Date.now();
       console.log(
         `Starting StarAuc updates crawl at ${new Date().toISOString()}`
