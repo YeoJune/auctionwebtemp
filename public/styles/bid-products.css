@@ -200,15 +200,16 @@
 /* 입찰 결과 아이템 */
 .bid-result-item {
   display: grid;
-  grid-template-columns: 100px 1fr 320px;
-  grid-template-areas: "image info status-action";
-  gap: 16px;
+  grid-template-columns: 100px 1fr 280px;
+  grid-template-areas: "image info action";
+  gap: 20px;
   padding: 20px;
   border-bottom: 1px solid #f0f0f0;
   cursor: pointer;
   transition: background-color 0.2s ease;
   position: relative;
   align-items: start;
+  min-height: 120px;
 }
 
 .bid-result-item:hover {
@@ -260,6 +261,7 @@
   flex-direction: column;
   gap: 8px;
   min-width: 0;
+  padding-right: 16px;
 }
 
 .item-brand {
@@ -284,13 +286,11 @@
   color: var(--text-secondary);
 }
 
-/* 상태 영역 */
-.result-status {
-  grid-area: status-action;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 300px;
+/* 액션 영역 (상태 + 입찰) */
+.bid-result-item .result-status,
+.bid-result-item .bid-action,
+.bid-result-item .bid-info {
+  grid-area: action;
 }
 
 .bid-type {
@@ -361,37 +361,49 @@
   color: var(--text-secondary);
 }
 
+/* 상태 헤더 */
+.result-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e9ecef;
+}
+
 /* 입찰 액션 영역 */
 .bid-action {
-  /* grid-area 제거 - 이제 result-status 내부에 포함 */
-  margin-top: 12px;
+  margin: 0;
 }
 
 .bid-action.expanded {
-  background-color: #f8f9fa;
-  padding: 12px;
-  border-radius: 6px;
-  border: 1px solid #e9ecef;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: none;
+  padding: 0;
+  border: none;
 }
 
 .bid-action-left {
-  margin-bottom: 10px;
+  flex: none;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
 .bid-action .bid-input-container {
-  /* flex 속성 제거 */
+  flex: none;
 }
 
 /* 입찰 정보 영역 */
 .bid-info {
-  margin-top: 12px;
   padding: 12px;
   background-color: #f8f9fa;
   border-radius: 6px;
   border: 1px solid #e9ecef;
+  margin: 0;
 }
 
 .price-stages {
@@ -550,25 +562,25 @@
     grid-template-columns: 80px 1fr;
     grid-template-areas:
       "image info"
-      "status-action status-action";
-    gap: 12px;
-    padding: 15px;
+      "action action";
+    gap: 16px;
+    padding: 16px;
+    min-height: auto;
+  }
+
+  .item-info {
+    padding-right: 0;
+  }
+
+  .result-status {
+    align-items: flex-start;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
   }
 
   .item-image {
     width: 80px;
     height: 80px;
-  }
-
-  .result-status {
-    grid-area: status-action;
-    align-items: stretch;
-    margin-top: 12px;
-    min-width: auto;
-  }
-
-  .bid-action.expanded {
-    padding: 10px;
   }
 
   /* 모바일 필터 */
@@ -623,8 +635,8 @@
 @media (max-width: 576px) {
   .bid-result-item {
     grid-template-columns: 70px 1fr;
-    gap: 10px;
-    padding: 12px;
+    gap: 12px;
+    padding: 14px;
   }
 
   .item-image {
@@ -650,7 +662,11 @@
   }
 
   .bid-action.expanded {
-    padding: 12px;
+    gap: 10px;
+  }
+
+  .bid-info {
+    padding: 10px;
   }
 }
 
@@ -664,7 +680,7 @@
   }
 
   .bid-result-item {
-    padding: 10px;
+    padding: 12px;
   }
 
   .filter-section select {
