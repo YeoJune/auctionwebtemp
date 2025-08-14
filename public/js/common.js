@@ -1474,6 +1474,8 @@ document.addEventListener("DOMContentLoaded", function () {
   setupMobileFilters();
   setupBasicEventListeners();
 
+  window.AuthManager.checkAuthStatus();
+
   // 툴팁 시스템 초기화
   if (window.TooltipManager) {
     window.TooltipManager.init();

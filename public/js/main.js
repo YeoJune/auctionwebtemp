@@ -110,9 +110,6 @@ window.ProductListController = (function () {
    */
   async function initializeAfterDOM() {
     try {
-      // 1. 인증 상태 확인
-      await window.AuthManager.checkAuthStatus();
-
       // 2. URL에서 상태 로드 (필터 데이터 로드 전에)
       loadStateFromURL();
 
