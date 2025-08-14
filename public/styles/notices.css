@@ -40,6 +40,14 @@
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
+.notice-item.hidden {
+  display: none !important;
+}
+
+.notice-item.show {
+  display: block !important;
+}
+
 .notice-item a,
 .notice-item .notice-content {
   transition: opacity 0.3s ease;

@@ -97,6 +97,8 @@ function displayNotices(notices) {
   notices.forEach((notice, index) => {
     const noticeItem = document.createElement("div");
     noticeItem.className = "notice-item";
+
+    // 첫 번째 아이템만 show 클래스, 나머지는 hidden 클래스
     if (index === 0) {
       noticeItem.classList.add("show");
     } else {
@@ -324,18 +326,24 @@ function goToSlide(index) {
     // 슬라이더 래퍼 높이 초기화
     const sliderWrapper = items[0].parentElement;
 
-    // 스타일 초기화
-    items.forEach((item) => {
+    // 스타일 초기화 및 클래스 정리
+    items.forEach((item, i) => {
       item.style.position = "";
       item.style.top = "";
       item.style.left = "";
       item.style.width = "";
       item.style.zIndex = "";
-      item.style.display = "none";
+
+      // 클래스 정리: 현재 활성 슬라이드가 아닌 경우 hidden 클래스 추가하고 show 클래스 제거
+      if (i !== index) {
+        item.classList.remove("show");
+        item.classList.add("hidden");
+      }
     });
 
     // 새 슬라이드만 표시
-    nextItem.style.display = "block";
+    nextItem.classList.remove("hidden");
+    nextItem.classList.add("show");
 
     // 슬라이더 래퍼 높이 초기화 (애니메이션 완료 후)
     setTimeout(() => {
