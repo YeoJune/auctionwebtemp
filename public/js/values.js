@@ -49,7 +49,9 @@ window.AdminPriceManager = (function () {
    * 가격 수정 처리
    */
   async function handlePriceEdit(itemId, priceSpan) {
-    if (!window.AuthManager.requireAdmin("관리자 권한이 필요합니다.")) {
+    // 관리자 권한 체크 (비동기 인증 상태 확인)
+    await window.AuthManager.checkAuthStatus();
+    if (!window.AuthManager.requireAdmin()) {
       return;
     }
 
@@ -84,11 +86,10 @@ window.AdminPriceManager = (function () {
           `/admin/values/${itemId}/price`,
           {
             method: "PUT",
-            body: JSON.stringify({ final_price: newPrice }),
+            body: JSON.stringify({ final_price: parseInt(newPrice) }),
           }
         );
-
-        if (response) {
+        if (response && response.success) {
           // 성공 시 UI 업데이트
           priceSpan.innerHTML = `${formatNumber(
             parseInt(newPrice)
@@ -104,6 +105,8 @@ window.AdminPriceManager = (function () {
           }
 
           alert("가격이 성공적으로 수정되었습니다.");
+        } else {
+          throw new Error(response?.message || "서버 응답 오류");
         }
       } catch (error) {
         console.error("Error updating price:", error);
@@ -306,18 +309,22 @@ function initializeValuePage() {
   valuePageConfig.customizeModal = ValuePageExtensions.customizeModal;
 
   // 관리자 권한 확인 후 UI 업데이트
-  window.AuthManager.checkAuthStatus().then(() => {
-    // 관리자가 아니면 수정 버튼 숨기기
-    if (!window.AuthManager.isAdmin()) {
+  window.AuthManager.checkAuthStatus()
+    .then(() => {
+      // 관리자가 아니면 수정 버튼 숨기기
+      if (!window.AuthManager.isAdmin()) {
+        valuePageConfig.features.adminEdit = false;
+      }
+
+      // ProductListController 초기화 (인증 확인 후)
+      window.ProductListController.init(valuePageConfig);
+    })
+    .catch((error) => {
+      console.error("인증 상태 확인 실패:", error);
       valuePageConfig.features.adminEdit = false;
-    }
-  });
-
-  // 커스텀 이벤트 설정
-  ValuePageExtensions.setupCustomEvents();
-
-  // ProductListController 초기화
-  window.ProductListController.init(valuePageConfig);
+      // 에러가 있어도 기본 기능은 동작하도록
+      window.ProductListController.init(valuePageConfig);
+    });
 }
 
 // DOM 로드 완료 시 초기화
