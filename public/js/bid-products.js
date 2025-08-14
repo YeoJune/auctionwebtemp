@@ -1170,52 +1170,6 @@ function toggleLoading(show) {
   }
 }
 
-// 모바일 필터 토글
-function setupMobileFilters() {
-  const filterBtn = document.getElementById("mobileFilterBtn");
-  const filtersContainer = document.querySelector(".filters-container");
-
-  if (!filterBtn || !filtersContainer) return;
-
-  // 이벤트 리스너가 중복되지 않도록 복제 후 새로 추가
-  const newFilterBtn = filterBtn.cloneNode(true);
-  filterBtn.parentNode.replaceChild(newFilterBtn, filterBtn);
-
-  newFilterBtn.addEventListener("click", function () {
-    filtersContainer.classList.toggle("active");
-
-    // 백드롭 생성 및 추가
-    let backdrop = document.querySelector(".filter-backdrop");
-    if (!backdrop) {
-      backdrop = document.createElement("div");
-      backdrop.className = "filter-backdrop";
-      document.body.appendChild(backdrop);
-
-      backdrop.addEventListener("click", function () {
-        filtersContainer.classList.remove("active");
-        backdrop.style.display = "none";
-      });
-    }
-
-    backdrop.style.display = filtersContainer.classList.contains("active")
-      ? "block"
-      : "none";
-  });
-
-  // 필터 닫기 버튼 추가
-  if (!filtersContainer.querySelector(".filter-close-btn")) {
-    const closeBtn = document.createElement("button");
-    closeBtn.className = "filter-close-btn";
-    closeBtn.innerHTML = "&times;";
-    closeBtn.addEventListener("click", function () {
-      filtersContainer.classList.remove("active");
-      document.querySelector(".filter-backdrop").style.display = "none";
-    });
-
-    filtersContainer.insertBefore(closeBtn, filtersContainer.firstChild);
-  }
-}
-
 // bid-products.js에 추가할 코드 (products.js와 동일)
 window.bidLoadingUI = {
   showBidLoading: function (buttonElement) {
@@ -1240,5 +1194,4 @@ window.bidLoadingUI = {
 // DOM 완료 시 실행
 document.addEventListener("DOMContentLoaded", function () {
   initialize();
-  setupMobileFilters();
 });
