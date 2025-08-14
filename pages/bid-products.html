@@ -28,15 +28,15 @@
         <div class="item-title" data-field="title"></div>
         <div class="item-category" data-field="category"></div>
       </div>
+      <!-- 조건부 요소: 입찰 가능한 경우 -->
+      <div class="bid-action" data-if="isActiveBid"></div>
+      <!-- 조건부 요소: 완료된 입찰의 경우 -->
+      <div class="bid-info" data-if="isCompletedBid"></div>
       <div class="result-status">
         <div class="bid-type" data-field="bid_type_display"></div>
         <div class="status-badge" data-field="status_display"></div>
         <div class="result-date" data-field="updated_at"></div>
       </div>
-      <!-- 조건부 요소: 입찰 가능한 경우 -->
-      <div class="bid-action" data-if="isActiveBid"></div>
-      <!-- 조건부 요소: 완료된 입찰의 경우 -->
-      <div class="bid-info" data-if="isCompletedBid"></div>
     </div>
   </template>
   <body>
