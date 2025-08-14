@@ -500,7 +500,7 @@ function setupMobileFilters() {
 
   // 요소가 없으면 함수 종료
   if (!filterBtn || !filtersContainer) {
-    console.error("Mobile filter elements not found");
+    console.log("Mobile filter elements not found");
     return;
   }
 
