@@ -198,18 +198,16 @@ window.ValueRenderer = (function () {
     );
 
     if (priceValueEl && item.final_price) {
-      // 관리자 수정 버튼이 있는지 확인
-      const hasEditButton = priceValueEl.querySelector(".edit-price-icon");
-      const editButtonHTML =
-        hasEditButton && window.AuthManager.isAdmin()
-          ? `<button class="edit-price-icon"><i class="fas fa-edit"></i></button>`
-          : "";
+      // 관리자인 경우에만 수정 버튼 추가
+      const editButtonHTML = window.AuthManager.isAdmin()
+        ? ` <button class="edit-price-icon"><i class="fas fa-edit"></i></button>`
+        : "";
 
       priceValueEl.innerHTML = `${formatNumber(
         parseInt(item.final_price)
-      )} ¥ ${editButtonHTML}`;
+      )} ¥${editButtonHTML}`;
 
-      // 수정 버튼이 새로 추가된 경우 이벤트 리스너 설정
+      // 수정 버튼이 추가된 경우 이벤트 리스너 설정
       if (editButtonHTML) {
         setupAdminEditButton(card, item);
       }
