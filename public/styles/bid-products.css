@@ -200,16 +200,16 @@
 /* 입찰 결과 아이템 */
 .bid-result-item {
   display: grid;
-  grid-template-columns: 100px 1fr 280px 200px;
+  grid-template-columns: 100px 1fr 250px 180px;
   grid-template-areas: "image info bid-section status";
-  gap: 20px;
-  padding: 16px;
+  gap: 16px;
+  padding: 14px;
   border-bottom: 1px solid #f0f0f0;
   cursor: pointer;
   transition: background-color 0.2s ease;
   position: relative;
   align-items: start;
-  min-height: 100px;
+  min-height: 90px;
 }
 
 .bid-result-item:hover {
@@ -299,9 +299,9 @@
 
 .bid-type {
   display: inline-block;
-  padding: 4px 12px;
-  border-radius: 16px;
-  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
   font-weight: 500;
 }
 
@@ -316,12 +316,12 @@
 }
 
 .status-badge {
-  padding: 6px 12px;
+  padding: 4px 10px;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   text-align: center;
-  min-width: 80px;
+  min-width: 70px;
 }
 
 /* 상태별 스타일 */
@@ -361,7 +361,7 @@
 }
 
 .result-date {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-secondary);
 }
 
@@ -370,7 +370,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 8px;
+  gap: 6px;
   padding: 0;
   border: none;
   background: none;
@@ -570,9 +570,10 @@
     grid-template-columns: 80px 1fr;
     grid-template-areas:
       "image info"
-      "bid-section status";
-    gap: 16px;
-    padding: 16px;
+      "bid-section bid-section"
+      "status status";
+    gap: 12px;
+    padding: 12px;
     min-height: auto;
   }
 
@@ -585,6 +586,9 @@
     padding: 0;
     border: none;
     background: none;
+    flex-direction: row;
+    gap: 12px;
+    flex-wrap: wrap;
   }
 
   .item-image {
@@ -701,5 +705,96 @@
   .secondary-button {
     padding: 8px 16px;
     font-size: 13px;
+  }
+}
+
+/* Bid-products 페이지 전용 오버라이드 - bid-action 내부 요소 컴팩트화 */
+.bid-result-item .bid-input-container {
+  margin-top: 6px;
+}
+
+.bid-result-item .bid-input-label {
+  font-size: 11px;
+  margin-bottom: 3px;
+  padding: 2px 6px;
+}
+
+.bid-result-item .bid-input-group {
+  height: 32px;
+}
+
+.bid-result-item .bid-input {
+  padding: 0 6px;
+  font-size: 13px;
+  min-height: 32px;
+}
+
+.bid-result-item .bid-value-display {
+  font-size: 13px;
+}
+
+.bid-result-item .bid-currency {
+  padding: 0 6px;
+  font-size: 13px;
+}
+
+.bid-result-item .bid-button {
+  padding: 0 12px;
+  height: 32px;
+  min-width: 50px;
+  font-size: 12px;
+}
+
+.bid-result-item .quick-bid-buttons {
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.bid-result-item .quick-bid-btn {
+  padding: 4px 8px;
+  font-size: 11px;
+  height: 28px;
+}
+
+.bid-result-item .price-details-container {
+  font-size: 10px;
+  margin-top: 2px;
+}
+
+.bid-result-item .real-time-price p,
+.bid-result-item .bid-price-info p,
+.bid-result-item .final-price p {
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.bid-result-item .real-time-price .price-details-container,
+.bid-result-item .bid-price-info .price-details-container,
+.bid-result-item .final-price .price-details-container {
+  font-size: 10px;
+  margin-top: 1px;
+}
+
+/* 모바일에서 추가 컴팩트화 */
+@media (max-width: 768px) {
+  .bid-result-item .bid-input-group {
+    height: 30px;
+  }
+
+  .bid-result-item .bid-input {
+    font-size: 12px;
+    min-height: 30px;
+  }
+
+  .bid-result-item .bid-button {
+    height: 30px;
+    font-size: 11px;
+    padding: 0 8px;
+  }
+
+  .bid-result-item .quick-bid-btn {
+    height: 26px;
+    font-size: 10px;
+    padding: 3px 6px;
   }
 }
