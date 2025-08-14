@@ -311,20 +311,14 @@ window.BidManager = (function () {
                 onclick="event.stopPropagation(); ${onClickHandler}">${buttonText}</button>
       </div>
       <div class="price-details-container"></div>
-      ${generateQuickBidButtonsHTML(
-        itemId,
-        aucNum,
-        bidType,
-        isExpired,
-        isFirstBid
-      )}
+      ${getQuickBidButtonsHTML(itemId, aucNum, bidType, isExpired, isFirstBid)}
     </div>`;
   }
 
   /**
    * 빠른 입찰 버튼 HTML 생성
    */
-  function generateQuickBidButtonsHTML(
+  function getQuickBidButtonsHTML(
     itemId,
     auctionNum,
     bidType,

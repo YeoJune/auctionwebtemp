@@ -100,10 +100,12 @@ async function initialize() {
     await fetchProducts();
 
     // BidManager 초기화
-    BidManager.initialize(
-      state.isAuthenticated,
-      state.filteredResults.map((item) => item.item)
-    );
+    if (window.BidManager) {
+      BidManager.initialize(
+        state.isAuthenticated,
+        state.filteredResults.map((item) => item.item)
+      );
+    }
 
     // 입찰 이벤트 리스너 설정
     setupBidEventListeners();
@@ -257,10 +259,12 @@ async function fetchProducts() {
     }
 
     // BidManager에 데이터 전달
-    BidManager.updateCurrentData(
-      state.filteredResults.map((item) => item.item)
-    );
-    BidManager.updateBidData(state.liveBids, state.directBids);
+    if (window.BidManager) {
+      BidManager.updateCurrentData(
+        state.filteredResults.map((item) => item.item)
+      );
+      BidManager.updateBidData(state.liveBids, state.directBids);
+    }
 
     // URL 업데이트 (common.js URLStateManager 사용)
     const defaultState = {
@@ -283,8 +287,12 @@ async function fetchProducts() {
     // 정렬 버튼 UI 업데이트
     updateSortButtonsUI();
 
-    BidManager.startTimerUpdates();
-    BidManager.initializePriceCalculators();
+    if (window.BidManager) {
+      BidManager.startTimerUpdates();
+      if (window.BidManager) {
+        BidManager.initializePriceCalculators();
+      }
+    }
   } catch (error) {
     console.error("상품 데이터를 가져오는 중 오류 발생:", error);
     document.getElementById("productList").innerHTML =
@@ -580,12 +588,18 @@ function processConditionalElements(element, product, item) {
   let timer, isExpired;
   if (product.type === "live") {
     if (product.first_price && !product.final_price) {
-      timer = BidManager.getRemainingTime(item.scheduled_date, "final");
+      timer = window.BidManager
+        ? BidManager.getRemainingTime(item.scheduled_date, "final")
+        : null;
     } else {
-      timer = BidManager.getRemainingTime(item.scheduled_date, "first");
+      timer = window.BidManager
+        ? BidManager.getRemainingTime(item.scheduled_date, "first")
+        : null;
     }
   } else {
-    timer = BidManager.getRemainingTime(item.scheduled_date, "first");
+    timer = window.BidManager
+      ? BidManager.getRemainingTime(item.scheduled_date, "first")
+      : null;
   }
 
   isExpired = !timer;
@@ -607,20 +621,24 @@ function processConditionalElements(element, product, item) {
       let bidHtml = "";
       if (product.type === "direct") {
         const directBidInfo = state.directBids.find((b) => b.id === product.id);
-        bidHtml = BidManager.getDirectBidSectionHTML(
-          directBidInfo,
-          item.item_id,
-          item.auc_num,
-          item.category
-        );
+        bidHtml = window.BidManager
+          ? BidManager.getDirectBidSectionHTML(
+              directBidInfo,
+              item.item_id,
+              item.auc_num,
+              item.category
+            )
+          : "";
       } else {
         const liveBidInfo = state.liveBids.find((b) => b.id === product.id);
-        bidHtml = BidManager.getLiveBidSectionHTML(
-          liveBidInfo,
-          item.item_id,
-          item.auc_num,
-          item.category
-        );
+        bidHtml = window.BidManager
+          ? BidManager.getLiveBidSectionHTML(
+              liveBidInfo,
+              item.item_id,
+              item.auc_num,
+              item.category
+            )
+          : "";
       }
 
       // BidManager HTML을 파싱하여 적절히 배치
