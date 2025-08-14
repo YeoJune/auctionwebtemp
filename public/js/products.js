@@ -214,7 +214,15 @@ window.ProductRenderer = (function () {
    */
   function setupBidUI(card, item) {
     const bidSection = card.querySelector(".bid-section");
-    if (!bidSection || !window.BidManager) return;
+    if (!bidSection) {
+      console.error("bid-section을 찾을 수 없습니다:", card);
+      return;
+    }
+
+    if (!window.BidManager) {
+      console.error("BidManager가 로드되지 않았습니다");
+      return;
+    }
 
     const state = window.ProductListController.getState();
 
@@ -226,21 +234,35 @@ window.ProductRenderer = (function () {
       (b) => b.item_id == item.item_id
     );
 
+    console.log("입찰 UI 설정:", {
+      item_id: item.item_id,
+      bid_type: item.bid_type,
+      liveBidInfo,
+      directBidInfo,
+      bidSection,
+    });
+
     // 입찰 섹션 HTML 생성
-    if (item.bid_type === "direct") {
-      bidSection.innerHTML = window.BidManager.getDirectBidSectionHTML(
-        directBidInfo,
-        item.item_id,
-        item.auc_num,
-        item.category
-      );
-    } else {
-      bidSection.innerHTML = window.BidManager.getLiveBidSectionHTML(
-        liveBidInfo,
-        item.item_id,
-        item.auc_num,
-        item.category
-      );
+    try {
+      if (item.bid_type === "direct") {
+        bidSection.innerHTML = window.BidManager.getDirectBidSectionHTML(
+          directBidInfo,
+          item.item_id,
+          item.auc_num,
+          item.category
+        );
+      } else {
+        bidSection.innerHTML = window.BidManager.getLiveBidSectionHTML(
+          liveBidInfo,
+          item.item_id,
+          item.auc_num,
+          item.category
+        );
+      }
+      console.log("입찰 UI 생성 완료:", item.item_id);
+    } catch (error) {
+      console.error("입찰 UI 생성 실패:", error);
+      bidSection.innerHTML = '<div class="bid-error">입찰 UI 로드 실패</div>';
     }
   }
 
@@ -715,18 +737,23 @@ window.bidLoadingUI = {
 
 // 페이지 초기화
 function initializeProductPage() {
+  console.log("상품 페이지 초기화 시작");
+
+  // BidManager 먼저 초기화
+  if (window.BidManager) {
+    console.log("BidManager 초기화");
+    window.BidManager.initialize(false, []); // 인증 상태는 AuthManager가 처리
+    window.BidManager.setAuthStatus(window.AuthManager.isAuthenticated());
+  } else {
+    console.error("BidManager를 찾을 수 없습니다");
+  }
+
   // 설정 확장
   productPageConfig.customizeCard = ProductPageExtensions.customizeCard;
   productPageConfig.customizeModal = ProductPageExtensions.customizeModal;
 
   // WishlistManager 초기화
   window.WishlistManager.init(productPageConfig.initialState);
-
-  // BidManager 초기화
-  if (window.BidManager) {
-    window.BidManager.initialize(false, []); // 인증 상태는 AuthManager가 처리
-    window.BidManager.setAuthStatus(window.AuthManager.isAuthenticated());
-  }
 
   // 실시간 업데이트 초기화
   if (productPageConfig.features.realtime) {
@@ -739,7 +766,8 @@ function initializeProductPage() {
   // 툴팁 설정
   setupTooltips();
 
-  // ProductListController 초기화
+  console.log("ProductListController 초기화 시작");
+  // ProductListController 초기화 (마지막에)
   window.ProductListController.init(productPageConfig);
 }
 

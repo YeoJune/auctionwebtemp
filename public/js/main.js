@@ -445,6 +445,11 @@ window.ProductListController = (function () {
     // 이벤트 리스너 추가
     addCardEventListeners(card, item);
 
+    // ⭐ 페이지별 커스터마이징 (중요!)
+    if (config.customizeCard) {
+      config.customizeCard(card, item);
+    }
+
     return card;
   }
 
