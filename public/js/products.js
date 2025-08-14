@@ -551,9 +551,6 @@ const ProductPageExtensions = {
     window.addEventListener("bidSuccess", function () {
       window.ProductListController.fetchData(); // 데이터 새로고침
     });
-
-    // 상단 메뉴 버튼들
-    setupTopMenuButtons();
   },
 };
 
@@ -596,63 +593,6 @@ function initializeBidInfo(itemId, item = null) {
   // 가격 계산기 초기화
   if (window.BidManager.initializePriceCalculators) {
     window.BidManager.initializePriceCalculators();
-  }
-}
-
-/**
- * 상단 메뉴 버튼 설정
- */
-function setupTopMenuButtons() {
-  // 전체 상품 버튼
-  const allProductsBtn = document.getElementById("allProductsBtn");
-  if (allProductsBtn) {
-    allProductsBtn.addEventListener("click", function () {
-      const state = window.ProductListController.getState();
-      state.selectedAuctionTypes = [];
-      updateFilterUI();
-      window.ProductListController.fetchData();
-    });
-  }
-
-  // 현장 경매 버튼
-  const liveAuctionBtn = document.getElementById("liveAuctionBtn");
-  if (liveAuctionBtn) {
-    liveAuctionBtn.addEventListener("click", function () {
-      const state = window.ProductListController.getState();
-      state.selectedAuctionTypes = ["live"];
-      updateFilterUI();
-      window.ProductListController.fetchData();
-    });
-  }
-
-  // 직접 경매 버튼
-  const directAuctionBtn = document.getElementById("directAuctionBtn");
-  if (directAuctionBtn) {
-    directAuctionBtn.addEventListener("click", function () {
-      const state = window.ProductListController.getState();
-      state.selectedAuctionTypes = ["direct"];
-      updateFilterUI();
-      window.ProductListController.fetchData();
-    });
-  }
-}
-
-/**
- * 필터 UI 업데이트
- */
-function updateFilterUI() {
-  const state = window.ProductListController.getState();
-
-  // 경매 타입 체크박스 업데이트
-  const liveCheckbox = document.getElementById("auction-type-live");
-  const directCheckbox = document.getElementById("auction-type-direct");
-
-  if (liveCheckbox) {
-    liveCheckbox.checked = state.selectedAuctionTypes.includes("live");
-  }
-
-  if (directCheckbox) {
-    directCheckbox.checked = state.selectedAuctionTypes.includes("direct");
   }
 }
 

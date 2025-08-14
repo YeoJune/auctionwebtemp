@@ -956,14 +956,12 @@ window.TooltipManager = (function () {
   };
 })();
 
-// 드롭다운 메뉴 설정 (범용)
+// 드롭다운 메뉴 설정 (범용) - 함수는 유지하되 내용 수정
 function setupDropdownMenus() {
-  // 드롭다운 버튼들 선택
   const dropdownButtons = document.querySelectorAll(
     ".nav-item.dropdown-container > .nav-button"
   );
 
-  // 모든 드롭다운 닫기 함수
   const closeAllDropdowns = (exceptDropdown = null) => {
     document.querySelectorAll(".dropdown-content").forEach((dropdown) => {
       if (dropdown !== exceptDropdown) {
@@ -972,105 +970,37 @@ function setupDropdownMenus() {
     });
   };
 
-  // 현재 모바일 환경인지 확인하는 함수
   const isMobile = () => window.innerWidth <= 768;
 
-  // 드롭다운 버튼 이벤트 설정
+  // 드롭다운 버튼 이벤트 설정 (UI 토글만 유지)
   dropdownButtons.forEach((button) => {
-    // 중요: 이벤트 중복 방지를 위해 이전 리스너 제거
     const newButton = button.cloneNode(true);
     button.parentNode.replaceChild(newButton, button);
 
     newButton.addEventListener("click", function (e) {
-      // 모바일 메뉴 토글 버튼 클릭 시 이벤트 차단
       if (e.target.closest(".mobile-menu-toggle")) {
         return;
       }
 
-      // 이벤트 전파 중지
       e.preventDefault();
       e.stopPropagation();
 
-      // 현재 버튼의 부모 요소 내에 있는 dropdown-content 찾기
       const dropdown = this.parentNode.querySelector(".dropdown-content");
       if (!dropdown) return;
 
-      // 현재 드롭다운이 이미 활성화되어 있는지 확인
       const isActive = dropdown.classList.contains("active");
-
-      // 다른 모든 드롭다운 닫기
       closeAllDropdowns(isActive ? null : dropdown);
-
-      // 현재 드롭다운 토글
       dropdown.classList.toggle("active");
-
-      // 버튼 상태 토글 (화살표 회전 애니메이션용)
       this.classList.toggle("active", dropdown.classList.contains("active"));
     });
   });
 
-  // 드롭다운 내부 링크 클릭 이벤트
-  document.querySelectorAll(".dropdown-content a").forEach((link) => {
-    link.addEventListener("click", function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      // 필요한 처리 수행
-      if (this.dataset.type) {
-        const type = this.dataset.type;
-        if (window.state && window.state.selectedAuctionTypes !== undefined) {
-          if (type === "all") {
-            window.state.selectedAuctionTypes = [];
-          } else {
-            window.state.selectedAuctionTypes = [type];
-          }
-        }
-      } else if (this.dataset.favorite) {
-        const favoriteNum = parseInt(this.dataset.favorite);
-        if (
-          window.state &&
-          window.state.selectedFavoriteNumbers !== undefined
-        ) {
-          window.state.selectedFavoriteNumbers = [favoriteNum];
-        }
-      }
-
-      // 데이터 새로고침
-      if (typeof updateFilterUI === "function") {
-        updateFilterUI();
-      }
-      if (typeof fetchData === "function") {
-        fetchData();
-      } else if (
-        window.ProductListController &&
-        typeof window.ProductListController.fetchData === "function"
-      ) {
-        window.ProductListController.fetchData();
-      }
-
-      // 드롭다운 닫기
-      closeAllDropdowns();
-
-      // 모바일 환경에서 메뉴 닫기 처리
-      if (isMobile()) {
-        if (
-          window.mobileMenuFunctions &&
-          window.mobileMenuFunctions.closeMobileMenu
-        ) {
-          window.mobileMenuFunctions.closeMobileMenu();
-        }
-      }
-    });
-  });
-
-  // 다른 곳 클릭 시 모든 드롭다운 닫기
+  // 외부 클릭 시 드롭다운 닫기는 유지
   document.addEventListener("click", function (e) {
-    // 햄버거 메뉴 버튼 클릭은 무시
     if (e.target.closest(".mobile-menu-toggle")) {
       return;
     }
 
-    // 클릭된 요소가 드롭다운 버튼이나 드롭다운 콘텐츠 내부가 아니면 모든 드롭다운 닫기
     if (
       !e.target.closest(".dropdown-content") &&
       !e.target.closest(".nav-item.dropdown-container > .nav-button")
@@ -1121,44 +1051,6 @@ function preventEventConflicts() {
       }, 50);
     });
   }
-
-  // 드롭다운 버튼들
-  const dropdownButtons = document.querySelectorAll(
-    ".nav-item.dropdown-container > .nav-button"
-  );
-
-  dropdownButtons.forEach((button) => {
-    // 기존 이벤트 제거를 위해 복제
-    const newButton = button.cloneNode(true);
-    button.parentNode.replaceChild(newButton, button);
-
-    // 새 버튼에 이벤트 추가
-    newButton.addEventListener("click", function (e) {
-      // 모바일 토글 버튼이 방금 클릭되었다면 드롭다운 동작 무시
-      if (mobileToggleClicked || e.target.closest(".mobile-menu-toggle")) {
-        return;
-      }
-
-      // 이벤트 전파 중지
-      e.stopPropagation();
-      e.preventDefault();
-
-      // 드롭다운 토글 로직 실행
-      const dropdown = this.parentNode.querySelector(".dropdown-content");
-      if (dropdown) {
-        // 다른 모든 드롭다운 닫기
-        document.querySelectorAll(".dropdown-content").forEach((d) => {
-          if (d !== dropdown) d.classList.remove("active");
-        });
-
-        // 현재 드롭다운 토글
-        dropdown.classList.toggle("active");
-
-        // 버튼 상태 토글 (화살표 회전 애니메이션용)
-        this.classList.toggle("active", dropdown.classList.contains("active"));
-      }
-    });
-  });
 }
 
 // 기본 이벤트 리스너 설정 (범용)
