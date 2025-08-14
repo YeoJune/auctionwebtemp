@@ -1140,6 +1140,7 @@ window.BidManager = (function () {
       document.querySelectorAll(".bid-timer").forEach((timerElement) => {
         const itemId =
           timerElement.closest(".product-card")?.dataset.itemId ||
+          timerElement.closest(".bid-result-item")?.dataset.itemId ||
           timerElement.closest(".modal-content")?.querySelector(".modal-title")
             ?.dataset.itemId;
         if (!itemId) return;
@@ -1147,23 +1148,32 @@ window.BidManager = (function () {
         const item = _state.currentData.find((item) => item.item_id === itemId);
         if (!item || !item.scheduled_date) return;
 
-        // 해당 아이템의 입찰 정보 확인
-        const bidInfo = _state.liveBidData.find(
-          (bid) => bid.item_id === itemId
-        );
-
+        // 경매 타입에 따라 다른 처리
         let bidStage = "first";
-        let stageText = "1차입찰마감";
+        let stageText = "입찰마감";
+        
+        if (item.bid_type === "live") {
+          // 현장 경매: 해당 아이템의 입찰 정보 확인
+          const bidInfo = _state.liveBidData.find(
+            (bid) => bid.item_id === itemId
+          );
 
-        // 입찰 단계 결정
-        if (bidInfo?.first_price && !bidInfo?.final_price) {
-          bidStage = "final";
-          stageText = "최종입찰마감";
-        } else if (bidInfo?.final_price) {
-          // 최종 입찰 완료된 경우
-          timerElement.textContent = "입찰완료";
-          timerElement.className = "bid-timer completed";
-          return;
+          stageText = "1차입찰마감";
+
+          // 입찰 단계 결정
+          if (bidInfo?.first_price && !bidInfo?.final_price) {
+            bidStage = "final";
+            stageText = "최종입찰마감";
+          } else if (bidInfo?.final_price) {
+            // 최종 입찰 완료된 경우
+            timerElement.textContent = "입찰완료";
+            timerElement.className = "bid-timer completed";
+            return;
+          }
+        } else {
+          // 직접 경매: 항상 first 단계
+          bidStage = "first";
+          stageText = "입찰마감";
         }
 
         const timer = getRemainingTime(item.scheduled_date, bidStage);
