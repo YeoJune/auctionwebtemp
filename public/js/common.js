@@ -1198,8 +1198,31 @@ function setupBasicEventListeners() {
   }
 }
 
-// URL 상태 관리자
+// URL 상태 관리자 (개선된 버전)
 window.URLStateManager = (function () {
+  // URL에 포함할 상태 키들 (화이트리스트 방식)
+  const URL_ALLOWED_KEYS = [
+    "bidType",
+    "status",
+    "dateRange",
+    "currentPage",
+    "sortBy",
+    "sortOrder",
+    "keyword",
+    "item_id", // 상세 모달용
+  ];
+
+  // 기본값들 (기본값과 같으면 URL에서 제외)
+  const DEFAULT_VALUES = {
+    bidType: "all",
+    status: "all",
+    dateRange: 30,
+    currentPage: 1,
+    sortBy: "updated_at",
+    sortOrder: "desc",
+    keyword: "",
+  };
+
   /**
    * URL 파라미터에서 상태 로드
    * @param {Object} defaultState - 기본 상태 객체
@@ -1210,7 +1233,12 @@ window.URLStateManager = (function () {
     const urlParams = new URLSearchParams(window.location.search);
     const updatedState = { ...defaultState };
 
-    stateKeys.forEach((key) => {
+    // URL에 허용된 키들만 처리
+    const allowedKeys = stateKeys.filter((key) =>
+      URL_ALLOWED_KEYS.includes(key)
+    );
+
+    allowedKeys.forEach((key) => {
       if (urlParams.has(key)) {
         const value = urlParams.get(key);
 
@@ -1220,12 +1248,17 @@ window.URLStateManager = (function () {
           key.includes("Range") ||
           key.includes("Limit")
         ) {
-          updatedState[key] = parseInt(value) || defaultState[key];
+          const numValue = parseInt(value);
+          if (!isNaN(numValue) && numValue > 0) {
+            updatedState[key] = numValue;
+          }
         } else if (key.includes("Array") || key.includes("Selected")) {
-          // 배열 타입 처리
-          updatedState[key] = value ? value.split(",") : defaultState[key];
-        } else {
-          updatedState[key] = value;
+          // 배열 타입 처리 (필요시)
+          updatedState[key] = value
+            ? value.split(",").filter((v) => v.trim())
+            : defaultState[key];
+        } else if (value && value.trim() !== "") {
+          updatedState[key] = value.trim();
         }
       }
     });
@@ -1234,30 +1267,91 @@ window.URLStateManager = (function () {
   }
 
   /**
-   * 상태를 URL에 업데이트
+   * 상태를 URL에 업데이트 (필터링된 상태만)
    * @param {Object} state - 현재 상태
    * @param {Object} defaultState - 기본 상태 (기본값과 다른 것만 URL에 포함)
    */
-  function updateURL(state, defaultState = {}) {
+  function updateURL(state, defaultState = DEFAULT_VALUES) {
     const params = new URLSearchParams();
 
-    Object.keys(state).forEach((key) => {
+    // URL에 허용된 키들만 처리
+    URL_ALLOWED_KEYS.forEach((key) => {
       const value = state[key];
       const defaultValue = defaultState[key];
 
-      // 기본값과 다른 경우만 URL에 포함
-      if (value !== defaultValue && value !== null && value !== undefined) {
+      // 값이 존재하고, 기본값과 다르며, 유효한 값인 경우만 URL에 포함
+      if (shouldIncludeInURL(key, value, defaultValue)) {
         if (Array.isArray(value)) {
           if (value.length > 0) {
-            params.append(key, value.join(","));
+            params.set(key, value.join(","));
           }
-        } else if (value !== "") {
-          params.append(key, value);
+        } else {
+          params.set(key, value.toString());
         }
       }
     });
 
     // URL 업데이트
+    const url = `${window.location.pathname}${
+      params.toString() ? `?${params.toString()}` : ""
+    }`;
+
+    // 현재 URL과 다른 경우에만 업데이트
+    if (window.location.href !== url) {
+      window.history.replaceState({}, "", url);
+    }
+  }
+
+  /**
+   * URL에 포함할지 여부 결정
+   * @param {string} key - 상태 키
+   * @param {any} value - 현재 값
+   * @param {any} defaultValue - 기본값
+   * @returns {boolean} 포함 여부
+   */
+  function shouldIncludeInURL(key, value, defaultValue) {
+    // 값이 없거나 undefined인 경우
+    if (value === null || value === undefined) {
+      return false;
+    }
+
+    // 빈 문자열인 경우
+    if (typeof value === "string" && value.trim() === "") {
+      return false;
+    }
+
+    // 빈 배열인 경우
+    if (Array.isArray(value) && value.length === 0) {
+      return false;
+    }
+
+    // 기본값과 같은 경우 (item_id는 예외)
+    if (key !== "item_id" && value === defaultValue) {
+      return false;
+    }
+
+    // 현재 페이지가 1인 경우 (기본값이므로 제외)
+    if (key === "currentPage" && value === 1) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * 특정 파라미터만 제거
+   * @param {string|Array} keys - 제거할 키(들)
+   */
+  function removeParams(keys) {
+    const params = new URLSearchParams(window.location.search);
+    const keysArray = Array.isArray(keys) ? keys : [keys];
+
+    keysArray.forEach((key) => {
+      if (params.has(key)) {
+        params.delete(key);
+      }
+    });
+
     const url = `${window.location.pathname}${
       params.toString() ? `?${params.toString()}` : ""
     }`;
@@ -1272,11 +1366,42 @@ window.URLStateManager = (function () {
     return new URLSearchParams(window.location.search);
   }
 
+  /**
+   * 깨끗한 URL 생성 (공유용)
+   * @param {Object} state - 상태 객체
+   * @returns {string} 깨끗한 URL
+   */
+  function getCleanURL(state) {
+    const params = new URLSearchParams();
+
+    // 중요한 필터링 상태만 포함
+    const importantKeys = ["bidType", "status", "dateRange", "keyword"];
+
+    importantKeys.forEach((key) => {
+      const value = state[key];
+      const defaultValue = DEFAULT_VALUES[key];
+
+      if (shouldIncludeInURL(key, value, defaultValue)) {
+        params.set(key, value.toString());
+      }
+    });
+
+    return `${window.location.origin}${window.location.pathname}${
+      params.toString() ? `?${params.toString()}` : ""
+    }`;
+  }
+
   // 공개 API
   return {
     loadFromURL,
     updateURL,
+    removeParams,
     getURLParams,
+    getCleanURL,
+
+    // 디버깅용
+    getAllowedKeys: () => [...URL_ALLOWED_KEYS],
+    getDefaultValues: () => ({ ...DEFAULT_VALUES }),
   };
 })();
 
