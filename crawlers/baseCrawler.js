@@ -395,57 +395,56 @@ class AxiosCrawler {
     return proxyIPsString.split(",").map((ip) => ip.trim());
   }
 
-  initializeClients() {
-    // 첫 번째: 직접 연결 (http-cookie-agent 사용)
-    const directCookieJar = new tough.CookieJar();
-    const directClient = axios.create({
-      httpAgent: new HttpCookieAgent({
-        cookies: { jar: directCookieJar },
-      }),
-      httpsAgent: new HttpsCookieAgent({
-        cookies: { jar: directCookieJar },
-      }),
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15",
-        "Accept-Language": "en-US,en;q=0.9",
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      },
-      maxRedirects: 5,
-      timeout: 30000,
-      validateStatus: function (status) {
-        return status >= 200 && status < 500;
-      },
-    });
+  createClientConfig(index, proxyIP = null) {
+    const cookieJar = new tough.CookieJar();
 
-    this.clients.push({
-      index: 0,
-      name: "직접연결",
-      client: directClient,
-      cookieJar: directCookieJar,
-      isLoggedIn: false,
-      loginTime: null,
-      useProxy: false,
-    });
+    if (index === 0 || !proxyIP) {
+      // 직접 연결 클라이언트
+      const client = axios.create({
+        httpAgent: new HttpCookieAgent({
+          cookies: { jar: cookieJar },
+        }),
+        httpsAgent: new HttpsCookieAgent({
+          cookies: { jar: cookieJar },
+        }),
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15",
+          "Accept-Language": "en-US,en;q=0.9",
+          Accept:
+            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        },
+        maxRedirects: 5,
+        timeout: 30000,
+        validateStatus: function (status) {
+          return status >= 200 && status < 500;
+        },
+      });
 
-    // 나머지: 프록시 클라이언트들
-    this.proxyIPs.forEach((ip, index) => {
-      const cookieJar = new tough.CookieJar();
-
+      return {
+        index: index,
+        name: "직접연결",
+        client: client,
+        cookieJar: cookieJar,
+        isLoggedIn: false,
+        loginTime: null,
+        useProxy: false,
+      };
+    } else {
+      // 프록시 클라이언트
       const HttpProxyCookieAgent = createCookieAgent(HttpProxyAgent);
       const HttpsProxyCookieAgent = createCookieAgent(HttpsProxyAgent);
 
-      const proxyClient = axios.create({
+      const client = axios.create({
         httpAgent: new HttpProxyCookieAgent({
           cookies: { jar: cookieJar },
-          host: ip,
+          host: proxyIP,
           port: 3128,
           protocol: "http:",
         }),
         httpsAgent: new HttpsProxyCookieAgent({
           cookies: { jar: cookieJar },
-          host: ip,
+          host: proxyIP,
           port: 3128,
           protocol: "http:",
         }),
@@ -463,15 +462,25 @@ class AxiosCrawler {
         },
       });
 
-      this.clients.push({
-        index: index + 1,
-        name: `프록시${index + 1}(${ip})`,
-        client: proxyClient,
+      return {
+        index: index,
+        name: `프록시${index}(${proxyIP})`,
+        client: client,
         cookieJar: cookieJar,
         isLoggedIn: false,
         loginTime: null,
         useProxy: true,
-      });
+      };
+    }
+  }
+
+  initializeClients() {
+    // 첫 번째: 직접 연결
+    this.clients.push(this.createClientConfig(0));
+
+    // 나머지: 프록시 클라이언트들
+    this.proxyIPs.forEach((ip, index) => {
+      this.clients.push(this.createClientConfig(index + 1, ip));
     });
 
     console.log(
@@ -650,24 +659,24 @@ class AxiosCrawler {
   // 특정 클라이언트 강제 로그아웃
   forceLogoutClient(clientInfo) {
     const clientIndex = clientInfo.index;
-
     console.log(
       `Forcing logout for ${clientInfo.name} and clearing session data...`
     );
 
-    // 클라이언트별 세션 정보 초기화
-    clientInfo.isLoggedIn = false;
-    clientInfo.loginTime = null;
-
-    // 로그인 진행 상태 초기화
+    // 기존 상태 초기화
     this.clientLoginInProgress.set(clientIndex, false);
     this.clientLoginPromises.delete(clientIndex);
-
-    // 로그인 체크 캐시 초기화
     this.clientLastLoginCheck.delete(clientIndex);
     this.clientLastLoginCheckResult.delete(clientIndex);
 
-    console.log(`Session data cleared for ${clientInfo.name}`);
+    // ✅ 완전히 새로운 클라이언트 생성 (기존 로직 재사용)
+    const proxyIP = clientIndex === 0 ? null : this.proxyIPs[clientIndex - 1];
+    const newClientConfig = this.createClientConfig(clientIndex, proxyIP);
+
+    // 기존 클라이언트 정보를 새로운 설정으로 대체
+    Object.assign(clientInfo, newClientConfig);
+
+    console.log(`Complete client recreation completed for ${clientInfo.name}`);
   }
 
   // 모든 클라이언트 로그인 - 동시 실행 지원
@@ -715,27 +724,33 @@ class AxiosCrawler {
     console.log("Forcing logout and clearing all session data...");
 
     if (this.useMultipleClients) {
-      // 다중 클라이언트의 경우 각각 초기화
-      this.clients.forEach((clientInfo) => {
-        this.forceLogoutClient(clientInfo);
-      });
+      // 전체 클라이언트 배열 재초기화 (더 깔끔한 방법)
+      this.clients = [];
+      this.currentClientIndex = 0;
+
+      // 모든 맵 초기화
+      this.clientLoginPromises.clear();
+      this.clientLoginInProgress.clear();
+      this.clientLastLoginCheck.clear();
+      this.clientLastLoginCheckResult.clear();
+
+      // 완전히 새로운 클라이언트들 생성
+      this.initializeClients();
     } else {
-      // 단일 클라이언트의 경우 기존 로직
+      // 단일 클라이언트 초기화
       this.cookieJar = new tough.CookieJar();
       this.initializeAxiosClient();
 
-      // 로그인 상태 초기화
       this.isLoggedIn = false;
       this.loginTime = null;
       this.loginInProgress = false;
       this.loginPromise = null;
 
-      // 로그인 체크 캐시 초기화
       this.lastLoginCheck = null;
       this.lastLoginCheckResult = false;
     }
 
-    console.log("Session data cleared successfully");
+    console.log("Complete session data cleared and clients reinitialized");
   }
 
   // 세션 유효성 검사
