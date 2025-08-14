@@ -1210,6 +1210,18 @@ window.URLStateManager = (function () {
     "sortOrder",
     "keyword",
     "item_id", // 상세 모달용
+    // ProductListController용 키들 추가
+    "selectedBrands",
+    "selectedCategories",
+    "selectedRanks",
+    "selectedAucNums",
+    "itemsPerPage",
+    "searchTerm",
+    "selectedAuctionTypes",
+    "selectedFavoriteNumbers",
+    "selectedDates",
+    "showBidItemsOnly",
+    "excludeExpired",
   ];
 
   // 기본값들 (기본값과 같으면 URL에서 제외)
@@ -1221,6 +1233,18 @@ window.URLStateManager = (function () {
     sortBy: "updated_at",
     sortOrder: "desc",
     keyword: "",
+    // ProductListController용 기본값들 추가
+    selectedBrands: [],
+    selectedCategories: [],
+    selectedRanks: [],
+    selectedAucNums: [],
+    itemsPerPage: 20,
+    searchTerm: "",
+    selectedAuctionTypes: [],
+    selectedFavoriteNumbers: [],
+    selectedDates: [],
+    showBidItemsOnly: false,
+    excludeExpired: true,
   };
 
   /**
@@ -1246,17 +1270,43 @@ window.URLStateManager = (function () {
         if (
           key.includes("Page") ||
           key.includes("Range") ||
-          key.includes("Limit")
+          key.includes("Limit") ||
+          key.includes("itemsPerPage")
         ) {
           const numValue = parseInt(value);
           if (!isNaN(numValue) && numValue > 0) {
             updatedState[key] = numValue;
           }
-        } else if (key.includes("Array") || key.includes("Selected")) {
-          // 배열 타입 처리 (필요시)
-          updatedState[key] = value
-            ? value.split(",").filter((v) => v.trim())
-            : defaultState[key];
+        } else if (
+          key.includes("Array") ||
+          key.includes("Selected") ||
+          key === "selectedBrands" ||
+          key === "selectedCategories" ||
+          key === "selectedRanks" ||
+          key === "selectedAucNums" ||
+          key === "selectedAuctionTypes" ||
+          key === "selectedFavoriteNumbers" ||
+          key === "selectedDates"
+        ) {
+          // 배열 타입 처리
+          if (value && value.trim() !== "") {
+            let arrayValue = value.split(",").filter((v) => v.trim());
+            // 숫자 배열인 경우 변환
+            if (
+              key === "selectedAucNums" ||
+              key === "selectedFavoriteNumbers"
+            ) {
+              arrayValue = arrayValue
+                .map((v) => parseInt(v))
+                .filter((v) => !isNaN(v));
+            }
+            updatedState[key] = arrayValue;
+          } else {
+            updatedState[key] = defaultState[key] || [];
+          }
+        } else if (key === "showBidItemsOnly" || key === "excludeExpired") {
+          // 불린 타입 처리
+          updatedState[key] = value === "true";
         } else if (value && value.trim() !== "") {
           updatedState[key] = value.trim();
         }
