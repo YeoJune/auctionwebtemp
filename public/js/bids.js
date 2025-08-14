@@ -1151,7 +1151,7 @@ window.BidManager = (function () {
         // 경매 타입에 따라 다른 처리
         let bidStage = "first";
         let stageText = "입찰마감";
-        
+
         if (item.bid_type === "live") {
           // 현장 경매: 해당 아이템의 입찰 정보 확인
           const bidInfo = _state.liveBidData.find(
