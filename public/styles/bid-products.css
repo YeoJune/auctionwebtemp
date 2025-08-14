@@ -781,6 +781,12 @@
 
 /* 모바일에서 추가 컴팩트화 */
 @media (max-width: 768px) {
+  .bid-result-item {
+    margin-bottom: 2px;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  }
+
   .bid-result-item .bid-action-left {
     gap: 1px;
   }
