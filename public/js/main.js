@@ -612,6 +612,11 @@ window.ProductListController = (function () {
 
       updateModalWithDetails(updatedItem);
 
+      // 페이지별 커스터마이징 호출
+      if (config.customizeModal) {
+        config.customizeModal(updatedItem);
+      }
+
       if (updatedItem.additional_images) {
         initializeImages([
           updatedItem.image,
