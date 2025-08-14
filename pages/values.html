@@ -11,6 +11,46 @@
     <link rel="stylesheet" href="/styles/main.css" />
     <link rel="stylesheet" href="/styles/header.css" />
   </head>
+  <!-- values.html에 추가할 템플릿 -->
+  <template id="value-card-template">
+    <div class="product-card" data-item-id="">
+      <div class="product-header">
+        <div class="product-brand" data-field="brand"></div>
+        <div class="product-title" data-field="title"></div>
+        <div class="auction-info">
+          <div class="auction-number">
+            <span data-field="auc_num"></span><span>번</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="product-image-container">
+        <img src="" alt="" class="product-image" data-field="image" />
+        <div class="product-rank" data-field="rank"></div>
+      </div>
+
+      <div class="product-info-grid">
+        <div class="info-cell">
+          <div class="info-label">랭크</div>
+          <div class="info-value" data-field="rank"></div>
+        </div>
+        <div class="info-cell">
+          <div class="info-label">경매일</div>
+          <div class="info-value" data-field="formatted_date"></div>
+        </div>
+        <div class="info-cell">
+          <div class="info-label">가격</div>
+          <div class="info-value">
+            <span data-field="formatted_price"></span>¥
+            <!-- 관리자 수정 버튼 (관리자일 때만) -->
+            <button class="edit-price-icon" data-if="hasAdminEdit">
+              <i class="fas fa-edit"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
   <body>
     <div class="container">
       <header class="main-header">
@@ -258,6 +298,7 @@
 
     <script src="/js/common.js"></script>
     <script src="/js/api.js"></script>
+    <script src="/js/main.js"></script>
     <script src="/js/values.js"></script>
     <script src="/js/traker.js"></script>
   </body>

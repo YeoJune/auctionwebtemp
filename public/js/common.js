@@ -70,7 +70,7 @@ function createElement(tag, className, textContent) {
   return element;
 }
 
-// 필터 아이템 생성 함수
+// 필터 아이템 생성 함수 (범용)
 function createFilterItem(value, type, selectedArray, label = value) {
   const item = createElement("div", "filter-item");
 
@@ -97,25 +97,7 @@ function createFilterItem(value, type, selectedArray, label = value) {
   return item;
 }
 
-// 필터 검색 설정
-function setupFilterSearch(inputId, containerId) {
-  const searchInput = document.getElementById(inputId);
-  const container = document.getElementById(containerId);
-
-  if (!searchInput || !container) return;
-
-  searchInput.addEventListener("input", function () {
-    const searchTerm = this.value.toLowerCase();
-    const filterItems = container.querySelectorAll(".filter-item");
-
-    filterItems.forEach((item) => {
-      const label = item.querySelector("label").textContent.toLowerCase();
-      item.style.display = label.includes(searchTerm) ? "" : "none";
-    });
-  });
-}
-
-// 페이지네이션 생성 함수
+// 페이지네이션 생성 함수 (범용)
 function createPagination(currentPage, totalPages, onPageChange) {
   const container = document.getElementById("pagination");
   if (!container) return;
@@ -182,7 +164,7 @@ function getPageNumbers(currentPage, totalPages) {
   return pages;
 }
 
-// 모달 관련 함수
+// 모달 관련 함수 (범용)
 function setupModal(modalId) {
   const modal = document.getElementById(modalId);
   if (!modal) return null;
@@ -217,7 +199,7 @@ function setupModal(modalId) {
   };
 }
 
-// 로딩 상태 관리
+// 로딩 상태 관리 (범용)
 function toggleLoading(show) {
   const loadingMsg = document.getElementById("loadingMsg");
   if (loadingMsg) {
@@ -225,542 +207,139 @@ function toggleLoading(show) {
   }
 }
 
-function setupMobileFilters() {
-  const filterBtn = document.getElementById("mobileFilterBtn");
-  const filtersContainer = document.querySelector(".filters-container");
+// 네비게이션 버튼 상태 업데이트 (범용 - 이미지 갤러리용)
+function updateNavigationButtons() {
+  const prevBtn = document.querySelector(".image-nav.prev");
+  const nextBtn = document.querySelector(".image-nav.next");
 
-  // 요소가 없으면 함수 종료
-  if (!filterBtn || !filtersContainer) {
-    console.error("Mobile filter elements not found");
-    return;
-  }
+  if (!prevBtn || !nextBtn) return;
 
-  // 이미 백드롭이 있는지 확인
-  let backdrop = document.querySelector(".filter-backdrop");
+  // 현재 이미지 인덱스는 호출하는 곳에서 전달받아야 함
+  // 이 함수는 범용이므로 전역 상태에 의존하지 않음
+  const currentIndex = window.currentImageIndex || 0;
+  const totalImages = window.totalImages || 0;
 
-  // 백드롭이 없으면 생성
-  if (!backdrop) {
-    backdrop = document.createElement("div");
-    backdrop.className = "filter-backdrop";
-    backdrop.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0, 0, 0, 0.5);
-      z-index: 899;
-      display: none;
-    `;
-    document.body.appendChild(backdrop);
-  }
+  prevBtn.disabled = currentIndex === 0;
+  nextBtn.disabled = currentIndex === totalImages - 1;
+}
 
-  // 필터 닫기 함수를 전역에 정의
-  if (!window.mobileFilterFunctions) {
-    window.mobileFilterFunctions = {};
-  }
+// 인증 시스템 (모든 페이지에서 사용 가능)
+window.AuthManager = (function () {
+  let isAuthenticated = false;
+  let user = null;
+  let isAdmin = false;
 
-  window.mobileFilterFunctions.closeFilter = function () {
-    if (filtersContainer) {
-      filtersContainer.classList.remove("active");
+  /**
+   * 인증 상태 확인
+   */
+  async function checkAuthStatus() {
+    try {
+      const response = await window.API.fetchAPI("/auth/user");
+      isAuthenticated = !!response.user;
+      user = response.user;
+
+      // 관리자 권한 확인
+      if (isAuthenticated) {
+        try {
+          const adminResponse = await window.API.fetchAPI(
+            "/admin/check-status"
+          );
+          isAdmin = adminResponse.isAdmin;
+        } catch (error) {
+          isAdmin = false;
+        }
+      }
+
+      updateAuthUI();
+      return isAuthenticated;
+    } catch (error) {
+      isAuthenticated = false;
+      user = null;
+      isAdmin = false;
+      updateAuthUI();
+      return false;
     }
-    if (backdrop) {
-      backdrop.style.display = "none";
+  }
+
+  /**
+   * 인증 UI 업데이트
+   */
+  function updateAuthUI() {
+    const signinBtn = document.getElementById("signinBtn");
+    const signoutBtn = document.getElementById("signoutBtn");
+
+    if (!signinBtn || !signoutBtn) return;
+
+    if (isAuthenticated) {
+      signinBtn.style.display = "none";
+      signoutBtn.style.display = "inline-block";
+    } else {
+      signinBtn.style.display = "inline-block";
+      signoutBtn.style.display = "none";
     }
-    document.body.style.overflow = "";
-    console.log("필터 닫기 함수 실행됨");
+  }
+
+  /**
+   * 로그아웃 처리
+   */
+  async function handleSignout() {
+    try {
+      await window.API.fetchAPI("/auth/logout", { method: "POST" });
+      isAuthenticated = false;
+      user = null;
+      isAdmin = false;
+      location.reload();
+    } catch (error) {
+      alert("로그아웃 중 오류가 발생했습니다.");
+    }
+  }
+
+  /**
+   * 인증 필요 체크
+   */
+  function requireAuth(message = "로그인이 필요합니다.") {
+    if (!isAuthenticated) {
+      alert(message);
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * 관리자 권한 체크
+   */
+  function requireAdmin(message = "관리자 권한이 필요합니다.") {
+    if (!isAuthenticated || !isAdmin) {
+      alert(message);
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * 로그인 페이지로 이동
+   */
+  function redirectToSignin() {
+    window.location.href = "/signinPage";
+  }
+
+  // 공개 API
+  return {
+    checkAuthStatus,
+    updateAuthUI,
+    handleSignout,
+    requireAuth,
+    requireAdmin,
+    redirectToSignin,
+
+    // getter 함수들
+    isAuthenticated: () => isAuthenticated,
+    getUser: () => user,
+    isAdmin: () => isAdmin,
   };
+})();
 
-  // 이미 추가된 요소 확인 및 중복 방지
-  let filtersHeader = filtersContainer.querySelector(".filters-header");
-  if (!filtersHeader) {
-    // 필터 헤더 추가
-    filtersHeader = document.createElement("div");
-    filtersHeader.className = "filters-header";
-    filtersHeader.textContent = "필터";
-    filtersContainer.prepend(filtersHeader);
-  }
-
-  // 닫기 버튼이 이미 있는지 확인
-  let closeBtn = filtersContainer.querySelector(".filter-close-btn");
-  if (closeBtn) {
-    closeBtn.remove(); // 기존 버튼 제거
-  }
-
-  // 필터 닫기 버튼 새로 추가
-  closeBtn = document.createElement("button");
-  closeBtn.className = "filter-close-btn";
-  closeBtn.innerHTML = "&times;";
-  closeBtn.setAttribute("aria-label", "필터 닫기");
-
-  // 기존 이벤트 리스너 제거를 위해 버튼 복제 후 다시 추가
-  closeBtn.addEventListener("click", function (e) {
-    e.preventDefault();
-    e.stopPropagation();
-    window.mobileFilterFunctions.closeFilter();
-  });
-
-  filtersContainer.prepend(closeBtn);
-
-  // 기존 버튼 이벤트 제거를 위해 복제
-  const filterBtnClone = filterBtn.cloneNode(true);
-  filterBtn.parentNode.replaceChild(filterBtnClone, filterBtn);
-
-  // 필터 열기 버튼 이벤트 추가
-  filterBtnClone.addEventListener("click", function (e) {
-    e.preventDefault();
-    e.stopPropagation();
-    filtersContainer.classList.add("active");
-    backdrop.style.display = "block";
-    document.body.style.overflow = "hidden";
-  });
-
-  // 백드롭 이벤트 리스너 추가
-  backdrop.addEventListener("click", window.mobileFilterFunctions.closeFilter);
-
-  console.log("모바일 필터 설정 완료");
-
-  // ESC 키 이벤트 리스너
-  document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape" && filtersContainer.classList.contains("active")) {
-      window.mobileFilterFunctions.closeFilter();
-    }
-  });
-
-  // 필터 적용 버튼에 이벤트 추가
-  const applyFiltersBtn = document.getElementById("applyFiltersBtn");
-  if (applyFiltersBtn) {
-    applyFiltersBtn.addEventListener("click", function () {
-      if (window.innerWidth <= 768) {
-        window.mobileFilterFunctions.closeFilter();
-      }
-    });
-  }
-}
-
-function displayFilters(brands, categories, dates, ranks, aucNums) {
-  displayBrandFilters(brands);
-  displayCategoryFilters(categories);
-  displayDateFilters(dates);
-  displayRankFilters(ranks);
-  // --- TEMP BEGIN ---
-  aucNums = [{ auc_num: "1" }, { auc_num: "2" }, { auc_num: "3" }];
-  displayAucNumFilters(aucNums);
-  // --- TEMP END ---
-}
-
-function displayBrandFilters(brands) {
-  const brandCheckboxes = document.getElementById("brandCheckboxes");
-  if (!brandCheckboxes) return;
-
-  // 기존 옵션 제거 (전체 선택 제외)
-  const allCheckbox = brandCheckboxes.querySelector(".multiselect-all");
-  brandCheckboxes.innerHTML = "";
-  if (allCheckbox) brandCheckboxes.appendChild(allCheckbox);
-
-  // 브랜드 정렬
-  brands.sort((a, b) => {
-    // 개수 내림차순으로 정렬 (많은 것부터)
-    return (b.count || 0) - (a.count || 0);
-  });
-
-  // 전체 선택 체크박스 이벤트 설정
-  const brandAllCheckbox = document.getElementById("brand-all");
-  if (brandAllCheckbox) {
-    brandAllCheckbox.addEventListener("change", function () {
-      const checkboxes = brandCheckboxes.querySelectorAll(
-        "input[type='checkbox']:not(#brand-all)"
-      );
-      checkboxes.forEach((checkbox) => {
-        checkbox.checked = this.checked;
-
-        // 체크 상태에 따라 selectedBrands 배열 업데이트
-        const brandValue = checkbox.value;
-        const index = window.state.selectedBrands.indexOf(brandValue);
-
-        if (this.checked && index === -1) {
-          window.state.selectedBrands.push(brandValue);
-        } else if (!this.checked && index !== -1) {
-          window.state.selectedBrands.splice(index, 1);
-        }
-      });
-
-      // 선택된 항목 수 업데이트
-      updateSelectedCount("brand");
-    });
-  }
-
-  // 새 체크박스 추가
-  brands.forEach((brand) => {
-    if (!brand.brand) return; // 빈 브랜드명 제외
-
-    const item = createElement("div", "filter-item");
-
-    const checkbox = createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.id = `brand-${brand.brand.replace(/\s+/g, "-")}`;
-    checkbox.value = brand.brand;
-
-    // 이미 선택된 브랜드면 체크
-    if (window.state.selectedBrands.includes(brand.brand)) {
-      checkbox.checked = true;
-    }
-
-    checkbox.addEventListener("change", function () {
-      if (this.checked) {
-        window.state.selectedBrands.push(this.value);
-      } else {
-        const index = window.state.selectedBrands.indexOf(this.value);
-        if (index > -1) {
-          window.state.selectedBrands.splice(index, 1);
-        }
-      }
-
-      // "전체 선택" 체크박스 상태 업데이트
-      updateAllCheckbox("brand");
-      // 선택된 항목 수 업데이트
-      updateSelectedCount("brand");
-    });
-
-    const label = createElement("label");
-    label.htmlFor = checkbox.id;
-    label.textContent = brand.brand;
-
-    if (brand.count) {
-      const countSpan = createElement("span", "item-count");
-      countSpan.textContent = `(${brand.count})`;
-      label.appendChild(countSpan);
-    }
-
-    item.appendChild(checkbox);
-    item.appendChild(label);
-    brandCheckboxes.appendChild(item);
-  });
-
-  // 선택된 항목 수 업데이트
-  updateSelectedCount("brand");
-  // 검색 기능 설정
-  setupFilterSearch("brandSearchInput", "brandCheckboxes");
-}
-
-function displayCategoryFilters(categories) {
-  const categoryCheckboxes = document.getElementById("categoryCheckboxes");
-  if (!categoryCheckboxes) return;
-
-  // 기존 옵션 제거 (전체 선택 제외)
-  const allCheckbox = categoryCheckboxes.querySelector(".multiselect-all");
-  categoryCheckboxes.innerHTML = "";
-  if (allCheckbox) categoryCheckboxes.appendChild(allCheckbox);
-
-  // 카테고리 정렬
-  categories.sort();
-
-  // 전체 선택 체크박스 이벤트 설정
-  const categoryAllCheckbox = document.getElementById("category-all");
-  if (categoryAllCheckbox) {
-    categoryAllCheckbox.addEventListener("change", function () {
-      const checkboxes = categoryCheckboxes.querySelectorAll(
-        "input[type='checkbox']:not(#category-all)"
-      );
-      checkboxes.forEach((checkbox) => {
-        checkbox.checked = this.checked;
-
-        const categoryValue = checkbox.value;
-        const index = window.state.selectedCategories.indexOf(categoryValue);
-
-        if (this.checked && index === -1) {
-          window.state.selectedCategories.push(categoryValue);
-        } else if (!this.checked && index !== -1) {
-          window.state.selectedCategories.splice(index, 1);
-        }
-      });
-
-      // 선택된 항목 수 업데이트
-      updateSelectedCount("category");
-    });
-  }
-
-  // 새 체크박스 추가
-  categories.forEach((category) => {
-    if (!category) category = "기타"; // 빈 카테고리는 "기타"로 표시
-
-    const item = createElement("div", "filter-item");
-
-    const checkbox = createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.id = `category-${category.replace(/\s+/g, "-")}`;
-    checkbox.value = category;
-
-    // 이미 선택된 카테고리면 체크
-    if (window.state.selectedCategories.includes(category)) {
-      checkbox.checked = true;
-    }
-
-    checkbox.addEventListener("change", function () {
-      if (this.checked) {
-        window.state.selectedCategories.push(this.value);
-      } else {
-        const index = window.state.selectedCategories.indexOf(this.value);
-        if (index > -1) {
-          window.state.selectedCategories.splice(index, 1);
-        }
-      }
-
-      // "전체 선택" 체크박스 상태 업데이트
-      updateAllCheckbox("category");
-      // 선택된 항목 수 업데이트
-      updateSelectedCount("category");
-    });
-
-    const label = createElement("label");
-    label.htmlFor = checkbox.id;
-    label.textContent = category;
-
-    item.appendChild(checkbox);
-    item.appendChild(label);
-    categoryCheckboxes.appendChild(item);
-  });
-
-  // 선택된 항목 수 업데이트
-  updateSelectedCount("category");
-  // 검색 기능 설정
-  setupFilterSearch("categorySearchInput", "categoryCheckboxes");
-}
-
-function updateAllCheckbox(type) {
-  const container = document.getElementById(`${type}Checkboxes`);
-  if (!container) return;
-
-  const allCheckbox = document.getElementById(`${type}-all`);
-  if (!allCheckbox) return;
-
-  const checkboxes = container.querySelectorAll(
-    `input[type='checkbox']:not(#${type}-all)`
-  );
-  const checkedCount = container.querySelectorAll(
-    `input[type='checkbox']:not(#${type}-all):checked`
-  ).length;
-
-  // 모든 체크박스가 선택되었는지 확인
-  allCheckbox.checked =
-    checkedCount === checkboxes.length && checkboxes.length > 0;
-}
-
-// 선택된 항목 수 업데이트 함수
-function updateSelectedCount(type) {
-  const container = document.getElementById(`${type}Checkboxes`);
-  if (!container) return;
-
-  const checkboxes = container.querySelectorAll(
-    `input[type='checkbox']:not(#${type}-all)`
-  );
-  const checkedCount = container.querySelectorAll(
-    `input[type='checkbox']:not(#${type}-all):checked`
-  ).length;
-
-  let countElement = container.querySelector(`.multiselect-selected-count`);
-  if (!countElement) {
-    countElement = createElement("span", "multiselect-selected-count");
-    container.querySelector(".multiselect-all label").appendChild(countElement);
-  }
-
-  countElement.textContent =
-    checkedCount > 0 ? ` (${checkedCount}/${checkboxes.length})` : "";
-}
-
-function displayDateFilters(dates) {
-  const scheduledDateFilters = document.getElementById("scheduledDateFilters");
-  if (!scheduledDateFilters) return;
-
-  scheduledDateFilters.innerHTML = "";
-
-  const noScheduledDateItem = createFilterItem(
-    "NO_DATE",
-    "date",
-    window.state.selectedDates,
-    "날짜 없음"
-  );
-  scheduledDateFilters.appendChild(noScheduledDateItem);
-
-  dates.forEach((date) => {
-    if (date.Date) {
-      const kstDate = new Date(date.Date);
-      const normalizedDate = kstDate
-        .toLocaleDateString("ko-KR", {
-          timeZone: "Asia/Seoul",
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-        })
-        .replace(/\. /g, "-")
-        .replace(".", "");
-      const dateItem = createFilterItem(
-        normalizedDate,
-        "date",
-        window.state.selectedDates,
-        normalizedDate
-      );
-      scheduledDateFilters.appendChild(dateItem);
-    }
-  });
-}
-
-function displayRankFilters(ranks) {
-  const rankFilters = document.getElementById("rankFilters");
-  if (!rankFilters) return;
-
-  rankFilters.innerHTML = "";
-  const rankOrder = ["N", "S", "A", "AB", "B", "BC", "C", "D", "E", "F"];
-  const rankMap = new Map(ranks.map((r) => [r.rank, r]));
-
-  rankOrder.forEach((rank) => {
-    const rankData = rankMap.get(rank);
-    if (rankData) {
-      // 개수 표시 제거
-      const rankItem = createFilterItem(
-        rankData.rank,
-        "rank",
-        window.state.selectedRanks,
-        rankData.rank
-      );
-      rankFilters.appendChild(rankItem);
-    }
-  });
-}
-
-function displayAucNumFilters(aucNums) {
-  const aucNumFilters = document.getElementById("aucNumFilters");
-  if (!aucNumFilters) return;
-
-  aucNumFilters.innerHTML = "";
-
-  // 출품사 정렬
-  aucNums.sort((a, b) => a.auc_num - b.auc_num);
-
-  aucNums.forEach((item) => {
-    const filterItem = document.createElement("div");
-    filterItem.className = "filter-item";
-
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.id = `aucNum-${item.auc_num}`;
-    checkbox.value = item.auc_num;
-
-    const label = document.createElement("label");
-    label.htmlFor = `aucNum-${item.auc_num}`;
-
-    filterItem.appendChild(checkbox);
-    filterItem.appendChild(label);
-    aucNumFilters.appendChild(filterItem);
-  });
-}
-
-function displayFavoriteFilters() {
-  const favoriteFilters = document.getElementById("favoriteFilters");
-  if (!favoriteFilters) return;
-
-  favoriteFilters.innerHTML = "";
-
-  for (let i = 1; i <= 3; i++) {
-    const filterItem = document.createElement("div");
-    filterItem.className = "filter-item";
-
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.id = `favorite-${i}`;
-    checkbox.value = i;
-
-    const label = document.createElement("label");
-    label.htmlFor = `favorite-${i}`;
-
-    filterItem.appendChild(checkbox);
-    filterItem.appendChild(label);
-    favoriteFilters.appendChild(filterItem);
-  }
-}
-
-// 공지사항 관련 함수
-async function showNoticeSection() {
-  const noticeSection = document.querySelector(".notice-section");
-  const showNoticesBtn = document.getElementById("showNoticesBtn");
-
-  if (!noticeSection || !showNoticesBtn) return;
-
-  if (noticeSection.style.display === "none") {
-    noticeSection.style.display = "block";
-    showNoticesBtn.innerHTML =
-      '<i class="fas fa-bullhorn fa-lg"></i> 공지사항 닫기';
-    await fetchNotices();
-  } else {
-    noticeSection.style.display = "none";
-    showNoticesBtn.innerHTML =
-      '<i class="fas fa-bullhorn fa-lg"></i> 공지사항 보기';
-  }
-}
-
-async function fetchNotices() {
-  try {
-    const notices = await API.fetchAPI("/admin/notices");
-    displayNotices(notices);
-  } catch (error) {
-    console.error("Error fetching notices:", error);
-  }
-}
-
-function displayNotices(notices) {
-  const noticeList = document.getElementById("noticeList");
-  if (!noticeList) return;
-
-  noticeList.innerHTML = "";
-  notices.forEach((notice) => {
-    const li = createElement("li", "", notice.title);
-    li.addEventListener("click", () => showNoticeDetail(notice));
-    noticeList.appendChild(li);
-  });
-}
-
-function showNoticeDetail(notice) {
-  const modal = document.getElementById("noticeDetailModal");
-  const title = document.getElementById("noticeTitle");
-  const content = document.getElementById("noticeContent");
-  const image = document.getElementById("noticeImage");
-
-  if (!modal || !title || !content || !image) return;
-
-  // 내용 설정
-  title.textContent = notice.title;
-  content.innerHTML = notice.content.replace(/\n/g, "<br>");
-
-  // 이미지 처리
-  if (notice.image_url) {
-    image.src = notice.image_url;
-    image.style.display = "block";
-  } else {
-    image.style.display = "none";
-  }
-
-  // 모달 표시 및 닫기 버튼 이벤트 설정
-  modal.style.display = "block";
-
-  const closeBtn = modal.querySelector(".close");
-  const closeModal = () => {
-    modal.style.display = "none";
-  };
-
-  // 기존 이벤트 리스너 제거 후 새로 추가
-  closeBtn?.removeEventListener("click", closeModal);
-  closeBtn?.addEventListener("click", closeModal);
-
-  // 모달 외부 클릭시 닫기
-  modal.addEventListener("click", (e) => {
-    if (e.target === modal) {
-      closeModal();
-    }
-  });
-}
-
-// 모바일 메뉴 설정 함수
-// 모바일 메뉴 설정 함수 개선
+// 모바일 메뉴 설정 (범용)
 function setupMobileMenu() {
   // 필요한 요소 찾기
   const menuToggle = document.querySelector(".mobile-menu-toggle");
@@ -879,119 +458,191 @@ function setupMobileMenu() {
   console.log("모바일 메뉴 설정 완료");
 }
 
-// 이 함수를 DOM이 로드된 후 호출
-function preventEventConflicts() {
-  // 모바일 토글 버튼이 클릭되었는지 확인하는 상태 변수
-  let mobileToggleClicked = false;
+// 모바일 필터 설정 (범용)
+function setupMobileFilters() {
+  const filterBtn = document.getElementById("mobileFilterBtn");
+  const filtersContainer = document.querySelector(".filters-container");
 
-  // 모바일 토글 버튼
-  const mobileToggle = document.querySelector(".mobile-menu-toggle");
-
-  if (mobileToggle) {
-    // 기존 이벤트 제거를 위해 복제
-    const newMobileToggle = mobileToggle.cloneNode(true);
-    mobileToggle.parentNode.replaceChild(newMobileToggle, mobileToggle);
-
-    // 토글 버튼에 클릭 이벤트 추가
-    newMobileToggle.addEventListener("click", function (e) {
-      // 중요: 이벤트 전파 중지
-      e.stopPropagation();
-      e.preventDefault();
-
-      // 클릭 상태 플래그 설정 (짧은 시간 동안만 유지)
-      mobileToggleClicked = true;
-
-      // 토글 함수 실행 (setupMobileMenu에서 정의됨)
-      if (window.mobileMenuFunctions) {
-        if (
-          document.querySelector(".nav-container").classList.contains("active")
-        ) {
-          window.mobileMenuFunctions.closeMobileMenu();
-        } else {
-          window.mobileMenuFunctions.openMobileMenu();
-        }
-      }
-
-      // 50ms 후에 플래그 초기화 (다른 이벤트 처리 허용)
-      setTimeout(() => {
-        mobileToggleClicked = false;
-      }, 50);
-    });
+  // 요소가 없으면 함수 종료
+  if (!filterBtn || !filtersContainer) {
+    console.error("Mobile filter elements not found");
+    return;
   }
 
-  // 드롭다운 버튼들
-  const dropdownButtons = document.querySelectorAll(
-    ".nav-item.dropdown-container > .nav-button"
-  );
+  // 이미 백드롭이 있는지 확인
+  let backdrop = document.querySelector(".filter-backdrop");
 
-  dropdownButtons.forEach((button) => {
-    // 기존 이벤트 제거를 위해 복제
-    const newButton = button.cloneNode(true);
-    button.parentNode.replaceChild(newButton, button);
+  // 백드롭이 없으면 생성
+  if (!backdrop) {
+    backdrop = document.createElement("div");
+    backdrop.className = "filter-backdrop";
+    backdrop.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 899;
+      display: none;
+    `;
+    document.body.appendChild(backdrop);
+  }
 
-    // 새 버튼에 이벤트 추가
-    newButton.addEventListener("click", function (e) {
-      // 모바일 토글 버튼이 방금 클릭되었다면 드롭다운 동작 무시
-      if (mobileToggleClicked || e.target.closest(".mobile-menu-toggle")) {
-        return;
-      }
+  // 필터 닫기 함수를 전역에 정의
+  if (!window.mobileFilterFunctions) {
+    window.mobileFilterFunctions = {};
+  }
 
-      // 이벤트 전파 중지
-      e.stopPropagation();
-      e.preventDefault();
+  window.mobileFilterFunctions.closeFilter = function () {
+    if (filtersContainer) {
+      filtersContainer.classList.remove("active");
+    }
+    if (backdrop) {
+      backdrop.style.display = "none";
+    }
+    document.body.style.overflow = "";
+    console.log("필터 닫기 함수 실행됨");
+  };
 
-      // 드롭다운 토글 로직 실행
-      const dropdown = this.parentNode.querySelector(".dropdown-content");
-      if (dropdown) {
-        // 다른 모든 드롭다운 닫기
-        document.querySelectorAll(".dropdown-content").forEach((d) => {
-          if (d !== dropdown) d.classList.remove("active");
-        });
+  // 이미 추가된 요소 확인 및 중복 방지
+  let filtersHeader = filtersContainer.querySelector(".filters-header");
+  if (!filtersHeader) {
+    // 필터 헤더 추가
+    filtersHeader = document.createElement("div");
+    filtersHeader.className = "filters-header";
+    filtersHeader.textContent = "필터";
+    filtersContainer.prepend(filtersHeader);
+  }
 
-        // 현재 드롭다운 토글
-        dropdown.classList.toggle("active");
+  // 닫기 버튼이 이미 있는지 확인
+  let closeBtn = filtersContainer.querySelector(".filter-close-btn");
+  if (closeBtn) {
+    closeBtn.remove(); // 기존 버튼 제거
+  }
 
-        // 버튼 상태 토글 (화살표 회전 애니메이션용)
-        this.classList.toggle("active", dropdown.classList.contains("active"));
-      }
-    });
+  // 필터 닫기 버튼 새로 추가
+  closeBtn = document.createElement("button");
+  closeBtn.className = "filter-close-btn";
+  closeBtn.innerHTML = "&times;";
+  closeBtn.setAttribute("aria-label", "필터 닫기");
+
+  // 기존 이벤트 리스너 제거를 위해 버튼 복제 후 다시 추가
+  closeBtn.addEventListener("click", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    window.mobileFilterFunctions.closeFilter();
+  });
+
+  filtersContainer.prepend(closeBtn);
+
+  // 기존 버튼 이벤트 제거를 위해 복제
+  const filterBtnClone = filterBtn.cloneNode(true);
+  filterBtn.parentNode.replaceChild(filterBtnClone, filterBtn);
+
+  // 필터 열기 버튼 이벤트 추가
+  filterBtnClone.addEventListener("click", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    filtersContainer.classList.add("active");
+    backdrop.style.display = "block";
+    document.body.style.overflow = "hidden";
+  });
+
+  // 백드롭 이벤트 리스너 추가
+  backdrop.addEventListener("click", window.mobileFilterFunctions.closeFilter);
+
+  console.log("모바일 필터 설정 완료");
+
+  // ESC 키 이벤트 리스너
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && filtersContainer.classList.contains("active")) {
+      window.mobileFilterFunctions.closeFilter();
+    }
   });
 }
 
-// 모바일 메뉴 열기 함수
-function openMobileMenu(navContainer, menuToggle) {
-  navContainer.classList.add("active");
-  document.body.style.overflow = "hidden"; // 배경 스크롤 방지
+// 공지사항 관련 함수 (범용)
+async function showNoticeSection() {
+  const noticeSection = document.querySelector(".notice-section");
+  const showNoticesBtn = document.getElementById("showNoticesBtn");
 
-  // 햄버거 아이콘을 X 아이콘으로 변경
-  const icon = menuToggle.querySelector("i");
-  if (icon) {
-    icon.classList.remove("fa-bars");
-    icon.classList.add("fa-times");
+  if (!noticeSection || !showNoticesBtn) return;
+
+  if (noticeSection.style.display === "none") {
+    noticeSection.style.display = "block";
+    showNoticesBtn.innerHTML =
+      '<i class="fas fa-bullhorn fa-lg"></i> 공지사항 닫기';
+    await fetchNotices();
+  } else {
+    noticeSection.style.display = "none";
+    showNoticesBtn.innerHTML =
+      '<i class="fas fa-bullhorn fa-lg"></i> 공지사항 보기';
   }
-
-  // 아이콘 이외의 시각적 표시를 추가할 수도 있음
-  menuToggle.classList.add("active");
 }
 
-// 모바일 메뉴 닫기 함수
-function closeMobileMenu(navContainer, menuToggle) {
-  navContainer.classList.remove("active");
-  document.body.style.overflow = ""; // 배경 스크롤 복원
-
-  // X 아이콘을 햄버거 아이콘으로 변경
-  const icon = menuToggle.querySelector("i");
-  if (icon) {
-    icon.classList.remove("fa-times");
-    icon.classList.add("fa-bars");
+async function fetchNotices() {
+  try {
+    const notices = await window.API.fetchAPI("/admin/notices");
+    displayNotices(notices);
+  } catch (error) {
+    console.error("Error fetching notices:", error);
   }
-
-  // 추가된 active 클래스 제거
-  menuToggle.classList.remove("active");
 }
 
-// common.js에 추가할 툴팁 매니저
+function displayNotices(notices) {
+  const noticeList = document.getElementById("noticeList");
+  if (!noticeList) return;
 
+  noticeList.innerHTML = "";
+  notices.forEach((notice) => {
+    const li = createElement("li", "", notice.title);
+    li.addEventListener("click", () => showNoticeDetail(notice));
+    noticeList.appendChild(li);
+  });
+}
+
+function showNoticeDetail(notice) {
+  const modal = document.getElementById("noticeDetailModal");
+  const title = document.getElementById("noticeTitle");
+  const content = document.getElementById("noticeContent");
+  const image = document.getElementById("noticeImage");
+
+  if (!modal || !title || !content || !image) return;
+
+  // 내용 설정
+  title.textContent = notice.title;
+  content.innerHTML = notice.content.replace(/\n/g, "<br>");
+
+  // 이미지 처리
+  if (notice.image_url) {
+    image.src = notice.image_url;
+    image.style.display = "block";
+  } else {
+    image.style.display = "none";
+  }
+
+  // 모달 표시 및 닫기 버튼 이벤트 설정
+  modal.style.display = "block";
+
+  const closeBtn = modal.querySelector(".close");
+  const closeModal = () => {
+    modal.style.display = "none";
+  };
+
+  // 기존 이벤트 리스너 제거 후 새로 추가
+  closeBtn?.removeEventListener("click", closeModal);
+  closeBtn?.addEventListener("click", closeModal);
+
+  // 모달 외부 클릭시 닫기
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) {
+      closeModal();
+    }
+  });
+}
+
+// 툴팁 매니저 (범용)
 window.TooltipManager = (function () {
   let tooltipContainer = null;
   let currentTooltip = null;
@@ -1037,9 +688,6 @@ window.TooltipManager = (function () {
 
   /**
    * 툴팁 표시
-   * @param {HTMLElement} element - 기준 요소
-   * @param {string} message - 툴팁 메시지
-   * @param {string} position - 위치 ('top', 'bottom', 'left', 'right')
    */
   function show(element, message, position = "top") {
     if (!tooltipContainer || !element || !message) return;
@@ -1063,7 +711,6 @@ window.TooltipManager = (function () {
 
   /**
    * 툴팁 숨기기
-   * @param {number} delay - 지연 시간 (ms)
    */
   function hide(delay = 0) {
     if (!tooltipContainer) return;
@@ -1087,8 +734,6 @@ window.TooltipManager = (function () {
 
   /**
    * 툴팁 위치 계산 및 설정
-   * @param {HTMLElement} element - 기준 요소
-   * @param {string} position - 위치
    */
   function positionTooltip(element, position) {
     const rect = element.getBoundingClientRect();
@@ -1129,14 +774,12 @@ window.TooltipManager = (function () {
 
     // 뷰포트 경계 체크 및 조정
     if (position === "top" || position === "bottom") {
-      // 좌우 경계 체크
       if (left - tooltipRect.width / 2 < 10) {
         left = tooltipRect.width / 2 + 10;
       } else if (left + tooltipRect.width / 2 > viewport.width - 10) {
         left = viewport.width - tooltipRect.width / 2 - 10;
       }
 
-      // 상하 경계 체크 (top/bottom 전환)
       if (position === "top" && top < 10) {
         top = rect.bottom + 8;
       } else if (
@@ -1153,10 +796,6 @@ window.TooltipManager = (function () {
 
   /**
    * 조건부 툴팁 등록
-   * @param {string} selector - CSS 선택자
-   * @param {function} conditionFn - 조건 함수 (element) => boolean
-   * @param {function} messageFn - 메시지 함수 (element) => string
-   * @param {string} position - 툴팁 위치
    */
   function registerConditionalTooltip(
     selector,
@@ -1173,7 +812,6 @@ window.TooltipManager = (function () {
 
   /**
    * 조건부 툴팁 제거
-   * @param {string} selector - CSS 선택자
    */
   function unregisterConditionalTooltip(selector) {
     conditionalTooltips.delete(selector);
@@ -1253,8 +891,6 @@ window.TooltipManager = (function () {
 
   /**
    * 직접 툴팁 표시 (기존 호환성)
-   * @param {HTMLElement} element - 기준 요소
-   * @param {string} message - 메시지
    */
   function showTooltip(element, message) {
     show(element, message, "top");
@@ -1283,8 +919,243 @@ window.TooltipManager = (function () {
   };
 })();
 
+// 드롭다운 메뉴 설정 (범용)
+function setupDropdownMenus() {
+  // 드롭다운 버튼들 선택
+  const dropdownButtons = document.querySelectorAll(
+    ".nav-item.dropdown-container > .nav-button"
+  );
+
+  // 모든 드롭다운 닫기 함수
+  const closeAllDropdowns = (exceptDropdown = null) => {
+    document.querySelectorAll(".dropdown-content").forEach((dropdown) => {
+      if (dropdown !== exceptDropdown) {
+        dropdown.classList.remove("active");
+      }
+    });
+  };
+
+  // 현재 모바일 환경인지 확인하는 함수
+  const isMobile = () => window.innerWidth <= 768;
+
+  // 드롭다운 버튼 이벤트 설정
+  dropdownButtons.forEach((button) => {
+    // 중요: 이벤트 중복 방지를 위해 이전 리스너 제거
+    const newButton = button.cloneNode(true);
+    button.parentNode.replaceChild(newButton, button);
+
+    newButton.addEventListener("click", function (e) {
+      // 모바일 메뉴 토글 버튼 클릭 시 이벤트 차단
+      if (e.target.closest(".mobile-menu-toggle")) {
+        return;
+      }
+
+      // 이벤트 전파 중지
+      e.preventDefault();
+      e.stopPropagation();
+
+      // 현재 버튼의 부모 요소 내에 있는 dropdown-content 찾기
+      const dropdown = this.parentNode.querySelector(".dropdown-content");
+      if (!dropdown) return;
+
+      // 현재 드롭다운이 이미 활성화되어 있는지 확인
+      const isActive = dropdown.classList.contains("active");
+
+      // 다른 모든 드롭다운 닫기
+      closeAllDropdowns(isActive ? null : dropdown);
+
+      // 현재 드롭다운 토글
+      dropdown.classList.toggle("active");
+
+      // 버튼 상태 토글 (화살표 회전 애니메이션용)
+      this.classList.toggle("active", dropdown.classList.contains("active"));
+    });
+  });
+
+  // 드롭다운 내부 링크 클릭 이벤트
+  document.querySelectorAll(".dropdown-content a").forEach((link) => {
+    link.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      // 필요한 처리 수행
+      if (this.dataset.type) {
+        const type = this.dataset.type;
+        if (window.state && window.state.selectedAuctionTypes !== undefined) {
+          if (type === "all") {
+            window.state.selectedAuctionTypes = [];
+          } else {
+            window.state.selectedAuctionTypes = [type];
+          }
+        }
+      } else if (this.dataset.favorite) {
+        const favoriteNum = parseInt(this.dataset.favorite);
+        if (
+          window.state &&
+          window.state.selectedFavoriteNumbers !== undefined
+        ) {
+          window.state.selectedFavoriteNumbers = [favoriteNum];
+        }
+      }
+
+      // 데이터 새로고침
+      if (typeof updateFilterUI === "function") {
+        updateFilterUI();
+      }
+      if (typeof fetchData === "function") {
+        fetchData();
+      } else if (
+        window.ProductListController &&
+        typeof window.ProductListController.fetchData === "function"
+      ) {
+        window.ProductListController.fetchData();
+      }
+
+      // 드롭다운 닫기
+      closeAllDropdowns();
+
+      // 모바일 환경에서 메뉴 닫기 처리
+      if (isMobile()) {
+        if (
+          window.mobileMenuFunctions &&
+          window.mobileMenuFunctions.closeMobileMenu
+        ) {
+          window.mobileMenuFunctions.closeMobileMenu();
+        }
+      }
+    });
+  });
+
+  // 다른 곳 클릭 시 모든 드롭다운 닫기
+  document.addEventListener("click", function (e) {
+    // 햄버거 메뉴 버튼 클릭은 무시
+    if (e.target.closest(".mobile-menu-toggle")) {
+      return;
+    }
+
+    // 클릭된 요소가 드롭다운 버튼이나 드롭다운 콘텐츠 내부가 아니면 모든 드롭다운 닫기
+    if (
+      !e.target.closest(".dropdown-content") &&
+      !e.target.closest(".nav-item.dropdown-container > .nav-button")
+    ) {
+      closeAllDropdowns();
+    }
+  });
+
+  console.log("드롭다운 메뉴 설정 완료");
+}
+
+// 이벤트 충돌 방지 함수 (범용)
+function preventEventConflicts() {
+  // 모바일 토글 버튼이 클릭되었는지 확인하는 상태 변수
+  let mobileToggleClicked = false;
+
+  // 모바일 토글 버튼
+  const mobileToggle = document.querySelector(".mobile-menu-toggle");
+
+  if (mobileToggle) {
+    // 기존 이벤트 제거를 위해 복제
+    const newMobileToggle = mobileToggle.cloneNode(true);
+    mobileToggle.parentNode.replaceChild(newMobileToggle, mobileToggle);
+
+    // 토글 버튼에 클릭 이벤트 추가
+    newMobileToggle.addEventListener("click", function (e) {
+      // 중요: 이벤트 전파 중지
+      e.stopPropagation();
+      e.preventDefault();
+
+      // 클릭 상태 플래그 설정 (짧은 시간 동안만 유지)
+      mobileToggleClicked = true;
+
+      // 토글 함수 실행 (setupMobileMenu에서 정의됨)
+      if (window.mobileMenuFunctions) {
+        if (
+          document.querySelector(".nav-container").classList.contains("active")
+        ) {
+          window.mobileMenuFunctions.closeMobileMenu();
+        } else {
+          window.mobileMenuFunctions.openMobileMenu();
+        }
+      }
+
+      // 50ms 후에 플래그 초기화 (다른 이벤트 처리 허용)
+      setTimeout(() => {
+        mobileToggleClicked = false;
+      }, 50);
+    });
+  }
+
+  // 드롭다운 버튼들
+  const dropdownButtons = document.querySelectorAll(
+    ".nav-item.dropdown-container > .nav-button"
+  );
+
+  dropdownButtons.forEach((button) => {
+    // 기존 이벤트 제거를 위해 복제
+    const newButton = button.cloneNode(true);
+    button.parentNode.replaceChild(newButton, button);
+
+    // 새 버튼에 이벤트 추가
+    newButton.addEventListener("click", function (e) {
+      // 모바일 토글 버튼이 방금 클릭되었다면 드롭다운 동작 무시
+      if (mobileToggleClicked || e.target.closest(".mobile-menu-toggle")) {
+        return;
+      }
+
+      // 이벤트 전파 중지
+      e.stopPropagation();
+      e.preventDefault();
+
+      // 드롭다운 토글 로직 실행
+      const dropdown = this.parentNode.querySelector(".dropdown-content");
+      if (dropdown) {
+        // 다른 모든 드롭다운 닫기
+        document.querySelectorAll(".dropdown-content").forEach((d) => {
+          if (d !== dropdown) d.classList.remove("active");
+        });
+
+        // 현재 드롭다운 토글
+        dropdown.classList.toggle("active");
+
+        // 버튼 상태 토글 (화살표 회전 애니메이션용)
+        this.classList.toggle("active", dropdown.classList.contains("active"));
+      }
+    });
+  });
+}
+
+// 기본 이벤트 리스너 설정 (범용)
+function setupBasicEventListeners() {
+  // 인증 버튼 이벤트
+  const signinBtn = document.getElementById("signinBtn");
+  const signoutBtn = document.getElementById("signoutBtn");
+
+  if (signinBtn) {
+    signinBtn.addEventListener("click", () => {
+      window.AuthManager.redirectToSignin();
+    });
+  }
+
+  if (signoutBtn) {
+    signoutBtn.addEventListener("click", () => {
+      window.AuthManager.handleSignout();
+    });
+  }
+}
+
 // 페이지 로드 시 초기화
 document.addEventListener("DOMContentLoaded", function () {
+  // 기본 UI 설정
   setupMobileMenu();
-  preventEventConflicts(); // 이벤트 충돌 방지 함수 호출
+  setupDropdownMenus();
+  preventEventConflicts();
+  setupMobileFilters();
+  setupBasicEventListeners();
+
+  // 툴팁 시스템 초기화
+  if (window.TooltipManager) {
+    window.TooltipManager.init();
+  }
+
+  console.log("Common.js 초기화 완료");
 });
