@@ -267,9 +267,17 @@ window.BidManager = (function () {
    * @param {string} itemId - 상품 ID
    * @param {number} aucNum - 출품사 번호
    * @param {string} category - 상품 카테고리
+   * @param {object} options - 옵션 객체
+   * @param {boolean} options.showTimer - 타이머 표시 여부 (기본값: true)
    * @returns {string} 입찰 섹션 HTML
    */
-  function getLiveBidSectionHTML(bidInfo, itemId, aucNum, category) {
+  function getLiveBidSectionHTML(
+    bidInfo,
+    itemId,
+    aucNum,
+    category,
+    options = { showTimer: true }
+  ) {
     const item = _state.currentData.find((item) => item.item_id === itemId);
     if (!item) return "";
 
@@ -278,40 +286,52 @@ window.BidManager = (function () {
 
     // 입찰 단계에 따른 마감시간 계산
     let bidStage = "first";
-    let isExpired = false;
+    let isExpired = false; // 여기서 선언
     let timer = null;
     let timerHTML = "";
 
-    if (bidInfo?.first_price && !bidInfo?.final_price) {
-      // 1차 입찰 완료, 최종 입찰 대기 중 - 저녁 10시까지
-      bidStage = "final";
-      timer = getRemainingTime(item.scheduled_date, "final");
-      isExpired = !timer;
+    if (options.showTimer) {
+      if (bidInfo?.first_price && !bidInfo?.final_price) {
+        // 1차 입찰 완료, 최종 입찰 대기 중 - 저녁 10시까지
+        bidStage = "final";
+        timer = getRemainingTime(item.scheduled_date, "final");
+        isExpired = !timer;
 
-      timerHTML = timer
-        ? `<div class="bid-timer ${timer.isNearEnd ? "near-end" : ""}">
-          최종입찰마감 남은시간 [${timer.text}]
-        </div>`
-        : `<div class="bid-timer expired">
-          최종입찰마감 [마감됨]
-        </div>`;
-    } else if (!bidInfo?.first_price) {
-      // 1차 입찰 전 - scheduled_date까지
-      timer = getRemainingTime(item.scheduled_date, "first");
-      isExpired = !timer;
+        timerHTML = timer
+          ? `<div class="bid-timer ${timer.isNearEnd ? "near-end" : ""}">
+            최종입찰마감 남은시간 [${timer.text}]
+          </div>`
+          : `<div class="bid-timer expired">
+            최종입찰마감 [마감됨]
+          </div>`;
+      } else if (!bidInfo?.first_price) {
+        // 1차 입찰 전 - scheduled_date까지
+        timer = getRemainingTime(item.scheduled_date, "first");
+        isExpired = !timer;
 
-      timerHTML = timer
-        ? `<div class="bid-timer ${timer.isNearEnd ? "near-end" : ""}">
-          1차입찰마감 남은시간 [${timer.text}]
-        </div>`
-        : `<div class="bid-timer expired">
-          1차입찰마감 [마감됨]
-        </div>`;
+        timerHTML = timer
+          ? `<div class="bid-timer ${timer.isNearEnd ? "near-end" : ""}">
+            1차입찰마감 남은시간 [${timer.text}]
+          </div>`
+          : `<div class="bid-timer expired">
+            1차입찰마감 [마감됨]
+          </div>`;
+      } else {
+        // 최종 입찰 완료
+        timerHTML = `<div class="bid-timer completed">
+        입찰완료
+      </div>`;
+      }
     } else {
-      // 최종 입찰 완료
-      timerHTML = `<div class="bid-timer completed">
-      입찰완료
-    </div>`;
+      // 타이머 표시하지 않을 때도 마감 여부는 확인
+      if (bidInfo?.first_price && !bidInfo?.final_price) {
+        bidStage = "final";
+        timer = getRemainingTime(item.scheduled_date, "final");
+        isExpired = !timer;
+      } else if (!bidInfo?.first_price) {
+        timer = getRemainingTime(item.scheduled_date, "first");
+        isExpired = !timer;
+      }
     }
 
     // 최종 입찰가가 있는 경우
@@ -405,9 +425,17 @@ window.BidManager = (function () {
    * @param {string} itemId - 상품 ID
    * @param {number} aucNum - 출품사 번호
    * @param {string} category - 상품 카테고리
+   * @param {object} options - 옵션 객체
+   * @param {boolean} options.showTimer - 타이머 표시 여부 (기본값: true)
    * @returns {string} 입찰 섹션 HTML
    */
-  function getDirectBidSectionHTML(bidInfo, itemId, aucNum, category) {
+  function getDirectBidSectionHTML(
+    bidInfo,
+    itemId,
+    aucNum,
+    category,
+    options = { showTimer: true }
+  ) {
     const item = _state.currentData.find((item) => item.item_id === itemId);
     if (!item) return "";
 
@@ -429,21 +457,30 @@ window.BidManager = (function () {
     const hasHigherBid =
       Number(live_price) > Number(currentPrice) && currentPrice > 0;
 
-    // 타이머 HTML (직접 경매는 scheduled_date까지만)
-    const timer = getRemainingTime(item.scheduled_date, "first");
-    const isExpired = !timer; // 마감 여부 확인
+    // 타이머 HTML (직접 경매는 scheduled_date까지만) - 옵션에 따라 표시
+    let timerHTML = "";
+    let isExpired = false; // 여기서 선언
 
-    const timerHTML = timer
-      ? `
-      <div class="bid-timer ${timer.isNearEnd ? "near-end" : ""}">
-        입찰마감 남은시간 [${timer.text}]
-      </div>
-    `
-      : `
-      <div class="bid-timer expired">
-        입찰마감 [마감됨]
-      </div>
-    `;
+    if (options.showTimer) {
+      const timer = getRemainingTime(item.scheduled_date, "first");
+      isExpired = !timer; // 마감 여부 확인
+
+      timerHTML = timer
+        ? `
+        <div class="bid-timer ${timer.isNearEnd ? "near-end" : ""}">
+          입찰마감 남은시간 [${timer.text}]
+        </div>
+      `
+        : `
+        <div class="bid-timer expired">
+          입찰마감 [마감됨]
+        </div>
+      `;
+    } else {
+      // 타이머 표시하지 않을 때는 마감 여부만 확인
+      const timer = getRemainingTime(item.scheduled_date, "first");
+      isExpired = !timer;
+    }
 
     let html = `<div class="bid-info direct">
       ${

@@ -249,14 +249,16 @@ window.ProductRenderer = (function () {
           directBidInfo,
           item.item_id,
           item.auc_num,
-          item.category
+          item.category,
+          { showTimer: false } // 카드에서는 타이머 표시하지 않음
         );
       } else {
         bidSection.innerHTML = window.BidManager.getLiveBidSectionHTML(
           liveBidInfo,
           item.item_id,
           item.auc_num,
-          item.category
+          item.category,
+          { showTimer: false } // 카드에서는 타이머 표시하지 않음
         );
       }
       console.log("입찰 UI 생성 완료:", item.item_id);
@@ -283,9 +285,42 @@ window.ProductRenderer = (function () {
   function updateTimer(timerElement, item) {
     if (!window.BidManager) return;
 
-    const timer = window.BidManager.getRemainingTime(item.scheduled_date);
+    const state = window.ProductListController.getState();
+
+    // 경매 타입에 따라 적절한 입찰 정보 가져오기
+    let bidInfo = null;
+    let bidStage = "first";
+    let timerText = "입찰마감";
+
+    if (item.bid_type === "live") {
+      // 현장 경매
+      bidInfo = state.liveBidData.find((b) => b.item_id == item.item_id);
+
+      if (bidInfo?.first_price && !bidInfo?.final_price) {
+        // 1차 입찰 완료, 최종 입찰 대기 중
+        bidStage = "final";
+        timerText = "최종입찰마감";
+      } else if (!bidInfo?.first_price) {
+        // 1차 입찰 전
+        bidStage = "first";
+        timerText = "1차입찰마감";
+      } else {
+        // 최종 입찰 완료
+        timerText = "입찰완료";
+      }
+    } else {
+      // 직접 경매 - 항상 first 단계만
+      bidInfo = state.directBidData.find((b) => b.item_id == item.item_id);
+      bidStage = "first";
+      timerText = "입찰마감";
+    }
+
+    const timer = window.BidManager.getRemainingTime(
+      item.scheduled_date,
+      bidStage
+    );
     const isNearEnd = timer?.isNearEnd;
-    const timerText = timer ? timer.text : "--:--:--";
+    const timeText = timer ? timer.text : "--:--:--";
 
     // 날짜 및 시간 표시
     const formattedDateTime = formatDateTime(item.scheduled_date);
@@ -305,7 +340,7 @@ window.ProductRenderer = (function () {
 
     if (remainingTimeEl) {
       if (timer) {
-        remainingTimeEl.textContent = `[${timerText}]`;
+        remainingTimeEl.textContent = `[${timeText}]`;
       } else {
         remainingTimeEl.textContent = "[마감됨]";
       }
@@ -537,7 +572,7 @@ function initializeBidInfo(itemId, item = null) {
 
   const state = window.ProductListController.getState();
 
-  // 경매 타입에 따라 다른 입찰 섹션 표시
+  // 경매 타입에 따라 다른 입찰 섹션 표시 (모달에서는 타이머 표시)
   if (item.bid_type === "direct") {
     const directBidInfo = state.directBidData.find((b) => b.item_id == itemId);
     bidSection.innerHTML = window.BidManager.getDirectBidSectionHTML(
@@ -545,6 +580,7 @@ function initializeBidInfo(itemId, item = null) {
       itemId,
       item.auc_num,
       item.category
+      // 옵션을 전달하지 않으면 기본값 { showTimer: true }가 사용됨
     );
   } else {
     const liveBidInfo = state.liveBidData.find((b) => b.item_id == itemId);
@@ -553,6 +589,7 @@ function initializeBidInfo(itemId, item = null) {
       itemId,
       item.auc_num,
       item.category
+      // 옵션을 전달하지 않으면 기본값 { showTimer: true }가 사용됨
     );
   }
 
