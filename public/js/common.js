@@ -280,14 +280,25 @@ window.AuthManager = (function () {
    */
   function updateAuthUI() {
     const authContainer = document.querySelector(".auth-container");
-    if (!authContainer) return;
+    const signinBtn = document.getElementById("signinBtn");
+    const signoutBtn = document.getElementById("signoutBtn");
+
+    if (!signinBtn || !signoutBtn) return;
 
     if (isAuthenticated) {
-      authContainer.classList.remove("auth-unauthenticated");
-      authContainer.classList.add("auth-authenticated");
+      if (authContainer) {
+        authContainer.classList.remove("auth-unauthenticated");
+        authContainer.classList.add("auth-authenticated");
+      }
+      signinBtn.style.display = "none";
+      signoutBtn.style.display = "inline-block";
     } else {
-      authContainer.classList.remove("auth-authenticated");
-      authContainer.classList.add("auth-unauthenticated");
+      if (authContainer) {
+        authContainer.classList.remove("auth-authenticated");
+        authContainer.classList.add("auth-unauthenticated");
+      }
+      signinBtn.style.display = "inline-block";
+      signoutBtn.style.display = "none";
     }
   }
 
@@ -335,6 +346,17 @@ window.AuthManager = (function () {
     window.location.href = "/signinPage";
   }
 
+  /**
+   * 인증되지 않은 경우 로그인 페이지로 리다이렉트
+   */
+  function redirectIfNotAuthenticated() {
+    if (!isAuthenticated) {
+      redirectToSignin();
+      return false;
+    }
+    return true;
+  }
+
   // 공개 API
   return {
     checkAuthStatus,
@@ -343,6 +365,7 @@ window.AuthManager = (function () {
     requireAuth,
     requireAdmin,
     redirectToSignin,
+    redirectIfNotAuthenticated,
 
     // getter 함수들
     isAuthenticated: () => isAuthenticated,
@@ -1155,7 +1178,225 @@ function setupBasicEventListeners() {
       window.AuthManager.handleSignout();
     });
   }
+
+  // 모달 기본 이벤트 (이미지 네비게이션)
+  const prevBtn = document.querySelector(".image-nav.prev");
+  const nextBtn = document.querySelector(".image-nav.next");
+
+  if (prevBtn) {
+    prevBtn.addEventListener("click", () => {
+      const currentIndex = window.ModalImageGallery.getCurrentIndex();
+      window.ModalImageGallery.changeImage(currentIndex - 1);
+    });
+  }
+
+  if (nextBtn) {
+    nextBtn.addEventListener("click", () => {
+      const currentIndex = window.ModalImageGallery.getCurrentIndex();
+      window.ModalImageGallery.changeImage(currentIndex + 1);
+    });
+  }
 }
+
+// URL 상태 관리자
+window.URLStateManager = (function () {
+  /**
+   * URL 파라미터에서 상태 로드
+   * @param {Object} defaultState - 기본 상태 객체
+   * @param {Array} stateKeys - 로드할 상태 키 배열
+   * @returns {Object} 업데이트된 상태 객체
+   */
+  function loadFromURL(defaultState, stateKeys) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const updatedState = { ...defaultState };
+
+    stateKeys.forEach((key) => {
+      if (urlParams.has(key)) {
+        const value = urlParams.get(key);
+
+        // 타입에 따른 변환
+        if (
+          key.includes("Page") ||
+          key.includes("Range") ||
+          key.includes("Limit")
+        ) {
+          updatedState[key] = parseInt(value) || defaultState[key];
+        } else if (key.includes("Array") || key.includes("Selected")) {
+          // 배열 타입 처리
+          updatedState[key] = value ? value.split(",") : defaultState[key];
+        } else {
+          updatedState[key] = value;
+        }
+      }
+    });
+
+    return updatedState;
+  }
+
+  /**
+   * 상태를 URL에 업데이트
+   * @param {Object} state - 현재 상태
+   * @param {Object} defaultState - 기본 상태 (기본값과 다른 것만 URL에 포함)
+   */
+  function updateURL(state, defaultState = {}) {
+    const params = new URLSearchParams();
+
+    Object.keys(state).forEach((key) => {
+      const value = state[key];
+      const defaultValue = defaultState[key];
+
+      // 기본값과 다른 경우만 URL에 포함
+      if (value !== defaultValue && value !== null && value !== undefined) {
+        if (Array.isArray(value)) {
+          if (value.length > 0) {
+            params.append(key, value.join(","));
+          }
+        } else if (value !== "") {
+          params.append(key, value);
+        }
+      }
+    });
+
+    // URL 업데이트
+    const url = `${window.location.pathname}${
+      params.toString() ? `?${params.toString()}` : ""
+    }`;
+    window.history.replaceState({}, "", url);
+  }
+
+  /**
+   * URL 파라미터 헬퍼
+   * @returns {URLSearchParams} URL 파라미터 객체
+   */
+  function getURLParams() {
+    return new URLSearchParams(window.location.search);
+  }
+
+  // 공개 API
+  return {
+    loadFromURL,
+    updateURL,
+    getURLParams,
+  };
+})();
+
+// 모달 이미지 갤러리 관리자
+window.ModalImageGallery = (function () {
+  let state = {
+    images: [],
+    currentImageIndex: 0,
+  };
+
+  /**
+   * 이미지 갤러리 초기화
+   * @param {Array} imageUrls - 이미지 URL 배열
+   */
+  function initialize(imageUrls) {
+    const validImageUrls = imageUrls.filter((url) => url);
+
+    state.images = validImageUrls;
+    state.currentImageIndex = 0;
+
+    const mainImage = document.querySelector(".main-image");
+    const thumbnailContainer = document.querySelector(".thumbnail-container");
+
+    if (!mainImage || !thumbnailContainer) return;
+
+    // 메인 이미지 설정
+    if (validImageUrls.length > 0) {
+      mainImage.src = API.validateImageUrl(validImageUrls[0]);
+    }
+
+    // 썸네일 초기화
+    thumbnailContainer.innerHTML = "";
+
+    validImageUrls.forEach((img, index) => {
+      const thumbnailWrapper = createElement("div", "thumbnail");
+      thumbnailWrapper.classList.toggle("active", index === 0);
+
+      const thumbnail = createElement("img");
+      thumbnail.src = API.validateImageUrl(img);
+      thumbnail.alt = `Thumbnail ${index + 1}`;
+      thumbnail.loading = "lazy";
+
+      thumbnail.addEventListener("click", () => changeImage(index));
+      thumbnailWrapper.appendChild(thumbnail);
+      thumbnailContainer.appendChild(thumbnailWrapper);
+    });
+
+    // 네비게이션 버튼 상태 업데이트
+    updateNavigation();
+  }
+
+  /**
+   * 메인 이미지 변경
+   * @param {number} index - 이미지 인덱스
+   */
+  function changeImage(index) {
+    if (index < 0 || index >= state.images.length) return;
+
+    state.currentImageIndex = index;
+    const mainImage = document.querySelector(".main-image");
+    if (!mainImage) return;
+
+    mainImage.src = API.validateImageUrl(state.images[index]);
+
+    // 썸네일 active 상태 업데이트
+    const thumbnails = document.querySelectorAll(".thumbnail");
+    thumbnails.forEach((thumb, i) => {
+      thumb.classList.toggle("active", i === index);
+    });
+
+    updateNavigation();
+  }
+
+  /**
+   * 이미지 네비게이션 버튼 상태 업데이트
+   */
+  function updateNavigation() {
+    const prevBtn = document.querySelector(".image-nav.prev");
+    const nextBtn = document.querySelector(".image-nav.next");
+
+    if (!prevBtn || !nextBtn) return;
+
+    prevBtn.disabled = state.currentImageIndex === 0;
+    nextBtn.disabled = state.currentImageIndex === state.images.length - 1;
+  }
+
+  /**
+   * 모달 로딩 표시
+   */
+  function showLoading() {
+    const existingLoader = document.getElementById("modal-loading");
+    if (existingLoader) return;
+
+    const loadingElement = createElement("div", "modal-loading");
+    loadingElement.id = "modal-loading";
+    loadingElement.textContent = "상세 정보를 불러오는 중...";
+
+    document.querySelector(".modal-content")?.appendChild(loadingElement);
+  }
+
+  /**
+   * 모달 로딩 숨기기
+   */
+  function hideLoading() {
+    document.getElementById("modal-loading")?.remove();
+  }
+
+  // 공개 API
+  return {
+    initialize,
+    changeImage,
+    updateNavigation,
+    showLoading,
+    hideLoading,
+
+    // getter 함수들
+    getCurrentIndex: () => state.currentImageIndex,
+    getImages: () => state.images,
+  };
+})();
 
 // 페이지 로드 시 초기화
 document.addEventListener("DOMContentLoaded", function () {

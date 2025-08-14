@@ -600,7 +600,7 @@ window.ProductListController = (function () {
 
     initializeModal(item);
     modalManager.show();
-    showLoadingInModal();
+    window.ModalImageGallery.showLoading();
 
     try {
       const updatedItem = await API.fetchAPI(
@@ -618,7 +618,7 @@ window.ProductListController = (function () {
       }
 
       if (updatedItem.additional_images) {
-        initializeImages([
+        window.ModalImageGallery.initialize([
           updatedItem.image,
           ...JSON.parse(updatedItem.additional_images),
         ]);
@@ -626,7 +626,7 @@ window.ProductListController = (function () {
     } catch (error) {
       console.error("상세 정보 업데이트 실패:", error);
     } finally {
-      hideLoadingInModal();
+      window.ModalImageGallery.hideLoading();
     }
   }
 
@@ -661,7 +661,7 @@ window.ProductListController = (function () {
           : "가격 정보 없음";
     }
 
-    initializeImages([item.image]);
+    window.ModalImageGallery.initialize([item.image]);
   }
 
   /**
@@ -690,104 +690,6 @@ window.ProductListController = (function () {
           ? `${formatNumber(parseInt(item.final_price))} ¥`
           : "가격 정보 없음";
     }
-  }
-
-  /**
-   * 이미지 갤러리 초기화
-   */
-  function initializeImages(imageUrls) {
-    state.images = imageUrls.filter((url) => url);
-    state.currentImageIndex = 0;
-
-    const mainImage = document.querySelector(".main-image");
-    const thumbnailContainer = document.querySelector(".thumbnail-container");
-
-    if (!mainImage || !thumbnailContainer) return;
-
-    mainImage.src = API.validateImageUrl(state.images[0]);
-
-    thumbnailContainer.innerHTML = "";
-    state.images.forEach((img, index) => {
-      const thumbnailWrapper = createElement("div", "thumbnail");
-      thumbnailWrapper.classList.toggle("active", index === 0);
-
-      const thumbnail = createElement("img");
-      thumbnail.src = API.validateImageUrl(img);
-      thumbnail.alt = `Thumbnail ${index + 1}`;
-      thumbnail.loading = "lazy";
-
-      thumbnail.addEventListener("click", () => changeMainImage(index));
-      thumbnailWrapper.appendChild(thumbnail);
-      thumbnailContainer.appendChild(thumbnailWrapper);
-    });
-
-    updateNavigationButtons();
-    setupImageNavigation();
-  }
-
-  /**
-   * 메인 이미지 변경
-   */
-  function changeMainImage(index) {
-    if (index < 0 || index >= state.images.length) return;
-
-    state.currentImageIndex = index;
-    const mainImage = document.querySelector(".main-image");
-    if (!mainImage) return;
-
-    mainImage.src = API.validateImageUrl(state.images[index]);
-
-    const thumbnails = document.querySelectorAll(".thumbnail");
-    thumbnails.forEach((thumb, i) => {
-      thumb.classList.toggle("active", i === index);
-    });
-
-    updateNavigationButtons();
-  }
-
-  /**
-   * 이미지 네비게이션 설정
-   */
-  function setupImageNavigation() {
-    const prevBtn = document.querySelector(".image-nav.prev");
-    const nextBtn = document.querySelector(".image-nav.next");
-
-    if (prevBtn) {
-      const newPrevBtn = prevBtn.cloneNode(true);
-      prevBtn.parentNode.replaceChild(newPrevBtn, prevBtn);
-      newPrevBtn.addEventListener("click", () => {
-        changeMainImage(state.currentImageIndex - 1);
-      });
-    }
-
-    if (nextBtn) {
-      const newNextBtn = nextBtn.cloneNode(true);
-      nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
-      newNextBtn.addEventListener("click", () => {
-        changeMainImage(state.currentImageIndex + 1);
-      });
-    }
-  }
-
-  /**
-   * 모달 로딩 표시
-   */
-  function showLoadingInModal() {
-    const existingLoader = document.getElementById("modal-loading");
-    if (existingLoader) return;
-
-    const loadingElement = createElement("div", "modal-loading");
-    loadingElement.id = "modal-loading";
-    loadingElement.textContent = "상세 정보를 불러오는 중...";
-
-    document.querySelector(".modal-content")?.appendChild(loadingElement);
-  }
-
-  /**
-   * 모달 로딩 숨기기
-   */
-  function hideLoadingInModal() {
-    document.getElementById("modal-loading")?.remove();
   }
 
   /**
@@ -1323,7 +1225,6 @@ window.ProductListController = (function () {
     fetchData,
     debouncedFetchData,
     showDetails,
-    changeMainImage,
     getState: () => state,
     getConfig: () => config,
   };

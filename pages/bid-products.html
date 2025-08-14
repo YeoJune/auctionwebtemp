@@ -12,6 +12,33 @@
     <link rel="stylesheet" href="/styles/bid-products.css" />
     <link rel="stylesheet" href="/styles/header.css" />
   </head>
+  <!-- 입찰 결과 아이템 템플릿 -->
+  <template id="bid-result-item-template">
+    <div
+      class="bid-result-item"
+      data-item-id=""
+      data-bid-id=""
+      data-bid-type="">
+      <div class="item-image">
+        <img data-field="image" alt="" />
+        <div class="item-rank" data-field="rank"></div>
+      </div>
+      <div class="item-info">
+        <div class="item-brand" data-field="brand"></div>
+        <div class="item-title" data-field="title"></div>
+        <div class="item-category" data-field="category"></div>
+      </div>
+      <div class="result-status">
+        <div class="bid-type" data-field="bid_type_display"></div>
+        <div class="status-badge" data-field="status_display"></div>
+        <div class="result-date" data-field="updated_at"></div>
+      </div>
+      <!-- 조건부 요소: 입찰 가능한 경우 -->
+      <div class="bid-action" data-if="isActiveBid"></div>
+      <!-- 조건부 요소: 완료된 입찰의 경우 -->
+      <div class="bid-info" data-if="isCompletedBid"></div>
+    </div>
+  </template>
   <body>
     <div class="container">
       <header class="main-header">
