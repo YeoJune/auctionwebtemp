@@ -1,4 +1,4 @@
-/* bid-results.css */
+/* bid-results.css - 배치와 시인성 개선 */
 
 /* 상품 상태별 배경색 */
 .bid-success {
@@ -18,7 +18,7 @@
   font-style: italic;
 }
 
-/* 검색 및 필터 툴바 */
+/* 검색 및 필터 툴바 - 간격 조정 */
 .search-toolbar {
   background-color: white;
   padding: 15px;
@@ -88,7 +88,7 @@
   min-height: 32px;
 }
 
-/* 날짜 필터 */
+/* 날짜 필터 - 정렬 개선 */
 .date-filter {
   display: flex;
   align-items: center;
@@ -98,6 +98,7 @@
 .date-filter label {
   font-size: 13px;
   color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 .date-filter select {
@@ -142,7 +143,7 @@
   color: var(--text-secondary);
 }
 
-/* 요약 통계 */
+/* 요약 통계 - 반응형 정렬 개선 */
 .summary-stats {
   display: flex;
   gap: 15px;
@@ -180,6 +181,31 @@
   color: var(--primary-color);
 }
 
+/* 입금 안내 - 가독성 개선 */
+.deposit-info {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 15px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.deposit-info p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.deposit-info p:first-child {
+  margin-bottom: 5px;
+}
+
+.deposit-info p:last-child {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
 /* 일별 결과 목록 */
 .daily-results-list {
   min-height: 200px;
@@ -196,12 +222,16 @@
   font-size: 16px;
 }
 
-/* 일별 결과 아이템 */
+/* 일별 결과 아이템 - 간격 개선 */
 .daily-result-item {
   margin-bottom: 20px;
   border: 1px solid #eee;
   border-radius: 4px;
   overflow: hidden;
+}
+
+.daily-result-item:last-child {
+  margin-bottom: 0;
 }
 
 .date-header {
@@ -238,6 +268,7 @@
   background: none;
 }
 
+/* 요약 섹션 - 정렬 개선 */
 .date-summary {
   display: flex;
   padding: 15px;
@@ -271,7 +302,7 @@
   background-color: #fafafa;
 }
 
-/* 상세 테이블 */
+/* 상세 테이블 - 가독성 개선 */
 .details-table {
   width: 100%;
   border-collapse: collapse;
@@ -309,6 +340,39 @@
   object-fit: cover;
   border-radius: 4px;
   border: 1px solid #eee;
+}
+
+.product-thumbnail-placeholder {
+  width: 50px;
+  height: 50px;
+  background-color: #f5f5f5;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #999;
+  text-align: center;
+}
+
+/* 감정서 버튼 */
+.appraisal-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+}
+
+.appraisal-btn.primary-button {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.appraisal-btn.success-button {
+  background-color: var(--success-color);
+  color: white;
 }
 
 /* 로딩 메시지 */
@@ -351,18 +415,19 @@
   cursor: not-allowed;
 }
 
-/* 반응형 스타일 */
+/* 반응형 스타일 - 배치 최적화 */
 @media (max-width: 992px) {
   .summary-stats {
     flex-wrap: wrap;
   }
 
   .stat-box {
-    min-width: 150px;
+    min-width: 140px;
   }
 }
 
 @media (max-width: 768px) {
+  /* 툴바 세로 배치로 변경 */
   .search-toolbar {
     flex-direction: column;
     align-items: stretch;
@@ -374,77 +439,167 @@
     gap: 15px;
   }
 
+  /* 정렬 버튼 한 줄 배치 */
   .sort-options {
     width: 100%;
     justify-content: space-between;
   }
 
+  .sort-btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  /* 날짜 필터 배치 개선 */
   .date-filter {
     width: 100%;
     flex-wrap: wrap;
+    gap: 8px;
   }
 
   .date-filter select {
     flex: 1;
+    min-width: 120px;
+  }
+
+  .small-button {
+    width: 100%;
+    margin-top: 8px;
   }
 
   .mobile-filter-toggle {
-    display: none; /* 필터 섹션이 제거되었으므로 토글 버튼도 숨김 */
+    display: none;
   }
 
-  .details-table {
-    font-size: 12px;
-  }
-
-  .details-table th,
-  .details-table td {
-    padding: a 8px 5px;
-  }
-
-  /* 테이블 스크롤 처리 */
-  .date-details {
-    overflow-x: auto;
-  }
-
-  .product-thumbnail {
-    width: 50px;
-    height: 50px;
-  }
-}
-
-@media (max-width: 480px) {
-  .sort-options {
-    flex-wrap: wrap;
-    gap: 5px;
-  }
-
-  .sort-btn {
-    flex: 1;
-    min-width: 90px;
-  }
-
+  /* 요약 통계 2열 배치 */
   .summary-stats {
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
   }
 
+  .stat-box {
+    min-width: unset;
+    padding: 12px;
+  }
+
+  .stat-value {
+    font-size: 20px;
+  }
+
+  /* 일별 결과 모바일 최적화 */
   .date-summary {
     flex-direction: column;
     gap: 10px;
   }
 
   .summary-item {
-    width: 100%;
-    align-items: flex-start;
     flex-direction: row;
     justify-content: space-between;
+    align-items: center;
+    min-width: unset;
+  }
+
+  .summary-label {
+    margin-bottom: 0;
+  }
+
+  /* 테이블 스크롤 처리 */
+  .date-details {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .details-table {
-    min-width: 480px;
+    min-width: 600px;
+    font-size: 12px;
   }
 
-  .product-thumbnail {
+  .details-table th,
+  .details-table td {
+    padding: 8px 6px;
+  }
+
+  .product-thumbnail,
+  .product-thumbnail-placeholder {
+    width: 45px;
+    height: 45px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* 정렬 버튼 세로 배치 */
+  .sort-options {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .sort-btn {
+    width: 100%;
+  }
+
+  /* 요약 통계 1열 배치 */
+  .summary-stats {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .stat-box {
+    padding: 10px;
+  }
+
+  .stat-label {
+    font-size: 12px;
+  }
+
+  .stat-value {
+    font-size: 18px;
+  }
+
+  /* 요약 항목 간격 조정 */
+  .date-summary {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .summary-item {
+    padding: 8px 0;
+  }
+
+  .summary-label {
+    font-size: 12px;
+  }
+
+  .summary-value {
+    font-size: 14px;
+  }
+
+  /* 테이블 최소 크기 조정 */
+  .details-table {
+    min-width: 500px;
+  }
+
+  .details-table th,
+  .details-table td {
+    padding: 6px 4px;
+  }
+
+  .product-thumbnail,
+  .product-thumbnail-placeholder {
     width: 40px;
     height: 40px;
+  }
+
+  .product-thumbnail-placeholder {
+    font-size: 9px;
+  }
+
+  /* 입금 안내 간격 조정 */
+  .deposit-info {
+    padding: 12px;
+  }
+
+  .deposit-info p {
+    font-size: 13px;
   }
 }
