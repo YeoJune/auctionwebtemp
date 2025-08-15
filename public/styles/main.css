@@ -117,7 +117,6 @@
 #favoriteFilters .filter-item label,
 #aucNumFilters .filter-item label {
   position: relative;
-  padding-left: 24px;
 }
 
 /* Filter search */
@@ -1359,7 +1358,6 @@ select {
   #favoriteFilters .filter-item label,
   #aucNumFilters .filter-item label {
     position: relative;
-    padding-left: 24px;
     white-space: nowrap;
     overflow: visible; /* overflow: hidden 해제 */
     display: flex;
