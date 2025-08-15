@@ -269,9 +269,9 @@ router.get("/", async (req, res) => {
 
     // 6. 검색 조건
     if (search && search.trim()) {
-      const searchTerms = search.trim().split(/\s+/);
+      const searchTerms = search.trim().toLowerCase().split(/\s+/); // 검색어를 소문자로 변경
       const searchConditions = searchTerms
-        .map(() => "ci.title LIKE ?")
+        .map(() => "LOWER(ci.title) LIKE ?") // DB의 title도 소문자로 비교
         .join(" AND ");
       conditions.push(`(${searchConditions})`);
       searchTerms.forEach((term) => {
@@ -290,9 +290,9 @@ router.get("/", async (req, res) => {
 
     if (effectiveBrands.length > 0) {
       conditions.push(
-        `ci.brand IN (${effectiveBrands.map(() => "?").join(",")})`
+        `LOWER(ci.brand) IN (${effectiveBrands.map(() => "?").join(",")})`
       );
-      queryParams.push(...effectiveBrands);
+      queryParams.push(...effectiveBrands.map((b) => b.toLowerCase()));
     } else {
       return res.json({
         data: [],
