@@ -9,12 +9,12 @@ const pool = mysql.createPool({
   password: process.env.DB_PASSWORD,
   port: process.env.DB_PORT || 3306,
   database: process.env.DB_NAME,
-  connectionLimit: 35,
+  connectionLimit: 100,
   charset: "utf8mb4",
   connectTimeout: 10000,
   // 추가 안정성 설정
   idleTimeout: 300000, // 5분 후 유휴 연결 해제
-  maxIdle: 15, // 최대 유휴 연결 수
+  maxIdle: 40, // 최대 유휴 연결 수
 });
 
 // 세션 스토어 전용 연결 풀 (별도 관리)
@@ -24,11 +24,11 @@ const sessionPool = mysql.createPool({
   password: process.env.DB_PASSWORD,
   port: process.env.DB_PORT || 3306,
   database: process.env.DB_NAME,
-  connectionLimit: 15, // 세션용 전용 연결
+  connectionLimit: 20, // 세션용 전용 연결
   charset: "utf8mb4",
   connectTimeout: 10000,
   idleTimeout: 120000, // 2분 후 유휴 연결 해제
-  maxIdle: 5,
+  maxIdle: 8,
 });
 
 // 연결 상태 모니터링 함수
