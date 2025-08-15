@@ -711,12 +711,12 @@ select {
   margin-bottom: var(--spacing-sm);
 }
 
-.bid-info.live {
+.modal-content .bid-info.live {
   border-left: 3px solid var(--blue-dark);
   padding-left: var(--spacing-sm);
 }
 
-.bid-info.direct {
+.modal-content .bid-info.direct {
   border-left: 3px solid var(--green-dark);
   padding-left: var(--spacing-sm);
 }
