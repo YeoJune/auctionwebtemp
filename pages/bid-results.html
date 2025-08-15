@@ -148,7 +148,7 @@
         <div class="content-wrapper">
           <section class="results-section full-width">
             <!-- 요약 통계 -->
-            <div class="summary-stats" style="display: none">
+            <div class="summary-stats hidden">
               <div class="stat-box">
                 <div class="stat-label">총 상품 수</div>
                 <div class="stat-value" id="totalItemCount">0</div>
@@ -195,7 +195,9 @@
             </div>
 
             <!-- 로딩 메시지 -->
-            <div class="loading-msg" id="loadingMsg">로딩 중...</div>
+            <div class="loading-msg loading-hidden" id="loadingMsg">
+              로딩 중...
+            </div>
 
             <!-- 일별 결과 목록 -->
             <div class="daily-results-list" id="resultsList">

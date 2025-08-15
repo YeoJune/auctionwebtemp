@@ -37,10 +37,17 @@ async function initialize() {
     // 환율 정보 가져오기
     await fetchExchangeRate();
 
-    // 인증 상태 확인
-    await checkAuthStatus();
+    // 인증 상태 확인 - AuthManager 사용
+    const isAuthenticated = await window.AuthManager.checkAuthStatus();
+    if (!isAuthenticated) {
+      window.AuthManager.redirectToSignin();
+      return;
+    }
 
-    // URL 파라미터에서 초기 상태 로드
+    state.isAuthenticated = window.AuthManager.isAuthenticated();
+    state.isAdmin = window.AuthManager.isAdmin();
+
+    // URL 파라미터에서 초기 상태 로드 - URLStateManager 사용
     loadStateFromURL();
 
     // 이벤트 리스너 설정
@@ -57,33 +64,33 @@ async function initialize() {
   }
 }
 
-// URL에서 상태 로드
+// URL에서 상태 로드 - URLStateManager 사용
 function loadStateFromURL() {
-  const urlParams = new URLSearchParams(window.location.search);
+  const stateKeys = ["dateRange", "currentPage", "sortBy", "sortOrder"];
+  const defaultState = {
+    dateRange: 30,
+    currentPage: 1,
+    sortBy: "date",
+    sortOrder: "desc",
+  };
 
-  if (urlParams.has("dateRange"))
-    state.dateRange = parseInt(urlParams.get("dateRange"));
-  if (urlParams.has("page"))
-    state.currentPage = parseInt(urlParams.get("page"));
-  if (urlParams.has("sortBy")) state.sortBy = urlParams.get("sortBy");
-  if (urlParams.has("sortOrder")) state.sortOrder = urlParams.get("sortOrder");
+  const urlState = window.URLStateManager.loadFromURL(defaultState, stateKeys);
+  Object.assign(state, urlState);
 
   // UI 요소 상태 업데이트
   updateUIFromState();
 }
 
-// URL 업데이트
+// URL 업데이트 - URLStateManager 사용
 function updateURL() {
-  const params = new URLSearchParams();
+  const defaultValues = {
+    dateRange: 30,
+    currentPage: 1,
+    sortBy: "date",
+    sortOrder: "desc",
+  };
 
-  if (state.dateRange !== 30) params.append("dateRange", state.dateRange);
-  if (state.currentPage !== 1) params.append("page", state.currentPage);
-  if (state.sortBy !== "date") params.append("sortBy", state.sortBy);
-  if (state.sortOrder !== "desc") params.append("sortOrder", state.sortOrder);
-
-  // URL 업데이트 (history API 사용)
-  const url = `${window.location.pathname}?${params.toString()}`;
-  window.history.replaceState({}, "", url);
+  window.URLStateManager.updateURL(state, defaultValues);
 }
 
 // UI 요소 상태 업데이트
@@ -94,25 +101,6 @@ function updateUIFromState() {
 
   // 정렬 버튼 업데이트
   updateSortButtonsUI();
-}
-
-// 인증 관련 함수
-async function checkAuthStatus() {
-  try {
-    const response = await API.fetchAPI("/auth/user");
-    state.isAuthenticated = !!response.user;
-
-    // 현재 사용자 정보 가져오기 (관리자 권한 체크)
-    if (state.isAuthenticated) {
-      await checkAdminStatus();
-    }
-
-    updateAuthUI();
-  } catch (error) {
-    state.isAuthenticated = false;
-    state.isAdmin = false;
-    updateAuthUI();
-  }
 }
 
 // 관리자 권한 체크
@@ -127,34 +115,15 @@ async function checkAdminStatus() {
 }
 
 function updateAuthUI() {
-  const signinBtn = document.getElementById("signinBtn");
-  const signoutBtn = document.getElementById("signoutBtn");
-
-  if (!signinBtn || !signoutBtn) return;
-
-  if (state.isAuthenticated) {
-    signinBtn.classList.add("hidden");
-    signoutBtn.classList.remove("hidden");
-    signoutBtn.classList.add("show-inline-block");
-
-    // 관리자 권한에 따른 총 합계 표시/숨김
-    updateSummaryStatsVisibility();
-  } else {
-    signinBtn.classList.remove("hidden");
-    signinBtn.classList.add("show-inline-block");
-    signoutBtn.classList.add("hidden");
-    // 로그인되지 않은 경우 로그인 페이지로 리다이렉트
-    window.location.href = "/signinPage";
-  }
-}
-
-async function handleSignout() {
-  try {
-    await API.fetchAPI("/auth/logout", { method: "POST" });
-    state.isAuthenticated = false;
-    window.location.href = "/signinPage";
-  } catch (error) {
-    alert("로그아웃 중 오류가 발생했습니다.");
+  const summaryStats = document.querySelector(".summary-stats");
+  if (summaryStats) {
+    if (state.isAdmin) {
+      summaryStats.classList.remove("hidden");
+      summaryStats.classList.add("show-flex");
+    } else {
+      summaryStats.classList.remove("show-flex");
+      summaryStats.classList.add("hidden");
+    }
   }
 }
 
@@ -164,6 +133,7 @@ async function fetchCompletedBids() {
     return;
   }
 
+  // common.js의 toggleLoading 사용
   toggleLoading(true);
 
   try {
@@ -219,8 +189,8 @@ async function fetchCompletedBids() {
     // 결과 표시
     displayResults();
 
-    // 페이지네이션 업데이트
-    updatePagination();
+    // 페이지네이션 업데이트 - common.js 함수 사용
+    createPagination(state.currentPage, state.totalPages, handlePageChange);
 
     // 관리자 권한에 따른 UI 업데이트
     updateSummaryStatsVisibility();
@@ -405,7 +375,7 @@ function updateTotalStats() {
     formatNumber(state.totalStats.grandTotalAmount) + " ₩";
 }
 
-// 총 합계 표시/숨김 제어
+// 총 합계 표시/숨김 제어 - CSS 클래스 사용
 function updateSummaryStatsVisibility() {
   const summaryStats = document.querySelector(".summary-stats");
   if (summaryStats) {
@@ -413,6 +383,7 @@ function updateSummaryStatsVisibility() {
       summaryStats.classList.remove("hidden");
       summaryStats.classList.add("show-flex");
     } else {
+      summaryStats.classList.remove("show-flex");
       summaryStats.classList.add("hidden");
     }
   }
@@ -454,7 +425,7 @@ function sortDailyResults() {
   state.totalPages = Math.ceil(state.totalItems / state.itemsPerPage);
 }
 
-// 이벤트 리스너 설정
+// 이벤트 리스너 설정 - 인증 관련 제거 (common.js에서 처리)
 function setupEventListeners() {
   // 기간 드롭다운
   document.getElementById("dateRange")?.addEventListener("change", (e) => {
@@ -479,11 +450,6 @@ function setupEventListeners() {
   document.getElementById("resetFilters")?.addEventListener("click", () => {
     resetFilters();
   });
-
-  // 로그아웃 버튼
-  document
-    .getElementById("signoutBtn")
-    ?.addEventListener("click", handleSignout);
 }
 
 // 정렬 변경 처리
@@ -568,110 +534,25 @@ function displayResults() {
   }
 }
 
-// 일별 결과 행 생성
+// 일별 결과 행 생성 - createElement 헬퍼 함수 사용
 function createDailyResultRow(dayResult) {
-  const dateRow = document.createElement("div");
-  dateRow.className = "daily-result-item";
+  const dateRow = createElement("div", "daily-result-item");
 
   // 날짜 헤더
-  const dateHeader = document.createElement("div");
-  dateHeader.className = "date-header";
-
-  const dateLabel = document.createElement("h3");
-  dateLabel.textContent = formatDisplayDate(dayResult.date);
-
-  const toggleButton = document.createElement("button");
-  toggleButton.className = "toggle-details";
+  const dateHeader = createElement("div", "date-header");
+  const dateLabel = createElement("h3", "", formatDisplayDate(dayResult.date));
+  const toggleButton = createElement("button", "toggle-details");
   toggleButton.innerHTML = '<i class="fas fa-chevron-down"></i>';
 
   dateHeader.appendChild(dateLabel);
   dateHeader.appendChild(toggleButton);
 
   // 요약 정보
-  const summary = document.createElement("div");
-  summary.className = "date-summary";
-  summary.innerHTML = `
-    <div class="summary-item">
-      <span class="summary-label">상품 수:</span>
-      <span class="summary-value">${formatNumber(
-        dayResult.itemCount
-      )}/${formatNumber(dayResult.totalItemCount || 0)}개</span>
-    </div>
-    <div class="summary-item">
-      <span class="summary-label">총액 (¥):</span>
-      <span class="summary-value">${formatNumber(
-        dayResult.totalJapanesePrice
-      )} ¥</span>
-    </div>
-    <div class="summary-item">
-      <span class="summary-label">관부가세 포함 (₩):</span>
-      <span class="summary-value">${formatNumber(
-        dayResult.totalKoreanPrice
-      )} ₩</span>
-    </div>
-    <div class="summary-item">
-      <span class="summary-label">수수료 (₩):</span>
-      <span class="summary-value">${formatNumber(dayResult.feeAmount)} ₩</span>
-      <span class="vat-note">VAT ${formatNumber(dayResult.vatAmount)} ₩</span>
-    </div>
-    <div class="summary-item">
-      <span class="summary-label">감정서 수수료 (₩):</span>
-      <span class="summary-value">${formatNumber(
-        dayResult.appraisalFee || 0
-      )} ₩</span>
-      <span class="vat-note">VAT ${formatNumber(
-        dayResult.appraisalVat || 0
-      )} ₩</span>
-    </div>
-    <div class="summary-item">
-      <span class="summary-label">총액 (₩):</span>
-      <span class="summary-value">${formatNumber(dayResult.grandTotal)} ₩</span>
-    </div>
-  `;
+  const summary = createSummarySection(dayResult);
 
   // 상세 정보 (접혀있는 상태)
-  const details = document.createElement("div");
-  details.className = "date-details hidden";
-
-  const detailsTable = document.createElement("table");
-  detailsTable.className = "details-table";
-
-  const tableHeader = document.createElement("thead");
-  tableHeader.innerHTML = `
-  <tr>
-    <th>이미지</th>
-    <th>브랜드</th>
-    <th>상품명</th>
-    <th>최종입찰금액 (¥)</th>
-    <th>실제낙찰금액 (¥)</th>
-    <th>관부가세 포함 (₩)</th>
-    <th>감정서</th>
-  </tr>
-  `;
-  detailsTable.appendChild(tableHeader);
-
-  const tableBody = document.createElement("tbody");
-
-  // 낙찰 성공 상품들 먼저 표시 (연한 초록 배경)
-  dayResult.successItems?.forEach((item) => {
-    const row = createItemRow(item, "success");
-    tableBody.appendChild(row);
-  });
-
-  // 낙찰 실패 상품들 표시 (연한 빨간 배경)
-  dayResult.failedItems?.forEach((item) => {
-    const row = createItemRow(item, "failed");
-    tableBody.appendChild(row);
-  });
-
-  // 집계중 상품들 표시 (기본 배경)
-  dayResult.pendingItems?.forEach((item) => {
-    const row = createItemRow(item, "pending");
-    tableBody.appendChild(row);
-  });
-
-  detailsTable.appendChild(tableBody);
-
+  const details = createElement("div", "date-details hidden");
+  const detailsTable = createDetailsTable(dayResult);
   details.appendChild(detailsTable);
 
   // 토글 버튼 이벤트
@@ -696,42 +577,142 @@ function createDailyResultRow(dayResult) {
   return dateRow;
 }
 
+// 요약 섹션 생성 - createElement 사용
+function createSummarySection(dayResult) {
+  const summary = createElement("div", "date-summary");
+
+  const summaryItems = [
+    {
+      label: "상품 수",
+      value: `${formatNumber(dayResult.itemCount)}/${formatNumber(
+        dayResult.totalItemCount || 0
+      )}개`,
+    },
+    {
+      label: "총액 (¥)",
+      value: `${formatNumber(dayResult.totalJapanesePrice)} ¥`,
+    },
+    {
+      label: "관부가세 포함 (₩)",
+      value: `${formatNumber(dayResult.totalKoreanPrice)} ₩`,
+    },
+    {
+      label: "수수료 (₩)",
+      value: `${formatNumber(dayResult.feeAmount)} ₩`,
+      note: `VAT ${formatNumber(dayResult.vatAmount)} ₩`,
+    },
+    {
+      label: "감정서 수수료 (₩)",
+      value: `${formatNumber(dayResult.appraisalFee || 0)} ₩`,
+      note: `VAT ${formatNumber(dayResult.appraisalVat || 0)} ₩`,
+    },
+    {
+      label: "총액 (₩)",
+      value: `${formatNumber(dayResult.grandTotal)} ₩`,
+    },
+  ];
+
+  summaryItems.forEach((item) => {
+    const summaryItem = createElement("div", "summary-item");
+    const label = createElement("span", "summary-label", item.label + ":");
+    const value = createElement("span", "summary-value", item.value);
+
+    summaryItem.appendChild(label);
+    summaryItem.appendChild(value);
+
+    if (item.note) {
+      const note = createElement("span", "vat-note", item.note);
+      summaryItem.appendChild(note);
+    }
+
+    summary.appendChild(summaryItem);
+  });
+
+  return summary;
+}
+
+// 상세 테이블 생성
+function createDetailsTable(dayResult) {
+  const detailsTable = createElement("table", "details-table");
+
+  const tableHeader = createElement("thead");
+  tableHeader.innerHTML = `
+  <tr>
+    <th>이미지</th>
+    <th>브랜드</th>
+    <th>상품명</th>
+    <th>최종입찰금액 (¥)</th>
+    <th>실제낙찰금액 (¥)</th>
+    <th>관부가세 포함 (₩)</th>
+    <th>감정서</th>
+  </tr>
+  `;
+  detailsTable.appendChild(tableHeader);
+
+  const tableBody = createElement("tbody");
+
+  // 낙찰 성공 상품들 먼저 표시 (연한 초록 배경)
+  dayResult.successItems?.forEach((item) => {
+    const row = createItemRow(item, "success");
+    tableBody.appendChild(row);
+  });
+
+  // 낙찰 실패 상품들 표시 (연한 빨간 배경)
+  dayResult.failedItems?.forEach((item) => {
+    const row = createItemRow(item, "failed");
+    tableBody.appendChild(row);
+  });
+
+  // 집계중 상품들 표시 (기본 배경)
+  dayResult.pendingItems?.forEach((item) => {
+    const row = createItemRow(item, "pending");
+    tableBody.appendChild(row);
+  });
+
+  detailsTable.appendChild(tableBody);
+  return detailsTable;
+}
+
 // 상품 행 생성 함수
 function createItemRow(item, status) {
-  const row = document.createElement("tr");
+  const row = createElement("tr");
   row.classList.add(`bid-${status}`);
 
-  // 기존 셀들 생성
-  const imageCell = document.createElement("td");
+  // 이미지 셀
+  const imageCell = createElement("td");
   if (item.image && item.image !== "/images/placeholder.png") {
-    const imageElement = document.createElement("img");
+    const imageElement = createElement("img");
     imageElement.src = item.image;
     imageElement.alt = item.item?.title || "상품 이미지";
     imageElement.classList.add("product-thumbnail");
     imageElement.onerror = function () {
-      const placeholder = document.createElement("div");
-      placeholder.className = "product-thumbnail-placeholder";
-      placeholder.textContent = "No Image";
+      const placeholder = createElement(
+        "div",
+        "product-thumbnail-placeholder",
+        "No Image"
+      );
       this.parentNode.replaceChild(placeholder, this);
     };
     imageCell.appendChild(imageElement);
   } else {
-    const placeholder = document.createElement("div");
-    placeholder.className = "product-thumbnail-placeholder";
-    placeholder.textContent = "No Image";
+    const placeholder = createElement(
+      "div",
+      "product-thumbnail-placeholder",
+      "No Image"
+    );
     imageCell.appendChild(placeholder);
   }
 
-  const brandCell = document.createElement("td");
-  brandCell.textContent = item.item?.brand || "-";
+  // 다른 셀들
+  const brandCell = createElement("td", "", item.item?.brand || "-");
+  const titleCell = createElement("td", "", item.item?.title || "제목 없음");
+  const finalPriceCell = createElement(
+    "td",
+    "",
+    `${formatNumber(item.finalPrice)} ¥`
+  );
 
-  const titleCell = document.createElement("td");
-  titleCell.textContent = item.item?.title || "제목 없음";
-
-  const finalPriceCell = document.createElement("td");
-  finalPriceCell.textContent = `${formatNumber(item.finalPrice)} ¥`;
-
-  const winningPriceCell = document.createElement("td");
+  const winningPriceCell = createElement("td");
   if (status === "pending") {
     winningPriceCell.textContent = "집계중";
     winningPriceCell.classList.add("pending-text");
@@ -739,7 +720,7 @@ function createItemRow(item, status) {
     winningPriceCell.textContent = `${formatNumber(item.winningPrice)} ¥`;
   }
 
-  const koreanCell = document.createElement("td");
+  const koreanCell = createElement("td");
   if (status === "success") {
     koreanCell.textContent = `${formatNumber(item.koreanPrice)} ₩`;
   } else if (status === "failed") {
@@ -748,8 +729,8 @@ function createItemRow(item, status) {
     koreanCell.textContent = "-";
   }
 
-  // 감정서 셀 추가
-  const appraisalCell = document.createElement("td");
+  // 감정서 셀
+  const appraisalCell = createElement("td");
   if (status === "success") {
     const appraisalBtn = createAppraisalButton(item);
     appraisalCell.appendChild(appraisalBtn);
@@ -757,20 +738,24 @@ function createItemRow(item, status) {
     appraisalCell.textContent = "-";
   }
 
-  row.appendChild(imageCell);
-  row.appendChild(brandCell);
-  row.appendChild(titleCell);
-  row.appendChild(finalPriceCell);
-  row.appendChild(winningPriceCell);
-  row.appendChild(koreanCell);
-  row.appendChild(appraisalCell);
+  // 모든 셀 추가
+  [
+    imageCell,
+    brandCell,
+    titleCell,
+    finalPriceCell,
+    winningPriceCell,
+    koreanCell,
+    appraisalCell,
+  ].forEach((cell) => {
+    row.appendChild(cell);
+  });
 
   return row;
 }
 
 function createAppraisalButton(item) {
-  const button = document.createElement("button");
-  button.className = "appraisal-btn small-button";
+  const button = createElement("button", "appraisal-btn small-button");
 
   if (item.appr_id) {
     button.textContent = "요청 완료";
@@ -825,11 +810,6 @@ function formatDisplayDate(dateStr) {
   return `${year}년 ${month}월 ${day}일 (${weekday})`;
 }
 
-// 페이지네이션 업데이트
-function updatePagination() {
-  createPagination(state.currentPage, state.totalPages, handlePageChange);
-}
-
 // 페이지 변경 처리
 function handlePageChange(page) {
   page = parseInt(page, 10);
@@ -849,14 +829,6 @@ function setupNavButtons() {
   navButtons.forEach((button) => {
     // 기존 onclick 속성 외에 추가 처리가 필요한 경우를 위한 공간
   });
-}
-
-// 로딩 표시 토글
-function toggleLoading(show) {
-  const loadingMsg = document.getElementById("loadingMsg");
-  if (loadingMsg) {
-    loadingMsg.style.display = show ? "block" : "none";
-  }
 }
 
 // 상품 상태 분류 함수
