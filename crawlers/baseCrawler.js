@@ -23,6 +23,13 @@ class AxiosCrawler {
     this.proxyManager =
       proxyManager ||
       new ProxyManager({
+        // Keep-Alive 최적화 설정 추가
+        maxSockets: 200, // 크롤러는 더 높은 동시 연결 필요
+        maxFreeSockets: 20,
+        socketTimeout: 60000,
+        freeSocketTimeout: 30000,
+        keepAliveMsecs: 1000,
+        // 기존 설정 유지
         headers: {
           "User-Agent":
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15",
