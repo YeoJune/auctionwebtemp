@@ -703,7 +703,12 @@ select {
 
 .price-details-container {
   font-size: var(--font-size-xs);
-  color: var(--text-secondary);
+  color: var(--error-color);
+}
+
+.info-price-detail {
+  color: var(--error-color);
+  font-weight: 500;
 }
 
 /* Bid Info Styles */
