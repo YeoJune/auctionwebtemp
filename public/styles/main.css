@@ -122,22 +122,11 @@
 
 #favoriteFilters .filter-item label::before,
 #aucNumFilters .filter-item label::before {
-  content: "①";
   position: absolute;
   left: 0;
   top: 50%;
   transform: translateY(-50%);
   font-size: 16px;
-}
-
-#favoriteFilters .filter-item:nth-child(2) label::before,
-#aucNumFilters .filter-item:nth-child(2) label::before {
-  content: "②";
-}
-
-#favoriteFilters .filter-item:nth-child(3) label::before,
-#aucNumFilters .filter-item:nth-child(3) label::before {
-  content: "③";
 }
 
 /* Filter search */
@@ -1388,7 +1377,6 @@ select {
 
   #favoriteFilters .filter-item label::before,
   #aucNumFilters .filter-item label::before {
-    content: "①";
     position: absolute;
     left: 0;
     top: 50%;
@@ -1396,16 +1384,6 @@ select {
     font-size: 16px;
     display: block; /* 명시적으로 표시 */
     line-height: 1;
-  }
-
-  #favoriteFilters .filter-item:nth-child(2) label::before,
-  #aucNumFilters .filter-item:nth-child(2) label::before {
-    content: "②";
-  }
-
-  #favoriteFilters .filter-item:nth-child(3) label::before,
-  #aucNumFilters .filter-item:nth-child(3) label::before {
-    content: "③";
   }
 }
 

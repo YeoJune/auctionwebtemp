@@ -1285,7 +1285,7 @@ window.ProductListController = (function () {
 
       const label = createElement("label");
       label.htmlFor = `aucNum-${item.auc_num}`;
-      label.textContent = `${item.auc_num}번`;
+      label.textContent = `${["①", "②", "③"][item.auc_num - 1]}`;
 
       filterItem.appendChild(checkbox);
       filterItem.appendChild(label);
