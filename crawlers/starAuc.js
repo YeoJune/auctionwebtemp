@@ -903,7 +903,7 @@ class StarAucCrawler extends AxiosCrawler {
     try {
       console.log(`Starting update crawl for ${itemIds.length} items...`);
 
-      await this.login();
+      // await this.login();
 
       const results = [];
       const limit = pLimit(10);

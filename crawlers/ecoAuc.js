@@ -971,7 +971,7 @@ class EcoAucCrawler extends AxiosCrawler {
       console.log(`Starting update crawl for ${itemIds.length} items...`);
 
       // 로그인
-      await this.login();
+      // await this.login();
 
       const results = [];
       const limit = pLimit(10); // 병렬 처리를 위한 제한 설정
