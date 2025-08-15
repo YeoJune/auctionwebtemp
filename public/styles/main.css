@@ -120,15 +120,6 @@
   padding-left: 24px;
 }
 
-#favoriteFilters .filter-item label::before,
-#aucNumFilters .filter-item label::before {
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 16px;
-}
-
 /* Filter search */
 .filter-search {
   margin-bottom: var(--spacing-sm);
@@ -1373,17 +1364,6 @@ select {
     overflow: visible; /* overflow: hidden 해제 */
     display: flex;
     align-items: center;
-  }
-
-  #favoriteFilters .filter-item label::before,
-  #aucNumFilters .filter-item label::before {
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 16px;
-    display: block; /* 명시적으로 표시 */
-    line-height: 1;
   }
 }
 
