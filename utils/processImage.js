@@ -44,21 +44,9 @@ let currentClientIndex = 0;
 // 프록시 초기화
 function initializeProxy() {
   if (!proxyManager) {
-    proxyManager = new ProxyManager({
-      // Keep-Alive 최적화 설정
-      maxSockets: 100,
-      maxFreeSockets: 10,
-      socketTimeout: 60000,
-      freeSocketTimeout: 30000,
-      keepAliveMsecs: 1000,
-      // 기존 설정 유지
-      timeout: 30000,
-      maxRedirects: 5,
-    });
+    proxyManager = new ProxyManager();
     clients = proxyManager.createAllClients();
-    console.log(
-      `이미지 프로세서: ${clients.length}개 클라이언트 초기화 (Keep-Alive 최적화)`
-    );
+    console.log(`이미지 프로세서: ${clients.length}개 클라이언트 초기화`);
   }
 }
 
