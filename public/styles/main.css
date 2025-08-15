@@ -706,11 +706,6 @@ select {
   color: var(--error-color);
 }
 
-.info-price-detail {
-  color: var(--error-color);
-  font-weight: 500;
-}
-
 /* Bid Info Styles */
 .bid-info {
   margin-bottom: var(--spacing-sm);
