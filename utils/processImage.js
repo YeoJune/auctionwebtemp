@@ -4,14 +4,7 @@ const { v4: uuidv4 } = require("uuid");
 const sharp = require("sharp");
 const path = require("path");
 const fs = require("fs");
-
-// ProxyManager import를 조건부로 처리
-let ProxyManager = null;
-try {
-  ProxyManager = require("./proxy").ProxyManager;
-} catch (error) {
-  console.log("ProxyManager not found, using direct connection only");
-}
+const { ProxyManager } = require("./proxy");
 
 let pLimit;
 (async () => {
