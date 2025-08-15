@@ -1,9 +1,9 @@
 // utils/processImage.js
-const axios = require("axios");
 const { v4: uuidv4 } = require("uuid");
 const sharp = require("sharp");
 const path = require("path");
 const fs = require("fs");
+const { ProxyManager } = require("./proxy");
 
 let pLimit;
 (async () => {
@@ -35,7 +35,39 @@ let currentDelay = INITIAL_DELAY;
 let consecutiveFailures = 0;
 let processingPaused = false;
 
-// 이미지 다운로드 및 저장
+// 프록시 관리
+let proxyManager = null;
+let clients = [];
+let currentClientIndex = 0;
+
+// 프록시 초기화
+function initializeProxy() {
+  if (!proxyManager) {
+    proxyManager = new ProxyManager({
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+        Accept: "image/webp,image/apng,image/*,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+      },
+      timeout: 10000,
+      maxRedirects: 5,
+    });
+
+    clients = proxyManager.createAllClients();
+    console.log(`이미지 프로세서: ${clients.length}개 클라이언트 초기화`);
+  }
+}
+
+// 다음 클라이언트 선택 (라운드 로빈)
+function getNextClient() {
+  initializeProxy();
+  const client = clients[currentClientIndex];
+  currentClientIndex = (currentClientIndex + 1) % clients.length;
+  return client;
+}
+
+// 이미지 다운로드 및 저장 (프록시 로테이션 적용)
 async function downloadAndSaveImage(
   url,
   folderName = "products",
@@ -53,98 +85,106 @@ async function downloadAndSaveImage(
     .replaceAll(":", "-")
     .split(".")[0];
 
-  try {
-    const response = await axios
-      .create({
-        timeout: 10000,
+  // 모든 클라이언트 시도 (프록시 로테이션)
+  for (let attempt = 0; attempt < clients.length; attempt++) {
+    const clientInfo = getNextClient();
+
+    try {
+      const response = await clientInfo.client.get(url, {
         responseType: "arraybuffer",
-      })
-      .get(url);
-
-    const fileName = `${dateString}_${uuidv4()}${
-      cropType ? `_${cropType}` : ""
-    }.webp`;
-    const filePath = path.join(IMAGE_DIR, fileName);
-
-    const metadata = await sharp(response.data).metadata();
-    let processedImage = sharp(response.data);
-
-    // Crop 처리 로직
-    if (cropType && CROP_SETTINGS[cropType]) {
-      const cropConfig = CROP_SETTINGS[cropType];
-
-      // 크롭 영역 계산
-      const left = cropConfig.cropLeft || 0;
-      const top = cropConfig.cropTop || 0;
-      const width = metadata.width - left - (cropConfig.cropRight || 0);
-      const height = metadata.height - top - (cropConfig.cropBottom || 0);
-
-      // 크롭 적용
-      processedImage = processedImage.extract({
-        left: left,
-        top: top,
-        width: width,
-        height: height,
       });
 
-      // 크롭 후 기본 리사이즈 로직도 적용
-      if (width > MAX_WIDTH || height > MAX_HEIGHT) {
-        processedImage = processedImage.resize({
-          width: Math.min(width, MAX_WIDTH),
-          height: Math.min(height, MAX_HEIGHT),
-          fit: "inside",
-          withoutEnlargement: true,
+      const fileName = `${dateString}_${uuidv4()}${
+        cropType ? `_${cropType}` : ""
+      }.webp`;
+      const filePath = path.join(IMAGE_DIR, fileName);
+
+      const metadata = await sharp(response.data).metadata();
+      let processedImage = sharp(response.data);
+
+      // Crop 처리 로직
+      if (cropType && CROP_SETTINGS[cropType]) {
+        const cropConfig = CROP_SETTINGS[cropType];
+
+        // 크롭 영역 계산
+        const left = cropConfig.cropLeft || 0;
+        const top = cropConfig.cropTop || 0;
+        const width = metadata.width - left - (cropConfig.cropRight || 0);
+        const height = metadata.height - top - (cropConfig.cropBottom || 0);
+
+        // 크롭 적용
+        processedImage = processedImage.extract({
+          left: left,
+          top: top,
+          width: width,
+          height: height,
         });
+
+        // 크롭 후 기본 리사이즈 로직도 적용
+        if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+          processedImage = processedImage.resize({
+            width: Math.min(width, MAX_WIDTH),
+            height: Math.min(height, MAX_HEIGHT),
+            fit: "inside",
+            withoutEnlargement: true,
+          });
+        }
+      } else {
+        // 기존 리사이즈 로직 (cropType이 null인 경우)
+        if (metadata.width > MAX_WIDTH || metadata.height > MAX_HEIGHT) {
+          processedImage = processedImage.resize({
+            width: Math.min(metadata.width, MAX_WIDTH),
+            height: Math.min(metadata.height, MAX_HEIGHT),
+            fit: "inside",
+            withoutEnlargement: true,
+          });
+        }
       }
-    } else {
-      // 기존 리사이즈 로직 (cropType이 null인 경우)
-      if (metadata.width > MAX_WIDTH || metadata.height > MAX_HEIGHT) {
-        processedImage = processedImage.resize({
-          width: Math.min(metadata.width, MAX_WIDTH),
-          height: Math.min(metadata.height, MAX_HEIGHT),
-          fit: "inside",
-          withoutEnlargement: true,
-        });
+
+      await processedImage.webp({ quality: 100 }).toFile(filePath);
+
+      // 성공 시 연속 실패 카운터 초기화
+      consecutiveFailures = 0;
+
+      // 성공 시 딜레이를 점진적으로 감소
+      if (currentDelay > INITIAL_DELAY) {
+        currentDelay = Math.max(INITIAL_DELAY, currentDelay * 0.9); // 10%씩 감소
+      }
+
+      return `/images/${folderName}/${fileName}`;
+    } catch (error) {
+      // 404인 경우 다른 프록시로 재시도하지 않음
+      if (error.response && error.response.status === 404) {
+        return 404;
+      }
+
+      // 마지막 클라이언트가 아니면 다음 클라이언트로 계속 시도
+      if (attempt < clients.length - 1) {
+        continue;
       }
     }
-
-    await processedImage.webp({ quality: 100 }).toFile(filePath);
-
-    // 성공 시 연속 실패 카운터 초기화
-    consecutiveFailures = 0;
-
-    // 성공 시 딜레이를 점진적으로 감소
-    if (currentDelay > INITIAL_DELAY) {
-      currentDelay = Math.max(INITIAL_DELAY, currentDelay * 0.9); // 10%씩 감소
-    }
-
-    return `/images/${folderName}/${fileName}`;
-  } catch (error) {
-    console.error(`이미지 처리 오류: ${url}`, error.message);
-
-    // 연속 실패 카운터 증가
-    consecutiveFailures++;
-
-    if (consecutiveFailures >= 2) {
-      processingPaused = true;
-      console.log(`연속 실패 감지! 처리 일시 중지, 딜레이 ${currentDelay}ms`);
-
-      setTimeout(() => {
-        processingPaused = false;
-        processQueue(folderName);
-      }, currentDelay);
-
-      // 딜레이 증가 (최대 1분)
-      currentDelay = Math.min(currentDelay * 2, 60000);
-    }
-
-    // 404인 경우 특수 코드 반환
-    if (error.response && error.response.status === 404) {
-      return 404;
-    }
-
-    return null;
   }
+
+  // 모든 클라이언트 실패
+  console.error(`이미지 처리 오류: ${url}`);
+
+  // 연속 실패 카운터 증가
+  consecutiveFailures++;
+
+  if (consecutiveFailures >= 2) {
+    processingPaused = true;
+    console.log(`연속 실패 감지! 처리 일시 중지, 딜레이 ${currentDelay}ms`);
+
+    setTimeout(() => {
+      processingPaused = false;
+      processQueue(folderName);
+    }, currentDelay);
+
+    // 딜레이 증가 (최대 1분)
+    currentDelay = Math.min(currentDelay * 2, 60000);
+  }
+
+  return null;
 }
 
 // 큐에서 다음 처리할 항목 가져오기 (높은 우선순위부터)
