@@ -559,8 +559,11 @@ function createDailyResultRow(dayResult) {
   toggleButton.addEventListener("click", function () {
     const isExpanded = !details.classList.contains("hidden");
     if (isExpanded) {
+      // 닫기: show 제거하고 hidden 추가
+      details.classList.remove("show");
       details.classList.add("hidden");
     } else {
+      // 열기: hidden 제거하고 show 추가
       details.classList.remove("hidden");
       details.classList.add("show");
     }
