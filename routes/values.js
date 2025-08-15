@@ -96,8 +96,8 @@ router.get("/", async (req, res) => {
 
     // 검색 조건 (원본과 동일)
     if (search && search.trim()) {
-      const searchTerms = search.trim().toLowerCase().split(/\s+/);
-      const searchConditions = searchTerms.map(() => "LOWER(title) LIKE ?");
+      const searchTerms = search.trim().split(/\s+/);
+      const searchConditions = searchTerms.map(() => "title LIKE ?");
       conditions.push(`(${searchConditions.join(" AND ")})`);
       searchTerms.forEach((term) => {
         queryParams.push(`%${term}%`);
@@ -115,10 +115,8 @@ router.get("/", async (req, res) => {
     if (brands) {
       const brandList = brands.split(",");
       if (brandList.length > 0) {
-        conditions.push(
-          `LOWER(brand) IN (${brandList.map(() => "?").join(",")})`
-        );
-        queryParams.push(...brandList.map((b) => b.toLowerCase()));
+        conditions.push(`brand IN (${brandList.map(() => "?").join(",")})`);
+        queryParams.push(...brandList);
       }
     }
 

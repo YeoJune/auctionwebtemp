@@ -35,6 +35,14 @@ const cache = {
   },
 };
 
+const normalizeString = (str) => {
+  if (!str) return "";
+  return str
+    .normalize("NFD") // 'è' 같은 문자를 'e'와 '`'로 분리
+    .replace(/[\u0300-\u036f]/g, "") // 악센트 기호(결합 문자) 제거
+    .toLowerCase(); // 소문자로 변환
+};
+
 // ===== 캐시 헬퍼 함수들 =====
 function isCacheValid(cacheItem) {
   const currentTime = new Date().getTime();
@@ -269,9 +277,9 @@ router.get("/", async (req, res) => {
 
     // 6. 검색 조건
     if (search && search.trim()) {
-      const searchTerms = search.trim().toLowerCase().split(/\s+/); // 검색어를 소문자로 변경
+      const searchTerms = search.trim().split(/\s+/);
       const searchConditions = searchTerms
-        .map(() => "LOWER(ci.title) LIKE ?") // DB의 title도 소문자로 비교
+        .map(() => "ci.title LIKE ?")
         .join(" AND ");
       conditions.push(`(${searchConditions})`);
       searchTerms.forEach((term) => {
@@ -283,16 +291,20 @@ router.get("/", async (req, res) => {
     let effectiveBrands = enabledBrands;
     if (brands) {
       const selectedBrands = brands.split(",");
+      // enabledBrands 목록을 미리 정규화(악센트 제거, 소문자화)
+      const normalizedEnabledBrands = enabledBrands.map(normalizeString);
+
       effectiveBrands = selectedBrands.filter((brand) =>
-        enabledBrands.map((b) => b.toLowerCase()).includes(brand.toLowerCase())
+        // 사용자가 선택한 브랜드도 정규화하여 비교
+        normalizedEnabledBrands.includes(normalizeString(brand))
       );
     }
 
     if (effectiveBrands.length > 0) {
       conditions.push(
-        `LOWER(ci.brand) IN (${effectiveBrands.map(() => "?").join(",")})`
+        `ci.brand IN (${effectiveBrands.map(() => "?").join(",")})`
       );
-      queryParams.push(...effectiveBrands.map((b) => b.toLowerCase()));
+      queryParams.push(...effectiveBrands);
     } else {
       return res.json({
         data: [],
