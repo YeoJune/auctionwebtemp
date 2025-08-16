@@ -57,6 +57,9 @@ document.addEventListener("DOMContentLoaded", function () {
   document
     .getElementById("bulkCancelBtn")
     .addEventListener("click", openBulkCancelModal);
+  document
+    .getElementById("bulkShipBtn")
+    ?.addEventListener("click", bulkMarkAsShipped);
 
   // 일괄 작업 모달 제출 버튼
   document
@@ -335,6 +338,10 @@ function renderLiveBidsTable(liveBids) {
         <button class="btn" onclick="openCompleteModal(${bid.id})">낙찰 완료</button>
         <button class="btn btn-secondary" onclick="openCancelModal(${bid.id})">낙찰 실패</button>
       `;
+    } else if (bid.status === "completed") {
+      actionButtons += `
+        <button class="btn btn-info btn-sm" onclick="markAsShipped(${bid.id})">출고됨으로 변경</button>
+      `;
     }
 
     // 날짜를 KST로 변환
@@ -499,9 +506,11 @@ function updateBulkActionButtons() {
   ).length;
   const bulkCompleteBtn = document.getElementById("bulkCompleteBtn");
   const bulkCancelBtn = document.getElementById("bulkCancelBtn");
+  const bulkShipBtn = document.getElementById("bulkShipBtn");
 
   if (bulkCompleteBtn) bulkCompleteBtn.disabled = checkedCount === 0;
   if (bulkCancelBtn) bulkCancelBtn.disabled = checkedCount === 0;
+  if (bulkShipBtn) bulkShipBtn.disabled = checkedCount === 0;
 }
 
 // 2차 제안가 제안 모달 열기
@@ -826,5 +835,55 @@ async function submitEditBid() {
     await loadLiveBids();
   } catch (error) {
     handleError(error, "입찰 수정 중 오류가 발생했습니다.");
+  }
+}
+
+// 완료 상태를 출고됨으로 변경
+async function markAsShipped(bidId) {
+  if (!confirm("이 입찰을 출고됨 상태로 변경하시겠습니까?")) {
+    return;
+  }
+
+  try {
+    await updateLiveBid(bidId, { status: "shipped" });
+    showAlert("상태가 출고됨으로 변경되었습니다.", "success");
+    await loadLiveBids();
+  } catch (error) {
+    handleError(error, "상태 변경 중 오류가 발생했습니다.");
+  }
+}
+
+// 선택 항목 일괄 출고됨 처리
+async function bulkMarkAsShipped() {
+  const checkedBoxes = document.querySelectorAll(".bid-checkbox:checked");
+  const bidIds = Array.from(checkedBoxes).map((cb) =>
+    parseInt(cb.dataset.bidId)
+  );
+
+  if (bidIds.length === 0) {
+    showAlert("선택된 항목이 없습니다.", "warning");
+    return;
+  }
+
+  if (
+    !confirm(`선택된 ${bidIds.length}개 항목을 출고됨 상태로 변경하시겠습니까?`)
+  ) {
+    return;
+  }
+
+  try {
+    // 각 항목에 대해 개별적으로 상태 업데이트
+    const promises = bidIds.map((bidId) =>
+      updateLiveBid(bidId, { status: "shipped" })
+    );
+    await Promise.all(promises);
+
+    showAlert(
+      `${bidIds.length}개 항목이 출고됨으로 변경되었습니다.`,
+      "success"
+    );
+    await loadLiveBids();
+  } catch (error) {
+    handleError(error, "일괄 상태 변경 중 오류가 발생했습니다.");
   }
 }

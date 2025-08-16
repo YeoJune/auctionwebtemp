@@ -137,10 +137,21 @@ input[type="checkbox"]:checked + .toggle-slider:before {
   transform: translateX(26px);
 }
 
-input[type="checkbox"] {
+/* 토글 스위치용 체크박스 숨김 */
+.toggle-switch input[type="checkbox"] {
   opacity: 0;
   width: 0;
   height: 0;
+}
+
+/* 일반 체크박스 스타일 */
+.bid-checkbox,
+#selectAllBids {
+  width: 18px;
+  height: 18px;
+  opacity: 1;
+  cursor: pointer;
+  accent-color: #3498db;
 }
 
 .toggle-label {
