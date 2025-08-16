@@ -7,8 +7,14 @@ class MyPageManager {
     this.bidItemsData = [];
     this.bidResultsData = [];
     this.userData = null;
-    this.bidItemsFilter = "all";
-    this.bidResultsFilter = "all";
+    this.bidItemsFilter = {
+      type: "all", // all, live, direct
+      status: "all", // all, active, completed
+    };
+    this.bidResultsFilter = {
+      type: "all", // all, live, direct
+      status: "all", // all, can_apply, completed
+    };
     this.bidItemsPagination = {
       currentPage: 1,
       itemsPerPage: 10,
@@ -342,15 +348,19 @@ class MyPageManager {
   applyBidItemsFilter() {
     let filtered = [...this.bidItemsData];
 
-    if (this.bidItemsFilter === "live") {
+    // 타입 필터 적용
+    if (this.bidItemsFilter.type === "live") {
       filtered = filtered.filter((bid) => bid.type === "live");
-    } else if (this.bidItemsFilter === "direct") {
+    } else if (this.bidItemsFilter.type === "direct") {
       filtered = filtered.filter((bid) => bid.type === "direct");
-    } else if (this.bidItemsFilter === "active") {
+    }
+
+    // 상태 필터 적용
+    if (this.bidItemsFilter.status === "active") {
       filtered = filtered.filter((bid) =>
         ["active", "first", "second", "final"].includes(bid.status)
       );
-    } else if (this.bidItemsFilter === "completed") {
+    } else if (this.bidItemsFilter.status === "completed") {
       filtered = filtered.filter((bid) => bid.status === "completed");
     }
 
@@ -361,13 +371,17 @@ class MyPageManager {
   applyBidResultsFilter() {
     let filtered = [...this.bidResultsData];
 
-    if (this.bidResultsFilter === "live") {
+    // 타입 필터 적용
+    if (this.bidResultsFilter.type === "live") {
       filtered = filtered.filter((bid) => bid.type === "live");
-    } else if (this.bidResultsFilter === "direct") {
+    } else if (this.bidResultsFilter.type === "direct") {
       filtered = filtered.filter((bid) => bid.type === "direct");
-    } else if (this.bidResultsFilter === "can_apply") {
+    }
+
+    // 상태 필터 적용
+    if (this.bidResultsFilter.status === "can_apply") {
       filtered = filtered.filter((bid) => bid.processStage === "can_apply");
-    } else if (this.bidResultsFilter === "completed") {
+    } else if (this.bidResultsFilter.status === "completed") {
       filtered = filtered.filter((bid) => bid.processStage === "completed");
     }
 
@@ -644,11 +658,29 @@ class MyPageManager {
       .querySelectorAll("#bid-items-section .filter-btn")
       .forEach((btn) => {
         btn.addEventListener("click", (e) => {
-          document
-            .querySelectorAll("#bid-items-section .filter-btn")
-            .forEach((b) => b.classList.remove("active"));
-          e.target.classList.add("active");
-          this.bidItemsFilter = e.target.dataset.filter;
+          const filter = e.target.dataset.filter;
+
+          // 필터 타입 구분
+          if (["all", "live", "direct"].includes(filter)) {
+            // 타입 필터
+            document
+              .querySelectorAll(
+                "#bid-items-section .filter-btn[data-filter='all'], #bid-items-section .filter-btn[data-filter='live'], #bid-items-section .filter-btn[data-filter='direct']"
+              )
+              .forEach((b) => b.classList.remove("active"));
+            e.target.classList.add("active");
+            this.bidItemsFilter.type = filter;
+          } else {
+            // 상태 필터
+            document
+              .querySelectorAll(
+                "#bid-items-section .filter-btn[data-filter='active'], #bid-items-section .filter-btn[data-filter='completed']"
+              )
+              .forEach((b) => b.classList.remove("active"));
+            e.target.classList.add("active");
+            this.bidItemsFilter.status = filter;
+          }
+
           this.bidItemsPagination.currentPage = 1;
           this.renderBidItemsSection();
         });
@@ -659,11 +691,29 @@ class MyPageManager {
       .querySelectorAll("#bid-results-section .filter-btn")
       .forEach((btn) => {
         btn.addEventListener("click", (e) => {
-          document
-            .querySelectorAll("#bid-results-section .filter-btn")
-            .forEach((b) => b.classList.remove("active"));
-          e.target.classList.add("active");
-          this.bidResultsFilter = e.target.dataset.filter;
+          const filter = e.target.dataset.filter;
+
+          // 필터 타입 구분
+          if (["all", "live", "direct"].includes(filter)) {
+            // 타입 필터
+            document
+              .querySelectorAll(
+                "#bid-results-section .filter-btn[data-filter='all'], #bid-results-section .filter-btn[data-filter='live'], #bid-results-section .filter-btn[data-filter='direct']"
+              )
+              .forEach((b) => b.classList.remove("active"));
+            e.target.classList.add("active");
+            this.bidResultsFilter.type = filter;
+          } else {
+            // 상태 필터
+            document
+              .querySelectorAll(
+                "#bid-results-section .filter-btn[data-filter='can_apply'], #bid-results-section .filter-btn[data-filter='completed']"
+              )
+              .forEach((b) => b.classList.remove("active"));
+            e.target.classList.add("active");
+            this.bidResultsFilter.status = filter;
+          }
+
           this.bidResultsPagination.currentPage = 1;
           this.renderBidResultsSection();
         });

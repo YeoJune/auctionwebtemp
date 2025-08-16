@@ -266,9 +266,24 @@
 /* 필터 버튼 */
 .filter-buttons {
   display: flex;
-  gap: var(--spacing-xs);
+  gap: var(--spacing-md);
   margin-bottom: var(--spacing-md);
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.filter-group label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-right: var(--spacing-xs);
+  white-space: nowrap;
 }
 
 .filter-btn {

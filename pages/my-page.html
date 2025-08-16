@@ -197,11 +197,21 @@
 
             <!-- 필터 버튼 -->
             <div class="filter-buttons">
-              <button class="filter-btn active" data-filter="all">전체</button>
-              <button class="filter-btn" data-filter="live">현장경매</button>
-              <button class="filter-btn" data-filter="direct">직접경매</button>
-              <button class="filter-btn" data-filter="active">입찰중</button>
-              <button class="filter-btn" data-filter="completed">완료</button>
+              <div class="filter-group">
+                <label>경매 타입:</label>
+                <button class="filter-btn active" data-filter="all">
+                  전체
+                </button>
+                <button class="filter-btn" data-filter="live">현장경매</button>
+                <button class="filter-btn" data-filter="direct">
+                  직접경매
+                </button>
+              </div>
+              <div class="filter-group">
+                <label>입찰 상태:</label>
+                <button class="filter-btn" data-filter="active">입찰중</button>
+                <button class="filter-btn" data-filter="completed">완료</button>
+              </div>
             </div>
 
             <!-- 결과 카운트 -->
@@ -232,13 +242,23 @@
 
             <!-- 필터 버튼 -->
             <div class="filter-buttons">
-              <button class="filter-btn active" data-filter="all">전체</button>
-              <button class="filter-btn" data-filter="live">현장경매</button>
-              <button class="filter-btn" data-filter="direct">직접경매</button>
-              <button class="filter-btn" data-filter="can_apply">
-                감정서 신청 가능
-              </button>
-              <button class="filter-btn" data-filter="completed">완료</button>
+              <div class="filter-group">
+                <label>경매 타입:</label>
+                <button class="filter-btn active" data-filter="all">
+                  전체
+                </button>
+                <button class="filter-btn" data-filter="live">현장경매</button>
+                <button class="filter-btn" data-filter="direct">
+                  직접경매
+                </button>
+              </div>
+              <div class="filter-group">
+                <label>처리 상태:</label>
+                <button class="filter-btn" data-filter="can_apply">
+                  감정서 신청 가능
+                </button>
+                <button class="filter-btn" data-filter="completed">완료</button>
+              </div>
             </div>
 
             <!-- 결과 카운트 -->
