@@ -647,6 +647,7 @@ function createDetailsTable(dayResult) {
     <th>최종입찰금액 (¥)</th>
     <th>실제낙찰금액 (¥)</th>
     <th>관부가세 포함 (₩)</th>
+    <th>출고 여부</th>
     <th>감정서</th>
   </tr>
   `;
@@ -732,6 +733,15 @@ function createItemRow(item, status) {
     koreanCell.textContent = "-";
   }
 
+  // 출고 여부 셀
+  const shippingCell = createElement("td");
+  if (status === "success") {
+    const shippingStatus = createShippingStatus(item);
+    shippingCell.appendChild(shippingStatus);
+  } else {
+    shippingCell.textContent = "-";
+  }
+
   // 감정서 셀
   const appraisalCell = createElement("td");
   if (status === "success") {
@@ -749,6 +759,7 @@ function createItemRow(item, status) {
     finalPriceCell,
     winningPriceCell,
     koreanCell,
+    shippingCell,
     appraisalCell,
   ].forEach((cell) => {
     row.appendChild(cell);
@@ -771,6 +782,23 @@ function createAppraisalButton(item) {
   }
 
   return button;
+}
+
+function createShippingStatus(item) {
+  const statusSpan = createElement("span", "shipping-status");
+
+  if (item.status === "shipped") {
+    statusSpan.textContent = "출고됨";
+    statusSpan.classList.add("status-shipped");
+  } else if (item.status === "completed") {
+    statusSpan.textContent = "출고 대기";
+    statusSpan.classList.add("status-waiting");
+  } else {
+    statusSpan.textContent = "-";
+    statusSpan.classList.add("status-none");
+  }
+
+  return statusSpan;
 }
 
 async function requestAppraisal(item) {

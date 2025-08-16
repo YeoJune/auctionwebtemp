@@ -318,6 +318,32 @@
   background-color: #f5f5f5;
 }
 
+/* 테이블 컬럼 너비 조정 */
+.details-table th:nth-child(1) {
+  width: 80px;
+} /* 이미지 */
+.details-table th:nth-child(2) {
+  width: 100px;
+} /* 브랜드 */
+.details-table th:nth-child(3) {
+  width: auto;
+} /* 상품명 */
+.details-table th:nth-child(4) {
+  width: 120px;
+} /* 최종입찰금액 */
+.details-table th:nth-child(5) {
+  width: 120px;
+} /* 실제낙찰금액 */
+.details-table th:nth-child(6) {
+  width: 130px;
+} /* 관부가세포함 */
+.details-table th:nth-child(7) {
+  width: 80px;
+} /* 출고여부 */
+.details-table th:nth-child(8) {
+  width: 100px;
+} /* 감정서 */
+
 .details-table td {
   padding: 10px;
   font-size: 14px;
@@ -602,4 +628,33 @@
   .deposit-info p {
     font-size: 13px;
   }
+}
+
+/* 출고 상태 스타일 */
+.shipping-status {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-block;
+  min-width: 60px;
+  text-align: center;
+}
+
+.status-shipped {
+  background-color: #e3f2fd;
+  color: #1976d2;
+  border: 1px solid #bbdefb;
+}
+
+.status-waiting {
+  background-color: #fff3e0;
+  color: #f57c00;
+  border: 1px solid #ffcc02;
+}
+
+.status-none {
+  background-color: #f5f5f5;
+  color: #757575;
+  border: 1px solid #e0e0e0;
 }

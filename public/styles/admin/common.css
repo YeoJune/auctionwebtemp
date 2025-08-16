@@ -277,6 +277,11 @@ body {
   border: 1px solid #d6d8db;
 }
 
+.badge-primary {
+  background-color: #007bff;
+  color: white;
+}
+
 /* ========== 폼 요소 ========== */
 .form-group {
   margin-bottom: 20px;
