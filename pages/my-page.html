@@ -114,35 +114,25 @@
       </header>
 
       <main class="my-page-content">
-        <!-- 사이드바 네비게이션 -->
-        <nav class="my-page-sidebar">
-          <div class="sidebar-header">
-            <h2>마이페이지</h2>
-          </div>
-          <ul class="my-page-nav">
-            <li>
-              <a
-                href="#dashboard"
-                class="nav-item active"
-                data-section="dashboard">
-                <i class="fas fa-tachometer-alt"></i>
-                <span>대시보드</span>
-              </a>
-            </li>
-            <li>
-              <a href="#bids" class="nav-item" data-section="bids">
-                <i class="fas fa-chart-bar"></i>
-                <span>입찰 현황</span>
-              </a>
-            </li>
-            <li>
-              <a href="#account" class="nav-item" data-section="account">
-                <i class="fas fa-user-cog"></i>
-                <span>계정 관리</span>
-              </a>
-            </li>
-          </ul>
-        </nav>
+        <!-- 상단 탭 네비게이션 -->
+        <div class="my-page-tabs">
+          <button class="tab-button active" data-section="dashboard">
+            <i class="fas fa-tachometer-alt"></i>
+            <span>대시보드</span>
+          </button>
+          <button class="tab-button" data-section="bid-items">
+            <i class="fas fa-gavel"></i>
+            <span>입찰 항목</span>
+          </button>
+          <button class="tab-button" data-section="bid-results">
+            <i class="fas fa-clipboard-check"></i>
+            <span>입찰 결과</span>
+          </button>
+          <button class="tab-button" data-section="account">
+            <i class="fas fa-user-cog"></i>
+            <span>계정 관리</span>
+          </button>
+        </div>
 
         <!-- 메인 컨텐츠 영역 -->
         <div class="my-page-main">
@@ -187,33 +177,6 @@
               </div>
             </div>
 
-            <!-- 빠른 액세스 -->
-            <div class="quick-access">
-              <h3>빠른 액세스</h3>
-              <div class="quick-buttons">
-                <button
-                  class="quick-btn"
-                  onclick="window.location.href='/bidProductsPage'">
-                  <i class="fas fa-gavel"></i>
-                  <span>입찰 항목</span>
-                </button>
-                <button
-                  class="quick-btn"
-                  onclick="window.location.href='/bidResultsPage'">
-                  <i class="fas fa-clipboard-check"></i>
-                  <span>입찰 결과</span>
-                </button>
-                <button class="quick-btn" data-section="bids">
-                  <i class="fas fa-chart-bar"></i>
-                  <span>입찰 현황</span>
-                </button>
-                <button class="quick-btn" data-section="account">
-                  <i class="fas fa-user-cog"></i>
-                  <span>계정 관리</span>
-                </button>
-              </div>
-            </div>
-
             <!-- 최근 활동 -->
             <div class="recent-activities">
               <div class="recent-section">
@@ -221,76 +184,80 @@
                 <div id="recent-bids-list" class="activity-list">
                   <div class="loading-msg">로딩 중...</div>
                 </div>
-                <div class="view-more">
-                  <button class="secondary-button" data-section="bids">
-                    전체 보기
-                  </button>
-                </div>
               </div>
             </div>
           </section>
 
-          <!-- 입찰 현황 섹션 -->
-          <section id="bids-section" class="page-section">
+          <!-- 입찰 항목 섹션 -->
+          <section id="bid-items-section" class="page-section">
             <div class="section-header">
-              <h2>입찰 현황</h2>
-              <p>전체 입찰 프로세스를 한눈에 확인하세요</p>
+              <h2>입찰 항목</h2>
+              <p>진행중인 입찰 내역을 확인하세요</p>
             </div>
 
-            <!-- 필터 영역 -->
-            <div class="filter-bar">
-              <div class="filter-group">
-                <label for="process-filter">상태별</label>
-                <select id="process-filter">
-                  <option value="all">전체</option>
-                  <option value="bidding">입찰중</option>
-                  <option value="can_apply">감정서 신청 가능</option>
-                  <option value="completed">완료</option>
-                  <option value="cancelled">취소</option>
-                </select>
-              </div>
-              <div class="filter-group">
-                <label for="type-filter">경매 타입</label>
-                <select id="type-filter">
-                  <option value="all">전체</option>
-                  <option value="live">현장경매</option>
-                  <option value="direct">직접경매</option>
-                </select>
-              </div>
-              <div class="filter-group">
-                <label for="date-filter">기간</label>
-                <select id="date-filter">
-                  <option value="7">최근 1주일</option>
-                  <option value="30" selected>최근 1개월</option>
-                  <option value="90">최근 3개월</option>
-                  <option value="180">최근 6개월</option>
-                </select>
-              </div>
-              <div class="filter-actions">
-                <button id="apply-filters" class="primary-button">적용</button>
-                <button id="reset-filters" class="secondary-button">
-                  초기화
-                </button>
-              </div>
+            <!-- 필터 버튼 -->
+            <div class="filter-buttons">
+              <button class="filter-btn active" data-filter="all">전체</button>
+              <button class="filter-btn" data-filter="live">현장경매</button>
+              <button class="filter-btn" data-filter="direct">직접경매</button>
+              <button class="filter-btn" data-filter="active">입찰중</button>
+              <button class="filter-btn" data-filter="completed">완료</button>
             </div>
 
             <!-- 결과 카운트 -->
             <div class="results-header">
               <div class="results-count">
-                총 <span id="bids-total-count">0</span>개 상품
+                총 <span id="bid-items-total-count">0</span>개 상품
               </div>
             </div>
 
             <!-- 로딩 메시지 -->
-            <div class="loading-msg" id="bids-loading">로딩 중...</div>
+            <div class="loading-msg" id="bid-items-loading">로딩 중...</div>
 
             <!-- 입찰 목록 -->
-            <div id="bids-list" class="bids-grid">
+            <div id="bid-items-list" class="bids-grid">
               <!-- 동적으로 생성됨 -->
             </div>
 
             <!-- 페이지네이션 -->
-            <div class="pagination" id="bids-pagination"></div>
+            <div class="pagination" id="bid-items-pagination"></div>
+          </section>
+
+          <!-- 입찰 결과 섹션 -->
+          <section id="bid-results-section" class="page-section">
+            <div class="section-header">
+              <h2>입찰 결과</h2>
+              <p>낙찰된 입찰 결과를 확인하세요</p>
+            </div>
+
+            <!-- 필터 버튼 -->
+            <div class="filter-buttons">
+              <button class="filter-btn active" data-filter="all">전체</button>
+              <button class="filter-btn" data-filter="live">현장경매</button>
+              <button class="filter-btn" data-filter="direct">직접경매</button>
+              <button class="filter-btn" data-filter="can_apply">
+                감정서 신청 가능
+              </button>
+              <button class="filter-btn" data-filter="completed">완료</button>
+            </div>
+
+            <!-- 결과 카운트 -->
+            <div class="results-header">
+              <div class="results-count">
+                총 <span id="bid-results-total-count">0</span>개 상품
+              </div>
+            </div>
+
+            <!-- 로딩 메시지 -->
+            <div class="loading-msg" id="bid-results-loading">로딩 중...</div>
+
+            <!-- 입찰 목록 -->
+            <div id="bid-results-list" class="bids-grid">
+              <!-- 동적으로 생성됨 -->
+            </div>
+
+            <!-- 페이지네이션 -->
+            <div class="pagination" id="bid-results-pagination"></div>
           </section>
 
           <!-- 계정 관리 섹션 -->

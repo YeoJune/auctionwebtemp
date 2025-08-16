@@ -4,14 +4,18 @@
 class MyPageManager {
   constructor() {
     this.currentSection = "dashboard";
-    this.bidsData = [];
+    this.bidItemsData = [];
+    this.bidResultsData = [];
     this.userData = null;
-    this.filters = {
-      process: "all",
-      type: "all",
-      dateRange: 30,
+    this.bidItemsFilter = "all";
+    this.bidResultsFilter = "all";
+    this.bidItemsPagination = {
+      currentPage: 1,
+      itemsPerPage: 10,
+      totalItems: 0,
+      totalPages: 0,
     };
-    this.pagination = {
+    this.bidResultsPagination = {
       currentPage: 1,
       itemsPerPage: 10,
       totalItems: 0,
@@ -34,14 +38,23 @@ class MyPageManager {
       await fetchUserCommissionRate();
 
       // 기본 데이터 로드
-      await Promise.all([this.loadUserData(), this.loadBidsData()]);
+      await Promise.all([
+        this.loadUserData(),
+        this.loadBidItemsData(),
+        this.loadBidResultsData(),
+      ]);
 
       // 이벤트 리스너 설정
       this.setupEventListeners();
 
       // URL 해시에 따른 초기 섹션 표시
       const hash = window.location.hash.replace("#", "");
-      const initialSection = ["dashboard", "bids", "account"].includes(hash)
+      const initialSection = [
+        "dashboard",
+        "bid-items",
+        "bid-results",
+        "account",
+      ].includes(hash)
         ? hash
         : "dashboard";
       this.showSection(initialSection);
@@ -63,110 +76,87 @@ class MyPageManager {
       throw error;
     }
   }
-
-  // 입찰 데이터 로드
-  async loadBidsData() {
+  // 입찰 항목 데이터 로드
+  async loadBidItemsData() {
     try {
-      toggleLoading(true);
-
       const [liveBidsResponse, directBidsResponse] = await Promise.all([
         API.fetchAPI("/live-bids?limit=0"),
         API.fetchAPI("/direct-bids?limit=0"),
       ]);
 
-      // 데이터 통합 및 가공
-      this.bidsData = this.processBidsData(
-        liveBidsResponse.bids || [],
-        directBidsResponse.bids || []
+      // 진행중인 입찰만 필터링
+      const liveBids = (liveBidsResponse.bids || [])
+        .filter((bid) =>
+          ["active", "first", "second", "final"].includes(bid.status)
+        )
+        .map((bid) => ({ ...bid, type: "live" }));
+
+      const directBids = (directBidsResponse.bids || [])
+        .filter((bid) => bid.status === "active")
+        .map((bid) => ({ ...bid, type: "direct" }));
+
+      this.bidItemsData = [...liveBids, ...directBids].sort(
+        (a, b) => new Date(b.updated_at) - new Date(a.updated_at)
       );
 
-      console.log(`입찰 데이터 로드 완료: 총 ${this.bidsData.length}건`);
+      console.log(
+        `입찰 항목 데이터 로드 완료: 총 ${this.bidItemsData.length}건`
+      );
     } catch (error) {
-      console.error("입찰 데이터 로드 실패:", error);
-      this.bidsData = [];
-    } finally {
-      toggleLoading(false);
+      console.error("입찰 항목 데이터 로드 실패:", error);
+      this.bidItemsData = [];
     }
   }
 
-  // 입찰 데이터 가공
-  processBidsData(liveBids, directBids) {
-    const allBids = [
-      ...liveBids.map((bid) => ({ ...bid, type: "live" })),
-      ...directBids.map((bid) => ({ ...bid, type: "direct" })),
-    ];
+  // 입찰 결과 데이터 로드
+  async loadBidResultsData() {
+    try {
+      const [liveBidsResponse, directBidsResponse] = await Promise.all([
+        API.fetchAPI("/live-bids?limit=0"),
+        API.fetchAPI("/direct-bids?limit=0"),
+      ]);
 
-    return allBids
-      .map((bid) => ({
-        ...bid,
-        processStage: this.getProcessStage(bid),
-        displayInfo: this.formatBidInfo(bid),
-        displayPrice: this.getDisplayPrice(bid),
-        winningInfo: this.getWinningInfo(bid),
-      }))
-      .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
-  }
+      // 완료된 입찰만 필터링
+      const liveBids = (liveBidsResponse.bids || [])
+        .filter((bid) => ["completed", "cancelled"].includes(bid.status))
+        .map((bid) => ({
+          ...bid,
+          type: "live",
+          processStage:
+            bid.status === "completed" && !bid.appr_id
+              ? "can_apply"
+              : "completed",
+        }));
 
-  // 프로세스 단계 판별
-  getProcessStage(bid) {
-    if (["active", "first", "second", "final"].includes(bid.status)) {
-      return "bidding";
+      const directBids = (directBidsResponse.bids || [])
+        .filter((bid) => ["completed", "cancelled"].includes(bid.status))
+        .map((bid) => ({
+          ...bid,
+          type: "direct",
+          processStage:
+            bid.status === "completed" && !bid.appr_id
+              ? "can_apply"
+              : "completed",
+        }));
+
+      this.bidResultsData = [...liveBids, ...directBids].sort(
+        (a, b) => new Date(b.updated_at) - new Date(a.updated_at)
+      );
+
+      console.log(
+        `입찰 결과 데이터 로드 완료: 총 ${this.bidResultsData.length}건`
+      );
+    } catch (error) {
+      console.error("입찰 결과 데이터 로드 실패:", error);
+      this.bidResultsData = [];
     }
-    if (bid.status === "completed" && bid.winning_price && !bid.appr_id) {
-      return "can_apply";
-    }
-    if (bid.appr_id) {
-      return "completed";
-    }
-    return "cancelled";
-  }
-
-  // 입찰 정보 포맷팅
-  formatBidInfo(bid) {
-    const item = bid.item;
-    if (!item) return null;
-
-    return {
-      brand: item.brand || "-",
-      title: item.title || item.original_title || "제목 없음",
-      image: API.validateImageUrl(item.image),
-      category: item.category || "-",
-      auc_num: item.auc_num || 1,
-    };
-  }
-
-  // 표시 가격 계산
-  getDisplayPrice(bid) {
-    if (bid.type === "direct") {
-      return bid.current_price || 0;
-    } else {
-      return bid.final_price || bid.second_price || bid.first_price || 0;
-    }
-  }
-
-  // 낙찰 정보 계산
-  getWinningInfo(bid) {
-    if (!bid.winning_price) return null;
-
-    const auctionId = bid.item?.auc_num || 1;
-    const category = bid.item?.category || "기타";
-    const koreanPrice = calculateTotalPrice(
-      bid.winning_price,
-      auctionId,
-      category
-    );
-
-    return {
-      winningPrice: bid.winning_price,
-      koreanPrice: koreanPrice,
-    };
   }
 
   // 섹션 전환
   showSection(sectionName) {
-    // 네비게이션 업데이트
-    document.querySelectorAll(".nav-item").forEach((item) => {
-      item.classList.remove("active");
+    // 탭 버튼 업데이트
+    document.querySelectorAll(".tab-button").forEach((btn) => {
+      btn.classList.remove("active");
     });
     document
       .querySelector(`[data-section="${sectionName}"]`)
@@ -187,8 +177,11 @@ class MyPageManager {
       case "dashboard":
         this.renderDashboard();
         break;
-      case "bids":
-        this.renderBidsSection();
+      case "bid-items":
+        this.renderBidItemsSection();
+        break;
+      case "bid-results":
+        this.renderBidResultsSection();
         break;
       case "account":
         this.renderAccountSection();
@@ -223,21 +216,24 @@ class MyPageManager {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const activeCount = this.bidsData.filter(
-      (bid) => bid.processStage === "bidding"
-    ).length;
-    const completedCount = this.bidsData.filter(
-      (bid) =>
-        bid.processStage === "completed" || bid.processStage === "can_apply"
+    const activeCount = this.bidItemsData.length;
+    const completedCount = this.bidResultsData.filter(
+      (bid) => bid.status === "completed"
     ).length;
 
     // 이번 달 낙찰 총액
-    const monthlyTotal = this.bidsData
+    const monthlyTotal = this.bidResultsData
       .filter((bid) => {
         const updatedAt = new Date(bid.updated_at);
-        return updatedAt >= monthStart && bid.winningInfo;
+        return updatedAt >= monthStart && bid.winning_price;
       })
-      .reduce((sum, bid) => sum + bid.winningInfo.koreanPrice, 0);
+      .reduce((sum, bid) => {
+        const auctionId = bid.item?.auc_num || 1;
+        const category = bid.item?.category || "기타";
+        return (
+          sum + calculateTotalPrice(bid.winning_price, auctionId, category)
+        );
+      }, 0);
 
     return { activeCount, completedCount, monthlyTotal };
   }
@@ -245,7 +241,9 @@ class MyPageManager {
   // 최근 입찰 렌더링
   renderRecentBids() {
     const container = document.getElementById("recent-bids-list");
-    const recentBids = this.bidsData.slice(0, 5);
+    const recentBids = [...this.bidItemsData, ...this.bidResultsData]
+      .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+      .slice(0, 5);
 
     if (recentBids.length === 0) {
       container.innerHTML =
@@ -254,93 +252,131 @@ class MyPageManager {
     }
 
     container.innerHTML = recentBids
-      .map(
-        (bid) => `
-      <div class="activity-item">
-        <img src="${
-          bid.displayInfo?.image
-        }" alt="상품 이미지" class="activity-image">
-        <div class="activity-content">
-          <div class="activity-title">${bid.displayInfo?.brand} - ${
-          bid.displayInfo?.title
+      .map((bid) => {
+        const displayPrice = this.getDisplayPrice(bid);
+        const statusText = this.getStatusText(bid);
+
+        return `
+        <div class="activity-item">
+          <img src="${API.validateImageUrl(
+            bid.item?.image
+          )}" alt="상품 이미지" class="activity-image">
+          <div class="activity-content">
+            <div class="activity-title">${bid.item?.brand || "-"} - ${
+          bid.item?.title || "제목 없음"
         }</div>
-          <div class="activity-details">
-            <span class="activity-type">${
-              bid.type === "live" ? "현장경매" : "직접경매"
-            }</span>
-            <span class="activity-price">￥${formatNumber(
-              bid.displayPrice
-            )}</span>
-            <span class="activity-status ${
-              bid.processStage
-            }">${this.getStatusText(bid)}</span>
+            <div class="activity-details">
+              <span class="activity-type">${
+                bid.type === "live" ? "현장경매" : "직접경매"
+              }</span>
+              <span class="activity-price">￥${formatNumber(
+                displayPrice
+              )}</span>
+              <span class="activity-status ${this.getStatusClass(
+                bid
+              )}">${statusText}</span>
+            </div>
+            <div class="activity-date">${formatDateTime(bid.updated_at)}</div>
           </div>
-          <div class="activity-date">${formatDateTime(bid.updated_at)}</div>
         </div>
-      </div>
-    `
-      )
+      `;
+      })
       .join("");
   }
 
-  // 입찰 현황 섹션 렌더링
-  renderBidsSection() {
-    // 필터링된 데이터 가져오기
-    const filteredBids = this.applyBidsFilters();
+  // 입찰 항목 섹션 렌더링
+  renderBidItemsSection() {
+    const filteredData = this.applyBidItemsFilter();
 
-    // 페이지네이션 계산
-    this.pagination.totalItems = filteredBids.length;
-    this.pagination.totalPages = Math.ceil(
-      filteredBids.length / this.pagination.itemsPerPage
+    this.bidItemsPagination.totalItems = filteredData.length;
+    this.bidItemsPagination.totalPages = Math.ceil(
+      filteredData.length / this.bidItemsPagination.itemsPerPage
     );
 
-    // 현재 페이지 데이터
     const startIdx =
-      (this.pagination.currentPage - 1) * this.pagination.itemsPerPage;
-    const endIdx = startIdx + this.pagination.itemsPerPage;
-    const currentPageBids = filteredBids.slice(startIdx, endIdx);
+      (this.bidItemsPagination.currentPage - 1) *
+      this.bidItemsPagination.itemsPerPage;
+    const endIdx = startIdx + this.bidItemsPagination.itemsPerPage;
+    const currentPageData = filteredData.slice(startIdx, endIdx);
 
-    // 결과 카운트 업데이트
-    document.getElementById("bids-total-count").textContent =
-      this.pagination.totalItems;
+    document.getElementById("bid-items-total-count").textContent =
+      this.bidItemsPagination.totalItems;
+    document.getElementById("bid-items-loading").style.display = "none";
 
-    // 로딩 숨기기
-    document.getElementById("bids-loading").style.display = "none";
-
-    // 입찰 목록 렌더링
-    this.renderBidsList(currentPageBids);
-
-    // 페이지네이션 렌더링
-    this.renderBidsPagination();
+    this.renderBidsList("bid-items-list", currentPageData);
+    this.renderPagination(
+      "bid-items-pagination",
+      this.bidItemsPagination,
+      (page) => this.handleBidItemsPageChange(page)
+    );
   }
 
-  // 입찰 필터 적용
-  applyBidsFilters() {
-    let filtered = [...this.bidsData];
+  // 입찰 결과 섹션 렌더링
+  renderBidResultsSection() {
+    const filteredData = this.applyBidResultsFilter();
 
-    // 프로세스 단계 필터
-    if (this.filters.process !== "all") {
-      filtered = filtered.filter(
-        (bid) => bid.processStage === this.filters.process
+    this.bidResultsPagination.totalItems = filteredData.length;
+    this.bidResultsPagination.totalPages = Math.ceil(
+      filteredData.length / this.bidResultsPagination.itemsPerPage
+    );
+
+    const startIdx =
+      (this.bidResultsPagination.currentPage - 1) *
+      this.bidResultsPagination.itemsPerPage;
+    const endIdx = startIdx + this.bidResultsPagination.itemsPerPage;
+    const currentPageData = filteredData.slice(startIdx, endIdx);
+
+    document.getElementById("bid-results-total-count").textContent =
+      this.bidResultsPagination.totalItems;
+    document.getElementById("bid-results-loading").style.display = "none";
+
+    this.renderBidsList("bid-results-list", currentPageData);
+    this.renderPagination(
+      "bid-results-pagination",
+      this.bidResultsPagination,
+      (page) => this.handleBidResultsPageChange(page)
+    );
+  }
+
+  // 입찰 항목 필터 적용
+  applyBidItemsFilter() {
+    let filtered = [...this.bidItemsData];
+
+    if (this.bidItemsFilter === "live") {
+      filtered = filtered.filter((bid) => bid.type === "live");
+    } else if (this.bidItemsFilter === "direct") {
+      filtered = filtered.filter((bid) => bid.type === "direct");
+    } else if (this.bidItemsFilter === "active") {
+      filtered = filtered.filter((bid) =>
+        ["active", "first", "second", "final"].includes(bid.status)
       );
+    } else if (this.bidItemsFilter === "completed") {
+      filtered = filtered.filter((bid) => bid.status === "completed");
     }
 
-    // 경매 타입 필터
-    if (this.filters.type !== "all") {
-      filtered = filtered.filter((bid) => bid.type === this.filters.type);
-    }
+    return filtered;
+  }
 
-    // 날짜 필터
-    const dateLimit = new Date();
-    dateLimit.setDate(dateLimit.getDate() - this.filters.dateRange);
-    filtered = filtered.filter((bid) => new Date(bid.updated_at) >= dateLimit);
+  // 입찰 결과 필터 적용
+  applyBidResultsFilter() {
+    let filtered = [...this.bidResultsData];
+
+    if (this.bidResultsFilter === "live") {
+      filtered = filtered.filter((bid) => bid.type === "live");
+    } else if (this.bidResultsFilter === "direct") {
+      filtered = filtered.filter((bid) => bid.type === "direct");
+    } else if (this.bidResultsFilter === "can_apply") {
+      filtered = filtered.filter((bid) => bid.processStage === "can_apply");
+    } else if (this.bidResultsFilter === "completed") {
+      filtered = filtered.filter((bid) => bid.processStage === "completed");
+    }
 
     return filtered;
   }
 
   // 입찰 목록 렌더링
-  renderBidsList(bids) {
-    const container = document.getElementById("bids-list");
+  renderBidsList(containerId, bids) {
+    const container = document.getElementById(containerId);
 
     if (bids.length === 0) {
       container.innerHTML =
@@ -355,31 +391,38 @@ class MyPageManager {
 
   // 입찰 아이템 HTML 생성
   createBidItemHTML(bid) {
-    const info = bid.displayInfo;
-    const status = this.getStatusText(bid);
-    const statusClass = bid.processStage;
+    const item = bid.item;
+    if (!item) return "";
+
+    const displayPrice = this.getDisplayPrice(bid);
+    const statusText = this.getStatusText(bid);
+    const statusClass = this.getStatusClass(bid);
 
     let priceHTML = `
       <div class="bid-price">
         <span class="price-label">입찰가:</span>
-        <span class="price-value">￥${formatNumber(bid.displayPrice)}</span>
+        <span class="price-value">￥${formatNumber(displayPrice)}</span>
       </div>
     `;
 
-    // 낙찰 정보가 있으면 추가 표시
-    if (bid.winningInfo) {
+    // 낙찰 정보 표시
+    if (bid.winning_price) {
+      const auctionId = item.auc_num || 1;
+      const category = item.category || "기타";
+      const koreanPrice = calculateTotalPrice(
+        bid.winning_price,
+        auctionId,
+        category
+      );
+
       priceHTML += `
         <div class="winning-price">
           <span class="price-label">낙찰가:</span>
-          <span class="price-value">￥${formatNumber(
-            bid.winningInfo.winningPrice
-          )}</span>
+          <span class="price-value">￥${formatNumber(bid.winning_price)}</span>
         </div>
         <div class="korean-price">
           <span class="price-label">관부가세 포함:</span>
-          <span class="price-value">₩${formatNumber(
-            bid.winningInfo.koreanPrice
-          )}</span>
+          <span class="price-value">₩${formatNumber(koreanPrice)}</span>
         </div>
       `;
     }
@@ -391,10 +434,10 @@ class MyPageManager {
         <button class="apply-appraisal-btn" 
                 data-bid-id="${bid.id}" 
                 data-bid-type="${bid.type}"
-                data-brand="${info.brand}"
-                data-title="${info.title}"
-                data-image="${info.image}"
-                data-winning-price="${bid.winningInfo?.winningPrice || 0}">
+                data-brand="${item.brand || "-"}"
+                data-title="${item.title || "제목 없음"}"
+                data-image="${API.validateImageUrl(item.image)}"
+                data-winning-price="${bid.winning_price || 0}">
           감정서 신청
         </button>
       `;
@@ -404,24 +447,24 @@ class MyPageManager {
 
     return `
       <div class="bid-item">
+        <img src="${API.validateImageUrl(
+          item.image
+        )}" alt="상품 이미지" class="item-image">
         <div class="item-info">
-          <img src="${info.image}" alt="상품 이미지" class="item-image">
-          <div class="item-details">
-            <div class="item-brand">${info.brand}</div>
-            <div class="item-title">${info.title}</div>
-            <div class="item-meta">
-              <span class="item-type">${
-                bid.type === "live" ? "현장경매" : "직접경매"
-              }</span>
-              <span class="item-category">${info.category}</span>
-            </div>
+          <div class="item-brand">${item.brand || "-"}</div>
+          <div class="item-title">${item.title || "제목 없음"}</div>
+          <div class="item-meta">
+            <span class="item-type">${
+              bid.type === "live" ? "현장경매" : "직접경매"
+            }</span>
+            <span class="item-category">${item.category || "-"}</span>
           </div>
         </div>
         <div class="price-info">
           ${priceHTML}
         </div>
         <div class="status-info">
-          <div class="status-badge ${statusClass}">${status}</div>
+          <span class="status-badge ${statusClass}">${statusText}</span>
           <div class="updated-date">${formatDateTime(bid.updated_at)}</div>
           ${actionHTML}
         </div>
@@ -429,30 +472,104 @@ class MyPageManager {
     `;
   }
 
+  // 표시 가격 계산
+  getDisplayPrice(bid) {
+    if (bid.type === "direct") {
+      return bid.current_price || 0;
+    } else {
+      return bid.final_price || bid.second_price || bid.first_price || 0;
+    }
+  }
+
   // 상태 텍스트 반환
   getStatusText(bid) {
+    if (bid.processStage) {
+      const statusMap = {
+        can_apply: "감정서 신청 가능",
+        completed: "완료",
+      };
+      return statusMap[bid.processStage] || "알 수 없음";
+    }
+
     const statusMap = {
-      bidding: "입찰중",
-      can_apply: "감정서 신청 가능",
-      completed: "완료",
+      active: "입찰 가능",
+      first: "1차 입찰",
+      second: "2차 제안",
+      final: "최종 입찰",
+      completed: "낙찰 완료",
       cancelled: "취소",
     };
-    return statusMap[bid.processStage] || "알 수 없음";
+    return statusMap[bid.status] || "알 수 없음";
   }
 
-  // 입찰 페이지네이션 렌더링
-  renderBidsPagination() {
-    createPagination(
-      this.pagination.currentPage,
-      this.pagination.totalPages,
-      (page) => this.handleBidsPageChange(page)
+  // 상태 클래스 반환
+  getStatusClass(bid) {
+    if (bid.processStage) {
+      return bid.processStage;
+    }
+
+    const statusMap = {
+      active: "active",
+      first: "first",
+      second: "second",
+      final: "final",
+      completed: "completed",
+      cancelled: "cancelled",
+    };
+    return statusMap[bid.status] || "unknown";
+  }
+
+  // 페이지네이션 렌더링
+  renderPagination(containerId, pagination, onPageChange) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = "";
+
+    if (pagination.totalPages <= 1) return;
+
+    // 이전 버튼
+    const prevButton = document.createElement("button");
+    prevButton.textContent = "이전";
+    prevButton.disabled = pagination.currentPage <= 1;
+    prevButton.addEventListener("click", () =>
+      onPageChange(pagination.currentPage - 1)
     );
+    container.appendChild(prevButton);
+
+    // 페이지 번호 버튼들
+    const startPage = Math.max(1, pagination.currentPage - 2);
+    const endPage = Math.min(pagination.totalPages, pagination.currentPage + 2);
+
+    for (let i = startPage; i <= endPage; i++) {
+      const pageButton = document.createElement("button");
+      pageButton.textContent = i;
+      if (i === pagination.currentPage) {
+        pageButton.classList.add("active");
+      }
+      pageButton.addEventListener("click", () => onPageChange(i));
+      container.appendChild(pageButton);
+    }
+
+    // 다음 버튼
+    const nextButton = document.createElement("button");
+    nextButton.textContent = "다음";
+    nextButton.disabled = pagination.currentPage >= pagination.totalPages;
+    nextButton.addEventListener("click", () =>
+      onPageChange(pagination.currentPage + 1)
+    );
+    container.appendChild(nextButton);
   }
 
-  // 입찰 페이지 변경 처리
-  handleBidsPageChange(page) {
-    this.pagination.currentPage = page;
-    this.renderBidsSection();
+  // 입찰 항목 페이지 변경
+  handleBidItemsPageChange(page) {
+    this.bidItemsPagination.currentPage = page;
+    this.renderBidItemsSection();
+    document.querySelector(".my-page-main").scrollTop = 0;
+  }
+
+  // 입찰 결과 페이지 변경
+  handleBidResultsPageChange(page) {
+    this.bidResultsPagination.currentPage = page;
+    this.renderBidResultsSection();
     document.querySelector(".my-page-main").scrollTop = 0;
   }
 
@@ -465,12 +582,10 @@ class MyPageManager {
       loadingEl.style.display = "block";
       contentEl.classList.add("hidden");
 
-      // 사용자 데이터가 없으면 다시 로드
       if (!this.userData) {
         await this.loadUserData();
       }
 
-      // 폼에 데이터 채우기
       this.populateAccountForm();
 
       loadingEl.style.display = "none";
@@ -486,7 +601,6 @@ class MyPageManager {
   populateAccountForm() {
     const data = this.userData;
 
-    // 기본 정보
     document.getElementById("user-id").value = data.id || "";
     document.getElementById("user-email").value = data.email || "";
     document.getElementById("user-phone").value = data.phone || "";
@@ -494,13 +608,11 @@ class MyPageManager {
       ? formatDate(data.registration_date)
       : "";
 
-    // 회사 정보
     document.getElementById("company-name").value = data.company_name || "";
     document.getElementById("business-number").value =
       data.business_number || "";
     document.getElementById("company-address").value = data.address || "";
 
-    // 수수료 정보 (읽기 전용)
     document.getElementById("commission-rate").textContent =
       data.commission_rate !== null
         ? `${data.commission_rate}%`
@@ -519,49 +631,43 @@ class MyPageManager {
 
   // 이벤트 리스너 설정
   setupEventListeners() {
-    // 네비게이션 클릭
+    // 탭 네비게이션
+    document.querySelectorAll(".tab-button").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const section = e.currentTarget.getAttribute("data-section");
+        this.showSection(section);
+      });
+    });
+
+    // 입찰 항목 필터 버튼
     document
-      .querySelectorAll(".nav-item, .quick-btn[data-section]")
-      .forEach((item) => {
-        item.addEventListener("click", (e) => {
-          e.preventDefault();
-          const section = e.currentTarget.getAttribute("data-section");
-          if (section) {
-            this.showSection(section);
-          }
+      .querySelectorAll("#bid-items-section .filter-btn")
+      .forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          document
+            .querySelectorAll("#bid-items-section .filter-btn")
+            .forEach((b) => b.classList.remove("active"));
+          e.target.classList.add("active");
+          this.bidItemsFilter = e.target.dataset.filter;
+          this.bidItemsPagination.currentPage = 1;
+          this.renderBidItemsSection();
         });
       });
 
-    // 입찰 현황 필터
+    // 입찰 결과 필터 버튼
     document
-      .getElementById("process-filter")
-      ?.addEventListener("change", (e) => {
-        this.filters.process = e.target.value;
-        this.pagination.currentPage = 1;
-        this.renderBidsSection();
+      .querySelectorAll("#bid-results-section .filter-btn")
+      .forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          document
+            .querySelectorAll("#bid-results-section .filter-btn")
+            .forEach((b) => b.classList.remove("active"));
+          e.target.classList.add("active");
+          this.bidResultsFilter = e.target.dataset.filter;
+          this.bidResultsPagination.currentPage = 1;
+          this.renderBidResultsSection();
+        });
       });
-
-    document.getElementById("type-filter")?.addEventListener("change", (e) => {
-      this.filters.type = e.target.value;
-      this.pagination.currentPage = 1;
-      this.renderBidsSection();
-    });
-
-    document.getElementById("date-filter")?.addEventListener("change", (e) => {
-      this.filters.dateRange = parseInt(e.target.value);
-      this.pagination.currentPage = 1;
-      this.renderBidsSection();
-    });
-
-    // 필터 버튼
-    document.getElementById("apply-filters")?.addEventListener("click", () => {
-      this.pagination.currentPage = 1;
-      this.renderBidsSection();
-    });
-
-    document.getElementById("reset-filters")?.addEventListener("click", () => {
-      this.resetBidsFilters();
-    });
 
     // 감정서 신청 모달
     this.setupAppraisalModal();
@@ -572,43 +678,23 @@ class MyPageManager {
     console.log("이벤트 리스너 설정 완료");
   }
 
-  // 입찰 필터 초기화
-  resetBidsFilters() {
-    this.filters = {
-      process: "all",
-      type: "all",
-      dateRange: 30,
-    };
-    this.pagination.currentPage = 1;
-
-    // UI 업데이트
-    document.getElementById("process-filter").value = "all";
-    document.getElementById("type-filter").value = "all";
-    document.getElementById("date-filter").value = "30";
-
-    this.renderBidsSection();
-  }
-
   // 감정서 신청 모달 설정
   setupAppraisalModal() {
     const modal = setupModal("appraisalModal");
     if (!modal) return;
 
-    // 감정서 신청 버튼 클릭
     document.addEventListener("click", (e) => {
       if (e.target.classList.contains("apply-appraisal-btn")) {
         this.handleAppraisalClick(e.target);
       }
     });
 
-    // 확인 버튼
     document
       .getElementById("confirmAppraisal")
       ?.addEventListener("click", () => {
         this.processAppraisalRequest();
       });
 
-    // 취소 버튼
     document
       .getElementById("cancelAppraisal")
       ?.addEventListener("click", () => {
@@ -625,7 +711,6 @@ class MyPageManager {
     const image = button.dataset.image;
     const winningPrice = button.dataset.winningPrice;
 
-    // 모달에 정보 설정
     document.getElementById("appraisal-product-image").src = image;
     document.getElementById("appraisal-brand").textContent = brand;
     document.getElementById("appraisal-title").textContent = title;
@@ -633,12 +718,10 @@ class MyPageManager {
       winningPrice
     )}`;
 
-    // 확인 버튼에 데이터 저장
     const confirmBtn = document.getElementById("confirmAppraisal");
     confirmBtn.dataset.bidId = bidId;
     confirmBtn.dataset.bidType = bidType;
 
-    // 모달 표시
     const modal = setupModal("appraisalModal");
     modal.show();
   }
@@ -660,14 +743,12 @@ class MyPageManager {
 
       alert("감정서 신청이 완료되었습니다.");
 
-      // 모달 닫기
       const modal = setupModal("appraisalModal");
       modal.hide();
 
-      // 데이터 새로고침
-      await this.loadBidsData();
-      if (this.currentSection === "bids") {
-        this.renderBidsSection();
+      await this.loadBidResultsData();
+      if (this.currentSection === "bid-results") {
+        this.renderBidResultsSection();
       } else if (this.currentSection === "dashboard") {
         this.renderDashboard();
       }
@@ -682,7 +763,6 @@ class MyPageManager {
 
   // 계정 관리 폼 설정
   setupAccountForms() {
-    // 기본 정보 수정
     document
       .getElementById("basic-info-form")
       ?.addEventListener("submit", async (e) => {
@@ -690,7 +770,6 @@ class MyPageManager {
         await this.handleAccountUpdate("basic");
       });
 
-    // 회사 정보 수정
     document
       .getElementById("company-info-form")
       ?.addEventListener("submit", async (e) => {
@@ -698,7 +777,6 @@ class MyPageManager {
         await this.handleAccountUpdate("company");
       });
 
-    // 비밀번호 변경
     document
       .getElementById("password-form")
       ?.addEventListener("submit", async (e) => {
@@ -733,7 +811,6 @@ class MyPageManager {
 
       alert("정보가 성공적으로 수정되었습니다.");
 
-      // 사용자 데이터 새로고침
       await this.loadUserData();
       this.populateAccountForm();
     } catch (error) {
@@ -767,8 +844,6 @@ class MyPageManager {
       });
 
       alert("비밀번호가 성공적으로 변경되었습니다.");
-
-      // 폼 초기화
       document.getElementById("password-form").reset();
     } catch (error) {
       console.error("비밀번호 변경 실패:", error);
@@ -796,7 +871,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 window.addEventListener("hashchange", () => {
   if (myPageManager) {
     const hash = window.location.hash.replace("#", "");
-    const section = ["dashboard", "bids", "account"].includes(hash)
+    const section = [
+      "dashboard",
+      "bid-items",
+      "bid-results",
+      "account",
+    ].includes(hash)
       ? hash
       : "dashboard";
     myPageManager.showSection(section);
