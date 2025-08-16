@@ -12,7 +12,7 @@ const isAdmin = (req, res, next) => {
   }
 };
 
-// STATUS -> 'first', 'second', 'final', 'completed', 'cancelled'
+// STATUS -> 'first', 'second', 'final', 'completed', 'cancelled', 'shipped'
 
 // Updated GET endpoint for live-bids.js
 router.get("/", async (req, res) => {
@@ -679,6 +679,7 @@ router.put("/:id", isAdmin, async (req, res) => {
         "final",
         "completed",
         "cancelled",
+        "shipped",
       ];
       if (!validStatuses.includes(status)) {
         await connection.rollback();

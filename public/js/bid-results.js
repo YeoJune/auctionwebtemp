@@ -144,7 +144,7 @@ async function fetchCompletedBids() {
 
     // 정렬 및 페이지네이션 파라미터
     const params = {
-      status: "active,final,completed,cancelled", // 모든 상태
+      status: "active,final,completed,shipped,cancelled", // shipped 상태 추가
       fromDate: fromDate,
       sortBy: "scheduled_date", // scheduled_date로 변경
       sortOrder: "desc",

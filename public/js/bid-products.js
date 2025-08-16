@@ -26,15 +26,24 @@ const STATUS_TYPES = {
   SECOND: "second",
   FINAL: "final",
   COMPLETED: "completed",
+  SHIPPED: "shipped",
   CANCELLED: "cancelled",
 };
 
 // 상태 그룹 - API 요청용
 const STATUS_GROUPS = {
   ACTIVE: ["active", "first", "second", "final"],
-  COMPLETED: ["completed"],
+  COMPLETED: ["completed", "shipped"], // shipped도 completed와 동일하게 처리
   CANCELLED: ["cancelled"],
-  ALL: ["active", "first", "second", "final", "completed", "cancelled"],
+  ALL: [
+    "active",
+    "first",
+    "second",
+    "final",
+    "completed",
+    "shipped",
+    "cancelled",
+  ],
 };
 
 // 상태 표시 텍스트
@@ -44,6 +53,7 @@ const STATUS_DISPLAY = {
   [STATUS_TYPES.SECOND]: "2차 제안",
   [STATUS_TYPES.FINAL]: "최종 입찰",
   [STATUS_TYPES.COMPLETED]: "낙찰 완료",
+  [STATUS_TYPES.SHIPPED]: "출고됨",
   [STATUS_TYPES.CANCELLED]: "더 높은 입찰 존재",
 };
 
@@ -54,6 +64,7 @@ const STATUS_CLASSES = {
   [STATUS_TYPES.SECOND]: "status-second",
   [STATUS_TYPES.FINAL]: "status-final",
   [STATUS_TYPES.COMPLETED]: "status-completed",
+  [STATUS_TYPES.SHIPPED]: "status-shipped",
   [STATUS_TYPES.CANCELLED]: "status-cancelled",
   "status-expired": "status-expired",
 };

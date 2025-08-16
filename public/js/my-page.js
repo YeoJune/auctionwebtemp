@@ -9,11 +9,11 @@ class MyPageManager {
     this.userData = null;
     this.bidItemsFilter = {
       type: "all", // all, live, direct
-      status: "all", // all, active, completed
+      status: "all", // all, active, completed, shipped
     };
     this.bidResultsFilter = {
       type: "all", // all, live, direct
-      status: "all", // all, can_apply, completed
+      status: "all", // all, can_apply, completed, shipped
     };
     this.bidItemsPagination = {
       currentPage: 1,
@@ -122,26 +122,34 @@ class MyPageManager {
         API.fetchAPI("/direct-bids?limit=0"),
       ]);
 
-      // 완료된 입찰만 필터링
+      // 완료된 입찰만 필터링 (shipped 상태도 포함)
       const liveBids = (liveBidsResponse.bids || [])
-        .filter((bid) => ["completed", "cancelled"].includes(bid.status))
+        .filter((bid) =>
+          ["completed", "cancelled", "shipped"].includes(bid.status)
+        )
         .map((bid) => ({
           ...bid,
           type: "live",
           processStage:
             bid.status === "completed" && !bid.appr_id
               ? "can_apply"
+              : bid.status === "shipped"
+              ? "shipped"
               : "completed",
         }));
 
       const directBids = (directBidsResponse.bids || [])
-        .filter((bid) => ["completed", "cancelled"].includes(bid.status))
+        .filter((bid) =>
+          ["completed", "cancelled", "shipped"].includes(bid.status)
+        )
         .map((bid) => ({
           ...bid,
           type: "direct",
           processStage:
             bid.status === "completed" && !bid.appr_id
               ? "can_apply"
+              : bid.status === "shipped"
+              ? "shipped"
               : "completed",
         }));
 
@@ -361,7 +369,10 @@ class MyPageManager {
         ["active", "first", "second", "final"].includes(bid.status)
       );
     } else if (this.bidItemsFilter.status === "completed") {
-      filtered = filtered.filter((bid) => bid.status === "completed");
+      // completed와 shipped를 모두 포함 (입찰 항목에서는 동일하게 취급)
+      filtered = filtered.filter((bid) =>
+        ["completed", "shipped"].includes(bid.status)
+      );
     }
 
     return filtered;
@@ -383,6 +394,8 @@ class MyPageManager {
       filtered = filtered.filter((bid) => bid.processStage === "can_apply");
     } else if (this.bidResultsFilter.status === "completed") {
       filtered = filtered.filter((bid) => bid.processStage === "completed");
+    } else if (this.bidResultsFilter.status === "shipped") {
+      filtered = filtered.filter((bid) => bid.processStage === "shipped");
     }
 
     return filtered;
@@ -501,6 +514,7 @@ class MyPageManager {
       const statusMap = {
         can_apply: "감정서 신청 가능",
         completed: "완료",
+        shipped: "출고됨",
       };
       return statusMap[bid.processStage] || "알 수 없음";
     }
@@ -511,6 +525,7 @@ class MyPageManager {
       second: "2차 제안",
       final: "최종 입찰",
       completed: "낙찰 완료",
+      shipped: "출고됨",
       cancelled: "취소",
     };
     return statusMap[bid.status] || "알 수 없음";
@@ -528,6 +543,7 @@ class MyPageManager {
       second: "second",
       final: "final",
       completed: "completed",
+      shipped: "shipped",
       cancelled: "cancelled",
     };
     return statusMap[bid.status] || "unknown";
@@ -707,7 +723,7 @@ class MyPageManager {
             // 상태 필터
             document
               .querySelectorAll(
-                "#bid-results-section .filter-btn[data-filter='can_apply'], #bid-results-section .filter-btn[data-filter='completed']"
+                "#bid-results-section .filter-btn[data-filter='can_apply'], #bid-results-section .filter-btn[data-filter='completed'], #bid-results-section .filter-btn[data-filter='shipped']"
               )
               .forEach((b) => b.classList.remove("active"));
             e.target.classList.add("active");

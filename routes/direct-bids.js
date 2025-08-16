@@ -20,7 +20,7 @@ const isAdmin = (req, res, next) => {
   }
 };
 
-// STATUS -> 'active', 'completed', 'cancelled'
+// STATUS -> 'active', 'completed', 'cancelled', 'shipped'
 // GET endpoint to retrieve all bids, with optional filtering
 // Updated GET endpoint for direct-bids.js
 router.get("/", async (req, res) => {
@@ -1068,7 +1068,7 @@ router.put("/:id", isAdmin, async (req, res) => {
     }
     if (status !== undefined) {
       // 유효한 status 값 체크
-      const validStatuses = ["active", "completed", "cancelled"];
+      const validStatuses = ["active", "completed", "cancelled", "shipped"];
       if (!validStatuses.includes(status)) {
         await connection.rollback();
         return res.status(400).json({

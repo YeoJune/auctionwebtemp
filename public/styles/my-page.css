@@ -253,6 +253,11 @@
   color: #388e3c;
 }
 
+.activity-status.shipped {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
 .activity-status.cancelled {
   background-color: #ffebee;
   color: #d32f2f;
@@ -464,6 +469,11 @@
 .status-badge.completed {
   background-color: #e8f5e9;
   color: #388e3c;
+}
+
+.status-badge.shipped {
+  background-color: #e3f2fd;
+  color: #1976d2;
 }
 
 .status-badge.cancelled {

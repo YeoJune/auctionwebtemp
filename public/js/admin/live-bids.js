@@ -315,6 +315,9 @@ function renderLiveBidsTable(liveBids) {
       case "completed":
         statusBadge = '<span class="badge badge-success">완료</span>';
         break;
+      case "shipped":
+        statusBadge = '<span class="badge badge-primary">출고됨</span>';
+        break;
       case "cancelled":
         statusBadge = '<span class="badge badge-secondary">낙찰 실패</span>';
         break;
