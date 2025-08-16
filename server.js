@@ -239,6 +239,13 @@ app.get("/inquiryPage", (req, res) => {
 app.get("/guidePage", (req, res) => {
   res.sendFile(path.join(mainPagesPath, "guide.html"));
 });
+app.get("/myPage", (req, res) => {
+  if (req.session.user) {
+    res.sendFile(path.join(mainPagesPath, "my-page.html"));
+  } else {
+    res.redirect("/signinPage");
+  }
+});
 
 // 메인 서비스 관리자 페이지 (제공해주신 원본 코드의 라우트들)
 app.get("/admin", (req, res) => {
