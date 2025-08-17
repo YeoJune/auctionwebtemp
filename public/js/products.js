@@ -134,7 +134,7 @@ window.WishlistManager = (function () {
         const favoriteNumber = parseInt(btn.dataset.favorite);
 
         const isActive = state.wishlist.some(
-          (w) => w.item_id == itemId && w.favorite_number === favoriteNumber
+          (w) => w.item_id == itemId && w.favorite_number == favoriteNumber
         );
 
         btn.classList.toggle("active", isActive);
@@ -181,13 +181,13 @@ window.ProductRenderer = (function () {
     const state = window.ProductListController.getState();
 
     const isActive1 = state.wishlist.some(
-      (w) => w.item_id == item.item_id && w.favorite_number === 1
+      (w) => w.item_id == item.item_id && w.favorite_number == 1
     );
     const isActive2 = state.wishlist.some(
-      (w) => w.item_id == item.item_id && w.favorite_number === 2
+      (w) => w.item_id == item.item_id && w.favorite_number == 2
     );
     const isActive3 = state.wishlist.some(
-      (w) => w.item_id == item.item_id && w.favorite_number === 3
+      (w) => w.item_id == item.item_id && w.favorite_number == 3
     );
 
     // 버튼 HTML 생성
