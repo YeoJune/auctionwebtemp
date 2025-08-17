@@ -139,10 +139,22 @@ window.WishlistManager = (function () {
     });
   }
 
+  function getWishlistState() {
+    return state.wishlist || [];
+  }
+
+  function isInWishlist(itemId, favoriteNumber) {
+    return state.wishlist.some(
+      (w) => w.item_id == itemId && w.favorite_number === favoriteNumber
+    );
+  }
+
   return {
     init,
     toggleWishlist,
     updateWishlistUI,
+    getWishlistState,
+    isInWishlist,
   };
 })();
 
@@ -174,7 +186,8 @@ window.ProductRenderer = (function () {
     const wishlistButtons = card.querySelector(".wishlist-buttons");
     if (!wishlistButtons) return;
 
-    // 상태에서 해당 아이템의 위시리스트 정보 찾기
+    // WishlistManager를 통해 상태 확인
+    const state = window.ProductListController.getState();
     const wishlistItems = state.wishlist.filter(
       (w) => w.item_id == item.item_id
     );
