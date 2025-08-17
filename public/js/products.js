@@ -74,7 +74,7 @@ window.WishlistManager = (function () {
 
     try {
       const existingItem = state.wishlist.find(
-        (w) => w.item_id === itemId && w.favorite_number === favoriteNumber
+        (w) => w.item_id == itemId && w.favorite_number === favoriteNumber
       );
 
       if (existingItem) {
@@ -89,7 +89,7 @@ window.WishlistManager = (function () {
 
         // 상태 업데이트
         state.wishlist = state.wishlist.filter(
-          (w) => w.item_id !== itemId || w.favorite_number !== favoriteNumber
+          (w) => w.item_id != itemId || w.favorite_number !== favoriteNumber
         );
       } else {
         // 추가
@@ -103,7 +103,7 @@ window.WishlistManager = (function () {
 
         // 같은 아이템의 같은 번호가 있으면 제거 (중복 방지)
         state.wishlist = state.wishlist.filter(
-          (w) => w.item_id !== itemId || w.favorite_number !== favoriteNumber
+          (w) => w.item_id != itemId || w.favorite_number !== favoriteNumber
         );
 
         // 새 항목 추가
@@ -133,7 +133,7 @@ window.WishlistManager = (function () {
       wishlistBtns.forEach((btn) => {
         const favoriteNumber = parseInt(btn.dataset.favorite);
         const isActive = state.wishlist.some(
-          (w) => w.item_id === itemId && w.favorite_number === favoriteNumber
+          (w) => w.item_id == itemId && w.favorite_number === favoriteNumber
         );
 
         btn.classList.toggle("active", isActive);
@@ -623,7 +623,7 @@ function setupExistingTooltips() {
     (element) => {
       const itemId = getItemIdFromElement(element);
       const state = window.ProductListController.getState();
-      const item = state.currentData.find((item) => item.item_id === itemId);
+      const item = state.currentData.find((item) => item.item_id == itemId);
       return item && (item.auc_num == 1 || item.auc_num == 3);
     },
     () =>
@@ -637,7 +637,7 @@ function setupExistingTooltips() {
     (element) => {
       const itemId = getItemIdFromElement(element);
       const state = window.ProductListController.getState();
-      const item = state.currentData.find((item) => item.item_id === itemId);
+      const item = state.currentData.find((item) => item.item_id == itemId);
       return item && item.auc_num == 3;
     },
     () => "해당 상품은 금액대별 최소금액으로 입찰됩니다.",
