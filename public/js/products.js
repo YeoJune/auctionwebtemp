@@ -147,7 +147,7 @@ window.WishlistManager = (function () {
       wishlistBtns.forEach((btn) => {
         const favoriteNumber = parseInt(btn.dataset.favorite);
         const isActive = state.wishlist.some(
-          (w) => w.item_id == itemId && w.favorite_number === favoriteNumber
+          (w) => w.item_id == itemId && w.favorite_number == favoriteNumber
         );
 
         btn.classList.toggle("active", isActive);
