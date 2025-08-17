@@ -225,20 +225,16 @@ router.get("/", async (req, res) => {
     const conditions = [];
     const queryParams = [];
 
-    // 4. 즐겨찾기 필터 (JOIN 추가)
+    // 4. 즐겨찾기 필터
     if (favoriteNumbers && userId) {
       const favoriteNumbersList = favoriteNumbers.split(",").map(Number);
       if (favoriteNumbersList.length > 0) {
-        joins.push(
-          "INNER JOIN wishlists w ON ci.item_id = w.item_id AND w.user_id = ?"
-        );
-        queryParams.push(userId);
         conditions.push(
-          `w.favorite_number IN (${favoriteNumbersList
+          `ci.item_id IN (SELECT DISTINCT item_id FROM wishlists WHERE user_id = ? AND favorite_number IN (${favoriteNumbersList
             .map(() => "?")
-            .join(",")})`
+            .join(",")}))`
         );
-        queryParams.push(...favoriteNumbersList);
+        queryParams.push(userId, ...favoriteNumbersList);
       }
     }
 
