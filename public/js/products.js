@@ -120,7 +120,7 @@ window.WishlistManager = (function () {
 
         // 새 항목 추가
         state.wishlist.push({
-          item_id: parseInt(itemId),
+          item_id: itemId,
           favorite_number: favoriteNumber,
         });
       }
