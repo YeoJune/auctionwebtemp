@@ -54,10 +54,16 @@ const productPageConfig = {
 
 // 위시리스트 관리
 window.WishlistManager = (function () {
-  let state = {};
+  function init() {
+    // 더 이상 자체 state를 관리하지 않음
+    console.log("WishlistManager 초기화 완료");
+  }
 
-  function init(initialState) {
-    state = initialState;
+  /**
+   * 현재 상태 가져오기 (항상 ProductListController의 state 참조)
+   */
+  function getCurrentState() {
+    return window.ProductListController.getState();
   }
 
   /**
@@ -73,9 +79,9 @@ window.WishlistManager = (function () {
     }
 
     try {
-      const currentState = window.ProductListController.getState();
-      const existingItem = currentState.wishlist.find(
-        (w) => w.item_id === itemId && w.favorite_number === favoriteNumber
+      const state = getCurrentState();
+      const existingItem = state.wishlist.find(
+        (w) => w.item_id == itemId && w.favorite_number === favoriteNumber
       );
 
       if (existingItem) {
@@ -88,9 +94,9 @@ window.WishlistManager = (function () {
           }),
         });
 
-        // 상태 업데이트
+        // ProductListController의 state 업데이트
         state.wishlist = state.wishlist.filter(
-          (w) => w.item_id !== itemId || w.favorite_number !== favoriteNumber
+          (w) => !(w.item_id == itemId && w.favorite_number === favoriteNumber)
         );
       } else {
         // 추가
@@ -104,12 +110,12 @@ window.WishlistManager = (function () {
 
         // 같은 아이템의 같은 번호가 있으면 제거 (중복 방지)
         state.wishlist = state.wishlist.filter(
-          (w) => w.item_id !== itemId || w.favorite_number !== favoriteNumber
+          (w) => !(w.item_id == itemId && w.favorite_number === favoriteNumber)
         );
 
         // 새 항목 추가
         state.wishlist.push({
-          item_id: itemId,
+          item_id: parseInt(itemId),
           favorite_number: favoriteNumber,
         });
       }
@@ -124,17 +130,17 @@ window.WishlistManager = (function () {
    * 위시리스트 UI 업데이트
    */
   function updateWishlistUI(itemId) {
-    // 카드의 위시리스트 버튼 업데이트
     const card = document.querySelector(
       `.product-card[data-item-id="${itemId}"]`
     );
     if (card) {
       const wishlistBtns = card.querySelectorAll(".wishlist-btn");
+      const state = getCurrentState();
 
       wishlistBtns.forEach((btn) => {
         const favoriteNumber = parseInt(btn.dataset.favorite);
         const isActive = state.wishlist.some(
-          (w) => w.item_id === itemId && w.favorite_number === favoriteNumber
+          (w) => w.item_id == itemId && w.favorite_number === favoriteNumber
         );
 
         btn.classList.toggle("active", isActive);
