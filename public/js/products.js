@@ -73,9 +73,8 @@ window.WishlistManager = (function () {
     }
 
     try {
-      // 상태 데이터를 유일한 진실 소스로 사용
       const existingItem = state.wishlist.find(
-        (w) => w.item_id == itemId && w.favorite_number === favoriteNumber
+        (w) => w.item_id == itemId && w.favorite_number == favoriteNumber
       );
 
       if (existingItem) {
@@ -88,9 +87,9 @@ window.WishlistManager = (function () {
           }),
         });
 
-        // 상태에서 제거
+        // 상태 업데이트
         state.wishlist = state.wishlist.filter(
-          (w) => !(w.item_id == itemId && w.favorite_number === favoriteNumber)
+          (w) => w.item_id != itemId || w.favorite_number !== favoriteNumber
         );
       } else {
         // 추가
@@ -102,14 +101,18 @@ window.WishlistManager = (function () {
           }),
         });
 
-        // 상태에 추가
+        // 같은 아이템의 같은 번호가 있으면 제거 (중복 방지)
+        state.wishlist = state.wishlist.filter(
+          (w) => w.item_id != itemId || w.favorite_number !== favoriteNumber
+        );
+
+        // 새 항목 추가
         state.wishlist.push({
-          item_id: parseInt(itemId),
+          item_id: itemId,
           favorite_number: favoriteNumber,
         });
       }
 
-      // UI 업데이트
       updateWishlistUI(itemId);
     } catch (error) {
       alert(`위시리스트 업데이트 중 오류가 발생했습니다: ${error.message}`);
@@ -120,41 +123,28 @@ window.WishlistManager = (function () {
    * 위시리스트 UI 업데이트
    */
   function updateWishlistUI(itemId) {
+    // 카드의 위시리스트 버튼 업데이트
     const card = document.querySelector(
       `.product-card[data-item-id="${itemId}"]`
     );
-    if (!card) return;
+    if (card) {
+      const wishlistBtns = card.querySelectorAll(".wishlist-btn");
 
-    const wishlistBtns = card.querySelectorAll(".wishlist-btn");
+      wishlistBtns.forEach((btn) => {
+        const favoriteNumber = parseInt(btn.dataset.favorite);
+        const isActive = state.wishlist.some(
+          (w) => w.item_id == itemId && w.favorite_number == favoriteNumber
+        );
 
-    wishlistBtns.forEach((btn) => {
-      const favoriteNumber = parseInt(btn.dataset.favorite);
-
-      // 상태 데이터 기준으로 UI 결정
-      const isActive = state.wishlist.some(
-        (w) => w.item_id == itemId && w.favorite_number === favoriteNumber
-      );
-
-      btn.classList.toggle("active", isActive);
-    });
-  }
-
-  function getWishlistState() {
-    return state.wishlist || [];
-  }
-
-  function isInWishlist(itemId, favoriteNumber) {
-    return state.wishlist.some(
-      (w) => w.item_id == itemId && w.favorite_number === favoriteNumber
-    );
+        btn.classList.toggle("active", isActive);
+      });
+    }
   }
 
   return {
     init,
     toggleWishlist,
     updateWishlistUI,
-    getWishlistState,
-    isInWishlist,
   };
 })();
 
@@ -186,39 +176,37 @@ window.ProductRenderer = (function () {
     const wishlistButtons = card.querySelector(".wishlist-buttons");
     if (!wishlistButtons) return;
 
-    // WishlistManager를 통해 상태 확인
     const state = window.ProductListController.getState();
-    const wishlistItems = state.wishlist.filter(
-      (w) => w.item_id == item.item_id
-    );
+    const wishlistItem = state.wishlist.find((w) => w.item_id == item.item_id);
+    const favoriteNumber = wishlistItem ? wishlistItem.favorite_number : null;
 
-    // 버튼 HTML 생성 (상태 기준)
+    // 버튼 HTML 생성
     wishlistButtons.innerHTML = `
-    <button class="wishlist-btn ${
-      wishlistItems.some((w) => w.favorite_number === 1) ? "active" : ""
-    }" data-favorite="1" 
-            onclick="event.stopPropagation(); window.WishlistManager.toggleWishlist('${
-              item.item_id
-            }', 1)">
-      즐겨찾기①
-    </button>
-    <button class="wishlist-btn ${
-      wishlistItems.some((w) => w.favorite_number === 2) ? "active" : ""
-    }" data-favorite="2" 
-            onclick="event.stopPropagation(); window.WishlistManager.toggleWishlist('${
-              item.item_id
-            }', 2)">
-      즐겨찾기②
-    </button>
-    <button class="wishlist-btn ${
-      wishlistItems.some((w) => w.favorite_number === 3) ? "active" : ""
-    }" data-favorite="3" 
-            onclick="event.stopPropagation(); window.WishlistManager.toggleWishlist('${
-              item.item_id
-            }', 3)">
-      즐겨찾기③
-    </button>
-  `;
+      <button class="wishlist-btn ${
+        favoriteNumber == 1 ? "active" : ""
+      }" data-favorite="1" 
+              onclick="event.stopPropagation(); window.WishlistManager.toggleWishlist('${
+                item.item_id
+              }', 1)">
+        즐겨찾기①
+      </button>
+      <button class="wishlist-btn ${
+        favoriteNumber == 2 ? "active" : ""
+      }" data-favorite="2" 
+              onclick="event.stopPropagation(); window.WishlistManager.toggleWishlist('${
+                item.item_id
+              }', 2)">
+        즐겨찾기②
+      </button>
+      <button class="wishlist-btn ${
+        favoriteNumber == 3 ? "active" : ""
+      }" data-favorite="3" 
+              onclick="event.stopPropagation(); window.WishlistManager.toggleWishlist('${
+                item.item_id
+              }', 3)">
+        즐겨찾기③
+      </button>
+    `;
   }
 
   /**
