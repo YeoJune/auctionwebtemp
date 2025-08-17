@@ -184,13 +184,22 @@ window.ProductRenderer = (function () {
     if (!wishlistButtons) return;
 
     const state = window.ProductListController.getState();
-    const wishlistItem = state.wishlist.find((w) => w.item_id == item.item_id);
-    const favoriteNumber = wishlistItem ? wishlistItem.favorite_number : null;
+
+    // 각 favorite_number별로 개별 확인 (타입 안전)
+    const isActive1 = state.wishlist.some(
+      (w) => w.item_id == item.item_id && w.favorite_number === 1
+    );
+    const isActive2 = state.wishlist.some(
+      (w) => w.item_id == item.item_id && w.favorite_number === 2
+    );
+    const isActive3 = state.wishlist.some(
+      (w) => w.item_id == item.item_id && w.favorite_number === 3
+    );
 
     // 버튼 HTML 생성
     wishlistButtons.innerHTML = `
       <button class="wishlist-btn ${
-        favoriteNumber === 1 ? "active" : ""
+        isActive1 ? "active" : ""
       }" data-favorite="1" 
               onclick="event.stopPropagation(); window.WishlistManager.toggleWishlist('${
                 item.item_id
@@ -198,7 +207,7 @@ window.ProductRenderer = (function () {
         즐겨찾기①
       </button>
       <button class="wishlist-btn ${
-        favoriteNumber === 2 ? "active" : ""
+        isActive2 ? "active" : ""
       }" data-favorite="2" 
               onclick="event.stopPropagation(); window.WishlistManager.toggleWishlist('${
                 item.item_id
@@ -206,7 +215,7 @@ window.ProductRenderer = (function () {
         즐겨찾기②
       </button>
       <button class="wishlist-btn ${
-        favoriteNumber === 3 ? "active" : ""
+        isActive3 ? "active" : ""
       }" data-favorite="3" 
               onclick="event.stopPropagation(); window.WishlistManager.toggleWishlist('${
                 item.item_id
@@ -219,6 +228,7 @@ window.ProductRenderer = (function () {
   /**
    * 입찰 UI 설정
    */
+
   function setupBidUI(card, item) {
     const bidSection = card.querySelector(".bid-section");
     if (!bidSection) {
@@ -241,14 +251,6 @@ window.ProductRenderer = (function () {
       (b) => b.item_id == item.item_id
     );
 
-    console.log("입찰 UI 설정:", {
-      item_id: item.item_id,
-      bid_type: item.bid_type,
-      liveBidInfo,
-      directBidInfo,
-      bidSection,
-    });
-
     // 입찰 섹션 HTML 생성
     try {
       if (item.bid_type === "direct") {
@@ -257,7 +259,7 @@ window.ProductRenderer = (function () {
           item.item_id,
           item.auc_num,
           item.category,
-          { showTimer: false } // 카드에서는 타이머 표시하지 않음
+          { showTimer: false }
         );
       } else {
         bidSection.innerHTML = window.BidManager.getLiveBidSectionHTML(
@@ -265,10 +267,9 @@ window.ProductRenderer = (function () {
           item.item_id,
           item.auc_num,
           item.category,
-          { showTimer: false } // 카드에서는 타이머 표시하지 않음
+          { showTimer: false }
         );
       }
-      console.log("입찰 UI 생성 완료:", item.item_id);
     } catch (error) {
       console.error("입찰 UI 생성 실패:", error);
       bidSection.innerHTML = '<div class="bid-error">입찰 UI 로드 실패</div>';
@@ -737,7 +738,7 @@ function initializeProductPage() {
   productPageConfig.customizeModal = ProductPageExtensions.customizeModal;
 
   // WishlistManager 초기화
-  window.WishlistManager.init(productPageConfig.initialState);
+  window.WishlistManager.init();
 
   // 실시간 업데이트 초기화
   if (productPageConfig.features.realtime) {
