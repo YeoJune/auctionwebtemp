@@ -84,15 +84,7 @@ window.WishlistManager = (function () {
         (w) => w.item_id == itemId && w.favorite_number === favoriteNumber
       );
 
-      console.log("토글 시작:", {
-        itemId,
-        favoriteNumber,
-        existingItem: !!existingItem,
-      });
-
       if (existingItem) {
-        console.log("DELETE 호출 - 제거");
-
         // 삭제
         await window.API.fetchAPI("/wishlist", {
           method: "DELETE",
@@ -107,8 +99,6 @@ window.WishlistManager = (function () {
           (w) => !(w.item_id == itemId && w.favorite_number === favoriteNumber)
         );
       } else {
-        console.log("POST 호출 - 추가");
-
         // 추가
         await window.API.fetchAPI("/wishlist", {
           method: "POST",
@@ -125,7 +115,6 @@ window.WishlistManager = (function () {
         });
       }
 
-      console.log("최종 wishlist:", state.wishlist);
       updateWishlistUI(itemId);
     } catch (error) {
       console.error("위시리스트 토글 에러:", error);
