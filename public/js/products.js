@@ -73,8 +73,9 @@ window.WishlistManager = (function () {
     }
 
     try {
-      const existingItem = state.wishlist.find(
-        (w) => w.item_id == itemId && w.favorite_number == favoriteNumber
+      const currentState = window.ProductListController.getState();
+      const existingItem = currentState.wishlist.find(
+        (w) => w.item_id === itemId && w.favorite_number === favoriteNumber
       );
 
       if (existingItem) {
@@ -89,7 +90,7 @@ window.WishlistManager = (function () {
 
         // 상태 업데이트
         state.wishlist = state.wishlist.filter(
-          (w) => w.item_id != itemId || w.favorite_number !== favoriteNumber
+          (w) => w.item_id !== itemId || w.favorite_number !== favoriteNumber
         );
       } else {
         // 추가
@@ -103,7 +104,7 @@ window.WishlistManager = (function () {
 
         // 같은 아이템의 같은 번호가 있으면 제거 (중복 방지)
         state.wishlist = state.wishlist.filter(
-          (w) => w.item_id != itemId || w.favorite_number !== favoriteNumber
+          (w) => w.item_id !== itemId || w.favorite_number !== favoriteNumber
         );
 
         // 새 항목 추가
@@ -132,10 +133,8 @@ window.WishlistManager = (function () {
 
       wishlistBtns.forEach((btn) => {
         const favoriteNumber = parseInt(btn.dataset.favorite);
-
-        const currentState = window.ProductListController.getState();
-        const isActive = currentState.wishlist.some(
-          (w) => w.item_id == itemId && w.favorite_number === favoriteNumber
+        const isActive = state.wishlist.some(
+          (w) => w.item_id === itemId && w.favorite_number === favoriteNumber
         );
 
         btn.classList.toggle("active", isActive);
@@ -174,44 +173,41 @@ window.ProductRenderer = (function () {
   /**
    * 위시리스트 버튼 설정
    */
-
   function setupWishlistButtons(card, item) {
     const wishlistButtons = card.querySelector(".wishlist-buttons");
     if (!wishlistButtons) return;
 
     const state = window.ProductListController.getState();
-
-    const isActive1 = state.wishlist.some(
-      (w) => w.item_id == item.item_id && w.favorite_number == 1
-    );
-    const isActive2 = state.wishlist.some(
-      (w) => w.item_id == item.item_id && w.favorite_number == 2
-    );
-    const isActive3 = state.wishlist.some(
-      (w) => w.item_id == item.item_id && w.favorite_number == 3
-    );
+    const wishlistItem = state.wishlist.find((w) => w.item_id == item.item_id);
+    const favoriteNumber = wishlistItem ? wishlistItem.favorite_number : null;
 
     // 버튼 HTML 생성
     wishlistButtons.innerHTML = `
-    <button class="wishlist-btn ${isActive1 ? "active" : ""}" data-favorite="1" 
-            onclick="event.stopPropagation(); window.WishlistManager.toggleWishlist('${
-              item.item_id
-            }', 1)">
-      즐겨찾기①
-    </button>
-    <button class="wishlist-btn ${isActive2 ? "active" : ""}" data-favorite="2" 
-            onclick="event.stopPropagation(); window.WishlistManager.toggleWishlist('${
-              item.item_id
-            }', 2)">
-      즐겨찾기②
-    </button>
-    <button class="wishlist-btn ${isActive3 ? "active" : ""}" data-favorite="3" 
-            onclick="event.stopPropagation(); window.WishlistManager.toggleWishlist('${
-              item.item_id
-            }', 3)">
-      즐겨찾기③
-    </button>
-  `;
+      <button class="wishlist-btn ${
+        favoriteNumber === 1 ? "active" : ""
+      }" data-favorite="1" 
+              onclick="event.stopPropagation(); window.WishlistManager.toggleWishlist('${
+                item.item_id
+              }', 1)">
+        즐겨찾기①
+      </button>
+      <button class="wishlist-btn ${
+        favoriteNumber === 2 ? "active" : ""
+      }" data-favorite="2" 
+              onclick="event.stopPropagation(); window.WishlistManager.toggleWishlist('${
+                item.item_id
+              }', 2)">
+        즐겨찾기②
+      </button>
+      <button class="wishlist-btn ${
+        favoriteNumber === 3 ? "active" : ""
+      }" data-favorite="3" 
+              onclick="event.stopPropagation(); window.WishlistManager.toggleWishlist('${
+                item.item_id
+              }', 3)">
+        즐겨찾기③
+      </button>
+    `;
   }
 
   /**
@@ -628,7 +624,7 @@ function setupExistingTooltips() {
     (element) => {
       const itemId = getItemIdFromElement(element);
       const state = window.ProductListController.getState();
-      const item = state.currentData.find((item) => item.item_id == itemId);
+      const item = state.currentData.find((item) => item.item_id === itemId);
       return item && (item.auc_num == 1 || item.auc_num == 3);
     },
     () =>
@@ -642,7 +638,7 @@ function setupExistingTooltips() {
     (element) => {
       const itemId = getItemIdFromElement(element);
       const state = window.ProductListController.getState();
-      const item = state.currentData.find((item) => item.item_id == itemId);
+      const item = state.currentData.find((item) => item.item_id === itemId);
       return item && item.auc_num == 3;
     },
     () => "해당 상품은 금액대별 최소금액으로 입찰됩니다.",
