@@ -743,7 +743,7 @@ router.put("/:id", isAdmin, async (req, res) => {
   }
 });
 
-router.post("/:id/request-appraisal", async (req, res) => {
+router.get("/:id/request-appraisal", async (req, res) => {
   const bidId = req.params.id;
 
   if (!req.session.user) {
@@ -762,7 +762,7 @@ router.post("/:id/request-appraisal", async (req, res) => {
        FROM live_bids l 
        JOIN crawled_items i ON l.item_id = i.item_id 
        WHERE l.id = ? AND l.user_id = ? AND l.status = 'completed' AND l.winning_price > 0`,
-      [bidId, userId]
+      [bidId]
     );
 
     if (bids.length === 0) {
