@@ -141,100 +141,49 @@ const bannerUpload = multer({
   },
 });
 
-/**
- * 기존 이미지 데이터를 새 구조로 정규화
- * @param {string} images - JSON 문자열
- * @returns {Array} 정규화된 이미지 배열
- */
 function normalizeImageData(images) {
   if (!images) return [];
 
   try {
     const parsed = JSON.parse(images);
+    
+    if (!Array.isArray(parsed)) return [];
+    if (parsed.length === 0) return [];
 
-    // 이미 새 구조인 경우
-    if (
-      Array.isArray(parsed) &&
-      parsed.length > 0 &&
-      typeof parsed[0] === "object" &&
-      parsed[0].id
-    ) {
-      return parsed;
+    // 새 구조 확인 (첫 번째 요소가 객체이고 id 속성을 가짐)
+    const isNewFormat = parsed.every(item => 
+      typeof item === "object" && 
+      item !== null && 
+      typeof item.id === "string" && 
+      typeof item.url === "string"
+    );
+
+    if (isNewFormat) {
+      // 새 구조인 경우 order 필드 보장
+      return parsed.map((item, index) => ({
+        id: item.id,
+        url: item.url,
+        order: typeof item.order === "number" ? item.order : index,
+      }));
     }
 
-    // 기존 구조인 경우 런타임에 변환
-    if (Array.isArray(parsed)) {
+    // Legacy 구조 (문자열 배열) 변환
+    const isLegacyFormat = parsed.every(item => typeof item === "string");
+    
+    if (isLegacyFormat) {
       return parsed.map((url, index) => ({
-        id: `legacy-${Date.now()}-${index}`,
+        id: `legacy-${uuidv4()}-${index}`, // UUID 사용으로 중복 방지
         url: url,
         order: index,
       }));
     }
 
+    console.warn("인식할 수 없는 이미지 데이터 형식:", parsed);
     return [];
   } catch (error) {
     console.error("이미지 데이터 파싱 오류:", error);
     return [];
   }
-}
-
-/**
- * 이미지 객체 배열을 JSON 문자열로 직렬화
- * @param {Array} imageObjects - 이미지 객체 배열
- * @returns {string} JSON 문자열
- */
-function serializeImageData(imageObjects) {
-  if (!Array.isArray(imageObjects)) return "[]";
-
-  // order로 정렬
-  const sortedImages = imageObjects.sort(
-    (a, b) => (a.order || 0) - (b.order || 0)
-  );
-
-  return JSON.stringify(sortedImages);
-}
-
-/**
- * 최종 이미지 순서 계산 (수정 시 사용)
- * @param {Array} existingImages - 기존 이미지 (정규화된)
- * @param {Array} deletedIds - 삭제할 이미지 ID들
- * @param {Array} newImages - 새로 업로드된 이미지들
- * @returns {Array} 최종 이미지 배열
- */
-function calculateFinalImageOrder(
-  existingImages,
-  deletedIds = [],
-  newImages = []
-) {
-  // 삭제되지 않은 기존 이미지
-  const remainingImages = existingImages.filter(
-    (img) => !deletedIds.includes(img.id)
-  );
-
-  // 새 이미지에 ID와 order 부여
-  const processedNewImages = newImages.map((img, index) => ({
-    id: img.id || `new-${uuidv4()}`,
-    url: img.url,
-    order: remainingImages.length + index,
-  }));
-
-  // 전체 병합 및 정렬
-  const finalImages = [...remainingImages, ...processedNewImages];
-  return finalImages.sort((a, b) => a.order - b.order);
-}
-
-/**
- * 이미지 URL들만 추출 (기존 API 호환성)
- * @param {Array} imageObjects - 이미지 객체 배열
- * @returns {Array} URL 문자열 배열
- */
-function extractImageUrls(imageObjects) {
-  if (!Array.isArray(imageObjects)) return [];
-
-  return imageObjects
-    .sort((a, b) => (a.order || 0) - (b.order || 0))
-    .map((img) => img.url)
-    .filter(Boolean);
 }
 
 // 배너 목록 조회 - GET /api/appr/admin/banners
