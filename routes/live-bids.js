@@ -743,7 +743,7 @@ router.put("/:id", isAdmin, async (req, res) => {
   }
 });
 
-router.get("/:id/request-appraisal", async (req, res) => {
+router.post("/:id/request-appraisal", async (req, res) => {
   const bidId = req.params.id;
 
   if (!req.session.user) {
