@@ -1229,75 +1229,12 @@ function handleImageUpload(e) {
   e.target.value = "";
 }
 
-// 감정 생성 모달 전용 이미지 업로드 처리
+// 감정 생성 모달 전용 이미지 업로드 처리 - imageList 사용
 function handleCreateImageUpload(e) {
-  const files = e.target.files;
-  const previewContainer = document.getElementById("create-images-preview");
-
-  if (files.length > 0) {
-    previewContainer.innerHTML = ""; // 기존 프리뷰 초기화
-
-    Array.from(files).forEach((file, index) => {
-      if (file.type.startsWith("image/")) {
-        const previewDiv = document.createElement("div");
-        previewDiv.style.cssText = `
-          position: relative;
-          display: inline-block;
-          margin-right: 10px;
-          margin-bottom: 10px;
-          border: 1px solid #e2e8f0;
-          border-radius: 6px;
-          overflow: hidden;
-          background: #f8fafc;
-        `;
-
-        const img = document.createElement("img");
-        img.style.cssText = `
-          width: 120px;
-          height: 120px;
-          object-fit: cover;
-          display: block;
-        `;
-
-        const removeBtn = document.createElement("button");
-        removeBtn.type = "button";
-        removeBtn.innerHTML = "×";
-        removeBtn.style.cssText = `
-          position: absolute;
-          top: 5px;
-          right: 5px;
-          background: rgba(0,0,0,0.7);
-          color: white;
-          border: none;
-          border-radius: 50%;
-          width: 24px;
-          height: 24px;
-          cursor: pointer;
-          font-size: 16px;
-          line-height: 1;
-        `;
-
-        removeBtn.onclick = () => {
-          previewDiv.remove();
-          // 파일 input에서 해당 파일 제거 (복잡하므로 전체 리셋)
-          const input = document.getElementById("create-appraisal-images");
-          if (previewContainer.children.length === 0) {
-            input.value = "";
-          }
-        };
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-
-        previewDiv.appendChild(img);
-        previewDiv.appendChild(removeBtn);
-        previewContainer.appendChild(previewDiv);
-      }
-    });
+  if (e.target.files.length > 0) {
+    addImages(e.target.files);
   }
+  e.target.value = "";
 }
 
 // 감정 수정 모달 전용 이미지 업로드 처리
@@ -1491,13 +1428,12 @@ function submitCreateAppraisal() {
     }
   }
 
-  // 이미지 추가 - 감정 생성에서는 파일 input에서 직접 가져옴
-  const imageInput = document.getElementById("create-appraisal-images");
-  if (imageInput.files && imageInput.files.length > 0) {
-    Array.from(imageInput.files).forEach((file) => {
-      formData.append("images", file);
+  // 이미지 추가 - imageList에서 새로운 이미지들만 가져옴
+  imageList
+    .filter((img) => img.isNew && img.file)
+    .forEach((img) => {
+      formData.append("images", img.file);
     });
-  }
 
   // 유효성 검사
   if (!formData.get("user_id")) {
@@ -1518,6 +1454,7 @@ function submitCreateAppraisal() {
     .then((data) => {
       if (data.success) {
         showAlert("감정이 성공적으로 생성되었습니다.", "success");
+        imageList = []; // imageList 초기화
         closeModal("create-appraisal-modal");
         loadAppraisalList();
       } else {
