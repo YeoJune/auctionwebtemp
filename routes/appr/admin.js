@@ -14,6 +14,7 @@ const {
   processUploadedImages,
   ensureWatermarkOnExistingImages,
   isWatermarked,
+  structureImageData,
 } = require("../../utils/appr");
 
 // Multer 설정 - 감정 이미지 저장
@@ -739,7 +740,7 @@ router.post(
         });
       }
 
-      // ✅ 새 구조로 이미지 처리
+      // ✅ 새 구조로 이미지 처리 - utils/appr.js와 동일한 방식 사용
       let finalImages = [];
       if (req.files && req.files.length > 0) {
         const imageUrls = await processUploadedImages(
@@ -748,12 +749,8 @@ router.post(
           { skipExisting: true }
         );
 
-        // 새 구조로 변환
-        finalImages = imageUrls.map((url, index) => ({
-          id: `img-${Date.now()}-${index}`,
-          url: url,
-          order: index,
-        }));
+        // ✅ 통일된 방식으로 구조화
+        finalImages = structureImageData(imageUrls);
       }
 
       const finalCertificateNumber = await generateCertificateNumber(
@@ -783,8 +780,8 @@ router.post(
           "pending",
           "pending",
           finalCertificateNumber,
-          // ✅ 새 구조로 저장
-          finalImages.length > 0 ? serializeImageData(finalImages) : null,
+          // ✅ 통일된 방식으로 저장 (utils/appr.js와 동일)
+          finalImages.length > 0 ? JSON.stringify(finalImages) : null,
         ]
       );
 
@@ -2737,42 +2734,42 @@ router.put(
         });
       }
 
-      // 2. 신규 업로드 파일 처리 및 파일명 기반 맵 생성
-      const newFileMap = new Map();
+      // 2. 신규 업로드 파일 처리 - 임시 ID와 매칭
+      let newImageUrls = [];
       if (req.files && req.files.images && req.files.images.length > 0) {
-        const newImageUrls = await processUploadedImages(
+        newImageUrls = await processUploadedImages(
           req.files.images,
           path.join(__dirname, "../../public/images/appraisals"),
           { skipExisting: true }
         );
-        req.files.images.forEach((file, index) => {
-          newFileMap.set(file.originalname, newImageUrls[index]);
-        });
       }
 
-      // 3. 삭제 및 순서 정보 파싱 (localStorage 대신 직접 전달받은 데이터 사용)
+      // 3. 삭제 및 순서 정보 파싱
       const deletedIds = deleted_image_ids ? JSON.parse(deleted_image_ids) : [];
       const orderInfo = final_image_order ? JSON.parse(final_image_order) : [];
 
       // 4. 최종 이미지 목록 재구성
+      finalImages = []; // 기존 선언된 변수 재사용
       const existingImageMap = new Map(
         existingImages.map((img) => [img.id, img])
       );
+      let newImageIndex = 0; // 새 이미지 인덱스 추적
 
       if (orderInfo.length > 0) {
         orderInfo.forEach((orderItem, index) => {
           if (orderItem.isNew) {
-            // 원본 파일명으로 맵에서 정확한 URL을 찾아 추가
-            const imageUrl = newFileMap.get(orderItem.originalName);
-            if (imageUrl) {
+            // 새 이미지: 업로드 순서대로 매칭
+            if (newImageIndex < newImageUrls.length) {
+              // ✅ structureImageData와 동일한 ID 생성 방식 사용
               finalImages.push({
-                id: `img-${Date.now()}-${index}`,
-                url: imageUrl,
+                id: `img-${Date.now()}-${newImageIndex}`,
+                url: newImageUrls[newImageIndex],
                 order: index,
               });
+              newImageIndex++;
             }
           } else {
-            // 삭제되지 않은 기존 이미지만 추가
+            // 기존 이미지: 삭제되지 않은 것만 추가
             if (
               !deletedIds.includes(orderItem.id) &&
               existingImageMap.has(orderItem.id)
@@ -2783,20 +2780,22 @@ router.put(
           }
         });
       } else {
-        // 순서 정보가 없는 경우, 삭제되지 않은 기존 이미지만 유지
+        // 순서 정보가 없는 경우의 fallback
         existingImages.forEach((img) => {
           if (!deletedIds.includes(img.id)) {
             finalImages.push(img);
           }
         });
-        // 새 이미지 추가
-        Array.from(newFileMap.values()).forEach((url, index) => {
-          finalImages.push({
-            id: `img-${Date.now()}-${index}`,
-            url: url,
-            order: finalImages.length + index,
+        // 새 이미지 추가 - structureImageData와 동일한 방식
+        if (newImageUrls.length > 0) {
+          const newImageStructures = structureImageData(newImageUrls);
+          newImageStructures.forEach((img, index) => {
+            finalImages.push({
+              ...img,
+              order: finalImages.length + index,
+            });
           });
-        });
+        }
       }
 
       // 5. 삭제된 이미지 파일들 실제 삭제
@@ -2958,10 +2957,10 @@ router.put(
         updateData.result_notes = result_notes;
       }
 
-      // 이미지 필드 업데이트
+      // 이미지 필드 업데이트 - 통일된 방식 사용
       updateFields.push("images = ?");
       updateValues.push(
-        finalImages.length > 0 ? serializeImageData(finalImages) : null
+        finalImages.length > 0 ? JSON.stringify(finalImages) : null
       );
       updateData.images = finalImages;
 
