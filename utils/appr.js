@@ -414,9 +414,11 @@ async function createAppraisalFromAuction(conn, bid, item, userId) {
 
     // 경매 이미지들에 워터마크 적용 (필요한 경우만)
     if (rawImages.length > 0) {
-      processedImages = await ensureWatermarkOnExistingImages(rawImages, {
+      const watermarkedUrls = await ensureWatermarkOnExistingImages(rawImages, {
         forceReprocess: false, // 이미 워터마크가 있으면 건너뛰기
       });
+      // [변경] watermarkedUrls(문자열 배열)를 표준 구조(객체 배열)로 변환
+      processedImages = structureImageData(watermarkedUrls);
     }
 
     const [appraisalResult] = await conn.query(
@@ -432,6 +434,7 @@ async function createAppraisalFromAuction(conn, bid, item, userId) {
         item.title || "제목 없음",
         item.category || "기타",
         "pending",
+        // [변경] 객체 배열을 JSON으로 저장. 이제 모든 데이터가 동일한 형식을 가짐
         processedImages.length > 0 ? JSON.stringify(processedImages) : null,
         certificateNumber,
         qrcodeUrl,
@@ -525,6 +528,22 @@ function parseAdditionalImages(additionalImagesJson) {
   }
 }
 
+/**
+ * 이미지 URL 배열을 표준 데이터 구조(객체 배열)로 변환하는 함수
+ * @param {string[]} imageUrls - ['/path/to/img1.jpg', ...]
+ * @returns {Array<Object>} - [{id, url, order}, ...]
+ */
+function structureImageData(imageUrls) {
+  if (!Array.isArray(imageUrls) || imageUrls.length === 0) {
+    return [];
+  }
+  return imageUrls.map((url, index) => ({
+    id: `img-${Date.now()}-${index}`, // 고유 ID 생성
+    url: url,
+    order: index,
+  }));
+}
+
 module.exports = {
   generateCertificateNumber,
   generateQRCode,
@@ -535,4 +554,5 @@ module.exports = {
   migrateExistingAppraisalImages, // 마이그레이션 함수
   isWatermarked, // 워터마크 여부 확인
   applyWatermarkToImage, // 직접 워터마크 적용
+  structureImageData, // 헬퍼 함수 export
 };

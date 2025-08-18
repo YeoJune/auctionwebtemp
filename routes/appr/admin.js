@@ -12,6 +12,8 @@ const {
   generateCertificateNumber,
   generateQRCode,
   processUploadedImages,
+  ensureWatermarkOnExistingImages,
+  isWatermarked,
 } = require("../../utils/appr");
 
 // Multer 설정 - 감정 이미지 저장
@@ -2716,88 +2718,85 @@ router.put(
       let finalImages = [];
 
       // 1. 기존 이미지 정규화
-      const existingImages = appraisal.images
+      let existingImages = appraisal.images
         ? normalizeImageData(appraisal.images)
         : [];
 
-      // 2. 삭제할 이미지 ID 파싱
-      const deletedIds = deleted_image_ids ? JSON.parse(deleted_image_ids) : [];
+      // (선택적이지만 권장) 기존 이미지에 워터마크가 없는 경우 이 시점에 적용
+      const needsWatermarkUpdate = existingImages.some(
+        (img) => !isWatermarked(img.url)
+      );
+      if (needsWatermarkUpdate) {
+        const existingImageUrls = existingImages.map((img) => img.url);
+        const watermarkedUrls = await ensureWatermarkOnExistingImages(
+          existingImageUrls
+        );
+        // 워터마크가 적용된 URL로 기존 이미지 정보 업데이트
+        existingImages.forEach((img, index) => {
+          img.url = watermarkedUrls[index];
+        });
+      }
 
-      // 3. 새로 업로드된 이미지 처리 (생성과 동일한 방식)
-      let newImages = [];
+      // 2. 신규 업로드 파일 처리 및 파일명 기반 맵 생성
+      const newFileMap = new Map();
       if (req.files && req.files.images && req.files.images.length > 0) {
-        const imageUrls = await processUploadedImages(
+        const newImageUrls = await processUploadedImages(
           req.files.images,
           path.join(__dirname, "../../public/images/appraisals"),
           { skipExisting: true }
         );
-
-        // 새 구조로 변환 (생성과 동일)
-        newImages = imageUrls.map((url, index) => ({
-          id: `img-${Date.now()}-${index}`,
-          url: url,
-          order: index,
-        }));
+        req.files.images.forEach((file, index) => {
+          newFileMap.set(file.originalname, newImageUrls[index]);
+        });
       }
 
-      // 4. 최종 이미지 순서 계산
-      if (final_image_order) {
-        try {
-          const orderInfo = JSON.parse(final_image_order);
+      // 3. 삭제 및 순서 정보 파싱 (localStorage 대신 직접 전달받은 데이터 사용)
+      const deletedIds = deleted_image_ids ? JSON.parse(deleted_image_ids) : [];
+      const orderInfo = final_image_order ? JSON.parse(final_image_order) : [];
 
-          // 기존 이미지 맵 생성 (삭제되지 않은 것만)
-          const existingImageMap = new Map();
-          existingImages
-            .filter((img) => !deletedIds.includes(img.id))
-            .forEach((img) => existingImageMap.set(img.id, img));
+      // 4. 최종 이미지 목록 재구성
+      const existingImageMap = new Map(
+        existingImages.map((img) => [img.id, img])
+      );
 
-          // 새 이미지 맵 생성
-          const newImageMap = new Map();
-          newImages.forEach((img) => {
-            // final_image_order의 ID와 매칭하기 위해 프론트엔드 ID도 매핑
-            newImageMap.set(img.id, img);
-          });
-
-          // orderInfo의 순서를 사용하되, 실제 이미지와 매칭
-          finalImages = [];
-          let newImageIndex = 0;
-
-          orderInfo.forEach((orderItem, finalIndex) => {
-            if (orderItem.isNew) {
-              // 새 이미지의 경우 순서대로 매칭
-              if (newImageIndex < newImages.length) {
-                const newImg = newImages[newImageIndex];
-                finalImages.push({
-                  ...newImg,
-                  order: finalIndex,
-                });
-                newImageIndex++;
-              }
-            } else {
-              // 기존 이미지의 경우 ID로 매칭
-              if (existingImageMap.has(orderItem.id)) {
-                const existingImg = existingImageMap.get(orderItem.id);
-                finalImages.push({
-                  ...existingImg,
-                  order: finalIndex,
-                });
-              }
+      if (orderInfo.length > 0) {
+        orderInfo.forEach((orderItem, index) => {
+          if (orderItem.isNew) {
+            // 원본 파일명으로 맵에서 정확한 URL을 찾아 추가
+            const imageUrl = newFileMap.get(orderItem.originalName);
+            if (imageUrl) {
+              finalImages.push({
+                id: `img-${Date.now()}-${index}`,
+                url: imageUrl,
+                order: index,
+              });
             }
-          });
-        } catch (error) {
-          console.error("이미지 순서 정보 파싱 오류:", error);
-          // 파싱 실패 시 기본 로직 (기존 + 새로운 순서)
-          finalImages = [
-            ...existingImages.filter((img) => !deletedIds.includes(img.id)),
-            ...newImages,
-          ].map((img, index) => ({ ...img, order: index }));
-        }
+          } else {
+            // 삭제되지 않은 기존 이미지만 추가
+            if (
+              !deletedIds.includes(orderItem.id) &&
+              existingImageMap.has(orderItem.id)
+            ) {
+              const existingImg = existingImageMap.get(orderItem.id);
+              finalImages.push({ ...existingImg, order: index });
+            }
+          }
+        });
       } else {
-        // final_image_order가 없으면 기본 로직
-        finalImages = [
-          ...existingImages.filter((img) => !deletedIds.includes(img.id)),
-          ...newImages,
-        ].map((img, index) => ({ ...img, order: index }));
+        // 순서 정보가 없는 경우, 삭제되지 않은 기존 이미지만 유지
+        existingImages.forEach((img) => {
+          if (!deletedIds.includes(img.id)) {
+            finalImages.push(img);
+          }
+        });
+        // 새 이미지 추가
+        Array.from(newFileMap.values()).forEach((url, index) => {
+          finalImages.push({
+            id: `img-${Date.now()}-${index}`,
+            url: url,
+            order: finalImages.length + index,
+          });
+        });
       }
 
       // 5. 삭제된 이미지 파일들 실제 삭제
@@ -2810,6 +2809,7 @@ router.put(
                 const filePath = path.join(__dirname, "../../public", img.url);
                 if (fs.existsSync(filePath)) {
                   fs.unlinkSync(filePath);
+                  console.log(`삭제된 이미지 파일: ${filePath}`);
                 }
               } catch (error) {
                 console.error(`파일 삭제 오류 (${img.url}):`, error);
