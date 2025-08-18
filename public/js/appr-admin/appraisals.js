@@ -9,6 +9,7 @@ let bulkDeleteMode = false;
 let bulkChangeMode = false; // 일괄 변경 모드 추가
 let imageList = [];
 let userSearchTimeout = null;
+let originalImageStateForEdit = []; // localStorage를 대체할 변수
 
 // 페이지 로드 시 이벤트 리스너 설정
 document.addEventListener("DOMContentLoaded", function () {
@@ -124,6 +125,7 @@ function addImages(files) {
       file: file,
       order: imageList.length,
       isNew: true,
+      originalName: file.name, // [수정] originalName 추가
     });
   });
   renderImages();
@@ -886,9 +888,12 @@ function displayAppraisalDetail(appraisal) {
 
   container.innerHTML = html;
 
+  // [수정] localStorage 대신 전역 변수에 원본 이미지 상태 저장
+  originalImageStateForEdit = appraisal.images ? [...appraisal.images] : [];
+
   // 기존 이미지 로드
   initImages(appraisal.images || []);
-  storeOriginalImageIds(appraisal.images || []);
+  // storeOriginalImageIds(appraisal.images || []); // 이 라인 삭제
 
   setTimeout(() => {
     const imageInput = document.getElementById("appraisal-images-update");
@@ -1125,9 +1130,8 @@ function updateAppraisal() {
       formData.append("images", img.file);
     });
 
-  const originalImageIds = JSON.parse(
-    localStorage.getItem("originalImageIds") || "[]"
-  );
+  // [수정] localStorage 대신 전역 변수를 사용하여 삭제된 ID 계산
+  const originalImageIds = originalImageStateForEdit.map((img) => img.id);
   const currentImageIds = imageList
     .filter((img) => !img.isNew)
     .map((img) => img.id);
@@ -1136,6 +1140,7 @@ function updateAppraisal() {
   );
   formData.append("deleted_image_ids", JSON.stringify(deletedIds));
 
+  // [수정] final_image_order에 originalName 포함
   formData.append(
     "final_image_order",
     JSON.stringify(
@@ -1143,6 +1148,7 @@ function updateAppraisal() {
         id: img.id,
         order: index,
         isNew: img.isNew,
+        originalName: img.isNew ? img.originalName : null,
       }))
     )
   );
