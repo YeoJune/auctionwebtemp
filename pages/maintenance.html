@@ -10,68 +10,119 @@
     <link rel="stylesheet" href="/styles/common.css" />
     <link rel="stylesheet" href="/styles/main.css" />
     <link rel="stylesheet" href="/styles/header.css" />
+    <style>
+      /* 점검 페이지 전용 스타일 */
+      .maintenance-container {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-height: 70vh;
+        text-align: center;
+        padding: var(--spacing-xl);
+      }
+
+      .maintenance-icon {
+        font-size: 4rem;
+        color: var(--primary-color);
+        margin-bottom: var(--spacing-lg);
+        animation: pulse 2s infinite;
+      }
+
+      .maintenance-title {
+        font-size: var(--font-size-xl);
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: var(--spacing-md);
+      }
+
+      .maintenance-message {
+        font-size: var(--font-size-lg);
+        color: var(--text-secondary);
+        margin-bottom: var(--spacing-lg);
+        line-height: 1.6;
+      }
+
+      .maintenance-info {
+        background-color: var(--background-light);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-md);
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        max-width: 500px;
+        width: 100%;
+      }
+
+      .maintenance-info h3 {
+        color: var(--primary-color);
+        margin-bottom: var(--spacing-sm);
+        font-size: var(--font-size-lg);
+      }
+
+      .maintenance-info p {
+        margin-bottom: var(--spacing-sm);
+        line-height: 1.5;
+      }
+
+      .contact-info {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--spacing-md);
+        margin-top: var(--spacing-lg);
+      }
+
+      .contact-btn {
+        background-color: var(--primary-color);
+        color: white;
+        padding: var(--spacing-sm) var(--spacing-lg);
+        border-radius: var(--border-radius-sm);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacing-xs);
+        transition: all var(--transition-normal);
+        border: none;
+        cursor: pointer;
+      }
+
+      .contact-btn:hover {
+        background-color: var(--primary-hover);
+        transform: translateY(-2px);
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.1);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      @media (max-width: 768px) {
+        .maintenance-icon {
+          font-size: 3rem;
+        }
+
+        .maintenance-title {
+          font-size: var(--font-size-lg);
+        }
+
+        .maintenance-message {
+          font-size: var(--font-size-md);
+        }
+
+        .contact-info {
+          flex-direction: column;
+          gap: var(--spacing-sm);
+        }
+      }
+    </style>
   </head>
-  <!-- 상품 카드 템플릿 -->
-  <template id="product-card-template">
-    <div class="product-card" data-item-id="">
-      <div class="product-header">
-        <div class="product-brand" data-field="brand"></div>
-        <div class="product-title" data-field="title"></div>
-        <div class="auction-info">
-          <div class="auction-number">
-            <span data-field="auc_num"></span><span>번</span>
-            <div
-              class="auction-type-indicator"
-              data-field="bid_type_text"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 타이머 (입찰 기능 있을 때만) -->
-      <div class="bid-timer" data-if="hasBidding">
-        <span class="scheduled-date" data-field="formatted_date"></span>
-        <span class="remaining-time">[--:--:--]</span>
-      </div>
-
-      <div class="product-image-container">
-        <img src="" alt="" class="product-image" data-field="image" />
-        <div class="product-rank" data-field="rank"></div>
-      </div>
-
-      <!-- 위시리스트 버튼 (위시리스트 기능 있을 때만) -->
-      <div class="wishlist-buttons" data-if="hasWishlist">
-        <button class="wishlist-btn" data-favorite="1">즐겨찾기①</button>
-        <button class="wishlist-btn" data-favorite="2">즐겨찾기②</button>
-        <button class="wishlist-btn" data-favorite="3">즐겨찾기③</button>
-      </div>
-
-      <!-- 3칸 정보 -->
-      <div class="product-info-grid">
-        <div class="info-cell">
-          <div class="info-label">랭크</div>
-          <div class="info-value" data-field="rank"></div>
-        </div>
-        <div class="info-cell">
-          <div class="info-label">시작 금액</div>
-          <div class="info-value">
-            <span data-field="formatted_price"></span>¥
-          </div>
-          <div class="info-price-detail"></div>
-        </div>
-        <div class="info-cell">
-          <div class="info-label">입찰/제안</div>
-          <div class="info-value">-</div>
-          <div class="info-price-detail"></div>
-        </div>
-      </div>
-
-      <!-- 입찰 섹션 (입찰 기능 있을 때만) -->
-      <div class="bid-section" data-if="hasBidding">
-        <div class="price-info"></div>
-        <div class="bid-input-container"></div>
-      </div>
-    </div>
-  </template>
   <body>
     <div class="container">
       <header class="main-header">
@@ -166,7 +217,36 @@
       </header>
 
       <main class="main-content">
-        <div class="maintenance-message">현재 해당 페이지는 점검 중입니다.</div>
+        <div class="maintenance-container">
+          <div class="maintenance-icon">
+            <i class="fas fa-tools"></i>
+          </div>
+
+          <h1 class="maintenance-title">시스템 점검 중</h1>
+
+          <p class="maintenance-message">
+            보다 나은 서비스 제공을 위해 시스템 점검 중입니다.<br />
+            잠시 후 다시 이용해 주시기 바랍니다.
+          </p>
+
+          <div class="maintenance-info">
+            <h3><i class="fas fa-info-circle"></i> 안내사항</h3>
+            <p>서비스 개선을 위한 시스템 점검이 진행 중입니다.</p>
+            <p>점검 완료 후 정상적으로 서비스를 이용하실 수 있습니다.</p>
+            <p>이용에 불편을 드려 죄송합니다.</p>
+          </div>
+
+          <div class="contact-info">
+            <button class="contact-btn" onclick="history.back()">
+              <i class="fas fa-arrow-left"></i>
+              이전 페이지
+            </button>
+            <button class="contact-btn" onclick="location.reload()">
+              <i class="fas fa-refresh"></i>
+              새로고침
+            </button>
+          </div>
+        </div>
       </main>
     </div>
   </body>
