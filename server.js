@@ -218,11 +218,18 @@ app.get("/productPage", (req, res) => {
 });
 app.get("/signinPage", (req, res) => {
   res.sendFile(path.join(mainPagesPath, "signin.html"));
-}); // 경로 통일
+});
 app.get("/valuesPage", (req, res) => {
+  if (req.session.user)
+    res.sendFile(path.join(mainPagesPath, "maintenance.html")); // 임시
+  else res.redirect("/signinPage");
+});
+
+app.get("/valuesPageTEST", (req, res) => {
   if (req.session.user) res.sendFile(path.join(mainPagesPath, "values.html"));
   else res.redirect("/signinPage");
 });
+
 app.get("/bidResultsPage", (req, res) => {
   if (req.session.user)
     res.sendFile(path.join(mainPagesPath, "bid-results.html"));

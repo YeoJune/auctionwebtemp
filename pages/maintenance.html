@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>점검중</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <link rel="stylesheet" href="/styles/common.css" />
+    <link rel="stylesheet" href="/styles/main.css" />
+    <link rel="stylesheet" href="/styles/header.css" />
+  </head>
+  <!-- 상품 카드 템플릿 -->
+  <template id="product-card-template">
+    <div class="product-card" data-item-id="">
+      <div class="product-header">
+        <div class="product-brand" data-field="brand"></div>
+        <div class="product-title" data-field="title"></div>
+        <div class="auction-info">
+          <div class="auction-number">
+            <span data-field="auc_num"></span><span>번</span>
+            <div
+              class="auction-type-indicator"
+              data-field="bid_type_text"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 타이머 (입찰 기능 있을 때만) -->
+      <div class="bid-timer" data-if="hasBidding">
+        <span class="scheduled-date" data-field="formatted_date"></span>
+        <span class="remaining-time">[--:--:--]</span>
+      </div>
+
+      <div class="product-image-container">
+        <img src="" alt="" class="product-image" data-field="image" />
+        <div class="product-rank" data-field="rank"></div>
+      </div>
+
+      <!-- 위시리스트 버튼 (위시리스트 기능 있을 때만) -->
+      <div class="wishlist-buttons" data-if="hasWishlist">
+        <button class="wishlist-btn" data-favorite="1">즐겨찾기①</button>
+        <button class="wishlist-btn" data-favorite="2">즐겨찾기②</button>
+        <button class="wishlist-btn" data-favorite="3">즐겨찾기③</button>
+      </div>
+
+      <!-- 3칸 정보 -->
+      <div class="product-info-grid">
+        <div class="info-cell">
+          <div class="info-label">랭크</div>
+          <div class="info-value" data-field="rank"></div>
+        </div>
+        <div class="info-cell">
+          <div class="info-label">시작 금액</div>
+          <div class="info-value">
+            <span data-field="formatted_price"></span>¥
+          </div>
+          <div class="info-price-detail"></div>
+        </div>
+        <div class="info-cell">
+          <div class="info-label">입찰/제안</div>
+          <div class="info-value">-</div>
+          <div class="info-price-detail"></div>
+        </div>
+      </div>
+
+      <!-- 입찰 섹션 (입찰 기능 있을 때만) -->
+      <div class="bid-section" data-if="hasBidding">
+        <div class="price-info"></div>
+        <div class="bid-input-container"></div>
+      </div>
+    </div>
+  </template>
+  <body>
+    <div class="container">
+      <header class="main-header">
+        <div class="header-content">
+          <div class="logo-container">
+            <img
+              src="images/logo.png"
+              alt="Logo"
+              onclick="location.href = '/productPage'" />
+          </div>
+          <button class="mobile-menu-toggle">
+            <i class="fas fa-bars"></i>
+          </button>
+          <div class="nav-container">
+            <div class="nav-item dropdown-container">
+              <button class="nav-button" id="productListBtn">
+                <i class="fas fa-list"></i>
+                <span>상품 리스트</span>
+              </button>
+              <div class="dropdown-content">
+                <a href="/productPage">전체 상품</a>
+                <a href="/productPage?selectedAuctionTypes=live">현장 경매</a>
+                <a href="/productPage?selectedAuctionTypes=direct">직접 경매</a>
+              </div>
+            </div>
+
+            <div class="nav-item dropdown-container">
+              <button class="nav-button" id="favoritesBtn">
+                <i class="fas fa-star"></i>
+                <span>즐겨찾기</span>
+              </button>
+              <div class="dropdown-content">
+                <a href="/productPage?selectedFavoriteNumbers=1">즐겨찾기 ①</a>
+                <a href="/productPage?selectedFavoriteNumbers=2">즐겨찾기 ②</a>
+                <a href="/productPage?selectedFavoriteNumbers=3">즐겨찾기 ③</a>
+              </div>
+            </div>
+
+            <button
+              class="nav-button"
+              id="bidItemsBtn"
+              onclick="window.location.href = '/bidProductsPage'">
+              <i class="fas fa-gavel"></i>
+              <span>입찰 항목</span>
+            </button>
+
+            <button
+              class="nav-button"
+              id="bidResultsBtn"
+              onclick="window.location.href = '/bidResultsPage'">
+              <i class="fas fa-clipboard-check"></i>
+              <span>입찰 결과</span>
+            </button>
+
+            <button
+              class="nav-button"
+              onclick="window.location.href = '/valuesPage'">
+              <i class="fas fa-chart-line"></i>
+              <span>낙찰 시세표</span>
+            </button>
+
+            <button
+              class="nav-button"
+              onclick="window.open('http://pf.kakao.com/_xcCxoqn/chat', '_blank')">
+              <i class="fas fa-comments"></i>
+              <span>실시간 문의</span>
+            </button>
+
+            <button
+              class="nav-button"
+              onclick="window.location.href = '/inquiryPage'">
+              <i class="fas fa-user-plus"></i>
+              <span>입점신청</span>
+            </button>
+
+            <button
+              class="nav-button"
+              onclick="window.location.href = '/guidePage'">
+              <i class="fas fa-book"></i>
+              <span>이용가이드</span>
+            </button>
+          </div>
+          <div class="auth-container auth-unauthenticated">
+            <button id="signinBtn" class="auth-button auth-signin">
+              로그인
+            </button>
+            <button id="signoutBtn" class="auth-button auth-signout">
+              로그아웃
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main class="main-content">
+        <div class="maintenance-message">현재 해당 페이지는 점검 중입니다.</div>
+      </main>
+    </div>
+  </body>
+</html>
