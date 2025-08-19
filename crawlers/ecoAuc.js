@@ -113,15 +113,12 @@ const ecoAucValueConfig = {
     binder: ".col-md-8.col-lg-7 .dl-horizontal",
   },
   searchParams: (categoryId, page, months = 3) => {
-    const endDate = new Date();
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - months);
 
     return `?limit=200&sortKey=1&tableType=grid&master_item_categories[0]=${categoryId}&page=${page}&target_start_year=${startDate.getFullYear()}&target_start_month=${
       startDate.getMonth() + 1
-    }&target_end_year=${endDate.getFullYear()}&target_end_month=${
-      endDate.getMonth() + 1
-    }&`;
+    }`;
   },
   detailUrl: (itemId) =>
     `https://www.ecoauc.com/client/auction-items/view/${itemId}`,
