@@ -229,15 +229,22 @@ class EcoAucCrawler extends AxiosCrawler {
           const totalPages = await this.getTotalPages(categoryId);
           console.log(`Total pages in category ${categoryId}: ${totalPages}`);
 
-          // 모든 페이지 크롤링
+          // 페이지 병렬 처리 (이미지 없이)
+          const limit = pLimit(10);
+          const pagePromises = [];
+
           for (let page = 1; page <= totalPages; page++) {
-            const pageItems = await this.crawlPage(
-              categoryId,
-              page,
-              existingIds
+            pagePromises.push(
+              limit(() => this.crawlPage(categoryId, page, existingIds, true))
             );
-            categoryItems.push(...pageItems);
           }
+
+          const pageResults = await Promise.all(pagePromises);
+          pageResults.forEach((pageItems) => {
+            if (pageItems && pageItems.length > 0) {
+              categoryItems.push(...pageItems);
+            }
+          });
 
           if (categoryItems && categoryItems.length > 0) {
             allCrawledItems.push(...categoryItems);
@@ -257,8 +264,23 @@ class EcoAucCrawler extends AxiosCrawler {
         return [];
       }
 
+      // 전체 이미지 일괄 처리
       console.log(
-        `Crawling completed for all categories. Total items: ${allCrawledItems.length}`
+        `Starting image processing for ${allCrawledItems.length} items...`
+      );
+      const itemsWithImages = allCrawledItems.filter((item) => item.image);
+      const finalProcessedItems = await processImagesInChunks(
+        itemsWithImages,
+        "products",
+        3
+      );
+
+      // 이미지가 없는 아이템들도 포함
+      const itemsWithoutImages = allCrawledItems.filter((item) => !item.image);
+      const allFinalItems = [...finalProcessedItems, ...itemsWithoutImages];
+
+      console.log(
+        `Crawling completed for all categories. Total items: ${allFinalItems.length}`
       );
 
       const endTime = Date.now();
@@ -267,14 +289,19 @@ class EcoAucCrawler extends AxiosCrawler {
         `Operation completed in ${this.formatExecutionTime(executionTime)}`
       );
 
-      return allCrawledItems;
+      return allFinalItems;
     } catch (error) {
       console.error("Crawl failed:", error);
       return [];
     }
   }
 
-  async crawlPage(categoryId, page, existingIds = new Set()) {
+  async crawlPage(
+    categoryId,
+    page,
+    existingIds = new Set(),
+    skipImageProcessing = false
+  ) {
     const clientInfo = this.getClient();
 
     return this.retryOperation(async () => {
@@ -317,16 +344,17 @@ class EcoAucCrawler extends AxiosCrawler {
         if (item) pageItems.push(item);
       }
 
-      const processedItems = await processImagesInChunks(
-        pageItems,
-        "products",
-        3
-      );
+      let finalItems;
+      if (skipImageProcessing) {
+        finalItems = pageItems;
+      } else {
+        finalItems = await processImagesInChunks(pageItems, "products", 3);
+      }
 
       console.log(
-        `Crawled ${processedItems.length} items from page ${page} (${clientInfo.name})`
+        `Crawled ${finalItems.length} items from page ${page} (${clientInfo.name})`
       );
-      return [...processedItems, ...remainItems];
+      return [...finalItems, ...remainItems];
     });
   }
 

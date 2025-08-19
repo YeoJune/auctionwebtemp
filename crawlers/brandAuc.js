@@ -209,50 +209,67 @@ class BrandAucCrawler extends AxiosCrawler {
             const firstPageItems = await this.processItemsPage(
               firstPageResponse.data.content,
               existingIds,
-              bidConfig.type
+              bidConfig.type,
+              true
             );
             allCrawledItems.push(...firstPageItems);
+            // 나머지 페이지 병렬 처리
+            const limit = pLimit(10);
+            const pagePromises = [];
 
-            // 나머지 페이지 순차적으로 처리
             for (let page = 1; page < totalPages; page++) {
-              console.log(
-                `Crawling page ${page + 1} of ${totalPages} for bid type: ${
-                  bidConfig.type
-                }`
+              pagePromises.push(
+                limit(async () => {
+                  console.log(
+                    `Crawling page ${page + 1} of ${totalPages} for bid type: ${
+                      bidConfig.type
+                    }`
+                  );
+
+                  const pageClientInfo = this.getClient();
+
+                  const response = await pageClientInfo.client.get(
+                    this.config.previewItemsApiUrl,
+                    {
+                      params: {
+                        page: page,
+                        size: size,
+                        gamenId: "B02-01",
+                        otherCds: bidConfig.otherCds,
+                      },
+                      headers: {
+                        Accept: "application/json",
+                      },
+                    }
+                  );
+
+                  if (response.data && response.data.content) {
+                    const pageItems = await this.processItemsPage(
+                      response.data.content,
+                      existingIds,
+                      bidConfig.type,
+                      true // skipImageProcessing = true
+                    );
+
+                    console.log(
+                      `Processed ${pageItems.length} items from page ${
+                        page + 1
+                      } with ${pageClientInfo.name}`
+                    );
+
+                    return pageItems;
+                  }
+                  return [];
+                })
               );
-
-              const pageClientInfo = this.getClient();
-
-              const response = await pageClientInfo.client.get(
-                this.config.previewItemsApiUrl,
-                {
-                  params: {
-                    page: page,
-                    size: size,
-                    gamenId: "B02-01",
-                    otherCds: bidConfig.otherCds,
-                  },
-                  headers: {
-                    Accept: "application/json",
-                  },
-                }
-              );
-
-              if (response.data && response.data.content) {
-                const pageItems = await this.processItemsPage(
-                  response.data.content,
-                  existingIds,
-                  bidConfig.type
-                );
-                allCrawledItems.push(...pageItems);
-
-                console.log(
-                  `Processed ${pageItems.length} items from page ${
-                    page + 1
-                  } with ${pageClientInfo.name}`
-                );
-              }
             }
+
+            const pageResults = await Promise.all(pagePromises);
+            pageResults.forEach((pageItems) => {
+              if (pageItems && pageItems.length > 0) {
+                allCrawledItems.push(...pageItems);
+              }
+            });
           } else if (bidConfig.type === "direct") {
             // Direct 경매 크롤링
             const clientInfo = this.getClient();
@@ -314,49 +331,69 @@ class BrandAucCrawler extends AxiosCrawler {
             const firstPageItems = await this.processItemsPage(
               firstPageResponse.data.content,
               existingIds,
-              bidConfig.type
+              bidConfig.type,
+              true
             );
             allCrawledItems.push(...firstPageItems);
 
-            // 나머지 페이지 순차적으로 처리
+            // 나머지 페이지 병렬 처리
+            const directLimit = pLimit(10);
+            const directPagePromises = [];
+
             for (let page = 1; page < totalPages; page++) {
-              console.log(`Crawling direct page ${page + 1} of ${totalPages}`);
+              directPagePromises.push(
+                directLimit(async () => {
+                  console.log(
+                    `Crawling direct page ${page + 1} of ${totalPages}`
+                  );
 
-              const pageClientInfo = this.getClient();
+                  const pageClientInfo = this.getClient();
 
-              const response = await pageClientInfo.client.get(
-                "https://bid.brand-auc.com/api/v1/brand-bid/items/list",
-                {
-                  params: {
-                    page: page,
-                    size: size,
-                    viewType: 1,
-                    status: 1,
-                    gamenId: "B201-01",
-                  },
-                  headers: {
-                    Accept: "application/json",
-                    Referer: "https://bid.brand-auc.com/",
-                    "X-Requested-With": "XMLHttpRequest",
-                  },
-                }
+                  const response = await pageClientInfo.client.get(
+                    "https://bid.brand-auc.com/api/v1/brand-bid/items/list",
+                    {
+                      params: {
+                        page: page,
+                        size: size,
+                        viewType: 1,
+                        status: 1,
+                        gamenId: "B201-01",
+                      },
+                      headers: {
+                        Accept: "application/json",
+                        Referer: "https://bid.brand-auc.com/",
+                        "X-Requested-With": "XMLHttpRequest",
+                      },
+                    }
+                  );
+
+                  if (response.data && response.data.content) {
+                    const pageItems = await this.processItemsPage(
+                      response.data.content,
+                      existingIds,
+                      bidConfig.type,
+                      true // skipImageProcessing = true
+                    );
+
+                    console.log(
+                      `Processed ${pageItems.length} direct items from page ${
+                        page + 1
+                      } with ${pageClientInfo.name}`
+                    );
+
+                    return pageItems;
+                  }
+                  return [];
+                })
               );
-
-              if (response.data && response.data.content) {
-                const pageItems = await this.processItemsPage(
-                  response.data.content,
-                  existingIds,
-                  bidConfig.type
-                );
-                allCrawledItems.push(...pageItems);
-
-                console.log(
-                  `Processed ${pageItems.length} direct items from page ${
-                    page + 1
-                  } with ${pageClientInfo.name}`
-                );
-              }
             }
+
+            const directPageResults = await Promise.all(directPagePromises);
+            directPageResults.forEach((pageItems) => {
+              if (pageItems && pageItems.length > 0) {
+                allCrawledItems.push(...pageItems);
+              }
+            });
           }
         } catch (error) {
           console.error(
@@ -368,7 +405,23 @@ class BrandAucCrawler extends AxiosCrawler {
         }
       }
 
-      console.log(`Total items processed: ${allCrawledItems.length}`);
+      // 전체 이미지 일괄 처리
+      console.log(
+        `Starting image processing for ${allCrawledItems.length} items...`
+      );
+      const itemsWithImages = allCrawledItems.filter((item) => item.image);
+      const finalProcessedItems = await processImagesInChunks(
+        itemsWithImages,
+        "products",
+        3,
+        "brand"
+      );
+
+      // 이미지가 없는 아이템들도 포함
+      const itemsWithoutImages = allCrawledItems.filter((item) => !item.image);
+      const allFinalItems = [...finalProcessedItems, ...itemsWithoutImages];
+
+      console.log(`Total items processed: ${allFinalItems.length}`);
 
       const endTime = Date.now();
       const executionTime = endTime - startTime;
@@ -378,14 +431,19 @@ class BrandAucCrawler extends AxiosCrawler {
         )}`
       );
 
-      return allCrawledItems;
+      return allFinalItems;
     } catch (error) {
       console.error("Crawl failed:", error.message);
       return [];
     }
   }
 
-  async processItemsPage(items, existingIds, bidType = "live") {
+  async processItemsPage(
+    items,
+    existingIds,
+    bidType = "live",
+    skipImageProcessing = false
+  ) {
     // 아이템 필터링
     const filteredItems = [];
 
@@ -410,14 +468,19 @@ class BrandAucCrawler extends AxiosCrawler {
     }
 
     // 필터링된 아이템에 대해 추가 처리 (이미지 처리 등)
-    const processedItems = await processImagesInChunks(
-      filteredItems,
-      "products",
-      3,
-      "brand"
-    );
+    let finalItems;
+    if (skipImageProcessing) {
+      finalItems = filteredItems;
+    } else {
+      finalItems = await processImagesInChunks(
+        filteredItems,
+        "products",
+        3,
+        "brand"
+      );
+    }
 
-    return processedItems;
+    return finalItems;
   }
 
   extractItemInfo(item, bidType = "live") {
