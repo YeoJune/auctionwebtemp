@@ -31,7 +31,7 @@ const valuePageConfig = {
     selectedRanks: [],
     selectedAucNums: [],
     sortBy: "scheduled_date",
-    sortOrder: "asc",
+    sortOrder: "desc",
     currentPage: 1,
     itemsPerPage: 20,
     totalItems: 0,

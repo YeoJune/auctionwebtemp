@@ -85,7 +85,7 @@ router.get("/", async (req, res) => {
     ranks,
     withDetails = "false",
     sortBy = "scheduled_date",
-    sortOrder = "asc",
+    sortOrder = "desc",
   } = req.query;
   const offset = (page - 1) * limit;
 
@@ -207,9 +207,9 @@ router.get("/", async (req, res) => {
     const totalItems = countResult[0].total;
     const totalPages = Math.ceil(totalItems / limit);
 
-    // 상세 정보 처리 (87만 개 데이터 고려해서 동시 처리 수 조정)
+    // 상세 정보 처리
     if (withDetails === "true") {
-      const limit = pLimit(3); // 기존 5 → 3으로 조정 (대용량 데이터 최적화)
+      const limit = pLimit(3);
 
       const processItemsInBatches = async (items) => {
         const promises = items.map((item) =>
