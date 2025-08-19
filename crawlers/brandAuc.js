@@ -173,60 +173,21 @@ class BrandAucCrawler extends AxiosCrawler {
       ];
 
       for (const bidConfig of bidTypes) {
-        console.log(`Starting crawl for bid type: ${bidConfig.type}`);
+        try {
+          console.log(`Starting crawl for bid type: ${bidConfig.type}`);
 
-        // 현재 bid_type 설정
-        this.currentBidType = bidConfig.type;
+          // 현재 bid_type 설정
+          this.currentBidType = bidConfig.type;
 
-        if (bidConfig.type === "live") {
-          // 기존 Live 경매 크롤링 방식
-          const clientInfo = this.getClient();
+          if (bidConfig.type === "live") {
+            // 기존 Live 경매 크롤링 방식
+            const clientInfo = this.getClient();
 
-          const firstPageResponse = await clientInfo.client.get(
-            this.config.previewItemsApiUrl,
-            {
-              params: {
-                page: 0,
-                size: size,
-                gamenId: "B02-01",
-                otherCds: bidConfig.otherCds,
-              },
-              headers: {
-                Accept: "application/json",
-              },
-            }
-          );
-
-          const totalPages = firstPageResponse.data.totalPages;
-          const totalItems = firstPageResponse.data.totalElements;
-
-          console.log(
-            `Found ${totalItems} items across ${totalPages} pages for bid type: ${bidConfig.type}`
-          );
-
-          // 첫 페이지 아이템 처리
-          const firstPageItems = await this.processItemsPage(
-            firstPageResponse.data.content,
-            existingIds,
-            bidConfig.type
-          );
-          allCrawledItems.push(...firstPageItems);
-
-          // 나머지 페이지 순차적으로 처리
-          for (let page = 1; page < totalPages; page++) {
-            console.log(
-              `Crawling page ${page + 1} of ${totalPages} for bid type: ${
-                bidConfig.type
-              }`
-            );
-
-            const pageClientInfo = this.getClient();
-
-            const response = await pageClientInfo.client.get(
+            const firstPageResponse = await clientInfo.client.get(
               this.config.previewItemsApiUrl,
               {
                 params: {
-                  page: page,
+                  page: 0,
                   size: size,
                   gamenId: "B02-01",
                   otherCds: bidConfig.otherCds,
@@ -237,100 +198,101 @@ class BrandAucCrawler extends AxiosCrawler {
               }
             );
 
-            if (response.data && response.data.content) {
-              const pageItems = await this.processItemsPage(
-                response.data.content,
-                existingIds,
-                bidConfig.type
-              );
-              allCrawledItems.push(...pageItems);
+            const totalPages = firstPageResponse.data.totalPages;
+            const totalItems = firstPageResponse.data.totalElements;
 
+            console.log(
+              `Found ${totalItems} items across ${totalPages} pages for bid type: ${bidConfig.type}`
+            );
+
+            // 첫 페이지 아이템 처리
+            const firstPageItems = await this.processItemsPage(
+              firstPageResponse.data.content,
+              existingIds,
+              bidConfig.type
+            );
+            allCrawledItems.push(...firstPageItems);
+
+            // 나머지 페이지 순차적으로 처리
+            for (let page = 1; page < totalPages; page++) {
               console.log(
-                `Processed ${pageItems.length} items from page ${
-                  page + 1
-                } with ${pageClientInfo.name}`
+                `Crawling page ${page + 1} of ${totalPages} for bid type: ${
+                  bidConfig.type
+                }`
               );
+
+              const pageClientInfo = this.getClient();
+
+              const response = await pageClientInfo.client.get(
+                this.config.previewItemsApiUrl,
+                {
+                  params: {
+                    page: page,
+                    size: size,
+                    gamenId: "B02-01",
+                    otherCds: bidConfig.otherCds,
+                  },
+                  headers: {
+                    Accept: "application/json",
+                  },
+                }
+              );
+
+              if (response.data && response.data.content) {
+                const pageItems = await this.processItemsPage(
+                  response.data.content,
+                  existingIds,
+                  bidConfig.type
+                );
+                allCrawledItems.push(...pageItems);
+
+                console.log(
+                  `Processed ${pageItems.length} items from page ${
+                    page + 1
+                  } with ${pageClientInfo.name}`
+                );
+              }
             }
-          }
-        } else if (bidConfig.type === "direct") {
-          // Direct 경매 크롤링
-          const clientInfo = this.getClient();
+          } else if (bidConfig.type === "direct") {
+            // Direct 경매 크롤링
+            const clientInfo = this.getClient();
 
-          await clientInfo.cookieJar.setCookie(
-            "brand_language=en",
-            "https://bid.brand-auc.com"
-          );
+            await clientInfo.cookieJar.setCookie(
+              "brand_language=en",
+              "https://bid.brand-auc.com"
+            );
 
-          // 경매 정보 가져오기
-          const auctionInfoResponse = await clientInfo.client.get(
-            "https://bid.brand-auc.com/api/v1/brand-bid/com/auction-info",
-            {
-              headers: {
-                Accept: "application/json",
-                Referer: "https://bid.brand-auc.com/",
-                "X-Requested-With": "XMLHttpRequest",
-              },
+            // 경매 정보 가져오기
+            const auctionInfoResponse = await clientInfo.client.get(
+              "https://bid.brand-auc.com/api/v1/brand-bid/com/auction-info",
+              {
+                headers: {
+                  Accept: "application/json",
+                  Referer: "https://bid.brand-auc.com/",
+                  "X-Requested-With": "XMLHttpRequest",
+                },
+              }
+            );
+
+            // 경매 날짜 정보 저장
+            const auctionDates = auctionInfoResponse.data.nyuShimeYmdList;
+            this.auctionKaisu = auctionInfoResponse.data.kaisaiKaisu;
+
+            if (auctionDates.length === 0) {
+              throw new Error("Failed to get auction dates");
             }
-          );
 
-          // 경매 날짜 정보 저장
-          const auctionDates = auctionInfoResponse.data.nyuShimeYmdList;
-          this.auctionKaisu = auctionInfoResponse.data.kaisaiKaisu;
+            this.auctionDate = auctionDates[0];
 
-          if (auctionDates.length === 0) {
-            throw new Error("Failed to get auction dates");
-          }
-
-          this.auctionDate = auctionDates[0];
-
-          // Direct 아이템 가져오기
-          const firstPageResponse = await clientInfo.client.get(
-            "https://bid.brand-auc.com/api/v1/brand-bid/items/list",
-            {
-              params: {
-                page: 0,
-                size: size,
-                viewType: 1,
-                status: 1, // 활성 상품만
-                gamenId: "B201-01",
-              },
-              headers: {
-                Accept: "application/json",
-                Referer: "https://bid.brand-auc.com/",
-                "X-Requested-With": "XMLHttpRequest",
-              },
-            }
-          );
-
-          const totalPages = firstPageResponse.data.totalPages;
-          const totalItems = firstPageResponse.data.totalElements;
-
-          console.log(
-            `Found ${totalItems} items across ${totalPages} pages for bid type: ${bidConfig.type}`
-          );
-
-          // 첫 페이지 아이템 처리
-          const firstPageItems = await this.processItemsPage(
-            firstPageResponse.data.content,
-            existingIds,
-            bidConfig.type
-          );
-          allCrawledItems.push(...firstPageItems);
-
-          // 나머지 페이지 순차적으로 처리
-          for (let page = 1; page < totalPages; page++) {
-            console.log(`Crawling direct page ${page + 1} of ${totalPages}`);
-
-            const pageClientInfo = this.getClient();
-
-            const response = await pageClientInfo.client.get(
+            // Direct 아이템 가져오기
+            const firstPageResponse = await clientInfo.client.get(
               "https://bid.brand-auc.com/api/v1/brand-bid/items/list",
               {
                 params: {
-                  page: page,
+                  page: 0,
                   size: size,
                   viewType: 1,
-                  status: 1,
+                  status: 1, // 활성 상품만
                   gamenId: "B201-01",
                 },
                 headers: {
@@ -341,21 +303,68 @@ class BrandAucCrawler extends AxiosCrawler {
               }
             );
 
-            if (response.data && response.data.content) {
-              const pageItems = await this.processItemsPage(
-                response.data.content,
-                existingIds,
-                bidConfig.type
-              );
-              allCrawledItems.push(...pageItems);
+            const totalPages = firstPageResponse.data.totalPages;
+            const totalItems = firstPageResponse.data.totalElements;
 
-              console.log(
-                `Processed ${pageItems.length} direct items from page ${
-                  page + 1
-                } with ${pageClientInfo.name}`
+            console.log(
+              `Found ${totalItems} items across ${totalPages} pages for bid type: ${bidConfig.type}`
+            );
+
+            // 첫 페이지 아이템 처리
+            const firstPageItems = await this.processItemsPage(
+              firstPageResponse.data.content,
+              existingIds,
+              bidConfig.type
+            );
+            allCrawledItems.push(...firstPageItems);
+
+            // 나머지 페이지 순차적으로 처리
+            for (let page = 1; page < totalPages; page++) {
+              console.log(`Crawling direct page ${page + 1} of ${totalPages}`);
+
+              const pageClientInfo = this.getClient();
+
+              const response = await pageClientInfo.client.get(
+                "https://bid.brand-auc.com/api/v1/brand-bid/items/list",
+                {
+                  params: {
+                    page: page,
+                    size: size,
+                    viewType: 1,
+                    status: 1,
+                    gamenId: "B201-01",
+                  },
+                  headers: {
+                    Accept: "application/json",
+                    Referer: "https://bid.brand-auc.com/",
+                    "X-Requested-With": "XMLHttpRequest",
+                  },
+                }
               );
+
+              if (response.data && response.data.content) {
+                const pageItems = await this.processItemsPage(
+                  response.data.content,
+                  existingIds,
+                  bidConfig.type
+                );
+                allCrawledItems.push(...pageItems);
+
+                console.log(
+                  `Processed ${pageItems.length} direct items from page ${
+                    page + 1
+                  } with ${pageClientInfo.name}`
+                );
+              }
             }
           }
+        } catch (error) {
+          console.error(
+            `Failed to crawl bid type ${bidConfig.type}:`,
+            error.message
+          );
+          // 해당 bid type 실패해도 다음 bid type 계속 진행
+          continue;
         }
       }
 
