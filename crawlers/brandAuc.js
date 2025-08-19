@@ -214,7 +214,7 @@ class BrandAucCrawler extends AxiosCrawler {
             );
             allCrawledItems.push(...firstPageItems);
             // 나머지 페이지 병렬 처리
-            const limit = pLimit(10);
+            const limit = pLimit(5);
             const pagePromises = [];
 
             for (let page = 1; page < totalPages; page++) {
@@ -337,7 +337,7 @@ class BrandAucCrawler extends AxiosCrawler {
             allCrawledItems.push(...firstPageItems);
 
             // 나머지 페이지 병렬 처리
-            const directLimit = pLimit(10);
+            const directLimit = pLimit(5);
             const directPagePromises = [];
 
             for (let page = 1; page < totalPages; page++) {

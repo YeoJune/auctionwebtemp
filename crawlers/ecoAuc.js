@@ -230,7 +230,7 @@ class EcoAucCrawler extends AxiosCrawler {
           console.log(`Total pages in category ${categoryId}: ${totalPages}`);
 
           // 페이지 병렬 처리 (이미지 없이)
-          const limit = pLimit(10);
+          const limit = pLimit(5);
           const pagePromises = [];
 
           for (let page = 1; page <= totalPages; page++) {
