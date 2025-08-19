@@ -1245,56 +1245,70 @@ class BrandAucValueCrawler extends AxiosCrawler {
         `Found ${totalItems} market price items across ${totalPages} pages`
       );
 
-      // 첫 페이지 아이템 처리
-      const firstPageItems = await this.processItemsPage(
-        firstPageResponse.data.content,
-        existingIds
-      );
-      allCrawledItems.push(...firstPageItems);
+      // 페이지 병렬 처리 (이미지 없이)
+      const limit = pLimit(5);
+      const pagePromises = [];
 
-      // 나머지 페이지 순차적으로 처리
-      for (let page = 1; page < totalPages; page++) {
-        console.log(`Crawling value page ${page + 1} of ${totalPages}`);
-
-        const pageClientInfo = this.getClient();
-
-        const response = await pageClientInfo.client.get(
-          this.config.marketPriceApiUrl,
-          {
-            params: {
-              kaisaiKaisuFrom: kaisaiKaisuFrom,
-              kaisaiKaisuTo: kaisaiKaisuTo,
-              page: page,
-              size: size,
-              getKbn: 3,
-              kaijoKbn: 0,
-            },
-            headers: {
-              Accept: "application/json, text/plain, */*",
-              "Accept-Language": "en-US,en;q=0.9",
-              Referer: "https://e-auc.brand-auc.com/",
-              "X-Requested-With": "XMLHttpRequest",
-            },
-          }
+      for (let page = 0; page < totalPages; page++) {
+        pagePromises.push(
+          limit(() =>
+            this.crawlPage(
+              page,
+              existingIds,
+              kaisaiKaisuFrom,
+              kaisaiKaisuTo,
+              size,
+              true
+            )
+          )
         );
-
-        if (response.data && response.data.content) {
-          const pageItems = await this.processItemsPage(
-            response.data.content,
-            existingIds
-          );
-
-          allCrawledItems.push(...pageItems);
-
-          console.log(
-            `Processed ${pageItems.length} value items from page ${
-              page + 1
-            } with ${pageClientInfo.name}`
-          );
-        }
       }
 
-      console.log(`Total value items processed: ${allCrawledItems.length}`);
+      const pageResults = await Promise.all(pagePromises);
+      let isEnd = false;
+
+      pageResults.forEach((pageItems) => {
+        if (pageItems && pageItems.length > 0) {
+          // 기존 데이터 발견 시 종료 플래그 확인
+          const hasExistingItem = pageItems.some((item) => item.isExisting);
+          if (hasExistingItem) {
+            isEnd = true;
+            // 기존 아이템 제외하고 추가
+            allCrawledItems.push(
+              ...pageItems.filter((item) => !item.isExisting)
+            );
+          } else {
+            allCrawledItems.push(...pageItems);
+          }
+        }
+      });
+
+      if (allCrawledItems.length === 0) {
+        console.log("No items were crawled. Aborting save operation.");
+        return [];
+      }
+
+      // 전체 이미지 일괄 처리
+      console.log(
+        `Starting image processing for ${allCrawledItems.length} items...`
+      );
+      const itemsWithImages = allCrawledItems.filter((item) => item.image);
+      const finalProcessedItems = await processImagesInChunks(
+        itemsWithImages,
+        "values",
+        3,
+        "brand"
+      );
+
+      // 이미지가 없는 아이템들도 포함
+      const itemsWithoutImages = allCrawledItems.filter((item) => !item.image);
+      const allFinalItems = [...finalProcessedItems, ...itemsWithoutImages];
+
+      console.log(`Total value items processed: ${allFinalItems.length}`);
+
+      if (isEnd) {
+        console.log(`Early termination due to existing data`);
+      }
 
       const endTime = Date.now();
       const executionTime = endTime - startTime;
@@ -1304,11 +1318,82 @@ class BrandAucValueCrawler extends AxiosCrawler {
         )}`
       );
 
-      return allCrawledItems;
+      return allFinalItems;
     } catch (error) {
       console.error("Value crawl failed:", error.message);
       return [];
     }
+  }
+
+  async crawlPage(
+    page,
+    existingIds,
+    kaisaiKaisuFrom,
+    kaisaiKaisuTo,
+    size,
+    skipImageProcessing = false
+  ) {
+    const clientInfo = this.getClient();
+
+    return this.retryOperation(async () => {
+      console.log(`Crawling value page ${page + 1}...`);
+
+      const response = await clientInfo.client.get(
+        this.config.marketPriceApiUrl,
+        {
+          params: {
+            kaisaiKaisuFrom: kaisaiKaisuFrom,
+            kaisaiKaisuTo: kaisaiKaisuTo,
+            page: page,
+            size: size,
+            getKbn: 3,
+            kaijoKbn: 0,
+          },
+          headers: {
+            Accept: "application/json, text/plain, */*",
+            "Accept-Language": "en-US,en;q=0.9",
+            Referer: "https://e-auc.brand-auc.com/",
+            "X-Requested-With": "XMLHttpRequest",
+          },
+        }
+      );
+
+      if (!response.data || !response.data.content) {
+        return [];
+      }
+
+      const pageItems = [];
+      for (const item of response.data.content) {
+        // 이미 처리된 아이템 제외
+        if (existingIds.has(item.uketsukeBng)) {
+          pageItems.push({ item_id: item.uketsukeBng, isExisting: true });
+          continue;
+        }
+
+        // 기본 정보 추출하여 아이템 생성
+        const processedItem = this.extractBasicItemInfo(item);
+        pageItems.push(processedItem);
+      }
+
+      let finalItems;
+      if (skipImageProcessing) {
+        finalItems = pageItems;
+      } else {
+        finalItems = await processImagesInChunks(
+          pageItems,
+          "values",
+          3,
+          "brand"
+        );
+      }
+
+      console.log(
+        `Processed ${finalItems.length} value items from page ${
+          page + 1
+        } with ${clientInfo.name}`
+      );
+      return finalItems;
+    });
   }
 
   async processItemsPage(items, existingIds) {
@@ -1317,7 +1402,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
     for (const item of items) {
       // 이미 처리된 아이템 제외
       if (existingIds.has(item.uketsukeBng)) {
-        filteredItems.push({ item_id: item.uketsukeBng });
+        filteredItems.push({ item_id: item.uketsukeBng, isExisting: true });
         continue;
       }
 

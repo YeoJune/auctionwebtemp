@@ -1219,7 +1219,118 @@ class StarAucValueCrawler extends AxiosCrawler {
     });
   }
 
-  async crawlPage(categoryId, page, existingIds = new Set(), months = 3) {
+  async crawlAllItems(existingIds = new Set(), months = 3) {
+    try {
+      const startTime = Date.now();
+      console.log(`Starting StarAucValue crawl at ${new Date().toISOString()}`);
+      console.log(`Crawling data for the last ${months} months`);
+
+      // 로그인
+      await this.login();
+
+      const allCrawledItems = [];
+
+      // 모든 카테고리 순회
+      for (const categoryId of this.config.categoryIds) {
+        const categoryItems = [];
+
+        console.log(`Starting crawl for category ${categoryId}`);
+        this.config.currentCategoryId = categoryId;
+
+        const totalPages = await this.getTotalPages(categoryId, months);
+        console.log(`Total pages in category ${categoryId}: ${totalPages}`);
+
+        // 페이지 병렬 처리 (이미지 없이)
+        const limit = pLimit(5);
+        const pagePromises = [];
+
+        for (let page = 1; page <= totalPages; page++) {
+          pagePromises.push(
+            limit(() =>
+              this.crawlPage(categoryId, page, existingIds, months, true)
+            )
+          );
+        }
+
+        const pageResults = await Promise.all(pagePromises);
+        let isEnd = false;
+
+        pageResults.forEach((pageItems) => {
+          if (pageItems && pageItems.length > 0) {
+            // 기존 데이터 발견 시 종료 플래그 확인
+            const hasExistingItem = pageItems.some((item) => item.isExisting);
+            if (hasExistingItem) {
+              isEnd = true;
+              // 기존 아이템 제외하고 추가
+              categoryItems.push(
+                ...pageItems.filter((item) => !item.isExisting)
+              );
+            } else {
+              categoryItems.push(...pageItems);
+            }
+          }
+        });
+
+        if (categoryItems && categoryItems.length > 0) {
+          allCrawledItems.push(...categoryItems);
+          console.log(
+            `Completed crawl for category ${categoryId}. Items found: ${categoryItems.length}`
+          );
+        } else {
+          console.log(`No items found for category ${categoryId}`);
+        }
+
+        if (isEnd) {
+          console.log(
+            `Early termination for category ${categoryId} due to existing data`
+          );
+        }
+      }
+
+      if (allCrawledItems.length === 0) {
+        console.log("No items were crawled. Aborting save operation.");
+        return [];
+      }
+
+      // 전체 이미지 일괄 처리
+      console.log(
+        `Starting image processing for ${allCrawledItems.length} items...`
+      );
+      const itemsWithImages = allCrawledItems.filter((item) => item.image);
+      const finalProcessedItems = await processImagesInChunks(
+        itemsWithImages,
+        "values",
+        3
+      );
+
+      // 이미지가 없는 아이템들도 포함
+      const itemsWithoutImages = allCrawledItems.filter((item) => !item.image);
+      const allFinalItems = [...finalProcessedItems, ...itemsWithoutImages];
+
+      console.log(
+        `Crawling completed for all categories. Total items: ${allFinalItems.length}`
+      );
+
+      const endTime = Date.now();
+      const executionTime = endTime - startTime;
+      console.log(
+        `Operation completed in ${this.formatExecutionTime(executionTime)}`
+      );
+
+      return allFinalItems;
+    } catch (error) {
+      console.error("Crawl failed:", error);
+      return [];
+    }
+  }
+
+  async crawlPage(
+    categoryId,
+    page,
+    existingIds = new Set(),
+    months = 3,
+    skipImageProcessing = false
+  ) {
     const clientInfo = this.getClient();
 
     return this.retryOperation(async () => {
@@ -1245,23 +1356,23 @@ class StarAucValueCrawler extends AxiosCrawler {
       const pageItems = [];
       itemElements.each((index, element) => {
         const item = this.extractItemInfo($, $(element), existingIds);
-        if (item && !existingIds.has(item.item_id)) {
+        if (item) {
           pageItems.push(item);
         }
       });
 
+      let finalItems;
+      if (skipImageProcessing) {
+        finalItems = pageItems;
+      } else {
+        finalItems = await processImagesInChunks(pageItems, "values", 3);
+      }
+
       console.log(
-        `Extracted ${pageItems.length} items from page ${page} (${clientInfo.name})`
+        `Processed ${finalItems.length} items from page ${page} (${clientInfo.name})`
       );
 
-      // 이미지 처리
-      const processedItems = await processImagesInChunks(
-        pageItems,
-        "values",
-        3
-      );
-
-      return processedItems;
+      return finalItems;
     });
   }
 
@@ -1272,8 +1383,13 @@ class StarAucValueCrawler extends AxiosCrawler {
       const href = $id.attr("href") || "";
       const itemId = href.split("/").pop();
 
-      if (!itemId || existingIds.has(itemId)) {
+      if (!itemId) {
         return null;
+      }
+
+      // 이미 처리된 아이템인지 확인
+      if (existingIds.has(itemId)) {
+        return { item_id: itemId, isExisting: true };
       }
 
       // 제목 추출
@@ -1419,70 +1535,6 @@ class StarAucValueCrawler extends AxiosCrawler {
         lot_no: lotNo || "",
       };
     });
-  }
-
-  async crawlAllItems(existingIds = new Set(), months = 3) {
-    try {
-      const startTime = Date.now();
-      console.log(`Starting StarAucValue crawl at ${new Date().toISOString()}`);
-      console.log(`Crawling data for the last ${months} months`);
-
-      // 로그인
-      await this.login();
-
-      const allCrawledItems = [];
-
-      // 모든 카테고리 순회
-      for (const categoryId of this.config.categoryIds) {
-        const categoryItems = [];
-
-        console.log(`Starting crawl for category ${categoryId}`);
-        this.config.currentCategoryId = categoryId;
-
-        const totalPages = await this.getTotalPages(categoryId, months);
-        console.log(`Total pages in category ${categoryId}: ${totalPages}`);
-
-        // 모든 페이지 크롤링
-        for (let page = 1; page <= totalPages; page++) {
-          const pageItems = await this.crawlPage(
-            categoryId,
-            page,
-            existingIds,
-            months
-          );
-          categoryItems.push(...pageItems);
-        }
-
-        if (categoryItems && categoryItems.length > 0) {
-          allCrawledItems.push(...categoryItems);
-          console.log(
-            `Completed crawl for category ${categoryId}. Items found: ${categoryItems.length}`
-          );
-        } else {
-          console.log(`No items found for category ${categoryId}`);
-        }
-      }
-
-      if (allCrawledItems.length === 0) {
-        console.log("No items were crawled. Aborting save operation.");
-        return [];
-      }
-
-      console.log(
-        `Crawling completed for all categories. Total items: ${allCrawledItems.length}`
-      );
-
-      const endTime = Date.now();
-      const executionTime = endTime - startTime;
-      console.log(
-        `Operation completed in ${this.formatExecutionTime(executionTime)}`
-      );
-
-      return allCrawledItems;
-    } catch (error) {
-      console.error("Crawl failed:", error);
-      return [];
-    }
   }
 }
 

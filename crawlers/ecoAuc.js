@@ -1146,19 +1146,36 @@ class EcoAucValueCrawler extends AxiosCrawler {
         const totalPages = await this.getTotalPages(categoryId, months);
         console.log(`Total pages in category ${categoryId}: ${totalPages}`);
 
-        let isEnd = false;
-        // 모든 페이지 크롤링
-        for (let page = 1; page <= totalPages; page++) {
-          const pageItems = await this.crawlPage(
-            categoryId,
-            page,
-            existingIds,
-            months
-          );
+        // 페이지 병렬 처리 (이미지 없이)
+        const limit = pLimit(5);
+        const pagePromises = [];
 
-          categoryItems.push(...pageItems);
-          if (isEnd) break;
+        for (let page = 1; page <= totalPages; page++) {
+          pagePromises.push(
+            limit(() =>
+              this.crawlPage(categoryId, page, existingIds, months, true)
+            )
+          );
         }
+
+        const pageResults = await Promise.all(pagePromises);
+        let isEnd = false;
+
+        pageResults.forEach((pageItems) => {
+          if (pageItems && pageItems.length > 0) {
+            // 기존 데이터 발견 시 종료 플래그 확인
+            const hasExistingItem = pageItems.some((item) => item.isExisting);
+            if (hasExistingItem) {
+              isEnd = true;
+              // 기존 아이템 제외하고 추가
+              categoryItems.push(
+                ...pageItems.filter((item) => !item.isExisting)
+              );
+            } else {
+              categoryItems.push(...pageItems);
+            }
+          }
+        });
 
         if (categoryItems && categoryItems.length > 0) {
           allCrawledItems.push(...categoryItems);
@@ -1168,6 +1185,12 @@ class EcoAucValueCrawler extends AxiosCrawler {
         } else {
           console.log(`No items found for category ${categoryId}`);
         }
+
+        if (isEnd) {
+          console.log(
+            `Early termination for category ${categoryId} due to existing data`
+          );
+        }
       }
 
       if (allCrawledItems.length === 0) {
@@ -1175,8 +1198,23 @@ class EcoAucValueCrawler extends AxiosCrawler {
         return [];
       }
 
+      // 전체 이미지 일괄 처리
       console.log(
-        `Crawling completed for all categories. Total items: ${allCrawledItems.length}`
+        `Starting image processing for ${allCrawledItems.length} items...`
+      );
+      const itemsWithImages = allCrawledItems.filter((item) => item.image);
+      const finalProcessedItems = await processImagesInChunks(
+        itemsWithImages,
+        "values",
+        3
+      );
+
+      // 이미지가 없는 아이템들도 포함
+      const itemsWithoutImages = allCrawledItems.filter((item) => !item.image);
+      const allFinalItems = [...finalProcessedItems, ...itemsWithoutImages];
+
+      console.log(
+        `Crawling completed for all categories. Total items: ${allFinalItems.length}`
       );
 
       const endTime = Date.now();
@@ -1185,14 +1223,20 @@ class EcoAucValueCrawler extends AxiosCrawler {
         `Operation completed in ${this.formatExecutionTime(executionTime)}`
       );
 
-      return allCrawledItems;
+      return allFinalItems;
     } catch (error) {
       console.error("Value crawl failed:", error);
       return [];
     }
   }
 
-  async crawlPage(categoryId, page, existingIds = new Set(), months = 3) {
+  async crawlPage(
+    categoryId,
+    page,
+    existingIds = new Set(),
+    months = 3,
+    skipImageProcessing = false
+  ) {
     const clientInfo = this.getClient();
 
     return this.retryOperation(async () => {
@@ -1224,14 +1268,15 @@ class EcoAucValueCrawler extends AxiosCrawler {
         }
       });
 
-      const processedItems = await processImagesInChunks(
-        pageItems,
-        "values",
-        3
-      );
-      console.log(`Crawled ${processedItems.length} items from page ${page}`);
+      let finalItems;
+      if (skipImageProcessing) {
+        finalItems = pageItems;
+      } else {
+        finalItems = await processImagesInChunks(pageItems, "values", 3);
+      }
 
-      return processedItems;
+      console.log(`Crawled ${finalItems.length} items from page ${page}`);
+      return finalItems;
     });
   }
 
@@ -1244,7 +1289,7 @@ class EcoAucValueCrawler extends AxiosCrawler {
 
       // 이미 처리된 항목인지 확인
       if (existingIds.has(itemId)) {
-        return { item_id: itemId };
+        return { item_id: itemId, isExisting: true };
       }
 
       // 날짜 추출
