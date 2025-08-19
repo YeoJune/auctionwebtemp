@@ -1265,21 +1265,11 @@ class BrandAucValueCrawler extends AxiosCrawler {
       }
 
       const pageResults = await Promise.all(pagePromises);
-      let isEnd = false;
 
       pageResults.forEach((pageItems) => {
         if (pageItems && pageItems.length > 0) {
-          // 기존 데이터 발견 시 종료 플래그 확인
-          const hasExistingItem = pageItems.some((item) => item.isExisting);
-          if (hasExistingItem) {
-            isEnd = true;
-            // 기존 아이템 제외하고 추가
-            allCrawledItems.push(
-              ...pageItems.filter((item) => !item.isExisting)
-            );
-          } else {
-            allCrawledItems.push(...pageItems);
-          }
+          // 기존 아이템 제외하고 추가
+          allCrawledItems.push(...pageItems.filter((item) => !item.isExisting));
         }
       });
 
@@ -1305,10 +1295,6 @@ class BrandAucValueCrawler extends AxiosCrawler {
       const allFinalItems = [...finalProcessedItems, ...itemsWithoutImages];
 
       console.log(`Total value items processed: ${allFinalItems.length}`);
-
-      if (isEnd) {
-        console.log(`Early termination due to existing data`);
-      }
 
       const endTime = Date.now();
       const executionTime = endTime - startTime;
