@@ -1188,9 +1188,7 @@ window.URLStateManager = (function () {
               key === "selectedAucNums" ||
               key === "selectedFavoriteNumbers"
             ) {
-              arrayValue = arrayValue
-                .map((v) => parseInt(v))
-                .filter((v) => !isNaN(v));
+              arrayValue = arrayValue.map((v) => v).filter((v) => !isNaN(v));
             }
             updatedState[key] = arrayValue;
           } else {
