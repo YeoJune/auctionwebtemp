@@ -168,7 +168,7 @@ router.post("/register", async (req, res) => {
         email,
         company_name || null,
         normalizedPhone || null,
-        0, // appr 사용자는 비활성으로 저장 (normal 사이트용)
+        1, // appr 사용자는 비활성으로 저장 (normal 사이트용)
         new Date().toISOString().split("T")[0], // 오늘 날짜
         "appr", // appr 사용자로 설정
       ]
