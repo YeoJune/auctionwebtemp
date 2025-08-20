@@ -41,6 +41,9 @@ document.addEventListener("DOMContentLoaded", function () {
     .getElementById("uploadGuideBtn")
     .addEventListener("click", uploadGuide);
   document
+    .getElementById("uploadInquiryBtn")
+    .addEventListener("click", uploadInquiry);
+  document
     .getElementById("updateScheduleBtn")
     .addEventListener("click", submitCrawlSchedule);
   document
@@ -376,6 +379,41 @@ async function uploadGuide() {
     showAlert("가이드 페이지가 성공적으로 업로드되었습니다.", "success");
   } catch (error) {
     handleError(error, "가이드 페이지 업로드 중 오류가 발생했습니다.");
+  }
+}
+
+// 입점신청 페이지 업로드 함수 추가
+async function uploadInquiry() {
+  const inquiryFile = document.getElementById("inquiryFile").files[0];
+  if (!inquiryFile) {
+    showAlert("입점신청 페이지 파일을 선택해주세요.");
+    return;
+  }
+
+  // HTML 파일 검증
+  if (!inquiryFile.type.includes("html")) {
+    showAlert("HTML 파일만 업로드 가능합니다.");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("inquiry", inquiryFile);
+
+  try {
+    // 파일 업로드 API는 fetchAPI 함수 대신 기본 fetch 사용
+    const response = await fetch("/api/admin/upload-inquiry", {
+      method: "POST",
+      body: formData,
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error("입점신청 페이지 업로드에 실패했습니다.");
+    }
+
+    showAlert("입점신청 페이지가 성공적으로 업로드되었습니다.", "success");
+  } catch (error) {
+    handleError(error, "입점신청 페이지 업로드 중 오류가 발생했습니다.");
   }
 }
 

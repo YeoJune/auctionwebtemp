@@ -72,6 +72,42 @@ const uploadGuide = multer({
   },
 });
 
+// inquiry.html을 위한 multer 설정 추가
+const inquiryStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "pages/");
+  },
+  filename: function (req, file, cb) {
+    cb(null, "inquiry.html");
+  },
+});
+
+const uploadInquiry = multer({
+  storage: inquiryStorage,
+  fileFilter: (req, file, cb) => {
+    // HTML 파일만 허용
+    if (file.mimetype === "text/html") {
+      cb(null, true);
+    } else {
+      cb(new Error("HTML 파일만 업로드 가능합니다."), false);
+    }
+  },
+});
+
+// inquiry.html 업로드 라우트 추가
+router.post(
+  "/upload-inquiry",
+  isAdmin,
+  uploadInquiry.single("inquiry"),
+  (req, res) => {
+    if (req.file) {
+      res.json({ message: "inquiry.html이 성공적으로 업로드되었습니다." });
+    } else {
+      res.status(400).json({ message: "inquiry.html 업로드에 실패했습니다." });
+    }
+  }
+);
+
 // Middleware to check if user is admin
 const isAdmin = (req, res, next) => {
   if (req.session.user && req.session.user.id === "admin") {
