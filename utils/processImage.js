@@ -51,11 +51,13 @@ function initializeProxy() {
 }
 
 // 이미지 다운로드 및 저장 (프록시 로테이션 적용)
-async function downloadAndSaveImage(
-  url,
-  folderName = "products",
-  cropType = null
-) {
+async function downloadAndSaveImage(url, folderName, cropType = null) {
+  // folderName 검증 및 기본값 설정
+  if (!folderName || typeof folderName !== "string") {
+    console.warn(`Invalid folderName: ${folderName}, using default 'products'`);
+    folderName = "products";
+  }
+
   initializeProxy();
 
   const IMAGE_DIR = path.join(__dirname, "..", "public", "images", folderName);
@@ -172,7 +174,7 @@ async function downloadAndSaveImage(
 
     setTimeout(() => {
       processingPaused = false;
-      processQueue(folderName);
+      processQueue();
     }, currentDelay);
 
     // 딜레이 증가 (최대 1분)
@@ -200,8 +202,8 @@ function isQueuesEmpty() {
   return queues.every((queue) => queue.length === 0);
 }
 
-// 큐 프로세서
-async function processQueue(folderName) {
+// 큐 프로세서 (folderName 파라미터 제거)
+async function processQueue() {
   if (isProcessing || processingPaused || isQueuesEmpty()) return;
 
   isProcessing = true;
@@ -216,7 +218,7 @@ async function processQueue(folderName) {
 
     const limit = pLimit(CONCURRENT_DOWNLOADS);
     const tasks = batch.map((task) =>
-      limit(() => processQueueItem(task, folderName, priority))
+      limit(() => processQueueItem(task, priority))
     );
 
     await Promise.all(tasks);
@@ -226,17 +228,25 @@ async function processQueue(folderName) {
     isProcessing = false;
 
     if (!isQueuesEmpty() && !processingPaused) {
-      setTimeout(() => processQueue(folderName), 100);
+      setTimeout(() => processQueue(), 100);
     }
   }
 }
 
-// 개별 큐 항목 처리
-async function processQueueItem(task, folderName, priority) {
-  const { url, resolve, attempt = 0, cropType } = task;
+// 개별 큐 항목 처리 (folderName을 task에서 가져옴)
+async function processQueueItem(task, priority) {
+  const { url, resolve, attempt = 0, cropType, folderName } = task;
+
+  // folderName 검증
+  if (!folderName) {
+    console.error(`Missing folderName for task: ${url}`);
+    resolve(null);
+    return;
+  }
 
   // 최대 재시도 횟수에 도달했으면 종료
   if (attempt >= MAX_RETRIES) {
+    console.error(`Max retries reached for ${url} in folder ${folderName}`);
     resolve(null);
     return;
   }
@@ -251,30 +261,56 @@ async function processQueueItem(task, folderName, priority) {
   } else if (result === 404) {
     // 404 오류는 딱 한 번만 재시도
     if (attempt === 0) {
-      queues[priority].push({ url, resolve, attempt: 1, cropType });
+      queues[priority].push({ url, resolve, attempt: 1, cropType, folderName });
     } else {
+      console.warn(`404 error after retry for ${url} in folder ${folderName}`);
       resolve(null);
     }
   } else {
     // 그 외 오류는 계속 재시도
     if (attempt < MAX_RETRIES - 1) {
-      queues[priority].push({ url, resolve, attempt: attempt + 1, cropType });
+      queues[priority].push({
+        url,
+        resolve,
+        attempt: attempt + 1,
+        cropType,
+        folderName,
+      });
     } else {
+      console.error(
+        `Failed after ${MAX_RETRIES} retries for ${url} in folder ${folderName}`
+      );
       resolve(null);
     }
   }
 }
 
-// 큐에 항목 추가 (우선순위 지정)
+// 큐에 항목 추가 (folderName을 task에 포함)
 function enqueueImage(url, folderName, priority = 2, cropType = null) {
+  // 파라미터 검증
+  if (!url || typeof url !== "string") {
+    console.error(`Invalid url: ${url}`);
+    return Promise.resolve(null);
+  }
+
+  if (!folderName || typeof folderName !== "string") {
+    console.error(`Invalid folderName: ${folderName} for url: ${url}`);
+    return Promise.resolve(null);
+  }
+
   // 유효한 우선순위 범위로 조정 (1부터 PRIORITY_LEVELS까지)
   const validPriority = Math.max(1, Math.min(PRIORITY_LEVELS, priority)) - 1;
 
   return new Promise((resolve) => {
-    queues[validPriority].push({ url, resolve, cropType });
+    queues[validPriority].push({
+      url,
+      resolve,
+      cropType,
+      folderName, // ← folderName을 task에 포함
+    });
 
     if (!isProcessing && !processingPaused) {
-      processQueue(folderName);
+      processQueue(); // ← folderName 파라미터 제거
     }
   });
 }
@@ -282,10 +318,31 @@ function enqueueImage(url, folderName, priority = 2, cropType = null) {
 // 공개 인터페이스
 async function processImagesInChunks(
   items,
-  folderName = "products",
+  folderName,
   priority = 2,
   cropType = null
 ) {
+  // 파라미터 검증
+  if (!Array.isArray(items)) {
+    console.error(`Invalid items parameter: ${items}`);
+    return [];
+  }
+
+  if (!folderName || typeof folderName !== "string") {
+    console.error(
+      `Invalid folderName: ${folderName}, aborting image processing`
+    );
+    return items; // 이미지 처리 없이 원본 반환
+  }
+
+  console.log(
+    `Starting image processing for ${
+      items.length
+    } items in folder: ${folderName}, priority: ${priority}${
+      cropType ? `, crop: ${cropType}` : ""
+    }`
+  );
+
   const itemsWithImages = [];
   const itemsWithoutImages = [];
 
@@ -308,7 +365,14 @@ async function processImagesInChunks(
       tasks.push(
         enqueueImage(item.image, folderName, priority, cropType).then(
           (savedPath) => {
-            if (savedPath) item.image = savedPath;
+            if (savedPath) {
+              item.image = savedPath;
+              console.log(`✅ Image saved: ${savedPath}`);
+            } else {
+              console.warn(
+                `❌ Failed to save image: ${item.image} to ${folderName}`
+              );
+            }
           }
         )
       );
@@ -323,7 +387,14 @@ async function processImagesInChunks(
           tasks.push(
             enqueueImage(imgUrl, folderName, priority, cropType).then(
               (savedPath) => {
-                if (savedPath) savedImages.push(savedPath);
+                if (savedPath) {
+                  savedImages.push(savedPath);
+                  console.log(`✅ Additional image saved: ${savedPath}`);
+                } else {
+                  console.warn(
+                    `❌ Failed to save additional image: ${imgUrl} to ${folderName}`
+                  );
+                }
               }
             )
           );
@@ -344,19 +415,23 @@ async function processImagesInChunks(
   // 진행 상황 모니터링
   let completed = 0;
   const total = itemsWithImages.length;
-  const logInterval = setInterval(() => {
-    const queueSizes = queues
-      .map((q, i) => `P${i + 1}: ${q.length}`)
-      .join(", ");
 
-    console.log(
-      `다운로드 진행률: ${completed} / ${total} (${Math.round(
-        (completed / total) * 100
-      )}%), 큐 길이: [${queueSizes}], 폴더: ${folderName}, 우선순위: ${priority}${
-        cropType ? `, 크롭: ${cropType}` : ""
-      }`
-    );
-  }, 5000);
+  let logInterval;
+  if (total > 0) {
+    logInterval = setInterval(() => {
+      const queueSizes = queues
+        .map((q, i) => `P${i + 1}: ${q.length}`)
+        .join(", ");
+
+      console.log(
+        `📥 다운로드 진행률: ${completed} / ${total} (${Math.round(
+          (completed / total) * 100
+        )}%), 큐 길이: [${queueSizes}], 폴더: ${folderName}, 우선순위: ${priority}${
+          cropType ? `, 크롭: ${cropType}` : ""
+        }`
+      );
+    }, 5000);
+  }
 
   // 모든 항목 처리
   const results = await Promise.allSettled(
@@ -367,14 +442,16 @@ async function processImagesInChunks(
     })
   );
 
-  clearInterval(logInterval);
+  if (logInterval) {
+    clearInterval(logInterval);
+  }
 
   const processedItems = results
     .filter((r) => r.status === "fulfilled")
     .map((r) => r.value);
 
   console.log(
-    `이미지 처리 완료: ${
+    `✅ 이미지 처리 완료: ${
       processedItems.length
     } 항목 성공, 폴더: ${folderName}, 우선순위: ${priority}${
       cropType ? `, 크롭: ${cropType}` : ""
@@ -391,25 +468,55 @@ function resetQueue() {
   currentDelay = INITIAL_DELAY;
   consecutiveFailures = 0;
   processingPaused = false;
+  console.log("🔄 Queue reset completed");
 }
 
 // 큐 상태 조회 함수
 function getQueueStatus() {
-  return {
+  const status = {
     queues: queues.map((queue, index) => ({
       priority: index + 1,
       length: queue.length,
+      items: queue.slice(0, 3).map((task) => ({
+        url: task.url?.substring(0, 50) + "...",
+        folderName: task.folderName,
+        cropType: task.cropType,
+        attempt: task.attempt || 0,
+      })),
     })),
     isProcessing,
     currentDelay,
     consecutiveFailures,
     processingPaused,
   };
+
+  console.log("📊 Queue Status:", JSON.stringify(status, null, 2));
+  return status;
+}
+
+// 폴더별 큐 상태 조회
+function getQueueStatusByFolder() {
+  const folderStats = {};
+
+  queues.forEach((queue, priority) => {
+    queue.forEach((task) => {
+      const folder = task.folderName || "unknown";
+      if (!folderStats[folder]) {
+        folderStats[folder] = { total: 0, byPriority: {} };
+      }
+      folderStats[folder].total++;
+      folderStats[folder].byPriority[priority + 1] =
+        (folderStats[folder].byPriority[priority + 1] || 0) + 1;
+    });
+  });
+
+  return folderStats;
 }
 
 module.exports = {
   processImagesInChunks,
   resetQueue,
   getQueueStatus,
+  getQueueStatusByFolder,
   enqueueImage,
 };
