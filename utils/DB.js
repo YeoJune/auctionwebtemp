@@ -15,6 +15,7 @@ const pool = mysql.createPool({
   // 추가 안정성 설정
   idleTimeout: 300000, // 5분 후 유휴 연결 해제
   maxIdle: 40, // 최대 유휴 연결 수
+  dateStrings: true,
 });
 
 // 세션 스토어 전용 연결 풀 (별도 관리)
@@ -79,7 +80,9 @@ async function testConnection() {
     console.log("Successfully connected to the database");
 
     // 연결 상태 확인 쿼리들
-    const queries = [`SELECT * FROM crawled_items LIMIT 10`];
+    const queries = [
+      `DELETE FROM values_items WHERE scheduled_date LIKE '%-00 %'`,
+    ];
 
     // 각 쿼리 순차 실행
     for (const query of queries) {
