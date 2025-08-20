@@ -22,6 +22,15 @@ const {
 } = require("../utils/filterDB");
 const DBManager = require("../utils/DBManager");
 
+// Middleware to check if user is admin
+const isAdmin = (req, res, next) => {
+  if (req.session.user && req.session.user.id === "admin") {
+    next();
+  } else {
+    res.status(403).json({ message: "Access denied. Admin only." });
+  }
+};
+
 // Multer configuration for image uploads
 const logoStorage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -107,15 +116,6 @@ router.post(
     }
   }
 );
-
-// Middleware to check if user is admin
-const isAdmin = (req, res, next) => {
-  if (req.session.user && req.session.user.id === "admin") {
-    next();
-  } else {
-    res.status(403).json({ message: "Access denied. Admin only." });
-  }
-};
 
 // 클라이언트 측 공지사항 조회 API (접근 제한 없음)
 router.get("/public/notices", async (req, res) => {
