@@ -1275,7 +1275,7 @@ window.ProductListController = (function () {
       checkbox.id = `aucNum-${item.auc_num}`;
       checkbox.value = item.auc_num;
 
-      if (state.selectedAucNums.map(String).includes(item.auc_num.toString())) {
+      if (state.selectedAucNums.includes(item.auc_num.toString())) {
         checkbox.checked = true;
       }
 
