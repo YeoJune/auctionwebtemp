@@ -367,11 +367,11 @@ async function processImagesInChunks(
           (savedPath) => {
             if (savedPath) {
               item.image = savedPath;
-              console.log(`✅ Image saved: ${savedPath}`);
+              // console.log(`✅ Image saved: ${savedPath}`);
             } else {
-              console.warn(
-                `❌ Failed to save image: ${item.image} to ${folderName}`
-              );
+              // console.warn(
+              //   `❌ Failed to save image: ${item.image} to ${folderName}`
+              // );
             }
           }
         )
@@ -389,11 +389,11 @@ async function processImagesInChunks(
               (savedPath) => {
                 if (savedPath) {
                   savedImages.push(savedPath);
-                  console.log(`✅ Additional image saved: ${savedPath}`);
+                  // console.log(`✅ Additional image saved: ${savedPath}`);
                 } else {
-                  console.warn(
-                    `❌ Failed to save additional image: ${imgUrl} to ${folderName}`
-                  );
+                  // console.warn(
+                  //   `❌ Failed to save additional image: ${imgUrl} to ${folderName}`
+                  // );
                 }
               }
             )
