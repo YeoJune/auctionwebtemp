@@ -251,7 +251,7 @@
       <div class="container">
         <div class="header-inner">
           <div class="header-left">
-            <a href="/appr" class="logo">
+            <a href="/" class="logo">
               <img
                 src="https://i.ibb.co/FqJhVh0T/image.png"
                 alt="CAS 명품감정시스템"
@@ -259,13 +259,14 @@
             </a>
 
             <nav class="nav-desktop">
-              <a href="/appr" class="btn-modern">홈</a>
-              <a href="/appr/request" class="btn-modern">감정신청</a>
-              <a href="/appr/result" class="btn-modern">감정번호조회</a>
-              <a href="/appr/mypage" class="btn-modern">마이페이지</a>
-              <a href="/appr/repair" class="btn-modern">까사복원시스템</a>
-              <a href="/appr/authenticity" class="btn-modern">정가품구별법</a>
-              <a href="/appr/signin" class="btn-modern">로그인</a>
+              <a href="/" class="btn-modern">홈</a>
+              <a href="/request" class="btn-modern">감정신청</a>
+              <a href="/result" class="btn-modern">감정번호조회</a>
+              <a href="/mypage" class="btn-modern">마이페이지</a>
+              <a href="/repair" class="btn-modern">까사복원시스템</a>
+              <a href="/authenticity" class="btn-modern">정가품구별법</a>
+              <a href="/signin" class="btn-modern">로그인</a>
+              <a href="/signup" class="btn-modern">회원가입</a>
             </nav>
           </div>
 
@@ -293,7 +294,7 @@
         z-index: 999;
       ">
       <a
-        href="/appr"
+        href="/"
         style="
           display: block;
           padding: 15px 20px;
@@ -304,7 +305,7 @@
         >홈</a
       >
       <a
-        href="/appr/request"
+        href="/request"
         style="
           display: block;
           padding: 15px 20px;
@@ -315,7 +316,7 @@
         >감정신청</a
       >
       <a
-        href="/appr/result"
+        href="/result"
         style="
           display: block;
           padding: 15px 20px;
@@ -326,7 +327,7 @@
         >감정번호조회</a
       >
       <a
-        href="/appr/mypage"
+        href="/mypage"
         style="
           display: block;
           padding: 15px 20px;
@@ -337,7 +338,7 @@
         >마이페이지</a
       >
       <a
-        href="/appr/repair"
+        href="/repair"
         style="
           display: block;
           padding: 15px 20px;
@@ -348,7 +349,7 @@
         >까사복원시스템</a
       >
       <a
-        href="/appr/authenticity"
+        href="/authenticity"
         style="
           display: block;
           padding: 15px 20px;
@@ -359,7 +360,7 @@
         >정가품구별법</a
       >
       <a
-        href="/appr/signin"
+        href="/signin"
         style="
           display: block;
           padding: 15px 20px;
@@ -367,6 +368,16 @@
           text-decoration: none;
         "
         >로그인</a
+      >
+      <a
+        href="/signup"
+        style="
+          display: block;
+          padding: 15px 20px;
+          color: #4a5568;
+          text-decoration: none;
+        "
+        >회원가입</a
       >
     </div>
 
@@ -473,7 +484,7 @@
                     </p>
                     <div style="display: flex; gap: 15px; flex-wrap: wrap">
                       <a
-                        href="/appr/request"
+                        href="/request"
                         class="btn-modern"
                         style="
                           padding: 15px 30px;
@@ -487,7 +498,7 @@
                         감정 신청하기
                       </a>
                       <a
-                        href="/appr/result"
+                        href="/result"
                         class="btn-modern"
                         style="
                           padding: 15px 30px;
@@ -776,37 +787,29 @@
             </h3>
             <ul style="list-style: none; padding: 0; margin: 0">
               <li style="margin-bottom: 10px">
-                <a
-                  href="/appr/request"
-                  style="color: #cbd5e0; text-decoration: none"
+                <a href="/request" style="color: #cbd5e0; text-decoration: none"
                   >감정 신청</a
                 >
               </li>
               <li style="margin-bottom: 10px">
-                <a
-                  href="/appr/result"
-                  style="color: #cbd5e0; text-decoration: none"
+                <a href="/result" style="color: #cbd5e0; text-decoration: none"
                   >감정서 조회</a
                 >
               </li>
               <li style="margin-bottom: 10px">
-                <a
-                  href="/appr/repair"
-                  style="color: #cbd5e0; text-decoration: none"
+                <a href="/repair" style="color: #cbd5e0; text-decoration: none"
                   >까사복원시스템</a
                 >
               </li>
               <li style="margin-bottom: 10px">
                 <a
-                  href="/appr/authenticity"
+                  href="/authenticity"
                   style="color: #cbd5e0; text-decoration: none"
                   >정가품구별법</a
                 >
               </li>
               <li>
-                <a
-                  href="/appr/mypage"
-                  style="color: #cbd5e0; text-decoration: none"
+                <a href="/mypage" style="color: #cbd5e0; text-decoration: none"
                   >마이페이지</a
                 >
               </li>
@@ -1322,7 +1325,7 @@
                     const certificateNumber =
                       this.getAttribute("data-certificate");
                     if (certificateNumber) {
-                      window.location.href = `/appr/result/${certificateNumber}`;
+                      window.location.href = `/result/${certificateNumber}`;
                     }
                   });
                 });
@@ -1372,7 +1375,7 @@
               link.href,
               window.location.origin
             ).searchParams.get("tab");
-            if (tabName) link.href = `/appr/request?tab=${tabName}`;
+            if (tabName) link.href = `/request?tab=${tabName}`;
           });
 
         // 상세 페이지 이동 핸들러 추가 (감정 결과 클릭시)
@@ -1380,7 +1383,7 @@
           item.addEventListener("click", function () {
             const appraisalId = this.getAttribute("data-id");
             if (appraisalId) {
-              window.location.href = `/appr/quick-result/${appraisalId}`;
+              window.location.href = `/quick-result/${appraisalId}`;
             }
           });
         });
@@ -1394,7 +1397,7 @@
             const certificateNumberInput =
               document.getElementById("certificate-number"); // 입력 필드 ID
             if (certificateNumberInput && certificateNumberInput.value.trim()) {
-              window.location.href = `/appr/result/${encodeURIComponent(
+              window.location.href = `/result/${encodeURIComponent(
                 certificateNumberInput.value.trim()
               )}`;
             } else {
@@ -1403,6 +1406,7 @@
           });
         }
       });
+
       // 로그인 상태에 따라 로그인/로그아웃 버튼을 변경하는 함수
       function updateAuthButton() {
         // 서버에 로그인 상태 확인 API 호출
@@ -1414,14 +1418,20 @@
           .then((data) => {
             // 로그인 버튼 요소들 가져오기 (데스크톱 및 모바일)
             const desktopAuthButton = document.querySelector(
-              '.nav-desktop a[href="/appr/signin"]'
+              '.nav-desktop a[href="/signin"]'
             );
             const mobileAuthButton = document.querySelector(
-              '#mobile-menu a[href="/appr/signin"]'
+              '#mobile-menu a[href="/signin"]'
+            );
+            const desktopSignupButton = document.querySelector(
+              '.nav-desktop a[href="/signup"]'
+            );
+            const mobileSignupButton = document.querySelector(
+              '#mobile-menu a[href="/signup"]'
             );
 
             if (data.user && data.user.id) {
-              // 사용자가 로그인된 경우, 로그인 버튼을 로그아웃 버튼으로 변경
+              // 사용자가 로그인된 경우, 로그인 버튼을 로그아웃 버튼으로 변경 후 회원가입 버튼 숨김
               if (desktopAuthButton) {
                 desktopAuthButton.textContent = "로그아웃";
                 desktopAuthButton.setAttribute("href", "#");
@@ -1432,6 +1442,14 @@
                 mobileAuthButton.textContent = "로그아웃";
                 mobileAuthButton.setAttribute("href", "#");
                 mobileAuthButton.addEventListener("click", handleLogout);
+              }
+
+              if (desktopSignupButton) {
+                desktopSignupButton.style.display = "none"; // 데스크톱 회원가입 버튼 숨김
+              }
+
+              if (mobileSignupButton) {
+                mobileSignupButton.style.display = "none"; // 모바일 회원가입 버튼 숨김
               }
             }
           })

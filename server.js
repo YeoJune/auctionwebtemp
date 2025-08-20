@@ -310,6 +310,13 @@ app.get("/appr/signin", (req, res) => {
     res.sendFile(path.join(apprPagesPath, "signin.html"));
   }
 });
+app.get("/appr/signup", (req, res) => {
+  if (req.session.user) {
+    res.redirect("/appr");
+  } else {
+    res.sendFile(path.join(apprPagesPath, "signup.html"));
+  }
+});
 app.get("/appr/request", (req, res) => {
   res.sendFile(path.join(apprPagesPath, "request.html"));
 });

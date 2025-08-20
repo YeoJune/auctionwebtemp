@@ -10,11 +10,17 @@ function hashPassword(password) {
   return crypto.createHash("sha256").update(password).digest("hex");
 }
 
-// 인증 미들웨어 - 관리자만 접근 가능하도록
+// 인증 미들웨어 - normal 권한 사용자만 접근 가능하도록
 const requireAuth = (req, res, next) => {
   if (!req.session.user) {
     return res.status(401).json({ message: "로그인이 필요합니다." });
   }
+
+  // normal role 체크 추가
+  if (req.session.user.role !== "normal") {
+    return res.status(403).json({ message: "접근 권한이 없습니다." });
+  }
+
   next();
 };
 
@@ -24,11 +30,11 @@ router.get("/current", requireAuth, async (req, res) => {
     conn = await pool.getConnection();
     const userId = req.session.user.id; // 세션에서 사용자 ID 가져오기
 
-    // 사용자 정보 조회
+    // 사용자 정보 조회 - normal 사용자만
     const [users] = await conn.query(
       `SELECT id, registration_date, email, business_number, company_name, 
        phone, address, is_active, created_at, commission_rate 
-       FROM users WHERE id = ?`,
+       FROM users WHERE id = ? AND role = 'normal'`,
       [userId]
     );
 
@@ -47,17 +53,17 @@ router.get("/current", requireAuth, async (req, res) => {
   }
 });
 
-// 회원 목록 조회
+// 회원 목록 조회 - normal 사용자만
 router.get("/", requireAuth, async (req, res) => {
   let conn;
   try {
     conn = await pool.getConnection();
 
-    // 회원 목록 조회 - 수수료율 필드 추가
+    // 회원 목록 조회 - normal 사용자만
     const [users] = await conn.query(
       `SELECT id, registration_date, email, business_number, company_name, 
        phone, address, created_at, is_active, commission_rate 
-       FROM users ORDER BY created_at DESC`
+       FROM users WHERE role = 'normal' ORDER BY created_at DESC`
     );
 
     res.json(users);
@@ -71,18 +77,18 @@ router.get("/", requireAuth, async (req, res) => {
   }
 });
 
-// 특정 회원 조회
+// 특정 회원 조회 - normal 사용자만
 router.get("/:id", requireAuth, async (req, res) => {
   let conn;
   try {
     conn = await pool.getConnection();
     const id = req.params.id;
 
-    // 회원 정보 조회 - 수수료율 필드 추가
+    // 회원 정보 조회 - normal 사용자만
     const [users] = await conn.query(
       `SELECT id, registration_date, email, business_number, company_name, 
        phone, address, is_active, created_at, commission_rate 
-       FROM users WHERE id = ?`,
+       FROM users WHERE id = ? AND role = 'normal'`,
       [id]
     );
 
@@ -101,7 +107,7 @@ router.get("/:id", requireAuth, async (req, res) => {
   }
 });
 
-// 회원 추가
+// 회원 추가 - normal 사용자로 등록
 router.post("/", requireAuth, async (req, res) => {
   let conn;
   try {
@@ -116,7 +122,7 @@ router.post("/", requireAuth, async (req, res) => {
       company_name,
       phone,
       address,
-      commission_rate, // 수수료율 필드 추가
+      commission_rate,
     } = req.body;
 
     // 필수 필드 검증
@@ -151,7 +157,7 @@ router.post("/", requireAuth, async (req, res) => {
     // 비밀번호 해싱
     const hashedPassword = hashPassword(password);
 
-    // 회원 추가 - 수수료율 필드 추가
+    // 회원 추가 - normal role로 설정
     await conn.query(
       `INSERT INTO users (
         id, 
@@ -163,8 +169,9 @@ router.post("/", requireAuth, async (req, res) => {
         phone,
         address,
         is_active,
-        commission_rate
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        commission_rate,
+        role
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         formattedDate,
@@ -175,7 +182,8 @@ router.post("/", requireAuth, async (req, res) => {
         normalizedPhone || null,
         address || null,
         is_active === false ? 0 : 1,
-        commission_rate || null, // 수수료율 기본값 null
+        commission_rate || null,
+        "normal", // normal role로 설정
       ]
     );
 
@@ -188,7 +196,7 @@ router.post("/", requireAuth, async (req, res) => {
   }
 });
 
-// 회원 수정
+// 회원 수정 - normal 사용자만
 router.put("/:id", requireAuth, async (req, res) => {
   let conn;
   try {
@@ -203,13 +211,14 @@ router.put("/:id", requireAuth, async (req, res) => {
       company_name,
       phone,
       address,
-      commission_rate, // 수수료율 필드 추가
+      commission_rate,
     } = req.body;
 
-    // 회원 존재 확인
-    const [existing] = await conn.query("SELECT id FROM users WHERE id = ?", [
-      id,
-    ]);
+    // 회원 존재 확인 - normal 사용자만
+    const [existing] = await conn.query(
+      "SELECT id FROM users WHERE id = ? AND role = 'normal'",
+      [id]
+    );
     if (existing.length === 0) {
       return res.status(404).json({ message: "회원을 찾을 수 없습니다." });
     }
@@ -272,7 +281,6 @@ router.put("/:id", requireAuth, async (req, res) => {
       updateValues.push(is_active ? 1 : 0);
     }
 
-    // 수수료율 필드 업데이트 처리
     if (commission_rate !== undefined) {
       updateFields.push("commission_rate = ?");
       updateValues.push(commission_rate);
@@ -282,9 +290,11 @@ router.put("/:id", requireAuth, async (req, res) => {
       return res.status(400).json({ message: "수정할 정보가 없습니다." });
     }
 
-    // 회원 정보 업데이트
+    // 회원 정보 업데이트 - normal 사용자만
     await conn.query(
-      `UPDATE users SET ${updateFields.join(", ")} WHERE id = ?`,
+      `UPDATE users SET ${updateFields.join(
+        ", "
+      )} WHERE id = ? AND role = 'normal'`,
       [...updateValues, id]
     );
 
@@ -297,23 +307,26 @@ router.put("/:id", requireAuth, async (req, res) => {
   }
 });
 
-// 회원 삭제
+// 회원 삭제 - normal 사용자만
 router.delete("/:id", requireAuth, async (req, res) => {
   let conn;
   try {
     conn = await pool.getConnection();
     const id = req.params.id;
 
-    // 회원 존재 확인
-    const [existing] = await conn.query("SELECT id FROM users WHERE id = ?", [
-      id,
-    ]);
+    // 회원 존재 확인 - normal 사용자만
+    const [existing] = await conn.query(
+      "SELECT id FROM users WHERE id = ? AND role = 'normal'",
+      [id]
+    );
     if (existing.length === 0) {
       return res.status(404).json({ message: "회원을 찾을 수 없습니다." });
     }
 
-    // 회원 삭제
-    await conn.query("DELETE FROM users WHERE id = ?", [id]);
+    // 회원 삭제 - normal 사용자만
+    await conn.query("DELETE FROM users WHERE id = ? AND role = 'normal'", [
+      id,
+    ]);
 
     res.json({ message: "회원이 삭제되었습니다." });
   } catch (error) {

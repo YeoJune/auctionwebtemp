@@ -1,20 +1,18 @@
-<!-- pages/appr/signin.html -->
+<!-- pages/appr/signup.html -->
 <!DOCTYPE html>
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>로그인 - CAS 명품감정시스템</title>
+    <title>회원가입 - CAS 명품감정시스템</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Montserrat:wght@500;600;700&display=swap"
       rel="stylesheet" />
-    <!-- 로그인 페이지 전용 스타일 -->
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
     <style>
-      /* 기존 appr 페이지들과 유사한 기본 스타일 */
-
+      /* 기본 스타일 (signin.html과 동일) */
       * {
         margin: 0;
         padding: 0;
@@ -34,8 +32,8 @@
         margin: 0 auto;
         padding: 0 20px;
       }
-      /* 헤더 & 푸터 공통 스타일 (다른 appr 페이지에서 가져옴) */
 
+      /* 헤더 스타일 */
       header {
         background-color: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(10px);
@@ -70,12 +68,6 @@
         align-items: center;
       }
 
-      .logo .cas-highlight {
-        background: linear-gradient(135deg, #1a2a3a 0%, #2d4263 100%);
-        background-clip: text;
-        -webkit-text-fill-color: transparent;
-      }
-
       .nav-desktop {
         display: none;
         align-items: center;
@@ -83,7 +75,6 @@
         flex-wrap: nowrap;
         justify-content: flex-end;
       }
-      /* 모바일 우선, 데스크탑에서 JS로 flex 처리 */
 
       .nav-desktop a {
         color: #333;
@@ -113,7 +104,6 @@
         display: none;
         position: fixed;
         top: 70px;
-        /* 헤더 높이에 따라 조정 */
         left: 0;
         right: 0;
         background-color: #fff;
@@ -133,10 +123,139 @@
         border-bottom: none;
       }
 
+      /* 회원가입 폼 스타일 */
+      .signup-container {
+        max-width: 500px;
+        margin: 60px auto;
+        padding: 40px;
+        background-color: #fff;
+        border-radius: 12px;
+        box-shadow: 0 5px 25px rgba(0, 0, 0, 0.1);
+      }
+
+      .signup-container h2 {
+        text-align: center;
+        font-size: 2rem;
+        color: #1a2a3a;
+        margin-bottom: 30px;
+      }
+
+      .success-message {
+        background-color: #d1fae5;
+        color: #065f46;
+        border: 1px solid #a7f3d0;
+        padding: 12px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+        font-size: 0.9rem;
+        text-align: center;
+      }
+
+      .error-message {
+        background-color: #fee2e2;
+        color: #b91c1c;
+        border: 1px solid #fca5a5;
+        padding: 12px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+        font-size: 0.9rem;
+        text-align: center;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      .form-group label {
+        display: block;
+        font-weight: 500;
+        color: #334155;
+        margin-bottom: 8px;
+      }
+
+      .form-group .required {
+        color: #dc2626;
+      }
+
+      .form-group input[type="text"],
+      .form-group input[type="email"],
+      .form-group input[type="password"] {
+        width: 100%;
+        padding: 14px;
+        border: 1px solid #cbd5e0;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: border-color 0.3s, box-shadow 0.3s;
+      }
+
+      .form-group input:focus {
+        outline: none;
+        border-color: #1a2a3a;
+        box-shadow: 0 0 0 3px rgba(26, 42, 58, 0.1);
+      }
+
+      .form-help {
+        font-size: 0.85rem;
+        color: #6b7280;
+        margin-top: 4px;
+      }
+
+      .btn-primary {
+        width: 100%;
+        background-color: #1a2a3a;
+        color: #fff;
+        padding: 14px;
+        border: none;
+        border-radius: 8px;
+        font-size: 1.05rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+
+      .btn-primary:hover:not(:disabled) {
+        background-color: #2d4263;
+      }
+
+      .btn-primary:disabled {
+        background-color: #9ca3af;
+        cursor: not-allowed;
+      }
+
+      .text-center {
+        text-align: center;
+      }
+
+      .signin-link {
+        color: #1a2a3a;
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .signin-link:hover {
+        text-decoration: underline;
+      }
+
+      .kakao-link {
+        color: #334155;
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .kakao-link i {
+        color: #ffeb00;
+        background-color: #3c1e1e;
+        padding: 3px 4px;
+        border-radius: 3px;
+        margin-right: 5px;
+      }
+
+      /* 푸터 스타일 */
       footer {
         background-color: #1a2a3a;
         color: #fff;
         padding: 40px 0 20px;
+        margin-top: 60px;
       }
 
       footer .grid-3 {
@@ -173,132 +292,8 @@
         color: #a0aec0;
         font-size: 0.875rem;
       }
-      /* 로그인 폼 전용 스타일 */
 
-      .signin-container {
-        max-width: 450px;
-        /* 폼 너비 조정 */
-        margin: 80px auto;
-        /* 상하 여백 추가 */
-        padding: 40px;
-        background-color: #fff;
-        border-radius: 12px;
-        box-shadow: 0 5px 25px rgba(0, 0, 0, 0.1);
-      }
-
-      .signin-container h2 {
-        text-align: center;
-        font-size: 2rem;
-        /* 제목 크기 조정 */
-        color: #1a2a3a;
-        margin-bottom: 30px;
-      }
-
-      .error-message {
-        background-color: #fee2e2;
-        color: #b91c1c;
-        border: 1px solid #fca5a5;
-        padding: 12px;
-        border-radius: 6px;
-        margin-bottom: 20px;
-        font-size: 0.9rem;
-        text-align: center;
-      }
-
-      .form-group {
-        margin-bottom: 20px;
-      }
-
-      .form-group label {
-        display: block;
-        font-weight: 500;
-        color: #334155;
-        margin-bottom: 8px;
-      }
-
-      .form-group input[type="text"],
-      .form-group input[type="password"] {
-        width: 100%;
-        padding: 14px;
-        border: 1px solid #cbd5e0;
-        border-radius: 8px;
-        font-size: 1rem;
-        transition: border-color 0.3s, box-shadow 0.3s;
-      }
-
-      .form-group input[type="text"]:focus,
-      .form-group input[type="password"]:focus {
-        outline: none;
-        border-color: #1a2a3a;
-        box-shadow: 0 0 0 3px rgba(26, 42, 58, 0.1);
-      }
-
-      .btn-modern {
-        padding: 14px 28px;
-        border-radius: 8px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
-        text-decoration: none;
-      }
-
-      .btn-modern:before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 0;
-        height: 100%;
-        background: rgba(255, 255, 255, 0.1);
-        transition: all 0.3s ease;
-        z-index: -1;
-      }
-
-      .btn-modern:hover:before {
-        width: 100%;
-      }
-
-      .btn-primary {
-        /* 로그인 버튼 스타일 */
-        width: 100%;
-        background-color: #1a2a3a;
-        color: #fff;
-        padding: 14px;
-        border: none;
-        border-radius: 8px;
-        font-size: 1.05rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background-color 0.3s;
-      }
-
-      .btn-primary:hover {
-        background-color: #2d4263;
-      }
-
-      .text-center {
-        text-align: center;
-      }
-
-      .kakao-link {
-        color: #334155;
-        /* 카카오톡 링크 색상 */
-        text-decoration: none;
-        font-weight: 500;
-      }
-
-      .kakao-link i {
-        color: #ffeb00;
-        /* 카카오 아이콘 색상 */
-        background-color: #3c1e1e;
-        /* 카카오 아이콘 배경 (선택적) */
-        padding: 3px 4px;
-        border-radius: 3px;
-        margin-right: 5px;
-      }
-      /* 반응형 그리드 설정 (푸터용) */
-
+      /* 반응형 */
       @media (min-width: 768px) {
         .nav-desktop {
           display: flex !important;
@@ -359,147 +354,101 @@
       </div>
     </header>
 
-    <div
-      class="mobile-menu"
-      id="mobile-menu"
-      style="
-        display: none;
-        position: fixed;
-        top: 70px;
-        left: 0;
-        right: 0;
-        background-color: #fff;
-        box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
-        z-index: 999;
-      ">
-      <a
-        href="/"
-        style="
-          display: block;
-          padding: 15px 20px;
-          color: #4a5568;
-          text-decoration: none;
-          border-bottom: 1px solid #e2e8f0;
-        "
-        >홈</a
-      >
-      <a
-        href="/request"
-        style="
-          display: block;
-          padding: 15px 20px;
-          color: #4a5568;
-          text-decoration: none;
-          border-bottom: 1px solid #e2e8f0;
-        "
-        >감정신청</a
-      >
-      <a
-        href="/result"
-        style="
-          display: block;
-          padding: 15px 20px;
-          color: #4a5568;
-          text-decoration: none;
-          border-bottom: 1px solid #e2e8f0;
-        "
-        >감정번호조회</a
-      >
-      <a
-        href="/mypage"
-        style="
-          display: block;
-          padding: 15px 20px;
-          color: #4a5568;
-          text-decoration: none;
-          border-bottom: 1px solid #e2e8f0;
-        "
-        >마이페이지</a
-      >
-      <a
-        href="/repair"
-        style="
-          display: block;
-          padding: 15px 20px;
-          color: #4a5568;
-          text-decoration: none;
-          border-bottom: 1px solid #e2e8f0;
-        "
-        >까사복원시스템</a
-      >
-      <a
-        href="/authenticity"
-        style="
-          display: block;
-          padding: 15px 20px;
-          color: #4a5568;
-          text-decoration: none;
-          border-bottom: 1px solid #e2e8f0;
-        "
-        >정가품구별법</a
-      >
-      <a
-        href="/signin"
-        style="
-          display: block;
-          padding: 15px 20px;
-          color: #4a5568;
-          text-decoration: none;
-        "
-        >로그인</a
-      >
-      <a
-        href="/signup"
-        style="
-          display: block;
-          padding: 15px 20px;
-          color: #4a5568;
-          text-decoration: none;
-        "
-        >회원가입</a
-      >
+    <div class="mobile-menu" id="mobile-menu" style="display: none">
+      <a href="/">홈</a>
+      <a href="/request">감정신청</a>
+      <a href="/result">감정번호조회</a>
+      <a href="/mypage">마이페이지</a>
+      <a href="/repair">까사복원시스템</a>
+      <a href="/authenticity">정가품구별법</a>
+      <a href="/signin">로그인</a>
+      <a href="/signup">회원가입</a>
     </div>
 
-    <!-- 메인 콘텐츠: 로그인 폼 -->
+    <!-- 메인 콘텐츠: 회원가입 폼 -->
     <main>
-      <div class="signin-container">
-        <h2>로그인</h2>
+      <div class="signup-container">
+        <h2>회원가입</h2>
+
+        <div
+          id="success-message"
+          class="success-message"
+          style="display: none"></div>
+
         <div
           id="error-message"
           class="error-message"
           style="display: none"></div>
 
-        <form id="signin-form">
+        <form id="signup-form">
           <div class="form-group">
-            <label for="id">아이디</label>
+            <label for="id">아이디 <span class="required">*</span></label>
             <input
               type="text"
               id="id"
               name="id"
               autocomplete="username"
               required />
+            <div class="form-help">
+              영문, 숫자만 사용하여 3-20자로 입력해주세요
+            </div>
           </div>
+
           <div class="form-group">
-            <label for="password">비밀번호</label>
+            <label for="password"
+              >비밀번호 <span class="required">*</span></label
+            >
             <input
               type="password"
               id="password"
               name="password"
-              autocomplete="current-password"
+              autocomplete="new-password"
+              required />
+            <div class="form-help">최소 4자 이상 입력해주세요</div>
+          </div>
+
+          <div class="form-group">
+            <label for="email">이메일 <span class="required">*</span></label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              autocomplete="email"
               required />
           </div>
-          <button type="submit" class="btn-primary">로그인</button>
+
+          <div class="form-group">
+            <label for="company_name">회사명</label>
+            <input
+              type="text"
+              id="company_name"
+              name="company_name"
+              autocomplete="organization" />
+            <div class="form-help">선택사항입니다</div>
+          </div>
+
+          <div class="form-group">
+            <label for="phone">전화번호</label>
+            <input
+              type="text"
+              id="phone"
+              name="phone"
+              autocomplete="tel"
+              placeholder="010-1234-5678" />
+            <div class="form-help">선택사항입니다</div>
+          </div>
+
+          <button type="submit" class="btn-primary" id="signup-btn">
+            회원가입
+          </button>
         </form>
 
         <p class="text-center" style="margin-top: 25px; font-size: 0.9rem">
-          계정이 없으신가요?
-          <a
-            href="/signup"
-            style="color: #1a2a3a; text-decoration: none; font-weight: 500"
-            >회원가입</a
-          >
+          이미 계정이 있으신가요?
+          <a href="/signin" class="signin-link">로그인</a>
         </p>
-        <p class="text-center" style="margin-top: 25px; font-size: 0.9rem">
+
+        <p class="text-center" style="margin-top: 15px; font-size: 0.9rem">
           계정 관련 문의:
           <a
             href="https://pf.kakao.com/_xcCxoqn/chat"
@@ -580,26 +529,43 @@
         handleResponsiveLayout();
         window.addEventListener("resize", handleResponsiveLayout);
 
-        const signinForm = document.getElementById("signin-form");
+        const signupForm = document.getElementById("signup-form");
         const errorMessageDiv = document.getElementById("error-message");
+        const successMessageDiv = document.getElementById("success-message");
 
-        if (signinForm) {
-          signinForm.addEventListener("submit", async (e) => {
+        if (signupForm) {
+          signupForm.addEventListener("submit", async (e) => {
             e.preventDefault();
-            const id = document.getElementById("id").value;
-            const password = document.getElementById("password").value;
 
+            const id = document.getElementById("id").value.trim();
+            const password = document.getElementById("password").value;
+            const email = document.getElementById("email").value.trim();
+            const company_name = document
+              .getElementById("company_name")
+              .value.trim();
+            const phone = document.getElementById("phone").value.trim();
+
+            // 메시지 초기화
             errorMessageDiv.textContent = "";
             errorMessageDiv.style.display = "none";
+            successMessageDiv.textContent = "";
+            successMessageDiv.style.display = "none";
 
-            const submitButton = signinForm.querySelector(
+            // 기본 검증
+            if (!id || !password || !email) {
+              errorMessageDiv.textContent = "필수 항목을 모두 입력해주세요.";
+              errorMessageDiv.style.display = "block";
+              return;
+            }
+
+            const submitButton = signupForm.querySelector(
               'button[type="submit"]'
             );
             submitButton.disabled = true;
-            submitButton.textContent = "로그인 중...";
+            submitButton.textContent = "가입 중...";
 
             try {
-              const response = await fetch("/api/auth/login", {
+              const response = await fetch("/api/auth/register", {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
@@ -607,28 +573,37 @@
                 body: JSON.stringify({
                   id,
                   password,
+                  email,
+                  company_name: company_name || null,
+                  phone: phone || null,
                 }),
                 credentials: "include",
               });
 
               const data = await response.json();
 
-              if (response.ok && data.message === "로그인 성공") {
-                window.location.href = "/"; // CAS 홈으로 리다이렉트
+              if (response.ok && data.success) {
+                successMessageDiv.textContent = data.message;
+                successMessageDiv.style.display = "block";
+                signupForm.reset();
+
+                // 3초 후 로그인 페이지로 이동
+                setTimeout(() => {
+                  window.location.href = "/signin";
+                }, 3000);
               } else {
                 errorMessageDiv.textContent =
-                  data.message ||
-                  "로그인에 실패했습니다. 아이디 또는 비밀번호를 확인해주세요.";
+                  data.message || "회원가입에 실패했습니다.";
                 errorMessageDiv.style.display = "block";
               }
             } catch (error) {
-              console.error("로그인 요청 중 오류 발생:", error);
+              console.error("회원가입 요청 중 오류 발생:", error);
               errorMessageDiv.textContent =
-                "로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+                "회원가입 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
               errorMessageDiv.style.display = "block";
             } finally {
               submitButton.disabled = false;
-              submitButton.textContent = "로그인";
+              submitButton.textContent = "회원가입";
             }
           });
         }
