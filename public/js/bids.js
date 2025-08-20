@@ -172,7 +172,7 @@ window.BidManager = (function () {
     const startingPrice = parseFloat(item.starting_price) || 0;
 
     let html = `<div class="real-time-price">
-      <p>시작 금액: ${cleanNumberFormat(startingPrice)} ¥</p>
+      <p>실시간: ${cleanNumberFormat(startingPrice)} ¥</p>
       <div class="price-details-container">
         관부가세 포함 ${cleanNumberFormat(
           calculateTotalPrice(startingPrice, aucNum, category)
