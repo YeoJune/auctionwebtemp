@@ -1161,11 +1161,14 @@ router.post("/:id/request-appraisal", async (req, res) => {
       `SELECT d.*, i.brand, i.title, i.category, i.image, i.additional_images
        FROM direct_bids d 
        JOIN crawled_items i ON d.item_id = i.item_id 
-       WHERE d.id = ? AND d.user_id = ? AND d.status = 'completed' AND d.winning_price > 0`,
-      [bidId, userId]
+       WHERE d.id = ? AND d.status = 'completed' AND d.winning_price > 0`,
+      [bidId]
     );
 
-    if (bids.length === 0) {
+    if (
+      bids.length === 0 ||
+      !(bids[0].user_id == userId || userId == "admin")
+    ) {
       await connection.rollback();
       return res.status(404).json({
         message: "낙찰된 상품을 찾을 수 없거나 접근 권한이 없습니다.",
