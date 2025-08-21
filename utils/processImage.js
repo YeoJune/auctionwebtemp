@@ -12,8 +12,8 @@ let pLimit;
 })();
 
 // 설정
-const MAX_WIDTH = 600;
-const MAX_HEIGHT = 600;
+const MAX_WIDTH = 800;
+const MAX_HEIGHT = 800;
 const CONCURRENT_DOWNLOADS = 20;
 const MAX_RETRIES = 5;
 const INITIAL_DELAY = 500;
@@ -24,7 +24,7 @@ const PRIORITY_LEVELS = 3; // 우선순위 레벨 수 (1: 높음, 2: 중간, 3: 
 // - cropTop/cropBottom: 위/아래에서 자를 픽셀 수
 // - cropLeft/cropRight: 좌/우에서 자를 픽셀 수
 const CROP_SETTINGS = {
-  brand: { cropTop: 40, cropBottom: 40, cropLeft: 0, cropRight: 0 },
+  brand: { cropTop: 12, cropBottom: 12, cropLeft: 0, cropRight: 0 },
 };
 
 // 우선순위별 이미지 처리 큐 및 상태
