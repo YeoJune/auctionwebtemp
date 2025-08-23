@@ -79,9 +79,7 @@ async function testConnection() {
     console.log("Successfully connected to the database");
 
     // 연결 상태 확인 쿼리들
-    const queries = [
-      `SELECT * FROM crawled_items WHERE image IS NULL AND auc_num = 2`,
-    ];
+    const queries = [`SELECT * FROM crawled_items LIMIT 10`];
 
     // 각 쿼리 순차 실행
     for (const query of queries) {
