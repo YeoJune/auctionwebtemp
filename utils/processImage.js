@@ -14,9 +14,10 @@ let pLimit;
 // 설정
 const MAX_WIDTH = 800;
 const MAX_HEIGHT = 800;
-const CONCURRENT_DOWNLOADS = 20;
+const CONCURRENT_DOWNLOADS = 10;
 const MAX_RETRIES = 5;
-const INITIAL_DELAY = 500;
+const INITIAL_DELAY = 100;
+const MAX_DELAY = 5 * 60 * 1000; // 5분
 const PRIORITY_LEVELS = 3; // 우선순위 레벨 수 (1: 높음, 2: 중간, 3: 낮음)
 
 // Crop 설정 format:
@@ -177,8 +178,8 @@ async function downloadAndSaveImage(url, folderName, cropType = null) {
       processQueue();
     }, currentDelay);
 
-    // 딜레이 증가 (최대 1분)
-    currentDelay = Math.min(currentDelay * 2, 60000);
+    // 딜레이 증가
+    currentDelay = Math.min(currentDelay * 2, MAX_DELAY);
   }
 
   return null;
