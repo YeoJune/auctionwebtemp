@@ -366,14 +366,7 @@ async function processImagesInChunks(
       tasks.push(
         enqueueImage(item.image, folderName, priority, cropType).then(
           (savedPath) => {
-            if (savedPath) {
-              item.image = savedPath;
-              // console.log(`✅ Image saved: ${savedPath}`);
-            } else {
-              // console.warn(
-              //   `❌ Failed to save image: ${item.image} to ${folderName}`
-              // );
-            }
+            item.image = savedPath;
           }
         )
       );
