@@ -457,10 +457,10 @@ class BrandAucCrawler extends AxiosCrawler {
       }
 
       // 이미 처리된 아이템 제외
-      if (existingIds.has(item.uketsukeBng)) {
-        filteredItems.push({ item_id: item.uketsukeBng });
+      if (item.kekkaKbn && item.kekkaKbn == 5) {
         continue;
-      } else if (item.kekkaKbn && item.kekkaKbn != 5) {
+      } else if (existingIds.has(item.uketsukeBng)) {
+        filteredItems.push({ item_id: item.uketsukeBng });
         continue;
       }
 
