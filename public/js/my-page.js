@@ -890,23 +890,11 @@ class MyPageManager {
 
     // BidManager 초기화 (입찰 UI 활성화) - bid-products.js와 동일한 순서
     if (window.BidManager) {
-      // 기존 타이머 정리 (있다면)
-      if (typeof BidManager.clearTimers === "function") {
-        BidManager.clearTimers();
-      }
-
-      // BidManager 재초기화 - 현재 필터링된 데이터로
-      BidManager.initialize(
-        true, // 인증된 상태
-        products.map((product) => product.item)
-      );
-
-      BidManager.updateCurrentData(products.map((item) => item.item));
+      BidManager.updateCurrentData(products.map((product) => product.item));
       BidManager.updateBidData(
         this.bidProductsState.liveBids,
         this.bidProductsState.directBids
       );
-      BidManager.startTimerUpdates();
       BidManager.initializePriceCalculators();
     }
   }
