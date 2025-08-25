@@ -161,16 +161,17 @@ class MyPageManager {
         : "dashboard";
       this.showSection(initialSection);
 
-      // BidManager 초기화
+      // BidManager 초기화 - bid-products.js와 정확히 동일한 순서
       if (window.BidManager) {
         BidManager.initialize(
           true,
-          this.bidItemsData.map((item) => item.item)
+          this.bidProductsState.filteredResults.map((item) => item.item)
         );
-        BidManager.updateBidData(
-          this.bidProductsState.liveBids,
-          this.bidProductsState.directBids
-        );
+
+        // 입찰 이벤트 리스너 설정 (bid-products.js의 setupBidEventListeners 대응)
+        this.setupBidEventListeners();
+
+        // 타이머 업데이트 시작
         BidManager.startTimerUpdates();
       }
 
@@ -239,6 +240,17 @@ class MyPageManager {
         ...directBidsWithType,
       ];
       this.bidProductsState.filteredResults = this.bidItemsData;
+
+      // BidManager에 데이터 전달 (bid-products.js fetchProducts()와 동일)
+      if (window.BidManager) {
+        BidManager.updateCurrentData(
+          this.bidProductsState.filteredResults.map((item) => item.item)
+        );
+        BidManager.updateBidData(
+          this.bidProductsState.liveBids,
+          this.bidProductsState.directBids
+        );
+      }
 
       console.log(
         `입찰 항목 데이터 로드 완료: 총 ${this.bidItemsData.length}건`
@@ -890,16 +902,13 @@ class MyPageManager {
       }
     });
 
-    // BidManager 강제 리셋 후 재초기화 (bid-products.js 방식)
+    // bid-products.js fetchProducts() 전체 흐름과 동일하게
     if (window.BidManager) {
-      // 데이터 업데이트
       BidManager.updateCurrentData(products.map((product) => product.item));
       BidManager.updateBidData(
         this.bidProductsState.liveBids,
         this.bidProductsState.directBids
       );
-
-      // 즉시 재시작
       BidManager.startTimerUpdates();
       BidManager.initializePriceCalculators();
     }
