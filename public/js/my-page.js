@@ -1368,7 +1368,13 @@ class MyPageManager {
         this.bidProductsState.liveBids,
         this.bidProductsState.directBids
       );
-      BidManager.initializePriceCalculators();
+
+      // DOM 렌더링 완료 후 비동기적으로 초기화
+      setTimeout(() => {
+        if (window.BidManager) {
+          BidManager.initializePriceCalculators();
+        }
+      }, 0);
     }
   }
 
