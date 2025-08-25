@@ -792,6 +792,15 @@
   background-color: #f5f5f5;
 }
 
+/* 3번째 column (상품명) 최대 너비 제한 */
+.details-table th:nth-child(3),
+.details-table td:nth-child(3) {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .details-table td {
   padding: 10px;
   font-size: 14px;
@@ -1464,4 +1473,13 @@
     padding: 4px;
     font-size: 10px;
   }
+}
+
+/* vat-note 스타일 - bid-results.css와 동일하게 */
+.vat-note {
+  font-size: 0.75rem;
+  color: #777;
+  display: block;
+  margin-top: 2px;
+  text-align: center;
 }
