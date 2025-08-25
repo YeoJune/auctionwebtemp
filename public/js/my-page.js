@@ -1947,67 +1947,93 @@ class MyPageManager {
       });
     }
 
-    // 입찰 항목 필터 버튼
+    // 입찰 항목 필터 버튼 - 타입 필터 (첫 번째 그룹)
     document
-      .querySelectorAll("#bid-items-section .filter-btn")
+      .querySelectorAll(
+        "#bid-items-section .filter-group:first-child .filter-btn"
+      )
       .forEach((btn) => {
         btn.addEventListener("click", (e) => {
           const filter = e.target.dataset.filter;
 
-          // 필터 타입 구분
-          if (["all", "live", "direct"].includes(filter)) {
-            // 타입 필터
-            document
-              .querySelectorAll(
-                "#bid-items-section .filter-group:first-child .filter-btn"
-              )
-              .forEach((b) => b.classList.remove("active"));
-            e.target.classList.add("active");
-            this.bidItemsFilter.type = filter;
-          } else {
-            // 상태 필터
-            document
-              .querySelectorAll(
-                "#bid-items-section .filter-group:last-child .filter-btn"
-              )
-              .forEach((b) => b.classList.remove("active"));
-            e.target.classList.add("active");
-            this.bidItemsFilter.status = filter;
-          }
+          // 타입 필터 그룹 내에서 active 클래스 관리
+          document
+            .querySelectorAll(
+              "#bid-items-section .filter-group:first-child .filter-btn"
+            )
+            .forEach((b) => b.classList.remove("active"));
+          e.target.classList.add("active");
 
+          this.bidItemsFilter.type = filter;
           this.bidItemsPagination.currentPage = 1;
           this.renderBidItemsSection();
         });
       });
 
-    // 입찰 결과 필터 버튼
+    // 입찰 항목 필터 버튼 - 상태 필터 (두 번째 그룹)
     document
-      .querySelectorAll("#bid-results-section .filter-btn")
+      .querySelectorAll(
+        "#bid-items-section .filter-group:last-child .filter-btn"
+      )
       .forEach((btn) => {
         btn.addEventListener("click", (e) => {
           const filter = e.target.dataset.filter;
 
-          // 필터 타입 구분
-          if (["all", "live", "direct"].includes(filter)) {
-            // 타입 필터
-            document
-              .querySelectorAll(
-                "#bid-results-section .filter-group:first-child .filter-btn"
-              )
-              .forEach((b) => b.classList.remove("active"));
-            e.target.classList.add("active");
-            this.bidResultsFilter.type = filter;
-          } else {
-            // 상태 필터
-            document
-              .querySelectorAll(
-                "#bid-results-section .filter-group:last-child .filter-btn"
-              )
-              .forEach((b) => b.classList.remove("active"));
-            e.target.classList.add("active");
-            this.bidResultsFilter.status = filter;
-          }
+          // 상태 필터 그룹 내에서 active 클래스 관리
+          document
+            .querySelectorAll(
+              "#bid-items-section .filter-group:last-child .filter-btn"
+            )
+            .forEach((b) => b.classList.remove("active"));
+          e.target.classList.add("active");
 
+          this.bidItemsFilter.status = filter;
+          this.bidItemsPagination.currentPage = 1;
+          this.renderBidItemsSection();
+        });
+      });
+
+    // 입찰 결과 필터 버튼 - 타입 필터 (첫 번째 그룹)
+    document
+      .querySelectorAll(
+        "#bid-results-section .filter-group:first-child .filter-btn"
+      )
+      .forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          const filter = e.target.dataset.filter;
+
+          // 타입 필터 그룹 내에서 active 클래스 관리
+          document
+            .querySelectorAll(
+              "#bid-results-section .filter-group:first-child .filter-btn"
+            )
+            .forEach((b) => b.classList.remove("active"));
+          e.target.classList.add("active");
+
+          this.bidResultsFilter.type = filter;
+          this.bidResultsPagination.currentPage = 1;
+          this.renderBidResultsSection();
+        });
+      });
+
+    // 입찰 결과 필터 버튼 - 상태 필터 (두 번째 그룹)
+    document
+      .querySelectorAll(
+        "#bid-results-section .filter-group:last-child .filter-btn"
+      )
+      .forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          const filter = e.target.dataset.filter;
+
+          // 상태 필터 그룹 내에서 active 클래스 관리
+          document
+            .querySelectorAll(
+              "#bid-results-section .filter-group:last-child .filter-btn"
+            )
+            .forEach((b) => b.classList.remove("active"));
+          e.target.classList.add("active");
+
+          this.bidResultsFilter.status = filter;
           this.bidResultsPagination.currentPage = 1;
           this.renderBidResultsSection();
         });
