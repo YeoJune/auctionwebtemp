@@ -1348,6 +1348,15 @@ class MyPageManager {
       const dateRow = this.createDailyResultRow(dayResult);
       container.appendChild(dateRow);
     });
+
+    // bid-products.js처럼 BidManager 초기화
+    if (window.BidManager) {
+      BidManager.updateBidData(
+        this.bidProductsState.liveBids,
+        this.bidProductsState.directBids
+      );
+      BidManager.initializePriceCalculators();
+    }
   }
 
   // 일별 결과 행 생성 (bid-results.js에서 완전 복사)
