@@ -42,7 +42,7 @@ class AxiosCrawler {
     // 로그인 관련 상태 변수들
     this.isLoggedIn = false;
     this.loginTime = null;
-    this.sessionTimeout = 1000 * 60 * 60 * 3; // 3시간
+    this.sessionTimeout = 1000 * 60 * 60 * 8; // 8시간
     this.maxRetries = 3;
     this.retryDelay = 1000;
 
@@ -57,8 +57,6 @@ class AxiosCrawler {
     this.clientLastLoginCheckResult = new Map(); // clientIndex -> boolean
 
     // 로그인 체크 캐싱을 위한 변수
-    this.lastLoginCheck = null;
-    this.lastLoginCheckResult = false;
     this.loginCheckInterval = 1000 * 60 * 5; // 5분
 
     if (this.useMultipleClients) {
@@ -173,37 +171,38 @@ class AxiosCrawler {
     );
   }
 
-  // 개선된 단일 클라이언트 로그인 - 중복 방지와 Promise 관리 포함
+  // 개선된 단일 클라이언트 로그인 - 일관된 세션 관리
   async loginWithClient(clientInfo, forceLogin = false) {
     const clientIndex = clientInfo.index;
 
     try {
-      // 강제 로그인이 아니고 세션이 유효한 경우
-      if (
-        !forceLogin &&
-        clientInfo.isLoggedIn &&
-        this.isSessionValid(clientInfo.loginTime)
-      ) {
-        const serverLoginValid = await this.loginCheckWithClient(clientInfo);
-        if (serverLoginValid) {
-          console.log(
-            `${clientInfo.name} - Already logged in, session is valid`
-          );
-          return true;
-        } else {
-          console.log(
-            `${clientInfo.name} - Server session expired, need to re-login`
-          );
-          this.forceLogoutClient(clientInfo);
-        }
-      }
-
-      // 강제 로그아웃 처리
+      // 1. 강제 로그인
       if (forceLogin) {
-        console.log(
-          `${clientInfo.name} - Force login requested - clearing session`
-        );
-        this.forceLogoutClient(clientInfo);
+        console.log(`${clientInfo.name} - Force login requested`);
+        await this.forceLogoutClient(clientInfo);
+      }
+      // 2. 첫 로그인
+      else if (!clientInfo.isLoggedIn) {
+        console.log(`${clientInfo.name} - First time login`);
+      }
+      // 3. 기존 로그인 상태 체크
+      else if (clientInfo.isLoggedIn) {
+        // 로컬 세션 체크
+        if (!this.isSessionValid(clientInfo.loginTime)) {
+          console.log(`${clientInfo.name} - Local session expired`);
+          await this.forceLogoutClient(clientInfo);
+        }
+        // 서버 세션 체크
+        else {
+          const serverLoginValid = await this.loginCheckWithClient(clientInfo);
+          if (serverLoginValid) {
+            console.log(`${clientInfo.name} - Session is valid`);
+            return true;
+          } else {
+            console.log(`${clientInfo.name} - Server session expired`);
+            await this.forceLogoutClient(clientInfo);
+          }
+        }
       }
 
       // 이미 로그인이 진행 중인 경우 기다림
@@ -232,13 +231,13 @@ class AxiosCrawler {
         console.log(`✅ ${clientInfo.name} 로그인 성공`);
       } else {
         console.log(`❌ ${clientInfo.name} 로그인 실패`);
-        this.forceLogoutClient(clientInfo);
+        await this.forceLogoutClient(clientInfo);
       }
 
       return result;
     } catch (error) {
       console.error(`❌ ${clientInfo.name} 로그인 과정 실패:`, error.message);
-      this.forceLogoutClient(clientInfo);
+      await this.forceLogoutClient(clientInfo);
       return false;
     } finally {
       // 로그인 상태 정리
@@ -247,12 +246,10 @@ class AxiosCrawler {
     }
   }
 
-  // 특정 클라이언트 강제 로그아웃
-  forceLogoutClient(clientInfo) {
+  // 특정 클라이언트 강제 로그아웃 - cookieJar 새로 발급
+  async forceLogoutClient(clientInfo) {
     const clientIndex = clientInfo.index;
-    console.log(
-      `Forcing logout for ${clientInfo.name} and clearing session data...`
-    );
+    console.log(`Forcing logout for ${clientInfo.name}...`);
 
     // 기존 상태 초기화
     this.clientLoginInProgress.set(clientIndex, false);
@@ -260,13 +257,13 @@ class AxiosCrawler {
     this.clientLastLoginCheck.delete(clientIndex);
     this.clientLastLoginCheckResult.delete(clientIndex);
 
-    // 프록시 매니저를 사용하여 클라이언트 재생성
+    // 프록시 매니저를 사용하여 클라이언트 재생성 (새로운 cookieJar 포함)
     const newClientConfig = this.proxyManager.recreateClient(clientIndex);
 
     // 기존 클라이언트 정보를 새로운 설정으로 대체
     Object.assign(clientInfo, newClientConfig);
 
-    console.log(`Complete client recreation completed for ${clientInfo.name}`);
+    console.log(`Complete session reset completed for ${clientInfo.name}`);
   }
 
   // 모든 클라이언트 로그인 - 동시 실행 지원
@@ -332,9 +329,6 @@ class AxiosCrawler {
       this.loginTime = null;
       this.loginInProgress = false;
       this.loginPromise = null;
-
-      this.lastLoginCheck = null;
-      this.lastLoginCheckResult = false;
     }
 
     console.log("Complete session data cleared and clients reinitialized");
@@ -346,95 +340,31 @@ class AxiosCrawler {
     return Date.now() - loginTime < this.sessionTimeout;
   }
 
-  // 로그인 체크 (캐싱 포함) - 단일 클라이언트용
-  async loginCheck() {
-    // 마지막 로그인 체크 시간이 5분 이내면 캐시된 결과 반환
-    if (
-      this.lastLoginCheck &&
-      Date.now() - this.lastLoginCheck < this.loginCheckInterval &&
-      this.lastLoginCheckResult !== false
-    ) {
-      console.log("Using cached login check result");
-      return this.lastLoginCheckResult;
-    }
-
-    // 5분이 지났거나 처음 체크하는 경우, 실제 체크 수행
-    return this.retryOperation(async () => {
-      try {
-        const responses = await Promise.all(
-          this.config.loginCheckUrls.map((url) => this.client.get(url))
-        );
-
-        // 결과 캐싱
-        this.lastLoginCheck = Date.now();
-        this.lastLoginCheckResult = responses.every(
-          (response) => response.status === 200
-        );
-
-        return this.lastLoginCheckResult;
-      } catch (error) {
-        // 에러 발생시 캐싱 업데이트
-        this.lastLoginCheck = Date.now();
-        this.lastLoginCheckResult = false;
-        return false;
-      }
-    });
-  }
-
   // 메인 로그인 메서드 - 통합된 로직
   async login(forceLogin = false) {
-    try {
-      if (this.useMultipleClients) {
-        // 다중 클라이언트인 경우 모든 클라이언트 로그인
-        const results = await this.loginAllClients(forceLogin);
-        return results.some((result) => result); // 하나라도 성공하면 true
-      }
+    if (this.useMultipleClients) {
+      const results = await this.loginAllClients(forceLogin);
+      return results.some((result) => result);
+    } else {
+      // 단일 클라이언트를 clientInfo 형태로 감싸서 loginWithClient 재사용
+      const singleClientInfo = {
+        index: 0,
+        client: this.client,
+        cookieJar: this.cookieJar,
+        name: "직접연결",
+        isLoggedIn: this.isLoggedIn,
+        loginTime: this.loginTime,
+      };
 
-      // 단일 클라이언트인 경우 기존 로직
-      if (forceLogin) {
-        console.log("Force login requested - clearing session");
-        this.forceLogout();
-      }
+      const result = await this.loginWithClient(singleClientInfo, forceLogin);
 
-      if (!forceLogin && this.isLoggedIn && this.isSessionValid()) {
-        const serverLoginValid = await this.loginCheck();
-        if (serverLoginValid) {
-          console.log("Already logged in, session is valid");
-          return true;
-        } else {
-          console.log("Server session expired, need to re-login");
-          this.forceLogout();
-        }
-      }
-
-      if (this.loginInProgress && this.loginPromise) {
-        console.log("Login already in progress, waiting for completion");
-        return await this.loginPromise;
-      }
-
-      console.log("Starting login process...");
-      this.loginInProgress = true;
-
-      this.loginPromise = this.performLogin();
-      const result = await this.loginPromise;
-
-      if (result) {
-        this.isLoggedIn = true;
-        this.loginTime = Date.now();
-        console.log("Login successful - session established");
-      } else {
-        console.log("Login failed");
-        this.forceLogout();
-      }
+      // 단일 클라이언트 상태 동기화
+      this.isLoggedIn = singleClientInfo.isLoggedIn;
+      this.loginTime = singleClientInfo.loginTime;
+      this.client = singleClientInfo.client;
+      this.cookieJar = singleClientInfo.cookieJar;
 
       return result;
-    } catch (error) {
-      console.error("Login process failed:", error.message);
-      this.forceLogout();
-      return false;
-    } finally {
-      this.loginInProgress = false;
-      this.loginPromise = null;
     }
   }
 
