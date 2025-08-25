@@ -860,10 +860,13 @@ class MyPageManager {
       this.bidItemsPagination.totalItems;
     document.getElementById("bid-items-loading").style.display = "none";
 
-    // 먼저 데이터를 표시하고
+    // 렌더링 전에 BidManager 완전 정리
+    if (window.BidManager) {
+      BidManager.stopTimerUpdates();
+    }
+
     this.displayBidItems(currentPageData);
 
-    // 페이지네이션은 나중에
     this.renderPagination(
       "bid-items-pagination",
       this.bidItemsPagination,
@@ -884,6 +887,7 @@ class MyPageManager {
       return;
     }
 
+    // DOM에 먼저 추가
     products.forEach((product) => {
       const itemElement = this.renderBidResultItem(product);
       if (itemElement) {
@@ -891,24 +895,21 @@ class MyPageManager {
       }
     });
 
-    // BidManager 초기화 - bid-products.js와 동일한 순서와 방식으로 수정
+    // BidManager 강제 리셋 후 재초기화 (bid-products.js 방식)
     if (window.BidManager) {
-      // 현재 데이터 업데이트
-      BidManager.updateCurrentData(products.map((product) => product.item));
+      // 기존 타이머 정리
+      BidManager.stopTimerUpdates();
 
-      // 입찰 데이터 업데이트
+      // 데이터 업데이트
+      BidManager.updateCurrentData(products.map((product) => product.item));
       BidManager.updateBidData(
         this.bidProductsState.liveBids,
         this.bidProductsState.directBids
       );
 
-      // DOM 렌더링 완료 후 비동기적으로 초기화
-      setTimeout(() => {
-        if (window.BidManager) {
-          BidManager.startTimerUpdates();
-          BidManager.initializePriceCalculators();
-        }
-      }, 0);
+      // 즉시 재시작
+      BidManager.startTimerUpdates();
+      BidManager.initializePriceCalculators();
     }
   }
 
@@ -2030,14 +2031,7 @@ class MyPageManager {
           this.bidItemsFilter.type = filter;
           this.bidItemsPagination.currentPage = 1;
 
-          // BidManager 데이터 업데이트 추가 (bid-products.js처럼)
-          if (window.BidManager) {
-            BidManager.updateBidData(
-              this.bidProductsState.liveBids,
-              this.bidProductsState.directBids
-            );
-          }
-
+          // 즉시 렌더링
           this.renderBidItemsSection();
         });
       });
@@ -2062,14 +2056,7 @@ class MyPageManager {
           this.bidItemsFilter.status = filter;
           this.bidItemsPagination.currentPage = 1;
 
-          // BidManager 데이터 업데이트 추가 (bid-products.js처럼)
-          if (window.BidManager) {
-            BidManager.updateBidData(
-              this.bidProductsState.liveBids,
-              this.bidProductsState.directBids
-            );
-          }
-
+          // 즉시 렌더링
           this.renderBidItemsSection();
         });
       });
