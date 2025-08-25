@@ -860,8 +860,10 @@ class MyPageManager {
       this.bidItemsPagination.totalItems;
     document.getElementById("bid-items-loading").style.display = "none";
 
+    // 먼저 데이터를 표시하고
     this.displayBidItems(currentPageData);
 
+    // 페이지네이션은 나중에
     this.renderPagination(
       "bid-items-pagination",
       this.bidItemsPagination,
@@ -889,15 +891,24 @@ class MyPageManager {
       }
     });
 
-    // BidManager 초기화 (입찰 UI 활성화) - bid-products.js와 동일한 순서
+    // BidManager 초기화 - bid-products.js와 동일한 순서와 방식으로 수정
     if (window.BidManager) {
+      // 현재 데이터 업데이트
       BidManager.updateCurrentData(products.map((product) => product.item));
+
+      // 입찰 데이터 업데이트
       BidManager.updateBidData(
         this.bidProductsState.liveBids,
         this.bidProductsState.directBids
       );
-      BidManager.startTimerUpdates();
-      BidManager.initializePriceCalculators();
+
+      // DOM 렌더링 완료 후 비동기적으로 초기화
+      setTimeout(() => {
+        if (window.BidManager) {
+          BidManager.startTimerUpdates();
+          BidManager.initializePriceCalculators();
+        }
+      }, 0);
     }
   }
 
