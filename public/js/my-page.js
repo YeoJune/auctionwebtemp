@@ -2029,6 +2029,15 @@ class MyPageManager {
 
           this.bidItemsFilter.type = filter;
           this.bidItemsPagination.currentPage = 1;
+
+          // BidManager 데이터 업데이트 추가 (bid-products.js처럼)
+          if (window.BidManager) {
+            BidManager.updateBidData(
+              this.bidProductsState.liveBids,
+              this.bidProductsState.directBids
+            );
+          }
+
           this.renderBidItemsSection();
         });
       });
@@ -2052,6 +2061,15 @@ class MyPageManager {
 
           this.bidItemsFilter.status = filter;
           this.bidItemsPagination.currentPage = 1;
+
+          // BidManager 데이터 업데이트 추가 (bid-products.js처럼)
+          if (window.BidManager) {
+            BidManager.updateBidData(
+              this.bidProductsState.liveBids,
+              this.bidProductsState.directBids
+            );
+          }
+
           this.renderBidItemsSection();
         });
       });
