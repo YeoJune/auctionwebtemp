@@ -1351,6 +1351,19 @@ class MyPageManager {
 
     // bid-products.js처럼 BidManager 초기화
     if (window.BidManager) {
+      // 현재 표시되는 아이템들의 item 데이터 추출
+      const currentItems = [];
+      dailyResults.forEach((dayResult) => {
+        if (dayResult.items) {
+          dayResult.items.forEach((item) => {
+            if (item.item) {
+              currentItems.push(item.item);
+            }
+          });
+        }
+      });
+
+      BidManager.updateCurrentData(currentItems);
       BidManager.updateBidData(
         this.bidProductsState.liveBids,
         this.bidProductsState.directBids
