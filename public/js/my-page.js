@@ -199,10 +199,12 @@ class MyPageManager {
         API.fetchAPI("/direct-bids?limit=0"),
       ]);
 
-      // 진행중인 입찰만 필터링
+      // 진행중인 입찰과 취소된 입찰 포함
       const liveBids = (liveBidsResponse.bids || [])
         .filter((bid) =>
-          ["active", "first", "second", "final"].includes(bid.status)
+          ["active", "first", "second", "final", "cancelled"].includes(
+            bid.status
+          )
         )
         .map((bid) => ({ ...bid, type: "live" }));
 
@@ -1650,23 +1652,23 @@ class MyPageManager {
       filtered = filtered.filter((bid) => bid.type === "direct");
     }
 
-    // 상태 필터 적용
+    // 상태 필터 적용 - displayStatus 사용
     if (this.bidItemsFilter.status === "active") {
       filtered = filtered.filter((bid) =>
-        ["active", "first", "second", "final"].includes(bid.status)
+        ["active", "first", "second", "final"].includes(bid.displayStatus)
       );
     } else if (this.bidItemsFilter.status === "completed") {
       filtered = filtered.filter((bid) =>
-        ["completed", "shipped"].includes(bid.status)
+        ["completed", "shipped"].includes(bid.displayStatus)
       );
     } else if (this.bidItemsFilter.status === "cancelled") {
-      filtered = filtered.filter((bid) => bid.status === "cancelled");
+      filtered = filtered.filter((bid) => bid.displayStatus === "cancelled");
     } else if (this.bidItemsFilter.status === "highest") {
       // 현재 최고가 필터 (직접경매 + active 상태만)
       filtered = filtered.filter(
         (bid) =>
           bid.type === "direct" &&
-          bid.status === "active" &&
+          bid.displayStatus === "active" &&
           bid.current_price > 0
       );
     }
