@@ -31,7 +31,7 @@ class MyPageManager {
     // bid-products.js 상태 복사
     this.bidProductsState = {
       bidType: "all",
-      status: "all", 
+      status: "all",
       dateRange: 30,
       currentPage: 1,
       itemsPerPage: 10,
@@ -78,7 +78,7 @@ class MyPageManager {
     // bid-products.js 상수들 복사
     this.STATUS_TYPES = {
       ACTIVE: "active",
-      FIRST: "first", 
+      FIRST: "first",
       SECOND: "second",
       FINAL: "final",
       COMPLETED: "completed",
@@ -90,14 +90,22 @@ class MyPageManager {
       ACTIVE: ["active", "first", "second", "final"],
       COMPLETED: ["completed", "shipped"],
       CANCELLED: ["cancelled"],
-      ALL: ["active", "first", "second", "final", "completed", "shipped", "cancelled"],
+      ALL: [
+        "active",
+        "first",
+        "second",
+        "final",
+        "completed",
+        "shipped",
+        "cancelled",
+      ],
     };
 
     this.STATUS_DISPLAY = {
       [this.STATUS_TYPES.ACTIVE]: "입찰 가능",
       [this.STATUS_TYPES.FIRST]: "1차 입찰",
       [this.STATUS_TYPES.SECOND]: "2차 제안",
-      [this.STATUS_TYPES.FINAL]: "최종 입찰", 
+      [this.STATUS_TYPES.FINAL]: "최종 입찰",
       [this.STATUS_TYPES.COMPLETED]: "낙찰 완료",
       [this.STATUS_TYPES.SHIPPED]: "출고됨",
       [this.STATUS_TYPES.CANCELLED]: "더 높은 입찰 존재",
@@ -106,7 +114,7 @@ class MyPageManager {
     this.STATUS_CLASSES = {
       [this.STATUS_TYPES.ACTIVE]: "status-active",
       [this.STATUS_TYPES.FIRST]: "status-first",
-      [this.STATUS_TYPES.SECOND]: "status-second", 
+      [this.STATUS_TYPES.SECOND]: "status-second",
       [this.STATUS_TYPES.FINAL]: "status-final",
       [this.STATUS_TYPES.COMPLETED]: "status-completed",
       [this.STATUS_TYPES.SHIPPED]: "status-shipped",
@@ -144,7 +152,7 @@ class MyPageManager {
       // URL 해시에 따른 초기 섹션 표시
       const hash = window.location.hash.replace("#", "");
       const initialSection = [
-        "dashboard", 
+        "dashboard",
         "bid-items",
         "bid-results",
         "account",
@@ -155,7 +163,10 @@ class MyPageManager {
 
       // BidManager 초기화
       if (window.BidManager) {
-        BidManager.initialize(true, this.bidItemsData.map((item) => item.item));
+        BidManager.initialize(
+          true,
+          this.bidItemsData.map((item) => item.item)
+        );
         BidManager.updateBidData(
           this.bidProductsState.liveBids,
           this.bidProductsState.directBids
@@ -208,7 +219,7 @@ class MyPageManager {
 
       const directBidsWithType = directBids.map((bid) => ({
         ...bid,
-        type: "direct", 
+        type: "direct",
         displayStatus: bid.status,
       }));
 
@@ -220,7 +231,10 @@ class MyPageManager {
       // bid-products.js 상태도 업데이트
       this.bidProductsState.liveBids = liveBids;
       this.bidProductsState.directBids = directBids;
-      this.bidProductsState.combinedResults = [...liveBidsWithType, ...directBidsWithType];
+      this.bidProductsState.combinedResults = [
+        ...liveBidsWithType,
+        ...directBidsWithType,
+      ];
       this.bidProductsState.filteredResults = this.bidItemsData;
 
       console.log(
@@ -428,8 +442,11 @@ class MyPageManager {
     });
 
     // 필터링된 결과 업데이트
-    this.bidResultsState.filteredResults = [...this.bidResultsState.dailyResults];
-    this.bidResultsState.totalItems = this.bidResultsState.filteredResults.length;
+    this.bidResultsState.filteredResults = [
+      ...this.bidResultsState.dailyResults,
+    ];
+    this.bidResultsState.totalItems =
+      this.bidResultsState.filteredResults.length;
     this.bidResultsState.totalPages = Math.ceil(
       this.bidResultsState.totalItems / this.bidResultsState.itemsPerPage
     );
@@ -454,14 +471,26 @@ class MyPageManager {
     // 데일리 합계의 정확한 합산
     this.bidResultsState.dailyResults.forEach((day) => {
       this.bidResultsState.totalStats.itemCount += Number(day.itemCount || 0);
-      this.bidResultsState.totalStats.totalItemCount += Number(day.totalItemCount || 0);
-      this.bidResultsState.totalStats.japaneseAmount += Number(day.totalJapanesePrice || 0);
-      this.bidResultsState.totalStats.koreanAmount += Number(day.totalKoreanPrice || 0);
+      this.bidResultsState.totalStats.totalItemCount += Number(
+        day.totalItemCount || 0
+      );
+      this.bidResultsState.totalStats.japaneseAmount += Number(
+        day.totalJapanesePrice || 0
+      );
+      this.bidResultsState.totalStats.koreanAmount += Number(
+        day.totalKoreanPrice || 0
+      );
       this.bidResultsState.totalStats.feeAmount += Number(day.feeAmount || 0);
       this.bidResultsState.totalStats.vatAmount += Number(day.vatAmount || 0);
-      this.bidResultsState.totalStats.appraisalFee += Number(day.appraisalFee || 0);
-      this.bidResultsState.totalStats.appraisalVat += Number(day.appraisalVat || 0);
-      this.bidResultsState.totalStats.appraisalCount += Number(day.appraisalCount || 0);
+      this.bidResultsState.totalStats.appraisalFee += Number(
+        day.appraisalFee || 0
+      );
+      this.bidResultsState.totalStats.appraisalVat += Number(
+        day.appraisalVat || 0
+      );
+      this.bidResultsState.totalStats.appraisalCount += Number(
+        day.appraisalCount || 0
+      );
     });
 
     // 총액 계산 (상품 총액 + 총 수수료 + 총 감정서 수수료)
@@ -493,7 +522,9 @@ class MyPageManager {
   // 더 높은 입찰 발생 개수 조회
   async loadHigherBidCount() {
     try {
-      const response = await API.fetchAPI("/direct-bids?status=cancelled&limit=0");
+      const response = await API.fetchAPI(
+        "/direct-bids?status=cancelled&limit=0"
+      );
       return (response.bids || []).length;
     } catch (error) {
       console.error("더 높은 입찰 발생 개수 조회 실패:", error);
@@ -504,7 +535,9 @@ class MyPageManager {
   // 현재 최고가 개수 조회
   async loadCurrentHighestCount() {
     try {
-      const response = await API.fetchAPI("/direct-bids?highestOnly=true&limit=0");
+      const response = await API.fetchAPI(
+        "/direct-bids?highestOnly=true&limit=0"
+      );
       return (response.bids || []).length;
     } catch (error) {
       console.error("현재 최고가 개수 조회 실패:", error);
@@ -576,17 +609,17 @@ class MyPageManager {
 
   // 대시보드 통계 계산
   async calculateDashboardStats() {
-    const activeCount = this.bidItemsData.filter(bid => 
+    const activeCount = this.bidItemsData.filter((bid) =>
       ["active", "first", "second", "final"].includes(bid.status)
     ).length;
-    
+
     const completedCount = this.bidResultsData.filter(
       (bid) => bid.status === "completed"
     ).length;
 
     // 더 높은 입찰 발생 개수
     const higherBidCount = await this.loadHigherBidCount();
-    
+
     // 현재 최고가 개수
     const currentHighestCount = await this.loadCurrentHighestCount();
 
@@ -649,7 +682,7 @@ class MyPageManager {
     let product = [...this.bidItemsData, ...this.bidResultsData].find(
       (p) => p.item?.item_id === itemId
     );
-    
+
     if (!product) return;
 
     const item = product.item;
@@ -680,7 +713,10 @@ class MyPageManager {
       if (itemDetails.additional_images) {
         try {
           const additionalImages = JSON.parse(itemDetails.additional_images);
-          window.ModalImageGallery.initialize([item.image, ...additionalImages]);
+          window.ModalImageGallery.initialize([
+            item.image,
+            ...additionalImages,
+          ]);
         } catch (e) {
           console.error("이미지 파싱 오류:", e);
         }
@@ -697,7 +733,9 @@ class MyPageManager {
     document.querySelector(".modal-brand").textContent = item.brand || "-";
     document.querySelector(".modal-title").textContent = item.title || "-";
     document.querySelector(".modal-title").dataset.itemId = item.item_id;
-    document.querySelector(".main-image").src = API.validateImageUrl(item.image);
+    document.querySelector(".main-image").src = API.validateImageUrl(
+      item.image
+    );
     document.querySelector(".modal-description").textContent = "로딩 중...";
     document.querySelector(".modal-category").textContent =
       item.category || "로딩 중...";
@@ -741,7 +779,9 @@ class MyPageManager {
 
     // BidManager를 사용하여 입찰 폼 생성
     if (product.type === "direct") {
-      const directBidInfo = this.bidProductsState.directBids.find((b) => b.id === product.id);
+      const directBidInfo = this.bidProductsState.directBids.find(
+        (b) => b.id === product.id
+      );
       bidSection.innerHTML = BidManager.getDirectBidSectionHTML(
         directBidInfo,
         item.item_id,
@@ -749,7 +789,9 @@ class MyPageManager {
         item.category
       );
     } else {
-      const liveBidInfo = this.bidProductsState.liveBids.find((b) => b.id === product.id);
+      const liveBidInfo = this.bidProductsState.liveBids.find(
+        (b) => b.id === product.id
+      );
       bidSection.innerHTML = BidManager.getLiveBidSectionHTML(
         liveBidInfo,
         item.item_id,
@@ -765,7 +807,7 @@ class MyPageManager {
   // 입찰 항목 섹션 렌더링 (bid-products.js 로직 완전 복사)
   renderBidItemsSection() {
     const filteredData = this.applyBidItemsFilter();
-    
+
     this.bidItemsPagination.totalItems = filteredData.length;
     this.bidItemsPagination.totalPages = Math.ceil(
       filteredData.length / this.bidItemsPagination.itemsPerPage
@@ -849,7 +891,9 @@ class MyPageManager {
   bindDataFields(element, product, item) {
     element.innerHTML = `
       <div class="item-image">
-        <img src="${API.validateImageUrl(item.image)}" alt="${item.title || "상품 이미지"}" />
+        <img src="${API.validateImageUrl(item.image)}" alt="${
+      item.title || "상품 이미지"
+    }" />
         <div class="item-rank">${item.rank || "N"}</div>
       </div>
       <div class="item-info">
@@ -862,8 +906,13 @@ class MyPageManager {
       <!-- 조건부 요소: 완료된 입찰의 경우 -->
       <div class="bid-info" data-if="isCompletedBid"></div>
       <div class="result-status">
-        <div class="bid-type">${product.type === "live" ? "현장 경매" : "직접 경매"}</div>
-        <div class="status-badge ${this.getStatusClass(product, item)}">${this.getStatusDisplay(product, item)}</div>
+        <div class="bid-type">${
+          product.type === "live" ? "현장 경매" : "직접 경매"
+        }</div>
+        <div class="status-badge ${this.getStatusClass(
+          product,
+          item
+        )}">${this.getStatusDisplay(product, item)}</div>
         <div class="result-date">${formatDateTime(product.updated_at)}</div>
       </div>
     `;
@@ -907,7 +956,9 @@ class MyPageManager {
 
         let bidHtml = "";
         if (product.type === "direct") {
-          const directBidInfo = this.bidProductsState.directBids.find((b) => b.id === product.id);
+          const directBidInfo = this.bidProductsState.directBids.find(
+            (b) => b.id === product.id
+          );
           bidHtml = window.BidManager
             ? BidManager.getDirectBidSectionHTML(
                 directBidInfo,
@@ -917,7 +968,9 @@ class MyPageManager {
               )
             : "";
         } else {
-          const liveBidInfo = this.bidProductsState.liveBids.find((b) => b.id === product.id);
+          const liveBidInfo = this.bidProductsState.liveBids.find(
+            (b) => b.id === product.id
+          );
           bidHtml = window.BidManager
             ? BidManager.getLiveBidSectionHTML(
                 liveBidInfo,
@@ -1179,7 +1232,7 @@ class MyPageManager {
   // 입찰 결과 섹션 렌더링 (bid-results.js 로직 완전 복사)
   renderBidResultsSection() {
     const filteredData = this.applyBidResultsFilter();
-    
+
     this.bidResultsPagination.totalItems = filteredData.length;
     this.bidResultsPagination.totalPages = Math.ceil(
       filteredData.length / this.bidResultsPagination.itemsPerPage
@@ -1210,7 +1263,7 @@ class MyPageManager {
     if (!container) return;
 
     container.innerHTML = "";
-    
+
     if (dailyResults.length === 0) {
       container.innerHTML =
         '<div class="no-results">조건에 맞는 입찰 결과가 없습니다.</div>';
@@ -1230,7 +1283,11 @@ class MyPageManager {
 
     // 날짜 헤더
     const dateHeader = createElement("div", "date-header");
-    const dateLabel = createElement("h3", "", this.formatDisplayDate(dayResult.date));
+    const dateLabel = createElement(
+      "h3",
+      "",
+      this.formatDisplayDate(dayResult.date)
+    );
     const toggleButton = createElement("button", "toggle-details");
     toggleButton.innerHTML = '<i class="fas fa-chevron-down"></i>';
 
@@ -1558,9 +1615,12 @@ class MyPageManager {
     } else if (this.bidItemsFilter.status === "cancelled") {
       filtered = filtered.filter((bid) => bid.status === "cancelled");
     } else if (this.bidItemsFilter.status === "highest") {
-      // 현재 최고가 필터 (직접경매만)
-      filtered = filtered.filter((bid) => 
-        bid.type === "direct" && bid.current_price > 0
+      // 현재 최고가 필터 (직접경매 + active 상태만)
+      filtered = filtered.filter(
+        (bid) =>
+          bid.type === "direct" &&
+          bid.status === "active" &&
+          bid.current_price > 0
       );
     }
 
@@ -1574,30 +1634,42 @@ class MyPageManager {
     // 타입 필터 적용
     if (this.bidResultsFilter.type === "live") {
       filtered = filtered.filter((dayResult) => {
-        return [...dayResult.successItems, ...dayResult.failedItems, ...dayResult.pendingItems]
-          .some(item => item.type === "live");
+        return [
+          ...dayResult.successItems,
+          ...dayResult.failedItems,
+          ...dayResult.pendingItems,
+        ].some((item) => item.type === "live");
       });
     } else if (this.bidResultsFilter.type === "direct") {
       filtered = filtered.filter((dayResult) => {
-        return [...dayResult.successItems, ...dayResult.failedItems, ...dayResult.pendingItems]
-          .some(item => item.type === "direct");
+        return [
+          ...dayResult.successItems,
+          ...dayResult.failedItems,
+          ...dayResult.pendingItems,
+        ].some((item) => item.type === "direct");
       });
     }
 
     // 상태 필터 적용
     if (this.bidResultsFilter.status === "can_apply") {
       filtered = filtered.filter((dayResult) => {
-        return dayResult.successItems.some(item => !item.appr_id);
+        return dayResult.successItems.some((item) => !item.appr_id);
       });
     } else if (this.bidResultsFilter.status === "completed") {
       filtered = filtered.filter((dayResult) => {
-        return [...dayResult.successItems, ...dayResult.failedItems, ...dayResult.pendingItems]
-          .some(item => item.status === "completed");
+        return [
+          ...dayResult.successItems,
+          ...dayResult.failedItems,
+          ...dayResult.pendingItems,
+        ].some((item) => item.status === "completed");
       });
     } else if (this.bidResultsFilter.status === "shipped") {
       filtered = filtered.filter((dayResult) => {
-        return [...dayResult.successItems, ...dayResult.failedItems, ...dayResult.pendingItems]
-          .some(item => item.status === "shipped");
+        return [
+          ...dayResult.successItems,
+          ...dayResult.failedItems,
+          ...dayResult.pendingItems,
+        ].some((item) => item.status === "shipped");
       });
     }
 
@@ -1658,7 +1730,7 @@ class MyPageManager {
   renderPagination(containerId, pagination, onPageChange) {
     const container = document.getElementById(containerId);
     if (!container) return;
-    
+
     container.innerHTML = "";
 
     if (pagination.totalPages <= 1) return;
@@ -1780,47 +1852,49 @@ class MyPageManager {
     const activeCountEl = document.getElementById("active-count");
     if (activeCountEl) {
       activeCountEl.parentElement.style.cursor = "pointer";
-      activeCountEl.parentElement.addEventListener('click', () => {
-        this.showSection('bid-items');
-        this.bidItemsFilter.status = 'active';
-        this.bidItemsFilter.type = 'all';
+      activeCountEl.parentElement.addEventListener("click", () => {
+        this.showSection("bid-items");
+        this.bidItemsFilter.status = "active";
+        this.bidItemsFilter.type = "all";
         this.renderBidItemsSection();
         // 필터 UI도 업데이트
-        this.updateFilterUI('bid-items', 'all', 'active');
+        this.updateFilterUI("bid-items", "all", "active");
       });
     }
 
     const higherBidCountEl = document.getElementById("higher-bid-count");
     if (higherBidCountEl) {
       higherBidCountEl.parentElement.style.cursor = "pointer";
-      higherBidCountEl.parentElement.addEventListener('click', () => {
-        this.showSection('bid-items');
-        this.bidItemsFilter.status = 'cancelled';
-        this.bidItemsFilter.type = 'direct';
+      higherBidCountEl.parentElement.addEventListener("click", () => {
+        this.showSection("bid-items");
+        this.bidItemsFilter.status = "cancelled";
+        this.bidItemsFilter.type = "direct";
         this.renderBidItemsSection();
         // 필터 UI도 업데이트
-        this.updateFilterUI('bid-items', 'direct', 'cancelled');
+        this.updateFilterUI("bid-items", "direct", "cancelled");
       });
     }
 
-    const currentHighestCountEl = document.getElementById("current-highest-count");
+    const currentHighestCountEl = document.getElementById(
+      "current-highest-count"
+    );
     if (currentHighestCountEl) {
       currentHighestCountEl.parentElement.style.cursor = "pointer";
-      currentHighestCountEl.parentElement.addEventListener('click', () => {
-        this.showSection('bid-items');
-        this.bidItemsFilter.status = 'highest';
-        this.bidItemsFilter.type = 'direct';
+      currentHighestCountEl.parentElement.addEventListener("click", () => {
+        this.showSection("bid-items");
+        this.bidItemsFilter.status = "highest";
+        this.bidItemsFilter.type = "direct";
         this.renderBidItemsSection();
         // 필터 UI도 업데이트
-        this.updateFilterUI('bid-items', 'direct', 'highest');
+        this.updateFilterUI("bid-items", "direct", "highest");
       });
     }
 
     const completedCountEl = document.getElementById("completed-count");
     if (completedCountEl) {
       completedCountEl.parentElement.style.cursor = "pointer";
-      completedCountEl.parentElement.addEventListener('click', () => {
-        this.showSection('bid-results');
+      completedCountEl.parentElement.addEventListener("click", () => {
+        this.showSection("bid-results");
       });
     }
 
@@ -1906,7 +1980,9 @@ class MyPageManager {
   updateFilterUI(section, type, status) {
     // 타입 필터 업데이트
     document
-      .querySelectorAll(`#${section}-section .filter-group:first-child .filter-btn`)
+      .querySelectorAll(
+        `#${section}-section .filter-group:first-child .filter-btn`
+      )
       .forEach((btn) => {
         btn.classList.remove("active");
         if (btn.dataset.filter === type) {
@@ -1916,7 +1992,9 @@ class MyPageManager {
 
     // 상태 필터 업데이트
     document
-      .querySelectorAll(`#${section}-section .filter-group:last-child .filter-btn`)
+      .querySelectorAll(
+        `#${section}-section .filter-group:last-child .filter-btn`
+      )
       .forEach((btn) => {
         btn.classList.remove("active");
         if (btn.dataset.filter === status) {
@@ -1929,11 +2007,11 @@ class MyPageManager {
   setupBidEventListeners() {
     window.addEventListener("bidSuccess", async (e) => {
       const { itemId, type } = e.detail;
-      
+
       // 데이터 새로고침
       await this.loadBidItemsData();
       await this.loadBidResultsData();
-      
+
       // 현재 섹션 다시 렌더링
       if (this.currentSection === "bid-items") {
         this.renderBidItemsSection();
