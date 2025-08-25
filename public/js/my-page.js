@@ -172,10 +172,8 @@ class MyPageManager {
       // 입찰 이벤트 리스너 설정 (bid-products.js와 동일하게 블록 밖에서)
       this.setupBidEventListeners();
 
-      // 타이머 업데이트 시작 (bid-products.js와 동일하게 블록 밖에서)
-      if (window.BidManager) {
-        BidManager.startTimerUpdates();
-      }
+      // 타이머 업데이트 시작 (bid-products.js와 정확히 동일하게)
+      BidManager.startTimerUpdates();
 
       console.log("마이페이지 초기화 완료");
     } catch (error) {
@@ -252,6 +250,14 @@ class MyPageManager {
           this.bidProductsState.liveBids,
           this.bidProductsState.directBids
         );
+      }
+
+      // bid-products.js fetchProducts() 끝부분과 동일하게 추가
+      if (window.BidManager) {
+        BidManager.startTimerUpdates();
+        if (window.BidManager) {
+          BidManager.initializePriceCalculators();
+        }
       }
 
       console.log(
@@ -904,14 +910,8 @@ class MyPageManager {
       }
     });
 
-    // bid-products.js fetchProducts() 전체 흐름과 동일하게
+    // bid-products.js displayProducts()와 정확히 동일하게
     if (window.BidManager) {
-      BidManager.updateCurrentData(products.map((product) => product.item));
-      BidManager.updateBidData(
-        this.bidProductsState.liveBids,
-        this.bidProductsState.directBids
-      );
-      BidManager.startTimerUpdates();
       BidManager.initializePriceCalculators();
     }
   }
