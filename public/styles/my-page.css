@@ -374,17 +374,16 @@
 
 /* 입찰 결과 아이템 - bid-products 스타일 적용 */
 .bid-result-item {
-  background-color: white;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
-  padding: 14px;
   display: grid;
   grid-template-columns: 100px 1fr 250px 180px;
   grid-template-areas: "image info bid-section status";
   gap: 16px;
-  align-items: start;
-  transition: background-color 0.2s ease;
+  padding: 14px;
+  border-bottom: 1px solid #f0f0f0;
   cursor: pointer;
+  transition: background-color 0.2s ease;
+  position: relative;
+  align-items: start;
   min-height: 90px;
 }
 
@@ -404,7 +403,6 @@
   background-color: #f8f9fa;
   border-radius: 8px;
   overflow: hidden;
-  flex-shrink: 0;
 }
 
 .bid-result-item .item-image img {
@@ -511,9 +509,6 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 6px;
-  padding: 0;
-  border: none;
-  background: none;
 }
 
 .bid-result-item .bid-type {
@@ -568,13 +563,14 @@
 /* 기존 입찰 목록 스타일 */
 .bid-item {
   display: grid;
-  grid-template-columns: 80px 1fr 150px 120px;
-  grid-template-areas: "image info price status";
-  gap: 15px;
-  padding: 15px;
+  grid-template-columns: 100px 1fr 250px 180px;
+  grid-template-areas: "image info bid-section status";
+  gap: 16px;
+  padding: 14px;
   border-bottom: 1px solid #f0f0f0;
   align-items: start;
   transition: background-color 0.2s ease;
+  min-height: 90px;
 }
 
 .bid-item:hover {
@@ -587,11 +583,11 @@
 
 .item-image {
   grid-area: image;
-  width: 70px;
-  height: 70px;
-  border-radius: 6px;
+  width: 100px;
+  height: 100px;
+  border-radius: 8px;
   object-fit: cover;
-  background-color: #f5f5f5;
+  background-color: #f8f9fa;
   cursor: pointer;
 }
 
@@ -637,7 +633,7 @@
 }
 
 .price-info {
-  grid-area: price;
+  grid-area: bid-section;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -702,29 +698,31 @@
   font-weight: 500;
 }
 
-/* 입찰 결과 - 일별 그룹화 스타일 */
+/* 입찰 결과 - 일별 그룹화 스타일 (bid-results와 동일) */
 .daily-result-item {
-  background-color: white;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
-  margin-bottom: 15px;
+  margin-bottom: 20px;
+  border: 1px solid #eee;
+  border-radius: 4px;
   overflow: hidden;
 }
 
+.daily-result-item:last-child {
+  margin-bottom: 0;
+}
+
 .date-header {
-  background-color: #f8f9fa;
-  padding: 15px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #e9ecef;
+  padding: 12px 15px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #eee;
 }
 
 .date-header h3 {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
   margin: 0;
+  font-size: 16px;
+  color: var(--text-primary);
 }
 
 .toggle-details {
@@ -732,9 +730,7 @@
   border: none;
   color: var(--text-secondary);
   cursor: pointer;
-  padding: 8px;
-  border-radius: 50%;
-  transition: all 0.2s ease;
+  padding: 0;
   width: 30px;
   height: 30px;
   display: flex;
@@ -743,92 +739,94 @@
 }
 
 .toggle-details:hover {
-  background-color: #e9ecef;
-  color: var(--text-primary);
+  color: var(--primary-color);
+  background: none;
 }
 
 .date-summary {
+  display: flex;
   padding: 15px;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 15px;
-  background-color: #fafafa;
-  border-bottom: 1px solid #e9ecef;
+  flex-wrap: wrap;
+  border-bottom: 1px solid #eee;
 }
 
 .summary-item {
+  flex: 1;
+  min-width: 150px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  align-items: center;
 }
 
 .summary-label {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-secondary);
-  font-weight: 500;
+  margin-bottom: 5px;
 }
 
 .summary-value {
-  font-size: 14px;
-  color: var(--text-primary);
+  font-size: 16px;
   font-weight: 600;
-}
-
-.vat-note {
-  font-size: 11px;
-  color: var(--text-secondary);
-  margin-left: 6px;
+  color: var(--primary-color);
 }
 
 .date-details {
-  display: none;
   padding: 15px;
+  background-color: #fafafa;
 }
 
-.date-details.show {
-  display: block;
-}
-
-/* 상세 테이블 */
+/* 상세 테이블 - bid-results와 동일 */
 .details-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 15px;
-}
-
-.details-table th,
-.details-table td {
-  padding: 8px;
-  text-align: left;
-  border-bottom: 1px solid #e9ecef;
-  font-size: 14px;
-  vertical-align: middle;
 }
 
 .details-table th {
-  background-color: #f8f9fa;
+  text-align: left;
+  padding: 10px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
-  font-size: 13px;
+  border-bottom: 1px solid #eee;
+  background-color: #f5f5f5;
+}
+
+.details-table td {
+  padding: 10px;
+  font-size: 14px;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+}
+
+.details-table tr:last-child td {
+  border-bottom: none;
+}
+
+.details-table tr:hover {
+  background-color: #f0f0f0;
 }
 
 .details-table .product-thumbnail {
-  width: 40px;
-  height: 40px;
-  border-radius: 4px;
+  width: 50px;
+  height: 50px;
   object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #eee;
 }
 
 .details-table .product-thumbnail-placeholder {
-  width: 40px;
-  height: 40px;
-  background-color: #f0f0f0;
+  width: 50px;
+  height: 50px;
+  background-color: #f5f5f5;
+  border: 1px solid #eee;
   border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
-  color: var(--text-secondary);
+  font-size: 10px;
+  color: #999;
+  text-align: center;
 }
 
 /* 입찰 결과별 행 색상 */
@@ -1294,14 +1292,16 @@
   }
 
   .bid-item {
-    grid-template-columns: 70px 1fr 130px;
+    grid-template-columns: 80px 1fr;
     grid-template-areas:
-      "image info status"
-      "price price price";
+      "image info"
+      "bid-section bid-section"
+      "status status";
+    gap: 12px;
   }
 
   .price-info {
-    grid-area: price;
+    grid-area: bid-section;
     flex-direction: row;
     justify-content: space-between;
     margin-top: 8px;
