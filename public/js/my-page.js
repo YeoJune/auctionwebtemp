@@ -1013,7 +1013,7 @@ class MyPageManager {
         product.displayStatus === "cancelled") &&
       !isExpired;
 
-    // 입찰 가능한 경우 bid-action 섹션 처리 (입찰 UI 직접 삽입)
+    // 입찰 가능한 경우 bid-action 섹션 처리
     const bidActionEl = element.querySelector('[data-if="isActiveBid"]');
     if (bidActionEl) {
       if (isActiveBid) {
@@ -1046,8 +1046,42 @@ class MyPageManager {
             : "";
         }
 
-        // BidManager HTML을 그대로 삽입
-        bidActionEl.innerHTML = bidHtml;
+        // BidManager HTML을 파싱하여 적절히 배치
+        const tempDiv = document.createElement("div");
+        tempDiv.innerHTML = bidHtml;
+
+        const leftContent = document.createElement("div");
+        leftContent.className = "bid-action-left";
+
+        const rightContent = document.createElement("div");
+        rightContent.className = "bid-input-container";
+
+        // 타이머 요소
+        const timerElement = tempDiv.querySelector(".bid-timer");
+        if (timerElement) {
+          leftContent.appendChild(timerElement);
+        }
+
+        // 가격 요소들
+        const priceElements = tempDiv.querySelectorAll(
+          ".real-time-price, .bid-price-info, .final-price"
+        );
+        priceElements.forEach((el) => {
+          leftContent.appendChild(el);
+        });
+
+        // 입력 컨테이너
+        const inputContainerSource = tempDiv.querySelector(
+          ".bid-input-container"
+        );
+        if (inputContainerSource) {
+          while (inputContainerSource.firstChild) {
+            rightContent.appendChild(inputContainerSource.firstChild);
+          }
+        }
+
+        bidActionEl.appendChild(leftContent);
+        bidActionEl.appendChild(rightContent);
       } else {
         bidActionEl.remove();
       }
