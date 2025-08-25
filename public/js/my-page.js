@@ -167,11 +167,13 @@ class MyPageManager {
           true,
           this.bidProductsState.filteredResults.map((item) => item.item)
         );
+      }
 
-        // 입찰 이벤트 리스너 설정 (bid-products.js의 setupBidEventListeners 대응)
-        this.setupBidEventListeners();
+      // 입찰 이벤트 리스너 설정 (bid-products.js와 동일하게 블록 밖에서)
+      this.setupBidEventListeners();
 
-        // 타이머 업데이트 시작
+      // 타이머 업데이트 시작 (bid-products.js와 동일하게 블록 밖에서)
+      if (window.BidManager) {
         BidManager.startTimerUpdates();
       }
 
