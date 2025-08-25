@@ -171,6 +171,7 @@ class MyPageManager {
           this.bidProductsState.liveBids,
           this.bidProductsState.directBids
         );
+        BidManager.startTimerUpdates();
       }
 
       console.log("마이페이지 초기화 완료");
@@ -895,6 +896,7 @@ class MyPageManager {
         this.bidProductsState.liveBids,
         this.bidProductsState.directBids
       );
+      BidManager.startTimerUpdates();
       BidManager.initializePriceCalculators();
     }
   }
