@@ -860,11 +860,6 @@ class MyPageManager {
       this.bidItemsPagination.totalItems;
     document.getElementById("bid-items-loading").style.display = "none";
 
-    // 렌더링 전에 BidManager 완전 정리
-    if (window.BidManager) {
-      BidManager.stopTimerUpdates();
-    }
-
     this.displayBidItems(currentPageData);
 
     this.renderPagination(
@@ -897,9 +892,6 @@ class MyPageManager {
 
     // BidManager 강제 리셋 후 재초기화 (bid-products.js 방식)
     if (window.BidManager) {
-      // 기존 타이머 정리
-      BidManager.stopTimerUpdates();
-
       // 데이터 업데이트
       BidManager.updateCurrentData(products.map((product) => product.item));
       BidManager.updateBidData(
