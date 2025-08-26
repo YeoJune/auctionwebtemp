@@ -116,13 +116,11 @@ class MessageService {
             linkTypeName: "채널 추가",
           },
           {
-            name: "입ㅊㅏㄺ",
+            name: "입찰",
             linkType: "WL",
             linkTypeName: "웹링크",
-            linkPc:
-              "https://casastrade.com/bidProductsPage?bidType=live&itemsPerPage=10",
-            linkMo:
-              "https://casastrade.com/bidProductsPage?bidType=live&itemsPerPage=10",
+            linkPc: "https://casastrade.com/bidProductsPage?bidType=live",
+            linkMo: "https://casastrade.com/bidProductsPage?bidType=live",
           },
         ],
       };
@@ -131,7 +129,7 @@ class MessageService {
         apikey: this.apiKey,
         userid: this.userId,
         senderkey: this.senderKey,
-        tpl_code: "UB_8487",
+        tpl_code: "UB_8707",
         sender: this.sender,
         failover: "N",
         testMode: "N",
@@ -143,11 +141,10 @@ class MessageService {
         const messageTemplate = `#{고객명}님 입찰하신 현장경매 모든상품에 대한 제안금액이 업데이트 되었습니다.
 
 입찰하실 상품에 한하여 최종입찰 부탁드립니다:)
-감사합니다:)
-`;
-        const fsubjectTemplate = `2차제안금액`;
+감사합니다:)`;
         const fmessageTemplate = `2차 제안가 등록 완료
 최종금액 입찰 요청
+
 
 #{고객명}님 입찰하신 현장경매 모든상품에 대한 제안금액이 업데이트 되었습니다.
 
@@ -165,10 +162,6 @@ class MessageService {
         formData.append(
           `message_${num}`,
           this.formatMessage(messageTemplate, params)
-        );
-        formData.append(
-          `fsubject_${num}`,
-          this.formatMessage(fsubjectTemplate, params)
         );
         formData.append(
           `fmessage_${num}`,
