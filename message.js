@@ -116,7 +116,7 @@ class MessageService {
             linkTypeName: "채널 추가",
           },
           {
-            name: "입찰항목 페이지",
+            name: "입ㅊㅏㄺ",
             linkType: "WL",
             linkTypeName: "웹링크",
             linkPc:
