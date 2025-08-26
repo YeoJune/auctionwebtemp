@@ -155,7 +155,7 @@ class MessageService {
 해당 제안 금액 업데이트 알림 메시지는 고객님의 알림 신청에 의해 발송됩니다.`;
 
         formData.append(`receiver_${num}`, phone);
-        formData.append(`subject_${num}`, "2차금액 제안완료");
+        formData.append(`subject_${num}`, "2차제안금액");
         formData.append(
           `emtitle_${num}`,
           this.formatMessage(emtitleTemplate, params)
@@ -226,7 +226,7 @@ class MessageService {
         const messageTemplate = `입찰하신 #{상품명}에 입찰하신 금액보다 높은 입찰이 발생하였습니다.`;
 
         formData.append(`receiver_${num}`, phone);
-        formData.append(`subject_${num}`, "더 높은 입찰 발생");
+        formData.append(`subject_${num}`, "더높은입찰");
         formData.append(
           `emtitle_${num}`,
           this.formatMessage(emtitleTemplate, params)
