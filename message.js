@@ -91,8 +91,6 @@ class MessageService {
         }
       );
 
-      console.log(response);
-
       return {
         success: response.data.code === 0,
         successCount: response.data.info.scnt,
@@ -181,8 +179,6 @@ class MessageService {
         }
       );
 
-      console.log(response);
-
       return {
         success: response.data.code === 0,
         successCount: response.data.info.scnt,
@@ -250,8 +246,6 @@ class MessageService {
         }
       );
 
-      console.log(response);
-
       return {
         success: response.data.code === 0,
         successCount: response.data.info.scnt,
@@ -268,64 +262,116 @@ class MessageService {
   }
 }
 
-// 테스트 실행
-async function testKakao() {
-  const messageService = new MessageService({
+// 테스트 데이터 생성
+function generateTestData() {
+  return {
+    sendKakao1: [
+      {
+        phone: "01051341771",
+        params: {
+          날짜: "2024-12-26",
+          고객명: "홍길동",
+          건수: "3",
+          금액: "1,500,000",
+        },
+      },
+      {
+        phone: "01012345678",
+        params: {
+          날짜: "2024-12-26",
+          고객명: "김철수",
+          건수: "1",
+          금액: "850,000",
+        },
+      },
+    ],
+    sendKakao2: [
+      {
+        phone: "01051341771",
+        params: { 고객명: "홍길동" },
+      },
+      {
+        phone: "01098765432",
+        params: { 고객명: "이영희" },
+      },
+    ],
+    sendKakao3: [
+      {
+        phone: "01051341771",
+        params: { 상품명: "샤넬 클래식 플랩백" },
+      },
+      {
+        phone: "01011112222",
+        params: { 상품명: "루이비통 네버풀 MM" },
+      },
+    ],
+  };
+}
+
+// 메시지 서비스 인스턴스 생성
+function createMessageService() {
+  return new MessageService({
     apiKey: process.env.SMS_API_KEY,
     userId: process.env.SMS_USER_ID,
     sender: process.env.SMS_SENDER,
     senderKey: process.env.CASATRADE_SENDER_KEY,
   });
+}
 
-  // 테스트 메시지 데이터
-  const testMessages = [
-    {
-      phone: "01051341771", // 받을 사람 번호
-      params: {
-        고객명: "홍길동",
-        날짜: "2025-08-21",
-        건수: "3",
-        금액: "150,000",
-      },
-    },
-  ];
-
-  try {
-    console.log("카카오톡 메시지 전송 중...");
-    const result1 = await messageService.sendKakao1(testMessages);
-    const result2 = await messageService.sendKakao2(testMessages);
-    const result3 = await messageService.sendKakao3(testMessages);
-
-    console.log("전송 결과:", result1, result2, result3);
-
-    if (result1.success) {
-      console.log("✅ 메시지 전송 성공!");
-      console.log(
-        `성공: ${result1.successCount}건, 실패: ${result1.errorCount}건`
-      );
-    } else {
-      console.log("❌ 메시지 전송 실패:", result1.error);
-    }
-    if (result2.success) {
-      console.log("✅ 메시지 전송 성공!");
-      console.log(
-        `성공: ${result2.successCount}건, 실패: ${result2.errorCount}건`
-      );
-    } else {
-      console.log("❌ 메시지 전송 실패:", result2.error);
-    }
-    if (result3.success) {
-      console.log("✅ 메시지 전송 성공!");
-      console.log(
-        `성공: ${result3.successCount}건, 실패: ${result3.errorCount}건`
-      );
-    } else {
-      console.log("❌ 메시지 전송 실패:", result3.error);
-    }
-  } catch (error) {
-    console.error("에러 발생:", error.message);
+// 결과 출력
+function printResult(result, messageType) {
+  console.log(`\n=== ${messageType} 결과 ===`);
+  if (result.success) {
+    console.log("✅ 메시지 전송 성공!");
+    console.log(`성공: ${result.successCount}건, 실패: ${result.errorCount}건`);
+  } else {
+    console.log("❌ 메시지 전송 실패:", result.error);
   }
 }
 
-// 테스트 실행
-testKakao();
+// 통합 테스트 함수
+async function runTests(testType = "all") {
+  const messageService = createMessageService();
+  const testData = generateTestData();
+  const testConfig = {
+    sendKakao1: { name: "낙찰 완료 메시지", method: "sendKakao1" },
+    sendKakao2: { name: "최종 입찰 요청 메시지", method: "sendKakao2" },
+    sendKakao3: { name: "더 높은 입찰 발생 메시지", method: "sendKakao3" },
+  };
+
+  try {
+    console.log("=== 카카오톡 메시지 전송 테스트 시작 ===\n");
+
+    const results = [];
+    const testsToRun =
+      testType === "all" ? Object.keys(testConfig) : [testType];
+
+    for (let i = 0; i < testsToRun.length; i++) {
+      const testKey = testsToRun[i];
+      const config = testConfig[testKey];
+
+      console.log(`${i + 1}. ${config.name} 전송 중...`);
+      const result = await messageService[config.method](testData[testKey]);
+      printResult(result, config.name);
+      results.push(result);
+    }
+
+    if (testType === "all") {
+      const totalSuccess = results.reduce(
+        (sum, r) => sum + (r.successCount || 0),
+        0
+      );
+      const totalError = results.reduce(
+        (sum, r) => sum + (r.errorCount || 0),
+        0
+      );
+      console.log("\n=== 전체 테스트 완료 ===");
+      console.log(`총 성공: ${totalSuccess}건, 총 실패: ${totalError}건`);
+    }
+  } catch (error) {
+    console.error("❌ 테스트 실행 중 에러 발생:", error.message);
+  }
+}
+
+// 실행
+runTests(); // 전체 테스트
