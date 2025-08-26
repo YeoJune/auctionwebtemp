@@ -119,8 +119,10 @@ class MessageService {
             name: "입찰항목 페이지",
             linkType: "WL",
             linkTypeName: "웹링크",
-            linkPc: "https://casastrade.com/bidProductsPage?",
-            linkMo: "https://casastrade.com/bidProductsPage?",
+            linkPc:
+              "https://casastrade.com/bidProductsPage?bidType=live&itemsPerPage=10",
+            linkMo:
+              "https://casastrade.com/bidProductsPage?bidType=live&itemsPerPage=10",
           },
         ],
       };
@@ -317,9 +319,7 @@ async function runTests(testType = "all") {
   const messageService = createMessageService();
   const testData = generateTestData();
   const testConfig = {
-    sendKakao1: { name: "낙찰 완료 메시지", method: "sendKakao1" },
     sendKakao2: { name: "최종 입찰 요청 메시지", method: "sendKakao2" },
-    sendKakao3: { name: "더 높은 입찰 발생 메시지", method: "sendKakao3" },
   };
 
   try {
