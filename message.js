@@ -144,6 +144,7 @@ class MessageService {
 
 입찰하실 상품에 한하여 최종입찰 부탁드립니다:)
 감사합니다:)`;
+        const fsubjectTemplate = `2차제안금액`;
         const fmessageTemplate = `2차 제안가 등록 완료
 최종금액 입찰 요청
 
@@ -163,6 +164,10 @@ class MessageService {
         formData.append(
           `message_${num}`,
           this.formatMessage(messageTemplate, params)
+        );
+        formData.append(
+          `fsubject_${num}`,
+          this.formatMessage(fsubjectTemplate, params)
         );
         formData.append(
           `fmessage_${num}`,
