@@ -352,6 +352,7 @@ async function runTests(testType = "all") {
 
       console.log(`${i + 1}. ${config.name} 전송 중...`);
       const result = await messageService[config.method](testData[testKey]);
+      console.log(result);
       printResult(result, config.name);
       results.push(result);
     }
