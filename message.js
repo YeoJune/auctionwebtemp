@@ -43,7 +43,7 @@ class MessageService {
         tpl_code: "UB_8485",
         sender: this.sender,
         failover: "N",
-        testMode: "Y",
+        testMode: "N",
       });
 
       messages.forEach(({ phone, params }, index) => {
@@ -132,7 +132,7 @@ class MessageService {
         tpl_code: "UB_8487",
         sender: this.sender,
         failover: "N",
-        testMode: "Y",
+        testMode: "N",
       });
 
       messages.forEach(({ phone, params }, index) => {
@@ -215,7 +215,7 @@ class MessageService {
         tpl_code: "UB_8489",
         sender: this.sender,
         failover: "N",
-        testMode: "Y",
+        testMode: "N",
       });
 
       messages.forEach(({ phone, params }, index) => {
@@ -275,34 +275,17 @@ function generateTestData() {
           금액: "1,500,000",
         },
       },
-      {
-        phone: "01012345678",
-        params: {
-          날짜: "2024-12-26",
-          고객명: "김철수",
-          건수: "1",
-          금액: "850,000",
-        },
-      },
     ],
     sendKakao2: [
       {
         phone: "01051341771",
         params: { 고객명: "홍길동" },
       },
-      {
-        phone: "01098765432",
-        params: { 고객명: "이영희" },
-      },
     ],
     sendKakao3: [
       {
         phone: "01051341771",
         params: { 상품명: "샤넬 클래식 플랩백" },
-      },
-      {
-        phone: "01011112222",
-        params: { 상품명: "루이비통 네버풀 MM" },
       },
     ],
   };
