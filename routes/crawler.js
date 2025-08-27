@@ -16,6 +16,10 @@ const { getAdminSettings } = require("../utils/adminDB");
 const { initializeFilterSettings } = require("../utils/filterDB");
 const dotenv = require("dotenv");
 const socketIO = require("socket.io");
+const {
+  sendHigherBidAlerts,
+  sendWinningNotifications,
+} = require("../utils/message");
 
 dotenv.config();
 
@@ -549,7 +553,25 @@ async function processChangedBids(changedItems) {
       }
     }
 
+    // commit 전에 취소될 입찰 데이터 조회
+    let cancelledBidsData = [];
+    if (bidsToCancel.length > 0) {
+      [cancelledBidsData] = await conn.query(
+        `SELECT db.user_id, i.title 
+        FROM direct_bids db 
+        JOIN crawled_items i ON db.item_id = i.item_id 
+        WHERE db.id IN (${bidsToCancel.map(() => "?").join(",")})`,
+        bidsToCancel
+      );
+    }
+
     await conn.commit();
+
+    // 취소된 입찰자들에게 알림 발송 (비동기)
+    if (cancelledBidsData.length > 0) {
+      sendHigherBidAlerts(cancelledBidsData);
+    }
+
     console.log(
       `Total cancelled due to price changes: ${bidsToCancel.length} bids`
     );
@@ -662,7 +684,25 @@ async function processExpiredBids() {
       }
     }
 
+    // commit 전에 완료될 입찰 데이터 조회
+    let completedBidsData = [];
+    if (bidsToComplete.length > 0) {
+      [completedBidsData] = await conn.query(
+        `SELECT db.user_id, db.current_price as winning_price, i.title, i.scheduled_date 
+        FROM direct_bids db 
+        JOIN crawled_items i ON db.item_id = i.item_id 
+        WHERE db.id IN (${bidsToComplete.map(() => "?").join(",")})`,
+        bidsToComplete
+      );
+    }
+
     await conn.commit();
+
+    // 완료된 입찰자들에게 낙찰 알림 발송 (비동기)
+    if (completedBidsData.length > 0) {
+      sendWinningNotifications(completedBidsData);
+    }
+
     console.log(
       `Expired items processed: ${uniqueItemIds.size}, completed: ${bidsToComplete.length}, cancelled: ${bidsToCancel.length}`
     );

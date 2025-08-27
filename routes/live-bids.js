@@ -3,6 +3,10 @@ const express = require("express");
 const router = express.Router();
 const { pool } = require("../utils/DB");
 const { createAppraisalFromAuction } = require("../utils/appr");
+const {
+  sendWinningNotifications,
+  sendFinalBidRequests,
+} = require("../utils/message");
 
 const isAdmin = (req, res, next) => {
   if (req.session.user && req.session.user.id === "admin") {
@@ -331,6 +335,9 @@ router.put("/:id/second", isAdmin, async (req, res) => {
 
     await connection.commit();
 
+    // 2차 입찰가 제안 후 최종 입찰 요청 메시지 발송 (비동기)
+    sendFinalBidRequests([{ user_id: bid.user_id }]);
+
     res.status(200).json({
       message: "Second price proposed successfully",
       bidId: id,
@@ -487,7 +494,24 @@ router.put("/complete", isAdmin, async (req, res) => {
       completedCount = updateResult.affectedRows;
     }
 
+    // commit 전에 완료될 입찰 데이터 조회
+    let completedBidsData = [];
+    if (completedCount > 0) {
+      [completedBidsData] = await connection.query(
+        `SELECT l.user_id, l.winning_price, l.final_price, i.title, i.scheduled_date 
+        FROM live_bids l 
+        JOIN crawled_items i ON l.item_id = i.item_id 
+        WHERE l.id IN (${placeholders}) AND l.status = 'completed'`,
+        bidIds
+      );
+    }
+
     await connection.commit();
+
+    // 낙찰 완료 시 알림 발송 (비동기)
+    if (completedBidsData.length > 0) {
+      sendWinningNotifications(completedBidsData);
+    }
 
     // 응답 메시지 구성
     let message;

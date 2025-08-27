@@ -11,6 +11,10 @@ const {
 } = require("../crawlers/index");
 const { notifyClientsOfChanges } = require("./crawler");
 const { createAppraisalFromAuction } = require("../utils/appr");
+const {
+  sendWinningNotifications,
+  sendHigherBidAlerts,
+} = require("../utils/message");
 
 const isAdmin = (req, res, next) => {
   if (req.session.user && req.session.user.id === "admin") {
@@ -648,7 +652,26 @@ router.post("/", async (req, res) => {
       }
     }
 
+    // commit 전에 취소될 입찰 데이터 조회
+    const [cancelledBidsData] = await connection.query(
+      `SELECT d.user_id, i.title 
+      FROM direct_bids d 
+      JOIN crawled_items i ON d.item_id = i.item_id 
+      WHERE d.item_id = ? AND d.current_price < ? AND d.status = 'active'`,
+      [itemId, currentPrice]
+    );
+
     await connection.commit();
+
+    // 가격이 낮은 다른 입찰들을 취소하고 알림 발송 (비동기)
+    if (cancelledBidsData.length > 0) {
+      pool.query(
+        "UPDATE direct_bids SET status = 'cancelled' WHERE item_id = ? AND current_price < ? AND status = 'active'",
+        [itemId, currentPrice]
+      );
+
+      sendHigherBidAlerts(cancelledBidsData);
+    }
 
     // 8. autoSubmit이 true인 경우 자동으로 입찰 제출
     let submissionResult = null;
@@ -760,7 +783,24 @@ router.put("/complete", isAdmin, async (req, res) => {
       );
     }
 
+    // commit 전에 완료될 입찰 데이터 조회
+    let completedBidsData = [];
+    if (completedCount > 0) {
+      [completedBidsData] = await connection.query(
+        `SELECT d.user_id, d.winning_price, d.current_price, i.title, i.scheduled_date 
+        FROM direct_bids d 
+        JOIN crawled_items i ON d.item_id = i.item_id 
+        WHERE d.id IN (${placeholders}) AND d.status = 'completed'`,
+        bidIds
+      );
+    }
+
     await connection.commit();
+
+    // 낙찰 완료 시 알림 발송 (비동기)
+    if (completedBidsData.length > 0) {
+      sendWinningNotifications(completedBidsData);
+    }
 
     // 응답 메시지 구성
     let message;
