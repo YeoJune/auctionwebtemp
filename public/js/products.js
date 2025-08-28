@@ -135,6 +135,23 @@ const productPageConfig = {
         message:
           "현장경매 최종 입찰 금액입니다.\n이 금액으로 최종 경쟁에 참여합니다.",
       },
+
+      // 1.5 타이머 정보 아이콘 (에코옥션, 스타옥션만)
+      {
+        selector: ".timer-info-icon",
+        type: "timer-info",
+        condition: (item) => item.auc_num == 1 || item.auc_num == 3,
+        message:
+          "마감 전 5분 입찰 발생 시\n5분씩 자동 연장\n\n추가 입찰 없을 시\n마지막 입찰 금액 낙찰",
+      },
+
+      // 1.6 스타옥션 입찰 정보
+      {
+        selector: ".quick-bid-buttons.star-auction .bid-info-tooltip-trigger",
+        type: "star-bid-info",
+        condition: (item) => item.auc_num == 3,
+        message: "해당 상품은 금액대별 최소금액으로 입찰됩니다.",
+      },
     ],
 
     modalTooltips: [
@@ -193,6 +210,23 @@ const productPageConfig = {
           !bidInfo?.final_price,
         message:
           "현장경매 최종 입찰 금액입니다.\n이 금액으로 최종 경쟁에 참여합니다.",
+      },
+
+      // 2.3 타이머 정보 아이콘 (에코옥션, 스타옥션만)
+      {
+        selector: ".timer-info-icon",
+        type: "timer-info",
+        condition: (item) => item.auc_num == 1 || item.auc_num == 3,
+        message:
+          "마감 전 5분 입찰 발생 시\n5분씩 자동 연장\n\n추가 입찰 없을 시\n마지막 입찰 금액 낙찰",
+      },
+
+      // 2.4 스타옥션 입찰 정보
+      {
+        selector: ".quick-bid-buttons.star-auction .bid-info-tooltip-trigger",
+        type: "star-bid-info",
+        condition: (item) => item.auc_num == 3,
+        message: "해당 상품은 금액대별 최소금액으로 입찰됩니다.",
       },
     ],
   },
@@ -813,42 +847,7 @@ function setupTooltips() {
 
   window.TooltipManager.clearConditionalTooltips();
 
-  // 기존 툴팁들 설정
-  setupExistingTooltips();
-
   console.log("상품 페이지 툴팁 시스템 설정 완료");
-}
-
-/**
- * 기존 툴팁 설정
- */
-function setupExistingTooltips() {
-  // 3.1 타이머 정보 아이콘 (에코옥션, 스타옥션만)
-  window.TooltipManager.registerConditionalTooltip(
-    ".timer-info-icon",
-    (element) => {
-      const itemId = getItemIdFromElement(element);
-      const state = window.ProductListController.getState();
-      const item = state.currentData.find((item) => item.item_id === itemId);
-      return item && (item.auc_num == 1 || item.auc_num == 3);
-    },
-    () =>
-      "마감 전 5분 입찰 발생 시\n5분씩 자동 연장\n\n추가 입찰 없을 시\n마지막 입찰 금액 낙찰",
-    "top"
-  );
-
-  // 3.2 스타옥션 입찰 정보
-  window.TooltipManager.registerConditionalTooltip(
-    ".quick-bid-buttons.star-auction .bid-info-tooltip-trigger",
-    (element) => {
-      const itemId = getItemIdFromElement(element);
-      const state = window.ProductListController.getState();
-      const item = state.currentData.find((item) => item.item_id === itemId);
-      return item && item.auc_num == 3;
-    },
-    () => "해당 상품은 금액대별 최소금액으로 입찰됩니다.",
-    "top"
-  );
 }
 
 function getItemIdFromElement(element) {
