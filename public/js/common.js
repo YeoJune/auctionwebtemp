@@ -956,6 +956,46 @@ window.TooltipManager = (function () {
   };
 })();
 
+// TooltipManager 확장 기능
+window.TooltipManager.addIcon = function (element, tooltipType) {
+  if (element.querySelector(".tooltip-icon")) return;
+
+  const icon = document.createElement("i");
+  icon.className = "fas fa-question-circle tooltip-icon";
+  icon.dataset.tooltip = tooltipType;
+  icon.style.cssText = `
+    margin-left: 4px;
+    color: #999;
+    cursor: pointer;
+    font-size: 12px;
+  `;
+
+  element.appendChild(icon);
+};
+
+window.TooltipManager.processTooltips = function (
+  container,
+  item,
+  tooltipConfigs,
+  bidInfo = null
+) {
+  if (!tooltipConfigs || !Array.isArray(tooltipConfigs)) return;
+
+  tooltipConfigs.forEach((config) => {
+    if (config.condition && !config.condition(item, bidInfo)) return;
+
+    const elements = container.querySelectorAll(config.selector);
+    elements.forEach((element) => {
+      if (
+        config.textCondition &&
+        !element.textContent.includes(config.textCondition)
+      )
+        return;
+      window.TooltipManager.addIcon(element, config.type);
+    });
+  });
+};
+
 // 드롭다운 메뉴 설정 (범용) - 함수는 유지하되 내용 수정
 function setupDropdownMenus() {
   const dropdownButtons = document.querySelectorAll(
