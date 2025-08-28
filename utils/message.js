@@ -336,29 +336,3 @@ module.exports = {
   sendFinalBidRequests,
   sendHigherBidAlerts,
 };
-
-// sendHigherBidAlert 테스트 함수
-async function testSendHigherBidAlert() {
-  const messageService = createMessageService();
-
-  const testMessages = [
-    {
-      phone: "01051341771", // 테스트할 전화번호
-      params: {
-        상품명:
-          "Louis Vuitton M63208 Essential V earring LE3273 Piercing jewelry (for both ears) GP Silver Scratched Wears Losing luster Discoloration distortions Marked Oxidation staining", // 테스트할 상품명
-      },
-    },
-  ];
-
-  return await safeSendMessage(
-    messageService,
-    "sendHigherBidAlert",
-    testMessages,
-    "higher bid alert test"
-  );
-}
-
-if (require.main === module) {
-  testSendHigherBidAlert();
-}
