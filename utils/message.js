@@ -339,7 +339,8 @@ async function testSendHigherBidAlert() {
     {
       phone: "01051341771", // 테스트할 전화번호
       params: {
-        상품명: "상품명 테스트!", // 테스트할 상품명
+        상품명:
+          "Louis Vuitton M63208 Essential V earring LE3273 Piercing jewelry (for both ears) GP Silver Scratched Wears Losing luster Discoloration distortions Marked Oxidation staining", // 테스트할 상품명
       },
     },
   ];
