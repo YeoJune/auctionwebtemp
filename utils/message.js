@@ -3,6 +3,8 @@ const axios = require("axios");
 const { pool } = require("./DB");
 require("dotenv").config();
 
+const MAX_PARAM_LENGTH = 40;
+
 // 유저 전화번호 조회 함수
 async function getUsersWithPhone(userIds) {
   if (!userIds || userIds.length === 0) return [];
@@ -56,7 +58,11 @@ class MessageService {
   formatMessage(template, params) {
     let message = template;
     Object.entries(params).forEach(([key, value]) => {
-      message = message.replace(`#{${key}}`, value);
+      const truncatedValue =
+        value && value.length > MAX_PARAM_LENGTH
+          ? value.substring(0, MAX_PARAM_LENGTH) + "..."
+          : value;
+      message = message.replace(`#{${key}}`, truncatedValue);
     });
     return message;
   }
