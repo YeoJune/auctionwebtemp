@@ -59,6 +59,8 @@ const productPageConfig = {
         selector: ".price-detail",
         type: "price-detail",
         condition: () => true,
+        message:
+          "까사트레이드 수수료를 제외한 모든 비용\n(관부가세, 출품사수수료, 현지세금)이\n반영된 실시간 원화 금액입니다.",
       },
 
       // 1.2 관부가세 포함 금액 설명 - .info-price-detail 선택자 (setupPriceInfo 생성)
@@ -66,6 +68,8 @@ const productPageConfig = {
         selector: ".info-price-detail",
         type: "price-detail",
         condition: () => true,
+        message:
+          "까사트레이드 수수료를 제외한 모든 비용\n(관부가세, 출품사수수료, 현지세금)이\n반영된 실시간 원화 금액입니다.",
       },
 
       // 1.3 관부가세 포함 금액 설명 - .price-details-container 선택자 (BidManager 생성)
@@ -73,6 +77,8 @@ const productPageConfig = {
         selector: ".price-details-container",
         type: "price-detail",
         condition: () => true,
+        message:
+          "까사트레이드 수수료를 제외한 모든 비용\n(관부가세, 출품사수수료, 현지세금)이\n반영된 실시간 원화 금액입니다.",
       },
 
       // 1.4 직접경매 - 실시간 라벨 (템플릿)
@@ -81,6 +87,8 @@ const productPageConfig = {
         type: "direct-realtime",
         textCondition: "실시간",
         condition: (item) => item.bid_type === "direct",
+        message:
+          "실시간 경쟁 입찰가입니다.\n마감이 가까울수록 급변할 수 있습니다.",
       },
 
       // 1.5 현장경매 - 시작 금액 라벨 (템플릿에서 setupPriceInfo가 변경)
@@ -89,6 +97,8 @@ const productPageConfig = {
         type: "live-starting",
         textCondition: "시작 금액",
         condition: (item) => item.bid_type === "live",
+        message:
+          "표시 금액은 사전입찰 시작가이며,\n실제 현장 낙찰가는 경합 정도에 따라\n크게 달라질 수 있습니다.",
       },
 
       // 1.6 BidManager 직접경매 실시간 라벨
@@ -97,6 +107,8 @@ const productPageConfig = {
         type: "direct-realtime",
         textCondition: "실시간 금액",
         condition: (item) => item.bid_type === "direct",
+        message:
+          "실시간 경쟁 입찰가입니다.\n마감이 가까울수록 급변할 수 있습니다.",
       },
 
       // 1.7 BidManager 현장경매 실시간 라벨 (리팩토링 후 "실시간:")
@@ -105,6 +117,8 @@ const productPageConfig = {
         type: "live-starting",
         textCondition: "실시간:",
         condition: (item) => item.bid_type === "live",
+        message:
+          "표시 금액은 사전입찰 시작가이며,\n실제 현장 낙찰가는 경합 정도에 따라\n크게 달라질 수 있습니다.",
       },
 
       // 1.8 현장경매 1차 입찰
@@ -114,6 +128,8 @@ const productPageConfig = {
         textCondition: "1차금액 입력",
         condition: (item, bidInfo) =>
           item.bid_type === "live" && !bidInfo?.first_price,
+        message:
+          "현장경매 참여를 위한 1차 입찰 금액입니다.\n이 금액으로 현장경매에 참여할 수 있습니다.",
       },
 
       // 1.9 현장경매 2차 제안 (템플릿 3번째 칸)
@@ -125,6 +141,8 @@ const productPageConfig = {
           item.bid_type === "live" &&
           bidInfo?.first_price &&
           !bidInfo?.final_price,
+        message:
+          "현장에서 경합이 발생할 경우\n자동으로 제안될 최대 금액입니다.",
       },
 
       // 1.10 현장경매 최대금액 (템플릿 3번째 칸, 다른 조건)
@@ -137,6 +155,8 @@ const productPageConfig = {
           bidInfo?.first_price &&
           bidInfo?.second_price &&
           !bidInfo?.final_price,
+        message:
+          "현장에서 경합이 발생할 경우\n자동으로 제안될 최대 금액입니다.",
       },
 
       // 1.11 현장경매 최종입찰
@@ -149,6 +169,8 @@ const productPageConfig = {
           bidInfo?.first_price &&
           bidInfo?.second_price &&
           !bidInfo?.final_price,
+        message:
+          "현장경매 최종 입찰 금액입니다.\n이 금액으로 최종 경쟁에 참여합니다.",
       },
     ],
 
@@ -158,16 +180,22 @@ const productPageConfig = {
         selector: ".price-detail",
         type: "price-detail",
         condition: () => true,
+        message:
+          "까사트레이드 수수료를 제외한 모든 비용\n(관부가세, 출품사수수료, 현지세금)이\n반영된 실시간 원화 금액입니다.",
       },
       {
         selector: ".info-price-detail",
         type: "price-detail",
         condition: () => true,
+        message:
+          "까사트레이드 수수료를 제외한 모든 비용\n(관부가세, 출품사수수료, 현지세금)이\n반영된 실시간 원화 금액입니다.",
       },
       {
         selector: ".price-details-container",
         type: "price-detail",
         condition: () => true,
+        message:
+          "까사트레이드 수수료를 제외한 모든 비용\n(관부가세, 출품사수수료, 현지세금)이\n반영된 실시간 원화 금액입니다.",
       },
 
       // 2.2 BidManager 직접경매 실시간 라벨
@@ -176,6 +204,8 @@ const productPageConfig = {
         type: "direct-realtime",
         textCondition: "실시간 금액",
         condition: (item) => item.bid_type === "direct",
+        message:
+          "실시간 경쟁 입찰가입니다.\n마감이 가까울수록 급변할 수 있습니다.",
       },
 
       // 2.3 BidManager 현장경매 실시간 라벨
@@ -184,6 +214,8 @@ const productPageConfig = {
         type: "live-starting",
         textCondition: "실시간:",
         condition: (item) => item.bid_type === "live",
+        message:
+          "표시 금액은 사전입찰 시작가이며,\n실제 현장 낙찰가는 경합 정도에 따라\n크게 달라질 수 있습니다.",
       },
 
       // 2.4 현장경매 입찰 단계별 (모달)
@@ -193,6 +225,8 @@ const productPageConfig = {
         textCondition: "1차금액 입력",
         condition: (item, bidInfo) =>
           item.bid_type === "live" && !bidInfo?.first_price,
+        message:
+          "현장경매 참여를 위한 1차 입찰 금액입니다.\n이 금액으로 현장경매에 참여할 수 있습니다.",
       },
       {
         selector: ".bid-price-info p",
@@ -202,6 +236,8 @@ const productPageConfig = {
           item.bid_type === "live" &&
           bidInfo?.first_price &&
           !bidInfo?.final_price,
+        message:
+          "현장에서 경합이 발생할 경우\n자동으로 제안될 최대 금액입니다.",
       },
       {
         selector: ".bid-input-label",
@@ -212,6 +248,8 @@ const productPageConfig = {
           bidInfo?.first_price &&
           bidInfo?.second_price &&
           !bidInfo?.final_price,
+        message:
+          "현장경매 최종 입찰 금액입니다.\n이 금액으로 최종 경쟁에 참여합니다.",
       },
     ],
   },
