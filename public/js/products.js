@@ -54,21 +54,28 @@ const productPageConfig = {
   tooltips: {
     enabled: true,
     cardTooltips: [
-      // 1. 템플릿 카드의 가격 상세 (setupPriceInfo에서 생성)
+      // 1.1 관부가세 포함 금액 설명 - .price-detail 선택자 (BidManager 생성)
+      {
+        selector: ".price-detail",
+        type: "price-detail",
+        condition: () => true,
+      },
+
+      // 1.2 관부가세 포함 금액 설명 - .info-price-detail 선택자 (setupPriceInfo 생성)
       {
         selector: ".info-price-detail",
         type: "price-detail",
         condition: () => true,
       },
 
-      // 2. BidManager가 생성하는 가격 상세
+      // 1.3 관부가세 포함 금액 설명 - .price-details-container 선택자 (BidManager 생성)
       {
         selector: ".price-details-container",
         type: "price-detail",
         condition: () => true,
       },
 
-      // 3. 직접경매 - 실시간 라벨 (템플릿)
+      // 1.4 직접경매 - 실시간 라벨 (템플릿)
       {
         selector: ".info-cell:nth-child(2) .info-label",
         type: "direct-realtime",
@@ -76,7 +83,7 @@ const productPageConfig = {
         condition: (item) => item.bid_type === "direct",
       },
 
-      // 4. 현장경매 - 시작 금액 라벨 (템플릿에서 setupPriceInfo가 변경)
+      // 1.5 현장경매 - 시작 금액 라벨 (템플릿에서 setupPriceInfo가 변경)
       {
         selector: ".info-cell:nth-child(2) .info-label",
         type: "live-starting",
@@ -84,21 +91,23 @@ const productPageConfig = {
         condition: (item) => item.bid_type === "live",
       },
 
-      // 5. BidManager 가격 정보
+      // 1.6 BidManager 직접경매 실시간 라벨
       {
         selector: ".real-time-price p",
         type: "direct-realtime",
         textCondition: "실시간 금액",
         condition: (item) => item.bid_type === "direct",
       },
+
+      // 1.7 BidManager 현장경매 실시간 라벨 (리팩토링 후 "실시간:")
       {
         selector: ".real-time-price p",
         type: "live-starting",
-        textCondition: "실시간",
+        textCondition: "실시간:",
         condition: (item) => item.bid_type === "live",
       },
 
-      // 6. 현장경매 입찰 단계별
+      // 1.8 현장경매 1차 입찰
       {
         selector: ".bid-input-label",
         type: "live-first-bid",
@@ -106,15 +115,31 @@ const productPageConfig = {
         condition: (item, bidInfo) =>
           item.bid_type === "live" && !bidInfo?.first_price,
       },
+
+      // 1.9 현장경매 2차 제안 (템플릿 3번째 칸)
       {
-        selector: ".bid-price-info p",
+        selector: ".info-cell:nth-child(3) .info-label",
         type: "live-second-proposal",
-        textCondition: "2차 제안금액",
+        textCondition: "2차 제안",
         condition: (item, bidInfo) =>
           item.bid_type === "live" &&
           bidInfo?.first_price &&
           !bidInfo?.final_price,
       },
+
+      // 1.10 현장경매 최대금액 (템플릿 3번째 칸, 다른 조건)
+      {
+        selector: ".info-cell:nth-child(3) .info-label",
+        type: "live-max-amount",
+        textCondition: "2차 제안",
+        condition: (item, bidInfo) =>
+          item.bid_type === "live" &&
+          bidInfo?.first_price &&
+          bidInfo?.second_price &&
+          !bidInfo?.final_price,
+      },
+
+      // 1.11 현장경매 최종입찰
       {
         selector: ".bid-input-label",
         type: "live-final-bid",
@@ -128,23 +153,40 @@ const productPageConfig = {
     ],
 
     modalTooltips: [
+      // 2.1 관부가세 포함 금액 설명 (모든 선택자)
+      {
+        selector: ".price-detail",
+        type: "price-detail",
+        condition: () => true,
+      },
+      {
+        selector: ".info-price-detail",
+        type: "price-detail",
+        condition: () => true,
+      },
       {
         selector: ".price-details-container",
         type: "price-detail",
         condition: () => true,
       },
+
+      // 2.2 BidManager 직접경매 실시간 라벨
       {
         selector: ".real-time-price p",
         type: "direct-realtime",
         textCondition: "실시간 금액",
         condition: (item) => item.bid_type === "direct",
       },
+
+      // 2.3 BidManager 현장경매 실시간 라벨
       {
         selector: ".real-time-price p",
         type: "live-starting",
-        textCondition: "실시간",
+        textCondition: "실시간:",
         condition: (item) => item.bid_type === "live",
       },
+
+      // 2.4 현장경매 입찰 단계별 (모달)
       {
         selector: ".bid-input-label",
         type: "live-first-bid",
@@ -294,7 +336,7 @@ window.ProductRenderer = (function () {
     // 가격 정보 설정
     setupPriceInfo(card, item);
 
-    // 툴팁 처리
+    // 툴팁 처리 (setupPriceInfo와 setupBidUI 완료 후)
     if (productPageConfig.tooltips?.enabled) {
       setTimeout(() => {
         const state = window.ProductListController.getState();
@@ -309,7 +351,7 @@ window.ProductRenderer = (function () {
           productPageConfig.tooltips.cardTooltips,
           bidInfo
         );
-      }, 100);
+      }, 150);
     }
   }
 
@@ -526,6 +568,18 @@ window.ProductRenderer = (function () {
       }
     }
 
+    // 세 번째 칸 라벨 변경 (리팩토링 전과 동일하게)
+    const thirdCellLabel = card.querySelector(
+      ".info-cell:nth-child(3) .info-label"
+    );
+    if (thirdCellLabel) {
+      if (item.bid_type === "direct") {
+        thirdCellLabel.textContent = "나의 입찰";
+      } else if (item.bid_type === "live") {
+        thirdCellLabel.textContent = "2차 제안";
+      }
+    }
+
     // 가격 표시 업데이트
     const priceValueEl = card.querySelector(
       ".info-cell:nth-child(2) .info-value"
@@ -539,7 +593,7 @@ window.ProductRenderer = (function () {
     }
 
     if (priceDetailEl && live_price) {
-      priceDetailEl.textContent = `관부가세 포함 ${cleanNumberFormat(
+      priceDetailEl.textContent = `${cleanNumberFormat(
         calculateTotalPrice(live_price, item.auc_num, item.category)
       )}원`;
     }
@@ -558,7 +612,7 @@ window.ProductRenderer = (function () {
 
       if (item.bid_type === "direct" && directBidInfo?.current_price) {
         thirdValue = `${cleanNumberFormat(directBidInfo.current_price)}¥`;
-        thirdDetail = `관부가세 포함 ${cleanNumberFormat(
+        thirdDetail = `${cleanNumberFormat(
           calculateTotalPrice(
             directBidInfo.current_price,
             item.auc_num,
@@ -567,7 +621,7 @@ window.ProductRenderer = (function () {
         )}원`;
       } else if (item.bid_type === "live" && liveBidInfo?.second_price) {
         thirdValue = `${cleanNumberFormat(liveBidInfo.second_price)}¥`;
-        thirdDetail = `관부가세 포함 ${cleanNumberFormat(
+        thirdDetail = `${cleanNumberFormat(
           calculateTotalPrice(
             liveBidInfo.second_price,
             item.auc_num,
@@ -778,11 +832,8 @@ function setupTooltips() {
 
   window.TooltipManager.clearConditionalTooltips();
 
-  // 기존 툴팁들
+  // 기존 툴팁들 설정
   setupExistingTooltips();
-
-  // 새로운 툴팁들
-  setupNewTooltips();
 
   console.log("상품 페이지 툴팁 시스템 설정 완료");
 }
@@ -791,7 +842,7 @@ function setupTooltips() {
  * 기존 툴팁 설정
  */
 function setupExistingTooltips() {
-  // 타이머 정보 아이콘 (에코옥션, 스타옥션만)
+  // 3.1 타이머 정보 아이콘 (에코옥션, 스타옥션만)
   window.TooltipManager.registerConditionalTooltip(
     ".timer-info-icon",
     (element) => {
@@ -805,7 +856,7 @@ function setupExistingTooltips() {
     "top"
   );
 
-  // 스타옥션 입찰 정보
+  // 3.2 스타옥션 입찰 정보
   window.TooltipManager.registerConditionalTooltip(
     ".quick-bid-buttons.star-auction .bid-info-tooltip-trigger",
     (element) => {
@@ -819,40 +870,6 @@ function setupExistingTooltips() {
   );
 }
 
-/**
- * 새로운 툴팁 설정
- */
-function setupNewTooltips() {
-  // 관부가세 포함 금액 설명
-  window.TooltipManager.registerConditionalTooltip(
-    '.tooltip-icon[data-tooltip="price-detail"]',
-    () => true,
-    () =>
-      "까사트레이드 수수료를 제외한 모든 비용\n(관부가세, 출품사수수료, 현지세금)이\n반영된 실시간 원화 금액입니다.",
-    "top"
-  );
-
-  // 직접경매 실시간 금액 설명
-  window.TooltipManager.registerConditionalTooltip(
-    '.tooltip-icon[data-tooltip="direct-realtime"]',
-    () => true,
-    () => "실시간 경쟁 입찰가입니다.\n마감이 가까울수록 급변할 수 있습니다.",
-    "top"
-  );
-
-  // 현장경매 시작 금액 설명
-  window.TooltipManager.registerConditionalTooltip(
-    '.tooltip-icon[data-tooltip="live-starting"]',
-    () => true,
-    () =>
-      "표시 금액은 사전입찰 시작가이며,\n실제 현장 낙찰가는 경합 정도에 따라\n크게 달라질 수 있습니다.",
-    "top"
-  );
-}
-
-/**
- * 요소에서 아이템 ID 추출
- */
 function getItemIdFromElement(element) {
   const card =
     element.closest(".product-card") || element.closest(".modal-content");
