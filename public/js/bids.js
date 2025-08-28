@@ -348,7 +348,7 @@ window.BidManager = (function () {
                 onclick="event.stopPropagation(); BidManager.setStarAuctionMinimumBid('${itemId}')">
           최소금액 입력
         </button>
-        <span class="bid-info-tooltip-trigger"><i class="fas fa-question-circle"></i></span>
+        <span class="bid-info-tooltip-trigger"></span>
       </div>`;
     }
 
@@ -371,9 +371,7 @@ window.BidManager = (function () {
 
     const className = auctionNum == 2 ? "brand-auction" : "";
     const tooltip =
-      auctionNum == 2
-        ? '<span class="bid-info-tooltip-trigger"><i class="fas fa-question-circle"></i></span>'
-        : "";
+      auctionNum == 2 ? '<span class="bid-info-tooltip-trigger"></span>' : "";
 
     return `<div class="quick-bid-buttons ${className}">
       ${buttonsHTML}
