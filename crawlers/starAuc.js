@@ -848,51 +848,63 @@ class StarAucCrawler extends AxiosCrawler {
       const url = this.config.searchUrl + this.config.searchParams(null, page);
 
       const response = await clientInfo.client.get(url);
+      const $ = cheerio.load(response.data);
 
+      // crawlPage와 동일한 스크립트 데이터 추출
       const scriptData = await this.parseScriptData(
         response.data,
         this.config.crawlSelectors.scriptData
       );
 
-      if (!scriptData || !scriptData.data) {
-        console.log(`No script data found on page ${page}`);
+      if (!scriptData) {
+        console.error("페이지에서 스크립트 데이터를 추출할 수 없음");
         return [];
       }
 
-      const updateItems = [];
+      // crawlPage와 동일한 필터링 방식 (existingIds는 빈 Set)
+      const [filteredItems, remainItems] = this.filterHandles(
+        $,
+        scriptData,
+        new Set()
+      );
 
-      for (const item of scriptData.data) {
-        const updateItem = this.extractUpdateItemInfo(item);
-        if (updateItem) {
-          updateItems.push(updateItem);
-        }
+      if (filteredItems.length === 0) {
+        console.log("필터링 후 처리할 아이템이 없음");
+        return remainItems;
       }
 
+      // extractItemInfo 대신 extractUpdateItemInfo 사용
+      const pageItems = filteredItems
+        .map((item) => this.extractUpdateItemInfo($, item))
+        .filter((item) => item !== null);
+
       console.log(
-        `Processed ${updateItems.length} update items from page ${page} (${clientInfo.name})`
+        `${pageItems.length}개 업데이트 아이템 추출 완료, 페이지 ${page} (${clientInfo.name})`
       );
-      return updateItems;
+
+      return pageItems;
     });
   }
 
-  extractUpdateItemInfo(scriptData) {
-    try {
-      const itemId = scriptData.id.toString();
-      const currentPrice =
-        scriptData.currentBiddingPrice || scriptData.startingPrice || 0;
-      const scheduledDate = this.extractDate(
-        scriptData.endAt || scriptData.ended_at
-      );
+  extractUpdateItemInfo($, item) {
+    const scriptData = item.scriptData;
+    const original_scheduled_date = item.scheduled_date;
+    const scheduled_date = original_scheduled_date;
 
-      return {
-        item_id: itemId,
-        starting_price: parseInt(currentPrice, 10),
-        scheduled_date: scheduledDate,
-      };
-    } catch (error) {
-      console.error("Error extracting update item info:", error);
-      return null;
+    // extractItemInfo와 동일한 가격 계산 로직
+    let currentPrice = parseInt(scriptData.startingPrice, 10);
+    if (scriptData.currentBiddingPrice) {
+      currentPrice = parseInt(scriptData.currentBiddingPrice, 10);
     }
+
+    // 업데이트에 필요한 필드만 반환
+    const result = {
+      item_id: item.item_id,
+      starting_price: currentPrice,
+      scheduled_date: scheduled_date,
+    };
+
+    return result;
   }
 
   async crawlUpdateWithId(itemId) {
