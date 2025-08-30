@@ -614,10 +614,6 @@
   margin: 0;
 }
 
-.modal-content .close-modal {
-  background: none;
-}
-
 .modal-content .modal-body {
   padding: 25px;
 }

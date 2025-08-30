@@ -355,6 +355,11 @@ body {
   color: #2c3e50;
 }
 
+.modal-content .close-modal {
+  background: none;
+  color: #333;
+}
+
 .modal-body {
   padding: 25px;
 }
