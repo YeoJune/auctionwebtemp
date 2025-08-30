@@ -217,8 +217,7 @@ const productPageConfig = {
         selector: ".timer-info-icon",
         type: "timer-info",
         condition: (item) =>
-          item.bid_type === "direct" &&
-          (item.auc_num == 1 || item.auc_num == 3),
+          item.bid_type == "direct" && (item.auc_num == 1 || item.auc_num == 3),
         message:
           "마감 전 5분 입찰 발생 시\n5분씩 자동 연장\n\n추가 입찰 없을 시\n마지막 입찰 금액 낙찰",
       },
