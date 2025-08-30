@@ -1,6 +1,7 @@
 // utils/message.js
 const axios = require("axios");
 const { pool } = require("./DB");
+const cron = require("node-cron");
 require("dotenv").config();
 
 const MAX_PARAM_LENGTH = 40;
@@ -328,6 +329,85 @@ async function sendHigherBidAlerts(cancelledBids) {
     "higher bid alert"
   );
 }
+
+async function sendDailyWinningNotifications() {
+  const connection = await pool.getConnection();
+
+  try {
+    // 발송되지 않은 완료된 입찰들 조회 (live + direct 통합)
+    const [completedBids] = await connection.query(`
+      SELECT 'live' as bid_type, l.id as bid_id, l.user_id, 
+             COALESCE(l.winning_price, l.final_price) as amount,
+             i.title, i.scheduled_date
+      FROM live_bids l
+      JOIN crawled_items i ON l.item_id = i.item_id
+      WHERE l.status = 'completed' 
+        AND l.notification_sent_at IS NULL
+        AND COALESCE(l.winning_price, l.final_price) > 0
+      
+      UNION ALL
+      
+      SELECT 'direct' as bid_type, d.id as bid_id, d.user_id,
+             d.winning_price as amount,
+             i.title, i.scheduled_date
+      FROM direct_bids d
+      JOIN crawled_items i ON d.item_id = i.item_id
+      WHERE d.status = 'completed' 
+        AND d.notification_sent_at IS NULL
+        AND d.winning_price > 0
+    `);
+
+    if (completedBids.length === 0) {
+      console.log("No completed bids to notify");
+      return;
+    }
+
+    // 기존 sendWinningNotifications 함수 재사용 (통합된 데이터로)
+    const result = await sendWinningNotifications(completedBids);
+
+    if (result && result.success) {
+      // 발송 완료 플래그 업데이트 (내부적으로 live/direct 구분)
+      await updateNotificationTimestamp(connection, completedBids);
+    }
+  } catch (error) {
+    console.error("Error in daily winning notifications:", error);
+  } finally {
+    connection.release();
+  }
+}
+
+async function updateNotificationTimestamp(connection, bids) {
+  const now = new Date();
+
+  const liveBids = bids.filter((b) => b.bid_type === "live");
+  const directBids = bids.filter((b) => b.bid_type === "direct");
+
+  if (liveBids.length > 0) {
+    const liveIds = liveBids.map((b) => b.bid_id);
+    const placeholders = liveIds.map(() => "?").join(",");
+    await connection.query(
+      `UPDATE live_bids SET notification_sent_at = ? WHERE id IN (${placeholders})`,
+      [now, ...liveIds]
+    );
+  }
+
+  if (directBids.length > 0) {
+    const directIds = directBids.map((b) => b.bid_id);
+    const placeholders = directIds.map(() => "?").join(",");
+    await connection.query(
+      `UPDATE direct_bids SET notification_sent_at = ? WHERE id IN (${placeholders})`,
+      [now, ...directIds]
+    );
+  }
+
+  console.log(`Updated notification timestamp for ${bids.length} bids`);
+}
+
+// 매일 16시에 실행
+cron.schedule("0 16 * * *", async () => {
+  console.log("Starting daily winning notifications...");
+  await sendDailyWinningNotifications();
+});
 
 module.exports = {
   MessageService,

@@ -11,10 +11,7 @@ const {
 } = require("../crawlers/index");
 const { notifyClientsOfChanges } = require("./crawler");
 const { createAppraisalFromAuction } = require("../utils/appr");
-const {
-  sendWinningNotifications,
-  sendHigherBidAlerts,
-} = require("../utils/message");
+const { sendHigherBidAlerts } = require("../utils/message");
 
 const isAdmin = (req, res, next) => {
   if (req.session.user && req.session.user.id === "admin") {
@@ -207,6 +204,7 @@ router.get("/", async (req, res) => {
         created_at: row.created_at,
         updated_at: row.updated_at,
         winning_price: row.winning_price,
+        notification_sent_at: row.notification_sent_at,
         appr_id: row.appr_id,
       };
 
@@ -796,11 +794,6 @@ router.put("/complete", isAdmin, async (req, res) => {
     }
 
     await connection.commit();
-
-    // 낙찰 완료 시 알림 발송 (비동기)
-    if (completedBidsData.length > 0) {
-      sendWinningNotifications(completedBidsData);
-    }
 
     // 응답 메시지 구성
     let message;

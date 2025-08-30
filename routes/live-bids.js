@@ -3,10 +3,7 @@ const express = require("express");
 const router = express.Router();
 const { pool } = require("../utils/DB");
 const { createAppraisalFromAuction } = require("../utils/appr");
-const {
-  sendWinningNotifications,
-  sendFinalBidRequests,
-} = require("../utils/message");
+const { sendFinalBidRequests } = require("../utils/message");
 
 const isAdmin = (req, res, next) => {
   if (req.session.user && req.session.user.id === "admin") {
@@ -102,8 +99,7 @@ router.get("/", async (req, res) => {
   // Main query with JOIN
   const mainQuery = `
     SELECT 
-      b.id, b.item_id, b.user_id, b.first_price, b.second_price, b.final_price, 
-      b.status, b.created_at, b.updated_at, b.winning_price, b.appr_id,
+      b.*,
       i.item_id, i.original_title, i.auc_num, i.category, i.brand, i.rank,
       i.starting_price, i.scheduled_date, i.image, i.original_scheduled_date, i.title
     FROM live_bids b
@@ -170,6 +166,7 @@ router.get("/", async (req, res) => {
         created_at: row.created_at,
         updated_at: row.updated_at,
         winning_price: row.winning_price,
+        notification_sent_at: row.notification_sent_at,
         appr_id: row.appr_id,
       };
 
@@ -507,11 +504,6 @@ router.put("/complete", isAdmin, async (req, res) => {
     }
 
     await connection.commit();
-
-    // 낙찰 완료 시 알림 발송 (비동기)
-    if (completedBidsData.length > 0) {
-      sendWinningNotifications(completedBidsData);
-    }
 
     // 응답 메시지 구성
     let message;
