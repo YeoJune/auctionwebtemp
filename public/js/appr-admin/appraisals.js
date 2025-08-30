@@ -1108,7 +1108,11 @@ function displayRestorationServicesCheckboxes(services) {
 function updateAppraisal() {
   if (isSubmitting) return;
 
-  setSubmitLoading('button[onclick="updateAppraisal()"]', true, "저장 중...");
+  setSubmitLoading(
+    '#appraisal-update-form button[type="submit"]',
+    true,
+    "저장 중..."
+  );
 
   const appraisalId = document.getElementById("appraisal-id").value;
 
@@ -1294,7 +1298,7 @@ function updateAppraisal() {
     })
     .catch((error) => showAlert(error.message, "error"))
     .finally(() =>
-      setSubmitLoading('button[onclick="updateAppraisal()"]', false)
+      setSubmitLoading('#appraisal-update-form button[type="submit"]', false)
     );
 }
 
