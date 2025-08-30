@@ -992,29 +992,17 @@ window.TooltipManager.processTooltips = function (
   // 먼저 기존의 동적으로 추가된 툴팁 아이콘들을 정리
   window.TooltipManager.clearDynamicTooltips(container);
 
-  console.log("ProcessTooltips:", {
-    item: item ? `${item.item_id} (${item.bid_type})` : "null",
-    bidInfo: bidInfo
-      ? `first:${!!bidInfo.first_price}, second:${!!bidInfo.second_price}, final:${!!bidInfo.final_price}`
-      : "null",
-    configCount: tooltipConfigs.length,
-  });
-
   tooltipConfigs.forEach((config, index) => {
     // 1. condition 체크 - false면 이 config는 스킵
     const conditionResult = config.condition
       ? config.condition(item, bidInfo)
       : true;
     if (!conditionResult) {
-      console.log(`Config ${index} skipped: condition failed`, config.selector);
       return;
     }
 
     // 2. 해당 selector에 맞는 요소들 찾기
     const elements = container.querySelectorAll(config.selector);
-    console.log(
-      `Config ${index}: selector "${config.selector}" found ${elements.length} elements`
-    );
 
     elements.forEach((element, elemIndex) => {
       // 3. textCondition 체크 - 있다면 텍스트가 일치해야 함
@@ -1022,23 +1010,15 @@ window.TooltipManager.processTooltips = function (
         config.textCondition &&
         !element.textContent.includes(config.textCondition)
       ) {
-        console.log(
-          `Element ${elemIndex} skipped: text "${element.textContent}" doesn't include "${config.textCondition}"`
-        );
         return;
       }
 
       // 4. 이미 툴팁 아이콘이 있다면 추가하지 않음
       if (element.querySelector(".tooltip-icon")) {
-        console.log(`Element ${elemIndex} skipped: already has tooltip icon`);
         return;
       }
 
       // 5. 모든 조건을 만족하면 툴팁 아이콘 추가
-      console.log(
-        `Adding tooltip icon: type="${config.type}" to element`,
-        element
-      );
       window.TooltipManager.addIcon(element, config.type);
 
       // 6. 추가된 아이콘에 대한 메시지 등록 (config에 message가 있는 경우)
