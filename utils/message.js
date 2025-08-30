@@ -341,7 +341,7 @@ async function sendDailyWinningNotifications() {
              i.title, i.scheduled_date
       FROM live_bids l
       JOIN crawled_items i ON l.item_id = i.item_id
-      WHERE l.status = 'completed' 
+      WHERE l.status IN ('completed', 'shipped')
         AND l.notification_sent_at IS NULL
         AND COALESCE(l.winning_price, l.final_price) > 0
       
@@ -352,7 +352,7 @@ async function sendDailyWinningNotifications() {
              i.title, i.scheduled_date
       FROM direct_bids d
       JOIN crawled_items i ON d.item_id = i.item_id
-      WHERE d.status = 'completed' 
+      WHERE d.status IN ('completed', 'shipped')
         AND d.notification_sent_at IS NULL
         AND d.winning_price > 0
     `);
