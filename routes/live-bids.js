@@ -377,7 +377,7 @@ router.put("/:id/final", async (req, res) => {
 
     // 입찰 정보와 상품 정보 함께 확인
     const [bids] = await connection.query(
-      `SELECT l.*, i.scheduled_date 
+      `SELECT l.*, i.scheduled_date, i.auc_num 
        FROM live_bids l 
        JOIN crawled_items i ON l.item_id = i.item_id 
        WHERE l.id = ?`,
