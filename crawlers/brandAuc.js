@@ -951,6 +951,128 @@ class BrandAucCrawler extends AxiosCrawler {
     }
   }
 
+  async liveBid(item_id, price) {
+    try {
+      // 로그인 상태 확인
+      await this.login();
+
+      // 직접 연결 클라이언트 사용
+      const directClient = this.getDirectClient();
+
+      // XSRF 토큰 추출 (쿠키에서)
+      const cookies = await directClient.cookieJar.getCookies(
+        "https://u.brand-auc.com/"
+      );
+      const xsrfToken = cookies.find(
+        (cookie) => cookie.key === "XSRF-TOKEN"
+      )?.value;
+
+      if (!xsrfToken) {
+        throw new Error("XSRF token not found in cookies");
+      }
+
+      const response = await directClient.client.post(
+        "https://u.brand-auc.com/api/v1/auction/nyusatsu/create",
+        {
+          uketsukeBng: item_id,
+          nyuKng: price,
+          nyuLockVersion: null,
+        },
+        {
+          params: {
+            gamenId: "B02-03",
+          },
+          headers: {
+            "Content-Type": "application/json",
+            "accept-encoding": "gzip, deflate, br, zstd",
+            Referer: "hhttps://u.brand-auc.com/",
+            "X-XSRF-TOKEN": xsrfToken,
+          },
+        }
+      );
+
+      // 첫 번째 API 성공
+      if (response.status === 201) {
+        return {
+          success: true,
+          message: "Bid successful",
+          data: response.data,
+        };
+      }
+    } catch (error) {
+      console.error(`Error placing bid for item ${item_id}:`, error.message);
+      return {
+        success: false,
+        message: "Bid failed",
+        error: error.message,
+      };
+    }
+  }
+
+  async addWishlist(item_id, favorite_number = "A", kaisaiKaisu = 0) {
+    try {
+      // 로그인 상태 확인
+      await this.login();
+
+      // 직접 연결 클라이언트 사용
+      const directClient = this.getDirectClient();
+
+      // XSRF 토큰 추출 (쿠키에서)
+      const cookies = await directClient.cookieJar.getCookies(
+        "https://u.brand-auc.com/"
+      );
+      const xsrfToken = cookies.find(
+        (cookie) => cookie.key === "XSRF-TOKEN"
+      )?.value;
+
+      if (!xsrfToken) {
+        throw new Error("XSRF token not found in cookies");
+      }
+
+      const response = await directClient.client.post(
+        "https://u.brand-auc.com/api/v1/auction/mylists/create",
+        {
+          kaijoCd: 1,
+          kaisaiKaisu: kaisaiKaisu,
+          uketsukeBng: item_id,
+          favoriteAorB: favorite_number,
+          favoriteOnOrOff: true,
+          lockVersion: null,
+        },
+        {
+          params: {
+            gamenId: "B02-03",
+          },
+          headers: {
+            "Content-Type": "application/json",
+            "accept-encoding": "gzip, deflate, br, zstd",
+            Referer: "hhttps://u.brand-auc.com/",
+            "X-XSRF-TOKEN": xsrfToken,
+          },
+        }
+      );
+
+      // 첫 번째 API 성공
+      if (response.status === 201) {
+        return {
+          success: true,
+          message: "Wishlist successful",
+          data: response.data,
+        };
+      }
+    } catch (error) {
+      console.error(
+        `Error adding wishlist for item ${item_id}:`,
+        error.message
+      );
+      return {
+        success: false,
+        message: "Wishlist failed",
+        error: error.message,
+      };
+    }
+  }
+
   async crawlInvoices() {
     try {
       console.log("Starting to crawl brand auction invoices...");
@@ -1514,5 +1636,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
 
 const brandAucCrawler = new BrandAucCrawler(brandAucConfig);
 const brandAucValueCrawler = new BrandAucValueCrawler(brandAucValueConfig);
+
+brandAucCrawler.addWishlist("833-31790", "A").then((data) => console.log(data));
 
 module.exports = { brandAucCrawler, brandAucValueCrawler };

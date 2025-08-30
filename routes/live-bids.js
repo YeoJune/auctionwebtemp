@@ -377,7 +377,7 @@ router.put("/:id/final", async (req, res) => {
 
     // 입찰 정보와 상품 정보 함께 확인
     const [bids] = await connection.query(
-      `SELECT l.*, i.scheduled_date, i.auc_num 
+      `SELECT l.*, i.scheduled_date, i.auc_num, i.kaisaiKaisu
        FROM live_bids l 
        JOIN crawled_items i ON l.item_id = i.item_id 
        WHERE l.id = ?`,
@@ -433,6 +433,9 @@ router.put("/:id/final", async (req, res) => {
     if (bid.auc_num == 1 && ecoAucCrawler) {
       ecoAucCrawler.liveBid(bid.item_id, finalPrice);
       ecoAucCrawler.addWishlist(bid.item_id, 1);
+    } else if (bid.auc_num == 1 && brandAucCrawler) {
+      brandAucCrawler.liveBid(bid.item_id, finalPrice);
+      brandAucCrawler.addWishlist(bid.item_id, "A", bid.kaisaiKaisu);
     }
 
     res.status(200).json({
