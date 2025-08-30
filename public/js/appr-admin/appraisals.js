@@ -1,19 +1,22 @@
-// public/js/appr-admin/appraisals.js - 감정 관리 관련 기능 (완전 개선 버전)
+// public/js/appr-admin/appraisals.js - Blob 최적화 버전 (기존 동작 완전 보존)
 
-// 전역 변수
+// ===== 기존 전역 변수들 (완전히 동일) =====
 let currentAppraisalPage = 1;
 let appraisalSearchQuery = "";
 let appraisalStatusFilter = "all";
 let appraisalResultFilter = "all";
 let bulkDeleteMode = false;
-let bulkChangeMode = false; // 일괄 변경 모드 추가
+let bulkChangeMode = false;
 let imageList = [];
 let userSearchTimeout = null;
-let originalImageStateForEdit = []; // localStorage를 대체할 변수
+let originalImageStateForEdit = [];
 
-// 페이지 로드 시 이벤트 리스너 설정
+// ===== 새로 추가되는 최적화 관련 변수들 =====
+let imageUrlCache = new Map(); // Blob URL 캐시
+
+// ===== 기존 DOMContentLoaded 이벤트 (완전히 동일) =====
 document.addEventListener("DOMContentLoaded", function () {
-  // 검색 기능
+  // 모든 기존 이벤트 리스너들 동일하게 유지
   document
     .getElementById("appraisal-search-btn")
     .addEventListener("click", function () {
@@ -22,7 +25,6 @@ document.addEventListener("DOMContentLoaded", function () {
       loadAppraisalList();
     });
 
-  // 검색창 엔터 이벤트
   document
     .getElementById("appraisal-search")
     .addEventListener("keypress", function (e) {
@@ -33,7 +35,6 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
 
-  // 상태 필터 변경 이벤트
   document
     .getElementById("appraisal-status-filter")
     .addEventListener("change", function () {
@@ -42,7 +43,6 @@ document.addEventListener("DOMContentLoaded", function () {
       loadAppraisalList();
     });
 
-  // 결과 필터 변경 이벤트
   document
     .getElementById("appraisal-result-filter")
     .addEventListener("change", function () {
@@ -51,7 +51,6 @@ document.addEventListener("DOMContentLoaded", function () {
       loadAppraisalList();
     });
 
-  // 감정 생성 관련 이벤트 리스너
   document
     .getElementById("create-appraisal-btn")
     .addEventListener("click", function () {
@@ -71,12 +70,10 @@ document.addEventListener("DOMContentLoaded", function () {
       submitCreateAppraisal();
     });
 
-  // 감정 생성 모달 이미지 업로드 이벤트 리스너
   document
     .getElementById("create-appraisal-images")
     .addEventListener("change", handleCreateImageUpload);
 
-  // 일괄 작업 관련 이벤트 리스너
   document
     .getElementById("bulk-delete-btn")
     .addEventListener("click", toggleBulkDeleteMode);
@@ -97,7 +94,6 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
 
-  // 실시간 사용자 검색 이벤트 리스너
   setTimeout(() => {
     const userIdInput = document.getElementById("create-user-id");
     if (userIdInput) {
@@ -105,12 +101,11 @@ document.addEventListener("DOMContentLoaded", function () {
         handleUserIdInput(e.target.value);
       });
     }
-
-    // 페이지 로드 시 감정 목록 초기 로드
     loadAppraisalList();
   }, 100);
 });
 
+// ===== 기존 함수들 (완전히 동일) =====
 function initImages(existingImages = []) {
   imageList = existingImages.map((img, index) => ({
     id: img.id || `existing-${Date.now()}-${index}`,
@@ -130,13 +125,16 @@ function addImages(files) {
       file: file,
       order: imageList.length,
       isNew: true,
-      originalName: file.name, // [수정] originalName 추가
+      originalName: file.name,
     });
   });
   renderImages();
 }
 
 function removeImage(imageId) {
+  // 캐시에서 해당 이미지 URL 정리
+  cleanupSingleImageFromCache(imageId);
+
   imageList = imageList.filter((img) => img.id !== imageId);
   imageList.forEach((img, index) => (img.order = index));
   renderImages();
@@ -157,25 +155,22 @@ function moveImage(imageId, direction) {
   renderImages();
 }
 
+// ===== 최적화된 renderImages 함수 =====
 function renderImages() {
+  // 기존 컨테이너 감지 로직 완전히 동일
   let container = null;
-
-  // 1. 열려있는 모달 감지하고 해당 컨테이너 찾기
   const createModal = document.getElementById("create-appraisal-modal");
   const detailModal = document.getElementById("appraisal-detail-modal");
 
   if (createModal && createModal.style.display === "flex") {
-    // 감정 생성 모달이 열려있는 경우
     container = document.getElementById("create-images-preview");
     console.log("감정 생성 모달에 이미지 렌더링");
   } else if (detailModal && detailModal.style.display === "flex") {
-    // 감정 상세/수정 모달이 열려있는 경우
     container =
       document.getElementById("current-images-container") ||
       document.getElementById("appraisal-detail-images-container");
     console.log("감정 수정 모달에 이미지 렌더링");
   } else {
-    // 모달이 안 열려있으면 기본 컨테이너들 순서대로 시도
     container =
       document.getElementById("create-images-preview") ||
       document.getElementById("current-images-container") ||
@@ -196,63 +191,120 @@ function renderImages() {
     container.id
   );
 
+  // 빈 목록 처리 (기존과 동일)
   if (imageList.length === 0) {
     container.innerHTML =
       '<p style="color: #666; text-align: center; padding: 20px;">업로드된 이미지가 없습니다.</p>';
     return;
   }
 
-  // 기존 blob URL 정리 (메모리 누수 방지)
+  // 기존 blob URL들을 나중에 정리
+  const oldBlobUrls = [];
   container.querySelectorAll('img[src^="blob:"]').forEach((img) => {
-    URL.revokeObjectURL(img.src);
+    oldBlobUrls.push(img.src);
   });
 
-  container.innerHTML = imageList
+  // HTML 생성 (캐시 사용)
+  const imageElements = imageList
     .map((img, index) => {
-      const src = img.isNew ? URL.createObjectURL(img.file) : img.url;
-      return `
-      <div style="position: relative; width: 150px; height: 150px; margin: 5px; display: inline-block; border: 2px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: white;">
-        <img src="${src}" style="width: 100%; height: 100%; object-fit: cover;" 
-             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-        <div style="display: none; width: 100%; height: 100%; background: #f3f4f6; align-items: center; justify-content: center; color: #9ca3af; font-size: 0.8rem;">
-          이미지 로드 실패
-        </div>
-        <div style="position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75rem; font-weight: 500;">${
-          index + 1
-        }</div>
-        ${
-          img.isNew
-            ? '<div style="position: absolute; top: 5px; right: 35px; background: rgba(34, 197, 94, 0.9); color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.65rem; font-weight: 500;">NEW</div>'
-            : ""
-        }
-        <button onclick="removeImage('${img.id}')" 
-                style="position: absolute; top: 5px; right: 5px; width: 24px; height: 24px; border-radius: 50%; background: rgba(220, 38, 38, 0.9); color: white; border: none; cursor: pointer; font-size: 16px; line-height: 1; display: flex; align-items: center; justify-content: center;"
-                title="이미지 삭제">×</button>
-        <div style="position: absolute; bottom: 5px; right: 5px; display: flex; gap: 2px;">
-          <button onclick="moveImage('${img.id}', 'up')" 
-                  style="width: 20px; height: 20px; border-radius: 3px; background: rgba(0,0,0,0.7); color: white; border: none; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; ${
-                    index === 0 ? "opacity: 0.3; cursor: not-allowed;" : ""
-                  }"
-                  title="앞으로 이동" ${
-                    index === 0 ? "disabled" : ""
-                  }>↑</button>
-          <button onclick="moveImage('${img.id}', 'down')" 
-                  style="width: 20px; height: 20px; border-radius: 3px; background: rgba(0,0,0,0.7); color: white; border: none; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; ${
-                    index === imageList.length - 1
-                      ? "opacity: 0.3; cursor: not-allowed;"
-                      : ""
-                  }"
-                  title="뒤로 이동" ${
-                    index === imageList.length - 1 ? "disabled" : ""
-                  }>↓</button>
-        </div>
-      </div>
-    `;
+      const src = getOptimizedImageSrc(img);
+      return createImageElementHTML(img, index, src);
     })
     .join("");
+
+  container.innerHTML = imageElements;
+
+  // 100ms 후 사용하지 않는 URL 정리
+  setTimeout(() => {
+    oldBlobUrls.forEach((url) => {
+      if (!document.querySelector(`img[src="${url}"]`)) {
+        URL.revokeObjectURL(url);
+      }
+    });
+  }, 100);
 }
 
-// 실시간 사용자 검색 처리
+// ===== 새로운 헬퍼 함수: 이미지 엘리먼트 HTML 생성 =====
+function createImageElementHTML(img, index, src) {
+  return `
+    <div style="position: relative; width: 150px; height: 150px; margin: 5px; display: inline-block; border: 2px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: white;">
+      <img src="${src}" 
+           style="width: 100%; height: 100%; object-fit: cover;" 
+           loading="lazy"
+           onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+      <div style="display: none; width: 100%; height: 100%; background: #f3f4f6; align-items: center; justify-content: center; color: #9ca3af; font-size: 0.8rem;">
+        이미지 로드 실패
+      </div>
+      <div style="position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.75rem; font-weight: 500;">${
+        index + 1
+      }</div>
+      ${
+        img.isNew
+          ? '<div style="position: absolute; top: 5px; right: 35px; background: rgba(34, 197, 94, 0.9); color: white; padding: 2px 6px; border-radius: 3px; font-size: 0.65rem; font-weight: 500;">NEW</div>'
+          : ""
+      }
+      <button onclick="removeImage('${img.id}')" 
+              style="position: absolute; top: 5px; right: 5px; width: 24px; height: 24px; border-radius: 50%; background: rgba(220, 38, 38, 0.9); color: white; border: none; cursor: pointer; font-size: 16px; line-height: 1; display: flex; align-items: center; justify-content: center;"
+              title="이미지 삭제">×</button>
+      <div style="position: absolute; bottom: 5px; right: 5px; display: flex; gap: 2px;">
+        <button onclick="moveImage('${img.id}', 'up')" 
+                style="width: 20px; height: 20px; border-radius: 3px; background: rgba(0,0,0,0.7); color: white; border: none; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; ${
+                  index === 0 ? "opacity: 0.3; cursor: not-allowed;" : ""
+                }"
+                title="앞으로 이동" ${index === 0 ? "disabled" : ""}>↑</button>
+        <button onclick="moveImage('${img.id}', 'down')" 
+                style="width: 20px; height: 20px; border-radius: 3px; background: rgba(0,0,0,0.7); color: white; border: none; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; ${
+                  index === imageList.length - 1
+                    ? "opacity: 0.3; cursor: not-allowed;"
+                    : ""
+                }"
+                title="뒤로 이동" ${
+                  index === imageList.length - 1 ? "disabled" : ""
+                }>↓</button>
+      </div>
+    </div>
+  `;
+}
+
+// ===== 새로운 헬퍼 함수: 최적화된 이미지 소스 가져오기 =====
+function getOptimizedImageSrc(img) {
+  if (img.isNew && img.file) {
+    // 캐시에서 확인
+    if (imageUrlCache.has(img.id)) {
+      return imageUrlCache.get(img.id);
+    }
+
+    // 새 Blob URL 생성하고 캐시에 저장
+    const blobUrl = URL.createObjectURL(img.file);
+    imageUrlCache.set(img.id, blobUrl);
+    return blobUrl;
+  } else {
+    // 기존 이미지는 URL 그대로 사용
+    return img.url;
+  }
+}
+
+// ===== 새로운 헬퍼 함수: 개별 이미지 캐시 정리 =====
+function cleanupSingleImageFromCache(imageId) {
+  if (imageUrlCache.has(imageId)) {
+    const url = imageUrlCache.get(imageId);
+    if (url && url.startsWith("blob:")) {
+      URL.revokeObjectURL(url);
+    }
+    imageUrlCache.delete(imageId);
+  }
+}
+
+// ===== 새로운 헬퍼 함수: 전체 이미지 캐시 정리 =====
+function cleanupImageCache() {
+  imageUrlCache.forEach((url, key) => {
+    if (url && url.startsWith("blob:")) {
+      URL.revokeObjectURL(url);
+    }
+  });
+  imageUrlCache.clear();
+}
+// ===== 기존 함수들 (메모리 정리 추가) =====
 function handleUserIdInput(query) {
   const resultsContainer = document.getElementById("user-search-results");
 
@@ -520,14 +572,12 @@ function viewAppraisalDetail(appraisalId) {
     });
 }
 
-function storeOriginalImageIds(images) {
-  const ids = (images || []).map((img) => img.id);
-  localStorage.setItem("originalImageIds", JSON.stringify(ids));
-}
-
 // 감정 상세 정보 표시 함수
 function displayAppraisalDetail(appraisal) {
-  // 기존 HTML 생성 로직은 그대로 유지하되, 이미지 부분만 수정
+  // 기존 캐시 정리
+  cleanupImageCache();
+
+  // 기존 HTML 생성 로직 완전히 동일하게 유지
   const container = document.getElementById("appraisal-detail-content");
   let html = `
     <form id="appraisal-update-form" enctype="multipart/form-data">
@@ -898,7 +948,6 @@ function displayAppraisalDetail(appraisal) {
 
   // 기존 이미지 로드
   initImages(appraisal.images || []);
-  // storeOriginalImageIds(appraisal.images || []); // 이 라인 삭제
 
   setTimeout(() => {
     const imageInput = document.getElementById("appraisal-images-update");
@@ -916,8 +965,25 @@ function displayAppraisalDetail(appraisal) {
 
 // 편집 취소 함수
 function cancelAppraisalEdit() {
-  // 모달 닫기
+  // 캐시 정리 후 모달 닫기
+  cleanupImageCache();
   closeModal("appraisal-detail-modal");
+}
+
+// ===== closeModal 함수가 있다면 수정, 없다면 추가 =====
+function closeModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.style.display = "none";
+
+    // 이미지 관련 모달인 경우 캐시 정리
+    if (
+      modalId === "create-appraisal-modal" ||
+      modalId === "appraisal-detail-modal"
+    ) {
+      cleanupImageCache();
+    }
+  }
 }
 
 // 감정 유형에 따른 필드 표시/숨김 함수 (상세 모달용)
@@ -1207,11 +1273,12 @@ function openCreateAppraisalModal() {
   document.getElementById("user-search-results").innerHTML = "";
   document.getElementById("user-search-results").style.display = "none";
 
-  // 이미지 프리뷰 초기화
+  // 기존 캐시 정리 후 새로 시작
+  cleanupImageCache();
+
   document.getElementById("create-images-preview").innerHTML = "";
   document.getElementById("create-appraisal-images").value = "";
 
-  // 수정 모달의 이미지 리스트 초기화 (혼동 방지)
   initImages([]);
 
   toggleAppraisalTypeFields("");
@@ -1734,3 +1801,19 @@ function executeBulkDelete() {
       .catch((error) => showAlert(error.message, "error"));
   }
 }
+
+// ===== 페이지 언로드시 메모리 정리 =====
+window.addEventListener("beforeunload", function () {
+  cleanupImageCache();
+});
+
+// ===== 나머지 모든 기존 함수들은 그대로 유지 =====
+// (handleUserIdInput, searchUsersRealtime, selectUserFromSearch, loadAppraisalList,
+//  displayAppraisalList, deleteAppraisal, viewAppraisalDetail,
+//  toggleAppraisalTypeFieldsInDetail, addComponentInputDetail, removeComponentInputDetail,
+//  loadRestorationServicesForAppraisal, displayRestorationServicesCheckboxes, updateAppraisal,
+//  handleImageUpload, handleCreateImageUpload, handleUpdateImageUpload, toggleAppraisalTypeFields,
+//  addComponentInput, removeComponentInput, searchUsers, performUserSearch, selectUser,
+//  submitCreateAppraisal, toggleBulkDeleteMode, toggleBulkChangeMode, toggleBulkChangeUI,
+//  toggleSelectAll, updateBulkActionButtons, executeBulkStatusChange, executeBulkResultChange,
+//  executeBulkDelete 등등...)
