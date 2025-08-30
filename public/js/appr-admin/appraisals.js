@@ -10,6 +10,7 @@ let bulkChangeMode = false;
 let imageList = [];
 let userSearchTimeout = null;
 let originalImageStateForEdit = [];
+let isSubmitting = false;
 
 // ===== 새로 추가되는 최적화 관련 변수들 =====
 let imageUrlCache = new Map(); // Blob URL 캐시
@@ -104,6 +105,29 @@ document.addEventListener("DOMContentLoaded", function () {
     loadAppraisalList();
   }, 100);
 });
+
+// 헬퍼 함수 추가
+function setSubmitLoading(
+  buttonSelector,
+  isLoading,
+  loadingText = "처리 중..."
+) {
+  const btn = document.querySelector(buttonSelector);
+  if (!btn) return;
+
+  if (isLoading) {
+    btn.dataset.originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = loadingText;
+    btn.style.opacity = "0.6";
+    isSubmitting = true;
+  } else {
+    btn.disabled = false;
+    btn.textContent = btn.dataset.originalText || btn.textContent;
+    btn.style.opacity = "1";
+    isSubmitting = false;
+  }
+}
 
 // ===== 기존 함수들 (완전히 동일) =====
 function initImages(existingImages = []) {
@@ -1082,6 +1106,10 @@ function displayRestorationServicesCheckboxes(services) {
 
 // 감정 정보 업데이트 함수 - 기본 정보도 포함하도록 수정
 function updateAppraisal() {
+  if (isSubmitting) return;
+
+  setSubmitLoading('button[onclick="updateAppraisal()"]', true, "저장 중...");
+
   const appraisalId = document.getElementById("appraisal-id").value;
 
   // 폼 데이터 생성
@@ -1264,7 +1292,10 @@ function updateAppraisal() {
         throw new Error(data.message || "업데이트에 실패했습니다.");
       }
     })
-    .catch((error) => showAlert(error.message, "error"));
+    .catch((error) => showAlert(error.message, "error"))
+    .finally(() =>
+      setSubmitLoading('button[onclick="updateAppraisal()"]', false)
+    );
 }
 
 // 감정 생성 모달 열기
@@ -1419,6 +1450,13 @@ function selectUser(userId, userEmail) {
 
 // 감정 생성 제출 함수
 function submitCreateAppraisal() {
+  if (isSubmitting) return;
+  setSubmitLoading(
+    'button[onclick="submitCreateAppraisal()"]',
+    true,
+    "생성 중..."
+  );
+
   const formData = new FormData();
 
   // 기본 정보 (기존과 동일)
@@ -1528,7 +1566,10 @@ function submitCreateAppraisal() {
         throw new Error(data.message);
       }
     })
-    .catch((error) => showAlert(error.message, "error"));
+    .catch((error) => showAlert(error.message, "error"))
+    .finally(() =>
+      setSubmitLoading('button[onclick="submitCreateAppraisal()"]', false)
+    );
 }
 
 // 다중 삭제 모드 토글 함수
@@ -1806,14 +1847,3 @@ function executeBulkDelete() {
 window.addEventListener("beforeunload", function () {
   cleanupImageCache();
 });
-
-// ===== 나머지 모든 기존 함수들은 그대로 유지 =====
-// (handleUserIdInput, searchUsersRealtime, selectUserFromSearch, loadAppraisalList,
-//  displayAppraisalList, deleteAppraisal, viewAppraisalDetail,
-//  toggleAppraisalTypeFieldsInDetail, addComponentInputDetail, removeComponentInputDetail,
-//  loadRestorationServicesForAppraisal, displayRestorationServicesCheckboxes, updateAppraisal,
-//  handleImageUpload, handleCreateImageUpload, handleUpdateImageUpload, toggleAppraisalTypeFields,
-//  addComponentInput, removeComponentInput, searchUsers, performUserSearch, selectUser,
-//  submitCreateAppraisal, toggleBulkDeleteMode, toggleBulkChangeMode, toggleBulkChangeUI,
-//  toggleSelectAll, updateBulkActionButtons, executeBulkStatusChange, executeBulkResultChange,
-//  executeBulkDelete 등등...)
