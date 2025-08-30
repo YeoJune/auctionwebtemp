@@ -433,7 +433,7 @@ router.put("/:id/final", async (req, res) => {
     if (bid.auc_num == 1 && ecoAucCrawler) {
       ecoAucCrawler.liveBid(bid.item_id, finalPrice);
       ecoAucCrawler.addWishlist(bid.item_id, 1);
-    } else if (bid.auc_num == 1 && brandAucCrawler) {
+    } else if (bid.auc_num == 2 && brandAucCrawler) {
       brandAucCrawler.liveBid(bid.item_id, finalPrice);
       brandAucCrawler.addWishlist(bid.item_id, "A", bid.kaisaiKaisu);
     }
