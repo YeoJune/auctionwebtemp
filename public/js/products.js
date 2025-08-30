@@ -136,6 +136,16 @@ const productPageConfig = {
           "현장경매 최종 입찰 금액입니다.\n이 금액으로 최종 경쟁에 참여합니다.",
       },
 
+      // 1.5 타이머 정보 아이콘 (에코옥션, 스타옥션만)
+      {
+        selector: ".timer-info-icon",
+        type: "timer-info",
+        condition: (item) =>
+          item.bid_type == "direct" && (item.auc_num == 1 || item.auc_num == 3),
+        message:
+          "마감 전 5분 입찰 발생 시\n5분씩 자동 연장\n\n추가 입찰 없을 시\n마지막 입찰 금액 낙찰",
+      },
+
       // 1.6 스타옥션 입찰 정보
       {
         selector: ".quick-bid-buttons.star-auction .bid-info-tooltip-trigger",
@@ -201,17 +211,6 @@ const productPageConfig = {
           !bidInfo?.final_price,
         message:
           "현장경매 최종 입찰 금액입니다.\n이 금액으로 최종 경쟁에 참여합니다.",
-      },
-
-      // 2.3 타이머 정보 아이콘 (에코옥션, 스타옥션만)
-      {
-        selector: ".timer-info-icon",
-        type: "timer-info",
-        condition: (item) =>
-          item.bid_type === "direct" &&
-          (item.auc_num == 1 || item.auc_num == 3),
-        message:
-          "마감 전 5분 입찰 발생 시\n5분씩 자동 연장\n\n추가 입찰 없을 시\n마지막 입찰 금액 낙찰",
       },
 
       // 2.4 스타옥션 입찰 정보
