@@ -1109,7 +1109,7 @@ function updateAppraisal() {
   if (isSubmitting) return;
 
   setSubmitLoading(
-    '#appraisal-update-form button[type="submit"]',
+    '#appraisal-update-form button[onclick="updateAppraisal()"]',
     true,
     "저장 중..."
   );
@@ -1298,7 +1298,10 @@ function updateAppraisal() {
     })
     .catch((error) => showAlert(error.message, "error"))
     .finally(() =>
-      setSubmitLoading('#appraisal-update-form button[type="submit"]', false)
+      setSubmitLoading(
+        '#appraisal-update-form button[onclick="updateAppraisal()"]',
+        false
+      )
     );
 }
 
@@ -1456,7 +1459,7 @@ function selectUser(userId, userEmail) {
 function submitCreateAppraisal() {
   if (isSubmitting) return;
   setSubmitLoading(
-    'button[onclick="submitCreateAppraisal()"]',
+    '#create-appraisal-form button[type="submit"]',
     true,
     "생성 중..."
   );
@@ -1572,7 +1575,7 @@ function submitCreateAppraisal() {
     })
     .catch((error) => showAlert(error.message, "error"))
     .finally(() =>
-      setSubmitLoading('button[onclick="submitCreateAppraisal()"]', false)
+      setSubmitLoading('#create-appraisal-form button[type="submit"]', false)
     );
 }
 
