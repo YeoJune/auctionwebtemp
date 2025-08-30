@@ -4,6 +4,11 @@ const router = express.Router();
 const { pool } = require("../utils/DB");
 const { createAppraisalFromAuction } = require("../utils/appr");
 const { sendFinalBidRequests } = require("../utils/message");
+const {
+  ecoAucCrawler,
+  brandAucCrawler,
+  starAucCrawler,
+} = require("../crawlers/index");
 
 const isAdmin = (req, res, next) => {
   if (req.session.user && req.session.user.id === "admin") {
@@ -423,6 +428,12 @@ router.put("/:id/final", async (req, res) => {
     );
 
     await connection.commit();
+
+    // 크롤러에 처리
+    if (bid.auc_num == 1 && ecoAucCrawler) {
+      ecoAucCrawler.liveBid(bid.item_id, finalPrice);
+      ecoAucCrawler.addWishlist(bid.item_id, 1);
+    }
 
     res.status(200).json({
       message: "Final price submitted successfully",
