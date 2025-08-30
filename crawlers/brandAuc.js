@@ -1637,6 +1637,4 @@ class BrandAucValueCrawler extends AxiosCrawler {
 const brandAucCrawler = new BrandAucCrawler(brandAucConfig);
 const brandAucValueCrawler = new BrandAucValueCrawler(brandAucValueConfig);
 
-brandAucCrawler.addWishlist("833-31790", "A").then((data) => console.log(data));
-
 module.exports = { brandAucCrawler, brandAucValueCrawler };

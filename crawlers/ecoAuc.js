@@ -1531,6 +1531,4 @@ class EcoAucValueCrawler extends AxiosCrawler {
 const ecoAucCrawler = new EcoAucCrawler(ecoAucConfig);
 const ecoAucValueCrawler = new EcoAucValueCrawler(ecoAucValueConfig);
 
-ecoAucCrawler.addWishlist("7740683");
-
 module.exports = { ecoAucCrawler, ecoAucValueCrawler };
