@@ -247,30 +247,45 @@ async function sendWinningNotifications(completedBids) {
 
   if (users.length === 0) return;
 
-  const messages = users.map((user) => {
+  const messages = [];
+
+  // 유저별, 날짜별로 그룹핑
+  users.forEach((user) => {
     const userBids = completedBids.filter((bid) => bid.user_id === user.id);
-    const totalAmount = userBids.reduce(
-      (sum, bid) =>
-        sum +
-        parseFloat(bid.winning_price || bid.final_price || bid.current_price),
-      0
-    );
-    const bidCount = userBids.length;
 
-    // scheduled_date가 있으면 사용, 없으면 현재 날짜
-    const bidDate = userBids[0]?.scheduled_date
-      ? new Date(userBids[0].scheduled_date).toISOString().split("T")[0]
-      : new Date().toISOString().split("T")[0];
+    // 날짜별로 그룹핑
+    const bidsByDate = userBids.reduce((acc, bid) => {
+      const bidDate = bid.scheduled_date
+        ? new Date(bid.scheduled_date).toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0];
 
-    return {
-      phone: user.phone,
-      params: {
-        날짜: bidDate,
-        고객명: user.id,
-        건수: bidCount.toString(),
-        금액: totalAmount.toLocaleString("ko-KR"),
-      },
-    };
+      if (!acc[bidDate]) {
+        acc[bidDate] = [];
+      }
+      acc[bidDate].push(bid);
+      return acc;
+    }, {});
+
+    // 각 날짜별로 메시지 생성
+    Object.entries(bidsByDate).forEach(([date, dateBids]) => {
+      const totalAmount = dateBids.reduce(
+        (sum, bid) =>
+          sum +
+          parseFloat(bid.winning_price || bid.final_price || bid.current_price),
+        0
+      );
+      const bidCount = dateBids.length;
+
+      messages.push({
+        phone: user.phone,
+        params: {
+          날짜: date,
+          고객명: user.id,
+          건수: bidCount.toString(),
+          금액: totalAmount.toLocaleString("ko-KR"),
+        },
+      });
+    });
   });
 
   return await safeSendMessage(
@@ -334,21 +349,22 @@ async function sendDailyWinningNotifications() {
   const connection = await pool.getConnection();
 
   try {
-    // 발송되지 않은 완료된 입찰들 조회 (live + direct 통합)
-    const [completedBids] = await connection.query(`
+    // 발송되지 않은 완료된 live 입찰들 조회
+    const [liveBids] = await connection.query(`
       SELECT 'live' as bid_type, l.id as bid_id, l.user_id, 
-             COALESCE(l.winning_price, l.final_price) as amount,
+             l.winning_price, l.final_price, NULL as current_price,
              i.title, i.scheduled_date
       FROM live_bids l
       JOIN crawled_items i ON l.item_id = i.item_id
       WHERE l.status IN ('completed', 'shipped')
         AND l.notification_sent_at IS NULL
         AND COALESCE(l.winning_price, l.final_price) > 0
-      
-      UNION ALL
-      
+    `);
+
+    // 발송되지 않은 완료된 direct 입찰들 조회
+    const [directBids] = await connection.query(`
       SELECT 'direct' as bid_type, d.id as bid_id, d.user_id,
-             d.winning_price as amount,
+             d.winning_price, NULL as final_price, NULL as current_price,
              i.title, i.scheduled_date
       FROM direct_bids d
       JOIN crawled_items i ON d.item_id = i.item_id
@@ -357,12 +373,14 @@ async function sendDailyWinningNotifications() {
         AND d.winning_price > 0
     `);
 
+    const completedBids = [...liveBids, ...directBids];
+
     if (completedBids.length === 0) {
       console.log("No completed bids to notify");
       return;
     }
 
-    // 기존 sendWinningNotifications 함수 재사용 (통합된 데이터로)
+    // 기존 sendWinningNotifications 함수 재사용 (필드명 통일된 데이터로)
     const result = await sendWinningNotifications(completedBids);
 
     if (result && result.success) {
