@@ -421,10 +421,58 @@ async function updateNotificationTimestamp(connection, bids) {
   console.log(`Updated notification timestamp for ${bids.length} bids`);
 }
 
+async function sendDailyFinalBidReminders() {
+  const connection = await pool.getConnection();
+
+  try {
+    // 내일 경매인데 아직 final_price가 없는 second 상태 입찰들 조회
+    const [secondBids] = await connection.query(`
+      SELECT l.id as bid_id, l.user_id
+      FROM live_bids l
+      JOIN crawled_items i ON l.item_id = i.item_id
+      WHERE l.status = 'second'
+        AND l.request_sent_at IS NULL
+        AND DATE(i.scheduled_date) = DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+    `);
+
+    if (secondBids.length === 0) {
+      console.log("No second bids to remind for tomorrow's auction");
+      return;
+    }
+
+    // 기존 sendFinalBidRequests 함수 재사용
+    const result = await sendFinalBidRequests(secondBids);
+
+    if (result && result.success) {
+      // 발송 완료 플래그 업데이트
+      const bidIds = secondBids.map((b) => b.bid_id);
+      const placeholders = bidIds.map(() => "?").join(",");
+      const now = new Date();
+
+      await connection.query(
+        `UPDATE live_bids SET request_sent_at = ? WHERE id IN (${placeholders})`,
+        [now, ...bidIds]
+      );
+
+      console.log(`Updated request_sent_at for ${bidIds.length} second bids`);
+    }
+  } catch (error) {
+    console.error("Error in daily final bid reminders:", error);
+  } finally {
+    connection.release();
+  }
+}
+
 // 매일 16시에 실행
 cron.schedule("0 16 * * *", async () => {
   console.log("Starting daily winning notifications...");
   await sendDailyWinningNotifications();
+});
+
+// 매일 18시에 실행
+cron.schedule("0 18 * * *", async () => {
+  console.log("Starting daily final bid reminders...");
+  await sendDailyFinalBidReminders();
 });
 
 module.exports = {

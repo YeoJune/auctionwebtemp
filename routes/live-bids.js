@@ -336,9 +336,6 @@ router.put("/:id/second", isAdmin, async (req, res) => {
 
     await connection.commit();
 
-    // 2차 입찰가 제안 후 최종 입찰 요청 메시지 발송 (비동기)
-    // sendFinalBidRequests([{ user_id: bid.user_id }]);
-
     res.status(200).json({
       message: "Second price proposed successfully",
       bidId: id,
