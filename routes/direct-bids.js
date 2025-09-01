@@ -135,11 +135,13 @@ router.get("/", async (req, res) => {
       const aucNumArray = aucNum.split(",");
 
       if (aucNumArray.length === 1) {
-        queryConditions.push("i.auc_num = ?");
+        countQuery += " AND i.auc_num = ?";
+        mainQuery += " AND i.auc_num = ?";
         queryParams.push(aucNum);
       } else {
         const placeholders = aucNumArray.map(() => "?").join(",");
-        queryConditions.push(`i.auc_num IN (${placeholders})`);
+        countQuery += ` AND i.auc_num IN (${placeholders})`;
+        mainQuery += ` AND i.auc_num IN (${placeholders})`;
         queryParams.push(...aucNumArray);
       }
     }
