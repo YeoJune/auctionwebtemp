@@ -718,7 +718,7 @@ class EcoAucCrawler extends AxiosCrawler {
       const url =
         this.config.searchUrl + this.config.searchParamsAllCategories(page);
 
-      const response = await clientInfo.client.get(url);
+      const response = await clientInfo.client.get(url, { timeout: 5 * 1000 });
       const $ = cheerio.load(response.data, { xmlMode: true });
 
       // 아이템 컨테이너 선택
