@@ -8,7 +8,7 @@ let pLimit;
   pLimit = (await import("p-limit")).default;
 })();
 
-const LIMIT1 = 100;
+const LIMIT1 = 20;
 const LIMIT2 = 5;
 
 const starAucConfig = {
