@@ -27,7 +27,7 @@ router.get("/", async (req, res) => {
   const {
     search,
     status,
-    auc_num,
+    aucNum,
     highestOnly,
     page = 1,
     limit = 10,
@@ -131,12 +131,12 @@ router.get("/", async (req, res) => {
       }
     }
 
-    if (auc_num) {
-      const aucNumArray = auc_num.split(",");
+    if (aucNum) {
+      const aucNumArray = aucNum.split(",");
 
       if (aucNumArray.length === 1) {
         queryConditions.push("i.auc_num = ?");
-        queryParams.push(auc_num);
+        queryParams.push(aucNum);
       } else {
         const placeholders = aucNumArray.map(() => "?").join(",");
         queryConditions.push(`i.auc_num IN (${placeholders})`);
