@@ -10,7 +10,6 @@ let pLimit;
 
 const LIMIT1 = 20;
 const LIMIT2 = 5;
-const LIMIT3 = 50;
 
 const ecoAucConfig = {
   name: "EcoAuc",
@@ -334,24 +333,16 @@ class EcoAucCrawler extends AxiosCrawler {
         console.log("No items to extract after filtering");
         return remainItems;
       }
-      const extractLimit = pLimit(LIMIT3);
-      const extractPromises = [];
 
+      const pageItems = [];
       for (let i = 0; i < filteredItems.length; i++) {
-        extractPromises.push(
-          extractLimit(() => {
-            const item = this.extractItemInfo(
-              $,
-              $(filteredElements[i]),
-              filteredItems[i]
-            );
-            return item;
-          })
+        const item = this.extractItemInfo(
+          $,
+          $(filteredElements[i]),
+          filteredItems[i]
         );
+        if (item) pageItems.push(item);
       }
-
-      const extractResults = await Promise.all(extractPromises);
-      const pageItems = extractResults.filter((item) => item !== null);
 
       let finalItems;
       if (skipImageProcessing) {
@@ -738,13 +729,15 @@ class EcoAucCrawler extends AxiosCrawler {
         return [];
       }
 
-      const elementsArray = itemElements.toArray();
-      const extractLimit = pLimit(LIMIT3);
-      const extractPromises = elementsArray.map((element) =>
-        extractLimit(() => this.extractUpdateItemInfo($, $(element)))
-      );
-      const extractResults = await Promise.all(extractPromises);
-      const pageItems = extractResults.filter((item) => item !== null);
+      // 배열로 변환하여 처리
+      const pageItems = [];
+      itemElements.each((index, element) => {
+        const item = this.extractUpdateItemInfo($, $(element));
+        if (item) {
+          // null이 아닌 유효한 항목만 추가
+          pageItems.push(item);
+        }
+      });
 
       console.log(`Crawled ${pageItems.length} update items from page ${page}`);
       return pageItems;
@@ -1399,20 +1392,15 @@ class EcoAucValueCrawler extends AxiosCrawler {
         return [];
       }
 
-      const elementsArray = itemElements.toArray();
-      const extractLimit = pLimit(LIMIT3);
-
-      const extractPromises = elementsArray.map((element, index) =>
-        extractLimit(() => {
-          const item = this.extractItemInfo($, $(element), existingIds);
-          return item && this.isCollectionDay(item.scheduled_date)
-            ? item
-            : null;
-        })
-      );
-
-      const extractResults = await Promise.all(extractPromises);
-      const pageItems = extractResults.filter((item) => item !== null);
+      // 배열로 변환하여 처리
+      const pageItems = [];
+      itemElements.each((index, element) => {
+        const item = this.extractItemInfo($, $(element), existingIds);
+        if (item && this.isCollectionDay(item.scheduled_date)) {
+          // null이 아닌 유효한 항목만 추가
+          pageItems.push(item);
+        }
+      });
 
       let finalItems;
       if (skipImageProcessing) {
