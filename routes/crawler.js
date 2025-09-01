@@ -16,10 +16,7 @@ const { getAdminSettings } = require("../utils/adminDB");
 const { initializeFilterSettings } = require("../utils/filterDB");
 const dotenv = require("dotenv");
 const socketIO = require("socket.io");
-const {
-  sendHigherBidAlerts,
-  sendWinningNotifications,
-} = require("../utils/message");
+const { sendHigherBidAlerts } = require("../utils/message");
 
 dotenv.config();
 
@@ -560,7 +557,9 @@ async function processChangedBids(changedItems) {
         `SELECT db.user_id, i.title 
         FROM direct_bids db 
         JOIN crawled_items i ON db.item_id = i.item_id 
-        WHERE db.id IN (${bidsToCancel.map(() => "?").join(",")})`,
+        WHERE db.status = 'active' AND db.id IN (${bidsToCancel
+          .map(() => "?")
+          .join(",")})`,
         bidsToCancel
       );
     }
@@ -697,11 +696,6 @@ async function processExpiredBids() {
     }
 
     await conn.commit();
-
-    // 완료된 입찰자들에게 낙찰 알림 발송 (비동기)
-    if (completedBidsData.length > 0) {
-      sendWinningNotifications(completedBidsData);
-    }
 
     console.log(
       `Expired items processed: ${uniqueItemIds.size}, completed: ${bidsToComplete.length}, cancelled: ${bidsToCancel.length}`

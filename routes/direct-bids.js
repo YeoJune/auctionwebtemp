@@ -11,7 +11,6 @@ const {
 } = require("../crawlers/index");
 const { notifyClientsOfChanges } = require("./crawler");
 const { createAppraisalFromAuction } = require("../utils/appr");
-const { sendHigherBidAlerts } = require("../utils/message");
 
 const isAdmin = (req, res, next) => {
   if (req.session.user && req.session.user.id === "admin") {
@@ -660,16 +659,6 @@ router.post("/", async (req, res) => {
     );
 
     await connection.commit();
-
-    // 가격이 낮은 다른 입찰들을 취소하고 알림 발송 (비동기)
-    if (cancelledBidsData.length > 0) {
-      pool.query(
-        "UPDATE direct_bids SET status = 'cancelled' WHERE item_id = ? AND current_price < ? AND status = 'active'",
-        [itemId, currentPrice]
-      );
-
-      sendHigherBidAlerts(cancelledBidsData);
-    }
 
     // 8. autoSubmit이 true인 경우 자동으로 입찰 제출
     let submissionResult = null;
