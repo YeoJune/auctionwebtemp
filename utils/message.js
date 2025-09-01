@@ -5,6 +5,8 @@ const cron = require("node-cron");
 require("dotenv").config();
 
 const MAX_PARAM_LENGTH = 40;
+const ACCOUNT_TEXT = `국민은행 024801-04-544857
+황승하(까사플랫폼)`;
 
 // 유저 전화번호 조회 함수
 async function getUsersWithPhone(userIds) {
@@ -130,23 +132,15 @@ class MessageService {
   // 낙찰 완료 알림
   async sendWinningNotification(messages) {
     const config = {
-      templateCode: "UB_8485",
+      templateCode: "UC_2621",
       subject: "낙찰완료",
       emtitle: "#{날짜} 경매 #{건수}건 낙찰",
       message: `#{고객명}님 #{날짜}입찰하신 상품중 #{건수}건 낙찰되었습니다.
 
-금액 : #{금액}원
+#{계좌텍스트}`,
+      fmessage: `#{고객명}님 #{날짜}입찰하신 상품중 #{건수}건 낙찰되었습니다.
 
-국민은행 792002 01 202171
-황승하(까사부티크)`,
-      fmessage: `#{날짜} 경매 #{건수}건 낙찰
-
-#{고객명}님 #{날짜}입찰하신 상품중 #{건수}건 낙찰되었습니다.
-
-금액 : #{금액}원
-
-국민은행 792002 01 202171
-황승하(까사부티크)`,
+#{계좌텍스트}`,
       buttons: [
         {
           name: "채널추가",
@@ -268,12 +262,6 @@ async function sendWinningNotifications(completedBids) {
 
     // 각 날짜별로 메시지 생성
     Object.entries(bidsByDate).forEach(([date, dateBids]) => {
-      const totalAmount = dateBids.reduce(
-        (sum, bid) =>
-          sum +
-          parseFloat(bid.winning_price || bid.final_price || bid.current_price),
-        0
-      );
       const bidCount = dateBids.length;
 
       messages.push({
@@ -282,7 +270,7 @@ async function sendWinningNotifications(completedBids) {
           날짜: date,
           고객명: user.id,
           건수: bidCount.toString(),
-          금액: totalAmount.toLocaleString("ko-KR"),
+          계좌텍스트: ACCOUNT_TEXT,
         },
       });
     });
@@ -352,7 +340,6 @@ async function sendDailyWinningNotifications() {
     // 발송되지 않은 완료된 live 입찰들 조회
     const [liveBids] = await connection.query(`
       SELECT 'live' as bid_type, l.id as bid_id, l.user_id, 
-             l.winning_price, l.final_price, NULL as current_price,
              i.title, i.scheduled_date
       FROM live_bids l
       JOIN crawled_items i ON l.item_id = i.item_id
@@ -364,7 +351,6 @@ async function sendDailyWinningNotifications() {
     // 발송되지 않은 완료된 direct 입찰들 조회
     const [directBids] = await connection.query(`
       SELECT 'direct' as bid_type, d.id as bid_id, d.user_id,
-             d.winning_price, NULL as final_price, NULL as current_price,
              i.title, i.scheduled_date
       FROM direct_bids d
       JOIN crawled_items i ON d.item_id = i.item_id
