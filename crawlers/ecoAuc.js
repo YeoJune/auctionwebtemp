@@ -311,11 +311,6 @@ class EcoAucCrawler extends AxiosCrawler {
       const url =
         this.config.searchUrl + this.config.searchParams(categoryId, page);
 
-      await clientInfo.cookieJar.setCookie(
-        "locale=ja_JP",
-        "https://www.ecoauc.com/"
-      );
-
       const response = await clientInfo.client.get(url);
       const $ = cheerio.load(response.data, { xmlMode: true });
 
@@ -374,11 +369,6 @@ class EcoAucCrawler extends AxiosCrawler {
 
       const bidType = item0?.bid_type || this.currentBidType;
       const url = this.config.detailUrl(itemId, bidType);
-
-      await clientInfo.cookieJar.setCookie(
-        "locale=ja_JP",
-        "https://www.ecoauc.com/"
-      );
 
       const response = await clientInfo.client.get(url);
       const $ = cheerio.load(response.data, { xmlMode: true });
@@ -727,11 +717,6 @@ class EcoAucCrawler extends AxiosCrawler {
       );
       const url =
         this.config.searchUrl + this.config.searchParamsAllCategories(page);
-
-      await clientInfo.cookieJar.setCookie(
-        "locale=ja_JP",
-        "https://www.ecoauc.com/"
-      );
 
       const response = await clientInfo.client.get(url);
       const $ = cheerio.load(response.data, { xmlMode: true });
@@ -1135,11 +1120,6 @@ class EcoAucCrawler extends AxiosCrawler {
 
       const bidType = "direct";
       const url = this.config.detailUrl(itemId, bidType);
-
-      await clientInfo.cookieJar.setCookie(
-        "locale=en",
-        "https://www.ecoauc.com/"
-      );
 
       const response = await clientInfo.client.get(url);
       const $ = cheerio.load(response.data, { xmlMode: true });
@@ -1553,9 +1533,5 @@ class EcoAucValueCrawler extends AxiosCrawler {
 
 const ecoAucCrawler = new EcoAucCrawler(ecoAucConfig);
 const ecoAucValueCrawler = new EcoAucValueCrawler(ecoAucValueConfig);
-
-setTimeout(() => {
-  ecoAucCrawler.crawlItemDetails("7729515").then((data) => console.log(data));
-}, 100);
 
 module.exports = { ecoAucCrawler, ecoAucValueCrawler };
