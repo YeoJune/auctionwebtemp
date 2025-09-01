@@ -10,6 +10,7 @@ let pLimit;
 
 const LIMIT1 = 20;
 const LIMIT2 = 5;
+const LIMIT3 = 50;
 
 const starAucConfig = {
   name: "StarAuc",
@@ -575,9 +576,12 @@ class StarAucCrawler extends AxiosCrawler {
         return remainItems;
       }
 
-      const pageItems = filteredItems
-        .map((item) => this.extractItemInfo($, item))
-        .filter((item) => item !== null);
+      const extractLimit = pLimit(LIMIT3);
+      const extractPromises = filteredItems.map((item) =>
+        extractLimit(() => this.extractItemInfo($, item))
+      );
+      const extractResults = await Promise.all(extractPromises);
+      const pageItems = extractResults.filter((item) => item !== null);
 
       console.log(
         `${pageItems.length}개 아이템 추출 완료, 페이지 ${page} (${clientInfo.name})`
@@ -876,10 +880,12 @@ class StarAucCrawler extends AxiosCrawler {
         return remainItems;
       }
 
-      // extractItemInfo 대신 extractUpdateItemInfo 사용
-      const pageItems = filteredItems
-        .map((item) => this.extractUpdateItemInfo($, item))
-        .filter((item) => item !== null);
+      const extractLimit = pLimit(LIMIT3);
+      const extractPromises = filteredItems.map((item) =>
+        extractLimit(() => this.extractUpdateItemInfo($, item))
+      );
+      const extractResults = await Promise.all(extractPromises);
+      const pageItems = extractResults.filter((item) => item !== null);
 
       console.log(
         `${pageItems.length}개 업데이트 아이템 추출 완료, 페이지 ${page} (${clientInfo.name})`
@@ -1352,13 +1358,13 @@ class StarAucValueCrawler extends AxiosCrawler {
       }
 
       // 페이지 아이템 추출
-      const pageItems = [];
-      itemElements.each((index, element) => {
-        const item = this.extractItemInfo($, $(element), existingIds);
-        if (item) {
-          pageItems.push(item);
-        }
-      });
+      const elementsArray = itemElements.toArray();
+      const extractLimit = pLimit(LIMIT3);
+      const extractPromises = elementsArray.map((element) =>
+        extractLimit(() => this.extractItemInfo($, $(element), existingIds))
+      );
+      const extractResults = await Promise.all(extractPromises);
+      const pageItems = extractResults.filter((item) => item !== null);
 
       let finalItems;
       if (skipImageProcessing) {
