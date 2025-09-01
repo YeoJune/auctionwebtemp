@@ -10,6 +10,7 @@ let currentSortOrder = "desc";
 let fromDate = "";
 let toDate = "";
 let currentSearch = ""; // 검색어 추가
+let currentAucNum = ""; // 선택된 경매장
 
 // 검색 디바운스 타이머
 let searchTimeout = null;
@@ -83,6 +84,14 @@ document.addEventListener("DOMContentLoaded", function () {
     currentPage = 1;
     loadLiveBids();
   });
+
+  document
+    .getElementById("aucNumFilter")
+    ?.addEventListener("change", function () {
+      currentAucNum = this.value;
+      currentPage = 1;
+      loadLiveBids();
+    });
 
   // 정렬 옵션 변경 이벤트
   document.getElementById("sortBy")?.addEventListener("change", function () {
@@ -221,7 +230,8 @@ async function loadLiveBids() {
       currentSortOrder,
       fromDate,
       toDate,
-      currentSearch // 검색어 추가
+      currentSearch,
+      currentAucNum
     );
 
     if (!liveBids?.bids || liveBids.count === 0) {

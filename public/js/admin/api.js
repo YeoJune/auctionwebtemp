@@ -119,7 +119,8 @@ async function fetchLiveBids(
   sortOrder = "desc",
   fromDate = "",
   toDate = "",
-  search = "" // 새로 추가
+  search = "",
+  aucNum = ""
 ) {
   const params = new URLSearchParams({
     status: status,
@@ -145,6 +146,10 @@ async function fetchLiveBids(
 
   if (toDate) {
     params.append("toDate", toDate);
+  }
+
+  if (aucNum) {
+    params.append("aucNum", aucNum);
   }
 
   return fetchAPI(`/live-bids?${params.toString()}`);
@@ -207,7 +212,8 @@ async function fetchDirectBids(
   sortOrder = "desc",
   fromDate = "",
   toDate = "",
-  search = "" // 새로 추가
+  search = "",
+  aucNum = ""
 ) {
   const params = new URLSearchParams({
     status: status,
@@ -234,6 +240,10 @@ async function fetchDirectBids(
 
   if (toDate) {
     params.append("toDate", toDate);
+  }
+
+  if (aucNum) {
+    params.append("aucNum", aucNum);
   }
 
   return fetchAPI(`/direct-bids?${params.toString()}`);

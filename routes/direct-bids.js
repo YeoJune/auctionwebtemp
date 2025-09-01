@@ -27,6 +27,7 @@ router.get("/", async (req, res) => {
   const {
     search,
     status,
+    auc_num,
     highestOnly,
     page = 1,
     limit = 10,
@@ -127,6 +128,19 @@ router.get("/", async (req, res) => {
         countQuery += ` AND d.status IN (${placeholders})`;
         mainQuery += ` AND d.status IN (${placeholders})`;
         queryParams.push(...statusArray);
+      }
+    }
+
+    if (auc_num) {
+      const aucNumArray = auc_num.split(",");
+
+      if (aucNumArray.length === 1) {
+        queryConditions.push("i.auc_num = ?");
+        queryParams.push(auc_num);
+      } else {
+        const placeholders = aucNumArray.map(() => "?").join(",");
+        queryConditions.push(`i.auc_num IN (${placeholders})`);
+        queryParams.push(...aucNumArray);
       }
     }
 

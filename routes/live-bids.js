@@ -24,6 +24,7 @@ router.get("/", async (req, res) => {
   const {
     search,
     status,
+    auc_num,
     page = 1,
     limit = 10,
     fromDate,
@@ -69,6 +70,19 @@ router.get("/", async (req, res) => {
       const placeholders = statusArray.map(() => "?").join(",");
       queryConditions.push(`b.status IN (${placeholders})`);
       queryParams.push(...statusArray);
+    }
+  }
+
+  if (auc_num) {
+    const aucNumArray = auc_num.split(",");
+
+    if (aucNumArray.length === 1) {
+      queryConditions.push("i.auc_num = ?");
+      queryParams.push(auc_num);
+    } else {
+      const placeholders = aucNumArray.map(() => "?").join(",");
+      queryConditions.push(`i.auc_num IN (${placeholders})`);
+      queryParams.push(...aucNumArray);
     }
   }
 
