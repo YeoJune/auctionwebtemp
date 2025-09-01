@@ -1121,7 +1121,7 @@ class EcoAucCrawler extends AxiosCrawler {
       const bidType = "direct";
       const url = this.config.detailUrl(itemId, bidType);
 
-      const response = await clientInfo.client.get(url, { timeout: 3000 });
+      const response = await clientInfo.client.get(url, { timeout: 1500 });
       const $ = cheerio.load(response.data, { xmlMode: true });
 
       // Price 추출
