@@ -1393,7 +1393,7 @@ class EcoAucValueCrawler extends AxiosCrawler {
       const pageItems = [];
       itemElements.each((index, element) => {
         const item = this.extractItemInfo($, $(element), existingIds);
-        if (item) {
+        if (item && this.isCollectionDay(item.scheduled_date)) {
           // null이 아닌 유효한 항목만 추가
           pageItems.push(item);
         }
