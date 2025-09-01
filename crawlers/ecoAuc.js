@@ -593,7 +593,7 @@ class EcoAucCrawler extends AxiosCrawler {
 
   async crawlUpdates() {
     try {
-      const limit = pLimit(10);
+      const limit = pLimit(100);
 
       const startTime = Date.now();
       console.log(`Starting updates crawl at ${new Date().toISOString()}`);
@@ -1149,7 +1149,7 @@ class EcoAucCrawler extends AxiosCrawler {
       // await this.login();
 
       const results = [];
-      const limit = pLimit(10); // 병렬 처리를 위한 제한 설정
+      const limit = pLimit(100); // 병렬 처리를 위한 제한 설정
 
       // 병렬 처리
       const promises = itemIds.map((itemId) =>
