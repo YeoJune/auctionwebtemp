@@ -85,7 +85,7 @@ class BrandAucCrawler extends AxiosCrawler {
       const response = await clientInfo.client.get(this.config.loginPageUrl);
 
       // CSRF 토큰 추출
-      const $ = cheerio.load(response.data);
+      const $ = cheerio.load(response.data, { xmlMode: true });
       const csrfToken = $('input[name="_csrf"]').val();
 
       if (!csrfToken) {
@@ -1255,7 +1255,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
       const response = await clientInfo.client.get(this.config.loginPageUrl);
 
       // CSRF 토큰 추출
-      const $ = cheerio.load(response.data);
+      const $ = cheerio.load(response.data, { xmlMode: true });
       const csrfToken = $('input[name="_csrf"]').val();
 
       if (!csrfToken) {

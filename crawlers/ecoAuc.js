@@ -142,7 +142,7 @@ class EcoAucCrawler extends AxiosCrawler {
       const response = await clientInfo.client.get(this.config.loginPageUrl);
 
       // CSRF 토큰 추출
-      const $ = cheerio.load(response.data);
+      const $ = cheerio.load(response.data, { xmlMode: true });
       const csrfToken = $(this.config.signinSelectors.csrfToken).val();
 
       if (!csrfToken) {
@@ -312,7 +312,7 @@ class EcoAucCrawler extends AxiosCrawler {
         this.config.searchUrl + this.config.searchParams(categoryId, page);
 
       const response = await clientInfo.client.get(url);
-      const $ = cheerio.load(response.data);
+      const $ = cheerio.load(response.data, { xmlMode: true });
 
       // 아이템 컨테이너 선택
       const itemElements = $(this.config.crawlSelectors.itemContainer);
@@ -371,7 +371,7 @@ class EcoAucCrawler extends AxiosCrawler {
       const url = this.config.detailUrl(itemId, bidType);
 
       const response = await clientInfo.client.get(url);
-      const $ = cheerio.load(response.data);
+      const $ = cheerio.load(response.data, { xmlMode: true });
 
       // 추가 이미지 추출
       const images = [];
@@ -428,7 +428,7 @@ class EcoAucCrawler extends AxiosCrawler {
         this.config.searchUrl + this.config.searchParams(categoryId, 1);
 
       const response = await clientInfo.client.get(url);
-      const $ = cheerio.load(response.data);
+      const $ = cheerio.load(response.data, { xmlMode: true });
 
       const paginationExists =
         $(this.config.crawlSelectors.paginationLast).length > 0;
@@ -687,7 +687,7 @@ class EcoAucCrawler extends AxiosCrawler {
         this.config.searchUrl + this.config.searchParamsAllCategories(1);
 
       const response = await clientInfo.client.get(url);
-      const $ = cheerio.load(response.data);
+      const $ = cheerio.load(response.data, { xmlMode: true });
 
       const paginationExists =
         $(this.config.crawlSelectors.paginationLast).length > 0;
@@ -719,7 +719,7 @@ class EcoAucCrawler extends AxiosCrawler {
         this.config.searchUrl + this.config.searchParamsAllCategories(page);
 
       const response = await clientInfo.client.get(url);
-      const $ = cheerio.load(response.data);
+      const $ = cheerio.load(response.data, { xmlMode: true });
 
       // 아이템 컨테이너 선택
       const itemElements = $(this.config.crawlSelectors.itemContainer);
@@ -814,7 +814,7 @@ class EcoAucCrawler extends AxiosCrawler {
       const mainPageResponse = await directClient.client.get(
         ecoAucConfig.searchUrl
       );
-      const $ = cheerio.load(mainPageResponse.data);
+      const $ = cheerio.load(mainPageResponse.data, { xmlMode: true });
       const csrfToken = $('[name="_csrfToken"]').attr("value");
 
       if (!csrfToken) {
@@ -889,7 +889,7 @@ class EcoAucCrawler extends AxiosCrawler {
       const mainPageResponse = await directClient.client.get(
         ecoAucConfig.searchUrl
       );
-      const $ = cheerio.load(mainPageResponse.data);
+      const $ = cheerio.load(mainPageResponse.data, { xmlMode: true });
       const csrfToken = $('[name="_csrfToken"]').attr("value");
 
       if (!csrfToken) {
@@ -962,7 +962,7 @@ class EcoAucCrawler extends AxiosCrawler {
       const mainPageResponse = await directClient.client.get(
         ecoAucConfig.searchUrl
       );
-      const $ = cheerio.load(mainPageResponse.data);
+      const $ = cheerio.load(mainPageResponse.data, { xmlMode: true });
       const csrfToken = $('[name="_csrfToken"]').attr("value");
 
       if (!csrfToken) {
@@ -1036,7 +1036,7 @@ class EcoAucCrawler extends AxiosCrawler {
       // 청구서 페이지 요청
       const url = "https://www.ecoauc.com/client/bids/bidwin";
       const response = await directClient.client.get(url);
-      const $ = cheerio.load(response.data);
+      const $ = cheerio.load(response.data, { xmlMode: true });
 
       // 테이블 행 추출
       const rows = $("table.table-striped tbody tr");
@@ -1122,7 +1122,7 @@ class EcoAucCrawler extends AxiosCrawler {
       const url = this.config.detailUrl(itemId, bidType);
 
       const response = await clientInfo.client.get(url);
-      const $ = cheerio.load(response.data);
+      const $ = cheerio.load(response.data, { xmlMode: true });
 
       // Price 추출
       const priceText = $("dt:contains('Price') + dd big.canopy-large-value")
@@ -1196,7 +1196,7 @@ class EcoAucValueCrawler extends AxiosCrawler {
       const response = await clientInfo.client.get(this.config.loginPageUrl);
 
       // CSRF 토큰 추출
-      const $ = cheerio.load(response.data);
+      const $ = cheerio.load(response.data, { xmlMode: true });
       const csrfToken = $(this.config.signinSelectors.csrfToken).val();
 
       if (!csrfToken) {
@@ -1254,7 +1254,7 @@ class EcoAucValueCrawler extends AxiosCrawler {
         this.config.searchUrl + this.config.searchParams(categoryId, 1, months);
 
       const response = await clientInfo.client.get(url);
-      const $ = cheerio.load(response.data);
+      const $ = cheerio.load(response.data, { xmlMode: true });
 
       const paginationExists =
         $(this.config.crawlSelectors.paginationLast).length > 0;
@@ -1382,7 +1382,7 @@ class EcoAucValueCrawler extends AxiosCrawler {
         this.config.searchParams(categoryId, page, months);
 
       const response = await clientInfo.client.get(url);
-      const $ = cheerio.load(response.data);
+      const $ = cheerio.load(response.data, { xmlMode: true });
 
       // 아이템 컨테이너 선택
       const itemElements = $(this.config.crawlSelectors.itemContainer);
@@ -1486,7 +1486,7 @@ class EcoAucValueCrawler extends AxiosCrawler {
       const url = this.config.detailUrl(itemId);
 
       const response = await clientInfo.client.get(url);
-      const $ = cheerio.load(response.data);
+      const $ = cheerio.load(response.data, { xmlMode: true });
 
       // 추가 이미지 추출
       const images = [];

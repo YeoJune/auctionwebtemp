@@ -143,7 +143,7 @@ class StarAucCrawler extends AxiosCrawler {
       const response = await clientInfo.client.get(this.config.loginPageUrl);
 
       // CSRF 토큰 추출
-      const $ = cheerio.load(response.data);
+      const $ = cheerio.load(response.data, { xmlMode: true });
       const csrfToken = $(this.config.signinSelectors.csrfToken).attr(
         "content"
       );
@@ -379,7 +379,7 @@ class StarAucCrawler extends AxiosCrawler {
 
   // 스크립트에서 데이터 파싱
   async parseScriptData(html, selector) {
-    const $ = cheerio.load(html);
+    const $ = cheerio.load(html, { xmlMode: true });
     const scriptTag = $(selector);
 
     if (scriptTag.length > 0) {
@@ -475,7 +475,7 @@ class StarAucCrawler extends AxiosCrawler {
         this.config.searchUrl + this.config.searchParams(categoryId, 1);
 
       const response = await clientInfo.client.get(url);
-      const $ = cheerio.load(response.data);
+      const $ = cheerio.load(response.data, { xmlMode: true });
 
       const paginationExists =
         $(this.config.crawlSelectors.paginationLast).length > 0;
@@ -552,7 +552,7 @@ class StarAucCrawler extends AxiosCrawler {
         this.config.searchUrl + this.config.searchParams(categoryId, page);
 
       const response = await clientInfo.client.get(url);
-      const $ = cheerio.load(response.data);
+      const $ = cheerio.load(response.data, { xmlMode: true });
 
       const scriptData = await this.parseScriptData(
         response.data,
@@ -636,7 +636,7 @@ class StarAucCrawler extends AxiosCrawler {
       const url = this.config.detailUrl(itemId);
 
       const response = await clientInfo.client.get(url);
-      const $ = cheerio.load(response.data);
+      const $ = cheerio.load(response.data, { xmlMode: true });
 
       const scriptData = await this.parseScriptData(
         response.data,
@@ -851,7 +851,7 @@ class StarAucCrawler extends AxiosCrawler {
       const url = this.config.searchUrl + this.config.searchParams(null, page);
 
       const response = await clientInfo.client.get(url);
-      const $ = cheerio.load(response.data);
+      const $ = cheerio.load(response.data, { xmlMode: true });
 
       // crawlPage와 동일한 스크립트 데이터 추출
       const scriptData = await this.parseScriptData(
@@ -995,7 +995,7 @@ class StarAucCrawler extends AxiosCrawler {
 
       const url = "https://www.starbuyers-global-auction.com/purchase_report";
       const response = await directClient.client.get(url);
-      const $ = cheerio.load(response.data);
+      const $ = cheerio.load(response.data, { xmlMode: true });
 
       const invoiceElements = $(".p-item-list__body");
       console.log(`Found ${invoiceElements.length} invoice records`);
@@ -1074,7 +1074,7 @@ class StarAucValueCrawler extends AxiosCrawler {
       const response = await clientInfo.client.get(this.config.loginPageUrl);
 
       // CSRF 토큰 추출
-      const $ = cheerio.load(response.data);
+      const $ = cheerio.load(response.data, { xmlMode: true });
       const csrfToken = $(this.config.signinSelectors.csrfToken).attr(
         "content"
       );
@@ -1127,7 +1127,7 @@ class StarAucValueCrawler extends AxiosCrawler {
 
   // 스크립트에서 데이터 파싱
   async parseScriptData(html, selector) {
-    const $ = cheerio.load(html);
+    const $ = cheerio.load(html, { xmlMode: true });
     const scriptTag = $(selector);
 
     if (scriptTag.length > 0) {
@@ -1211,7 +1211,7 @@ class StarAucValueCrawler extends AxiosCrawler {
         this.config.searchUrl + this.config.searchParams(categoryId, 1, months);
 
       const response = await clientInfo.client.get(url);
-      const $ = cheerio.load(response.data);
+      const $ = cheerio.load(response.data, { xmlMode: true });
 
       // 방법 1: HTML에서 pagination 요소 찾기
       const paginationExists =
@@ -1341,7 +1341,7 @@ class StarAucValueCrawler extends AxiosCrawler {
         this.config.searchParams(categoryId, page, months);
 
       const response = await clientInfo.client.get(url);
-      const $ = cheerio.load(response.data);
+      const $ = cheerio.load(response.data, { xmlMode: true });
 
       // 아이템 컨테이너 선택
       const itemElements = $(this.config.crawlSelectors.itemContainer);
@@ -1465,7 +1465,7 @@ class StarAucValueCrawler extends AxiosCrawler {
       const url = this.config.detailUrl(itemId);
 
       const response = await clientInfo.client.get(url);
-      const $ = cheerio.load(response.data);
+      const $ = cheerio.load(response.data, { xmlMode: true });
 
       // 스크립트 데이터 추출
       const scriptData = await this.parseScriptData(
