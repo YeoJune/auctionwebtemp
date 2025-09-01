@@ -379,7 +379,7 @@ class StarAucCrawler extends AxiosCrawler {
 
   // 스크립트에서 데이터 파싱
   async parseScriptData(html, selector) {
-    const $ = cheerio.load(html, { xmlMode: true });
+    const $ = cheerio.load(html, { xmlMode: false });
     const scriptTag = $(selector);
 
     if (scriptTag.length > 0) {
@@ -1127,7 +1127,7 @@ class StarAucValueCrawler extends AxiosCrawler {
 
   // 스크립트에서 데이터 파싱
   async parseScriptData(html, selector) {
-    const $ = cheerio.load(html, { xmlMode: true });
+    const $ = cheerio.load(html, { xmlMode: false });
     const scriptTag = $(selector);
 
     if (scriptTag.length > 0) {
