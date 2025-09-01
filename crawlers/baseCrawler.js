@@ -30,7 +30,7 @@ class AxiosCrawler {
           Accept:
             "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         },
-        timeout: 3 * 1000,
+        timeout: 10 * 1000,
         maxRedirects: 5,
       });
 
