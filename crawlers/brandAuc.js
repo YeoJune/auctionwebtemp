@@ -8,6 +8,9 @@ let pLimit;
   pLimit = (await import("p-limit")).default;
 })();
 
+const LIMIT1 = 20;
+const LIMIT2 = 5;
+
 const brandAucConfig = {
   name: "BrandAuc",
   baseUrl: "https://member.brand-auc.com",
@@ -214,7 +217,7 @@ class BrandAucCrawler extends AxiosCrawler {
             );
             allCrawledItems.push(...firstPageItems);
             // 나머지 페이지 병렬 처리
-            const limit = pLimit(5);
+            const limit = pLimit(LIMIT2);
             const pagePromises = [];
 
             for (let page = 1; page < totalPages; page++) {
@@ -337,7 +340,7 @@ class BrandAucCrawler extends AxiosCrawler {
             allCrawledItems.push(...firstPageItems);
 
             // 나머지 페이지 병렬 처리
-            const directLimit = pLimit(5);
+            const directLimit = pLimit(LIMIT2);
             const directPagePromises = [];
 
             for (let page = 1; page < totalPages; page++) {
@@ -646,7 +649,7 @@ class BrandAucCrawler extends AxiosCrawler {
 
   async crawlUpdates() {
     try {
-      const limit = pLimit(100);
+      const limit = pLimit(LIMIT1);
       const startTime = Date.now();
       console.log(`Starting updates crawl at ${new Date().toISOString()}`);
 
@@ -1204,7 +1207,7 @@ class BrandAucCrawler extends AxiosCrawler {
       // await this.login();
 
       const results = [];
-      const limit = pLimit(100); // 병렬 처리를 위한 제한 설정
+      const limit = pLimit(LIMIT1); // 병렬 처리를 위한 제한 설정
 
       // 병렬 처리
       const promises = itemIds.map((itemId) =>
@@ -1370,7 +1373,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
       );
 
       // 페이지 병렬 처리 (이미지 없이)
-      const limit = pLimit(5);
+      const limit = pLimit(LIMIT2);
       const pagePromises = [];
 
       for (let page = 0; page < totalPages; page++) {

@@ -8,6 +8,9 @@ let pLimit;
   pLimit = (await import("p-limit")).default;
 })();
 
+const LIMIT1 = 20;
+const LIMIT2 = 5;
+
 const starAucConfig = {
   name: "StarAuc",
   baseUrl: "https://www.starbuyers-global-auction.com",
@@ -725,7 +728,7 @@ class StarAucCrawler extends AxiosCrawler {
         console.log(`Total pages in category ${categoryId}: ${totalPages}`);
 
         // 페이지 병렬 처리 (이미지 없이)
-        const limit = pLimit(5);
+        const limit = pLimit(LIMIT2);
         const pagePromises = [];
 
         for (let page = 1; page <= totalPages; page++) {
@@ -790,7 +793,7 @@ class StarAucCrawler extends AxiosCrawler {
 
   async crawlUpdates() {
     try {
-      const limit = pLimit(100);
+      const limit = pLimit(LIMIT1);
       const startTime = Date.now();
       console.log(
         `Starting StarAuc updates crawl at ${new Date().toISOString()}`
@@ -951,7 +954,7 @@ class StarAucCrawler extends AxiosCrawler {
       // await this.login();
 
       const results = [];
-      const limit = pLimit(100);
+      const limit = pLimit(LIMIT1);
 
       const promises = itemIds.map((itemId) =>
         limit(async () => {
@@ -1253,7 +1256,7 @@ class StarAucValueCrawler extends AxiosCrawler {
         console.log(`Total pages in category ${categoryId}: ${totalPages}`);
 
         // 페이지 병렬 처리 (이미지 없이)
-        const limit = pLimit(5);
+        const limit = pLimit(LIMIT2);
         const pagePromises = [];
 
         for (let page = 1; page <= totalPages; page++) {
