@@ -143,7 +143,7 @@ class StarAucCrawler extends AxiosCrawler {
       const response = await clientInfo.client.get(this.config.loginPageUrl);
 
       // CSRF 토큰 추출
-      const $ = cheerio.load(response.data);
+      const $ = cheerio.load(response.data, { xmlMode: false });
       const csrfToken = $(this.config.signinSelectors.csrfToken).attr(
         "content"
       );
@@ -1075,7 +1075,7 @@ class StarAucValueCrawler extends AxiosCrawler {
       const response = await clientInfo.client.get(this.config.loginPageUrl);
 
       // CSRF 토큰 추출
-      const $ = cheerio.load(response.data);
+      const $ = cheerio.load(response.data, { xmlMode: false });
       const csrfToken = $(this.config.signinSelectors.csrfToken).attr(
         "content"
       );
