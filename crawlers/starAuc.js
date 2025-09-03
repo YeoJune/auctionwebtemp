@@ -684,7 +684,8 @@ class StarAucCrawler extends AxiosCrawler {
                 !term.startsWith("Other Condition") &&
                 !term.includes("Brand") &&
                 !term.includes("Lot Number") &&
-                !term.includes("Accessories")
+                !term.includes("Accessories") &&
+                !term.includes("ALLU")
               ) {
                 const descItem = $(child).next("dd").text().trim();
                 sectionDesc += `${term}: ${descItem}\n`;
