@@ -1832,3 +1832,127 @@ select {
     display: none; /* 모바일에서는 hover 툴팁 숨김 */
   }
 }
+
+/* Footer Styles */
+.main-footer {
+  background-color: var(--background-light);
+  border-top: 1px solid var(--border-color);
+  margin-top: var(--spacing-xl);
+  padding: var(--spacing-xl) 0 var(--spacing-md) 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-md);
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--spacing-xl);
+}
+
+.footer-section h3 {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+}
+
+.footer-section h4 {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.company-details,
+.contact-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.company-row,
+.contact-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  line-height: 1.5;
+}
+
+.company-row .label,
+.contact-row .label {
+  min-width: 120px;
+  font-weight: 500;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.company-row .value,
+.contact-row .value {
+  flex: 1;
+}
+
+.contact-row .value a {
+  color: var(--primary-color);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.contact-row .value a:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
+.footer-bottom {
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border-color);
+  text-align: center;
+}
+
+.footer-bottom .copyright {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+}
+
+/* Responsive Footer */
+@media (max-width: 768px) {
+  .footer-content {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-lg);
+    text-align: left;
+  }
+
+  .company-row,
+  .contact-row {
+    flex-direction: column;
+    gap: var(--spacing-xs);
+  }
+
+  .company-row .label,
+  .contact-row .label {
+    min-width: auto;
+    font-weight: 600;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-footer {
+    padding: var(--spacing-lg) 0 var(--spacing-sm) 0;
+  }
+
+  .footer-content {
+    padding: 0 var(--spacing-sm);
+  }
+
+  .footer-section h3 {
+    font-size: var(--font-size-md);
+  }
+
+  .footer-section h4 {
+    font-size: var(--font-size-sm);
+  }
+}

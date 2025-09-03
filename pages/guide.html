@@ -22,10 +22,12 @@
 
       body {
         font-family: "Noto Sans KR", -apple-system, BlinkMacSystemFont,
-          sans-serif;
-        line-height: 1.6;
-        color: #1a1a1a;
-        background-color: #fafafa;
+          "Segoe UI", sans-serif;
+        line-height: 1.65;
+        color: #2d3748;
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        font-size: 15px;
+        letter-spacing: -0.01em;
       }
 
       .section {
@@ -39,11 +41,24 @@
 
       .section-title {
         text-align: center;
-        font-size: 36px;
-        font-weight: 700;
-        color: #1a1a1a;
+        font-size: 32px;
+        font-weight: 600;
+        color: #1a202c;
         margin-bottom: 48px;
-        letter-spacing: -0.02em;
+        letter-spacing: -0.025em;
+        position: relative;
+      }
+
+      .section-title::after {
+        content: "";
+        position: absolute;
+        bottom: -12px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 60px;
+        height: 3px;
+        background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 100%);
+        border-radius: 2px;
       }
       /* 이용가이드 스타일 */
 
@@ -54,27 +69,41 @@
       }
 
       .guide-card {
-        background: #fff;
-        border-radius: 16px;
-        padding: 24px;
-        margin-bottom: 24px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-        transition: transform 0.3s ease;
-        border: 1px solid #e5e7eb;
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 32px;
+        margin-bottom: 32px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid rgba(226, 232, 240, 0.5);
       }
 
       .guide-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+        border-color: rgba(79, 70, 229, 0.2);
       }
 
       .guide-subtitle {
-        font-size: 24px;
+        font-size: 22px;
         font-weight: 600;
-        color: #1e3a8a;
-        margin-bottom: 16px;
-        padding-bottom: 8px;
-        border-bottom: 2px solid #e5e7eb;
+        color: #1a202c;
+        margin-bottom: 28px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #e2e8f0;
+        position: relative;
+      }
+
+      .guide-subtitle::after {
+        content: "";
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        width: 40px;
+        height: 2px;
+        background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 100%);
+        border-radius: 1px;
       }
 
       .guide-list {
@@ -89,9 +118,24 @@
 
       .guide-list > li > strong {
         display: block;
-        margin-bottom: 12px;
-        color: #1a1a1a;
-        font-size: 18px;
+        margin-bottom: 16px;
+        color: #1a202c;
+        font-size: 16px;
+        font-weight: 600;
+        position: relative;
+        padding-left: 20px;
+      }
+
+      .guide-list > li > strong::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 4px;
+        height: 16px;
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        border-radius: 2px;
       }
 
       .guide-list > li > ul {
@@ -102,16 +146,31 @@
 
       .guide-list > li > ul > li {
         position: relative;
-        padding-left: 20px;
+        padding-left: 24px;
         margin-bottom: 12px;
-        color: #4b5563;
+        color: #4a5568;
+        font-size: 15px;
+        line-height: 1.65;
+      }
+
+      .guide-list > li > p {
+        font-size: 15px;
+        line-height: 1.65;
+        color: #4a5568;
+        margin-bottom: 12px;
+        font-weight: 400;
       }
 
       .guide-list > li > ul > li:before {
-        content: "•";
+        content: "";
         position: absolute;
-        left: 0;
-        color: #1e3a8a;
+        left: 8px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 6px;
+        height: 6px;
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        border-radius: 50%;
       }
 
       .guide-tip {
@@ -133,38 +192,60 @@
 
       .guidebook-tabs {
         display: flex;
-        margin-bottom: 24px;
-        background: #f8faff;
-        padding: 16px;
-        border-radius: 12px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        margin-bottom: 32px;
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(12px);
+        padding: 8px;
+        border-radius: 16px;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(226, 232, 240, 0.6);
         flex-wrap: wrap;
+        gap: 4px;
       }
 
       .guidebook-tab {
         display: block;
-        padding: 12px 16px;
+        padding: 16px 20px;
         cursor: pointer;
         font-weight: 500;
-        color: #4b5563;
+        font-size: 14px;
+        color: #64748b;
         text-align: center;
-        margin: 0 4px 8px;
-        background: #fff;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
+        background: transparent;
+        border: none;
+        border-radius: 12px;
         flex: 1 0 auto;
-        min-width: 120px;
+        min-width: 140px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
       }
 
       .guidebook-tab:hover {
-        background: #eff6ff;
-        color: #1e3a8a;
+        background: rgba(79, 70, 229, 0.1);
+        color: #4f46e5;
+        transform: translateY(-2px);
       }
 
       .guidebook-tab.active {
-        background: #1e3a8a;
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
         color: white;
-        border-color: #1e3a8a;
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+      }
+
+      .guidebook-tab.active::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.2) 0%,
+          rgba(255, 255, 255, 0) 100%
+        );
+        border-radius: 12px;
       }
 
       .guidebook-content {
@@ -196,17 +277,19 @@
       }
 
       .faq-item {
-        background: white;
-        border-radius: 12px;
-        margin-bottom: 16px;
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
+        border-radius: 16px;
+        margin-bottom: 20px;
         overflow: hidden;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        border: 1px solid #e5e7eb;
-        transition: all 0.3s ease;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+        border: 1px solid rgba(226, 232, 240, 0.5);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       }
 
       .faq-item:hover {
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+        border-color: rgba(79, 70, 229, 0.2);
       }
 
       .faq-question {
@@ -214,39 +297,59 @@
         text-align: left;
         background: none;
         border: none;
-        padding: 24px;
+        padding: 20px 24px;
         cursor: pointer;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        font-weight: 500;
-        color: #1a1a1a;
-        font-size: 18px;
+        font-weight: 400;
+        color: #1f2937;
+        font-size: 15px;
         transition: background-color 0.3s ease;
       }
 
       .faq-question:hover {
-        background-color: #f8faff;
+        background: linear-gradient(
+          135deg,
+          rgba(79, 70, 229, 0.05) 0%,
+          rgba(124, 58, 237, 0.05) 100%
+        );
       }
 
       .faq-question h3 {
         margin: 0;
-        font-size: 18px;
-        font-weight: 600;
+        font-size: 15px;
+        font-weight: 500;
       }
 
       .faq-answer {
         max-height: 0;
         overflow: hidden;
         transition: max-height 0.3s ease-out;
-        padding: 0 24px;
-        background-color: #f8fafc;
-        border-top: 1px solid #e5e7eb;
+        padding: 0 32px;
+        background: linear-gradient(
+          135deg,
+          rgba(248, 250, 252, 0.8) 0%,
+          rgba(241, 245, 249, 0.8) 100%
+        );
+        border-top: 1px solid rgba(226, 232, 240, 0.6);
+      }
+
+      .faq-answer p {
+        font-size: 15px;
+        line-height: 1.6;
+        color: #374151;
+        margin-bottom: 12px;
+        font-weight: 400;
+      }
+
+      .faq-answer p:last-child {
+        margin-bottom: 0;
       }
 
       .faq-item.active .faq-answer {
-        max-height: 500px;
-        padding: 24px;
+        max-height: 600px;
+        padding: 24px 32px;
       }
 
       .faq-answer ol {
@@ -295,30 +398,59 @@
       }
 
       .pricing-card {
-        background: white;
-        border-radius: 12px;
-        padding: 24px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-        border: 1px solid #e5e7eb;
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
+        border-radius: 16px;
+        padding: 28px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(226, 232, 240, 0.5);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .pricing-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+        border-color: rgba(79, 70, 229, 0.2);
       }
 
       .pricing-title {
-        color: #1e3a8a;
-        font-size: 24px;
+        color: #1a202c;
+        font-size: 18px;
         font-weight: 600;
-        margin-bottom: 16px;
+        margin-bottom: 20px;
         text-align: center;
+        position: relative;
+        padding-bottom: 12px;
+      }
+
+      .pricing-title::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 30px;
+        height: 2px;
+        background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 100%);
+        border-radius: 1px;
       }
 
       .highlight-box {
-        background: #f8faff;
-        border-radius: 8px;
-        padding: 16px;
-        margin-bottom: 24px;
+        background: linear-gradient(
+          135deg,
+          rgba(79, 70, 229, 0.05) 0%,
+          rgba(124, 58, 237, 0.05) 100%
+        );
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 28px;
+        border: 1px solid rgba(79, 70, 229, 0.1);
       }
 
       .highlight-box p {
         margin-bottom: 8px;
+        font-size: 15px;
+        line-height: 1.5;
       }
 
       .highlight-box p:last-child {
@@ -334,14 +466,20 @@
       .service-list li {
         padding-left: 24px;
         position: relative;
-        margin-bottom: 12px;
+        margin-bottom: 8px;
+        font-size: 15px;
+        line-height: 1.5;
+        font-weight: 400;
       }
 
       .service-list li:before {
         content: "✓";
         position: absolute;
         left: 0;
-        color: #1e3a8a;
+        top: 1px;
+        color: #10b981;
+        font-weight: 600;
+        font-size: 14px;
       }
 
       .price-list {
@@ -353,8 +491,10 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 12px 0;
+        padding: 10px 0;
         border-bottom: 1px solid #e5e7eb;
+        font-size: 15px;
+        font-weight: 400;
       }
 
       .price-list li:last-child {
@@ -372,11 +512,12 @@
         padding: 12px;
         text-align: left;
         border-bottom: 1px solid #e5e7eb;
+        font-size: 15px;
       }
 
       .commission-table th {
         background: #f8faff;
-        font-weight: 600;
+        font-weight: 500;
         color: #1e3a8a;
       }
 
@@ -519,8 +660,8 @@
 
       .cas-service-title {
         color: #1e3a8a;
-        font-size: 20px;
-        font-weight: 600;
+        font-size: 16px;
+        font-weight: 500;
         margin-bottom: 12px;
         padding-bottom: 8px;
         border-bottom: 1px solid #e5e7eb;
@@ -528,6 +669,9 @@
 
       .cas-service-description {
         margin-bottom: 16px;
+        font-size: 15px;
+        line-height: 1.6;
+        font-weight: 400;
       }
 
       .cas-table {
@@ -541,11 +685,12 @@
         padding: 12px;
         text-align: left;
         border-bottom: 1px solid #e5e7eb;
+        font-size: 15px;
       }
 
       .cas-table th {
         background: #f8faff;
-        font-weight: 600;
+        font-weight: 500;
         color: #1e3a8a;
       }
 
@@ -557,9 +702,10 @@
       }
 
       .cas-process-title {
-        font-weight: 600;
+        font-weight: 500;
         color: #1e3a8a;
         margin-bottom: 12px;
+        font-size: 16px;
       }
 
       .cas-process-list {
@@ -570,7 +716,10 @@
       .cas-process-list li {
         position: relative;
         padding-left: 24px;
-        margin-bottom: 10px;
+        margin-bottom: 8px;
+        font-size: 15px;
+        line-height: 1.5;
+        font-weight: 400;
       }
 
       .cas-process-list li:before {
@@ -596,7 +745,7 @@
 
       .comparison-table th {
         background: #f8faff;
-        font-weight: 600;
+        font-weight: 500;
         color: #1e3a8a;
       }
 
@@ -745,30 +894,27 @@
         }
         .section-title {
           font-size: 24px;
-          margin-bottom: 24px;
+          margin-bottom: 32px;
         }
         .guide-subtitle {
-          font-size: 20px;
-        }
-        .guide-card {
-          padding: 20px;
+          font-size: 18px;
           margin-bottom: 16px;
         }
         .guide-list > li > strong {
           font-size: 16px;
+          margin-bottom: 10px;
         }
         .guide-list > li > p,
         .guide-list > li > ul > li,
         .faq-question,
         .faq-answer p {
           font-size: 15px;
+          line-height: 1.6;
         }
         .pricing-title {
-          font-size: 20px;
+          font-size: 18px;
         }
-        .highlight-box p {
-          font-size: 15px;
-        }
+        .highlight-box p,
         .service-list li,
         .price-list li,
         .commission-table th,
@@ -890,11 +1036,11 @@
               <button class="guidebook-tab" data-tab="pricing">
                 4. 요금안내
               </button>
-              <button class="guidebook-tab" data-tab="delivery">
-                5. 배송 및 반품
-              </button>
               <button class="guidebook-tab" data-tab="cas">
-                6. CAS 명품감정시스템
+                5. CAS 명품감정시스템
+              </button>
+              <button class="guidebook-tab" data-tab="condition">
+                6. 상품 컨디션(랭크)가이드
               </button>
             </div>
 
@@ -906,31 +1052,28 @@
                   <h3 class="guide-subtitle">1. 서비스 소개</h3>
                   <ul class="guide-list">
                     <li>
-                      <strong>까사트레이드는 무엇인가요?</strong>
+                      <strong>까사트레이드는</strong>
                       <p>
-                        국내 최초 명품 경매 플랫폼입니다.<br />빈티지 및 새
-                        명품들을 직접 경매로 낙찰받으실수 있으며, 국내
-                        도매가보다 저렴히 경쟁력 있는 가격에 품질 높은 명품을
-                        구매할 수 있습니다.
+                        국내 유일의 명품 경매 플랫폼으로, 빈티지 및 신상품
+                        명품들을 전세계 경매를 통해 직접 낙찰받으실 수 있습니다.
                       </p>
                       <p>
-                        단순한 경매 중계가 아닌
-                        <strong
-                          >감정서 발급 부터 수선까지 자동제안 서비스로</strong
-                        >
-                        국내 유일 명품 유통 구조 플랫폼으로 진화하고 있습니다.
+                        단순한 경매 중개 서비스가 아닌, 감정서 발급부터 수선까지
+                        원스톱으로 제공하는 국내 유일의 명품 유통 구조
+                        플랫폼으로 진화하고 있습니다.
                       </p>
                       <p>
-                        매주 5만개 이상의 상품이 업데이트되며, 교육비나 초기비용
-                        없이 바로 경매에 참여하실 수 있습니다. 감정, 수선,
-                        재판매까지 원스톱으로 해결 가능합니다.
+                        매주 5만 개 이상의 다양한 명품 상품이 업데이트되며,
+                        별도의 교육비나 초기 비용 없이 즉시 경매에 참여하실 수
+                        있습니다. 감정에서 수선, 재판매까지 원스톱으로 빠르고
+                        간편하게 해결할 수 있습니다.
                       </p>
                     </li>
                   </ul>
 
                   <div class="pricing-grid">
                     <div class="pricing-card">
-                      <h3 class="pricing-title">까사 플랫폼</h3>
+                      <h3 class="pricing-title">까사트레이드</h3>
                       <ul class="service-list">
                         <li>실시간 경매</li>
                         <li>100만개의 시세 확인</li>
@@ -965,8 +1108,6 @@
                     <div class="pricing-card">
                       <h3 class="pricing-title">비즈니스 지원</h3>
                       <ul class="service-list">
-                        <li>판매 전략 수립</li>
-                        <li>아이템 추천</li>
                         <li>담당 경매사 배정</li>
                         <li>협력사 제휴금액 이용</li>
                         <li>감정서 발급 서비스</li>
@@ -983,20 +1124,22 @@
                   <h3 class="guide-subtitle">2. 입점신청</h3>
                   <ul class="guide-list">
                     <li>
-                      <strong
-                        >까사트레이드는 기업 고객을 위한 B2B 명품 경매
-                        플랫폼입니다.<br /><br />
-
+                      <p>
+                        까사트레이드는 기업 고객을 위한 B2B 명품 경매
+                        플랫폼입니다.
+                      </p>
+                      <p>
                         개인 구매를 위한 서비스가 아닌, 사업 목적의 명품 매입을
-                        위해 운영되고 있습니다.<br /><br />
-
+                        위해 운영되고 있습니다.
+                      </p>
+                      <p>
                         또한 경매의 메리트 유지를 위해 입점 가능한 고객사 수를
-                        제한하고 있습니다.<br /><br />
-
+                        제한하고 있습니다.
+                      </p>
+                      <p>
                         아래 신청서를 작성해 주시면, 검토 후 담당자가 순차적으로
-                        연락드리겠습니다.</strong
-                      >
-
+                        연락드리겠습니다.
+                      </p>
                       <div
                         style="
                           margin: 16px 0;
@@ -1019,7 +1162,7 @@
                                 margin: 0;
                                 font-weight: 500;
                                 color: #374151;
-                                font-size: 14px;
+                                font-size: 15px;
                               ">
                               💰 보증금에 대한 자세한 내용은 이용가이드 요금안내
                               탭을 참고해주세요
@@ -1033,7 +1176,7 @@
                               border: none;
                               border-radius: 6px;
                               padding: 8px 16px;
-                              font-size: 14px;
+                              font-size: 15px;
                               font-weight: 500;
                               cursor: pointer;
                               white-space: nowrap;
@@ -1056,7 +1199,7 @@
                         <h4
                           style="
                             margin-bottom: 15px;
-                            font-size: 18px;
+                            font-size: 16px;
                             color: #1e3a8a;
                           ">
                           입점신청
@@ -1073,97 +1216,59 @@
                           로딩 중...
                         </iframe>
 
-                        <!-- 입점신청 완료 안내 -->
+                        <!-- 개인정보 처리방침 및 동의 -->
                         <div
                           style="
                             margin-top: 20px;
-                            padding: 20px;
-                            background: white;
+                            padding: 16px;
+                            background: #f8fafc;
                             border-radius: 8px;
                             border: 1px solid #e5e7eb;
                           ">
                           <h5
                             style="
-                              margin: 0 0 16px 0;
+                              margin: 0 0 12px 0;
                               color: #1f2937;
-                              font-size: 18px;
+                              font-size: 15px;
                               font-weight: 600;
                             ">
-                            입점신청 완료 후 다음 단계
+                            개인정보 처리방침
                           </h5>
                           <p
                             style="
-                              margin: 0 0 20px 0;
+                              margin: 0 0 16px 0;
                               color: #6b7280;
                               font-size: 14px;
+                              line-height: 1.5;
                             ">
-                            신청서 제출이 완료되었다면 아래 단계를 진행해주세요
+                            입점신청을 위해 수집된 개인정보는 서비스 제공
+                            목적으로만 사용되며, 관련 법령에 따라 안전하게
+                            관리됩니다.
                           </p>
-
-                          <div
-                            style="
-                              display: flex;
-                              align-items: flex-start;
-                              gap: 16px;
-                              margin-bottom: 24px;
-                            ">
-                            <div
-                              style="
-                                flex-shrink: 0;
-                                width: 32px;
-                                height: 32px;
-                                background: #1e3a8a;
-                                border-radius: 6px;
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                color: white;
-                                font-size: 14px;
-                                font-weight: 600;
-                              ">
-                              1
-                            </div>
-                            <div style="flex: 1">
-                              <h6
-                                style="
-                                  margin: 0 0 6px 0;
-                                  font-weight: 600;
-                                  color: #1f2937;
-                                  font-size: 16px;
-                                ">
-                                카카오톡 채널로 "입점신청 완료" 메시지 전송
-                              </h6>
-                              <p
-                                style="
-                                  margin: 0;
-                                  color: #6b7280;
-                                  font-size: 14px;
-                                ">
-                                보증금 납부후, 아이디/비밀번호 발급을 위해
-                                반드시 카톡으로 연락해 주세요
-                              </p>
-                            </div>
-                          </div>
-
                           <div style="text-align: center">
-                            <a
-                              href="https://pf.kakao.com/_xcCxoqn/chat"
-                              target="_blank"
+                            <button
+                              onclick="openPrivacyModal()"
                               style="
                                 display: inline-block;
-                                background-color: #fee500;
-                                color: #1a1a1a;
-                                padding: 12px 24px;
+                                background: linear-gradient(
+                                  135deg,
+                                  #6b7280 0%,
+                                  #4b5563 100%
+                                );
+                                color: white;
+                                padding: 8px 16px;
                                 border-radius: 6px;
-                                text-decoration: none;
-                                font-weight: 600;
-                                font-size: 15px;
-                                transition: all 0.2s ease;
+                                border: none;
+                                font-weight: 500;
+                                font-size: 14px;
+                                cursor: pointer;
+                                transition: all 0.3s
+                                  cubic-bezier(0.4, 0, 0.2, 1);
                               "
-                              onmouseover="this.style.backgroundColor='#FACC15'"
-                              onmouseout="this.style.backgroundColor='#FEE500'">
-                              카카오톡 채널로 연락하기
-                            </a>
+                              onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(107, 114, 128, 0.3)'"
+                              onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                              개인정보 처리방침 전문 보기
+                            </button>
                           </div>
                         </div>
 
@@ -1177,52 +1282,78 @@
               <!-- 3. 경매안내 탭 -->
               <div class="guidebook-page" id="auction-page">
                 <div class="guide-card">
-                  <h3 class="guide-subtitle">3. 경매 안내</h3>
+                  <h3 class="guide-subtitle" style="text-align: center">
+                    3. 경매 안내
+                  </h3>
                   <ul class="guide-list">
                     <li>
-                      <strong>경매 방식 안내</strong>
-                      <p>
+                      <strong
+                        style="
+                          text-align: center;
+                          display: block;
+                          margin-bottom: 16px;
+                        "
+                        >경매 방식 안내</strong
+                      >
+                      <p style="text-align: center; margin-bottom: 20px">
                         까사트레이드는 두 가지 경매 방식을 제공하며, 경매는
                         보증금 한도 내에서 입찰 가능합니다.
                       </p>
 
-                      <div class="auction-type-box">
-                        <h4 style="margin-bottom: 12px; font-size: 18px">
+                      <div class="auction-type-box" style="text-align: center">
+                        <h4 style="margin-bottom: 16px; font-size: 16px">
                           경매 유형 구분 방법
                         </h4>
                         <p style="margin-bottom: 10px">
                           <span class="color-indicator color-green"></span>
-                          <strong>초록색</strong> - 직접경매 (마감 경매)
+                          초록색 - 직접경매 (마감 경매)
                         </p>
                         <p>
                           <span class="color-indicator color-blue"></span>
-                          <strong>파란색</strong> - 현장경매 (협상 경매)
+                          파란색 - 현장경매 (협상 경매)
                         </p>
                       </div>
 
-                      <div class="pricing-grid" style="margin-top: 20px">
+                      <div class="pricing-grid" style="margin-top: 24px">
                         <div
                           class="pricing-card"
-                          style="border-left: 4px solid #10b981">
+                          style="
+                            border-left: 4px solid #10b981;
+                            text-align: center;
+                          ">
                           <h3 class="pricing-title" style="color: #10b981">
                             직접경매 (마감 경매)
                           </h3>
-                          <p style="text-align: center; margin-bottom: 16px">
+
+                          <!-- 직접경매 이미지 추가 -->
+                          <div class="image-container" style="margin: 16px 0">
+                            <img
+                              src="https://i.ibb.co/0y54VxfV/2025-09-03-10-52-10.png"
+                              alt="직접경매 화면"
+                              style="
+                                max-width: 100%;
+                                height: auto;
+                                border-radius: 8px;
+                                border: 1px solid #e2e8f0;
+                              " />
+                          </div>
+
+                          <p
+                            style="
+                              text-align: center;
+                              margin-bottom: 16px;
+                              font-weight: 500;
+                            ">
                             회원님이 온라인으로 직접 참여하는 방식
                           </p>
-                          <ul class="service-list">
+                          <ul class="service-list" style="text-align: left">
                             <li>
-                              경매 마감 시간까지
-                              <strong
-                                >가장 높은 입찰가를 입력한 사람이 자동
-                                낙찰</strong
-                              >
+                              경매 마감 시간까지 가장 높은 입찰가를 입력한
+                              사람이 자동 낙찰
                             </li>
                             <li>
-                              <strong
-                                >일부 상품은 마감시간 직전 입찰 시 수 초~수 분
-                                자동 연장될 수 있으므로 반드시 확인 요망</strong
-                              >
+                              일부 상품은 마감 5분전 입찰시 5분 연장될 수
+                              있습니다
                             </li>
                             <li>
                               시세가 명확하거나 중저가 아이템, 초보자에게 적합
@@ -1231,9 +1362,12 @@
                           <div
                             style="
                               text-align: center;
-                              margin-top: 12px;
+                              margin-top: 16px;
                               color: #1e40af;
-                              font-weight: 600;
+                              font-weight: 500;
+                              background: #eff6ff;
+                              padding: 8px;
+                              border-radius: 6px;
                             ">
                             참여 후 1영업일 뒤에 결과 확인
                           </div>
@@ -1241,21 +1375,39 @@
 
                         <div
                           class="pricing-card"
-                          style="border-left: 4px solid #1e3a8a">
+                          style="
+                            border-left: 4px solid #1e3a8a;
+                            text-align: center;
+                          ">
                           <h3 class="pricing-title" style="color: #1e3a8a">
                             현장경매 (협상 경매)
                           </h3>
-                          <p style="text-align: center; margin-bottom: 16px">
-                            전문 경매사가 현지에서 대신 입찰하는 방식
+
+                          <!-- 현장경매 이미지 추가 -->
+                          <div class="image-container" style="margin: 16px 0">
+                            <img
+                              src="https://i.ibb.co/9HR5ydVQ/2025-09-03-10-52-15.png"
+                              alt="현장경매 화면"
+                              style="
+                                max-width: 100%;
+                                height: auto;
+                                border-radius: 8px;
+                                border: 1px solid #e2e8f0;
+                              " />
+                          </div>
+
+                          <p
+                            style="
+                              text-align: center;
+                              margin-bottom: 16px;
+                              font-weight: 500;
+                            ">
+                            까사트레이드 경매 담당자가 현지에서 대신 경매 참여
                           </p>
-                          <ul class="service-list">
-                            <li>
-                              고객이 직접 입찰하지 않고, 까사 경매사가 현지에서
-                              대리 입찰
-                            </li>
-                            <li>
-                              고가 아이템 또는 시세를 모르겠는 아이템에 유리
-                            </li>
+                          <ul class="service-list" style="text-align: left">
+                            <li>고가 아이템이나 시세를 모르는 상품에 적합</li>
+                            <li>직접경매 마감시간에 시간을 내지 못 할 경우</li>
+                            <li>3단계 협상 과정을 통해 적정 입찰가 결정</li>
                           </ul>
 
                           <div
@@ -1264,37 +1416,319 @@
                               padding: 16px;
                               border-radius: 8px;
                               margin-top: 16px;
+                              text-align: left;
                             ">
-                            <h4 style="color: #1e3a8a; margin-bottom: 12px">
-                              3단계 제안 흐름
+                            <h4
+                              style="
+                                color: #1e3a8a;
+                                margin-bottom: 12px;
+                                font-size: 16px;
+                                text-align: center;
+                              ">
+                              간단한 3단계 과정
                             </h4>
-                            <div style="margin-bottom: 12px">
-                              <strong>1차 입찰가격 입력</strong><br />
-                              <span style="color: #6b7280"
-                                >고객이 1차로 낙찰 희망가격 입력</span
+                            <div style="margin-bottom: 10px; padding-left: 8px">
+                              <span style="color: #4f46e5; font-weight: 600"
+                                >1차 (신청)</span
+                              >
+                              낙찰시세표 참고 후 입찰금액 입력
+                            </div>
+                            <div style="margin-bottom: 10px; padding-left: 8px">
+                              <span style="color: #4f46e5; font-weight: 600"
+                                >2차 (제안)</span
+                              >
+                              경매 담당자의 예측 낙찰금액 제안<br />
+                              <span
+                                style="
+                                  color: #6b7280;
+                                  font-size: 14px;
+                                  padding-left: 20px;
+                                "
+                                >(낙찰 데이터•상태•구성품•경쟁도 기반)</span
                               >
                             </div>
-                            <div style="margin-bottom: 12px">
-                              <strong>2차 제안가 안내</strong><br />
-                              <span style="color: #6b7280"
-                                >까사 경매팀이 시세 기반 2차 제안가 제공</span
+                            <div style="margin-bottom: 12px; padding-left: 8px">
+                              <span style="color: #4f46e5; font-weight: 600"
+                                >3차 (최종입찰)</span
                               >
+                              제안금액 참고 후 해당상품에 지불할 수 있는
+                              최대금액 입력
                             </div>
-                            <div>
-                              <strong>3차 최종입찰가 입력</strong><br />
-                              <span style="color: #6b7280"
-                                >고객이 직접 경매 들어갈 3차 최종 입찰가
-                                입력</span
-                              >
+
+                            <!-- 현장경매 예시 이미지 -->
+                            <div
+                              style="
+                                margin: 20px 0;
+                                display: flex;
+                                justify-content: center;
+                              ">
+                              <div
+                                style="
+                                  background: white;
+                                  border-radius: 16px;
+                                  padding: 18px;
+                                  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+                                  width: 350px;
+                                  height: 380px;
+                                  display: flex;
+                                  flex-direction: column;
+                                  justify-content: space-between;
+                                  overflow: hidden;
+                                ">
+                                <div
+                                  style="
+                                    background: #f8fafc;
+                                    border: 2px solid #e2e8f0;
+                                    border-radius: 12px;
+                                    padding: 12px 15px;
+                                    text-align: center;
+                                  ">
+                                  <div
+                                    style="
+                                      font-size: 15px;
+                                      color: #64748b;
+                                      font-weight: 500;
+                                      margin-bottom: 6px;
+                                    ">
+                                    3차 입찰
+                                  </div>
+                                  <div
+                                    style="
+                                      font-size: 28px;
+                                      font-weight: 700;
+                                      color: #1e293b;
+                                    ">
+                                    50,000<span
+                                      style="
+                                        font-size: 20px;
+                                        color: #64748b;
+                                        margin-left: 4px;
+                                      "
+                                      >¥</span
+                                    >
+                                  </div>
+                                </div>
+
+                                <div
+                                  style="
+                                    position: relative;
+                                    flex: 1;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    margin: 8px 0;
+                                  ">
+                                  <div
+                                    style="
+                                      display: flex;
+                                      justify-content: space-between;
+                                      align-items: center;
+                                      width: 100%;
+                                      position: relative;
+                                    ">
+                                    <div
+                                      style="
+                                        display: flex;
+                                        flex-direction: column;
+                                        align-items: center;
+                                      ">
+                                      <div
+                                        style="
+                                          background: white;
+                                          border: 2px solid #e2e8f0;
+                                          border-radius: 12px;
+                                          padding: 6px 12px;
+                                          font-size: 15px;
+                                          font-weight: 600;
+                                          color: #475569;
+                                          box-shadow: 0 2px 8px
+                                            rgba(0, 0, 0, 0.08);
+                                        ">
+                                        40,000¥
+                                      </div>
+                                      <div
+                                        style="
+                                          width: 45px;
+                                          height: 45px;
+                                          background: #cbd5e1;
+                                          border-radius: 50%;
+                                          margin: 6px 0;
+                                          position: relative;
+                                        ">
+                                        <div
+                                          style="
+                                            position: absolute;
+                                            top: 11px;
+                                            left: 50%;
+                                            transform: translateX(-50%);
+                                            width: 12px;
+                                            height: 12px;
+                                            background: #94a3b8;
+                                            border-radius: 50%;
+                                          "></div>
+                                        <div
+                                          style="
+                                            position: absolute;
+                                            top: 23px;
+                                            left: 50%;
+                                            transform: translateX(-50%);
+                                            width: 20px;
+                                            height: 16px;
+                                            background: #94a3b8;
+                                            border-radius: 10px 10px 20px 20px;
+                                          "></div>
+                                      </div>
+                                      <div
+                                        style="
+                                          margin-top: 4px;
+                                          font-size: 10px;
+                                          color: #64748b;
+                                          font-weight: 500;
+                                          text-align: center;
+                                          line-height: 1.2;
+                                        ">
+                                        경쟁자가 마지막으로<br />입찰한 금액
+                                      </div>
+                                    </div>
+
+                                    <div
+                                      style="
+                                        position: absolute;
+                                        top: 50%;
+                                        left: 50%;
+                                        transform: translate(-50%, -50%);
+                                        background: #059669;
+                                        color: white;
+                                        font-size: 15px;
+                                        font-weight: 700;
+                                        padding: 6px 10px;
+                                        border-radius: 18px;
+                                        box-shadow: 0 4px 12px
+                                          rgba(5, 150, 105, 0.3);
+                                        z-index: 10;
+                                      ">
+                                      +1,000¥
+                                    </div>
+
+                                    <div
+                                      style="
+                                        display: flex;
+                                        flex-direction: column;
+                                        align-items: center;
+                                      ">
+                                      <div
+                                        style="
+                                          background: #fb923c;
+                                          color: white;
+                                          border: 2px solid #fb923c;
+                                          border-radius: 12px;
+                                          padding: 6px 12px;
+                                          font-size: 16px;
+                                          font-weight: 600;
+                                          box-shadow: 0 2px 8px
+                                            rgba(0, 0, 0, 0.08);
+                                        ">
+                                        41,000¥
+                                      </div>
+                                      <div
+                                        style="
+                                          width: 55px;
+                                          height: 55px;
+                                          background: #fb923c;
+                                          border-radius: 50%;
+                                          margin: 6px 0;
+                                          position: relative;
+                                        ">
+                                        <div
+                                          style="
+                                            position: absolute;
+                                            top: 13px;
+                                            left: 50%;
+                                            transform: translateX(-50%);
+                                            width: 16px;
+                                            height: 16px;
+                                            background: white;
+                                            border-radius: 50%;
+                                          "></div>
+                                        <div
+                                          style="
+                                            position: absolute;
+                                            top: 30px;
+                                            left: 50%;
+                                            transform: translateX(-50%);
+                                            width: 24px;
+                                            height: 18px;
+                                            background: white;
+                                            border-radius: 12px 12px 24px 24px;
+                                          "></div>
+                                      </div>
+                                      <div
+                                        style="
+                                          margin-top: 4px;
+                                          font-size: 10px;
+                                          color: #64748b;
+                                          font-weight: 500;
+                                          text-align: center;
+                                        ">
+                                        까사트레이드
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div
+                                  style="
+                                    background: linear-gradient(
+                                      135deg,
+                                      #0ea5e9 0%,
+                                      #3b82f6 100%
+                                    );
+                                    border-radius: 12px;
+                                    padding: 12px;
+                                    color: white;
+                                    text-align: center;
+                                  ">
+                                  <div
+                                    style="
+                                      font-size: 12px;
+                                      opacity: 0.9;
+                                      margin-bottom: 4px;
+                                      font-weight: 600;
+                                    ">
+                                    실제 낙찰금액
+                                  </div>
+                                  <div
+                                    style="
+                                      font-size: 24px;
+                                      font-weight: 800;
+                                      margin-bottom: 4px;
+                                      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+                                    ">
+                                    41,000¥
+                                  </div>
+                                  <div
+                                    style="
+                                      font-size: 11px;
+                                      opacity: 0.95;
+                                      line-height: 1.3;
+                                    ">
+                                    50,000¥으로 설정해도 더 낮은 금액에 낙찰될
+                                    수 있습니다!
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           </div>
 
                           <div
                             style="
                               text-align: center;
-                              margin-top: 12px;
+                              margin-top: 16px;
                               color: #1e40af;
-                              font-weight: 600;
+                              font-weight: 500;
+                              background: #eff6ff;
+                              padding: 8px;
+                              border-radius: 6px;
                             ">
                             참여 후 2영업일 뒤에 결과 확인
                           </div>
@@ -1303,52 +1737,91 @@
                     </li>
 
                     <li>
-                      <strong>입찰 금액 입력 주의사항</strong>
-                      <div
-                        class="pricing-card"
+                      <strong
                         style="
-                          border-left: 4px solid #f59e0b;
-                          background-color: #fffbeb;
+                          text-align: center;
+                          display: block;
+                          margin-bottom: 16px;
+                        "
+                        >입찰 금액 입력 주의사항</strong
+                      >
+                      <div
+                        style="
+                          background: white;
+                          border: 1px solid #e5e7eb;
+                          border-radius: 8px;
+                          padding: 20px;
+                          margin-top: 16px;
                         ">
                         <div
                           style="
-                            background: #fef3c7;
-                            padding: 16px;
+                            background: #fef2f2;
+                            border: 1px solid #fecaca;
                             border-radius: 8px;
-                            margin-bottom: 16px;
+                            padding: 20px;
+                            margin-bottom: 20px;
                           ">
                           <h4
                             style="
-                              color: #92400e;
-                              margin-bottom: 12px;
-                              font-size: 18px;
+                              color: #b91c1c;
+                              margin: 0 0 16px 0;
+                              font-size: 16px;
+                              font-weight: 600;
+                              text-align: center;
                             ">
                             입찰 단위 확인 필수
                           </h4>
-                          <ul style="list-style: none; padding: 0; margin: 0">
-                            <li style="margin-bottom: 8px">
-                              <strong>올바른 입력:</strong> 7만원 입찰 시 "7"
-                              입력 → 7,000엔
-                            </li>
-                            <li style="margin-bottom: 8px">
-                              <strong>잘못된 입력:</strong> "7000" 입력 시 →
-                              7,000,000엔 (약 700만원)
-                            </li>
-                            <li style="color: #92400e; font-weight: 600">
+                          <div style="margin-bottom: 12px; text-align: center">
+                            <div
+                              style="
+                                margin-bottom: 12px;
+                                padding: 12px;
+                                background: rgba(16, 185, 129, 0.1);
+                                border-radius: 6px;
+                                color: #059669;
+                              ">
+                              <span style="font-weight: 600">올바른 입력:</span>
+                              7만원 입찰 시 "7" 입력 → 7,000엔
+                            </div>
+                            <div
+                              style="
+                                margin-bottom: 12px;
+                                padding: 12px;
+                                background: rgba(239, 68, 68, 0.1);
+                                border-radius: 6px;
+                                color: #dc2626;
+                              ">
+                              <span style="font-weight: 600">잘못된 입력:</span>
+                              "7000" 입력 시 → 7,000,000엔 (약 700만원)
+                            </div>
+                            <div
+                              style="
+                                color: #b91c1c;
+                                font-weight: 600;
+                                font-size: 16px;
+                                margin-top: 16px;
+                                padding: 12px;
+                                background: rgba(185, 28, 28, 0.1);
+                                border-radius: 6px;
+                              ">
                               입찰 전 금액을 반드시 재확인해 주세요
-                            </li>
-                          </ul>
+                            </div>
+                          </div>
                         </div>
                         <h4
                           style="
-                            color: #1e3a8a;
-                            margin-bottom: 12px;
-                            font-size: 16px;
+                            color: #1f2937;
+                            margin: 0 0 12px 0;
+                            font-size: 15px;
+                            font-weight: 500;
+                            text-align: center;
                           ">
                           기타 주의사항
                         </h4>
-                        <ul class="service-list">
-                          <li>낙찰된 상품은 취소가 불가능합니다</li>
+                        <ul
+                          class="service-list"
+                          style="max-width: 600px; margin: 0 auto">
+                          <li>입찰하신 상품은 취소가 불가능합니다</li>
                           <li>입찰은 보증금 한도 내에서만 가능합니다</li>
                           <li>
                             입찰 전 상품 상태와 구성품을 상세히 확인하세요
@@ -1358,9 +1831,25 @@
                     </li>
 
                     <li>
-                      <strong>제품 정보 확인 방법</strong>
-                      <div class="pricing-card">
-                        <ul class="service-list">
+                      <strong
+                        style="
+                          text-align: center;
+                          display: block;
+                          margin-bottom: 16px;
+                        "
+                        >제품 정보 확인 방법</strong
+                      >
+                      <div
+                        style="
+                          background: white;
+                          border: 1px solid #e5e7eb;
+                          border-radius: 8px;
+                          padding: 20px;
+                          margin-top: 16px;
+                        ">
+                        <ul
+                          class="service-list"
+                          style="max-width: 600px; margin: 0 auto">
                           <li>
                             제품 클릭시 구성품, 상세내용 확인이 가능합니다
                           </li>
@@ -1390,59 +1879,97 @@
                     <div class="pricing-card">
                       <h3 class="pricing-title">보증금</h3>
                       <div class="highlight-box">
-                        <p><strong>보증금 운영 방식 안내</strong></p>
+                        <p>보증금 운영 방식 안내</p>
                       </div>
 
                       <h4
                         style="
                           color: #1e3a8a;
                           margin: 20px 0 12px 0;
-                          font-size: 18px;
+                          font-size: 16px;
+                          font-weight: 500;
                         ">
                         입찰 한도
                       </h4>
                       <ul style="list-style: none; padding: 0">
-                        <li style="margin-bottom: 12px">
+                        <li
+                          style="
+                            margin-bottom: 12px;
+                            font-size: 15px;
+                            line-height: 1.6;
+                          ">
                           입찰은 납부하신 보증금 한도 내에서만 가능합니다<br />
-                          <span style="color: #6b7280; font-size: 14px"
+                          <span style="color: #6b7280; font-size: 15px"
                             >예) 보증금 100만원 → 당일 입찰금액 합계 100만원까지
                             가능</span
                           >
                         </li>
-                        <li style="margin-bottom: 12px">
-                          추가 입찰을 원하시면 보증금을 추가 납부해 주세요
+                        <li
+                          style="
+                            margin-bottom: 12px;
+                            font-size: 15px;
+                            line-height: 1.6;
+                          ">
+                          추가 입찰을 원할 시 해당경매 이전 1일전까지 납부가
+                          확인이 되어야 합니다.
                         </li>
-                        <li style="margin-bottom: 12px">
-                          계약 종료 시 환급됩니다
+                        <li
+                          style="
+                            margin-bottom: 12px;
+                            font-size: 15px;
+                            line-height: 1.6;
+                          ">
+                          계약 종료 시 14영업일 이내에 환급됩니다.
+                        </li>
+                        <li
+                          style="
+                            margin-bottom: 12px;
+                            font-size: 15px;
+                            line-height: 1.6;
+                          ">
+                          보증금 환급 시 미결제된 월 이용료가 있을 경우 해당
+                          금액을 차감한 후 환급됩니다.
                         </li>
                       </ul>
                     </div>
 
                     <div class="pricing-card">
                       <h3 class="pricing-title">월 이용료</h3>
-                      <div class="highlight-box">
-                        <p><strong>신규 고객 1개월 무료 체험!</strong></p>
+                      <div
+                        style="
+                          background: linear-gradient(
+                            135deg,
+                            rgba(79, 70, 229, 0.1) 0%,
+                            rgba(124, 58, 237, 0.1) 100%
+                          );
+                          color: #4f46e5;
+                          font-weight: 600;
+                          font-size: 16px;
+                          padding: 16px;
+                          margin-bottom: 20px;
+                          border-radius: 8px;
+                          text-align: center;
+                          border: 1px solid rgba(79, 70, 229, 0.2);
+                        ">
+                        신규고객 1개월간 무료 이용
                       </div>
                       <ul class="service-list">
-                        <li>추천 아이템 카테고리 제공</li>
-                        <li>무료감정 (감정서 발급 유료)</li>
+                        <li>무료감정 [감정서 발급 유료]</li>
                         <li>담당 경매사 배정</li>
                         <li>추천 입찰가 제안</li>
-                        <li>실시간 상담</li>
                         <li>도금, 수선, 염색 제안 및 협력사 금액</li>
                       </ul>
                       <ul class="price-list">
-                        <li><span>1개월</span> <strong>99,000원</strong></li>
-                        <li><span>3개월</span> <strong>279,000원</strong></li>
-                        <li><span>6개월</span> <strong>495,000원</strong></li>
-                        <li><span>12개월</span> <strong>990,000원</strong></li>
+                        <li><span>1개월</span> 99,000원</li>
+                        <li><span>3개월</span> 279,000원</li>
+                        <li><span>6개월</span> 495,000원</li>
+                        <li><span>12개월</span> 990,000원</li>
                       </ul>
                     </div>
                     <div class="pricing-card">
-                      <h3 class="pricing-title">입찰대행 수수료</h3>
-                      <div class="highlight-box">
-                        <p><strong>낙찰금액 기준</strong></p>
-                      </div>
+                      <h3 class="pricing-title">
+                        까사레이드<br />입찰/통관/감정 수수료
+                      </h3>
                       <table class="commission-table">
                         <thead>
                           <tr>
@@ -1453,19 +1980,80 @@
                         <tbody>
                           <tr>
                             <td>10만원 미만</td>
-                            <td>10,000원</td>
+                            <td>
+                              제품당 10,000원
+                              <div style="font-size: 13px; color: #6b7280">
+                                (1일 합산 X)
+                              </div>
+                            </td>
                           </tr>
                           <tr>
-                            <td>11만원 ~ 500만원</td>
+                            <td
+                              colspan="2"
+                              style="
+                                border: none;
+                                padding: 8px 0 0 0;
+                                color: #1e3a8a;
+                                font-size: 13px;
+                                font-weight: 500;
+                                background: transparent;
+                              ">
+                              1일 총낙찰 합산금액 기준
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>~ 500만원</td>
                             <td>10%</td>
+                          </tr>
+                          <tr>
+                            <td
+                              colspan="2"
+                              style="
+                                border: none;
+                                padding: 8px 0 0 0;
+                                color: #1e3a8a;
+                                font-size: 13px;
+                                font-weight: 500;
+                                background: transparent;
+                              ">
+                              1일 총낙찰 합산금액 기준
+                            </td>
                           </tr>
                           <tr>
                             <td>500만원 ~ 1,000만원</td>
                             <td>7%</td>
                           </tr>
                           <tr>
+                            <td
+                              colspan="2"
+                              style="
+                                border: none;
+                                padding: 8px 0 0 0;
+                                color: #1e3a8a;
+                                font-size: 13px;
+                                font-weight: 500;
+                                background: transparent;
+                              ">
+                              1일 총낙찰 합산금액 기준
+                            </td>
+                          </tr>
+                          <tr>
                             <td>1,000만원 ~ 5,000만원</td>
                             <td>5%</td>
+                          </tr>
+                          <tr>
+                            <td
+                              colspan="2"
+                              style="
+                                border: none;
+                                padding: 8px 0 0 0;
+                                color: #1e3a8a;
+                                font-size: 13px;
+                                font-weight: 500;
+                                background: transparent;
+                              ">
+                              1일 총낙찰 합산금액 기준
+                            </td>
                           </tr>
                           <tr>
                             <td>5,000만원 이상</td>
@@ -1478,217 +2066,334 @@
                 </div>
               </div>
 
-              <!-- 5. 배송 및 반품 탭 -->
-              <div class="guidebook-page" id="delivery-page">
+              <!-- 5. CAS 명품감정시스템 탭 -->
+              <div class="guidebook-page" id="cas-page">
                 <div class="guide-card">
-                  <h3 class="guide-subtitle">5. 배송 및 반품</h3>
-                  <ul class="guide-list">
-                    <li>
-                      <strong>배송 과정</strong>
-                      <p>
-                        낙찰 상품 견적서발급 → 통관 → 검수 및 감정 → 국내배송
-                        (평균 7~10영업일 소요)
-                      </p>
-                    </li>
-                    <li>
-                      <strong>검수 및 감정</strong>
-                      <p>
-                        1차) 출품사 감정 → 2차) 세관감정 → 3차) 까사트레이드
-                        검수
-                      </p>
-                    </li>
-                    <li>
-                      <strong>반품 및 교환 정책</strong>
-                      <p>반품은 가품일 경우 전액 환불 및 반품 진행됩니다.</p>
-                      <p>교환은 불가합니다.</p>
-                    </li>
-                  </ul>
-                  <div class="guide-tip">
-                    <div class="tip-icon">💡</div>
-                    <p>
-                      TIP: 낙찰일로부터 통상 7-10일 정도 소요되며, 연휴나 특수한
-                      상황에 따라 기간이 달라질 수 있습니다.
+                  <h3 class="guide-subtitle">5. CAS 명품감정시스템</h3>
+
+                  <div class="cas-card">
+                    <h4 class="cas-service-title">CAS 명품감정 시스템</h4>
+                    <p class="cas-service-description">
+                      까사트레이드는 전문 감정기관과 제휴된
+                      <strong
+                        >자체 감정 프로세스(Casa Authentication System)</strong
+                      >를 운영하고 있습니다. 모든 낙찰 제품은 국내 도착 후 내부
+                      검수와 함께 <strong>명품 감정서 발급</strong>이
+                      가능합니다.
                     </p>
+
+                    <div class="cas-card">
+                      <h4 class="cas-service-title">회원 등급별 감정 혜택</h4>
+                      <table class="cas-table">
+                        <thead>
+                          <tr>
+                            <th>구분</th>
+                            <th>실물 감정</th>
+                            <th>사진 감정</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td>까사 회원</td>
+                            <td>15,000원</td>
+                            <td>오픈 예정</td>
+                          </tr>
+                          <tr>
+                            <td>제휴 회원</td>
+                            <td>20,000원</td>
+                            <td>오픈 예정</td>
+                          </tr>
+                          <tr>
+                            <td>일반 회원</td>
+                            <td>38,000원</td>
+                            <td>15,000원</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div class="cas-card">
+                    <h4 class="cas-service-title">CRS 수선 연계 서비스</h4>
+                    <p class="cas-service-description">
+                      낙찰된 제품이 국내에 도착하면, 까사 검수팀이 상품 상태를
+                      확인 후 필요 시 수선을 제안드립니다.
+                      <strong>일반 소비자보다 더 저렴한 제휴금액</strong>으로
+                      이용 가능합니다. 수선이 필요한 경우, 까사에서 인증한
+                      <strong>전문 수선사와 바로 연계</strong>가 가능하며, 비용
+                      및 기간은 고객에게 안내 후 최종 결정됩니다.
+                    </p>
+                    <ul class="service-list">
+                      <li>
+                        수선 항목 예시: 가방 스티치/가죽/지퍼 보수, 안감 교체 등
+                      </li>
+                      <li>고객 승인 후 수선 진행 / 비용은 별도 안내 및 입금</li>
+                    </ul>
                   </div>
                 </div>
               </div>
-              <!-- 6. CAS 명품감정시스템 탭 -->
-              <div class="guidebook-page" id="cas-page">
+
+              <!-- 6. 상품 컨디션(랭크)가이드 탭 -->
+              <div class="guidebook-page" id="condition-page">
                 <div class="guide-card">
-                  <h3 class="guide-subtitle">6. CAS 명품감정시스템</h3>
-
-                  <div class="cas-card">
-                    <h4 class="cas-service-title">CAS 명품감정시스템 소개</h4>
-                    <p class="cas-service-description">
-                      까사트레이드는 명품 경매를 넘어
-                      <strong>감정 → 수선 → 재판매</strong>까지 가능한 명품 유통
-                      구조 플랫폼으로 진화하고 있습니다. CAS(Casa Authentication
-                      System)는 까사트레이드가 운영하는 명품 감정 시스템으로,
-                      디지털 감정과 실물 감정을 통해 신뢰할 수 있는 감정
-                      서비스를 제공합니다.
-                    </p>
-                  </div>
-
-                  <div class="cas-card">
-                    <h4 class="cas-service-title">감정 서비스 종류</h4>
-                    <table class="cas-table">
+                  <h3 class="guide-subtitle">6. 상품 컨디션(랭크)가이드</h3>
+                  <div style="overflow-x: auto">
+                    <table
+                      style="
+                        width: 100%;
+                        border-collapse: separate;
+                        border-spacing: 0;
+                        background: #f8faff;
+                        border-radius: 10px;
+                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+                        font-size: 16px;
+                      ">
                       <thead>
-                        <tr>
-                          <th>서비스 유형</th>
-                          <th>설명</th>
-                          <th>비용 (일반회원 기준)</th>
-                          <th>결과</th>
+                        <tr
+                          style="
+                            background: #eff6ff;
+                            color: #1e3a8a;
+                            font-weight: 700;
+                          ">
+                          <th
+                            style="
+                              padding: 16px 12px;
+                              border-bottom: 2px solid #e5e7eb;
+                              min-width: 90px;
+                              font-size: 20px;
+                            ">
+                            랭크
+                          </th>
+                          <th
+                            style="
+                              padding: 16px 12px;
+                              border-bottom: 2px solid #e5e7eb;
+                              font-size: 16px;
+                            ">
+                            설명
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr>
-                          <td>퀵링크 감정</td>
-                          <td>번개장터/당근마켓 링크 제출 → 감정</td>
-                          <td>까사 회원 무료 (월 10회)</td>
-                          <td>정품/가품/판단불가</td>
+                          <td
+                            style="
+                              padding: 14px 12px;
+                              border-bottom: 1px solid #e5e7eb;
+                              font-weight: 700;
+                              font-size: 22px;
+                              text-align: center;
+                            ">
+                            N
+                          </td>
+                          <td
+                            style="
+                              padding: 14px 12px;
+                              border-bottom: 1px solid #e5e7eb;
+                            ">
+                            가격 태그와 보호 씰이 부착되어 있어 미사용으로
+                            판단할 수 있는 양호한 상태의 제품
+                          </td>
                         </tr>
                         <tr>
-                          <td>사진 감정 (오픈예정)</td>
-                          <td>직접 사진 업로드 후 감정</td>
-                          <td>까사 회원 10,000원</td>
-                          <td>온라인 감정서 발급</td>
+                          <td
+                            style="
+                              padding: 14px 12px;
+                              border-bottom: 1px solid #e5e7eb;
+                              font-weight: 700;
+                              font-size: 22px;
+                              text-align: center;
+                            ">
+                            S
+                          </td>
+                          <td
+                            style="
+                              padding: 14px 12px;
+                              border-bottom: 1px solid #e5e7eb;
+                            ">
+                            착용 또는 사용 흔적이 없으며 보관 상태도 좋은 제품
+                          </td>
                         </tr>
                         <tr>
-                          <td>실물 감정</td>
-                          <td>택배로 실물 발송 후 정밀 감정</td>
-                          <td>까사 회원 15,000원</td>
-                          <td>정식 감정서 발급 가능</td>
+                          <td
+                            style="
+                              padding: 14px 12px;
+                              border-bottom: 1px solid #e5e7eb;
+                              font-weight: 700;
+                              font-size: 22px;
+                              text-align: center;
+                            ">
+                            SA
+                          </td>
+                          <td
+                            style="
+                              padding: 14px 12px;
+                              border-bottom: 1px solid #e5e7eb;
+                            ">
+                            몇 번 사용된 것으로 보이지만 새것처럼 상태가 좋으며
+                            보관 상태도 양호한 제품
+                          </td>
+                        </tr>
+                        <tr>
+                          <td
+                            style="
+                              padding: 14px 12px;
+                              border-bottom: 1px solid #e5e7eb;
+                              font-weight: 700;
+                              font-size: 22px;
+                              text-align: center;
+                            ">
+                            A
+                          </td>
+                          <td
+                            style="
+                              padding: 14px 12px;
+                              border-bottom: 1px solid #e5e7eb;
+                            ">
+                            사용감과 보관으로 인한 약간의 손상이 있으나
+                            전반적으로 상태가 좋은 제품
+                          </td>
+                        </tr>
+                        <tr>
+                          <td
+                            style="
+                              padding: 14px 12px;
+                              border-bottom: 1px solid #e5e7eb;
+                              font-weight: 700;
+                              font-size: 22px;
+                              text-align: center;
+                            ">
+                            AB
+                          </td>
+                          <td
+                            style="
+                              padding: 14px 12px;
+                              border-bottom: 1px solid #e5e7eb;
+                            ">
+                            눈에 띄지 않는 얼룩, 작은 흠집 및 보관으로 인한
+                            손상이 있는 제품
+                          </td>
+                        </tr>
+                        <tr>
+                          <td
+                            style="
+                              padding: 14px 12px;
+                              border-bottom: 1px solid #e5e7eb;
+                              font-weight: 700;
+                              font-size: 22px;
+                              text-align: center;
+                            ">
+                            B
+                          </td>
+                          <td
+                            style="
+                              padding: 14px 12px;
+                              border-bottom: 1px solid #e5e7eb;
+                            ">
+                            사용 및 보관으로 인해 여러 곳에서 긁힘과 얼룩이
+                            보이는 제품
+                          </td>
+                        </tr>
+                        <tr>
+                          <td
+                            style="
+                              padding: 14px 12px;
+                              border-bottom: 1px solid #e5e7eb;
+                              font-weight: 700;
+                              font-size: 22px;
+                              text-align: center;
+                            ">
+                            BC
+                          </td>
+                          <td
+                            style="
+                              padding: 14px 12px;
+                              border-bottom: 1px solid #e5e7eb;
+                            ">
+                            일상적인 사용에 지장을 줄 수 있는 제품
+                          </td>
+                        </tr>
+                        <tr>
+                          <td
+                            style="
+                              padding: 14px 12px;
+                              border-bottom: 1px solid #e5e7eb;
+                              font-weight: 700;
+                              font-size: 22px;
+                              text-align: center;
+                            ">
+                            C
+                          </td>
+                          <td
+                            style="
+                              padding: 14px 12px;
+                              border-bottom: 1px solid #e5e7eb;
+                            ">
+                            정상적인 사용에 방해가 될 정도로 상태가 좋지 않은
+                            제품
+                          </td>
+                        </tr>
+                        <tr>
+                          <td
+                            style="
+                              padding: 14px 12px;
+                              border-bottom: 1px solid #e5e7eb;
+                              font-weight: 700;
+                              font-size: 22px;
+                              text-align: center;
+                            ">
+                            D
+                          </td>
+                          <td
+                            style="
+                              padding: 14px 12px;
+                              border-bottom: 1px solid #e5e7eb;
+                            ">
+                            사용감이 아주 많고 수선이 필요한 제품
+                          </td>
+                        </tr>
+                        <tr>
+                          <td
+                            style="
+                              padding: 14px 12px;
+                              border-bottom: 1px solid #e5e7eb;
+                              font-weight: 700;
+                              font-size: 22px;
+                              text-align: center;
+                            ">
+                            F
+                          </td>
+                          <td
+                            style="
+                              padding: 14px 12px;
+                              border-bottom: 1px solid #e5e7eb;
+                            ">
+                            세트 상품 또는 구성품 모음
+                          </td>
+                        </tr>
+                        <tr>
+                          <td
+                            style="
+                              padding: 14px 12px;
+                              border-bottom: 1px solid #e5e7eb;
+                              font-weight: 700;
+                              font-size: 22px;
+                              text-align: center;
+                            ">
+                            J
+                          </td>
+                          <td
+                            style="
+                              padding: 14px 12px;
+                              border-bottom: 1px solid #e5e7eb;
+                            ">
+                            상태 악화나 손상으로 사용이 어려운 제품. 부품용
+                            등으로 활용을 권장
+                          </td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
-
-                  <div class="cas-card">
-                    <h4 class="cas-service-title">감정서 발급 유형</h4>
-                    <ul class="service-list">
-                      <li>PDF 감정서: 온라인용, 감정번호 포함</li>
-                      <li>실물 감정서: 종이, QR 및 감정번호 포함</li>
-                      <li>
-                        모든 감정 결과는 진위 여부(정품/가품/판단불가)와 상태
-                        평가 포함
-                      </li>
-                    </ul>
-
-                    <div class="cas-process">
-                      <h5 class="cas-process-title">감정서 발급 프로세스</h5>
-                      <ul class="cas-process-list">
-                        <li>고객이 홈페이지에서 감정 신청</li>
-                        <li>사진 기반 예비 판별 or 실물 도착 후 정밀 감정</li>
-                        <li>내부 기준 및 시세/구성품 일치율 검토</li>
-                        <li>감정서 생성 및 고객 전달 (마이페이지 저장)</li>
-                      </ul>
-                    </div>
-                  </div>
-
-                  <div class="cas-card">
-                    <h4 class="cas-service-title">회원 등급별 감정 혜택</h4>
-                    <table class="cas-table">
-                      <thead>
-                        <tr>
-                          <th>구분</th>
-                          <th>퀵링크 감정</th>
-                          <th>실물 감정</th>
-                          <th>사진 감정</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td>까사 회원</td>
-                          <td>무료 (월 10회)</td>
-                          <td>12,000원</td>
-                          <td>오픈 예정</td>
-                        </tr>
-                        <tr>
-                          <td>제휴 회원</td>
-                          <td>무료 (월 5회)</td>
-                          <td>20,000원</td>
-                          <td>오픈 예정</td>
-                        </tr>
-                        <tr>
-                          <td>일반 회원</td>
-                          <td>월 29,000원 (월 10회)</td>
-                          <td>38,000원</td>
-                          <td>15,000원</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                  <div class="cas-card">
-                    <h4 class="cas-service-title">
-                      까사 낙찰 상품의 처리 흐름 (감정·수선 연계)
-                    </h4>
-
-                    <div class="cas-process">
-                      <h5 class="cas-process-title">
-                        ① 수선만 원하는 경우 (감정서 없이)
-                      </h5>
-                      <ul class="cas-process-list">
-                        <li>까사 검수팀이 낙찰상품 수령</li>
-                        <li>사진 촬영 및 수선 필요 항목 체크</li>
-                        <li>고객에게 수선 제안</li>
-                        <li>고객 수락 → 까사 네트워크 수선사 자동 연동</li>
-                        <li>수선 완료 → 까사 재확인 및 전/후 사진 전달</li>
-                        <li>고객 수령 or 위탁 재출품 선택</li>
-                      </ul>
-                    </div>
-
-                    <div class="cas-process">
-                      <h5 class="cas-process-title">
-                        ② 감정서 발급만 원하는 경우 (수선 없이)
-                      </h5>
-                      <ul class="cas-process-list">
-                        <li>고객이 낙찰 직후 감정서 발급 요청</li>
-                        <li>까사 감정원(CAS) 정밀 감정 진행</li>
-                        <li>사진 촬영 및 감정서 작성</li>
-                        <li>QR 포함 공식 감정서 발급 후 상품 출고</li>
-                      </ul>
-                    </div>
-
-                    <div class="cas-process">
-                      <h5 class="cas-process-title">
-                        ③ 감정 + 수선 동시 진행 시
-                      </h5>
-                      <ul class="cas-process-list">
-                        <li>감정 결과와 함께 수선 제안 포함</li>
-                        <li>수선이 정품 여부에 영향 없을 경우 병행 가능</li>
-                        <li>수선 완료 후 감정서 + 복원 인증 제공</li>
-                      </ul>
-                    </div>
-                  </div>
-
-                  <!-- 
-                            <div class="cas-card">
-                                <h4 class="cas-service-title">CRS 복원시스템 개발 방향 (예정)</h4>
-                                <p class="cas-service-description">
-                                    CRS(Casa Restoration System)는 까사트레이드가 운영하는 명품 복원/수선 시스템으로, 현재는 내부 검수 과정에서 까사 직원이 고객의 상품 상태를 보고 적절한 수선사에게 자동으로 연결하고 있습니다. 앞으로는 고객이 수선사를 직접 선택할 수 있도록 다음과 같은 고도화 기능을 개발 중입니다:
-                                </p>
-                                
-                                <div class="cas-process">
-                                    <h5 class="cas-process-title">개선될 서비스 흐름</h5>
-                                    <ul class="cas-process-list">
-                                        <li>고객이 감정 신청 또는 낙찰 시 수선 의사를 밝히면, 감정사가 수선 필요 부위를 사진과 함께 체크합니다.</li>
-                                        <li>이 정보가 <strong>CAS에 입점된 수선사 네트워크</strong>에 전달되어, 복수 수선사로부터 견적이 자동으로 도착합니다.</li>
-                                        <li>고객은 <strong>수선사의 가격, 후기, 경력, 위치</strong>를 비교하고 직접 선택할 수 있습니다.</li>
-                                        <li>선택한 수선사에게 택배로 전달되며, 수선 완료 후 까사 측에서 수선 품질을 검수하고 전/후 사진을 제공합니다.</li>
-                                    </ul>
-                                </div>
-                                
-                                <div class="cas-process">
-                                    <h5 class="cas-process-title">핵심 기능</h5>
-                                    <ul class="cas-process-list">
-                                        <li><strong>수선사 입점 시스템</strong>: 까사 감정 시스템 내 공식 인증을 거쳐 입점 신청 가능</li>
-                                        <li><strong>견적 비교 시스템</strong>: 복수 견적 자동 수신 → 마이페이지에서 비교 및 선택</li>
-                                        <li><strong>복원 리포트 발급</strong>: 수선 전/후 이미지와 간단한 복원 요약 제공</li>
-                                        <li><strong>안전한 수선 이행</strong>: 까사 물류팀을 통한 수선사 간 연계 및 검수 프로세스 유지</li>
-                                    </ul>
-                                </div>
-                            </div>
-                            -->
                 </div>
               </div>
             </div>
@@ -1704,6 +2409,148 @@
         </div>
       </div>
 
+      <!-- 개인정보 처리방침 모달 -->
+      <div id="privacyModal" class="modal">
+        <div
+          class="modal-content"
+          style="
+            max-width: 800px;
+            background: white;
+            border-radius: 12px;
+            padding: 0;
+            overflow: hidden;
+          ">
+          <div
+            style="
+              background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+              color: white;
+              padding: 20px;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            ">
+            <h3 style="margin: 0; font-size: 18px; font-weight: 600">
+              개인정보 처리방침
+            </h3>
+            <button
+              onclick="closePrivacyModal()"
+              style="
+                background: none;
+                border: none;
+                color: white;
+                font-size: 24px;
+                cursor: pointer;
+                padding: 0;
+                width: 30px;
+                height: 30px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              ">
+              &times;
+            </button>
+          </div>
+          <div
+            style="
+              padding: 30px;
+              max-height: 70vh;
+              overflow-y: auto;
+              line-height: 1.6;
+              color: #374151;
+            ">
+            <h4 style="color: #1f2937; margin-bottom: 16px">
+              ㈜까사트레이드 개인정보 처리방침
+            </h4>
+
+            <div style="margin-bottom: 24px">
+              <h5 style="color: #4f46e5; margin-bottom: 12px; font-size: 16px">
+                1. 개인정보 수집·이용 목적
+              </h5>
+              <p style="margin-bottom: 8px">
+                • 입점신청 검토 및 회원가입 절차 진행
+              </p>
+              <p style="margin-bottom: 8px">
+                • 서비스 이용 관련 상담 및 고객지원
+              </p>
+              <p style="margin-bottom: 8px">
+                • 경매 참여 자격 확인 및 보증금 관리
+              </p>
+              <p>• 법령에 따른 의무 이행 및 분쟁 해결</p>
+            </div>
+
+            <div style="margin-bottom: 24px">
+              <h5 style="color: #4f46e5; margin-bottom: 12px; font-size: 16px">
+                2. 수집하는 개인정보 항목
+              </h5>
+              <p style="margin-bottom: 8px">
+                <strong>필수정보:</strong> 회사명, 주소, 대표자명,
+                사업자등록번호, 연락처, 이메일
+              </p>
+            </div>
+
+            <div style="margin-bottom: 24px">
+              <h5 style="color: #4f46e5; margin-bottom: 12px; font-size: 16px">
+                3. 개인정보 보유·이용 기간
+              </h5>
+              <p style="margin-bottom: 8px">
+                • 회원탈퇴 시까지 (단, 법령에 따른 보존 의무가 있는 경우 해당
+                기간)
+              </p>
+              <p style="margin-bottom: 8px">
+                • 상법, 전자상거래법에 따른 거래기록: 5년
+              </p>
+              <p>• 소비자 불만 및 분쟁처리 기록: 3년</p>
+            </div>
+
+            <div style="margin-bottom: 24px">
+              <h5 style="color: #4f46e5; margin-bottom: 12px; font-size: 16px">
+                4. 개인정보 제3자 제공
+              </h5>
+              <p>
+                고객의 별도 동의 없이는 제3자에게 개인정보를 제공하지 않습니다.
+                다만, 법령에 따른 요구가 있는 경우는 예외로 합니다.
+              </p>
+            </div>
+
+            <div style="margin-bottom: 24px">
+              <h5 style="color: #4f46e5; margin-bottom: 12px; font-size: 16px">
+                5. 개인정보 처리 위탁
+              </h5>
+              <p>
+                서비스 제공을 위해 필요한 경우, 개인정보 처리업무를 위탁할 수
+                있으며 이 경우 위탁계약을 통해 개인정보 보호를 위한 필요한
+                사항을 규정합니다.
+              </p>
+            </div>
+
+            <div style="margin-bottom: 24px">
+              <h5 style="color: #4f46e5; margin-bottom: 12px; font-size: 16px">
+                6. 개인정보보호 책임자
+              </h5>
+              <p style="margin-bottom: 8px"><strong>성명:</strong> 황승하</p>
+              <p style="margin-bottom: 8px">
+                <strong>연락처:</strong> 02-6959-9640
+              </p>
+              <p><strong>이메일:</strong> casatrade.kr@gmail.com</p>
+            </div>
+
+            <div
+              style="
+                background: #f8fafc;
+                padding: 16px;
+                border-radius: 8px;
+                border-left: 4px solid #4f46e5;
+              ">
+              <p style="margin: 0; font-size: 14px; color: #6b7280">
+                본 개인정보 처리방침은 2025년 1월 1일부터 시행되며, 변경 시에는
+                웹사이트를 통해 공지합니다. 개인정보 처리에 관한 문의사항이
+                있으시면 언제든지 연락주시기 바랍니다.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- FAQ 섹션 -->
       <section class="section faq" id="faq">
         <div class="section-container">
@@ -1711,17 +2558,75 @@
           <div class="faq-container">
             <div class="faq-item">
               <button class="faq-question">
-                <h3>보증금 환급은 어떻게 되나요?</h3>
+                <h3>보증금 관련 질문들</h3>
                 <span class="toggle-icon">+</span>
               </button>
               <div class="faq-answer">
-                <p>계약 종료 시 14영업일 이내에 환급해 드립니다.</p>
-                <p>무료 체험 고객은 체험 기간 종료 후 환급 가능합니다.</p>
-                <p>환급 시 미결제 배송비 등이 차감될 수 있습니다.</p>
                 <p>
-                  보증금은 예치금이 아니므로 낙찰대금 결제에는 사용되지
-                  않습니다.
+                  <strong>보증금의 정의:</strong> 입찰 한도를 설정하기 위한
+                  예치금으로, 낙찰대금 결제 시에는 사용되지 않습니다.
                 </p>
+                <p>
+                  <strong>전액 환불:</strong> 계약 종료 시 14영업일 이내에 전액
+                  환급됩니다.
+                </p>
+                <p>
+                  <strong>부분 환불:</strong> 일부 금액만 환불받고 서비스를 계속
+                  이용하는 것이 가능합니다.
+                </p>
+                <p>
+                  <strong>환불 절차:</strong> 환급받을 계좌번호를 제공해 주시면
+                  자동으로 환급 처리됩니다.
+                </p>
+                <p>
+                  <strong>체험 고객:</strong> 무료 체험 기간 종료 후 환급이
+                  가능합니다.
+                </p>
+                <p>
+                  <strong>미결제 시 처리:</strong> 낙찰 후 미결제하는 경우
+                  보증금에서 차감되며, 로그인이 제한됩니다. 부족한 차액은 법적
+                  절차를 통해 청구될 수 있습니다.
+                </p>
+                <p>
+                  <strong>환급 시 차감:</strong> 미결제 배송비 등이 차감될 수
+                  있습니다.
+                </p>
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question">
+                <h3>배송기간 + 감정은 얼마나 걸리나요?</h3>
+                <span class="toggle-icon">+</span>
+              </button>
+              <div class="faq-answer">
+                <p>
+                  낙찰 결과 안내 후 <strong>평균 7~10영업일</strong> 정도
+                  소요됩니다. 통관이나 물류 과정에서 지연이 발생하면
+                  안내드립니다.
+                </p>
+                <p>
+                  배송 과정: 낙찰 상품 견적서발급 → 통관 → 검수 및 감정 →
+                  국내배송
+                </p>
+                <p>
+                  검수 및 감정: 1차: 출품사 감정 → 2차: 세관감정 → 3차:
+                  까사트레이드
+                </p>
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question">
+                <h3>반품 및 교환은 가능한가요?</h3>
+                <span class="toggle-icon">+</span>
+              </button>
+              <div class="faq-answer">
+                <p>
+                  반품: <strong>가품일 경우 전액 환불</strong> 및 반품
+                  진행됩니다.
+                </p>
+                <p>교환: <strong>교환은 불가</strong>합니다.</p>
               </div>
             </div>
 
@@ -1732,22 +2637,11 @@
               </button>
               <div class="faq-answer">
                 <p>
-                  해외 법인경매는 이베이나 옥션처럼 개인 간 거래가 아닌, 자격과
-                  일정 입회금을 납부한 제한된 사업자들만 참여할 수 있는 전문
-                  경매 방식입니다.
-                </p>
-              </div>
-            </div>
-
-            <div class="faq-item">
-              <button class="faq-question">
-                <h3>배송기간이 얼마나 걸리나요?</h3>
-                <span class="toggle-icon">+</span>
-              </button>
-              <div class="faq-answer">
-                <p>
-                  낙찰 결과 안내 후 평균 7~10영업일 정도 소요됩니다. 통관이나
-                  물류 과정에서 지연이 발생하면 안내드립니다.
+                  해외 법인경매는 이베이나 옥션처럼 개인 간 거래가 아닌,
+                  <strong
+                    >자격과 일정 입회금을 납부한 제한된 사업자들만 참여할 수
+                    있는 전문 경매 방식</strong
+                  >입니다.
                 </p>
               </div>
             </div>
@@ -1759,18 +2653,179 @@
               </button>
               <div class="faq-answer">
                 <p>
-                  까사트레이드는 현재까지 고객이 가품을 수취한 사례가 단 한 건도
-                  없습니다.<br />모든 상품은 출품사의 1차 감정 후, 까사트레이드
-                  전문 감정사의 철저한 2차 감정을 통과합니다. <br />만에 하나
-                  가품으로 판정될 경우 전액 환불을 보장합니다. <br />*이제 CAS
-                  명품감정시스템을 통해 공식 감정서 발급 서비스(유상)도
-                  제공합니다.
+                  까사트레이드는
+                  <strong
+                    >현재까지 고객이 가품을 수취한 사례가 단 한 건도
+                    없습니다</strong
+                  >.<br />모든 상품은 출품사의 1차 감정 후, 까사트레이드 전문
+                  감정사의 철저한 2차 감정을 통과합니다. <br /><strong
+                    >만에 하나 가품으로 판정될 경우 전액 환불을 보장</strong
+                  >합니다. <br />CAS 명품감정시스템을 통해 공식 감정서 발급
+                  서비스(유상)도 제공합니다.
+                </p>
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question">
+                <h3>잘못 입찰했는데 취소할 수 있나요?</h3>
+                <span class="toggle-icon">+</span>
+              </button>
+              <div class="faq-answer">
+                <p>경매 유형에 따라 다릅니다:</p>
+                <p>
+                  <strong>• 현장경매:</strong> 마감 전까지 수정/취소 가능
+                  (고객센터 문의)
+                </p>
+                <p><strong>• 직접경매:</strong> 실시간 진행으로 취소 어려움</p>
+                <p>
+                  <strong>⚠️ 마감 후에는 모든 경매에서 취소 불가능</strong
+                  >합니다.
+                </p>
+                <p>
+                  입찰 금액을 잘못 입력한 경우, 마감 전이라면 고객센터로
+                  연락주시면 수정 도와드립니다.
+                </p>
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question">
+                <h3>배송비는 어떻게 되나요?</h3>
+                <span class="toggle-icon">+</span>
+              </button>
+              <div class="faq-answer">
+                <p>
+                  <strong>• 같은 날 여러 상품 낙찰받으면?</strong> → 각 상품마다
+                  개별적으로 배송비가 적용됩니다. 배송비 통합할인은 제공되지
+                  않습니다.
+                </p>
+                <p>
+                  <strong>• 배송비는 얼마나 나오나요?</strong> → 상품 실시간
+                  표시 금액에 배송비가 이미 포함되어 있습니다. 별도로 배송비를
+                  추가 결제하실 필요가 없습니다.
+                </p>
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question">
+                <h3>최종 결제 금액은 어떻게 계산되나요?</h3>
+                <span class="toggle-icon">+</span>
+              </button>
+              <div class="faq-answer">
+                <p><strong>결제 구조:</strong></p>
+                <p>
+                  <strong>① 상품 실시간 표시 금액:</strong> 상품가 + 관부가세 +
+                  배송비 + 출품사수수료 (모든 부대비용 포함)
+                </p>
+                <p>
+                  <strong>② 최종 결제:</strong> 실시간 표시 금액 + 까사트레이드
+                  수수료 + 감정서 발급비(선택시)
+                </p>
+                <p>
+                  <strong>감정서 신청:</strong> 낙찰된 상품에 한해 낙찰결과
+                  페이지에서 신청 가능 (VAT 포함 16,500원)
+                </p>
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question">
+                <h3>입찰 시 주의사항이 있나요?</h3>
+                <span class="toggle-icon">+</span>
+              </button>
+              <div class="faq-answer">
+                <p>
+                  <strong>• PC 사용을 권장</strong>합니다 (모바일은 렉 발생
+                  가능)
+                </p>
+                <p>
+                  <strong>• 입찰 전 실시간 원화 금액을 꼭 확인</strong>하세요
+                </p>
+                <p>
+                  <strong>• 마감 30분 전부터 입찰이 급증</strong>합니다.
+                  신중하게 입찰해주세요
+                </p>
+                <p>
+                  <strong>• 상품이 갑자기 사라진 경우:</strong> 마감 3일
+                  전까지는 출품 취소나 일정 변경으로 일부 데이터가 변경될 수
+                  있습니다.
+                </p>
+                <p>
+                  <strong>• 모바일에서 입찰이 여러 번 들어간 경우:</strong>
+                  렉으로 인한 오류입니다. 실제로는 입찰이 반영되지 않았으니
+                  안정적인 PC 환경에서 다시 입찰해주세요.
                 </p>
               </div>
             </div>
           </div>
         </div>
       </section>
+
+      <footer class="main-footer">
+        <div class="footer-content">
+          <div class="footer-section company-info">
+            <h3>까사트레이드</h3>
+            <div class="company-details">
+              <div class="company-row">
+                <span class="label">상호명:</span>
+                <span class="value">까사플랫폼</span>
+              </div>
+              <div class="company-row">
+                <span class="label">대표:</span>
+                <span class="value">황승하</span>
+              </div>
+              <div class="company-row">
+                <span class="label">사업자등록번호:</span>
+                <span class="value">459-01-03147</span>
+              </div>
+              <div class="company-row">
+                <span class="label">통신판매업신고번호:</span>
+                <span class="value">제 2024-서울은평-0763 호</span>
+              </div>
+              <div class="company-row">
+                <span class="label">주소:</span>
+                <span class="value"
+                  >서울특별시 은평구 갈현동 409-2, 2층 까사플랫폼</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="footer-section contact-info">
+            <h4>연락처 정보</h4>
+            <div class="contact-details">
+              <div class="contact-row">
+                <span class="label">전화:</span>
+                <span class="value">
+                  <a href="tel:02-6959-9640">02-6959-9640</a>
+                </span>
+              </div>
+              <div class="contact-row">
+                <span class="label">이메일:</span>
+                <span class="value">
+                  <a href="mailto:casatrade.kr@gmail.com"
+                    >casatrade.kr@gmail.com</a
+                  >
+                </span>
+              </div>
+              <div class="contact-row">
+                <span class="label">입금계좌:</span>
+                <span class="value">국민은행 024801-04-544857</span>
+              </div>
+              <div class="contact-row">
+                <span class="label">예금주:</span>
+                <span class="value">황승하 (까사플랫폼)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer-bottom">
+          <p class="copyright">© 2024 까사트레이드. All rights reserved.</p>
+        </div>
+      </footer>
     </div>
     <script>
       document.addEventListener("DOMContentLoaded", function () {
@@ -1802,10 +2857,26 @@
 
         // ESC 키 누르면 모달 닫기
         document.addEventListener("keydown", function (e) {
-          if (e.key === "Escape" && modal.style.display === "flex") {
-            modal.style.display = "none";
+          if (e.key === "Escape") {
+            if (modal.style.display === "flex") {
+              modal.style.display = "none";
+            }
+            if (
+              document.getElementById("privacyModal").style.display === "flex"
+            ) {
+              document.getElementById("privacyModal").style.display = "none";
+            }
           }
         });
+
+        // 개인정보 처리방침 모달 바깥 클릭시 닫기
+        document
+          .getElementById("privacyModal")
+          .addEventListener("click", function (e) {
+            if (e.target === this) {
+              this.style.display = "none";
+            }
+          });
 
         // 1. 가이드북 탭 기능
         const guidebookTabs = document.querySelectorAll(".guidebook-tab");
@@ -1860,6 +2931,15 @@
 
       function closeModal() {
         document.getElementById("imageModal").style.display = "none";
+      }
+
+      // 개인정보 처리방침 모달 열기/닫기 함수
+      function openPrivacyModal() {
+        document.getElementById("privacyModal").style.display = "flex";
+      }
+
+      function closePrivacyModal() {
+        document.getElementById("privacyModal").style.display = "none";
       }
 
       // 보증금에 대한 자세한 내용 링크 클릭 시 요금안내 탭으로 이동하는 함수
