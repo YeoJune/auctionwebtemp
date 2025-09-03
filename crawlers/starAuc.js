@@ -1075,7 +1075,7 @@ class StarAucValueCrawler extends AxiosCrawler {
       const response = await clientInfo.client.get(this.config.loginPageUrl);
 
       // CSRF 토큰 추출
-      const $ = cheerio.load(response.data, { xmlMode: true });
+      const $ = cheerio.load(response.data);
       const csrfToken = $(this.config.signinSelectors.csrfToken).attr(
         "content"
       );
