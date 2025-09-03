@@ -2,7 +2,7 @@
 
 ## 1️⃣ EC2 생성
 
-- 인스턴스: `t4g.small` (ARM)
+- 인스턴스: `t4g.nano` (ARM)
 - AMI: Ubuntu 22.04 LTS
 - 보안 그룹:
 

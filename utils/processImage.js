@@ -14,7 +14,7 @@ let pLimit;
 // 설정
 const MAX_WIDTH = 800;
 const MAX_HEIGHT = 800;
-const CONCURRENT_DOWNLOADS = 10;
+const CONCURRENT_DOWNLOADS = 20;
 const MAX_RETRIES = 5;
 const INITIAL_DELAY = 100;
 const MAX_DELAY = 5 * 60 * 1000; // 5분
