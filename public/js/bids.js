@@ -60,7 +60,7 @@ window.BidManager = (function () {
     let endDate = new Date(scheduledDate);
 
     if (bidStage === "final") {
-      endDate.setHours(22, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999);
     }
 
     if (endDate <= now) return null;

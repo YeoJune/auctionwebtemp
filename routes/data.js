@@ -244,9 +244,7 @@ router.get("/", async (req, res) => {
       (
         (ci.bid_type = 'direct' AND ci.scheduled_date > NOW()) OR
         (ci.bid_type = 'live' AND
-          (ci.scheduled_date > NOW() OR
-            (DATE(ci.scheduled_date) = DATE(NOW()) AND HOUR(NOW()) < 13)
-          )
+          (ci.scheduled_date > NOW() OR DATE(ci.scheduled_date) = DATE(NOW()))
         )
       )
       `);

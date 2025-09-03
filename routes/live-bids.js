@@ -417,15 +417,15 @@ router.put("/:id/final", async (req, res) => {
     const now = new Date();
     const scheduledDate = new Date(bid.scheduled_date);
 
-    // scheduled_date의 날짜 부분만 가져와서 22:00 (저녁 10시)로 설정
+    // scheduled_date의 날짜 부분만 가져와서 23:59:59 (저녁 12시)로 설정
     const deadline = new Date(scheduledDate);
-    deadline.setHours(22, 0, 0, 0); // 22:00:00.000
+    deadline.setHours(23, 59, 59, 999); // 23:59:59.999
 
     if (now > deadline) {
       await connection.rollback();
       return res.status(400).json({
         message:
-          "최종 입찰 시간이 종료되었습니다. (경매일 저녁 10시까지만 가능)",
+          "최종 입찰 시간이 종료되었습니다. (경매일 저녁 12시까지만 가능)",
         deadline: deadline.toISOString(),
         scheduled_date: bid.scheduled_date,
       });
