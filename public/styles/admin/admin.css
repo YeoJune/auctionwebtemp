@@ -583,8 +583,6 @@
   background-color: rgba(0, 0, 0, 0.6);
   justify-content: center;
   align-items: center;
-  max-height: 80vh; /* 화면 높이의 80% */
-  overflow-y: auto; /* 세로 스크롤 */
 }
 
 .modal.active {
@@ -618,6 +616,9 @@
 
 .modal-content .modal-body {
   padding: 25px;
+
+  max-height: 80vh; /* 화면 높이의 80% */
+  overflow-y: auto; /* 세로 스크롤 */
 }
 
 .modal-content .modal-footer {
