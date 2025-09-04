@@ -206,7 +206,8 @@ router.get("/", async (req, res) => {
         SELECT 'live' as bid_type, item_id, first_price, second_price, final_price, status, id
         FROM live_bids WHERE user_id = ?
         UNION ALL
-        SELECT 'direct' as bid_type, item_id, current_price, status, id
+        SELECT 'direct' as bid_type, item_id, current_price,
+               NULL as second_price, NULL as final_price, status, id
         FROM direct_bids WHERE user_id = ?
       `,
         [userId, userId]
