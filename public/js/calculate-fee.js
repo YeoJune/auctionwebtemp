@@ -124,14 +124,14 @@ function calculateCustomsDuty(amountKRW, category) {
     }
   }
 
-  // 악세서리/귀금속: 200만원 기준
+  // 악세서리/귀금속: 500만원 기준
   if (["악세서리", "귀금속", "쥬얼리", "보석"].includes(category)) {
-    if (amountKRW <= 2000000) {
-      // 200만원 이하: 8% 관세
+    if (amountKRW <= 5000000) {
+      // 500만원 이하: 8% 관세
       return Math.round(amountKRW * 0.08);
     } else if (amountKRW < 1000000000) {
-      // 200만원 초과 10억 미만: 복합관세
-      return calculateComplexCustomsDuty(amountKRW, 2000000);
+      // 500만원 초과 10억 미만: 복합관세
+      return calculateComplexCustomsDuty(amountKRW, 5000000);
     }
   }
 
