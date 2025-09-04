@@ -335,6 +335,9 @@ body {
   border-radius: 8px;
   width: 500px;
   max-width: 90%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   animation: slideIn 0.3s ease;
 }
@@ -347,6 +350,7 @@ body {
   align-items: center;
   background-color: #f8f9fa;
   border-radius: 8px 8px 0 0;
+  flex-shrink: 0;
 }
 
 .modal-title {
@@ -362,6 +366,8 @@ body {
 
 .modal-body {
   padding: 25px;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .modal-footer {
@@ -372,6 +378,7 @@ body {
   gap: 10px;
   background-color: #f8f9fa;
   border-radius: 0 0 8px 8px;
+  flex-shrink: 0;
 }
 
 .modal-overlay.active {
