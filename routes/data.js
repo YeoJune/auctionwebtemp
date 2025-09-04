@@ -201,19 +201,23 @@ router.get("/", async (req, res) => {
     let userBidItemIds = [];
 
     if (userId) {
-      const [userBids] = await pool.query(
+      const [userLiveBids] = await pool.query(
         `
         SELECT 'live' as bid_type, item_id, first_price, second_price, final_price, status, id
         FROM live_bids WHERE user_id = ?
-        UNION ALL
-        SELECT 'direct' as bid_type, item_id, current_price,
-               NULL as second_price, NULL as final_price, status, id
-        FROM direct_bids WHERE user_id = ?
       `,
-        [userId, userId]
+        [userId]
       );
 
-      bidData = userBids;
+      const [userDirectBids] = await pool.query(
+        `
+        SELECT 'direct' as bid_type, item_id, current_price, status, id
+        FROM direct_bids WHERE user_id = ?
+      `,
+        [userId]
+      );
+
+      bidData = [...userLiveBids, ...userDirectBids];
       if (bidsOnly === "true") {
         userBidItemIds = bidData.map((bid) => bid.item_id);
       }
