@@ -8,8 +8,8 @@ let pLimit;
   pLimit = (await import("p-limit")).default;
 })();
 
-const LIMIT1 = 20;
-const LIMIT2 = 20;
+const LIMIT1 = 5;
+const LIMIT2 = 10;
 
 const ecoAucConfig = {
   name: "EcoAuc",
@@ -370,7 +370,7 @@ class EcoAucCrawler extends AxiosCrawler {
       const bidType = item0?.bid_type || this.currentBidType;
       const url = this.config.detailUrl(itemId, bidType);
 
-      const response = await clientInfo.client.get(url);
+      const response = await clientInfo.client.get(url, { timeout: 5 * 1000 });
       const $ = cheerio.load(response.data, { xmlMode: true });
 
       // 추가 이미지 추출

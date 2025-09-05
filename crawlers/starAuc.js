@@ -9,7 +9,7 @@ let pLimit;
 })();
 
 const LIMIT1 = 20;
-const LIMIT2 = 20;
+const LIMIT2 = 10;
 
 const starAucConfig = {
   name: "StarAuc",
