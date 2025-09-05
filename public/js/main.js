@@ -812,6 +812,24 @@ window.ProductListController = (function () {
     window.ModalImageGallery.showLoading();
 
     try {
+      // 소켓이 활성화된 경우 소켓 기반 요청
+      if (config.features.realtime && window.currentSocket) {
+        const response = await API.fetchAPI(
+          `${config.detailEndpoint}${itemId}`,
+          {
+            method: "POST",
+            body: JSON.stringify({ socketId: window.currentSocket.id }),
+          }
+        );
+
+        // 소켓 기반 처리가 시작되면 여기서 대기
+        if (response.processing) {
+          console.log("소켓 기반 상세 정보 처리 시작");
+          return; // 소켓 이벤트에서 모달 업데이트 처리
+        }
+      }
+
+      // 기존 방식 (소켓 없는 경우)
       const updatedItem = await API.fetchAPI(
         `${config.detailEndpoint}${itemId}`,
         {
@@ -835,7 +853,10 @@ window.ProductListController = (function () {
     } catch (error) {
       console.error("상세 정보 업데이트 실패:", error);
     } finally {
-      window.ModalImageGallery.hideLoading();
+      // 소켓 기반이 아닌 경우에만 로딩 해제
+      if (!config.features.realtime || !window.currentSocket) {
+        window.ModalImageGallery.hideLoading();
+      }
     }
   }
 
@@ -874,31 +895,10 @@ window.ProductListController = (function () {
   }
 
   /**
-   * 모달 상세 정보 업데이트
+   * 모달 상세 정보 업데이트 (ModalUtils 사용)
    */
   function updateModalWithDetails(item) {
-    document.querySelector(".modal-description").textContent =
-      item.description || "설명 없음";
-    document.querySelector(".modal-category").textContent =
-      item.category || "카테고리 없음";
-    document.querySelector(".modal-accessory-code").textContent =
-      item.accessory_code || "액세서리 코드 없음";
-    document.querySelector(".modal-brand").textContent = item.brand || "";
-    document.querySelector(".modal-brand2").textContent = item.brand || "";
-    document.querySelector(".modal-title").textContent = item.title || "";
-    document.querySelector(".modal-rank").textContent = item.rank || "N";
-
-    if (config.type === "products") {
-      document.querySelector(".modal-scheduled-date").textContent =
-        formatDateTime(item.scheduled_date) || "날짜 정보 없음";
-    } else if (config.type === "values") {
-      document.querySelector(".modal-scheduled-date").textContent =
-        formatDate(item.scheduled_date) || "날짜 정보 없음";
-      document.querySelector(".modal-final-price").textContent =
-        item.final_price
-          ? `${formatNumber(parseInt(item.final_price))} ¥`
-          : "가격 정보 없음";
-    }
+    ModalUtils.updateBasicInfo(item);
   }
 
   /**
@@ -932,6 +932,11 @@ window.ProductListController = (function () {
       }
     });
 
+    // 상세 정보 소켓 이벤트들
+    socket.on("item-detail-basic", SocketHandlers.onBasicInfo);
+    socket.on("item-detail-images", SocketHandlers.onImagesReady);
+    socket.on("item-detail-complete", SocketHandlers.onComplete);
+
     socket.on("connect", () => {
       console.log("서버에 연결됨");
     });
@@ -940,8 +945,183 @@ window.ProductListController = (function () {
       console.log("서버 연결 해제됨");
     });
 
+    // 전역 변수로 소켓 인스턴스 저장
+    window.currentSocket = socket;
+
     return socket;
   }
+
+  /**
+   * 모달 유틸리티 객체
+   */
+  const ModalUtils = {
+    /**
+     * 모달이 열려있는지 확인
+     */
+    isModalOpen() {
+      const modal = document.getElementById("detailModal");
+      return modal && modal.classList.contains("show");
+    },
+
+    /**
+     * 모달에서 요소 찾기
+     */
+    findElement(selector) {
+      if (!this.isModalOpen()) return null;
+      return document.getElementById("detailModal").querySelector(selector);
+    },
+
+    /**
+     * 기본 정보 업데이트 (기존 updateModalWithDetails와 통합)
+     */
+    updateBasicInfo(item) {
+      const elements = {
+        title: this.findElement(".modal-title"),
+        brand: this.findElement(".modal-brand"),
+        brand2: this.findElement(".modal-brand2"),
+        category: this.findElement(".modal-category"),
+        price: this.findElement(".modal-price"),
+        finalPrice: this.findElement(".modal-final-price"),
+        description: this.findElement(".modal-description"),
+        accessoryCode: this.findElement(".modal-accessory-code"),
+        rank: this.findElement(".modal-rank"),
+        scheduledDate: this.findElement(".modal-scheduled-date"),
+      };
+
+      // 기본 정보 업데이트
+      if (elements.title) elements.title.textContent = item.title || "";
+      if (elements.brand) elements.brand.textContent = item.brand || "";
+      if (elements.brand2) elements.brand2.textContent = item.brand || "";
+      if (elements.category)
+        elements.category.textContent = item.category || "카테고리 없음";
+      if (elements.accessoryCode)
+        elements.accessoryCode.textContent =
+          item.accessory_code || "액세서리 코드 없음";
+      if (elements.rank) elements.rank.textContent = item.rank || "N";
+
+      // 설명 업데이트
+      if (elements.description) {
+        elements.description.textContent = item.description || "설명 없음";
+        // 소켓에서 받은 HTML 형태 설명 처리
+        if (item.description && item.description.includes("\n")) {
+          elements.description.innerHTML = item.description.replace(
+            /\n/g,
+            "<br>"
+          );
+        }
+      }
+
+      // 페이지 타입별 날짜/가격 처리
+      if (config.type === "products") {
+        if (elements.scheduledDate) {
+          elements.scheduledDate.textContent =
+            formatDateTime(item.scheduled_date) || "날짜 정보 없음";
+        }
+        if (elements.price && item.final_price) {
+          elements.price.textContent = formatNumber(item.final_price) + " ¥";
+        }
+      } else if (config.type === "values") {
+        if (elements.scheduledDate) {
+          elements.scheduledDate.textContent =
+            formatDate(item.scheduled_date) || "날짜 정보 없음";
+        }
+        if (elements.finalPrice && item.final_price) {
+          elements.finalPrice.textContent = `${formatNumber(
+            parseInt(item.final_price)
+          )} ¥`;
+        }
+      }
+    },
+
+    /**
+     * 이미지 로딩 상태 표시
+     */
+    showImageLoading() {
+      const imageContainer = this.findElement(".modal-images");
+      if (!imageContainer) return;
+
+      imageContainer.innerHTML = `
+        <div class="image-loading">
+          <div class="loading-spinner"></div>
+          <p>이미지 처리 중...</p>
+        </div>
+      `;
+    },
+
+    /**
+     * 이미지 로딩 상태 제거
+     */
+    hideImageLoading() {
+      const loadingEl = this.findElement(".image-loading");
+      if (loadingEl) loadingEl.remove();
+    },
+
+    /**
+     * 이미지 갤러리 업데이트
+     */
+    updateImageGallery(images) {
+      if (!images || images.length === 0) return;
+
+      const imageContainer = this.findElement(".modal-images");
+      if (!imageContainer) return;
+
+      this.hideImageLoading();
+
+      const galleryHTML = images
+        .map(
+          (img, index) => `
+        <img src="${img}" alt="상품 이미지 ${index + 1}" 
+             class="modal-image ${index === 0 ? "active" : ""}"
+             onclick="showImageAt(${index})">
+      `
+        )
+        .join("");
+
+      imageContainer.innerHTML = galleryHTML;
+    },
+
+    /**
+     * 로딩 스피너 제거
+     */
+    hideLoading() {
+      const loadingEl = this.findElement(".loading-spinner");
+      if (loadingEl) loadingEl.remove();
+    },
+  };
+
+  /**
+   * 소켓 이벤트 핸들러들
+   */
+  const SocketHandlers = {
+    /**
+     * 기본 정보 수신 처리
+     */
+    onBasicInfo(data) {
+      console.log("기본 정보 수신:", data.itemId);
+      ModalUtils.updateBasicInfo(data.item);
+
+      // 이미지가 없으면 로딩 표시
+      if (!data.item.images || data.item.images.length === 0) {
+        ModalUtils.showImageLoading();
+      }
+    },
+
+    /**
+     * 이미지 처리 완료 처리
+     */
+    onImagesReady(data) {
+      console.log("이미지 처리 완료:", data.itemId);
+      ModalUtils.updateImageGallery(data.item.images);
+    },
+
+    /**
+     * 전체 처리 완료 처리
+     */
+    onComplete(data) {
+      console.log("상세 정보 처리 완료:", data.itemId);
+      ModalUtils.hideLoading();
+    },
+  };
 
   /**
    * 디바운스된 데이터 가져오기
