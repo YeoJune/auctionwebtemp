@@ -8,8 +8,8 @@ let pLimit;
   pLimit = (await import("p-limit")).default;
 })();
 
-const LIMIT1 = 20;
-const LIMIT2 = 10;
+const LIMIT1 = 30;
+const LIMIT2 = 30;
 
 const brandAucConfig = {
   name: "BrandAuc",

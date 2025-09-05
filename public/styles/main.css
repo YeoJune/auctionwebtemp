@@ -1038,6 +1038,7 @@ select {
   grid-template-columns: 120px 1fr auto;
   grid-template-areas:
     "image header price-info"
+    "image timer timer"
     "image content content"
     "image actions actions";
   height: auto;
@@ -1087,7 +1088,7 @@ select {
   flex-direction: column;
   border: none;
   justify-content: flex-start;
-  gap: 6px;
+  gap: 4px;
   align-items: flex-end;
   min-width: 110px;
 }
@@ -1095,7 +1096,7 @@ select {
 .product-grid.list-view .info-cell {
   border-right: none;
   border-bottom: 1px solid #f0f0f0;
-  padding: 6px 0;
+  padding: 4px 0;
   text-align: right;
   width: 100%;
   min-width: 90px;
@@ -1193,10 +1194,13 @@ select {
 }
 
 .product-grid.list-view .bid-timer {
-  margin-top: 8px;
-  padding: 6px 12px;
+  grid-area: timer;
+  padding: 4px 8px;
+  font-size: 11px;
+  margin-top: 4px;
+  width: 100%;
+  text-align: center;
   border-radius: var(--border-radius-sm);
-  font-size: 13px;
 }
 
 .product-grid.list-view .wishlist-btn {
@@ -1579,6 +1583,7 @@ select {
     grid-template-areas:
       "image header"
       "image price-info"
+      "timer timer"
       "content content"
       "actions actions";
     gap: 10px;
@@ -1643,6 +1648,18 @@ select {
   .product-grid.list-view .wishlist-btn {
     padding: 6px 4px;
     font-size: 10px;
+  }
+
+  .product-grid.list-view .bid-timer {
+    grid-area: timer;
+    padding: 6px 12px;
+    font-size: 12px;
+    margin-top: 4px;
+    width: 100%;
+    text-align: center;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
 
   .product-grid.list-view .bid-timer {
@@ -1793,6 +1810,7 @@ select {
     grid-template-areas:
       "image header"
       "image price-info"
+      "timer timer"
       "content content"
       "actions actions";
     gap: 8px;
@@ -1850,8 +1868,9 @@ select {
   }
 
   .product-grid.list-view .bid-timer {
-    padding: 3px 6px;
-    font-size: 10px;
+    grid-area: timer;
+    padding: 5px 8px;
+    font-size: 11px;
     width: 100%;
     text-align: center;
     display: flex;
