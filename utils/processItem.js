@@ -29,7 +29,8 @@ async function processItem(
   res,
   returnData = false,
   userId = null,
-  priority = 2
+  priority = 2,
+  req = null
 ) {
   try {
     const tableName = isValue ? "values_items" : "crawled_items";
@@ -99,6 +100,12 @@ async function processItem(
     item.bids = userBids;
     // --- End Fetch User Bid Data ---
 
+    // 소켓이 있으면 기본 정보부터 전송
+    if (req && req.body?.socketId && req.app.get("io")) {
+      const io = req.app.get("io");
+      io.to(req.body.socketId).emit("item-detail-basic", item);
+    }
+
     // If description exists, no need to crawl, return item with bids
     if (item.description) {
       if (returnData) return item;
@@ -133,6 +140,13 @@ async function processItem(
         crawledDetails &&
         (crawledDetails.description || crawledDetails.images?.length > 0)
       ) {
+        // 크롤링 완료된 정보를 소켓으로 먼저 보내기
+        if (req && req.body?.socketId && req.app.get("io")) {
+          const io = req.app.get("io");
+          const crawledItem = { ...item, ...crawledDetails, bids: userBids };
+          io.to(req.body.socketId).emit("item-detail-crawled", crawledItem);
+        }
+
         // 여기서 imageFolder, priority, cropType 파라미터를 전달하여 적절한 폴더에 저장
         const processedDetails = (
           await processImagesInChunks(
@@ -160,6 +174,15 @@ async function processItem(
             let updatedItem = updatedItems[0];
             // Attach the previously fetched bids to the updated item
             updatedItem.bids = userBids;
+
+            // 이미지 처리 완료된 최종 정보를 소켓으로 보내기
+            if (req && req.body?.socketId && req.app.get("io")) {
+              const io = req.app.get("io");
+              io.to(req.body.socketId).emit(
+                "item-detail-complete",
+                updatedItem
+              );
+            }
 
             if (returnData) return updatedItem;
             return res.json(updatedItem);

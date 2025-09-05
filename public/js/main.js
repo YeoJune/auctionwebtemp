@@ -816,6 +816,9 @@ window.ProductListController = (function () {
         `${config.detailEndpoint}${itemId}`,
         {
           method: "POST",
+          body: JSON.stringify({
+            socketId: window.currentSocket?.id,
+          }),
         }
       );
 
@@ -941,8 +944,19 @@ window.ProductListController = (function () {
       }
     });
 
+    socket.on("item-detail-crawled", (item) => {
+      // 크롤링된 정보로 모달 업데이트 (이미지는 아직 로딩 중)
+      displayItemDetails(item, true);
+    });
+
+    socket.on("item-detail-complete", (item) => {
+      // 최종 완료된 정보로 모달 업데이트
+      displayItemDetails(item, false); // false = 로딩 완료
+    });
+
     socket.on("connect", () => {
       console.log("서버에 연결됨");
+      window.currentSocket = socket;
     });
 
     socket.on("disconnect", () => {
