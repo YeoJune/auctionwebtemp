@@ -792,6 +792,24 @@ window.ProductListController = (function () {
     const modalManager = setupModal("detailModal");
     if (!modalManager) return;
 
+    // 소켓이 있으면 소켓 기반으로 처리
+    if (window.currentSocket) {
+      // API 호출만 하고 응답은 소켓 이벤트로 받기
+      try {
+        await API.fetchAPI(`${config.detailEndpoint}${itemId}`, {
+          method: "POST",
+          body: JSON.stringify({
+            socketId: window.currentSocket.id,
+          }),
+        });
+      } catch (error) {
+        console.error("상세 정보 요청 실패:", error);
+        alert("상세 정보를 불러올 수 없습니다.");
+      }
+      return;
+    }
+
+    // 소켓이 없으면 기존 방식으로 처리
     let item = state.currentData.find((data) => data.item_id == itemId);
 
     if (!item) {
@@ -816,9 +834,6 @@ window.ProductListController = (function () {
         `${config.detailEndpoint}${itemId}`,
         {
           method: "POST",
-          body: JSON.stringify({
-            socketId: window.currentSocket?.id,
-          }),
         }
       );
 
@@ -937,21 +952,29 @@ window.ProductListController = (function () {
 
     socket.on("item-detail-basic", (item) => {
       // 기본 정보로 모달 먼저 열기
-      const modal = document.getElementById("detailModal");
-      if (modal) {
-        displayItemDetails(item, true); // true = 로딩 중
-        modal.style.display = "block";
+      const modalManager = setupModal("detailModal");
+      if (modalManager) {
+        initializeModal(item);
+        modalManager.show();
+        window.ModalImageGallery.showLoading();
       }
     });
 
     socket.on("item-detail-crawled", (item) => {
       // 크롤링된 정보로 모달 업데이트 (이미지는 아직 로딩 중)
-      displayItemDetails(item, true);
+      updateModalWithDetails(item);
+      window.ModalImageGallery.showLoading(); // 여전히 로딩 중
     });
 
     socket.on("item-detail-complete", (item) => {
       // 최종 완료된 정보로 모달 업데이트
-      displayItemDetails(item, false); // false = 로딩 완료
+      updateModalWithDetails(item);
+      window.ModalImageGallery.hideLoading(); // 로딩 완료
+
+      // 페이지별 커스터마이징 호출
+      if (config.customizeModal) {
+        config.customizeModal(item);
+      }
     });
 
     socket.on("connect", () => {
