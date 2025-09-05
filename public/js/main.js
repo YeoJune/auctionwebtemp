@@ -812,8 +812,14 @@ window.ProductListController = (function () {
     window.ModalImageGallery.showLoading();
 
     try {
-      // 소켓이 활성화된 경우 소켓 기반 요청
-      if (config.features.realtime && window.currentSocket) {
+      // 소켓이 활성화되고 연결된 경우
+      if (
+        config.features.realtime &&
+        window.currentSocket &&
+        window.currentSocket.connected
+      ) {
+        console.log("소켓 기반 요청 시작, Socket ID:", window.currentSocket.id);
+
         const response = await API.fetchAPI(
           `${config.detailEndpoint}${itemId}`,
           {
@@ -822,14 +828,15 @@ window.ProductListController = (function () {
           }
         );
 
-        // 소켓 기반 처리가 시작되면 여기서 대기
-        if (response.processing) {
-          console.log("소켓 기반 상세 정보 처리 시작");
-          return; // 소켓 이벤트에서 모달 업데이트 처리
+        // 소켓 기반 처리가 시작되면 여기서 종료
+        if (response && response.processing) {
+          console.log("소켓 기반 처리 중...");
+          return;
         }
       }
 
-      // 기존 방식 (소켓 없는 경우)
+      // 기존 방식 (소켓 없거나 실패한 경우)
+      console.log("기존 방식으로 처리");
       const updatedItem = await API.fetchAPI(
         `${config.detailEndpoint}${itemId}`,
         {
@@ -854,7 +861,11 @@ window.ProductListController = (function () {
       console.error("상세 정보 업데이트 실패:", error);
     } finally {
       // 소켓 기반이 아닌 경우에만 로딩 해제
-      if (!config.features.realtime || !window.currentSocket) {
+      if (
+        !config.features.realtime ||
+        !window.currentSocket ||
+        !window.currentSocket.connected
+      ) {
         window.ModalImageGallery.hideLoading();
       }
     }
