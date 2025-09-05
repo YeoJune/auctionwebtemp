@@ -1137,7 +1137,9 @@ function preventEventConflicts() {
       // 토글 함수 실행 (setupMobileMenu에서 정의됨)
       if (window.mobileMenuFunctions) {
         if (
-          document.querySelector(".nav-container").classList.contains("active")
+          document
+            .querySelector(".nav-container")
+            .classList.contains("mobile-menu-active")
         ) {
           window.mobileMenuFunctions.closeMobileMenu();
         } else {
