@@ -103,13 +103,13 @@ router.get("/", async (req, res) => {
     }
 
     // 검색 조건 추가
-    if (search) {
+    if (search && req.session.user.id === "admin") {
       const searchTerm = `%${search}%`;
       countQuery +=
-        " AND (d.item_id LIKE ? OR i.original_title LIKE ? OR i.brand LIKE ?)";
+        " AND (d.item_id LIKE ? OR i.original_title LIKE ? OR i.brand LIKE ? OR d.user_id LIKE ?)";
       mainQuery +=
-        " AND (d.item_id LIKE ? OR i.original_title LIKE ? OR i.brand LIKE ?)";
-      queryParams.push(searchTerm, searchTerm, searchTerm);
+        " AND (d.item_id LIKE ? OR i.original_title LIKE ? OR i.brand LIKE ? OR d.user_id LIKE ?)";
+      queryParams.push(searchTerm, searchTerm, searchTerm, searchTerm);
     }
 
     // 상태 필터 추가

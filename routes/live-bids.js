@@ -48,12 +48,12 @@ router.get("/", async (req, res) => {
   let queryParams = [];
 
   // 검색 조건 추가
-  if (search) {
+  if (search && req.session.user.id === "admin") {
     const searchTerm = `%${search}%`;
     queryConditions.push(
-      "(b.item_id LIKE ? OR i.original_title LIKE ? OR i.brand LIKE ?)"
+      "(b.item_id LIKE ? OR i.original_title LIKE ? OR i.brand LIKE ? OR b.user_id LIKE ?)"
     );
-    queryParams.push(searchTerm, searchTerm, searchTerm);
+    queryParams.push(searchTerm, searchTerm, searchTerm, searchTerm);
   }
 
   // Add status filter if provided
