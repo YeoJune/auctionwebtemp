@@ -397,7 +397,7 @@ button.auth-button:hover {
     bottom: 0;
     width: 100%;
     background-color: var(--blue-dark);
-    z-index: 1010;
+    z-index: var(--z-mobile-menu);
     flex-direction: column;
     padding: 20px;
     overflow-y: auto;

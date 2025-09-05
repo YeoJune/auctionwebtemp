@@ -324,7 +324,7 @@ body {
   right: 0;
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.6);
-  z-index: 1000;
+  z-index: var(--z-modal);
   justify-content: center;
   align-items: center;
   animation: fadeIn 0.3s ease;
