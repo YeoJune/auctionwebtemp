@@ -792,9 +792,16 @@ window.ProductListController = (function () {
     const modalManager = setupModal("detailModal");
     if (!modalManager) return;
 
+    // 일단 기본 아이템 정보로 모달부터 열기
+    let item = state.currentData.find((data) => data.item_id == itemId);
+    if (item) {
+      initializeModal(item);
+      modalManager.show();
+      window.ModalImageGallery.showLoading();
+    }
+
     // 소켓이 있으면 소켓 기반으로 처리
-    if (window.currentSocket) {
-      // API 호출만 하고 응답은 소켓 이벤트로 받기
+    if (window.currentSocket && window.currentSocket.connected) {
       try {
         await API.fetchAPI(`${config.detailEndpoint}${itemId}`, {
           method: "POST",
@@ -802,32 +809,28 @@ window.ProductListController = (function () {
             socketId: window.currentSocket.id,
           }),
         });
+        return; // 소켓 이벤트로 처리됨
       } catch (error) {
-        console.error("상세 정보 요청 실패:", error);
-        alert("상세 정보를 불러올 수 없습니다.");
+        console.error("소켓 기반 요청 실패, 기존 방식으로 fallback:", error);
       }
-      return;
     }
 
-    // 소켓이 없으면 기존 방식으로 처리
-    let item = state.currentData.find((data) => data.item_id == itemId);
-
+    // 소켓이 없거나 실패하면 기존 방식으로 처리
     if (!item) {
       try {
         item = await API.fetchAPI(`${config.detailEndpoint}${itemId}`, {
           method: "POST",
         });
         state.currentData.push(item);
+        initializeModal(item);
+        modalManager.show();
+        window.ModalImageGallery.showLoading();
       } catch (error) {
         console.error("상세 정보 로드 실패:", error);
         alert("상세 정보를 불러올 수 없습니다.");
         return;
       }
     }
-
-    initializeModal(item);
-    modalManager.show();
-    window.ModalImageGallery.showLoading();
 
     try {
       const updatedItem = await API.fetchAPI(
