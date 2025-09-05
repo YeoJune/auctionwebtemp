@@ -41,10 +41,7 @@ const metricsModule = require("./utils/metrics");
 // init
 const app = express();
 const server = http.createServer(app);
-const io = initializeSocket(server);
-
-// Socket.IO를 app에 설정하여 라우터에서 접근 가능하게 함
-app.set("io", io);
+global.io = initializeSocket(server);
 
 app.set("trust proxy", 1);
 app.use(

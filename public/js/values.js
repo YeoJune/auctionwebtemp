@@ -10,7 +10,7 @@ const valuePageConfig = {
   features: {
     bidding: false,
     wishlist: false,
-    realtime: true, // 소켓 기반 실시간 업데이트 활성화
+    realtime: true,
     adminEdit: true, // 관리자 가격 수정 기능
     auctionTypes: false,
     scheduledDates: false,
