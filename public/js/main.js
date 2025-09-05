@@ -792,45 +792,24 @@ window.ProductListController = (function () {
     const modalManager = setupModal("detailModal");
     if (!modalManager) return;
 
-    // 일단 기본 아이템 정보로 모달부터 열기
     let item = state.currentData.find((data) => data.item_id == itemId);
-    if (item) {
-      initializeModal(item);
-      modalManager.show();
-      window.ModalImageGallery.showLoading();
-    }
 
-    // 소켓이 있으면 소켓 기반으로 처리
-    if (window.currentSocket && window.currentSocket.connected) {
-      try {
-        await API.fetchAPI(`${config.detailEndpoint}${itemId}`, {
-          method: "POST",
-          body: JSON.stringify({
-            socketId: window.currentSocket.id,
-          }),
-        });
-        return; // 소켓 이벤트로 처리됨
-      } catch (error) {
-        console.error("소켓 기반 요청 실패, 기존 방식으로 fallback:", error);
-      }
-    }
-
-    // 소켓이 없거나 실패하면 기존 방식으로 처리
     if (!item) {
       try {
         item = await API.fetchAPI(`${config.detailEndpoint}${itemId}`, {
           method: "POST",
         });
         state.currentData.push(item);
-        initializeModal(item);
-        modalManager.show();
-        window.ModalImageGallery.showLoading();
       } catch (error) {
         console.error("상세 정보 로드 실패:", error);
         alert("상세 정보를 불러올 수 없습니다.");
         return;
       }
     }
+
+    initializeModal(item);
+    modalManager.show();
+    window.ModalImageGallery.showLoading();
 
     try {
       const updatedItem = await API.fetchAPI(
@@ -953,36 +932,8 @@ window.ProductListController = (function () {
       }
     });
 
-    socket.on("item-detail-basic", (item) => {
-      // 기본 정보로 모달 먼저 열기
-      const modalManager = setupModal("detailModal");
-      if (modalManager) {
-        initializeModal(item);
-        modalManager.show();
-        window.ModalImageGallery.showLoading();
-      }
-    });
-
-    socket.on("item-detail-crawled", (item) => {
-      // 크롤링된 정보로 모달 업데이트 (이미지는 아직 로딩 중)
-      updateModalWithDetails(item);
-      window.ModalImageGallery.showLoading(); // 여전히 로딩 중
-    });
-
-    socket.on("item-detail-complete", (item) => {
-      // 최종 완료된 정보로 모달 업데이트
-      updateModalWithDetails(item);
-      window.ModalImageGallery.hideLoading(); // 로딩 완료
-
-      // 페이지별 커스터마이징 호출
-      if (config.customizeModal) {
-        config.customizeModal(item);
-      }
-    });
-
     socket.on("connect", () => {
       console.log("서버에 연결됨");
-      window.currentSocket = socket;
     });
 
     socket.on("disconnect", () => {

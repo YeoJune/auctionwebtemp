@@ -10,7 +10,7 @@ const valuePageConfig = {
   features: {
     bidding: false,
     wishlist: false,
-    realtime: true,
+    realtime: false,
     adminEdit: true, // 관리자 가격 수정 기능
     auctionTypes: false,
     scheduledDates: false,
