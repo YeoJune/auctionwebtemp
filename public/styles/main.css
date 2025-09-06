@@ -1329,7 +1329,7 @@ select {
   width: 100%;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
-  z-index: var(--z-modal);
+  z-index: var(--z-dropdown);
   display: none;
   touch-action: none; /* Prevent touch events */
 }
