@@ -449,8 +449,8 @@ async function sendDailyFinalBidReminders() {
   }
 }
 
-// 매일 16시에 실행
-cron.schedule("0 16 * * *", async () => {
+// 평일(월-금) 16시에 실행
+cron.schedule("0 16 * * 1-5", async () => {
   console.log("Starting daily winning notifications...");
   await sendDailyWinningNotifications();
 });
