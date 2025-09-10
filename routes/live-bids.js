@@ -801,7 +801,7 @@ router.post("/:id/request-appraisal", async (req, res) => {
       `SELECT l.*, i.brand, i.title, i.category, i.image, i.additional_images
        FROM live_bids l 
        JOIN crawled_items i ON l.item_id = i.item_id 
-       WHERE l.id = ? AND l.status = 'completed' AND l.winning_price > 0`,
+       WHERE l.id = ? AND l.status IN ('completed', 'shipped') AND l.winning_price > 0`,
       [bidId]
     );
 
