@@ -58,8 +58,10 @@ const starAucConfig = {
     scriptData: "script:contains(window.item_data)",
   },
   searchParams: (categoryId, page) => {
-    if (!categoryId) return `?limit=100&page=${page}`;
-    else return `?sub_categories%5B0%5D=${categoryId}&limit=100&page=${page}`;
+    if (!categoryId)
+      return `?limit=100&page=${page}&export_prohibited_parts=not_included`;
+    else
+      return `?sub_categories%5B0%5D=${categoryId}&limit=100&page=${page}&export_prohibited_parts=not_included`;
   },
   detailUrl: (itemId) =>
     `https://www.starbuyers-global-auction.com/item/${itemId}`,
