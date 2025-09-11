@@ -269,7 +269,7 @@ router.post("/", async (req, res) => {
     if (now > scheduledDate) {
       await connection.rollback();
       return res.status(400).json({
-        message: "1차 입찰 시간이 종료되었습니다. (경매 예정일까지만 가능)",
+        message: "1차 입찰 시간이 종료되었습니다.",
         scheduled_date: item.scheduled_date,
       });
     }
@@ -387,7 +387,7 @@ router.put("/:id/final", async (req, res) => {
 
     // 입찰 정보와 상품 정보 함께 확인
     const [bids] = await connection.query(
-      `SELECT l.*, i.scheduled_date, i.auc_num, i.kaisaiKaisu
+      `SELECT l.*, i.scheduled_date, i.auc_num, i.kaisaiKaisu, i.starting_price
        FROM live_bids l 
        JOIN crawled_items i ON l.item_id = i.item_id 
        WHERE l.id = ?`,
@@ -428,6 +428,23 @@ router.put("/:id/final", async (req, res) => {
           "최종 입찰 시간이 종료되었습니다. (경매일 저녁 12시까지만 가능)",
         deadline: deadline.toISOString(),
         scheduled_date: bid.scheduled_date,
+      });
+    }
+
+    // 경매장별 입찰가 검증
+    // 스타옥션의 경우 starting_price가 실시간 최고가를 의미함
+    const currentHighestPrice = bid.starting_price;
+    const validation = validateBidByAuction(
+      bid.auc_num,
+      finalPrice,
+      currentHighestPrice,
+      true
+    );
+
+    if (!validation.valid) {
+      await connection.rollback();
+      return res.status(400).json({
+        message: validation.message,
       });
     }
 
