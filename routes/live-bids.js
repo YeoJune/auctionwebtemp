@@ -8,6 +8,7 @@ const {
   brandAucCrawler,
   starAucCrawler,
 } = require("../crawlers/index");
+const { validateBidByAuction } = require("../utils/submitBid");
 
 const isAdmin = (req, res, next) => {
   if (req.session.user && req.session.user.id === "admin") {
