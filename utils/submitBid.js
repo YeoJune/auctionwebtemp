@@ -22,7 +22,7 @@ function validateBidByAuction(auctionNum, bidPrice, currentPrice, isFirstBid) {
       if (bidPrice % 1000 !== 0) {
         return {
           valid: false,
-          message: "Price must be in units of 1000",
+          message: "가격을 1000원 단위로 입력해야 합니다",
         };
       }
       break;
@@ -32,14 +32,14 @@ function validateBidByAuction(auctionNum, bidPrice, currentPrice, isFirstBid) {
         if (bidPrice % 1000 !== 0) {
           return {
             valid: false,
-            message: "First bid must be in units of 1000 yen",
+            message: "가격을 1000엔 단위로 입력해야 합니다",
           };
         }
       } else {
         if (bidPrice % 500 !== 0) {
           return {
             valid: false,
-            message: "Subsequent bids must be in units of 500 yen",
+            message: "가격을 500엔 단위로 입력해야 합니다",
           };
         }
       }
@@ -61,7 +61,7 @@ function validateBidByAuction(auctionNum, bidPrice, currentPrice, isFirstBid) {
       if (bidPrice !== expectedPrice) {
         return {
           valid: false,
-          message: `Bid must be exactly ${expectedPrice} yen (auto-calculated minimum)`,
+          message: `입찰가는 최소 ${expectedPrice}엔이어야 합니다.`,
         };
       }
       break;
