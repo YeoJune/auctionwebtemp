@@ -351,6 +351,14 @@ function renderDirectBidsTable(directBids) {
         statusBadge = '<span class="badge">' + bid.status + "</span>";
     }
 
+    // 감정서 상태 배지
+    let appraisalBadge = "";
+    if (bid.appr_id) {
+      appraisalBadge = '<span class="badge badge-success">발급됨</span>';
+    } else {
+      appraisalBadge = '<span class="badge badge-secondary">미발급</span>';
+    }
+
     // 플랫폼 반영 상태 배지
     let submittedBadge = "";
     if (bid.submitted_to_platform) {
@@ -496,6 +504,7 @@ function renderDirectBidsTable(directBids) {
    </td>
    <td>${formatDate(bid.updated_at)}</td>
    <td>${statusBadge}</td>
+   <td>${appraisalBadge}</td>
    <td>${submittedBadge}</td>
    <td>
      ${actionButtons}
