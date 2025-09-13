@@ -7,6 +7,10 @@ const router = express.Router();
 const axios = require("axios");
 const { pool } = require("../utils/DB");
 const { processItem } = require("../utils/processItem");
+const {
+  getRecommendSettings,
+  buildRecommendWhereClause,
+} = require("../utils/recommend");
 
 let pLimit;
 (async () => {
@@ -16,7 +20,10 @@ let pLimit;
 const apiUrl = `https://api.currencyfreaks.com/v2.0/rates/latest?apikey=${process.env.CURRENCY_API_KEY}`;
 
 // ===== 캐싱 관련 설정 =====
-const CACHE_DURATION = 5 * 60 * 1000; // 5분
+const FILTER_CACHE_DURATION = 5 * 60 * 1000; // 필터 동기화: 5분
+const RECOMMEND_CACHE_DURATION = 10 * 60 * 1000; // 추천 동기화: 10분
+const STATS_CACHE_DURATION = 5 * 60 * 1000; // 통계 캐시: 5분
+const EXCHANGE_CACHE_DURATION = 60 * 60 * 1000; // 환율 캐시: 1시간
 
 const cache = {
   exchange: {
@@ -24,6 +31,9 @@ const cache = {
     lastFetched: null,
   },
   sync: {
+    lastSynced: null,
+  },
+  recommendSync: {
     lastSynced: null,
   },
   filters: {
@@ -46,15 +56,21 @@ const normalizeString = (str) => {
 };
 
 // ===== 캐시 헬퍼 함수들 =====
-function isCacheValid(cacheItem) {
+function isCacheValid(cacheItem, duration) {
   const currentTime = new Date().getTime();
-  return (
-    (cacheItem.lastSynced !== null &&
-      currentTime - cacheItem.lastSynced < CACHE_DURATION) ||
-    (cacheItem.data !== null &&
+
+  if (cacheItem.lastSynced !== undefined) {
+    return (
+      cacheItem.lastSynced !== null &&
+      currentTime - cacheItem.lastSynced < duration
+    );
+  } else {
+    return (
+      cacheItem.data !== null &&
       cacheItem.lastFetched !== null &&
-      currentTime - cacheItem.lastFetched < CACHE_DURATION)
-  );
+      currentTime - cacheItem.lastFetched < duration
+    );
+  }
 }
 
 function updateCache(cacheItem, data) {
@@ -87,6 +103,8 @@ function invalidateCache(type, subType = null) {
     });
   } else if (type === "sync") {
     cache.sync.lastSynced = null;
+  } else if (type === "recommendSync") {
+    cache.recommendSync.lastSynced = null;
   } else if (type === "filters") {
     if (subType) {
       if (cache.filters.withStats[subType]) {
@@ -105,9 +123,9 @@ function invalidateCache(type, subType = null) {
   }
 }
 
-// ===== 동기화 함수 =====
+// ===== 필터 동기화 함수 =====
 async function syncItemsWithFilterSettings() {
-  if (isCacheValid(cache.sync)) {
+  if (isCacheValid(cache.sync, FILTER_CACHE_DURATION)) {
     return; // 5분 이내면 스킵
   }
 
@@ -141,9 +159,49 @@ async function syncItemsWithFilterSettings() {
     `);
 
     updateCache(cache.sync, true);
-    console.log("Sync completed successfully");
+    console.log("Filter sync completed successfully");
   } catch (error) {
-    console.error("Error during sync:", error);
+    console.error("Error during filter sync:", error);
+  }
+}
+
+// ===== 추천 동기화 함수 =====
+async function syncItemsWithRecommendSettings() {
+  if (isCacheValid(cache.recommendSync, RECOMMEND_CACHE_DURATION)) {
+    return; // 10분 이내면 스킵
+  }
+
+  console.log("Syncing crawled_items.recommend with recommend_settings...");
+
+  try {
+    // 모든 아이템을 0으로 초기화
+    await pool.query(`UPDATE crawled_items SET recommend = 0`);
+
+    // 활성화된 추천 규칙들을 점수 순으로 조회 (높은 점수부터)
+    const recommendSettings = await getRecommendSettings();
+
+    // 각 규칙을 순차적으로 적용 (MAX 로직)
+    for (const setting of recommendSettings) {
+      const conditions = JSON.parse(setting.conditions);
+      const { whereClause, params } = buildRecommendWhereClause(conditions);
+
+      if (whereClause) {
+        // 현재 점수보다 높은 경우만 업데이트 (MAX 로직)
+        await pool.query(
+          `
+          UPDATE crawled_items ci
+          SET recommend = ?
+          WHERE (${whereClause}) AND recommend < ?
+        `,
+          [setting.recommend_score, ...params, setting.recommend_score]
+        );
+      }
+    }
+
+    updateCache(cache.recommendSync, true);
+    console.log("Recommend sync completed successfully");
+  } catch (error) {
+    console.error("Error during recommend sync:", error);
   }
 }
 
@@ -173,14 +231,16 @@ router.get("/", async (req, res) => {
     sortBy = "scheduled_date",
     sortOrder = "asc",
     excludeExpired = "true",
+    minRecommend = 0,
   } = req.query;
 
   const offset = (page - 1) * limit;
   const userId = req.session.user?.id;
 
   try {
-    // 1. Lazy 동기화 (5분마다)
+    // 1. Lazy 동기화들 (각각 다른 주기)
     await syncItemsWithFilterSettings();
+    await syncItemsWithRecommendSettings();
 
     // 2. 사용자 입찰 데이터 조회 (통합 쿼리)
     let bidData = [];
@@ -215,7 +275,13 @@ router.get("/", async (req, res) => {
     const conditions = ["ci.is_enabled = 1"]; // 기본 조건: 활성화된 아이템만
     const queryParams = [];
 
-    // 4. 즐겨찾기 필터
+    // 4. 추천 점수 필터
+    if (minRecommend && parseInt(minRecommend) > 0) {
+      conditions.push("ci.recommend >= ?");
+      queryParams.push(parseInt(minRecommend));
+    }
+
+    // 5. 즐겨찾기 필터
     if (favoriteNumbers && userId) {
       const favoriteNumbersList = favoriteNumbers.split(",").map(Number);
       if (favoriteNumbersList.length > 0) {
@@ -228,7 +294,7 @@ router.get("/", async (req, res) => {
       }
     }
 
-    // 5. 기본 조건들
+    // 6. 기본 조건들
     if (excludeExpired === "true") {
       conditions.push(`
       (
@@ -259,7 +325,7 @@ router.get("/", async (req, res) => {
       }
     }
 
-    // 6. 검색 조건
+    // 7. 검색 조건
     if (search && search.trim()) {
       const searchTerms = search.trim().split(/\s+/);
       const searchConditions = searchTerms
@@ -271,7 +337,7 @@ router.get("/", async (req, res) => {
       });
     }
 
-    // 7. 사용자 선택 필터들 (단순화)
+    // 8. 사용자 선택 필터들 (단순화)
     if (brands) {
       const brandList = brands.split(",");
       conditions.push(`ci.brand IN (${brandList.map(() => "?").join(",")})`);
@@ -320,7 +386,7 @@ router.get("/", async (req, res) => {
       queryParams.push(...aucNumList);
     }
 
-    // 8. 최종 쿼리 조립
+    // 9. 최종 쿼리 조립
     let finalQuery = baseQuery;
 
     if (joins.length > 0) {
@@ -331,9 +397,12 @@ router.get("/", async (req, res) => {
       finalQuery += " WHERE " + conditions.join(" AND ");
     }
 
-    // 9. 정렬 (MariaDB 호환)
+    // 10. 정렬 (추천 점수 포함)
     let orderByClause;
     switch (sortBy) {
+      case "recommend":
+        orderByClause = "ci.recommend";
+        break;
       case "title":
         orderByClause = "ci.title";
         break;
@@ -359,14 +428,14 @@ router.get("/", async (req, res) => {
     const sortDirection = sortOrder.toLowerCase() === "desc" ? "DESC" : "ASC";
     finalQuery += ` ORDER BY ${orderByClause} ${sortDirection}`;
 
-    // 10. 카운트 쿼리 (LIMIT 전에)
+    // 11. 카운트 쿼리 (LIMIT 전에)
     const countQuery = `SELECT COUNT(*) as total FROM (${finalQuery}) as subquery`;
 
-    // 11. 페이징 추가
+    // 12. 페이징 추가
     finalQuery += " LIMIT ? OFFSET ?";
     queryParams.push(parseInt(limit), offset);
 
-    // 12. 쿼리 실행
+    // 13. 쿼리 실행
     const [items] = await pool.query(finalQuery, queryParams);
     const [countResult] = await pool.query(
       countQuery,
@@ -376,7 +445,7 @@ router.get("/", async (req, res) => {
     const totalItems = countResult[0].total;
     const totalPages = Math.ceil(totalItems / limit);
 
-    // 13. 위시리스트 조회
+    // 14. 위시리스트 조회
     let wishlist = [];
     if (userId) {
       [wishlist] = await pool.query(
@@ -385,7 +454,7 @@ router.get("/", async (req, res) => {
       );
     }
 
-    // 14. 입찰 정보 매핑
+    // 15. 입찰 정보 매핑
     const itemBidMap = {};
     bidData.forEach((bid) => {
       if (!itemBidMap[bid.item_id]) {
@@ -394,7 +463,7 @@ router.get("/", async (req, res) => {
       itemBidMap[bid.item_id][bid.bid_type] = bid;
     });
 
-    // 15. 상세 정보 처리 (필요시)
+    // 16. 상세 정보 처리 (필요시)
     let finalItems = items;
     if (withDetails === "true") {
       const limit = pLimit(5);
@@ -408,7 +477,7 @@ router.get("/", async (req, res) => {
       finalItems = await processItemsInBatches(items);
     }
 
-    // 16. 최종 응답 구성
+    // 17. 최종 응답 구성
     const itemsWithBids = finalItems.map((item) => {
       const itemBids = itemBidMap[item.item_id] || {};
       return {
@@ -434,10 +503,34 @@ router.get("/", async (req, res) => {
   }
 });
 
+// ===== 추천 아이템 조회 라우터 =====
+router.get("/recommended", async (req, res) => {
+  const { limit = 10, minScore = 1 } = req.query;
+
+  try {
+    await syncItemsWithRecommendSettings();
+
+    const [items] = await pool.query(
+      `
+      SELECT ci.* FROM crawled_items ci
+      WHERE ci.is_enabled = 1 AND ci.recommend >= ?
+      ORDER BY ci.recommend DESC, ci.scheduled_date ASC
+      LIMIT ?
+    `,
+      [parseInt(minScore), parseInt(limit)]
+    );
+
+    res.json(items);
+  } catch (error) {
+    console.error("Error fetching recommended items:", error);
+    res.status(500).json({ message: "Error fetching recommended items" });
+  }
+});
+
 // ===== 통계와 함께 브랜드 조회 =====
 router.get("/brands-with-count", async (req, res) => {
   try {
-    if (isCacheValid(cache.filters.withStats.brands)) {
+    if (isCacheValid(cache.filters.withStats.brands, STATS_CACHE_DURATION)) {
       return res.json(cache.filters.withStats.brands.data);
     }
 
@@ -463,7 +556,9 @@ router.get("/brands-with-count", async (req, res) => {
 // ===== 경매 타입 조회 =====
 router.get("/auction-types", async (req, res) => {
   try {
-    if (isCacheValid(cache.filters.withStats.auctionTypes)) {
+    if (
+      isCacheValid(cache.filters.withStats.auctionTypes, STATS_CACHE_DURATION)
+    ) {
       return res.json(cache.filters.withStats.auctionTypes.data);
     }
 
@@ -489,7 +584,7 @@ router.get("/auction-types", async (req, res) => {
 // ===== 통계와 함께 날짜 조회 =====
 router.get("/scheduled-dates-with-count", async (req, res) => {
   try {
-    if (isCacheValid(cache.filters.withStats.dates)) {
+    if (isCacheValid(cache.filters.withStats.dates, STATS_CACHE_DURATION)) {
       return res.json(cache.filters.withStats.dates.data);
     }
 
@@ -550,7 +645,7 @@ router.get("/categories", async (req, res) => {
 // ===== 경매번호 조회 =====
 router.get("/auc-nums", async (req, res) => {
   try {
-    if (isCacheValid(cache.filters.withStats.aucNums)) {
+    if (isCacheValid(cache.filters.withStats.aucNums, STATS_CACHE_DURATION)) {
       return res.json(cache.filters.withStats.aucNums.data);
     }
 
@@ -576,7 +671,7 @@ router.get("/auc-nums", async (req, res) => {
 // ===== 환율 조회 =====
 router.get("/exchange-rate", async (req, res) => {
   try {
-    if (isCacheValid(cache.exchange)) {
+    if (isCacheValid(cache.exchange, EXCHANGE_CACHE_DURATION)) {
       return res.json({ rate: cache.exchange.data });
     }
 
@@ -603,7 +698,7 @@ router.get("/exchange-rate", async (req, res) => {
 // ===== 등급 조회 =====
 router.get("/ranks", async (req, res) => {
   try {
-    if (isCacheValid(cache.filters.withStats.ranks)) {
+    if (isCacheValid(cache.filters.withStats.ranks, STATS_CACHE_DURATION)) {
       return res.json(cache.filters.withStats.ranks.data);
     }
 
