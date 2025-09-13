@@ -379,3 +379,5 @@ function invalidateCache(type, subType = null) {
     cache.exchange.lastFetched = null;
   }
 }
+
+module.exports = router;
