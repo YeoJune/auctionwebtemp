@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>추천 및 필터 설정</title>
+    <link rel="stylesheet" href="/styles/admin/common.css" />
+    <link rel="stylesheet" href="/styles/admin/admin.css" />
+    <link rel="stylesheet" href="/styles/admin/recommend-filters.css" />
+  </head>
+  <body>
+    <div class="admin-layout">
+      <div class="sidebar">
+        <div class="sidebar-logo">
+          <h2>경매 관리자</h2>
+        </div>
+        <div class="sidebar-menu">
+          <a href="/admin">대시보드</a>
+          <a href="/admin/live-bids">현장 경매 관리</a>
+          <a href="/admin/direct-bids">직접 경매 관리</a>
+          <a href="/admin/all-bids">통합 경매 관리</a>
+          <a href="/admin/invoices">인보이스 관리</a>
+          <a href="/admin/users">회원 관리</a>
+          <a href="/admin/recommend-filters" class="active">추천 및 필터</a>
+          <a href="/admin/settings">기타 설정</a>
+        </div>
+      </div>
+
+      <div class="main-content">
+        <div class="main-header">
+          <h1>추천 및 필터 설정</h1>
+          <div class="user-info">
+            관리자
+            <button id="logoutBtn" class="btn btn-secondary">로그아웃</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            아이템 노출 필터 설정
+            <div class="card-actions">
+              <button id="cancelFilterBtn" class="btn btn-secondary">
+                변경 취소
+              </button>
+              <button id="applyFilterBtn" class="btn btn-primary">
+                변경사항 적용
+              </button>
+            </div>
+          </div>
+          <div class="filter-section">
+            <div class="filter-group">
+              <div class="filter-title">날짜 필터</div>
+              <div id="dateFilters" class="filter-grid"></div>
+            </div>
+
+            <div class="filter-group mt-3">
+              <div class="filter-title">브랜드 필터</div>
+              <div id="brandFilters" class="filter-grid"></div>
+            </div>
+
+            <div class="filter-group mt-3">
+              <div class="filter-title">카테고리 필터</div>
+              <div id="categoryFilters" class="filter-grid"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            추천 규칙 설정
+            <div class="card-actions">
+              <button id="addRecommendRuleBtn" class="btn btn-primary">
+                새 규칙 추가
+              </button>
+            </div>
+          </div>
+          <div id="recommendRulesContainer" class="recommend-section"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="alertModal" class="modal"></div>
+    <div id="confirmModal" class="modal"></div>
+
+    <script src="/js/admin/common.js"></script>
+    <script src="/js/admin/api.js"></script>
+    <script src="/js/admin/recommend-filters.js"></script>
+  </body>
+</html>

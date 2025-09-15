@@ -20,6 +20,12 @@ const {
   updateFilterSetting,
   initializeFilterSettings,
 } = require("../utils/filterDB");
+const {
+  getRecommendSettings,
+  addRecommendSetting,
+  updateRecommendSetting,
+  deleteRecommendSetting,
+} = require("../utils/recommend");
 const DBManager = require("../utils/DBManager");
 
 // Middleware to check if user is admin
@@ -419,6 +425,87 @@ router.put("/filter-settings/batch", isAdmin, async (req, res) => {
   } catch (error) {
     console.error("Error performing batch update of filter settings:", error);
     res.status(500).json({ message: "Error updating filter settings" });
+  }
+});
+
+// Recommendation Settings Routes
+
+// 모든 추천 설정 조회
+router.get("/recommend-settings", isAdmin, async (req, res) => {
+  try {
+    const settings = await getRecommendSettings();
+    // conditions가 JSON 문자열이므로 파싱해서 보내줍니다.
+    const parsedSettings = settings.map((s) => ({
+      ...s,
+      conditions: JSON.parse(s.conditions),
+    }));
+    res.json(parsedSettings);
+  } catch (error) {
+    console.error("Error getting recommend settings:", error);
+    res.status(500).json({ message: "Error getting recommend settings" });
+  }
+});
+
+// 새 추천 설정 추가
+router.post("/recommend-settings", isAdmin, async (req, res) => {
+  try {
+    const { ruleName, conditions, recommendScore } = req.body;
+    if (!ruleName || !conditions || recommendScore === undefined) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+    const newSetting = await addRecommendSetting(
+      ruleName,
+      conditions,
+      recommendScore
+    );
+    res.status(201).json(newSetting);
+  } catch (error) {
+    console.error("Error adding recommend setting:", error);
+    res.status(500).json({ message: "Error adding recommend setting" });
+  }
+});
+
+// 기존 추천 설정 업데이트
+router.put("/recommend-settings/:id", isAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { ruleName, conditions, recommendScore, isEnabled } = req.body;
+
+    if (
+      !ruleName ||
+      !conditions ||
+      recommendScore === undefined ||
+      isEnabled === undefined
+    ) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const updatedSetting = await updateRecommendSetting(
+      id,
+      ruleName,
+      conditions,
+      recommendScore,
+      isEnabled
+    );
+    res.json(updatedSetting);
+  } catch (error) {
+    console.error("Error updating recommend setting:", error);
+    res.status(500).json({ message: "Error updating recommend setting" });
+  }
+});
+
+// 추천 설정 삭제
+router.delete("/recommend-settings/:id", isAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await deleteRecommendSetting(id);
+    if (!result) {
+      return res.status(404).json({ message: "Setting not found" });
+    }
+    res.json({ message: "Recommend setting deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting recommend setting:", error);
+    res.status(500).json({ message: "Error deleting recommend setting" });
   }
 });
 

@@ -384,6 +384,47 @@ async function updateFilterSetting(filterType, filterValue, isEnabled) {
   });
 }
 
+// 필터 설정 일괄 업데이트
+async function updateFilterSettingsBatch(settings) {
+  // settings: [{ filterType, filterValue, isEnabled }, ...]
+  return fetchAPI("/admin/filter-settings/batch", {
+    method: "PUT",
+    body: JSON.stringify({ settings }),
+  });
+}
+
+// ---- 추천 설정 API ----
+
+// 추천 설정 목록 조회
+async function fetchRecommendSettings() {
+  return fetchAPI("/admin/recommend-settings");
+}
+
+// 새 추천 설정 생성
+async function createRecommendSetting(settingData) {
+  // settingData: { ruleName, conditions, recommendScore }
+  return fetchAPI("/admin/recommend-settings", {
+    method: "POST",
+    body: JSON.stringify(settingData),
+  });
+}
+
+// 추천 설정 업데이트
+async function updateRecommendSetting(settingId, settingData) {
+  // settingData: { ruleName, conditions, recommendScore, isEnabled }
+  return fetchAPI(`/admin/recommend-settings/${settingId}`, {
+    method: "PUT",
+    body: JSON.stringify(settingData),
+  });
+}
+
+// 추천 설정 삭제
+async function deleteRecommendSetting(settingId) {
+  return fetchAPI(`/admin/recommend-settings/${settingId}`, {
+    method: "DELETE",
+  });
+}
+
 // ---- 회원 관리 API ----
 
 // 회원 목록 조회
