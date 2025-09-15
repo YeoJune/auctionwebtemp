@@ -153,6 +153,13 @@ function filterBrandList(searchTerm) {
 }
 
 function createFilterToggleHTML(filter) {
+  // 날짜 필터인 경우 시간 부분 제거
+  let displayValue = filter.filter_value;
+  if (filter.filter_type === "date") {
+    // 날짜 문자열에서 시간 부분 제거 (YYYY-MM-DD 형태만 유지)
+    displayValue = displayValue.split("T")[0].split(" ")[0];
+  }
+
   return `
     <div class="filter-item">
       <label class="toggle-switch">
@@ -163,7 +170,7 @@ function createFilterToggleHTML(filter) {
   }', this.checked)">
         <span class="toggle-slider"></span>
       </label>
-      <span class="filter-value">${filter.filter_value}</span>
+      <span class="filter-value">${displayValue}</span>
     </div>
   `;
 }
