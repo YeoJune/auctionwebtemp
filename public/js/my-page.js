@@ -8,7 +8,7 @@ class MyPageManager {
 
     // bid-products.js와 완전히 동일한 상태 구조
     this.bidProductsState = {
-      bidType: "all",
+      bidType: "all", // bid-products.js와 동일하게 "all"로 유지 (실제로는 live로 처리)
       status: "all",
       dateRange: 30,
       currentPage: 1,
@@ -139,21 +139,40 @@ class MyPageManager {
   // 입찰 항목 데이터 로드 (bid-products.js와 완전히 동일한 로직)
   async loadBidItemsData() {
     try {
+      // 선택된 상태에 따라 API 파라미터 준비
+      let statusParam;
+      switch (this.bidProductsState.status) {
+        case "active":
+          statusParam = this.bidProductsCore.STATUS_GROUPS.ACTIVE.join(",");
+          break;
+        case "completed":
+          statusParam = this.bidProductsCore.STATUS_GROUPS.COMPLETED.join(",");
+          break;
+        case "cancelled":
+          statusParam = this.bidProductsCore.STATUS_GROUPS.CANCELLED.join(",");
+          break;
+        case "all":
+        default:
+          statusParam = this.bidProductsCore.STATUS_GROUPS.ALL.join(",");
+          break;
+      }
+
       // 날짜 범위 계산
       const dateLimit = new Date();
       dateLimit.setDate(dateLimit.getDate() - this.bidProductsState.dateRange);
       const fromDate = formatDate(dateLimit);
 
-      // API 파라미터 (bid-products.js와 동일)
+      // API 파라미터
       const params = {
-        status: this.bidProductsCore.STATUS_GROUPS.ALL.join(","),
+        status: statusParam,
         fromDate: fromDate,
-        page: 1,
-        limit: 0, // 모든 데이터 가져오기
+        page: this.bidProductsState.currentPage,
+        limit: this.bidProductsState.itemsPerPage,
         sortBy: this.bidProductsState.sortBy,
         sortOrder: this.bidProductsState.sortOrder,
       };
 
+      // 키워드 검색 파라미터 추가
       if (
         this.bidProductsState.keyword &&
         this.bidProductsState.keyword.trim() !== ""
@@ -162,29 +181,36 @@ class MyPageManager {
       }
 
       const queryString = window.API.createURLParams(params);
+      let results;
 
-      // 경매 타입에 따른 API 호출 (bid-products.js와 동일)
-      let liveResults = { bids: [] };
-      let directResults = { bids: [] };
-
+      // 경매 타입에 따른 API 호출
       if (this.bidProductsState.bidType === "direct") {
-        directResults = await window.API.fetchAPI(
+        const directResults = await window.API.fetchAPI(
           `/direct-bids?${queryString}`
         );
-      } else if (this.bidProductsState.bidType === "live") {
-        liveResults = await window.API.fetchAPI(`/live-bids?${queryString}`);
+        this.bidProductsState.directBids = directResults.bids || [];
+        this.bidProductsState.liveBids = [];
+        this.bidProductsState.totalItems = directResults.total || 0;
+        this.bidProductsState.totalPages = directResults.totalPages || 1;
+        results = directResults;
       } else {
-        // all인 경우 둘 다 가져오기
-        [liveResults, directResults] = await Promise.all([
-          window.API.fetchAPI(`/live-bids?${queryString}`),
-          window.API.fetchAPI(`/direct-bids?${queryString}`),
-        ]);
+        // 기본값은 라이브 경매
+        this.bidProductsState.bidType = "live";
+        // HTML 업데이트
+        const liveRadio = document.getElementById("bidItems-bidType-live");
+        if (liveRadio) liveRadio.checked = true;
+
+        const liveResults = await window.API.fetchAPI(
+          `/live-bids?${queryString}`
+        );
+        this.bidProductsState.liveBids = liveResults.bids || [];
+        this.bidProductsState.directBids = [];
+        this.bidProductsState.totalItems = liveResults.total || 0;
+        this.bidProductsState.totalPages = liveResults.totalPages || 1;
+        results = liveResults;
       }
 
-      this.bidProductsState.liveBids = liveResults.bids || [];
-      this.bidProductsState.directBids = directResults.bids || [];
-
-      // 데이터 타입 정보 추가 (bid-products.js와 동일)
+      // 데이터 타입 정보 추가
       const liveBidsWithType = this.bidProductsState.liveBids.map((bid) => ({
         ...bid,
         type: "live",
@@ -207,12 +233,17 @@ class MyPageManager {
       this.bidProductsState.filteredResults =
         this.bidProductsState.combinedResults;
 
-      // 페이지네이션 설정
-      this.bidProductsState.totalItems =
-        this.bidProductsState.filteredResults.length;
-      this.bidProductsState.totalPages = Math.ceil(
-        this.bidProductsState.totalItems / this.bidProductsState.itemsPerPage
-      );
+      // 페이지 번호 유효성 검사
+      if (this.bidProductsState.totalPages === 0) {
+        this.bidProductsState.totalPages = 1;
+      }
+
+      if (
+        this.bidProductsState.currentPage > this.bidProductsState.totalPages
+      ) {
+        this.bidProductsState.currentPage = 1;
+        return await this.loadBidItemsData();
+      }
 
       // BidManager에 데이터 전달
       if (window.BidManager) {
@@ -455,13 +486,17 @@ class MyPageManager {
       "bidItems-pagination"
     );
 
-    // 결과 카운트 업데이트 (섹션별 ID 사용)
+    // 결과 카운트 업데이트 (섹션별 ID 사용) - totalItems 사용
     document.getElementById("bidItems-totalResults").textContent =
       this.bidProductsState.totalItems;
     document.getElementById("bidItems-loadingMsg").style.display = "none";
 
+    // 정렬 버튼 UI 업데이트
+    this.bidProductsCore.updateSortButtonsUI();
+
     // BidManager 초기화
     if (window.BidManager) {
+      window.BidManager.startTimerUpdates();
       window.BidManager.initializePriceCalculators();
     }
   }
@@ -578,19 +613,9 @@ class MyPageManager {
 
   // 입찰 항목 페이지 변경 (bid-products.js와 동일한 방식)
   async handleBidItemsPageChange(page) {
-    page = parseInt(page, 10);
-
-    if (
-      page === this.bidProductsState.currentPage ||
-      page < 1 ||
-      page > this.bidProductsState.totalPages
-    ) {
-      return;
-    }
-
-    this.bidProductsState.currentPage = page;
-    this.renderBidItemsSection();
-    window.scrollTo(0, 0);
+    await this.bidProductsCore.handlePageChange(page, async () => {
+      await this.loadBidItemsData();
+    });
   }
 
   // 입찰 결과 페이지 변경 (bid-results.js와 동일한 방식)
@@ -867,7 +892,7 @@ class MyPageManager {
 
   // 입찰 항목 필터 초기화
   async resetBidItemsFilters() {
-    this.bidProductsState.bidType = "all";
+    this.bidProductsState.bidType = "all"; // 기본값은 all이지만 실제로는 live로 처리됨
     this.bidProductsState.status = "all";
     this.bidProductsState.dateRange = 30;
     this.bidProductsState.keyword = "";
