@@ -521,6 +521,7 @@ window.ProductListController = (function () {
       aucNums: state.selectedAucNums.join(","),
       sortBy: state.sortBy,
       sortOrder: state.sortOrder,
+      minRecommend: state.minRecommend,
     };
 
     // 페이지별 추가 파라미터
