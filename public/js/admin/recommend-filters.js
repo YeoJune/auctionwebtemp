@@ -375,7 +375,7 @@ function getFieldDisplayName(field) {
     brand: "브랜드",
     category: "카테고리",
     scheduled_date: "경매일",
-    starting_price: "시작 가격",
+    starting_price: "가격",
     title: "제목",
   };
   return displayNames[field] || field;
