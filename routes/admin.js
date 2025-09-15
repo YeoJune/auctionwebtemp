@@ -513,13 +513,28 @@ router.put("/recommend-settings/:id", isAdmin, async (req, res) => {
   }
 });
 
-// 추천 설정 배치 업데이트
+// 배치 업데이트 라우트
 router.put("/recommend-settings/batch", isAdmin, async (req, res) => {
   try {
     const { settings } = req.body;
 
     if (!Array.isArray(settings)) {
       return res.status(400).json({ message: "Settings must be an array" });
+    }
+
+    // 각 설정에 대해 필수 필드 검증 추가
+    for (const setting of settings) {
+      const { id, ruleName, conditions, recommendScore, isEnabled } = setting;
+
+      if (
+        !id ||
+        !ruleName ||
+        !conditions ||
+        recommendScore === undefined ||
+        isEnabled === undefined
+      ) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
     }
 
     const results = await updateRecommendSettingsBatch(settings);
