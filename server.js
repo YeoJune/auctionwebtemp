@@ -284,6 +284,13 @@ app.get("/admin/invoices", (req, res) => {
     res.redirect("/signinPage");
   }
 });
+app.get("/admin/recommend-filters", (req, res) => {
+  if (req.session.user && req.session.user.id === "admin") {
+    res.sendFile(path.join(mainPagesPath, "admin", "recommend-filters.html"));
+  } else {
+    res.redirect("/signinPage");
+  }
+});
 app.get("/admin/settings", (req, res) => {
   if (req.session.user && req.session.user.id === "admin") {
     res.sendFile(path.join(mainPagesPath, "admin", "settings.html"));

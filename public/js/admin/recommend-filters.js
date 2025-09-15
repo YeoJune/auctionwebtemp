@@ -1,6 +1,9 @@
 // public/js/admin/recommend-filters.js
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  // 추천 규칙 UI에 필요한 데이터 미리 불러오기
+  await loadPrerequisiteData();
+
   // 필터 섹션 초기화
   initFilterSection();
 
@@ -9,71 +12,70 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // =======================================================================
+// 데이터 사전 로드 (Data Preloading)
+// =======================================================================
+let availableBrands = [];
+let availableCategories = [];
+
+async function loadPrerequisiteData() {
+  try {
+    // api.js에 fetchAvailableBrands, fetchAvailableCategories 추가 필요
+    // 지금은 임시로 기존 /api/data/ 엔드포인트를 사용합니다.
+    const brandData = await fetch("/api/data/brands").then((res) => res.json());
+    const categoryData = await fetch("/api/data/categories").then((res) =>
+      res.json()
+    );
+    availableBrands = brandData;
+    availableCategories = categoryData;
+  } catch (error) {
+    handleError(error, "필터링 데이터를 불러오는 데 실패했습니다.");
+  }
+}
+
+// =======================================================================
 // 필터 설정 섹션 (Filter Settings Section)
 // =======================================================================
 
-// 필터 상태를 저장할 변수
 let originalFilterSettings = [];
-let modifiedFilterSettings = {}; // 변경된 필터만 추적: { "key": { type, value, isEnabled }, ... }
+let modifiedFilterSettings = {};
 
 function initFilterSection() {
-  // 버튼 이벤트 리스너 등록
   document
     .getElementById("applyFilterBtn")
     .addEventListener("click", applyFilterChanges);
   document
     .getElementById("cancelFilterBtn")
     .addEventListener("click", revertFilterChanges);
-
-  // 필터 데이터 불러오기 및 표시
   fetchAndDisplayFilters();
 }
 
-// 서버에서 필터 설정을 가져와 화면에 표시
 async function fetchAndDisplayFilters() {
   try {
     showLoading("dateFilters");
     showLoading("brandFilters");
     showLoading("categoryFilters");
-
     const settings = await fetchFilterSettings();
-    originalFilterSettings = settings; // 원본 데이터 저장
-    modifiedFilterSettings = {}; // 변경 내역 초기화
-
-    displayFilters(originalFilterSettings);
+    originalFilterSettings = JSON.parse(JSON.stringify(settings)); // Deep copy
+    modifiedFilterSettings = {};
+    displayFilters(settings);
   } catch (error) {
     handleError(error, "필터 설정을 불러오는 데 실패했습니다.");
   }
 }
 
-// 필터 데이터를 화면에 렌더링
 function displayFilters(settings) {
-  const filtersByType = {
-    date: [],
-    brand: [],
-    category: [],
-  };
+  const filtersByType = { date: [], brand: [], category: [] };
+  settings.forEach((s) => filtersByType[s.filter_type]?.push(s));
 
-  settings.forEach((s) => {
-    if (filtersByType[s.filter_type]) {
-      filtersByType[s.filter_type].push(s);
-    }
+  ["date", "brand", "category"].forEach((type) => {
+    const container = document.getElementById(`${type}Filters`);
+    container.innerHTML = filtersByType[type]
+      .map(createFilterToggleHTML)
+      .join("");
   });
-
-  document.getElementById("dateFilters").innerHTML = filtersByType.date
-    .map(createFilterToggleHTML)
-    .join("");
-  document.getElementById("brandFilters").innerHTML = filtersByType.brand
-    .map(createFilterToggleHTML)
-    .join("");
-  document.getElementById("categoryFilters").innerHTML = filtersByType.category
-    .map(createFilterToggleHTML)
-    .join("");
 }
 
-// 개별 필터 토글 HTML 생성
 function createFilterToggleHTML(filter) {
-  const key = `${filter.filter_type}:${filter.filter_value}`;
   return `
     <div class="filter-item">
       <label class="toggle-switch">
@@ -89,43 +91,41 @@ function createFilterToggleHTML(filter) {
   `;
 }
 
-// 필터 토글 변경 시 호출될 함수
 function handleFilterChange(filterType, filterValue, isEnabled) {
   const key = `${filterType}:${filterValue}`;
-  modifiedFilterSettings[key] = {
-    filterType,
-    filterValue,
-    isEnabled,
-  };
-  console.log("변경됨:", modifiedFilterSettings);
+  const original = originalFilterSettings.find(
+    (s) => s.filter_type === filterType && s.filter_value === filterValue
+  );
+
+  // 원래 상태와 같아지면 변경 목록에서 제거, 다르면 추가
+  if (original && original.is_enabled !== isEnabled) {
+    modifiedFilterSettings[key] = { filterType, filterValue, isEnabled };
+  } else {
+    delete modifiedFilterSettings[key];
+  }
 }
 
-// '변경사항 적용' 버튼 클릭 시
 async function applyFilterChanges() {
   const changes = Object.values(modifiedFilterSettings);
   if (changes.length === 0) {
     showAlert("변경된 내용이 없습니다.", "info");
     return;
   }
-
   if (!confirmAction("변경된 필터 설정을 적용하시겠습니까?")) return;
 
   try {
     await updateFilterSettingsBatch(changes);
     showAlert("필터 설정이 성공적으로 업데이트되었습니다.", "success");
-    fetchAndDisplayFilters(); // 데이터 다시 로드
+    fetchAndDisplayFilters();
   } catch (error) {
     handleError(error, "필터 설정 업데이트에 실패했습니다.");
   }
 }
 
-// '변경 취소' 버튼 클릭 시
 function revertFilterChanges() {
-  if (Object.keys(modifiedFilterSettings).length === 0) {
-    return; // 변경된게 없으면 아무것도 안함
-  }
-  displayFilters(originalFilterSettings); // 원본 데이터로 다시 렌더링
-  modifiedFilterSettings = {}; // 변경 내역 초기화
+  if (Object.keys(modifiedFilterSettings).length === 0) return;
+  displayFilters(originalFilterSettings);
+  modifiedFilterSettings = {};
   showAlert("변경이 취소되었습니다.", "info");
 }
 
@@ -136,19 +136,12 @@ function revertFilterChanges() {
 let recommendRules = [];
 
 function initRecommendSection() {
-  // '새 규칙 추가' 버튼 이벤트 리스너
   document
     .getElementById("addRecommendRuleBtn")
-    .addEventListener("click", () => {
-      // 나중에 구현할 새 규칙 추가 UI 표시 함수
-      console.log("새 규칙 추가 UI를 엽니다.");
-    });
-
-  // 추천 규칙 불러오기
+    .addEventListener("click", () => renderRuleForm()); // 새 규칙 폼 렌더링
   fetchAndDisplayRecommendRules();
 }
 
-// 추천 규칙 불러와서 표시
 async function fetchAndDisplayRecommendRules() {
   try {
     showLoading("recommendRulesContainer");
@@ -159,9 +152,10 @@ async function fetchAndDisplayRecommendRules() {
   }
 }
 
-// 추천 규칙 목록을 화면에 렌더링 (현재는 비어있음)
 function displayRecommendRules() {
   const container = document.getElementById("recommendRulesContainer");
+  container.innerHTML = ""; // 컨테이너 비우기
+
   if (recommendRules.length === 0) {
     showNoData(
       "recommendRulesContainer",
@@ -169,8 +163,310 @@ function displayRecommendRules() {
     );
     return;
   }
-  // 나중에 실제 규칙을 표시하는 로직 구현
-  container.innerHTML = `
-    <p>총 ${recommendRules.length}개의 규칙이 있습니다.</p>
-    `;
+
+  recommendRules.forEach((rule) => {
+    container.insertAdjacentHTML("beforeend", createRuleCardHTML(rule));
+  });
+
+  // 이벤트 위임 방식으로 이벤트 리스너 등록
+  container.addEventListener("click", (e) => {
+    const target = e.target.closest("button");
+    if (!target) return;
+
+    const ruleId = target.dataset.id;
+    if (target.classList.contains("edit-rule-btn")) {
+      const ruleToEdit = recommendRules.find((r) => r.id == ruleId);
+      renderRuleForm(ruleToEdit);
+    } else if (target.classList.contains("delete-rule-btn")) {
+      handleDeleteRule(ruleId);
+    }
+  });
+}
+
+function createRuleCardHTML(rule) {
+  const conditionsSummary = Object.entries(rule.conditions)
+    .map(([field, cond]) => {
+      let values = "";
+      if (cond.values) values = cond.values.join(", ");
+      if (cond.keywords) values = cond.keywords.join(", ");
+      if (cond.min) values = `${cond.min} ~ ${cond.max}`;
+      if (cond.start) values = `${cond.start} ~ ${cond.end}`;
+      return `<li><strong>${field}:</strong> ${values}</li>`;
+    })
+    .join("");
+
+  return `
+    <div class="rule-card">
+      <div class="rule-header">
+        <span class="rule-name">${rule.rule_name}</span>
+        <span class="rule-score">점수: ${rule.recommend_score}</span>
+        <label class="toggle-switch small">
+          <input type="checkbox" ${rule.is_enabled ? "checked" : ""}>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="rule-body">
+        <ul>${conditionsSummary}</ul>
+      </div>
+      <div class="rule-actions">
+        <button class="btn btn-sm edit-rule-btn" data-id="${
+          rule.id
+        }">수정</button>
+        <button class="btn btn-sm btn-danger delete-rule-btn" data-id="${
+          rule.id
+        }">삭제</button>
+      </div>
+    </div>
+  `;
+}
+
+async function handleDeleteRule(ruleId) {
+  if (!confirmAction("정말로 이 규칙을 삭제하시겠습니까?")) return;
+  try {
+    await deleteRecommendSetting(ruleId);
+    showAlert("규칙이 삭제되었습니다.", "success");
+    fetchAndDisplayRecommendRules();
+  } catch (error) {
+    handleError(error, "규칙 삭제에 실패했습니다.");
+  }
+}
+
+// =======================================================================
+// 추천 규칙 폼 (Form for Recommendation Rule)
+// =======================================================================
+
+function renderRuleForm(rule = null) {
+  const container = document.getElementById("recommendRulesContainer");
+  // 기존에 열려있는 폼이 있다면 제거
+  const existingForm = container.querySelector(".rule-form-card");
+  if (existingForm) existingForm.remove();
+
+  const formHTML = createRuleFormHTML(rule);
+  container.insertAdjacentHTML("afterbegin", formHTML);
+
+  const form = container.querySelector("#ruleForm");
+  form.addEventListener("submit", (e) => handleRuleFormSubmit(e, rule));
+  form
+    .querySelector("#cancelRuleForm")
+    .addEventListener("click", () => form.closest(".rule-form-card").remove());
+  form
+    .querySelector("#addConditionBtn")
+    .addEventListener("click", () => addConditionRow(form));
+}
+
+function createRuleFormHTML(rule) {
+  const isEditing = rule !== null;
+  const conditionsHTML = isEditing
+    ? Object.entries(rule.conditions).map(createConditionRowHTML).join("")
+    : "";
+
+  return `
+    <div class="rule-form-card">
+      <h3>${isEditing ? "규칙 수정" : "새 규칙 추가"}</h3>
+      <form id="ruleForm">
+        <div class="form-group">
+          <label>규칙 이름</label>
+          <input type="text" name="ruleName" class="form-control" value="${
+            rule?.rule_name || ""
+          }" required>
+        </div>
+        <div class="form-group">
+          <label>추천 점수</label>
+          <input type="number" name="recommendScore" class="form-control" value="${
+            rule?.recommend_score || 0
+          }" required>
+        </div>
+        <div class="form-group">
+          <label>활성화</label>
+           <label class="toggle-switch">
+            <input type="checkbox" name="isEnabled" ${
+              !isEditing || rule.is_enabled ? "checked" : ""
+            }>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        
+        <h4>조건</h4>
+        <div id="conditionsContainer">${conditionsHTML}</div>
+        <button type="button" id="addConditionBtn" class="btn btn-sm btn-secondary">조건 추가</button>
+        
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">저장</button>
+          <button type="button" id="cancelRuleForm" class="btn btn-secondary">취소</button>
+        </div>
+      </form>
+    </div>
+  `;
+}
+
+function addConditionRow(form) {
+  const container = form.querySelector("#conditionsContainer");
+  container.insertAdjacentHTML("beforeend", createConditionRowHTML(["", {}]));
+}
+
+function createConditionRowHTML([field, condition]) {
+  const conditionTypes = {
+    brand: "브랜드",
+    category: "카테고리",
+    scheduled_date: "경매일",
+    starting_price: "시작 가격",
+    title: "제목",
+  };
+
+  const id = `condition-${Date.now()}`;
+  let inputHTML = `<div class="condition-input-container"></div>`; // 초기 placeholder
+
+  // 기존 데이터가 있으면 해당 인풋 렌더링
+  if (field) {
+    inputHTML = renderConditionInput(
+      field,
+      condition,
+      availableBrands,
+      availableCategories
+    );
+  }
+
+  return `
+    <div class="condition-row" id="${id}">
+      <select class="condition-type-select" onchange="updateConditionInput(this)">
+        <option value="">-- 타입 선택 --</option>
+        ${Object.entries(conditionTypes)
+          .map(
+            ([key, value]) =>
+              `<option value="${key}" ${
+                field === key ? "selected" : ""
+              }>${value}</option>`
+          )
+          .join("")}
+      </select>
+      ${inputHTML}
+      <button type="button" class="btn btn-sm btn-danger" onclick="document.getElementById('${id}').remove()">삭제</button>
+    </div>
+  `;
+}
+
+function updateConditionInput(selectElement) {
+  const type = selectElement.value;
+  const container = selectElement.nextElementSibling;
+  container.innerHTML = renderConditionInput(
+    type,
+    {},
+    availableBrands,
+    availableCategories
+  );
+}
+
+function renderConditionInput(type, condition, brands, categories) {
+  switch (type) {
+    case "brand":
+    case "category":
+      const options = type === "brand" ? brands : categories;
+      const selectedValues = new Set(condition.values || []);
+      return `
+        <select class="form-control" multiple name="${type}">
+          ${options
+            .map(
+              (opt) =>
+                `<option value="${opt}" ${
+                  selectedValues.has(opt) ? "selected" : ""
+                }>${opt}</option>`
+            )
+            .join("")}
+        </select>
+      `;
+    case "scheduled_date":
+      return `
+        <input type="date" name="date_start" class="form-control" value="${
+          condition.start || ""
+        }">
+        <span>~</span>
+        <input type="date" name="date_end" class="form-control" value="${
+          condition.end || ""
+        }">
+      `;
+    case "starting_price":
+      return `
+        <input type="number" name="price_min" placeholder="최소" class="form-control" value="${
+          condition.min || ""
+        }">
+        <span>~</span>
+        <input type="number" name="price_max" placeholder="최대" class="form-control" value="${
+          condition.max || ""
+        }">
+      `;
+    case "title":
+      return `<input type="text" name="title_keywords" placeholder="쉼표(,)로 키워드 구분" class="form-control" value="${(
+        condition.keywords || []
+      ).join(", ")}">`;
+    default:
+      return "";
+  }
+}
+
+async function handleRuleFormSubmit(event, existingRule) {
+  event.preventDefault();
+  const form = event.target;
+  const formData = new FormData(form);
+
+  const conditions = {};
+  const conditionRows = form.querySelectorAll(".condition-row");
+  conditionRows.forEach((row) => {
+    const type = row.querySelector(".condition-type-select").value;
+    if (!type) return;
+
+    switch (type) {
+      case "brand":
+      case "category":
+        conditions[type] = {
+          operator: "IN",
+          values: formData.getAll(type),
+        };
+        break;
+      case "scheduled_date":
+        conditions[type] = {
+          operator: "BETWEEN",
+          start: formData.get("date_start"),
+          end: formData.get("date_end"),
+        };
+        break;
+      case "starting_price":
+        conditions[type] = {
+          operator: "BETWEEN",
+          min: formData.get("price_min"),
+          max: formData.get("price_max"),
+        };
+        break;
+      case "title":
+        conditions[type] = {
+          operator: "CONTAINS",
+          keywords: formData
+            .get("title_keywords")
+            .split(",")
+            .map((k) => k.trim())
+            .filter(Boolean),
+        };
+        break;
+    }
+  });
+
+  const ruleData = {
+    ruleName: formData.get("ruleName"),
+    recommendScore: parseInt(formData.get("recommendScore")),
+    isEnabled: form.querySelector('[name="isEnabled"]').checked,
+    conditions: conditions,
+  };
+
+  try {
+    if (existingRule) {
+      await updateRecommendSetting(existingRule.id, ruleData);
+      showAlert("규칙이 성공적으로 수정되었습니다.", "success");
+    } else {
+      await createRecommendSetting(ruleData);
+      showAlert("새 규칙이 성공적으로 추가되었습니다.", "success");
+    }
+    form.closest(".rule-form-card").remove();
+    fetchAndDisplayRecommendRules();
+  } catch (error) {
+    handleError(error, "규칙 저장에 실패했습니다.");
+  }
 }
