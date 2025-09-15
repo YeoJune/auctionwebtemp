@@ -20,7 +20,7 @@
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
-/* 기본 필터 그리드 - 스크롤 없음 */
+/* 필터 그리드 - 기본 */
 .filter-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -31,7 +31,7 @@
   background-color: #f8f9fa;
 }
 
-/* 브랜드 필터만 스크롤 적용 (그리드 유지) */
+/* 브랜드 필터에만 스크롤 추가 */
 #brandFilterGrid {
   max-height: 300px;
   overflow-y: auto;
