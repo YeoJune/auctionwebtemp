@@ -378,7 +378,6 @@ input:checked + .toggle-slider:before {
 @media (max-width: 768px) {
   .filter-grid {
     grid-template-columns: 1fr;
-    max-height: 300px;
   }
 
   #brandFilterGrid {
