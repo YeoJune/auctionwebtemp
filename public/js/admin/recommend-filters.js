@@ -529,7 +529,7 @@ function createRuleFormHTML(rule) {
         <div class="form-group">
           <label>추천 점수</label>
           <input type="number" name="recommendScore" class="form-control" value="${
-            rule?.recommend_score || 0
+            rule?.recommend_score || 1
           }" required>
         </div>
         <div class="form-group">
