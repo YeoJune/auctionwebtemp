@@ -33,6 +33,7 @@
 
 /* 브랜드 필터에만 스크롤 추가 */
 #brandFilterGrid {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   max-height: 300px;
   overflow-y: auto;
 }
