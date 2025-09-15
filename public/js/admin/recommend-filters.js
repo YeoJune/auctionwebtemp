@@ -623,16 +623,55 @@ function updateConditionInput(selectElement) {
 function renderConditionInput(type, condition, brands, categories, ranks) {
   switch (type) {
     case "brand":
-    case "category":
-      const options = type === "brand" ? brands : categories;
-      const selectedValues = new Set(condition.values || []);
+      const brandOptions = brands;
+      const selectedBrands = new Set(condition.values || []);
+      const selectedCount = selectedBrands.size;
 
-      const checkboxesHTML = options
+      const brandCheckboxesHTML = brandOptions
         .map(
           (opt) => `
         <label class="checkbox-option">
-          <input type="checkbox" name="${type}" value="${opt}" ${
-            selectedValues.has(opt) ? "checked" : ""
+          <input type="checkbox" name="brand" value="${opt}" ${
+            selectedBrands.has(opt) ? "checked" : ""
+          }>
+          <span>${opt}</span>
+        </label>
+      `
+        )
+        .join("");
+
+      const selectedTags = Array.from(selectedBrands)
+        .slice(0, 5)
+        .map((brand) => `<span class="selected-tag">${brand}</span>`)
+        .join("");
+
+      const moreCount =
+        selectedCount > 5
+          ? `<span class="more-count">+${selectedCount - 5}개 더</span>`
+          : "";
+
+      return `
+        <div class="checkbox-container searchable">
+          ${
+            selectedCount > 0
+              ? `<div class="selected-summary">${selectedTags}${moreCount}</div>`
+              : ""
+          }
+          <input type="text" placeholder="검색..." class="condition-search form-control">
+          <div class="checkbox-list">${brandCheckboxesHTML}</div>
+        </div>
+      `;
+
+    case "category":
+      const categoryOptions = categories;
+      const selectedCategories = new Set(condition.values || []);
+
+      const categoryCheckboxesHTML = categoryOptions
+        .map(
+          (opt) => `
+        <label class="checkbox-option">
+          <input type="checkbox" name="category" value="${opt}" ${
+            selectedCategories.has(opt) ? "checked" : ""
           }>
           <span>${opt}</span>
         </label>
@@ -641,13 +680,8 @@ function renderConditionInput(type, condition, brands, categories, ranks) {
         .join("");
 
       return `
-        <div class="checkbox-container ${type === "brand" ? "searchable" : ""}">
-          ${
-            type === "brand"
-              ? `<input type="text" placeholder="검색..." class="condition-search form-control">`
-              : ""
-          }
-          <div class="checkbox-list">${checkboxesHTML}</div>
+        <div class="checkbox-container">
+          <div class="checkbox-list">${categoryCheckboxesHTML}</div>
         </div>
       `;
 
