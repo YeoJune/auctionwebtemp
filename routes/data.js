@@ -206,14 +206,9 @@ async function syncItemsWithRecommendSettings() {
 }
 
 // ===== 기본 필터 조건 (단순화) =====
-async function buildBaseFilterConditions(userId = null) {
-  const conditions = ["ci.is_enabled = 1"];
-  // TEMP: 비로그인 사용자는 auc_num = 1 제외
-  if (!userId) {
-    conditions.push("ci.auc_num != 1");
-  }
+async function buildBaseFilterConditions() {
   return {
-    conditions,
+    conditions: ["ci.is_enabled = 1"],
     queryParams: [],
   };
 }
@@ -544,9 +539,7 @@ router.get("/brands-with-count", async (req, res) => {
       return res.json(cache.filters.withStats.brands.data);
     }
 
-    const { conditions, queryParams } = await buildBaseFilterConditions(
-      req.session.user?.id
-    );
+    const { conditions, queryParams } = await buildBaseFilterConditions();
 
     const [results] = await pool.query(
       `SELECT ci.brand, COUNT(*) as count
@@ -574,9 +567,7 @@ router.get("/auction-types", async (req, res) => {
       return res.json(cache.filters.withStats.auctionTypes.data);
     }
 
-    const { conditions, queryParams } = await buildBaseFilterConditions(
-      req.session.user?.id
-    );
+    const { conditions, queryParams } = await buildBaseFilterConditions();
 
     const [results] = await pool.query(
       `SELECT ci.bid_type, COUNT(*) as count
@@ -602,9 +593,7 @@ router.get("/scheduled-dates-with-count", async (req, res) => {
       return res.json(cache.filters.withStats.dates.data);
     }
 
-    const { conditions, queryParams } = await buildBaseFilterConditions(
-      req.session.user?.id
-    );
+    const { conditions, queryParams } = await buildBaseFilterConditions();
 
     const [results] = await pool.query(
       `SELECT DATE(ci.scheduled_date) as Date, COUNT(*) as count
@@ -665,9 +654,7 @@ router.get("/auc-nums", async (req, res) => {
       return res.json(cache.filters.withStats.aucNums.data);
     }
 
-    const { conditions, queryParams } = await buildBaseFilterConditions(
-      req.session.user?.id
-    );
+    const { conditions, queryParams } = await buildBaseFilterConditions();
 
     const [results] = await pool.query(
       `SELECT ci.auc_num, COUNT(*) as count
