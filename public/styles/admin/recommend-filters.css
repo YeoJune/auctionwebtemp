@@ -19,6 +19,25 @@
   margin-bottom: 20px !important;
 }
 
+/* 필터 그리드 - 깔끔한 그리드 레이아웃 */
+#dateFilterGrid,
+#brandFilterGrid,
+#categoryFilterGrid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
+  gap: 12px !important;
+  padding: 15px !important;
+  border: 1px solid #e9ecef !important;
+  border-radius: 6px !important;
+  background-color: #f8f9fa !important;
+}
+
+/* 브랜드 필터 스크롤 */
+#brandFilterGrid {
+  max-height: 300px !important;
+  overflow-y: auto !important;
+}
+
 .brand-search {
   width: 100%;
   max-width: 300px;
@@ -32,37 +51,6 @@
   outline: none;
   border-color: #007bff;
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-}
-
-/* 모든 필터 관련 스타일 강제 오버라이드 */
-div[id$="Filters"] .filter-grid,
-div[id$="FilterGrid"],
-#dateFilters .filter-grid,
-#brandFilters .filter-grid,
-#categoryFilters .filter-grid,
-#dateFilterGrid,
-#brandFilterGrid,
-#categoryFilterGrid {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  gap: 10px !important;
-  padding: 15px !important;
-  border: 1px solid #e9ecef !important;
-  border-radius: 6px !important;
-  background-color: #f8f9fa !important;
-}
-
-div[id$="Filters"] .filter-grid .filter-item,
-div[id$="FilterGrid"] .filter-item,
-#dateFilters .filter-grid .filter-item,
-#brandFilters .filter-grid .filter-item,
-#categoryFilters .filter-grid .filter-item,
-#dateFilterGrid .filter-item,
-#brandFilterGrid .filter-item,
-#categoryFilterGrid .filter-item {
-  flex: 0 0 auto !important;
-  min-width: 150px !important;
-  max-width: 200px !important;
 }
 
 .filter-item {
@@ -409,15 +397,16 @@ input:checked + .toggle-slider:before {
 
 /* 반응형 */
 @media (max-width: 768px) {
-  .filter-section .filter-grid {
+  #dateFilterGrid,
+  #brandFilterGrid,
+  #categoryFilterGrid {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
-    gap: 10px;
-    padding: 12px;
+    gap: 10px !important;
+    padding: 12px !important;
   }
 
-  .filter-section #brandFilterGrid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
-    max-height: 250px;
+  #brandFilterGrid {
+    max-height: 250px !important;
   }
 
   .rule-header {
@@ -452,21 +441,17 @@ input:checked + .toggle-slider:before {
 }
 
 @media (min-width: 769px) and (max-width: 1200px) {
-  .filter-section .filter-grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
-  }
-
-  .filter-section #brandFilterGrid {
+  #dateFilterGrid,
+  #brandFilterGrid,
+  #categoryFilterGrid {
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
   }
 }
 
 @media (min-width: 1201px) {
-  .filter-section .filter-grid {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
-  }
-
-  .filter-section #brandFilterGrid {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
+  #dateFilterGrid,
+  #brandFilterGrid,
+  #categoryFilterGrid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important;
   }
 }
