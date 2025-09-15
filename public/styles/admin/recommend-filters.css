@@ -20,22 +20,40 @@
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
-/* 필터 그리드 */
+/* 기본 필터 그리드 - 스크롤 없음 */
 .filter-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 12px;
-  max-height: 400px;
-  overflow-y: auto;
   padding: 10px;
   border: 1px solid #e9ecef;
   border-radius: 6px;
   background-color: #f8f9fa;
 }
 
-/* 브랜드 필터는 더 높게 */
+/* 브랜드 필터만 스크롤 적용 */
 #brandFilterGrid {
   max-height: 300px;
+  overflow-y: auto;
+}
+
+/* 브랜드 필터 스크롤바 스타일 */
+#brandFilterGrid::-webkit-scrollbar {
+  width: 6px;
+}
+
+#brandFilterGrid::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+#brandFilterGrid::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+#brandFilterGrid::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 
 .filter-item {
