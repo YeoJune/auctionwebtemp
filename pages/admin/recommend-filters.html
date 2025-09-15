@@ -39,6 +39,36 @@
           <div class="card-title">
             아이템 노출 필터 설정
             <div class="card-actions">
+              <button id="cancelFilterBtn" class="btn btn-secondary">
+                변경 취소
+              </button>
+              <button id="applyFilterBtn" class="btn btn-primary">
+                변경사항 적용
+              </button>
+            </div>
+          </div>
+          <div class="filter-section">
+            <div class="filter-group">
+              <div class="filter-title">날짜 필터</div>
+              <div id="dateFilters" class="filter-grid"></div>
+            </div>
+
+            <div class="filter-group mt-3">
+              <div class="filter-title">브랜드 필터</div>
+              <div id="brandFilters" class="filter-grid"></div>
+            </div>
+
+            <div class="filter-group mt-3">
+              <div class="filter-title">카테고리 필터</div>
+              <div id="categoryFilters" class="filter-grid"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            추천 규칙 설정
+            <div class="card-actions">
               <button
                 id="cancelRecommendBtn"
                 class="btn btn-secondary"
