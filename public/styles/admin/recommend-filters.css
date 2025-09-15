@@ -7,8 +7,16 @@
 
 /* 필터 섹션 재정의 - 부모 그리드 해제 */
 .card .filter-section {
-  display: block;
-  margin-top: 0;
+  display: block !important;
+  margin-top: 0 !important;
+  grid-template-columns: none !important;
+  gap: 0 !important;
+}
+
+/* 필터 그룹 재정의 */
+.card .filter-section .filter-group {
+  display: block !important;
+  margin-bottom: 20px !important;
 }
 
 .brand-search {
