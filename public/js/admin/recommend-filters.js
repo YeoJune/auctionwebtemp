@@ -1,30 +1,23 @@
 // public/js/admin/recommend-filters.js
 
 document.addEventListener("DOMContentLoaded", async () => {
-  // 추천 규칙 UI에 필요한 데이터 미리 불러오기
   await loadPrerequisiteData();
-
-  // 필터 섹션 초기화
   initFilterSection();
-
-  // 추천 규칙 섹션 초기화
   initRecommendSection();
 });
 
 // =======================================================================
-// 데이터 사전 로드 (Data Preloading)
+// 데이터 사전 로드
 // =======================================================================
 let availableBrands = [];
 let availableCategories = [];
 
 async function loadPrerequisiteData() {
   try {
-    // api.js에 fetchAvailableBrands, fetchAvailableCategories 추가 필요
-    // 지금은 임시로 기존 /api/data/ 엔드포인트를 사용합니다.
-    const brandData = await fetch("/api/data/brands").then((res) => res.json());
-    const categoryData = await fetch("/api/data/categories").then((res) =>
-      res.json()
-    );
+    const [brandData, categoryData] = await Promise.all([
+      fetch("/api/data/brands").then((res) => res.json()),
+      fetch("/api/data/categories").then((res) => res.json()),
+    ]);
     availableBrands = brandData;
     availableCategories = categoryData;
   } catch (error) {
@@ -33,11 +26,11 @@ async function loadPrerequisiteData() {
 }
 
 // =======================================================================
-// 필터 설정 섹션 (Filter Settings Section)
+// 필터 설정 섹션
 // =======================================================================
 
 let originalFilterSettings = [];
-let modifiedFilterSettings = {};
+let currentFilterState = {};
 
 function initFilterSection() {
   document
@@ -46,35 +39,22 @@ function initFilterSection() {
   document
     .getElementById("cancelFilterBtn")
     .addEventListener("click", revertFilterChanges);
+
+  // 이벤트 위임으로 필터 체크박스 처리
+  document.addEventListener("change", (e) => {
+    if (e.target.matches(".filter-checkbox")) {
+      handleFilterChange(e.target);
+    }
+  });
+
+  // 브랜드 검색 이벤트 위임
+  document.addEventListener("input", (e) => {
+    if (e.target.matches(".brand-search")) {
+      filterBrandList(e.target.value);
+    }
+  });
+
   fetchAndDisplayFilters();
-}
-
-// 로딩 상태 표시
-function showLoading(containerId) {
-  const container = document.getElementById(containerId);
-  if (container) {
-    container.innerHTML = `
-      <div class="loading-container">
-        <div class="loading-spinner"></div>
-        <span>데이터를 불러오는 중...</span>
-      </div>
-    `;
-  }
-}
-
-// 데이터 없음 메시지 표시
-function showNoData(containerId, message) {
-  const container = document.getElementById(containerId);
-  if (container) {
-    container.innerHTML = `<div class="no-data-message">${message}</div>`;
-  }
-}
-
-// 에러 처리
-function handleError(error, defaultMessage = "오류가 발생했습니다") {
-  console.error("Error:", error);
-  const message = error.message || defaultMessage;
-  showAlert(message, "error");
 }
 
 async function fetchAndDisplayFilters() {
@@ -82,10 +62,19 @@ async function fetchAndDisplayFilters() {
     showLoading("dateFilters");
     showLoading("brandFilters");
     showLoading("categoryFilters");
+
     const settings = await fetchFilterSettings();
-    originalFilterSettings = JSON.parse(JSON.stringify(settings)); // Deep copy
-    modifiedFilterSettings = {};
+    originalFilterSettings = JSON.parse(JSON.stringify(settings));
+
+    // 현재 상태를 원본으로 초기화
+    currentFilterState = {};
+    settings.forEach((s) => {
+      const key = `${s.filter_type}:${s.filter_value}`;
+      currentFilterState[key] = s.is_enabled;
+    });
+
     displayFilters(settings);
+    updateFilterButtonStates();
   } catch (error) {
     handleError(error, "필터 설정을 불러오는 데 실패했습니다.");
   }
@@ -111,11 +100,10 @@ function displayFilters(settings) {
 function createFilterContainerHTML(type, filters) {
   let html = "";
 
-  // 브랜드의 경우 검색 기능 추가
   if (type === "brand") {
     html += `
       <div class="brand-search-container">
-        <input type="text" id="brandSearchInput" placeholder="브랜드 검색..." class="form-control brand-search">
+        <input type="text" class="form-control brand-search" placeholder="브랜드 검색...">
       </div>
     `;
   }
@@ -124,25 +112,130 @@ function createFilterContainerHTML(type, filters) {
   html += filters.map(createFilterToggleHTML).join("");
   html += `</div>`;
 
-  // 브랜드 검색 이벤트 리스너 추가
-  if (type === "brand") {
-    setTimeout(() => {
-      const searchInput = document.getElementById("brandSearchInput");
-      if (searchInput) {
-        searchInput.addEventListener("input", (e) => {
-          filterBrandList(e.target.value);
-        });
-      }
-    }, 100);
+  return html;
+}
+
+function createFilterToggleHTML(filter) {
+  const key = `${filter.filter_type}:${filter.filter_value}`;
+  const isChecked = currentFilterState[key] || false;
+
+  let displayValue = filter.filter_value;
+  if (filter.filter_type === "date") {
+    displayValue = displayValue.split("T")[0].split(" ")[0];
   }
 
-  return html;
+  return `
+    <div class="filter-item">
+      <label class="toggle-switch">
+        <input type="checkbox" 
+               class="filter-checkbox"
+               data-filter-type="${filter.filter_type}" 
+               data-filter-value="${filter.filter_value}"
+               ${isChecked ? "checked" : ""}>
+        <span class="toggle-slider"></span>
+      </label>
+      <span class="filter-value">${displayValue}</span>
+    </div>
+  `;
+}
+
+function handleFilterChange(checkbox) {
+  const filterType = checkbox.dataset.filterType;
+  const filterValue = checkbox.dataset.filterValue;
+  const key = `${filterType}:${filterValue}`;
+
+  currentFilterState[key] = checkbox.checked;
+  updateFilterButtonStates();
+}
+
+function updateFilterButtonStates() {
+  const changes = getFilterChanges();
+  const hasChanges = changes.length > 0;
+
+  const applyBtn = document.getElementById("applyFilterBtn");
+  const cancelBtn = document.getElementById("cancelFilterBtn");
+
+  applyBtn.disabled = !hasChanges;
+  applyBtn.textContent = hasChanges
+    ? `변경사항 적용 (${changes.length})`
+    : "변경사항 적용";
+  cancelBtn.disabled = !hasChanges;
+}
+
+function getFilterChanges() {
+  const changes = [];
+  const originalState = {};
+
+  originalFilterSettings.forEach((s) => {
+    const key = `${s.filter_type}:${s.filter_value}`;
+    originalState[key] = s.is_enabled;
+  });
+
+  Object.keys(currentFilterState).forEach((key) => {
+    if (currentFilterState[key] !== originalState[key]) {
+      const [filterType, filterValue] = key.split(":");
+      changes.push({
+        filterType,
+        filterValue,
+        isEnabled: currentFilterState[key],
+      });
+    }
+  });
+
+  return changes;
+}
+
+async function applyFilterChanges() {
+  const changes = getFilterChanges();
+  if (changes.length === 0) {
+    showAlert("변경된 내용이 없습니다.", "info");
+    return;
+  }
+
+  if (!confirmAction(`${changes.length}개의 필터 설정을 적용하시겠습니까?`)) {
+    return;
+  }
+
+  const applyBtn = document.getElementById("applyFilterBtn");
+  const originalText = applyBtn.textContent;
+
+  try {
+    applyBtn.disabled = true;
+    applyBtn.innerHTML = '<div class="loading-spinner"></div> 적용 중...';
+
+    await updateFilterSettingsBatch(changes);
+    showAlert("필터 설정이 성공적으로 업데이트되었습니다.", "success");
+
+    // 성공 시 원본 데이터 업데이트
+    await fetchAndDisplayFilters();
+  } catch (error) {
+    handleError(error, "필터 설정 업데이트에 실패했습니다.");
+    // 실패 시 UI 상태 롤백
+    revertFilterChanges();
+  } finally {
+    applyBtn.disabled = false;
+    applyBtn.textContent = originalText;
+  }
+}
+
+function revertFilterChanges() {
+  // 현재 상태를 원본으로 되돌리기
+  currentFilterState = {};
+  originalFilterSettings.forEach((s) => {
+    const key = `${s.filter_type}:${s.filter_value}`;
+    currentFilterState[key] = s.is_enabled;
+  });
+
+  displayFilters(originalFilterSettings);
+  updateFilterButtonStates();
+  showAlert("변경이 취소되었습니다.", "info");
 }
 
 function filterBrandList(searchTerm) {
   const brandGrid = document.getElementById("brandFilterGrid");
-  const brandItems = brandGrid.querySelectorAll(".filter-item");
+  if (!brandGrid) return;
 
+  const brandItems = brandGrid.querySelectorAll(".filter-item");
   brandItems.forEach((item) => {
     const brandName = item
       .querySelector(".filter-value")
@@ -152,119 +245,44 @@ function filterBrandList(searchTerm) {
   });
 }
 
-function createFilterToggleHTML(filter) {
-  // 날짜 필터인 경우 시간 부분 제거
-  let displayValue = filter.filter_value;
-  if (filter.filter_type === "date") {
-    // 날짜 문자열에서 시간 부분 제거 (YYYY-MM-DD 형태만 유지)
-    displayValue = displayValue.split("T")[0].split(" ")[0];
-  }
-
-  return `
-    <div class="filter-item">
-      <label class="toggle-switch">
-        <input type="checkbox" 
-          ${filter.is_enabled ? "checked" : ""} 
-          onchange="handleFilterChange('${filter.filter_type}', '${
-    filter.filter_value
-  }', this.checked)">
-        <span class="toggle-slider"></span>
-      </label>
-      <span class="filter-value">${displayValue}</span>
-    </div>
-  `;
-}
-
-function handleFilterChange(filterType, filterValue, isEnabled) {
-  const key = `${filterType}:${filterValue}`;
-  const original = originalFilterSettings.find(
-    (s) => s.filter_type === filterType && s.filter_value === filterValue
-  );
-
-  // 원래 상태와 같아지면 변경 목록에서 제거, 다르면 추가
-  if (original && original.is_enabled !== isEnabled) {
-    modifiedFilterSettings[key] = { filterType, filterValue, isEnabled };
-  } else {
-    delete modifiedFilterSettings[key];
-  }
-
-  // 버튼 상태 업데이트
-  updateFilterButtonStates();
-}
-
-function updateFilterButtonStates() {
-  const hasChanges = Object.keys(modifiedFilterSettings).length > 0;
-  const applyBtn = document.getElementById("applyFilterBtn");
-  const cancelBtn = document.getElementById("cancelFilterBtn");
-
-  if (applyBtn) {
-    applyBtn.disabled = !hasChanges;
-    applyBtn.textContent = hasChanges
-      ? `변경사항 적용 (${Object.keys(modifiedFilterSettings).length})`
-      : "변경사항 적용";
-  }
-  if (cancelBtn) {
-    cancelBtn.disabled = !hasChanges;
-  }
-}
-
-async function applyFilterChanges() {
-  const changes = Object.values(modifiedFilterSettings);
-  if (changes.length === 0) {
-    showAlert("변경된 내용이 없습니다.", "info");
-    return;
-  }
-  if (!confirmAction(`${changes.length}개의 필터 설정을 적용하시겠습니까?`))
-    return;
-
-  try {
-    const applyBtn = document.getElementById("applyFilterBtn");
-    if (applyBtn) {
-      applyBtn.disabled = true;
-      applyBtn.innerHTML = '<div class="loading-spinner"></div> 적용 중...';
-    }
-
-    await updateFilterSettingsBatch(changes);
-    showAlert("필터 설정이 성공적으로 업데이트되었습니다.", "success");
-    fetchAndDisplayFilters();
-  } catch (error) {
-    handleError(error, "필터 설정 업데이트에 실패했습니다.");
-  } finally {
-    const applyBtn = document.getElementById("applyFilterBtn");
-    if (applyBtn) {
-      applyBtn.disabled = false;
-      applyBtn.innerHTML = "변경사항 적용";
-    }
-  }
-}
-
-function revertFilterChanges() {
-  if (Object.keys(modifiedFilterSettings).length === 0) return;
-  displayFilters(originalFilterSettings);
-  modifiedFilterSettings = {};
-  updateFilterButtonStates();
-  showAlert("변경이 취소되었습니다.", "info");
-}
-
 // =======================================================================
-// 추천 규칙 설정 섹션 (Recommendation Rules Section)
+// 추천 규칙 설정 섹션
 // =======================================================================
 
-let recommendRules = [];
-let modifiedRecommendRules = {};
+let originalRecommendRules = [];
+let currentRecommendState = {};
 
 function initRecommendSection() {
   document
     .getElementById("addRecommendRuleBtn")
-    .addEventListener("click", () => renderRuleForm()); // 새 규칙 폼 렌더링
-
+    .addEventListener("click", () => renderRuleForm());
   document
     .getElementById("applyRecommendBtn")
     ?.addEventListener("click", applyRecommendChanges);
-
   document
     .getElementById("cancelRecommendBtn")
     ?.addEventListener("click", revertRecommendChanges);
+
+  // 이벤트 위임으로 규칙 토글 처리
+  document.addEventListener("change", (e) => {
+    if (e.target.matches(".rule-toggle")) {
+      handleRuleToggleChange(e.target);
+    }
+  });
+
+  // 이벤트 위임으로 규칙 액션 버튼 처리
+  document.addEventListener("click", (e) => {
+    const button = e.target.closest("button");
+    if (!button) return;
+
+    const ruleId = button.dataset.id;
+    if (button.classList.contains("edit-rule-btn")) {
+      const ruleToEdit = originalRecommendRules.find((r) => r.id == ruleId);
+      renderRuleForm(ruleToEdit);
+    } else if (button.classList.contains("delete-rule-btn")) {
+      handleDeleteRule(ruleId);
+    }
+  });
 
   fetchAndDisplayRecommendRules();
 }
@@ -272,8 +290,17 @@ function initRecommendSection() {
 async function fetchAndDisplayRecommendRules() {
   try {
     showLoading("recommendRulesContainer");
-    recommendRules = await fetchRecommendSettings();
+    const rules = await fetchRecommendSettings();
+    originalRecommendRules = JSON.parse(JSON.stringify(rules));
+
+    // 현재 상태를 원본으로 초기화
+    currentRecommendState = {};
+    rules.forEach((rule) => {
+      currentRecommendState[rule.id] = rule.is_enabled;
+    });
+
     displayRecommendRules();
+    updateRecommendButtonStates();
   } catch (error) {
     handleError(error, "추천 규칙을 불러오는 데 실패했습니다.");
   }
@@ -281,9 +308,9 @@ async function fetchAndDisplayRecommendRules() {
 
 function displayRecommendRules() {
   const container = document.getElementById("recommendRulesContainer");
-  container.innerHTML = ""; // 컨테이너 비우기
+  container.innerHTML = "";
 
-  if (recommendRules.length === 0) {
+  if (originalRecommendRules.length === 0) {
     showNoData(
       "recommendRulesContainer",
       "등록된 추천 규칙이 없습니다. '새 규칙 추가' 버튼을 눌러 규칙을 만들어보세요."
@@ -291,26 +318,17 @@ function displayRecommendRules() {
     return;
   }
 
-  recommendRules.forEach((rule) => {
+  originalRecommendRules.forEach((rule) => {
     container.insertAdjacentHTML("beforeend", createRuleCardHTML(rule));
-  });
-
-  // 이벤트 위임 방식으로 이벤트 리스너 등록
-  container.addEventListener("click", (e) => {
-    const target = e.target.closest("button");
-    if (!target) return;
-
-    const ruleId = target.dataset.id;
-    if (target.classList.contains("edit-rule-btn")) {
-      const ruleToEdit = recommendRules.find((r) => r.id == ruleId);
-      renderRuleForm(ruleToEdit);
-    } else if (target.classList.contains("delete-rule-btn")) {
-      handleDeleteRule(ruleId);
-    }
   });
 }
 
 function createRuleCardHTML(rule) {
+  const isEnabled =
+    currentRecommendState[rule.id] !== undefined
+      ? currentRecommendState[rule.id]
+      : rule.is_enabled;
+
   const conditionsSummary = Object.entries(rule.conditions)
     .map(([field, cond]) => {
       let values = "";
@@ -330,8 +348,10 @@ function createRuleCardHTML(rule) {
         <span class="rule-name">${rule.rule_name}</span>
         <span class="rule-score">점수: ${rule.recommend_score}</span>
         <label class="toggle-switch small">
-          <input type="checkbox" ${rule.is_enabled ? "checked" : ""} 
-                 onchange="handleRuleToggleChange(${rule.id}, this.checked)">
+          <input type="checkbox" 
+                 class="rule-toggle"
+                 data-rule-id="${rule.id}"
+                 ${isEnabled ? "checked" : ""}>
           <span class="toggle-slider"></span>
         </label>
       </div>
@@ -361,18 +381,16 @@ function getFieldDisplayName(field) {
   return displayNames[field] || field;
 }
 
-function handleRuleToggleChange(ruleId, isEnabled) {
-  const original = recommendRules.find((r) => r.id === ruleId);
-  if (original && original.is_enabled !== isEnabled) {
-    modifiedRecommendRules[ruleId] = { ...original, is_enabled: isEnabled };
-  } else {
-    delete modifiedRecommendRules[ruleId];
-  }
+function handleRuleToggleChange(checkbox) {
+  const ruleId = parseInt(checkbox.dataset.ruleId);
+  currentRecommendState[ruleId] = checkbox.checked;
   updateRecommendButtonStates();
 }
 
 function updateRecommendButtonStates() {
-  const hasChanges = Object.keys(modifiedRecommendRules).length > 0;
+  const changes = getRecommendChanges();
+  const hasChanges = changes.length > 0;
+
   const applyBtn = document.getElementById("applyRecommendBtn");
   const cancelBtn = document.getElementById("cancelRecommendBtn");
 
@@ -380,49 +398,78 @@ function updateRecommendButtonStates() {
   if (cancelBtn) cancelBtn.disabled = !hasChanges;
 }
 
+function getRecommendChanges() {
+  const changes = [];
+
+  originalRecommendRules.forEach((rule) => {
+    const currentEnabled = currentRecommendState[rule.id];
+    if (currentEnabled !== undefined && currentEnabled !== rule.is_enabled) {
+      changes.push({
+        ...rule,
+        is_enabled: currentEnabled,
+      });
+    }
+  });
+
+  return changes;
+}
+
 async function applyRecommendChanges() {
-  const changes = Object.values(modifiedRecommendRules);
+  const changes = getRecommendChanges();
   if (changes.length === 0) {
     showAlert("변경된 내용이 없습니다.", "info");
     return;
   }
-  if (!confirmAction("변경된 추천 설정을 적용하시겠습니까?")) return;
+
+  if (!confirmAction("변경된 추천 설정을 적용하시겠습니까?")) {
+    return;
+  }
 
   try {
     await updateRecommendSettingsBatch(changes);
     showAlert("추천 설정이 성공적으로 업데이트되었습니다.", "success");
-    fetchAndDisplayRecommendRules();
+
+    // 성공 시 원본 데이터 업데이트
+    await fetchAndDisplayRecommendRules();
   } catch (error) {
     handleError(error, "추천 설정 업데이트에 실패했습니다.");
+    // 실패 시 UI 상태 롤백
+    revertRecommendChanges();
   }
 }
 
 function revertRecommendChanges() {
-  if (Object.keys(modifiedRecommendRules).length === 0) return;
+  // 현재 상태를 원본으로 되돌리기
+  currentRecommendState = {};
+  originalRecommendRules.forEach((rule) => {
+    currentRecommendState[rule.id] = rule.is_enabled;
+  });
+
   displayRecommendRules();
-  modifiedRecommendRules = {};
   updateRecommendButtonStates();
   showAlert("변경이 취소되었습니다.", "info");
 }
 
 async function handleDeleteRule(ruleId) {
-  if (!confirmAction("정말로 이 규칙을 삭제하시겠습니까?")) return;
+  if (!confirmAction("정말로 이 규칙을 삭제하시겠습니까?")) {
+    return;
+  }
+
   try {
     await deleteRecommendSetting(ruleId);
     showAlert("규칙이 삭제되었습니다.", "success");
-    fetchAndDisplayRecommendRules();
+    await fetchAndDisplayRecommendRules();
   } catch (error) {
     handleError(error, "규칙 삭제에 실패했습니다.");
   }
 }
 
 // =======================================================================
-// 추천 규칙 폼 (Form for Recommendation Rule)
+// 추천 규칙 폼
 // =======================================================================
 
 function renderRuleForm(rule = null) {
   const container = document.getElementById("recommendRulesContainer");
-  // 기존에 열려있는 폼이 있다면 제거
   const existingForm = container.querySelector(".rule-form-card");
   if (existingForm) existingForm.remove();
 
@@ -431,12 +478,33 @@ function renderRuleForm(rule = null) {
 
   const form = container.querySelector("#ruleForm");
   form.addEventListener("submit", (e) => handleRuleFormSubmit(e, rule));
-  form
-    .querySelector("#cancelRuleForm")
-    .addEventListener("click", () => form.closest(".rule-form-card").remove());
+  form.querySelector("#cancelRuleForm").addEventListener("click", () => {
+    form.closest(".rule-form-card").remove();
+  });
   form
     .querySelector("#addConditionBtn")
     .addEventListener("click", () => addConditionRow(form));
+
+  // 조건 타입 변경 이벤트 위임
+  form.addEventListener("change", (e) => {
+    if (e.target.matches(".condition-type-select")) {
+      updateConditionInput(e.target);
+    }
+  });
+
+  // 조건 검색 이벤트 위임
+  form.addEventListener("input", (e) => {
+    if (e.target.matches(".condition-search")) {
+      filterConditionOptions(e.target);
+    }
+  });
+
+  // 조건 삭제 이벤트 위임
+  form.addEventListener("click", (e) => {
+    if (e.target.matches(".remove-condition-btn")) {
+      e.target.closest(".condition-row").remove();
+    }
+  });
 }
 
 function createRuleFormHTML(rule) {
@@ -463,7 +531,7 @@ function createRuleFormHTML(rule) {
         </div>
         <div class="form-group">
           <label>활성화</label>
-           <label class="toggle-switch">
+          <label class="toggle-switch">
             <input type="checkbox" name="isEnabled" ${
               !isEditing || rule.is_enabled ? "checked" : ""
             }>
@@ -498,10 +566,11 @@ function createConditionRowHTML([field, condition]) {
     title: "제목",
   };
 
-  const id = `condition-${Date.now()}`;
-  let inputHTML = `<div class="condition-input-container"></div>`; // 초기 placeholder
+  const id = `condition-${Date.now()}-${Math.random()
+    .toString(36)
+    .substr(2, 9)}`;
+  let inputHTML = `<div class="condition-input-container"></div>`;
 
-  // 기존 데이터가 있으면 해당 인풋 렌더링
   if (field) {
     inputHTML = renderConditionInput(
       field,
@@ -513,7 +582,7 @@ function createConditionRowHTML([field, condition]) {
 
   return `
     <div class="condition-row" id="${id}">
-      <select class="condition-type-select" onchange="updateConditionInput(this)">
+      <select class="condition-type-select">
         <option value="">-- 타입 선택 --</option>
         ${Object.entries(conditionTypes)
           .map(
@@ -525,7 +594,7 @@ function createConditionRowHTML([field, condition]) {
           .join("")}
       </select>
       ${inputHTML}
-      <button type="button" class="btn btn-sm btn-danger" onclick="document.getElementById('${id}').remove()">삭제</button>
+      <button type="button" class="btn btn-sm btn-danger remove-condition-btn">삭제</button>
     </div>
   `;
 }
@@ -548,7 +617,6 @@ function renderConditionInput(type, condition, brands, categories) {
       const options = type === "brand" ? brands : categories;
       const selectedValues = new Set(condition.values || []);
 
-      // 체크박스 방식으로 변경
       const checkboxesHTML = options
         .map(
           (opt) => `
@@ -566,15 +634,10 @@ function renderConditionInput(type, condition, brands, categories) {
         <div class="checkbox-container ${type === "brand" ? "searchable" : ""}">
           ${
             type === "brand"
-              ? `
-            <input type="text" placeholder="검색..." class="condition-search form-control" 
-                   onkeyup="filterConditionOptions(this)">
-          `
+              ? `<input type="text" placeholder="검색..." class="condition-search form-control">`
               : ""
           }
-          <div class="checkbox-list">
-            ${checkboxesHTML}
-          </div>
+          <div class="checkbox-list">${checkboxesHTML}</div>
         </div>
       `;
 
@@ -588,6 +651,7 @@ function renderConditionInput(type, condition, brands, categories) {
           condition.end || ""
         }">
       `;
+
     case "starting_price":
       return `
         <input type="number" name="price_min" placeholder="최소" class="form-control" value="${
@@ -598,10 +662,12 @@ function renderConditionInput(type, condition, brands, categories) {
           condition.max || ""
         }">
       `;
+
     case "title":
       return `<input type="text" name="title_keywords" placeholder="쉼표(,)로 키워드 구분" class="form-control" value="${(
         condition.keywords || []
       ).join(", ")}">`;
+
     default:
       return "";
   }
@@ -625,6 +691,7 @@ async function handleRuleFormSubmit(event, existingRule) {
 
   const conditions = {};
   const conditionRows = form.querySelectorAll(".condition-row");
+
   conditionRows.forEach((row) => {
     const type = row.querySelector(".condition-type-select").value;
     if (!type) return;
@@ -632,7 +699,6 @@ async function handleRuleFormSubmit(event, existingRule) {
     switch (type) {
       case "brand":
       case "category":
-        // 체크박스에서 선택된 값들 가져오기
         const checkedBoxes = row.querySelectorAll(
           `input[name="${type}"]:checked`
         );
@@ -644,29 +710,42 @@ async function handleRuleFormSubmit(event, existingRule) {
           };
         }
         break;
+
       case "scheduled_date":
-        conditions[type] = {
-          operator: "BETWEEN",
-          start: formData.get("date_start"),
-          end: formData.get("date_end"),
-        };
+        const startDate = row.querySelector('[name="date_start"]').value;
+        const endDate = row.querySelector('[name="date_end"]').value;
+        if (startDate && endDate) {
+          conditions[type] = {
+            operator: "BETWEEN",
+            start: startDate,
+            end: endDate,
+          };
+        }
         break;
+
       case "starting_price":
-        conditions[type] = {
-          operator: "BETWEEN",
-          min: formData.get("price_min"),
-          max: formData.get("price_max"),
-        };
+        const minPrice = row.querySelector('[name="price_min"]').value;
+        const maxPrice = row.querySelector('[name="price_max"]').value;
+        if (minPrice && maxPrice) {
+          conditions[type] = {
+            operator: "BETWEEN",
+            min: parseInt(minPrice),
+            max: parseInt(maxPrice),
+          };
+        }
         break;
+
       case "title":
-        conditions[type] = {
-          operator: "CONTAINS",
-          keywords: formData
-            .get("title_keywords")
-            .split(",")
-            .map((k) => k.trim())
-            .filter(Boolean),
-        };
+        const keywords = row.querySelector('[name="title_keywords"]').value;
+        if (keywords.trim()) {
+          conditions[type] = {
+            operator: "CONTAINS",
+            keywords: keywords
+              .split(",")
+              .map((k) => k.trim())
+              .filter(Boolean),
+          };
+        }
         break;
     }
   });
@@ -686,9 +765,39 @@ async function handleRuleFormSubmit(event, existingRule) {
       await createRecommendSetting(ruleData);
       showAlert("새 규칙이 성공적으로 추가되었습니다.", "success");
     }
+
     form.closest(".rule-form-card").remove();
-    fetchAndDisplayRecommendRules();
+    await fetchAndDisplayRecommendRules();
   } catch (error) {
     handleError(error, "규칙 저장에 실패했습니다.");
   }
+}
+
+// =======================================================================
+// 유틸리티 함수
+// =======================================================================
+
+function showLoading(containerId) {
+  const container = document.getElementById(containerId);
+  if (container) {
+    container.innerHTML = `
+      <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <span>데이터를 불러오는 중...</span>
+      </div>
+    `;
+  }
+}
+
+function showNoData(containerId, message) {
+  const container = document.getElementById(containerId);
+  if (container) {
+    container.innerHTML = `<div class="no-data-message">${message}</div>`;
+  }
+}
+
+function handleError(error, defaultMessage = "오류가 발생했습니다") {
+  console.error("Error:", error);
+  const message = error.message || defaultMessage;
+  showAlert(message, "error");
 }
