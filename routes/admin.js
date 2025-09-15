@@ -480,6 +480,29 @@ router.post("/recommend-settings", isAdmin, async (req, res) => {
   }
 });
 
+// 배치 업데이트 라우트
+router.put("/recommend-settings/batch", isAdmin, async (req, res) => {
+  try {
+    const { settings } = req.body;
+
+    const results = await updateRecommendSettingsBatch(settings);
+
+    // 배치 업데이트 완료 후 즉시 동기화
+    await syncRecommendSettingsToItems();
+
+    res.json({
+      message: "Batch update completed",
+      updated: results,
+    });
+  } catch (error) {
+    console.error(
+      "Error performing batch update of recommend settings:",
+      error
+    );
+    res.status(500).json({ message: "Error updating recommend settings" });
+  }
+});
+
 // 기존 추천 설정 업데이트
 router.put("/recommend-settings/:id", isAdmin, async (req, res) => {
   try {
@@ -510,29 +533,6 @@ router.put("/recommend-settings/:id", isAdmin, async (req, res) => {
   } catch (error) {
     console.error("Error updating recommend setting:", error);
     res.status(500).json({ message: "Error updating recommend setting" });
-  }
-});
-
-// 배치 업데이트 라우트
-router.put("/recommend-settings/batch", isAdmin, async (req, res) => {
-  try {
-    const { settings } = req.body;
-
-    const results = await updateRecommendSettingsBatch(settings);
-
-    // 배치 업데이트 완료 후 즉시 동기화
-    await syncRecommendSettingsToItems();
-
-    res.json({
-      message: "Batch update completed",
-      updated: results,
-    });
-  } catch (error) {
-    console.error(
-      "Error performing batch update of recommend settings:",
-      error
-    );
-    res.status(500).json({ message: "Error updating recommend settings" });
   }
 });
 
