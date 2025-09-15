@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="naver-site-verification"
+      content="177f9a8caf78b44dff251bb2e588915d87a98560" />
+    <meta
+      name="naver-site-verification"
+      content="b68679df5d23772e2572a59656512319dbf70d77" />
+    <meta
+      name="description"
+      content="국내 유일 명품경매 플랫폼. 합리적인 명품 도소매의 새로운 기준." />
+    <title>까사트레이드 - 추천 상품</title>
+    <link rel="shortcut icon" href="https://casastrade.com/favicon.ico" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <link rel="stylesheet" href="/styles/common.css" />
+    <link rel="stylesheet" href="/styles/main.css" />
+    <link rel="stylesheet" href="/styles/notices.css" />
+    <link rel="stylesheet" href="/styles/header.css" />
+  </head>
+  <!-- 상품 카드 템플릿 -->
+  <template id="product-card-template">
+    <div class="product-card" data-item-id="">
+      <div class="product-header">
+        <div class="product-brand" data-field="brand"></div>
+        <div class="product-title" data-field="title"></div>
+        <div class="auction-info">
+          <div class="auction-number">
+            <span data-field="auc_num"></span><span>번</span>
+            <div
+              class="auction-type-indicator"
+              data-field="bid_type_text"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 타이머 (입찰 기능 있을 때만) -->
+      <div class="bid-timer" data-if="hasBidding">
+        <span class="scheduled-date" data-field="formatted_date"></span>
+        <span class="remaining-time">[--:--:--]</span>
+        <span class="timer-info-icon"></span>
+      </div>
+
+      <div class="product-image-container">
+        <img src="" alt="" class="product-image" data-field="image" />
+        <div class="product-rank" data-field="rank"></div>
+      </div>
+
+      <!-- 위시리스트 버튼 (위시리스트 기능 있을 때만) -->
+      <div class="wishlist-buttons" data-if="hasWishlist">
+        <button class="wishlist-btn" data-favorite="1">즐겨찾기①</button>
+        <button class="wishlist-btn" data-favorite="2">즐겨찾기②</button>
+        <button class="wishlist-btn" data-favorite="3">즐겨찾기③</button>
+      </div>
+
+      <!-- 3칸 정보 -->
+      <div class="product-info-grid">
+        <div class="info-cell">
+          <div class="info-label">랭크</div>
+          <div class="info-value" data-field="rank"></div>
+        </div>
+        <div class="info-cell">
+          <div class="info-label">실시간</div>
+          <div class="info-value">
+            <span data-field="formatted_price"></span>¥
+          </div>
+          <div class="info-price-detail"></div>
+        </div>
+        <div class="info-cell">
+          <div class="info-label">입찰/제안</div>
+          <div class="info-value">-</div>
+          <div class="info-price-detail"></div>
+        </div>
+      </div>
+
+      <!-- 입찰 섹션 (입찰 기능 있을 때만) -->
+      <div class="bid-section" data-if="hasBidding">
+        <div class="price-info"></div>
+        <div class="bid-input-container"></div>
+      </div>
+    </div>
+  </template>
+  <body>
+    <div class="container">
+      <header class="main-header">
+        <div class="header-content">
+          <div class="logo-container">
+            <img
+              src="images/logo.png"
+              alt="Logo"
+              onclick="location.href = '/productPage'" />
+          </div>
+          <button class="mobile-menu-toggle">
+            <i class="fas fa-bars"></i>
+          </button>
+          <div class="nav-container">
+            <div class="nav-item dropdown-container">
+              <button class="nav-button" id="productListBtn">
+                <i class="fas fa-list"></i>
+                <span>상품 리스트</span>
+              </button>
+              <div class="dropdown-content">
+                <a href="/productPage">전체 상품</a>
+                <a href="/productPage?selectedAuctionTypes=live">현장 경매</a>
+                <a href="/productPage?selectedAuctionTypes=direct">직접 경매</a>
+              </div>
+            </div>
+
+            <div class="nav-item dropdown-container">
+              <button class="nav-button" id="favoritesBtn">
+                <i class="fas fa-star"></i>
+                <span>즐겨찾기</span>
+              </button>
+              <div class="dropdown-content">
+                <a href="/productPage?selectedFavoriteNumbers=1">즐겨찾기 ①</a>
+                <a href="/productPage?selectedFavoriteNumbers=2">즐겨찾기 ②</a>
+                <a href="/productPage?selectedFavoriteNumbers=3">즐겨찾기 ③</a>
+              </div>
+            </div>
+
+            <button
+              class="nav-button"
+              id="recommendBtn"
+              onclick="window.location.href = '/recommendPage'">
+              <i class="fas fa-star"></i>
+              <span>추천 상품</span>
+            </button>
+
+            <button
+              class="nav-button"
+              id="bidItemsBtn"
+              onclick="window.location.href = '/bidProductsPage'">
+              <i class="fas fa-gavel"></i>
+              <span>입찰 항목</span>
+            </button>
+
+            <button
+              class="nav-button"
+              id="bidResultsBtn"
+              onclick="window.location.href = '/bidResultsPage'">
+              <i class="fas fa-clipboard-check"></i>
+              <span>입찰 결과</span>
+            </button>
+
+            <button
+              class="nav-button"
+              onclick="window.location.href = '/valuesPage'">
+              <i class="fas fa-chart-line"></i>
+              <span>낙찰 시세표</span>
+            </button>
+
+            <button
+              class="nav-button"
+              onclick="window.open('http://pf.kakao.com/_xcCxoqn/chat', '_blank')">
+              <i class="fas fa-comments"></i>
+              <span>실시간 문의</span>
+            </button>
+
+            <button
+              class="nav-button"
+              onclick="window.location.href = '/inquiryPage'">
+              <i class="fas fa-user-plus"></i>
+              <span>입점신청</span>
+            </button>
+
+            <button
+              class="nav-button"
+              onclick="window.location.href = '/guidePage'">
+              <i class="fas fa-book"></i>
+              <span>이용가이드</span>
+            </button>
+          </div>
+          <div class="auth-container auth-unauthenticated">
+            <button id="signinBtn" class="auth-button auth-signin">
+              로그인
+            </button>
+            <button id="signoutBtn" class="auth-button auth-signout">
+              로그아웃
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <section class="notice-section">
+        <div class="notice-container" id="noticeContainer">
+          <!-- 공지사항 이미지들이 여기에 동적으로 추가됨 -->
+        </div>
+      </section>
+
+      <main class="main-content">
+        <div class="recommend-header">
+          <h1><i class="fas fa-star"></i> 추천 상품</h1>
+          <p class="recommend-subtitle">
+            까사트레이드가 엄선한 추천 상품들을 만나보세요
+          </p>
+        </div>
+
+        <button id="mobileFilterBtn" class="mobile-filter-toggle">
+          <i class="fas fa-filter"></i>
+        </button>
+        <section class="filters-container">
+          <div class="search-filter-section">
+            <div class="search-container">
+              <input
+                type="text"
+                id="searchInput"
+                placeholder="상품명/상품코드/검색어 입력" />
+              <button id="searchButton">
+                <i class="fas fa-search"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="filter-row">
+            <div class="filter-label">브랜드</div>
+            <div class="filter-content">
+              <div class="multiselect-container">
+                <div class="multiselect-header">
+                  <input
+                    type="text"
+                    id="brandSearchInput"
+                    class="multiselect-search"
+                    placeholder="브랜드 검색..." />
+                </div>
+                <div class="multiselect-body" id="brandCheckboxes">
+                  <div class="multiselect-all">
+                    <input type="checkbox" id="brand-all" value="all" />
+                    <label for="brand-all">전체 선택</label>
+                  </div>
+                  <!-- 여기에 자바스크립트로 체크박스 추가 -->
+                </div>
+              </div>
+            </div>
+            <div class="filter-label">카테고리</div>
+            <div class="filter-content">
+              <div class="multiselect-container">
+                <div class="multiselect-header">
+                  <input
+                    type="text"
+                    id="categorySearchInput"
+                    class="multiselect-search"
+                    placeholder="카테고리 검색..." />
+                </div>
+                <div class="multiselect-body" id="categoryCheckboxes">
+                  <div class="multiselect-all">
+                    <input type="checkbox" id="category-all" value="all" />
+                    <label for="category-all">전체 선택</label>
+                  </div>
+                  <!-- 여기에 자바스크립트로 체크박스 추가 -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-row">
+            <div class="filter-label">출품사</div>
+            <div class="filter-content" id="aucNumFilters"></div>
+          </div>
+
+          <div class="filter-row">
+            <div class="filter-label">랭크</div>
+            <div class="filter-content" id="rankFilters"></div>
+          </div>
+
+          <div class="filter-row">
+            <div class="filter-label">경매일</div>
+            <div class="filter-content" id="scheduledDateFilters"></div>
+          </div>
+
+          <div class="filter-row">
+            <div class="filter-label">경매유형</div>
+            <div class="filter-content" id="auctionTypeFilters">
+              <div class="filter-item">
+                <input
+                  type="checkbox"
+                  id="auction-type-direct"
+                  value="direct" />
+                <label for="auction-type-direct">직접 경매</label>
+              </div>
+              <div class="filter-item">
+                <input type="checkbox" id="auction-type-live" value="live" />
+                <label for="auction-type-live">현장 경매</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-row">
+            <div class="filter-label">즐겨찾기</div>
+            <div class="filter-content" id="favoriteFilters">
+              <div class="filter-item">
+                <input type="checkbox" id="favorite-1" value="1" />
+                <label for="favorite-1">즐겨찾기 ①</label>
+              </div>
+              <div class="filter-item">
+                <input type="checkbox" id="favorite-2" value="2" />
+                <label for="favorite-2">즐겨찾기 ②</label>
+              </div>
+              <div class="filter-item">
+                <input type="checkbox" id="favorite-3" value="3" />
+                <label for="favorite-3">즐겨찾기 ③</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-row">
+            <div class="filter-label"></div>
+            <div class="filter-content">
+              <div class="filter-item">
+                <input type="checkbox" id="exclude-expired" checked />
+                <label for="exclude-expired">마감 항목 제외</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-row">
+            <div class="filter-label"></div>
+            <div class="filter-content">
+              <div class="filter-item">
+                <input type="checkbox" id="bid-items-only" />
+                <label for="bid-items-only">입찰항목만 표기</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-actions">
+            <button id="resetFiltersBtn" class="reset-filters">리셋</button>
+            <button id="applyFiltersBtn" class="apply-filters">검색</button>
+          </div>
+        </section>
+
+        <div class="view-controls">
+          <div class="items-per-page">
+            <select id="itemsPerPage">
+              <option value="20">20개씩 보기</option>
+              <option value="50">50개씩 보기</option>
+              <option value="100">100개씩 보기</option>
+            </select>
+          </div>
+          <div class="sort-options">
+            <select id="sortOption">
+              <option value="recommend-desc">추천순</option>
+              <option value="scheduled_date-asc">마감일 오름차순</option>
+              <option value="scheduled_date-desc">마감일 내림차순</option>
+              <option value="starting_price-asc">가격 오름차순</option>
+              <option value="starting_price-desc">가격 내림차순</option>
+              <option value="title-asc">제목 오름차순</option>
+              <option value="title-desc">제목 내림차순</option>
+              <option value="rank-asc">등급 오름차순</option>
+              <option value="rank-desc">등급 내림차순</option>
+              <option value="brand-asc">브랜드 오름차순</option>
+              <option value="brand-desc">브랜드 내림차순</option>
+            </select>
+          </div>
+          <div class="view-type">
+            <button id="cardViewBtn" class="view-btn active">
+              <i class="fas fa-th-large"></i>
+            </button>
+            <button id="listViewBtn" class="view-btn">
+              <i class="fas fa-list"></i>
+            </button>
+          </div>
+        </div>
+
+        <section class="products-section">
+          <div class="loading-msg" id="loadingMsg">로딩 중...</div>
+          <div class="product-grid" id="dataBody"></div>
+          <div class="pagination" id="pagination"></div>
+        </section>
+      </main>
+
+      <footer class="main-footer">
+        <div class="footer-content">
+          <div class="footer-section company-info">
+            <h3>까사트레이드</h3>
+            <div class="company-details">
+              <div class="company-row">
+                <span class="label">상호명:</span>
+                <span class="value">까사플랫폼</span>
+              </div>
+              <div class="company-row">
+                <span class="label">대표:</span>
+                <span class="value">황승하</span>
+              </div>
+              <div class="company-row">
+                <span class="label">사업자등록번호:</span>
+                <span class="value">459-01-03147</span>
+              </div>
+              <div class="company-row">
+                <span class="label">통신판매업신고번호:</span>
+                <span class="value">제 2024-서울은평-0763 호</span>
+              </div>
+              <div class="company-row">
+                <span class="label">주소:</span>
+                <span class="value"
+                  >서울특별시 은평구 갈현동 409-2, 2층 까사플랫폼</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <div class="footer-section contact-info">
+            <h4>연락처 정보</h4>
+            <div class="contact-details">
+              <div class="contact-row">
+                <span class="label">전화:</span>
+                <span class="value">
+                  <a href="tel:02-6959-9640">02-6959-9640</a>
+                </span>
+              </div>
+              <div class="contact-row">
+                <span class="label">이메일:</span>
+                <span class="value">
+                  <a href="mailto:casatrade.kr@gmail.com"
+                    >casatrade.kr@gmail.com</a
+                  >
+                </span>
+              </div>
+              <div class="contact-row">
+                <span class="label">입금계좌:</span>
+                <span class="value">국민은행 024801-04-544857</span>
+              </div>
+              <div class="contact-row">
+                <span class="label">예금주:</span>
+                <span class="value">황승하 (까사플랫폼)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer-bottom">
+          <p class="copyright">© 2024 까사트레이드. All rights reserved.</p>
+        </div>
+      </footer>
+    </div>
+
+    <!-- 상품 상세 모달 -->
+    <div id="detailModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="product-info">
+            <p class="modal-brand"></p>
+            <h2 class="modal-title"></h2>
+          </div>
+          <button class="close" aria-label="Close modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-left">
+            <div class="main-image-container">
+              <button class="image-nav prev" aria-label="Previous image">
+                &lt;
+              </button>
+              <img src="" alt="Main product image" class="main-image" />
+              <button class="image-nav next" aria-label="Next image">
+                &gt;
+              </button>
+            </div>
+            <div class="thumbnail-container"></div>
+          </div>
+          <div class="modal-right">
+            <div class="bid-info-holder"></div>
+            <div class="product-details">
+              <div class="detail-item description">
+                <span class="detail-label">상세 설명:</span>
+                <p class="modal-description"></p>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">예정일:</span>
+                <span class="modal-scheduled-date"></span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">브랜드:</span>
+                <span class="modal-brand2"></span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">카테고리:</span>
+                <span class="modal-category"></span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">액세서리 코드:</span>
+                <span class="modal-accessory-code"></span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">랭크:</span>
+                <span class="modal-rank"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 공지사항 상세 모달 -->
+    <div id="noticeDetailModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="noticeTitle"></h2>
+          <button class="close" aria-label="Close modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div id="noticeContent"></div>
+          <img
+            id="noticeImage"
+            src=""
+            alt="Notice image"
+            class="notice-image" />
+        </div>
+      </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/bids.js"></script>
+    <script src="/js/main.js"></script>
+    <script src="/js/calculate-fee.js"></script>
+    <script src="/js/recommend.js"></script>
+    <script src="/js/notices.js"></script>
+    <script src="/js/traker.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+  </body>
+</html>

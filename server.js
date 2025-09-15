@@ -216,12 +216,14 @@ app.get("/", (req, res) => {
 app.get("/productPage", (req, res) => {
   res.sendFile(path.join(mainPagesPath, "product.html"));
 });
+app.get("/recommendPage", (req, res) => {
+  res.sendFile(path.join(mainPagesPath, "recommend.html"));
+});
 app.get("/signinPage", (req, res) => {
   res.sendFile(path.join(mainPagesPath, "signin.html"));
 });
 app.get("/valuesPage", (req, res) => {
-  if (req.session.user)
-    res.sendFile(path.join(mainPagesPath, "values.html")); // 임시
+  if (req.session.user) res.sendFile(path.join(mainPagesPath, "values.html"));
   else res.redirect("/signinPage");
 });
 app.get("/bidResultsPage", (req, res) => {

@@ -32,6 +32,14 @@ const cache = {
       ranks: { data: null, lastFetched: null },
       auctionTypes: { data: null, lastFetched: null },
     },
+    // 추천 아이템만 대상으로 한 필터 캐시
+    recommend: {
+      brands: { data: null, lastFetched: null },
+      dates: { data: null, lastFetched: null },
+      aucNums: { data: null, lastFetched: null },
+      ranks: { data: null, lastFetched: null },
+      auctionTypes: { data: null, lastFetched: null },
+    },
   },
 };
 
@@ -39,7 +47,6 @@ const cache = {
 function isCacheValid(cacheItem, duration) {
   const currentTime = new Date().getTime();
 
-  // sync 관련 조건 제거
   return (
     cacheItem.data !== null &&
     cacheItem.lastFetched !== null &&
@@ -48,51 +55,20 @@ function isCacheValid(cacheItem, duration) {
 }
 
 function updateCache(cacheItem, data) {
-  // sync 관련 로직 제거
   cacheItem.data = data;
   cacheItem.lastFetched = new Date().getTime();
 }
-function invalidateCache(type, subType = null) {
-  if (type === "all") {
-    Object.keys(cache).forEach((key) => {
-      if (typeof cache[key] === "object") {
-        if (cache[key].data !== undefined) {
-          cache[key].data = null;
-          cache[key].lastFetched = null;
-        } else {
-          Object.keys(cache[key]).forEach((subKey) => {
-            Object.keys(cache[key][subKey]).forEach((item) => {
-              cache[key][subKey][item].data = null;
-              cache[key][subKey][item].lastFetched = null;
-            });
-          });
-        }
-      }
-    });
-  } else if (type === "filters") {
-    if (subType) {
-      if (cache.filters.withStats[subType]) {
-        cache.filters.withStats[subType].data = null;
-        cache.filters.withStats[subType].lastFetched = null;
-      }
-    } else {
-      Object.keys(cache.filters.withStats).forEach((item) => {
-        cache.filters.withStats[item].data = null;
-        cache.filters.withStats[item].lastFetched = null;
-      });
-    }
-  } else if (type === "exchange") {
-    cache.exchange.data = null;
-    cache.exchange.lastFetched = null;
-  }
-}
 
 // ===== 기본 필터 조건 (단순화) =====
-async function buildBaseFilterConditions() {
-  return {
-    conditions: ["ci.is_enabled = 1"],
-    queryParams: [],
-  };
+async function buildBaseFilterConditions(isRecommendOnly = false) {
+  const conditions = ["ci.is_enabled = 1"];
+  const queryParams = [];
+
+  if (isRecommendOnly) {
+    conditions.push("ci.recommend >= 1");
+  }
+
+  return { conditions, queryParams };
 }
 
 // ===== 메인 데이터 조회 라우터 =====
@@ -410,12 +386,21 @@ router.get("/recommended", async (req, res) => {
 
 // ===== 통계와 함께 브랜드 조회 =====
 router.get("/brands-with-count", async (req, res) => {
+  const { recommend = "false" } = req.query;
+  const isRecommendOnly = recommend === "true";
+
   try {
-    if (isCacheValid(cache.filters.withStats.brands, STATS_CACHE_DURATION)) {
-      return res.json(cache.filters.withStats.brands.data);
+    const cacheKey = isRecommendOnly
+      ? cache.filters.recommend.brands
+      : cache.filters.withStats.brands;
+
+    if (isCacheValid(cacheKey, STATS_CACHE_DURATION)) {
+      return res.json(cacheKey.data);
     }
 
-    const { conditions, queryParams } = await buildBaseFilterConditions();
+    const { conditions, queryParams } = await buildBaseFilterConditions(
+      isRecommendOnly
+    );
 
     const [results] = await pool.query(
       `SELECT ci.brand, COUNT(*) as count
@@ -426,7 +411,7 @@ router.get("/brands-with-count", async (req, res) => {
       queryParams
     );
 
-    updateCache(cache.filters.withStats.brands, results);
+    updateCache(cacheKey, results);
     res.json(results);
   } catch (error) {
     console.error("Error fetching brands with count:", error);
@@ -436,14 +421,21 @@ router.get("/brands-with-count", async (req, res) => {
 
 // ===== 경매 타입 조회 =====
 router.get("/auction-types", async (req, res) => {
+  const { recommend = "false" } = req.query;
+  const isRecommendOnly = recommend === "true";
+
   try {
-    if (
-      isCacheValid(cache.filters.withStats.auctionTypes, STATS_CACHE_DURATION)
-    ) {
-      return res.json(cache.filters.withStats.auctionTypes.data);
+    const cacheKey = isRecommendOnly
+      ? cache.filters.recommend.auctionTypes
+      : cache.filters.withStats.auctionTypes;
+
+    if (isCacheValid(cacheKey, STATS_CACHE_DURATION)) {
+      return res.json(cacheKey.data);
     }
 
-    const { conditions, queryParams } = await buildBaseFilterConditions();
+    const { conditions, queryParams } = await buildBaseFilterConditions(
+      isRecommendOnly
+    );
 
     const [results] = await pool.query(
       `SELECT ci.bid_type, COUNT(*) as count
@@ -454,7 +446,7 @@ router.get("/auction-types", async (req, res) => {
       queryParams
     );
 
-    updateCache(cache.filters.withStats.auctionTypes, results);
+    updateCache(cacheKey, results);
     res.json(results);
   } catch (error) {
     console.error("Error fetching auction types:", error);
@@ -464,12 +456,21 @@ router.get("/auction-types", async (req, res) => {
 
 // ===== 통계와 함께 날짜 조회 =====
 router.get("/scheduled-dates-with-count", async (req, res) => {
+  const { recommend = "false" } = req.query;
+  const isRecommendOnly = recommend === "true";
+
   try {
-    if (isCacheValid(cache.filters.withStats.dates, STATS_CACHE_DURATION)) {
-      return res.json(cache.filters.withStats.dates.data);
+    const cacheKey = isRecommendOnly
+      ? cache.filters.recommend.dates
+      : cache.filters.withStats.dates;
+
+    if (isCacheValid(cacheKey, STATS_CACHE_DURATION)) {
+      return res.json(cacheKey.data);
     }
 
-    const { conditions, queryParams } = await buildBaseFilterConditions();
+    const { conditions, queryParams } = await buildBaseFilterConditions(
+      isRecommendOnly
+    );
 
     const [results] = await pool.query(
       `SELECT DATE(ci.scheduled_date) as Date, COUNT(*) as count
@@ -480,13 +481,83 @@ router.get("/scheduled-dates-with-count", async (req, res) => {
       queryParams
     );
 
-    updateCache(cache.filters.withStats.dates, results);
+    updateCache(cacheKey, results);
     res.json(results);
   } catch (error) {
     console.error("Error fetching scheduled dates with count:", error);
     res
       .status(500)
       .json({ message: "Error fetching scheduled dates with count" });
+  }
+});
+
+// ===== 경매번호 조회 =====
+router.get("/auc-nums", async (req, res) => {
+  const { recommend = "false" } = req.query;
+  const isRecommendOnly = recommend === "true";
+
+  try {
+    const cacheKey = isRecommendOnly
+      ? cache.filters.recommend.aucNums
+      : cache.filters.withStats.aucNums;
+
+    if (isCacheValid(cacheKey, STATS_CACHE_DURATION)) {
+      return res.json(cacheKey.data);
+    }
+
+    const { conditions, queryParams } = await buildBaseFilterConditions(
+      isRecommendOnly
+    );
+
+    const [results] = await pool.query(
+      `SELECT ci.auc_num, COUNT(*) as count
+       FROM crawled_items ci
+       WHERE ${conditions.join(" AND ")} AND ci.auc_num IS NOT NULL
+       GROUP BY ci.auc_num
+       ORDER BY ci.auc_num ASC`,
+      queryParams
+    );
+
+    updateCache(cacheKey, results);
+    res.json(results);
+  } catch (error) {
+    console.error("Error fetching auction numbers:", error);
+    res.status(500).json({ message: "Error fetching auction numbers" });
+  }
+});
+
+// ===== 등급 조회 =====
+router.get("/ranks", async (req, res) => {
+  const { recommend = "false" } = req.query;
+  const isRecommendOnly = recommend === "true";
+
+  try {
+    const cacheKey = isRecommendOnly
+      ? cache.filters.recommend.ranks
+      : cache.filters.withStats.ranks;
+
+    if (isCacheValid(cacheKey, STATS_CACHE_DURATION)) {
+      return res.json(cacheKey.data);
+    }
+
+    const { conditions, queryParams } = await buildBaseFilterConditions(
+      isRecommendOnly
+    );
+
+    const [results] = await pool.query(
+      `SELECT ci.rank, COUNT(*) as count
+       FROM crawled_items ci
+       WHERE ${conditions.join(" AND ")}
+       GROUP BY ci.rank
+       ORDER BY FIELD(ci.rank, 'N', 'S', 'A', 'AB', 'B', 'BC', 'C', 'D', 'E', 'F')`,
+      queryParams
+    );
+
+    updateCache(cacheKey, results);
+    res.json(results);
+  } catch (error) {
+    console.error("Error fetching ranks:", error);
+    res.status(500).json({ message: "Error fetching ranks" });
   }
 });
 
@@ -523,32 +594,6 @@ router.get("/categories", async (req, res) => {
   }
 });
 
-// ===== 경매번호 조회 =====
-router.get("/auc-nums", async (req, res) => {
-  try {
-    if (isCacheValid(cache.filters.withStats.aucNums, STATS_CACHE_DURATION)) {
-      return res.json(cache.filters.withStats.aucNums.data);
-    }
-
-    const { conditions, queryParams } = await buildBaseFilterConditions();
-
-    const [results] = await pool.query(
-      `SELECT ci.auc_num, COUNT(*) as count
-       FROM crawled_items ci
-       WHERE ${conditions.join(" AND ")} AND ci.auc_num IS NOT NULL
-       GROUP BY ci.auc_num
-       ORDER BY ci.auc_num ASC`,
-      queryParams
-    );
-
-    updateCache(cache.filters.withStats.aucNums, results);
-    res.json(results);
-  } catch (error) {
-    console.error("Error fetching auction numbers:", error);
-    res.status(500).json({ message: "Error fetching auction numbers" });
-  }
-});
-
 // ===== 환율 조회 =====
 router.get("/exchange-rate", async (req, res) => {
   try {
@@ -573,29 +618,6 @@ router.get("/exchange-rate", async (req, res) => {
     }
 
     res.status(500).json({ error: "Failed to fetch exchange rate" });
-  }
-});
-
-// ===== 등급 조회 =====
-router.get("/ranks", async (req, res) => {
-  try {
-    if (isCacheValid(cache.filters.withStats.ranks, STATS_CACHE_DURATION)) {
-      return res.json(cache.filters.withStats.ranks.data);
-    }
-
-    const [results] = await pool.query(
-      `SELECT ci.rank, COUNT(*) as count
-       FROM crawled_items ci
-       WHERE ci.is_enabled = 1
-       GROUP BY ci.rank
-       ORDER BY FIELD(ci.rank, 'N', 'S', 'A', 'AB', 'B', 'BC', 'C', 'D', 'E', 'F')`
-    );
-
-    updateCache(cache.filters.withStats.ranks, results);
-    res.json(results);
-  } catch (error) {
-    console.error("Error fetching ranks:", error);
-    res.status(500).json({ message: "Error fetching ranks" });
   }
 });
 
