@@ -34,34 +34,35 @@
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
-/* 필터 그리드 - 기본 */
-.filter-section .filter-grid {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
-  gap: 12px;
-  padding: 15px;
-  border: 1px solid #e9ecef;
-  border-radius: 6px;
-  background-color: #f8f9fa;
-}
-
-/* 각 필터 그리드 개별 적용 */
+/* 모든 필터 관련 스타일 강제 오버라이드 */
+div[id$="Filters"] .filter-grid,
+div[id$="FilterGrid"],
+#dateFilters .filter-grid,
+#brandFilters .filter-grid,
+#categoryFilters .filter-grid,
 #dateFilterGrid,
 #brandFilterGrid,
 #categoryFilterGrid {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
-  gap: 12px;
-  padding: 15px;
-  border: 1px solid #e9ecef;
-  border-radius: 6px;
-  background-color: #f8f9fa;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  padding: 15px !important;
+  border: 1px solid #e9ecef !important;
+  border-radius: 6px !important;
+  background-color: #f8f9fa !important;
 }
 
-/* 브랜드 필터에만 스크롤 추가 */
-#brandFilterGrid {
-  max-height: 300px;
-  overflow-y: auto;
+div[id$="Filters"] .filter-grid .filter-item,
+div[id$="FilterGrid"] .filter-item,
+#dateFilters .filter-grid .filter-item,
+#brandFilters .filter-grid .filter-item,
+#categoryFilters .filter-grid .filter-item,
+#dateFilterGrid .filter-item,
+#brandFilterGrid .filter-item,
+#categoryFilterGrid .filter-item {
+  flex: 0 0 auto !important;
+  min-width: 150px !important;
+  max-width: 200px !important;
 }
 
 .filter-item {
