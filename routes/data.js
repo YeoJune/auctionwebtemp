@@ -544,7 +544,9 @@ router.get("/brands-with-count", async (req, res) => {
       return res.json(cache.filters.withStats.brands.data);
     }
 
-    const { conditions, queryParams } = await buildBaseFilterConditions();
+    const { conditions, queryParams } = await buildBaseFilterConditions(
+      req.session.user?.id
+    );
 
     const [results] = await pool.query(
       `SELECT ci.brand, COUNT(*) as count
@@ -572,7 +574,9 @@ router.get("/auction-types", async (req, res) => {
       return res.json(cache.filters.withStats.auctionTypes.data);
     }
 
-    const { conditions, queryParams } = await buildBaseFilterConditions();
+    const { conditions, queryParams } = await buildBaseFilterConditions(
+      req.session.user?.id
+    );
 
     const [results] = await pool.query(
       `SELECT ci.bid_type, COUNT(*) as count
@@ -598,7 +602,9 @@ router.get("/scheduled-dates-with-count", async (req, res) => {
       return res.json(cache.filters.withStats.dates.data);
     }
 
-    const { conditions, queryParams } = await buildBaseFilterConditions();
+    const { conditions, queryParams } = await buildBaseFilterConditions(
+      req.session.user?.id
+    );
 
     const [results] = await pool.query(
       `SELECT DATE(ci.scheduled_date) as Date, COUNT(*) as count
@@ -659,7 +665,9 @@ router.get("/auc-nums", async (req, res) => {
       return res.json(cache.filters.withStats.aucNums.data);
     }
 
-    const { conditions, queryParams } = await buildBaseFilterConditions();
+    const { conditions, queryParams } = await buildBaseFilterConditions(
+      req.session.user?.id
+    );
 
     const [results] = await pool.query(
       `SELECT ci.auc_num, COUNT(*) as count
