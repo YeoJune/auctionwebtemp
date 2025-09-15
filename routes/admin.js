@@ -18,12 +18,46 @@ const {
 const {
   getFilterSettings,
   updateFilterSetting,
-  initializeFilterSettings,
+// 추천 설정 삭제
+router.delete("/recommend-settings/:id", isAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await deleteRecommendSetting(id);
+    if (!result) {
+      return res.status(404).json({ message: "Recommend setting not found" });
+    }
+    res.json({ message: "Recommend setting deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting recommend setting:", error);
+    res.status(500).json({ message: "Error deleting recommend setting" });
+  }
+});
+
+// 추천 설정 배치 업데이트
+router.put("/recommend-settings/batch", isAdmin, async (req, res) => {
+  try {
+    const { settings } = req.body;
+
+    if (!Array.isArray(settings)) {
+      return res.status(400).json({ message: "Settings must be an array" });
+    }
+
+    const results = await updateRecommendSettingsBatch(settings);
+    res.json({
+      message: "Batch update completed",
+      updated: results,
+    });
+  } catch (error) {
+    console.error("Error performing batch update of recommend settings:", error);
+    res.status(500).json({ message: "Error updating recommend settings" });
+  }
+});lterSettings,
 } = require("../utils/filterDB");
 const {
   getRecommendSettings,
   addRecommendSetting,
   updateRecommendSetting,
+  updateRecommendSettingsBatch,
   deleteRecommendSetting,
 } = require("../utils/recommend");
 const DBManager = require("../utils/DBManager");
@@ -506,6 +540,26 @@ router.delete("/recommend-settings/:id", isAdmin, async (req, res) => {
   } catch (error) {
     console.error("Error deleting recommend setting:", error);
     res.status(500).json({ message: "Error deleting recommend setting" });
+  }
+});
+
+// 추천 설정 배치 업데이트
+router.put("/recommend-settings/batch", isAdmin, async (req, res) => {
+  try {
+    const { settings } = req.body;
+
+    if (!Array.isArray(settings)) {
+      return res.status(400).json({ message: "Settings must be an array" });
+    }
+
+    const results = await updateRecommendSettingsBatch(settings);
+    res.json({
+      message: "Batch update completed",
+      updated: results,
+    });
+  } catch (error) {
+    console.error("Error performing batch update of recommend settings:", error);
+    res.status(500).json({ message: "Error updating recommend settings" });
   }
 });
 

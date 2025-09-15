@@ -425,6 +425,15 @@ async function deleteRecommendSetting(settingId) {
   });
 }
 
+// 추천 설정 배치 업데이트
+async function updateRecommendSettingsBatch(settings) {
+  // settings: [{ id, ruleName, conditions, recommendScore, isEnabled }, ...]
+  return fetchAPI("/admin/recommend-settings/batch", {
+    method: "PUT",
+    body: JSON.stringify({ settings }),
+  });
+}
+
 // ---- 회원 관리 API ----
 
 // 회원 목록 조회

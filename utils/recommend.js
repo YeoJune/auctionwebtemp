@@ -7,7 +7,6 @@ async function getRecommendSettings() {
     const [rows] = await conn.query(`
       SELECT id, rule_name, conditions, recommend_score, is_enabled 
       FROM recommend_settings 
-      WHERE is_enabled = 1
       ORDER BY recommend_score DESC
     `);
     return rows;
@@ -76,6 +75,41 @@ async function deleteRecommendSetting(id) {
   }
 }
 
+// 배치로 추천 설정 업데이트
+async function updateRecommendSettingsBatch(settings) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const results = [];
+    for (const setting of settings) {
+      const { id, ruleName, conditions, recommendScore, isEnabled } = setting;
+
+      const [result] = await conn.query(
+        `UPDATE recommend_settings 
+         SET rule_name = ?, conditions = ?, recommend_score = ?, is_enabled = ?
+         WHERE id = ?`,
+        [ruleName, JSON.stringify(conditions), recommendScore, isEnabled, id]
+      );
+
+      if (result.affectedRows > 0) {
+        results.push({ id, updated: true });
+      } else {
+        results.push({ id, updated: false, error: "Rule not found" });
+      }
+    }
+
+    await conn.commit();
+    return results;
+  } catch (error) {
+    await conn.rollback();
+    console.error("Error batch updating recommend settings:", error);
+    throw error;
+  } finally {
+    conn.release();
+  }
+}
+
 // JSON 조건을 SQL WHERE 조건으로 변환
 function buildRecommendWhereClause(conditions) {
   const whereClauses = [];
@@ -123,6 +157,7 @@ module.exports = {
   getRecommendSettings,
   addRecommendSetting,
   updateRecommendSetting,
+  updateRecommendSettingsBatch,
   deleteRecommendSetting,
   buildRecommendWhereClause,
 };

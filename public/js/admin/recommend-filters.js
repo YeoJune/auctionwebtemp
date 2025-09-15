@@ -49,6 +49,34 @@ function initFilterSection() {
   fetchAndDisplayFilters();
 }
 
+// 로딩 상태 표시
+function showLoading(containerId) {
+  const container = document.getElementById(containerId);
+  if (container) {
+    container.innerHTML = `
+      <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <span>데이터를 불러오는 중...</span>
+      </div>
+    `;
+  }
+}
+
+// 데이터 없음 메시지 표시
+function showNoData(containerId, message) {
+  const container = document.getElementById(containerId);
+  if (container) {
+    container.innerHTML = `<div class="no-data-message">${message}</div>`;
+  }
+}
+
+// 에러 처리
+function handleError(error, defaultMessage = "오류가 발생했습니다") {
+  console.error("Error:", error);
+  const message = error.message || defaultMessage;
+  showAlert(message, "error");
+}
+
 async function fetchAndDisplayFilters() {
   try {
     showLoading("dateFilters");
@@ -69,9 +97,13 @@ function displayFilters(settings) {
 
   ["date", "brand", "category"].forEach((type) => {
     const container = document.getElementById(`${type}Filters`);
-    container.innerHTML = filtersByType[type]
-      .map(createFilterToggleHTML)
-      .join("");
+    if (filtersByType[type].length === 0) {
+      container.innerHTML = `<div class="no-data-message">등록된 ${type} 필터가 없습니다.</div>`;
+    } else {
+      container.innerHTML = filtersByType[type]
+        .map(createFilterToggleHTML)
+        .join("");
+    }
   });
 }
 
@@ -103,6 +135,25 @@ function handleFilterChange(filterType, filterValue, isEnabled) {
   } else {
     delete modifiedFilterSettings[key];
   }
+
+  // 버튼 상태 업데이트
+  updateFilterButtonStates();
+}
+
+function updateFilterButtonStates() {
+  const hasChanges = Object.keys(modifiedFilterSettings).length > 0;
+  const applyBtn = document.getElementById("applyFilterBtn");
+  const cancelBtn = document.getElementById("cancelFilterBtn");
+
+  if (applyBtn) {
+    applyBtn.disabled = !hasChanges;
+    applyBtn.textContent = hasChanges
+      ? `변경사항 적용 (${Object.keys(modifiedFilterSettings).length})`
+      : "변경사항 적용";
+  }
+  if (cancelBtn) {
+    cancelBtn.disabled = !hasChanges;
+  }
 }
 
 async function applyFilterChanges() {
@@ -111,14 +162,27 @@ async function applyFilterChanges() {
     showAlert("변경된 내용이 없습니다.", "info");
     return;
   }
-  if (!confirmAction("변경된 필터 설정을 적용하시겠습니까?")) return;
+  if (!confirmAction(`${changes.length}개의 필터 설정을 적용하시겠습니까?`))
+    return;
 
   try {
+    const applyBtn = document.getElementById("applyFilterBtn");
+    if (applyBtn) {
+      applyBtn.disabled = true;
+      applyBtn.innerHTML = '<div class="loading-spinner"></div> 적용 중...';
+    }
+
     await updateFilterSettingsBatch(changes);
     showAlert("필터 설정이 성공적으로 업데이트되었습니다.", "success");
     fetchAndDisplayFilters();
   } catch (error) {
     handleError(error, "필터 설정 업데이트에 실패했습니다.");
+  } finally {
+    const applyBtn = document.getElementById("applyFilterBtn");
+    if (applyBtn) {
+      applyBtn.disabled = false;
+      applyBtn.innerHTML = "변경사항 적용";
+    }
   }
 }
 
@@ -126,6 +190,7 @@ function revertFilterChanges() {
   if (Object.keys(modifiedFilterSettings).length === 0) return;
   displayFilters(originalFilterSettings);
   modifiedFilterSettings = {};
+  updateFilterButtonStates();
   showAlert("변경이 취소되었습니다.", "info");
 }
 
@@ -134,11 +199,21 @@ function revertFilterChanges() {
 // =======================================================================
 
 let recommendRules = [];
+let modifiedRecommendRules = {};
 
 function initRecommendSection() {
   document
     .getElementById("addRecommendRuleBtn")
     .addEventListener("click", () => renderRuleForm()); // 새 규칙 폼 렌더링
+
+  document
+    .getElementById("applyRecommendBtn")
+    ?.addEventListener("click", applyRecommendChanges);
+
+  document
+    .getElementById("cancelRecommendBtn")
+    ?.addEventListener("click", revertRecommendChanges);
+
   fetchAndDisplayRecommendRules();
 }
 
@@ -191,7 +266,9 @@ function createRuleCardHTML(rule) {
       if (cond.keywords) values = cond.keywords.join(", ");
       if (cond.min) values = `${cond.min} ~ ${cond.max}`;
       if (cond.start) values = `${cond.start} ~ ${cond.end}`;
-      return `<li><strong>${field}:</strong> ${values}</li>`;
+      return `<li><strong>${getFieldDisplayName(field)}:</strong> ${values} (${
+        cond.operator
+      })</li>`;
     })
     .join("");
 
@@ -201,7 +278,8 @@ function createRuleCardHTML(rule) {
         <span class="rule-name">${rule.rule_name}</span>
         <span class="rule-score">점수: ${rule.recommend_score}</span>
         <label class="toggle-switch small">
-          <input type="checkbox" ${rule.is_enabled ? "checked" : ""}>
+          <input type="checkbox" ${rule.is_enabled ? "checked" : ""} 
+                 onchange="handleRuleToggleChange(${rule.id}, this.checked)">
           <span class="toggle-slider"></span>
         </label>
       </div>
@@ -218,6 +296,61 @@ function createRuleCardHTML(rule) {
       </div>
     </div>
   `;
+}
+
+function getFieldDisplayName(field) {
+  const displayNames = {
+    brand: "브랜드",
+    category: "카테고리",
+    scheduled_date: "경매일",
+    starting_price: "시작 가격",
+    title: "제목",
+  };
+  return displayNames[field] || field;
+}
+
+function handleRuleToggleChange(ruleId, isEnabled) {
+  const original = recommendRules.find((r) => r.id === ruleId);
+  if (original && original.is_enabled !== isEnabled) {
+    modifiedRecommendRules[ruleId] = { ...original, is_enabled: isEnabled };
+  } else {
+    delete modifiedRecommendRules[ruleId];
+  }
+  updateRecommendButtonStates();
+}
+
+function updateRecommendButtonStates() {
+  const hasChanges = Object.keys(modifiedRecommendRules).length > 0;
+  const applyBtn = document.getElementById("applyRecommendBtn");
+  const cancelBtn = document.getElementById("cancelRecommendBtn");
+
+  if (applyBtn) applyBtn.disabled = !hasChanges;
+  if (cancelBtn) cancelBtn.disabled = !hasChanges;
+}
+
+async function applyRecommendChanges() {
+  const changes = Object.values(modifiedRecommendRules);
+  if (changes.length === 0) {
+    showAlert("변경된 내용이 없습니다.", "info");
+    return;
+  }
+  if (!confirmAction("변경된 추천 설정을 적용하시겠습니까?")) return;
+
+  try {
+    await updateRecommendSettingsBatch(changes);
+    showAlert("추천 설정이 성공적으로 업데이트되었습니다.", "success");
+    fetchAndDisplayRecommendRules();
+  } catch (error) {
+    handleError(error, "추천 설정 업데이트에 실패했습니다.");
+  }
+}
+
+function revertRecommendChanges() {
+  if (Object.keys(modifiedRecommendRules).length === 0) return;
+  displayRecommendRules();
+  modifiedRecommendRules = {};
+  updateRecommendButtonStates();
+  showAlert("변경이 취소되었습니다.", "info");
 }
 
 async function handleDeleteRule(ruleId) {
