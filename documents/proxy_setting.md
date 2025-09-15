@@ -131,3 +131,13 @@ sudo lsof -p $(pidof squid) | wc -l
 ```bash
 sudo tail -f /var/log/squid/access.log
 ```
+
+## 자동 설치
+
+```bash
+# 스크립트 다운로드 및 실행 권한 부여
+chmod +x install_proxy.sh
+
+# 실행
+./install_proxy.sh <내_공인_IP>
+```
