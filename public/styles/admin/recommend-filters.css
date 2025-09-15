@@ -45,9 +45,21 @@
   background-color: #f8f9fa;
 }
 
-/* 브랜드 필터에만 스크롤 추가 */
-.filter-section #brandFilterGrid {
+/* 각 필터 그리드 개별 적용 */
+#dateFilterGrid,
+#brandFilterGrid,
+#categoryFilterGrid {
+  display: grid !important;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  background-color: #f8f9fa;
+}
+
+/* 브랜드 필터에만 스크롤 추가 */
+#brandFilterGrid {
   max-height: 300px;
   overflow-y: auto;
 }
