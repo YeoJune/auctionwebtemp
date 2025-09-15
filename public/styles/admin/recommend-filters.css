@@ -1,50 +1,62 @@
 /* public/styles/admin/recommend-filters.css */
 
-/* 필터 설정 섹션 */
-.filter-section {
-  padding: 20px 0;
-}
-
-.filter-group {
-  margin-bottom: 30px;
-}
-
-.filter-title {
-  font-weight: 600;
-  font-size: 16px;
+/* 브랜드 검색 컨테이너 */
+.brand-search-container {
   margin-bottom: 15px;
-  color: #333;
-  border-bottom: 2px solid #e9ecef;
-  padding-bottom: 8px;
 }
 
+.brand-search {
+  width: 100%;
+  max-width: 300px;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.brand-search:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* 필터 그리드 */
 .filter-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 15px;
-  margin-top: 15px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 10px;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  background-color: #f8f9fa;
+}
+
+/* 브랜드 필터는 더 높게 */
+#brandFilterGrid {
+  max-height: 300px;
 }
 
 .filter-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
+  gap: 10px;
+  padding: 8px 12px;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
   transition: all 0.2s ease;
 }
 
 .filter-item:hover {
-  background: #e9ecef;
-  border-color: #dee2e6;
+  background-color: #f1f3f4;
+  border-color: #007bff;
 }
 
 .filter-value {
-  flex: 1;
   font-size: 14px;
-  color: #495057;
+  color: #333;
 }
 
 /* 토글 스위치 */
@@ -53,6 +65,12 @@
   display: inline-block;
   width: 50px;
   height: 24px;
+  margin: 0;
+}
+
+.toggle-switch.small {
+  width: 40px;
+  height: 20px;
 }
 
 .toggle-switch input {
@@ -93,11 +111,6 @@ input:checked + .toggle-slider:before {
   transform: translateX(26px);
 }
 
-.toggle-switch.small {
-  width: 40px;
-  height: 20px;
-}
-
 .toggle-switch.small .toggle-slider:before {
   height: 14px;
   width: 14px;
@@ -109,35 +122,82 @@ input:checked + .toggle-slider:before {
   transform: translateX(20px);
 }
 
-/* 추천 규칙 섹션 */
-.recommend-section {
-  padding: 20px 0;
+/* 체크박스 컨테이너 (추천 규칙 폼용) */
+.checkbox-container {
+  width: 100%;
+  max-width: 400px;
 }
 
+.checkbox-container.searchable {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 10px;
+  background-color: #f8f9fa;
+}
+
+.condition-search {
+  margin-bottom: 10px;
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.checkbox-list {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 8px;
+  background: white;
+}
+
+.checkbox-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background-color 0.15s ease;
+}
+
+.checkbox-option:hover {
+  background-color: #e9ecef;
+}
+
+.checkbox-option input[type="checkbox"] {
+  margin: 0;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.checkbox-option span {
+  font-size: 14px;
+  color: #333;
+  user-select: none;
+}
+
+/* 추천 규칙 카드 */
 .rule-card {
   border: 1px solid #e9ecef;
-  border-radius: 12px;
-  background: #ffffff;
+  border-radius: 8px;
+  background: white;
   margin-bottom: 20px;
   overflow: hidden;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.rule-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  border-color: #dee2e6;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .rule-header {
   background: #f8f9fa;
-  padding: 16px 20px;
+  padding: 15px 20px;
   border-bottom: 1px solid #e9ecef;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
+  gap: 15px;
 }
 
 .rule-name {
@@ -145,7 +205,6 @@ input:checked + .toggle-slider:before {
   font-size: 16px;
   color: #333;
   flex: 1;
-  min-width: 200px;
 }
 
 .rule-score {
@@ -153,7 +212,7 @@ input:checked + .toggle-slider:before {
   color: #6c757d;
   background: #e9ecef;
   padding: 4px 12px;
-  border-radius: 16px;
+  border-radius: 12px;
   font-size: 13px;
 }
 
@@ -170,9 +229,7 @@ input:checked + .toggle-slider:before {
 .rule-body li {
   padding: 8px 0;
   border-bottom: 1px solid #f8f9fa;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  font-size: 14px;
 }
 
 .rule-body li:last-child {
@@ -180,12 +237,12 @@ input:checked + .toggle-slider:before {
 }
 
 .rule-body strong {
-  min-width: 100px;
   color: #495057;
+  margin-right: 8px;
 }
 
 .rule-actions {
-  padding: 16px 20px;
+  padding: 15px 20px;
   background: #f8f9fa;
   border-top: 1px solid #e9ecef;
   display: flex;
@@ -196,24 +253,24 @@ input:checked + .toggle-slider:before {
 /* 규칙 폼 */
 .rule-form-card {
   border: 2px solid #007bff;
-  border-radius: 12px;
-  background: #ffffff;
+  border-radius: 8px;
+  background: white;
   margin-bottom: 30px;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.15);
 }
 
 .rule-form-card h3 {
   background: #007bff;
   color: white;
   margin: 0;
-  padding: 16px 20px;
+  padding: 15px 20px;
   font-size: 18px;
   font-weight: 600;
 }
 
 .rule-form-card form {
-  padding: 24px;
+  padding: 20px;
 }
 
 .form-group {
@@ -225,151 +282,60 @@ input:checked + .toggle-slider:before {
   margin-bottom: 8px;
   font-weight: 500;
   color: #333;
-}
-
-.form-control {
-  width: 100%;
-  padding: 10px 14px;
-  border: 1px solid #ced4da;
-  border-radius: 6px;
   font-size: 14px;
-  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.form-control:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-}
-
+/* 조건 행 */
 .condition-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
-  margin-bottom: 12px;
-  padding: 16px;
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
+  margin-bottom: 15px;
+  padding: 15px;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  background-color: #f8f9fa;
 }
 
 .condition-type-select {
   min-width: 120px;
+  padding: 8px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background-color: white;
+  font-size: 14px;
 }
 
 .condition-input-container {
   flex: 1;
-}
-
-.condition-input-container .form-control {
-  margin-bottom: 0;
-}
-
-.date-range-input,
-.price-range-input {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-.date-range-input span,
-.price-range-input span {
+.condition-input-container input {
+  padding: 8px 10px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.condition-input-container span {
   color: #6c757d;
   font-weight: 500;
 }
 
-.condition-select {
-  min-height: 100px;
-}
-
-.condition-input-placeholder {
-  color: #6c757d;
-  font-style: italic;
-  padding: 10px 14px;
-  background: #e9ecef;
-  border-radius: 6px;
-}
-
 .form-actions {
-  margin-top: 30px;
+  margin-top: 25px;
   padding-top: 20px;
   border-top: 1px solid #e9ecef;
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 10px;
 }
 
-/* 버튼 스타일 */
-.btn {
-  padding: 8px 16px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  text-decoration: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  white-space: nowrap;
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-sm {
-  padding: 6px 12px;
-  font-size: 13px;
-}
-
-.btn-primary {
-  background-color: #007bff;
-  border-color: #007bff;
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background-color: #0056b3;
-  border-color: #004085;
-}
-
-.btn-success {
-  background-color: #28a745;
-  border-color: #28a745;
-  color: white;
-}
-
-.btn-success:hover:not(:disabled) {
-  background-color: #1e7e34;
-  border-color: #1c7430;
-}
-
-.btn-secondary {
-  background-color: #6c757d;
-  border-color: #6c757d;
-  color: white;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background-color: #545b62;
-  border-color: #4e555b;
-}
-
-.btn-danger {
-  background-color: #dc3545;
-  border-color: #dc3545;
-  color: white;
-}
-
-.btn-danger:hover:not(:disabled) {
-  background-color: #c82333;
-  border-color: #bd2130;
-}
-
-/* 로딩 및 상태 표시 */
+/* 로딩 및 상태 */
 .loading-container {
   display: flex;
   align-items: center;
@@ -404,61 +370,48 @@ input:checked + .toggle-slider:before {
   font-style: italic;
   padding: 40px 20px;
   background: #f8f9fa;
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px dashed #dee2e6;
 }
 
-/* 카드 액션 버튼들 */
-.card-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.card-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
-  font-size: 20px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 20px;
-  padding-bottom: 12px;
-  border-bottom: 2px solid #e9ecef;
-}
-
-/* 반응형 디자인 */
+/* 반응형 */
 @media (max-width: 768px) {
   .filter-grid {
     grid-template-columns: 1fr;
+    max-height: 300px;
+  }
+
+  #brandFilterGrid {
+    max-height: 250px;
   }
 
   .rule-header {
     flex-direction: column;
     align-items: flex-start;
+    gap: 10px;
   }
 
   .condition-row {
     flex-direction: column;
     align-items: stretch;
+    gap: 10px;
   }
 
-  .date-range-input,
-  .price-range-input {
+  .condition-input-container {
     flex-direction: column;
+    align-items: stretch;
     gap: 8px;
   }
 
-  .card-title {
+  .form-actions {
     flex-direction: column;
-    align-items: flex-start;
   }
 
-  .card-actions {
-    width: 100%;
-    justify-content: flex-start;
+  .checkbox-container {
+    max-width: 100%;
+  }
+
+  .brand-search {
+    max-width: 100%;
   }
 }

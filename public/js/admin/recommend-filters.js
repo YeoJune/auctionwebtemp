@@ -100,10 +100,55 @@ function displayFilters(settings) {
     if (filtersByType[type].length === 0) {
       container.innerHTML = `<div class="no-data-message">등록된 ${type} 필터가 없습니다.</div>`;
     } else {
-      container.innerHTML = filtersByType[type]
-        .map(createFilterToggleHTML)
-        .join("");
+      container.innerHTML = createFilterContainerHTML(
+        type,
+        filtersByType[type]
+      );
     }
+  });
+}
+
+function createFilterContainerHTML(type, filters) {
+  let html = "";
+
+  // 브랜드의 경우 검색 기능 추가
+  if (type === "brand") {
+    html += `
+      <div class="brand-search-container">
+        <input type="text" id="brandSearchInput" placeholder="브랜드 검색..." class="form-control brand-search">
+      </div>
+    `;
+  }
+
+  html += `<div class="filter-grid" id="${type}FilterGrid">`;
+  html += filters.map(createFilterToggleHTML).join("");
+  html += `</div>`;
+
+  // 브랜드 검색 이벤트 리스너 추가
+  if (type === "brand") {
+    setTimeout(() => {
+      const searchInput = document.getElementById("brandSearchInput");
+      if (searchInput) {
+        searchInput.addEventListener("input", (e) => {
+          filterBrandList(e.target.value);
+        });
+      }
+    }, 100);
+  }
+
+  return html;
+}
+
+function filterBrandList(searchTerm) {
+  const brandGrid = document.getElementById("brandFilterGrid");
+  const brandItems = brandGrid.querySelectorAll(".filter-item");
+
+  brandItems.forEach((item) => {
+    const brandName = item
+      .querySelector(".filter-value")
+      .textContent.toLowerCase();
+    const matches = brandName.includes(searchTerm.toLowerCase());
+    item.style.display = matches ? "flex" : "none";
   });
 }
 
@@ -495,18 +540,37 @@ function renderConditionInput(type, condition, brands, categories) {
     case "category":
       const options = type === "brand" ? brands : categories;
       const selectedValues = new Set(condition.values || []);
+
+      // 체크박스 방식으로 변경
+      const checkboxesHTML = options
+        .map(
+          (opt) => `
+        <label class="checkbox-option">
+          <input type="checkbox" name="${type}" value="${opt}" ${
+            selectedValues.has(opt) ? "checked" : ""
+          }>
+          <span>${opt}</span>
+        </label>
+      `
+        )
+        .join("");
+
       return `
-        <select class="form-control" multiple name="${type}">
-          ${options
-            .map(
-              (opt) =>
-                `<option value="${opt}" ${
-                  selectedValues.has(opt) ? "selected" : ""
-                }>${opt}</option>`
-            )
-            .join("")}
-        </select>
+        <div class="checkbox-container ${type === "brand" ? "searchable" : ""}">
+          ${
+            type === "brand"
+              ? `
+            <input type="text" placeholder="검색..." class="condition-search form-control" 
+                   onkeyup="filterConditionOptions(this)">
+          `
+              : ""
+          }
+          <div class="checkbox-list">
+            ${checkboxesHTML}
+          </div>
+        </div>
       `;
+
     case "scheduled_date":
       return `
         <input type="date" name="date_start" class="form-control" value="${
@@ -536,6 +600,17 @@ function renderConditionInput(type, condition, brands, categories) {
   }
 }
 
+function filterConditionOptions(searchInput) {
+  const checkboxContainer = searchInput.nextElementSibling;
+  const checkboxes = checkboxContainer.querySelectorAll(".checkbox-option");
+  const searchTerm = searchInput.value.toLowerCase();
+
+  checkboxes.forEach((checkbox) => {
+    const text = checkbox.querySelector("span").textContent.toLowerCase();
+    checkbox.style.display = text.includes(searchTerm) ? "block" : "none";
+  });
+}
+
 async function handleRuleFormSubmit(event, existingRule) {
   event.preventDefault();
   const form = event.target;
@@ -550,10 +625,17 @@ async function handleRuleFormSubmit(event, existingRule) {
     switch (type) {
       case "brand":
       case "category":
-        conditions[type] = {
-          operator: "IN",
-          values: formData.getAll(type),
-        };
+        // 체크박스에서 선택된 값들 가져오기
+        const checkedBoxes = row.querySelectorAll(
+          `input[name="${type}"]:checked`
+        );
+        const selectedValues = Array.from(checkedBoxes).map((cb) => cb.value);
+        if (selectedValues.length > 0) {
+          conditions[type] = {
+            operator: "IN",
+            values: selectedValues,
+          };
+        }
         break;
       case "scheduled_date":
         conditions[type] = {
