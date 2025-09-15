@@ -31,29 +31,10 @@
   background-color: #f8f9fa;
 }
 
-/* 브랜드 필터만 스크롤 적용 */
+/* 브랜드 필터만 스크롤 적용 (그리드 유지) */
 #brandFilterGrid {
   max-height: 300px;
   overflow-y: auto;
-}
-
-/* 브랜드 필터 스크롤바 스타일 */
-#brandFilterGrid::-webkit-scrollbar {
-  width: 6px;
-}
-
-#brandFilterGrid::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
-}
-
-#brandFilterGrid::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
-}
-
-#brandFilterGrid::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
 }
 
 .filter-item {
