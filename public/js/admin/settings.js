@@ -13,13 +13,6 @@ document.addEventListener("DOMContentLoaded", function () {
   updateMetrics();
   setInterval(updateMetrics, 60000); // 1분마다 갱신
 
-  // 필터 설정 불러오기
-  fetchFilterSettings()
-    .then(displayFilterSettings)
-    .catch((error) =>
-      handleError(error, "필터 설정을 불러오는데 실패했습니다.")
-    );
-
   // 공지 목록 불러오기
   fetchNotices()
     .then(displayNotices)
@@ -598,93 +591,5 @@ async function deleteSelectedNotice(id) {
     displayNotices(notices);
   } catch (error) {
     handleError(error, "공지 삭제 중 오류가 발생했습니다.");
-  }
-}
-
-// ----- 필터 설정 관리 -----
-
-// 필터 설정 표시
-function displayFilterSettings(settings) {
-  // 필터 타입별로 분류
-  const dateFilters = settings.filter((s) => s.filter_type === "date");
-  const brandFilters = settings.filter((s) => s.filter_type === "brand");
-  const categoryFilters = settings.filter((s) => s.filter_type === "category");
-
-  // 각 섹션에 필터 아이템 추가
-  document.getElementById("dateFilters").innerHTML = dateFilters
-    .map(createFilterToggle)
-    .join("");
-  document.getElementById("brandFilters").innerHTML = brandFilters
-    .map(createFilterToggle)
-    .join("");
-  document.getElementById("categoryFilters").innerHTML = categoryFilters
-    .map(createFilterToggle)
-    .join("");
-}
-
-// 날짜 포맷 함수 (YYYY-MM-DD)
-function formatDateOnly(dateString) {
-  const date = new Date(dateString);
-  // UTC 시간에 9시간(KST)을 더함
-  const kstDate = new Date(date.getTime() + 9 * 60 * 60 * 1000);
-  return kstDate.toISOString().split("T")[0];
-}
-
-// 필터 토글 HTML 생성
-function createFilterToggle(filter) {
-  return `
-      <div class="filter-item">
-        <label class="toggle-switch">
-          <input type="checkbox" 
-            ${filter.is_enabled ? "checked" : ""} 
-            onchange="toggleFilterSetting('${filter.filter_type}', '${
-    filter.filter_value
-  }', this.checked)">
-          <span class="toggle-slider"></span>
-        </label>
-        <span class="filter-value">
-          ${
-            filter.filter_type === "date"
-              ? formatDateOnly(filter.filter_value)
-              : filter.filter_value
-          }
-        </span>
-      </div>
-    `;
-}
-
-// 필터 설정 업데이트 (함수명 변경)
-async function toggleFilterSetting(filterType, filterValue, isEnabled) {
-  try {
-    await updateFilterSetting(filterType, filterValue, isEnabled); // API 함수 호출
-
-    // 성공 메시지 표시
-    const action = isEnabled ? "활성화" : "비활성화";
-    showAlert(
-      `${getFilterTypeText(
-        filterType
-      )} 필터 "${filterValue}"가 ${action}되었습니다.`,
-      "success"
-    );
-  } catch (error) {
-    handleError(error, "필터 설정 업데이트에 실패했습니다.");
-
-    // 실패 시 필터 설정 다시 로드하여 UI 업데이트
-    const settings = await fetchFilterSettings();
-    displayFilterSettings(settings);
-  }
-}
-
-// 필터 타입 텍스트 반환
-function getFilterTypeText(filterType) {
-  switch (filterType) {
-    case "date":
-      return "날짜";
-    case "brand":
-      return "브랜드";
-    case "category":
-      return "카테고리";
-    default:
-      return filterType;
   }
 }
