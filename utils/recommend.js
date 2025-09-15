@@ -153,6 +153,50 @@ function buildRecommendWhereClause(conditions) {
   return { whereClause: whereClauses.join(" AND "), params };
 }
 
+// 추천 설정 즉시 동기화
+async function syncRecommendSettingsToItems() {
+  console.log("Syncing crawled_items.recommend with recommend_settings...");
+
+  const conn = await pool.getConnection();
+  try {
+    // 모든 아이템을 0으로 초기화
+    await conn.query(`UPDATE crawled_items SET recommend = 0`);
+
+    // 활성화된 추천 규칙들을 점수 순으로 조회
+    const [rows] = await conn.query(`
+      SELECT id, rule_name, conditions, recommend_score, is_enabled 
+      FROM recommend_settings 
+      WHERE is_enabled = 1
+      ORDER BY recommend_score DESC
+    `);
+
+    // 각 규칙을 순차적으로 적용
+    for (const setting of rows) {
+      const conditions = JSON.parse(setting.conditions);
+      const { whereClause, params } = buildRecommendWhereClause(conditions);
+
+      if (whereClause) {
+        await conn.query(
+          `
+          UPDATE crawled_items ci
+          SET recommend = ?
+          WHERE (${whereClause}) AND recommend < ?
+        `,
+          [setting.recommend_score, ...params, setting.recommend_score]
+        );
+      }
+    }
+
+    console.log("Recommend sync completed successfully");
+    return { success: true };
+  } catch (error) {
+    console.error("Error during recommend sync:", error);
+    throw error;
+  } finally {
+    conn.release();
+  }
+}
+
 module.exports = {
   getRecommendSettings,
   addRecommendSetting,
@@ -160,4 +204,5 @@ module.exports = {
   updateRecommendSettingsBatch,
   deleteRecommendSetting,
   buildRecommendWhereClause,
+  syncRecommendSettingsToItems,
 };

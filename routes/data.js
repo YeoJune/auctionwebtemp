@@ -7,10 +7,6 @@ const router = express.Router();
 const axios = require("axios");
 const { pool } = require("../utils/DB");
 const { processItem } = require("../utils/processItem");
-const {
-  getRecommendSettings,
-  buildRecommendWhereClause,
-} = require("../utils/recommend");
 
 let pLimit;
 (async () => {
@@ -20,21 +16,13 @@ let pLimit;
 const apiUrl = `https://api.currencyfreaks.com/v2.0/rates/latest?apikey=${process.env.CURRENCY_API_KEY}`;
 
 // ===== 캐싱 관련 설정 =====
-const FILTER_CACHE_DURATION = 5 * 60 * 1000; // 필터 동기화: 5분
-const RECOMMEND_CACHE_DURATION = 10 * 60 * 1000; // 추천 동기화: 10분
-const STATS_CACHE_DURATION = 5 * 60 * 1000; // 통계 캐시: 5분
+const STATS_CACHE_DURATION = 10 * 60 * 1000; // 통계 캐시: 10분
 const EXCHANGE_CACHE_DURATION = 60 * 60 * 1000; // 환율 캐시: 1시간
 
 const cache = {
   exchange: {
     data: null,
     lastFetched: null,
-  },
-  sync: {
-    lastSynced: null,
-  },
-  recommendSync: {
-    lastSynced: null,
   },
   filters: {
     withStats: {
@@ -47,48 +35,28 @@ const cache = {
   },
 };
 
-const normalizeString = (str) => {
-  if (!str) return "";
-  return str
-    .normalize("NFD") // 'è' 같은 문자를 'e'와 '`'로 분리
-    .replace(/[\u0300-\u036f]/g, "") // 악센트 기호(결합 문자) 제거
-    .toLowerCase(); // 소문자로 변환
-};
-
 // ===== 캐시 헬퍼 함수들 =====
 function isCacheValid(cacheItem, duration) {
   const currentTime = new Date().getTime();
 
-  if (cacheItem.lastSynced !== undefined) {
-    return (
-      cacheItem.lastSynced !== null &&
-      currentTime - cacheItem.lastSynced < duration
-    );
-  } else {
-    return (
-      cacheItem.data !== null &&
-      cacheItem.lastFetched !== null &&
-      currentTime - cacheItem.lastFetched < duration
-    );
-  }
+  // sync 관련 조건 제거
+  return (
+    cacheItem.data !== null &&
+    cacheItem.lastFetched !== null &&
+    currentTime - cacheItem.lastFetched < duration
+  );
 }
 
 function updateCache(cacheItem, data) {
-  if (cacheItem.lastSynced !== undefined) {
-    cacheItem.lastSynced = new Date().getTime();
-  } else {
-    cacheItem.data = data;
-    cacheItem.lastFetched = new Date().getTime();
-  }
+  // sync 관련 로직 제거
+  cacheItem.data = data;
+  cacheItem.lastFetched = new Date().getTime();
 }
-
 function invalidateCache(type, subType = null) {
   if (type === "all") {
     Object.keys(cache).forEach((key) => {
       if (typeof cache[key] === "object") {
-        if (cache[key].lastSynced !== undefined) {
-          cache[key].lastSynced = null;
-        } else if (cache[key].data !== undefined) {
+        if (cache[key].data !== undefined) {
           cache[key].data = null;
           cache[key].lastFetched = null;
         } else {
@@ -101,10 +69,6 @@ function invalidateCache(type, subType = null) {
         }
       }
     });
-  } else if (type === "sync") {
-    cache.sync.lastSynced = null;
-  } else if (type === "recommendSync") {
-    cache.recommendSync.lastSynced = null;
   } else if (type === "filters") {
     if (subType) {
       if (cache.filters.withStats[subType]) {
@@ -120,88 +84,6 @@ function invalidateCache(type, subType = null) {
   } else if (type === "exchange") {
     cache.exchange.data = null;
     cache.exchange.lastFetched = null;
-  }
-}
-
-// ===== 필터 동기화 함수 =====
-async function syncItemsWithFilterSettings() {
-  if (isCacheValid(cache.sync, FILTER_CACHE_DURATION)) {
-    return; // 5분 이내면 스킵
-  }
-
-  console.log("Syncing crawled_items.is_enabled with filter_settings...");
-
-  try {
-    await pool.query(`
-      UPDATE crawled_items ci
-      SET is_enabled = CASE 
-        WHEN EXISTS (
-          SELECT 1 FROM filter_settings fs1 
-          WHERE fs1.filter_type = 'brand' 
-          AND fs1.filter_value = ci.brand 
-          AND fs1.is_enabled = 1
-        )
-        AND EXISTS (
-          SELECT 1 FROM filter_settings fs2 
-          WHERE fs2.filter_type = 'category' 
-          AND fs2.filter_value = ci.category 
-          AND fs2.is_enabled = 1
-        )
-        AND EXISTS (
-          SELECT 1 FROM filter_settings fs3 
-          WHERE fs3.filter_type = 'date' 
-          AND fs3.filter_value = DATE(ci.scheduled_date)
-          AND fs3.is_enabled = 1
-        )
-        THEN 1 
-        ELSE 0 
-      END
-    `);
-
-    updateCache(cache.sync, true);
-    console.log("Filter sync completed successfully");
-  } catch (error) {
-    console.error("Error during filter sync:", error);
-  }
-}
-
-// ===== 추천 동기화 함수 =====
-async function syncItemsWithRecommendSettings() {
-  if (isCacheValid(cache.recommendSync, RECOMMEND_CACHE_DURATION)) {
-    return; // 10분 이내면 스킵
-  }
-
-  console.log("Syncing crawled_items.recommend with recommend_settings...");
-
-  try {
-    // 모든 아이템을 0으로 초기화
-    await pool.query(`UPDATE crawled_items SET recommend = 0`);
-
-    // 활성화된 추천 규칙들을 점수 순으로 조회 (높은 점수부터)
-    const recommendSettings = await getRecommendSettings();
-
-    // 각 규칙을 순차적으로 적용 (MAX 로직)
-    for (const setting of recommendSettings) {
-      const conditions = JSON.parse(setting.conditions);
-      const { whereClause, params } = buildRecommendWhereClause(conditions);
-
-      if (whereClause) {
-        // 현재 점수보다 높은 경우만 업데이트 (MAX 로직)
-        await pool.query(
-          `
-          UPDATE crawled_items ci
-          SET recommend = ?
-          WHERE (${whereClause}) AND recommend < ?
-        `,
-          [setting.recommend_score, ...params, setting.recommend_score]
-        );
-      }
-    }
-
-    updateCache(cache.recommendSync, true);
-    console.log("Recommend sync completed successfully");
-  } catch (error) {
-    console.error("Error during recommend sync:", error);
   }
 }
 
@@ -238,10 +120,6 @@ router.get("/", async (req, res) => {
   const userId = req.session.user?.id;
 
   try {
-    // 1. Lazy 동기화들 (각각 다른 주기)
-    await syncItemsWithFilterSettings();
-    await syncItemsWithRecommendSettings();
-
     // 2. 사용자 입찰 데이터 조회 (통합 쿼리)
     let bidData = [];
     let userBidItemIds = [];
@@ -513,8 +391,6 @@ router.get("/recommended", async (req, res) => {
   const { limit = 10, minScore = 1 } = req.query;
 
   try {
-    await syncItemsWithRecommendSettings();
-
     const [items] = await pool.query(
       `
       SELECT ci.* FROM crawled_items ci
@@ -720,25 +596,6 @@ router.get("/ranks", async (req, res) => {
   } catch (error) {
     console.error("Error fetching ranks:", error);
     res.status(500).json({ message: "Error fetching ranks" });
-  }
-});
-
-// ===== 캐시 무효화 =====
-router.post("/invalidate-cache", (req, res) => {
-  try {
-    const { type, subType } = req.body;
-
-    if (!req.session.user?.isAdmin) {
-      return res
-        .status(403)
-        .json({ message: "Unauthorized: Admin access required" });
-    }
-
-    invalidateCache(type, subType);
-    res.json({ message: "Cache invalidated successfully" });
-  } catch (error) {
-    console.error("Error invalidating cache:", error);
-    res.status(500).json({ message: "Error invalidating cache" });
   }
 });
 

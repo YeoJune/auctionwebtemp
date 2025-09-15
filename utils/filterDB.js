@@ -165,9 +165,52 @@ async function initializeFilterSettings() {
   }
 }
 
+// 필터 설정 즉시 동기화
+async function syncFilterSettingsToItems() {
+  console.log("Syncing crawled_items.is_enabled with filter_settings...");
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.query(`
+      UPDATE crawled_items ci
+      SET is_enabled = CASE 
+        WHEN EXISTS (
+          SELECT 1 FROM filter_settings fs1 
+          WHERE fs1.filter_type = 'brand' 
+          AND fs1.filter_value = ci.brand 
+          AND fs1.is_enabled = 1
+        )
+        AND EXISTS (
+          SELECT 1 FROM filter_settings fs2 
+          WHERE fs2.filter_type = 'category' 
+          AND fs2.filter_value = ci.category 
+          AND fs2.is_enabled = 1
+        )
+        AND EXISTS (
+          SELECT 1 FROM filter_settings fs3 
+          WHERE fs3.filter_type = 'date' 
+          AND fs3.filter_value = DATE(ci.scheduled_date)
+          AND fs3.is_enabled = 1
+        )
+        THEN 1 
+        ELSE 0 
+      END
+    `);
+
+    console.log("Filter sync completed successfully");
+    return { success: true };
+  } catch (error) {
+    console.error("Error during filter sync:", error);
+    throw error;
+  } finally {
+    conn.release();
+  }
+}
+
 module.exports = {
   getFilterSettings,
   getEnabledFilters,
   updateFilterSetting,
   initializeFilterSettings,
+  syncFilterSettingsToItems,
 };
