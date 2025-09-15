@@ -98,8 +98,13 @@ function createFilterItem(value, type, selectedArray, label = value) {
 }
 
 // 페이지네이션 생성 함수 (범용)
-function createPagination(currentPage, totalPages, onPageChange) {
-  const container = document.getElementById("pagination");
+function createPagination(
+  currentPage,
+  totalPages,
+  onPageChange,
+  containerId = "pagination"
+) {
+  const container = document.getElementById(containerId);
   if (!container) return;
 
   container.innerHTML = "";

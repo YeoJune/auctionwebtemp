@@ -279,15 +279,15 @@ window.BidResultsCore = (function () {
   }
 
   /**
-   * 결과 표시
+   * 결과 표시 (컨테이너 독립적)
    */
-  function displayResults() {
+  function displayResults(containerId = "resultsList") {
     if (!_pageState) {
       console.error("페이지 상태가 설정되지 않았습니다.");
       return;
     }
 
-    const container = document.getElementById("resultsList");
+    const container = document.getElementById(containerId);
     if (!container) return;
 
     container.innerHTML = "";

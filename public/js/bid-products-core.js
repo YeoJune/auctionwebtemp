@@ -481,15 +481,15 @@ window.BidProductsCore = (function () {
   }
 
   /**
-   * 상품 표시 (템플릿 기반)
+   * 상품 표시 (컨테이너 독립적)
    */
-  function displayProducts() {
+  function displayProducts(containerId = "productList") {
     if (!_pageState) {
       console.error("페이지 상태가 설정되지 않았습니다.");
       return;
     }
 
-    const container = document.getElementById("productList");
+    const container = document.getElementById(containerId);
     if (!container) return;
 
     container.innerHTML = "";
@@ -517,14 +517,15 @@ window.BidProductsCore = (function () {
   }
 
   /**
-   * 페이지네이션 업데이트
+   * 페이지네이션 업데이트 (컨테이너 독립적)
    */
-  function updatePagination(onPageChange) {
+  function updatePagination(onPageChange, paginationId = "pagination") {
     if (!_pageState) return;
     createPagination(
       _pageState.currentPage,
       _pageState.totalPages,
-      onPageChange
+      onPageChange,
+      paginationId
     );
   }
 
