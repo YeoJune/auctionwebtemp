@@ -258,10 +258,10 @@ function initRecommendSection() {
     .addEventListener("click", () => renderRuleForm());
   document
     .getElementById("applyRecommendBtn")
-    ?.addEventListener("click", applyRecommendChanges);
+    .addEventListener("click", applyRecommendChanges);
   document
     .getElementById("cancelRecommendBtn")
-    ?.addEventListener("click", revertRecommendChanges);
+    .addEventListener("click", revertRecommendChanges);
 
   // 이벤트 위임으로 규칙 토글 처리
   document.addEventListener("change", (e) => {
@@ -405,8 +405,11 @@ function getRecommendChanges() {
     const currentEnabled = currentRecommendState[rule.id];
     if (currentEnabled !== undefined && currentEnabled !== rule.is_enabled) {
       changes.push({
-        ...rule,
-        is_enabled: currentEnabled,
+        id: rule.id,
+        ruleName: rule.rule_name,
+        conditions: rule.conditions,
+        recommendScore: rule.recommend_score,
+        isEnabled: currentEnabled,
       });
     }
   });
