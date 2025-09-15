@@ -18,6 +18,17 @@ const {
 const {
   getFilterSettings,
   updateFilterSetting,
+  initializeFilterSettings,
+} = require("../utils/filterDB");
+const {
+  getRecommendSettings,
+  addRecommendSetting,
+  updateRecommendSetting,
+  updateRecommendSettingsBatch,
+  deleteRecommendSetting,
+} = require("../utils/recommend");
+const DBManager = require("../utils/DBManager");
+
 // 추천 설정 삭제
 router.delete("/recommend-settings/:id", isAdmin, async (req, res) => {
   try {
@@ -48,19 +59,13 @@ router.put("/recommend-settings/batch", isAdmin, async (req, res) => {
       updated: results,
     });
   } catch (error) {
-    console.error("Error performing batch update of recommend settings:", error);
+    console.error(
+      "Error performing batch update of recommend settings:",
+      error
+    );
     res.status(500).json({ message: "Error updating recommend settings" });
   }
-});lterSettings,
-} = require("../utils/filterDB");
-const {
-  getRecommendSettings,
-  addRecommendSetting,
-  updateRecommendSetting,
-  updateRecommendSettingsBatch,
-  deleteRecommendSetting,
-} = require("../utils/recommend");
-const DBManager = require("../utils/DBManager");
+});
 
 // Middleware to check if user is admin
 const isAdmin = (req, res, next) => {
@@ -558,7 +563,10 @@ router.put("/recommend-settings/batch", isAdmin, async (req, res) => {
       updated: results,
     });
   } catch (error) {
-    console.error("Error performing batch update of recommend settings:", error);
+    console.error(
+      "Error performing batch update of recommend settings:",
+      error
+    );
     res.status(500).json({ message: "Error updating recommend settings" });
   }
 });
