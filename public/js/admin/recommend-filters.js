@@ -497,6 +497,10 @@ function renderRuleForm(rule = null) {
     if (e.target.matches(".condition-type-select")) {
       updateConditionInput(e.target);
     }
+    // 브랜드 체크박스 변경 시 선택된 항목 요약 업데이트
+    if (e.target.matches('input[name="brand"]')) {
+      updateBrandSummary(e.target.closest(".checkbox-container"));
+    }
   });
 
   // 조건 검색 이벤트 위임
@@ -652,11 +656,13 @@ function renderConditionInput(type, condition, brands, categories, ranks) {
 
       return `
         <div class="checkbox-container searchable">
-          ${
-            selectedCount > 0
-              ? `<div class="selected-summary">${selectedTags}${moreCount}</div>`
-              : ""
-          }
+          <div class="selected-summary" style="display: ${
+            selectedCount > 0 ? "block" : "none"
+          };">
+            <div class="selected-tags">
+              ${selectedTags}${moreCount}
+            </div>
+          </div>
           <input type="text" placeholder="검색..." class="condition-search form-control">
           <div class="checkbox-list">${brandCheckboxesHTML}</div>
         </div>
@@ -882,4 +888,39 @@ function handleError(error, defaultMessage = "오류가 발생했습니다") {
   console.error("Error:", error);
   const message = error.message || defaultMessage;
   showAlert(message, "error");
+}
+
+function updateBrandSummary(container) {
+  const checkedBoxes = container.querySelectorAll(
+    'input[name="brand"]:checked'
+  );
+  const selectedBrands = Array.from(checkedBoxes).map((cb) => cb.value);
+  const selectedCount = selectedBrands.length;
+
+  let summaryDiv = container.querySelector(".selected-summary");
+  if (!summaryDiv) {
+    summaryDiv = document.createElement("div");
+    summaryDiv.className = "selected-summary";
+    container.insertBefore(
+      summaryDiv,
+      container.querySelector(".condition-search")
+    );
+  }
+
+  if (selectedCount > 0) {
+    const selectedTags = selectedBrands
+      .slice(0, 5)
+      .map((brand) => `<span class="selected-tag">${brand}</span>`)
+      .join("");
+
+    const moreCount =
+      selectedCount > 5
+        ? `<span class="more-count">+${selectedCount - 5}개 더</span>`
+        : "";
+
+    summaryDiv.innerHTML = `<div class="selected-tags">${selectedTags}${moreCount}</div>`;
+    summaryDiv.style.display = "block";
+  } else {
+    summaryDiv.style.display = "none";
+  }
 }
