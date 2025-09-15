@@ -206,9 +206,14 @@ async function syncItemsWithRecommendSettings() {
 }
 
 // ===== 기본 필터 조건 (단순화) =====
-async function buildBaseFilterConditions() {
+async function buildBaseFilterConditions(userId = null) {
+  const conditions = ["ci.is_enabled = 1"];
+  // TEMP: 비로그인 사용자는 auc_num = 1 제외
+  if (!userId) {
+    conditions.push("ci.auc_num != 1");
+  }
   return {
-    conditions: ["ci.is_enabled = 1"],
+    conditions,
     queryParams: [],
   };
 }
@@ -274,6 +279,11 @@ router.get("/", async (req, res) => {
     const joins = [];
     const conditions = ["ci.is_enabled = 1"]; // 기본 조건: 활성화된 아이템만
     const queryParams = [];
+
+    // TEMP: 비로그인 사용자는 auc_num = 1 제외
+    if (!userId) {
+      conditions.push("ci.auc_num != 1");
+    }
 
     // 4. 추천 점수 필터
     if (minRecommend && parseInt(minRecommend) > 0) {
