@@ -28,8 +28,8 @@
 
 /* 필터 그리드 - 기본 */
 .filter-section .filter-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
   gap: 12px;
   padding: 15px;
   border: 1px solid #e9ecef;
@@ -39,7 +39,7 @@
 
 /* 브랜드 필터에만 스크롤 추가 */
 .filter-section #brandFilterGrid {
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
   max-height: 300px;
   overflow-y: auto;
 }
@@ -389,13 +389,13 @@ input:checked + .toggle-slider:before {
 /* 반응형 */
 @media (max-width: 768px) {
   .filter-section .filter-grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
     gap: 10px;
     padding: 12px;
   }
 
   .filter-section #brandFilterGrid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
     max-height: 250px;
   }
 
@@ -432,20 +432,20 @@ input:checked + .toggle-slider:before {
 
 @media (min-width: 769px) and (max-width: 1200px) {
   .filter-section .filter-grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
   }
 
   .filter-section #brandFilterGrid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
   }
 }
 
 @media (min-width: 1201px) {
   .filter-section .filter-grid {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
   }
 
   .filter-section #brandFilterGrid {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
   }
 }
