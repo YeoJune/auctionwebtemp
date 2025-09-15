@@ -233,76 +233,78 @@
               <p>진행중인 입찰 내역을 확인하세요</p>
             </div>
 
-            <!-- 검색 툴바 (원본과 동일한 필터) -->
+            <!-- 검색 툴바 -->
             <section class="search-toolbar">
               <div class="filter-row">
-                <!-- Auction Type Filter -->
+                <!-- 경매 타입 필터 -->
                 <div class="filter-section inline-filter">
                   <h4>경매 타입</h4>
                   <div class="radio-buttons horizontal">
                     <div class="radio-item">
                       <input
                         type="radio"
-                        name="bidType"
-                        id="bidType-live"
+                        name="mypage-bidType"
+                        id="mypage-bidType-live"
                         value="live" />
-                      <label for="bidType-live">현장 경매</label>
+                      <label for="mypage-bidType-live">현장 경매</label>
                     </div>
                     <div class="radio-item">
                       <input
                         type="radio"
-                        name="bidType"
-                        id="bidType-direct"
+                        name="mypage-bidType"
+                        id="mypage-bidType-direct"
                         value="direct" />
-                      <label for="bidType-direct">직접 경매</label>
+                      <label for="mypage-bidType-direct">직접 경매</label>
                     </div>
                   </div>
                 </div>
 
-                <!-- Status Filter -->
+                <!-- 상태 필터 -->
                 <div class="filter-section inline-filter">
                   <h4>상태</h4>
                   <div class="radio-buttons horizontal">
                     <div class="radio-item">
                       <input
                         type="radio"
-                        name="status"
-                        id="status-all"
+                        name="mypage-status"
+                        id="mypage-status-all"
                         value="all"
                         checked />
-                      <label for="status-all">전체</label>
+                      <label for="mypage-status-all">전체</label>
                     </div>
                     <div class="radio-item">
                       <input
                         type="radio"
-                        name="status"
-                        id="status-active"
+                        name="mypage-status"
+                        id="mypage-status-active"
                         value="active" />
-                      <label for="status-active">입찰 진행중</label>
+                      <label for="mypage-status-active">입찰 진행중</label>
                     </div>
                     <div class="radio-item">
                       <input
                         type="radio"
-                        name="status"
-                        id="status-completed"
+                        name="mypage-status"
+                        id="mypage-status-completed"
                         value="completed" />
-                      <label for="status-completed">낙찰 완료</label>
+                      <label for="mypage-status-completed">낙찰 완료</label>
                     </div>
                     <div class="radio-item">
                       <input
                         type="radio"
-                        name="status"
-                        id="status-cancelled"
+                        name="mypage-status"
+                        id="mypage-status-cancelled"
                         value="cancelled" />
-                      <label for="status-cancelled">더 높은 입찰 존재</label>
+                      <label for="mypage-status-cancelled"
+                        >더 높은 입찰 존재</label
+                      >
                     </div>
                   </div>
                 </div>
 
-                <!-- Date Range Filter -->
+                <!-- 날짜 범위 필터 -->
                 <div class="filter-section inline-filter">
                   <h4>기간</h4>
-                  <select id="dateRange">
+                  <select id="mypage-dateRange">
                     <option value="7">최근 1주일</option>
                     <option value="30" selected>최근 1개월</option>
                     <option value="90">최근 3개월</option>
@@ -311,25 +313,25 @@
                   </select>
                 </div>
 
-                <!-- Filter Buttons -->
+                <!-- 필터 버튼 -->
                 <div class="filter-buttons">
-                  <button id="applyFilters" class="primary-button">
+                  <button id="mypage-applyFilters" class="primary-button">
                     필터 적용
                   </button>
-                  <button id="resetFilters" class="secondary-button">
+                  <button id="mypage-resetFilters" class="secondary-button">
                     초기화
                   </button>
                 </div>
               </div>
               <div class="view-controls">
                 <div class="sort-options">
-                  <button class="sort-btn active" data-sort="updated_at">
+                  <button class="mypage-sort-btn active" data-sort="updated_at">
                     최신순 <i class="fas fa-sort"></i>
                   </button>
-                  <button class="sort-btn" data-sort="starting_price">
+                  <button class="mypage-sort-btn" data-sort="starting_price">
                     가격순 <i class="fas fa-sort"></i>
                   </button>
-                  <button class="sort-btn" data-sort="brand">
+                  <button class="mypage-sort-btn" data-sort="brand">
                     브랜드순 <i class="fas fa-sort"></i>
                   </button>
                 </div>
@@ -339,20 +341,20 @@
             <!-- 결과 카운트 -->
             <div class="results-header">
               <div class="results-count">
-                총 <span id="bid-items-total-count">0</span>개 상품
+                총 <span id="totalResults">0</span>개 상품
               </div>
             </div>
 
             <!-- 로딩 메시지 -->
-            <div class="loading-msg" id="bid-items-loading">로딩 중...</div>
+            <div class="loading-msg" id="loadingMsg">로딩 중...</div>
 
             <!-- 입찰 목록 -->
-            <div id="bid-items-list" class="bid-results-list">
+            <div id="productList" class="bid-results-list">
               <!-- 동적으로 생성됨 -->
             </div>
 
             <!-- 페이지네이션 -->
-            <div class="pagination" id="bid-items-pagination"></div>
+            <div class="pagination" id="pagination"></div>
           </section>
 
           <!-- 입찰 결과 섹션 -->
@@ -362,25 +364,31 @@
               <p>낙찰된 입찰 결과를 확인하세요</p>
             </div>
 
-            <!-- 검색 툴바 (원본과 동일한 필터) -->
+            <!-- 검색 툴바 -->
             <section class="search-toolbar">
               <div class="view-controls">
                 <div class="sort-options">
-                  <button class="sort-btn active" data-sort="date">
+                  <button
+                    class="mypage-results-sort-btn active"
+                    data-sort="date">
                     날짜순 <i class="fas fa-sort"></i>
                   </button>
-                  <button class="sort-btn" data-sort="total_price">
+                  <button
+                    class="mypage-results-sort-btn"
+                    data-sort="total_price">
                     금액순 <i class="fas fa-sort"></i>
                   </button>
-                  <button class="sort-btn" data-sort="item_count">
+                  <button
+                    class="mypage-results-sort-btn"
+                    data-sort="item_count">
                     상품수 <i class="fas fa-sort"></i>
                   </button>
                 </div>
 
                 <!-- 기간 필터 -->
                 <div class="date-filter">
-                  <label for="dateRangeResults">기간:</label>
-                  <select id="dateRangeResults">
+                  <label for="mypage-dateRangeResults">기간:</label>
+                  <select id="mypage-dateRangeResults">
                     <option value="7">최근 1주일</option>
                     <option value="30" selected>최근 1개월</option>
                     <option value="90">최근 3개월</option>
@@ -388,12 +396,12 @@
                     <option value="365">최근 1년</option>
                   </select>
                   <button
-                    id="applyResultsFilters"
+                    id="mypage-applyResultsFilters"
                     class="primary-button small-button">
                     적용
                   </button>
                   <button
-                    id="resetResultsFilters"
+                    id="mypage-resetResultsFilters"
                     class="secondary-button small-button">
                     초기화
                   </button>
@@ -404,20 +412,22 @@
             <!-- 결과 카운트 -->
             <div class="results-header">
               <div class="results-count">
-                총 <span id="bid-results-total-count">0</span>개 날짜
+                총 <span id="totalResults-results">0</span>개 날짜
               </div>
             </div>
 
             <!-- 로딩 메시지 -->
-            <div class="loading-msg" id="bid-results-loading">로딩 중...</div>
+            <div class="loading-msg loading-hidden" id="loadingMsg-results">
+              로딩 중...
+            </div>
 
             <!-- 입찰 목록 -->
-            <div id="bid-results-list" class="daily-results-list">
+            <div id="resultsList" class="daily-results-list">
               <!-- 동적으로 생성됨 -->
             </div>
 
             <!-- 페이지네이션 -->
-            <div class="pagination" id="bid-results-pagination"></div>
+            <div class="pagination" id="pagination-results"></div>
           </section>
 
           <!-- 계정 관리 섹션 -->
