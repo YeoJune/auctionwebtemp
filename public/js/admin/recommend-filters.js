@@ -11,15 +11,18 @@ document.addEventListener("DOMContentLoaded", async () => {
 // =======================================================================
 let availableBrands = [];
 let availableCategories = [];
+let availableRanks = [];
 
 async function loadPrerequisiteData() {
   try {
-    const [brandData, categoryData] = await Promise.all([
+    const [brandData, categoryData, rankData] = await Promise.all([
       fetch("/api/data/brands").then((res) => res.json()),
       fetch("/api/data/categories").then((res) => res.json()),
+      fetch("/api/data/ranks").then((res) => res.json()),
     ]);
     availableBrands = brandData;
     availableCategories = categoryData;
+    availableRanks = rankData;
   } catch (error) {
     handleError(error, "필터링 데이터를 불러오는 데 실패했습니다.");
   }
@@ -377,6 +380,7 @@ function getFieldDisplayName(field) {
     scheduled_date: "경매일",
     starting_price: "가격",
     title: "제목",
+    rank: "등급",
   };
   return displayNames[field] || field;
 }
@@ -567,6 +571,7 @@ function createConditionRowHTML([field, condition]) {
     scheduled_date: "경매일",
     starting_price: "가격",
     title: "제목",
+    rank: "등급",
   };
 
   const id = `condition-${Date.now()}-${Math.random()
@@ -579,7 +584,8 @@ function createConditionRowHTML([field, condition]) {
       field,
       condition,
       availableBrands,
-      availableCategories
+      availableCategories,
+      availableRanks
     );
   }
 
@@ -609,11 +615,12 @@ function updateConditionInput(selectElement) {
     type,
     {},
     availableBrands,
-    availableCategories
+    availableCategories,
+    availableRanks
   );
 }
 
-function renderConditionInput(type, condition, brands, categories) {
+function renderConditionInput(type, condition, brands, categories, ranks) {
   switch (type) {
     case "brand":
     case "category":
@@ -641,6 +648,29 @@ function renderConditionInput(type, condition, brands, categories) {
               : ""
           }
           <div class="checkbox-list">${checkboxesHTML}</div>
+        </div>
+      `;
+
+    case "rank":
+      const rankSelectedValues = new Set(condition.values || []);
+      const rankOptions = ranks || [];
+
+      const rankCheckboxesHTML = rankOptions
+        .map(
+          (opt) => `
+        <label class="checkbox-option">
+          <input type="checkbox" name="rank" value="${opt.rank}" ${
+            rankSelectedValues.has(opt.rank) ? "checked" : ""
+          }>
+          <span>${opt.rank}</span>
+        </label>
+      `
+        )
+        .join("");
+
+      return `
+        <div class="checkbox-container">
+          <div class="checkbox-list">${rankCheckboxesHTML}</div>
         </div>
       `;
 
@@ -710,6 +740,21 @@ async function handleRuleFormSubmit(event, existingRule) {
           conditions[type] = {
             operator: "IN",
             values: selectedValues,
+          };
+        }
+        break;
+
+      case "rank":
+        const rankCheckedBoxes = row.querySelectorAll(
+          `input[name="rank"]:checked`
+        );
+        const selectedRanks = Array.from(rankCheckedBoxes).map(
+          (cb) => cb.value
+        );
+        if (selectedRanks.length > 0) {
+          conditions[type] = {
+            operator: "IN",
+            values: selectedRanks,
           };
         }
         break;
