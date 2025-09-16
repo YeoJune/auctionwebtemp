@@ -462,8 +462,6 @@ cron.schedule("0 18 * * *", async () => {
   await sendDailyFinalBidReminders();
 });
 
-sendDailyFinalBidReminders();
-
 module.exports = {
   MessageService,
   createMessageService,
