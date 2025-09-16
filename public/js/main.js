@@ -120,8 +120,10 @@ window.ProductListController = (function () {
         // 특정 사용자 ID에 대한 임시 처리
         if (currentUser.id === "admin") {
           // 임시 코드 실행
-          console.log("특정 사용자를 위한 상품 페이지 임시 처리");
-          // 예: 특별한 필터 옵션 추가, 디버그 정보 표시 등
+          document
+            .querySelector("#aucNumFilters")
+            .closest(".filter-row")
+            .classList.remove("hidden");
         }
       }
 
