@@ -110,6 +110,21 @@ window.ProductListController = (function () {
    */
   async function initializeAfterDOM() {
     try {
+      // ⭐ 인증 상태 확인 후 사용자 정보 활용
+      const isAuth = await window.AuthManager.checkAuthStatus();
+      const currentUser = window.AuthManager.getUser();
+
+      if (isAuth && currentUser && currentUser.id) {
+        console.log("상품 페이지 - 현재 사용자 ID:", currentUser.id);
+
+        // 특정 사용자 ID에 대한 임시 처리
+        if (currentUser.id === "admin") {
+          // 임시 코드 실행
+          console.log("특정 사용자를 위한 상품 페이지 임시 처리");
+          // 예: 특별한 필터 옵션 추가, 디버그 정보 표시 등
+        }
+      }
+
       // 2. URL에서 상태 로드 (필터 데이터 로드 전에)
       loadStateFromURL();
 
