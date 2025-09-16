@@ -418,7 +418,8 @@ async function sendDailyFinalBidReminders() {
       JOIN crawled_items i ON l.item_id = i.item_id
       WHERE l.status = 'second'
         AND l.request_sent_at IS NULL
-        AND DATE(i.scheduled_date) = DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+        AND DATE(i.scheduled_date) <= DATE(DATE_ADD(NOW(), INTERVAL 1 DAY))
+        AND DATE(i.scheduled_date) >= DATE(NOW())
     `);
 
     if (secondBids.length === 0) {
@@ -460,6 +461,8 @@ cron.schedule("0 18 * * *", async () => {
   console.log("Starting daily final bid reminders...");
   await sendDailyFinalBidReminders();
 });
+
+sendDailyFinalBidReminders();
 
 module.exports = {
   MessageService,
