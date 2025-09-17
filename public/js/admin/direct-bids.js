@@ -24,12 +24,97 @@ function changePage(page) {
   loadDirectBids();
 }
 
+let fromDate = "";
 let toDate = "";
 let currentSearch = "";
 let currentAucNum = "";
 
 // 검색 디바운스 타이머
 let searchTimeout = null;
+
+// 현재 표시된 직접경매 데이터 저장 (실시간 업데이트용)
+let currentDirectBidsData = [];
+
+// 실시간 업데이트 매니저 (products.js RealtimeManager 패턴 참고)
+const DirectBidsRealtimeManager = (function () {
+  let socket = null;
+
+  /**
+   * Socket.IO 초기화
+   */
+  function initializeSocket() {
+    if (typeof io === "undefined") {
+      console.warn("Socket.IO not available");
+      return null;
+    }
+
+    socket = io({
+      reconnectionAttempts: 5,
+      timeout: 10000,
+    });
+
+    socket.on("connect_error", (error) => {
+      console.error("Socket connection error:", error);
+      setupFallbackPolling();
+    });
+
+    // 데이터 업데이트 이벤트 수신
+    socket.on("data-updated", (data) => {
+      console.log(`직접경매 업데이트 알림: ${data.itemIds.length}개 아이템`);
+
+      // 현재 표시된 직접경매 테이블의 item_id들과 비교
+      const visibleItemIds = getVisibleDirectBidItemIds();
+      const itemsToUpdate = data.itemIds.filter((id) =>
+        visibleItemIds.includes(id)
+      );
+
+      if (itemsToUpdate.length > 0) {
+        console.log(
+          `${itemsToUpdate.length}개 아이템 업데이트 - 테이블 새로고침`
+        );
+        debouncedLoadDirectBids();
+      }
+    });
+
+    socket.on("connect", () => {
+      console.log("직접경매 관리 페이지 - 서버에 연결됨");
+    });
+
+    socket.on("disconnect", () => {
+      console.log("직접경매 관리 페이지 - 서버 연결 해제됨");
+    });
+
+    return socket;
+  }
+
+  /**
+   * 폴백 폴링 설정 (products.js와 동일)
+   */
+  function setupFallbackPolling() {
+    // Socket 연결 실패 시 주기적 폴링
+    setInterval(() => {
+      debouncedLoadDirectBids();
+    }, 30000); // 30초마다
+  }
+
+  return {
+    initializeSocket,
+  };
+})();
+
+// 현재 테이블에 표시된 item_id들 추출 (메모리 기반 - products.js 패턴)
+function getVisibleDirectBidItemIds() {
+  return currentDirectBidsData.map((bid) => bid.item_id);
+}
+
+// 디바운스된 데이터 로드 함수
+let loadDirectBidsDebounceTimer = null;
+function debouncedLoadDirectBids() {
+  if (loadDirectBidsDebounceTimer) clearTimeout(loadDirectBidsDebounceTimer);
+  loadDirectBidsDebounceTimer = setTimeout(() => {
+    loadDirectBids();
+  }, 300);
+}
 
 // URL 상태 관리자
 const urlStateManager = window.URLStateManager;
@@ -94,6 +179,9 @@ function updateUIFromState() {
 document.addEventListener("DOMContentLoaded", function () {
   // URL에서 상태 복원
   initializeFromURL();
+
+  // 🔥 실시간 업데이트 웹소켓 초기화
+  DirectBidsRealtimeManager.initializeSocket();
 
   // 초기 데이터 로드
   loadDirectBids();
@@ -327,20 +415,6 @@ function handleQuickDateFilter(event) {
   loadDirectBids();
 }
 
-// 필터 상태에 따라 데이터 로드
-async function filterByStatus(status) {
-  currentStatus = status;
-  currentPage = 1;
-  await loadDirectBids();
-}
-
-// 페이지 변경 함수
-function changePage(page) {
-  if (page < 1 || page > totalPages) return;
-  currentPage = page;
-  loadDirectBids();
-}
-
 // 직접 경매 데이터 로드
 async function loadDirectBids() {
   try {
@@ -360,10 +434,14 @@ async function loadDirectBids() {
     );
 
     if (!directBids?.bids || directBids.count === 0) {
+      currentDirectBidsData = []; // 데이터 없을 때 초기화
       showNoData("directBidsTableBody", "직접 경매 데이터가 없습니다.");
       renderPagination(0, 0, 0);
       return;
     }
+
+    // 🔥 현재 데이터를 전역 변수에 저장 (실시간 업데이트용)
+    currentDirectBidsData = directBids.bids;
 
     renderDirectBidsTable(directBids.bids);
     renderPagination(
@@ -373,6 +451,7 @@ async function loadDirectBids() {
     );
     totalPages = directBids.totalPages;
   } catch (error) {
+    currentDirectBidsData = []; // 에러 시 데이터 초기화
     handleError(error, "직접 경매 데이터를 불러오는 중 오류가 발생했습니다.");
     showNoData(
       "directBidsTableBody",
