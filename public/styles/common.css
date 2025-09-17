@@ -81,7 +81,8 @@ body {
 }
 
 /* Common Button Styles */
-button {
+button,
+.btn {
   background-color: var(--primary-color);
   color: white;
   border: none;
@@ -95,16 +96,60 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  text-decoration: none;
+  text-align: center;
 }
 
-button:hover:not(:disabled) {
+button:hover:not(:disabled),
+.btn:hover:not(:disabled) {
   background-color: var(--primary-hover);
 }
 
-button:disabled {
+button:disabled,
+.btn:disabled {
   background-color: var(--border-color);
   cursor: not-allowed;
   opacity: 0.7;
+}
+
+/* Button Variants */
+.btn-secondary {
+  background-color: #6c757d;
+}
+
+.btn-secondary:hover {
+  background-color: #5a6268;
+}
+
+.btn-danger {
+  background-color: var(--error-color);
+}
+
+.btn-danger:hover {
+  background-color: #c82333;
+}
+
+.btn-success {
+  background-color: var(--success-color);
+}
+
+.btn-success:hover {
+  background-color: #218838;
+}
+
+.btn-warning {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.btn-warning:hover {
+  background-color: #e0a800;
+}
+
+.btn-sm {
+  padding: 4px 8px;
+  font-size: 12px;
+  min-height: 32px;
 }
 
 /* Common Modal Base Styles */
