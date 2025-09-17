@@ -553,8 +553,13 @@ router.get("/ranks", async (req, res) => {
       queryParams
     );
 
-    updateCache(cacheKey, results);
-    res.json(results);
+    const normalizedResults = results.map((result) => ({
+      rank: normalizeRank(result.rank),
+      count: result.count,
+    }));
+
+    updateCache(cacheKey, normalizedResults);
+    res.json(normalizedResults);
   } catch (error) {
     console.error("Error fetching ranks:", error);
     res.status(500).json({ message: "Error fetching ranks" });
