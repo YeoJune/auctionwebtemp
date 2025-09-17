@@ -184,17 +184,20 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 /* common.js 기본 페이지네이션 구조에 맞춘 스타일 */
 #pagination {
   display: flex;
-  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  gap: 15px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 #pagination > div:first-child {
   /* pagination-info div */
+  width: 100%;
   font-size: 15px;
   color: #6c757d;
   text-align: center;
   font-weight: 500;
+  margin-bottom: 15px;
 }
 
 #pagination button {
