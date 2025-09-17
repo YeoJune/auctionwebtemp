@@ -1222,6 +1222,12 @@ window.URLStateManager = (function () {
     "sortOrder",
     "keyword",
     "item_id", // 상세 모달용
+    // Admin pages용 키들 추가
+    "page",
+    "sort",
+    "order",
+    "search",
+    "aucNum",
     // ProductListController용 키들 추가
     "selectedBrands",
     "selectedCategories",
@@ -1245,6 +1251,12 @@ window.URLStateManager = (function () {
     sortBy: "updated_at",
     sortOrder: "desc",
     keyword: "",
+    // Admin pages용 기본값들 추가
+    page: 1,
+    sort: "original_scheduled_date",
+    order: "desc",
+    search: "",
+    aucNum: "",
     // ProductListController용 기본값들 추가
     selectedBrands: [],
     selectedCategories: [],
@@ -1283,7 +1295,8 @@ window.URLStateManager = (function () {
           key.includes("Page") ||
           key.includes("Range") ||
           key.includes("Limit") ||
-          key.includes("itemsPerPage")
+          key.includes("itemsPerPage") ||
+          key === "page"
         ) {
           const numValue = parseInt(value);
           if (!isNaN(numValue) && numValue > 0) {
@@ -1391,7 +1404,7 @@ window.URLStateManager = (function () {
     }
 
     // 현재 페이지가 1인 경우 (기본값이므로 제외)
-    if (key === "currentPage" && value === 1) {
+    if ((key === "currentPage" || key === "page") && value === 1) {
       return false;
     }
 

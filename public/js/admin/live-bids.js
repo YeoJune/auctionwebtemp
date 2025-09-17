@@ -18,34 +18,44 @@ let searchTimeout = null;
 // URL 상태 관리자
 const urlStateManager = window.URLStateManager;
 
+// 기본 상태 정의
+const defaultState = {
+  page: 1,
+  sort: "original_scheduled_date",
+  order: "desc",
+  search: "",
+  status: "",
+  aucNum: "",
+};
+
 // URL에서 상태 복원
 function initializeFromURL() {
-  const state = urlStateManager.getState();
+  const stateKeys = ["page", "sort", "order", "search", "status", "aucNum"];
+  const state = urlStateManager.loadFromURL(defaultState, stateKeys);
 
-  currentPage = parseInt(state.page) || 1;
-  currentSortBy = state.sort || "original_scheduled_date";
-  currentSortOrder = state.order || "desc";
-  currentSearch = state.search || "";
-  currentStatus = state.status || "";
-  currentAucNum = state.aucNum || "";
+  currentPage = state.page;
+  currentSortBy = state.sort;
+  currentSortOrder = state.order;
+  currentSearch = state.search;
+  currentStatus = state.status;
+  currentAucNum = state.aucNum;
 
   updateUIFromState();
 }
 
 // URL 상태 업데이트
 function updateURLState() {
-  const state = {};
-  if (currentPage > 1) state.page = currentPage;
-  if (currentSortBy !== "original_scheduled_date") state.sort = currentSortBy;
-  if (currentSortOrder !== "desc") state.order = currentSortOrder;
-  if (currentSearch) state.search = currentSearch;
-  if (currentStatus) state.status = currentStatus;
-  if (currentAucNum) state.aucNum = currentAucNum;
+  const state = {
+    page: currentPage,
+    sort: currentSortBy,
+    order: currentSortOrder,
+    search: currentSearch,
+    status: currentStatus,
+    aucNum: currentAucNum,
+  };
 
-  urlStateManager.setState(state);
-}
-
-// UI를 현재 상태로 업데이트
+  urlStateManager.updateURL(state, defaultState);
+} // UI를 현재 상태로 업데이트
 function updateUIFromState() {
   const searchInput = document.getElementById("searchInput");
   const sortBySelect = document.getElementById("sortBy");
