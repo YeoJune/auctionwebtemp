@@ -41,6 +41,19 @@ function formatNumber(num) {
   return (num || 0).toLocaleString();
 }
 
+// 통화 포맷팅
+function formatCurrency(amount, currency = "JPY") {
+  if (!amount && amount !== 0) return "-";
+
+  if (currency === "JPY") {
+    return `¥${formatNumber(amount)}`;
+  } else if (currency === "KRW") {
+    return `₩${formatNumber(amount)}`;
+  } else {
+    return formatNumber(amount);
+  }
+}
+
 // 숫자 클린 포맷팅 - 소수점 처리 및 콤마 표시
 function cleanNumberFormat(num) {
   if (num === null || num === undefined) return "0";

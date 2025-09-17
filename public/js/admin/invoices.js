@@ -263,14 +263,3 @@ function goToPage(page) {
 }
 
 // 로딩 표시
-function showLoading(tableBodyId) {
-  const tableBody = document.getElementById(tableBodyId);
-  tableBody.innerHTML =
-    '<tr><td colspan="5" class="text-center">데이터를 불러오는 중입니다...</td></tr>';
-}
-
-// 데이터 없음 표시
-function showNoData(tableBodyId, message = "데이터가 없습니다.") {
-  const tableBody = document.getElementById(tableBodyId);
-  tableBody.innerHTML = `<tr><td colspan="5" class="text-center">${message}</td></tr>`;
-}

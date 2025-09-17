@@ -46,11 +46,13 @@ function renderUsers(users) {
   tableBody.innerHTML = "";
 
   users.forEach((user) => {
-    const row = document.createElement("tr");
+    const row = createElement("tr");
 
     // 날짜 형식 변환 (YYYY-MM-DD 형식)
     const registrationDate = user.registration_date
-      ? formatDateOnly(user.registration_date)
+      ? window.formatDate
+        ? formatDate(user.registration_date).split(" ")[0]
+        : "-"
       : "-";
 
     row.innerHTML = `
@@ -127,40 +129,16 @@ function renderUsers(users) {
   });
 }
 
-// 날짜만 형식화 (YYYY-MM-DD)
-function formatDateOnly(dateString) {
-  if (!dateString) return "-";
-
-  try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return "-";
-
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  } catch (e) {
-    console.error("날짜 형식화 오류:", e);
-    return "-";
-  }
-}
-
 // 날짜를 입력 필드용 형식으로 변환 (YYYY-MM-DD)
 function formatDateForInput(dateString) {
   if (!dateString) return "";
-
-  try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return "";
-
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  } catch (e) {
-    console.error("날짜 입력 형식화 오류:", e);
-    return "";
+  // formatDate에서 날짜 부분만 추출
+  if (window.formatDate) {
+    const formatted = formatDate(dateString);
+    return formatted.split(" ")[0];
   }
+  // fallback for date input format
+  return dateString.split("T")[0];
 }
 
 // 회원 등록/수정 모달 열기
@@ -218,7 +196,8 @@ function openUserForm(user = null) {
     userPassword.required = true;
   }
 
-  openModal("userFormModal");
+  const modal = setupModal("userFormModal");
+  modal.show();
 }
 
 // 회원 저장 (등록 또는 수정)

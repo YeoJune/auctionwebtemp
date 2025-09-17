@@ -174,22 +174,24 @@ async function updateMetrics() {
       stats.totalDailyUsers || 0;
 
     // 총 요청 수 및 페이지뷰 업데이트
-    document.getElementById("totalRequests").textContent = (
-      stats.totalRequests || 0
-    ).toLocaleString();
-    document.getElementById("uniquePageviews").textContent = (
-      stats.uniquePageviews || 0
-    ).toLocaleString();
+    document.getElementById("totalRequests").textContent = window.formatNumber
+      ? formatNumber(stats.totalRequests || 0)
+      : (stats.totalRequests || 0).toLocaleString();
+    document.getElementById("uniquePageviews").textContent = window.formatNumber
+      ? formatNumber(stats.uniquePageviews || 0)
+      : (stats.uniquePageviews || 0).toLocaleString();
 
     // 마지막 초기화 시간 업데이트
     if (stats.lastManualReset) {
       const resetDate = new Date(stats.lastManualReset);
-      document.getElementById("lastReset").textContent =
-        resetDate.toLocaleString();
+      document.getElementById("lastReset").textContent = window.formatDateTime
+        ? formatDateTime(stats.lastManualReset)
+        : resetDate.toLocaleString();
     } else if (stats.lastReset) {
       const resetDate = new Date(stats.lastReset);
-      document.getElementById("lastReset").textContent =
-        resetDate.toLocaleString() + " (자동)";
+      document.getElementById("lastReset").textContent = window.formatDateTime
+        ? formatDateTime(stats.lastReset) + " (자동)"
+        : resetDate.toLocaleString() + " (자동)";
     }
   } catch (error) {
     console.error("메트릭스 업데이트 중 오류:", error);

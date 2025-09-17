@@ -113,7 +113,9 @@ function updateUserStats(stats) {
   document.getElementById("dailyTotalUsers").textContent =
     stats.totalDailyUsers || 0;
   document.getElementById("totalRequests").textContent = stats.totalRequests
-    ? stats.totalRequests.toLocaleString()
+    ? window.formatNumber
+      ? formatNumber(stats.totalRequests)
+      : stats.totalRequests.toLocaleString()
     : 0;
 }
 

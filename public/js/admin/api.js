@@ -1,59 +1,9 @@
 // public/js/admin/api.js
+// Admin 전용 API 함수들 - 공통 api.js 기능 활용
 
-// API 기본 URL
-const API_BASE_URL = "/api";
-
-// 공통 fetch 함수
+// 공통 API 함수 사용
 async function fetchAPI(endpoint, options = {}) {
-  const defaultOptions = {
-    headers: {
-      "Content-Type": "application/json",
-    },
-    credentials: "include", // 쿠키 전송 (세션 인증)
-  };
-
-  const fetchOptions = { ...defaultOptions, ...options };
-
-  try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, fetchOptions);
-
-    // 세션 만료시 로그인 페이지로 리다이렉트
-    if (response.status === 401) {
-      window.location.href = "/signinPage";
-      return null;
-    }
-
-    // 403 권한 없음
-    if (response.status === 403) {
-      throw new Error("접근 권한이 없습니다.");
-    }
-
-    // 404 찾을 수 없음
-    if (response.status === 404) {
-      throw new Error("요청한 리소스를 찾을 수 없습니다.");
-    }
-
-    // 500 서버 오류
-    if (response.status >= 500) {
-      throw new Error("서버 오류가 발생했습니다.");
-    }
-
-    // 그 외 HTTP 오류
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `API 요청 오류: ${response.status}`);
-    }
-
-    // 응답 데이터 반환
-    if (response.headers.get("content-type")?.includes("application/json")) {
-      return await response.json();
-    }
-
-    return await response.text();
-  } catch (error) {
-    console.error("API 요청 오류:", error);
-    throw error;
-  }
+  return await window.API.fetchAPI(endpoint, options);
 }
 
 // ---- 대시보드 API ----
@@ -516,37 +466,3 @@ async function crawlInvoices() {
 }
 
 // ---- 유틸리티 함수 ----
-
-// 통화 포맷 함수
-function formatCurrency(amount, currency = "JPY") {
-  if (!amount) return "-";
-
-  if (currency === "JPY") {
-    // 일본 엔으로 표시
-    return new Intl.NumberFormat("ja-JP", {
-      style: "currency",
-      currency: "JPY",
-      maximumFractionDigits: 0,
-    }).format(amount);
-  } else {
-    // 한국 원으로 표시 (기본 통화)
-    return new Intl.NumberFormat("ko-KR", {
-      style: "currency",
-      currency: "KRW",
-      maximumFractionDigits: 0,
-    }).format(amount);
-  }
-}
-
-// 날짜 포맷 함수
-function formatDate(dateString) {
-  if (!dateString) return "-";
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}

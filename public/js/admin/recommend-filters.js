@@ -865,31 +865,6 @@ async function handleRuleFormSubmit(event, existingRule) {
 // 유틸리티 함수
 // =======================================================================
 
-function showLoading(containerId) {
-  const container = document.getElementById(containerId);
-  if (container) {
-    container.innerHTML = `
-      <div class="loading-container">
-        <div class="loading-spinner"></div>
-        <span>데이터를 불러오는 중...</span>
-      </div>
-    `;
-  }
-}
-
-function showNoData(containerId, message) {
-  const container = document.getElementById(containerId);
-  if (container) {
-    container.innerHTML = `<div class="no-data-message">${message}</div>`;
-  }
-}
-
-function handleError(error, defaultMessage = "오류가 발생했습니다") {
-  console.error("Error:", error);
-  const message = error.message || defaultMessage;
-  showAlert(message, "error");
-}
-
 function updateBrandSummary(container) {
   const checkedBoxes = container.querySelectorAll(
     'input[name="brand"]:checked'
@@ -899,8 +874,7 @@ function updateBrandSummary(container) {
 
   let summaryDiv = container.querySelector(".selected-summary");
   if (!summaryDiv) {
-    summaryDiv = document.createElement("div");
-    summaryDiv.className = "selected-summary";
+    summaryDiv = createElement("div", "selected-summary");
     container.insertBefore(
       summaryDiv,
       container.querySelector(".condition-search")

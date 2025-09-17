@@ -1,25 +1,98 @@
 // public/js/admin/direct-bids.js
 
-// 현재 선택된 필터 상태
+// 현재 선택된 필터 상태 - URL로 관리
 let currentStatus = "";
 let highestOnly = false;
 let currentPage = 1;
 let itemsPerPage = 10;
 let totalPages = 1;
-let currentSortBy = "original_scheduled_date"; // 기본값 변경
+let currentSortBy = "original_scheduled_date";
 let currentSortOrder = "desc";
-let fromDate = "";
+let from; // 필터 상태에 따라 데이터 로드
+async function filterByStatus(status) {
+  currentStatus = status;
+  currentPage = 1;
+  updateURLState();
+  await loadDirectBids();
+}
+
+// 페이지 변경
+function changePage(page) {
+  if (page < 1 || page > totalPages) return;
+  currentPage = page;
+  updateURLState();
+  loadDirectBids();
+}
+
 let toDate = "";
-let currentSearch = ""; // 검색어 추가
-let currentAucNum = ""; // 선택된 경매장
+let currentSearch = "";
+let currentAucNum = "";
 
 // 검색 디바운스 타이머
 let searchTimeout = null;
 
+// URL 상태 관리자
+const urlStateManager = window.URLStateManager;
+
+// URL에서 상태 복원
+function initializeFromURL() {
+  const state = urlStateManager.getState();
+
+  currentPage = parseInt(state.page) || 1;
+  currentSortBy = state.sort || "original_scheduled_date";
+  currentSortOrder = state.order || "desc";
+  currentSearch = state.search || "";
+  currentStatus = state.status || "";
+  currentAucNum = state.aucNum || "";
+
+  updateUIFromState();
+}
+
+// URL 상태 업데이트
+function updateURLState() {
+  const state = {};
+  if (currentPage > 1) state.page = currentPage;
+  if (currentSortBy !== "original_scheduled_date") state.sort = currentSortBy;
+  if (currentSortOrder !== "desc") state.order = currentSortOrder;
+  if (currentSearch) state.search = currentSearch;
+  if (currentStatus) state.status = currentStatus;
+  if (currentAucNum) state.aucNum = currentAucNum;
+
+  urlStateManager.setState(state);
+}
+
+// UI를 현재 상태로 업데이트
+function updateUIFromState() {
+  const searchInput = document.getElementById("searchInput");
+  const sortBySelect = document.getElementById("sortBy");
+  const statusButtons = document.querySelectorAll(".status-filter");
+  const aucNumButtons = document.querySelectorAll(".auc-num-filter");
+
+  if (searchInput) searchInput.value = currentSearch;
+  if (sortBySelect) sortBySelect.value = currentSortBy;
+
+  statusButtons.forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.status === currentStatus);
+  });
+
+  aucNumButtons.forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.aucNum === currentAucNum);
+  });
+}
+
 // 페이지 로드 시 실행
 document.addEventListener("DOMContentLoaded", function () {
+  // URL에서 상태 복원
+  initializeFromURL();
+
   // 초기 데이터 로드
   loadDirectBids();
+
+  // 브라우저 뒤로가기/앞으로가기 처리
+  window.addEventListener("popstate", function () {
+    initializeFromURL();
+    loadDirectBids();
+  });
 
   // 검색 관련 이벤트
   document
@@ -78,6 +151,7 @@ document.addEventListener("DOMContentLoaded", function () {
     ?.addEventListener("change", function () {
       currentAucNum = this.value;
       currentPage = 1;
+      updateURLState();
       loadDirectBids();
     });
 
@@ -85,6 +159,7 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("sortBy")?.addEventListener("change", function () {
     currentSortBy = this.value;
     currentPage = 1;
+    updateURLState();
     loadDirectBids();
   });
 
@@ -92,6 +167,7 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("sortOrder")?.addEventListener("change", function () {
     currentSortOrder = this.value;
     currentPage = 1;
+    updateURLState();
     loadDirectBids();
   });
 
@@ -157,6 +233,7 @@ function handleSearchInput() {
     if (currentSearch !== searchValue) {
       currentSearch = searchValue;
       currentPage = 1;
+      updateURLState();
       loadDirectBids();
     }
   }, 300);
@@ -167,6 +244,7 @@ function handleSearchSubmit() {
   if (currentSearch !== searchValue) {
     currentSearch = searchValue;
     currentPage = 1;
+    updateURLState();
     loadDirectBids();
   }
 }
@@ -176,6 +254,7 @@ function handleSearchClear() {
   if (currentSearch !== "") {
     currentSearch = "";
     currentPage = 1;
+    updateURLState();
     loadDirectBids();
   }
 }
@@ -271,51 +350,21 @@ async function loadDirectBids() {
   }
 }
 
-// 페이지네이션 렌더링
-function renderPagination(currentPage, totalPages, totalItems) {
+// 페이지네이션 렌더링 - 공통 함수 활용
+function renderPagination(currentPageNum, totalPagesNum, totalItems) {
+  // 공통 페이지네이션 함수 사용
+  createPagination(currentPageNum, totalPagesNum, changePage);
+
+  // 페이지 정보 표시
   const paginationContainer = document.getElementById("pagination");
-  if (!paginationContainer) return;
+  if (paginationContainer && totalPagesNum > 0) {
+    const infoDiv = createElement("div", "pagination-info");
+    infoDiv.textContent = `총 ${totalItems}개 항목 중 ${
+      (currentPageNum - 1) * itemsPerPage + 1
+    } - ${Math.min(currentPageNum * itemsPerPage, totalItems)}개 표시`;
 
-  if (totalPages <= 1) {
-    paginationContainer.innerHTML = "";
-    return;
+    paginationContainer.insertBefore(infoDiv, paginationContainer.firstChild);
   }
-
-  let html = `<div class="pagination-info">총 ${totalItems}개 항목 중 ${
-    (currentPage - 1) * itemsPerPage + 1
-  } - ${Math.min(currentPage * itemsPerPage, totalItems)}개 표시</div>`;
-  html += '<div class="pagination-controls">';
-
-  // 이전 페이지 버튼
-  html += `<button class="btn btn-sm ${currentPage === 1 ? "disabled" : ""}" ${
-    currentPage === 1
-      ? "disabled"
-      : 'onclick="changePage(' + (currentPage - 1) + ')"'
-  }>이전</button>`;
-
-  // 페이지 번호 버튼들
-  const maxPageButtons = 5;
-  const startPage = Math.max(1, currentPage - Math.floor(maxPageButtons / 2));
-  const endPage = Math.min(totalPages, startPage + maxPageButtons - 1);
-
-  for (let i = startPage; i <= endPage; i++) {
-    html += `<button class="btn btn-sm ${
-      i === currentPage ? "active" : ""
-    }" onclick="changePage(${i})">${i}</button>`;
-  }
-
-  // 다음 페이지 버튼
-  html += `<button class="btn btn-sm ${
-    currentPage === totalPages ? "disabled" : ""
-  }" ${
-    currentPage === totalPages
-      ? "disabled"
-      : 'onclick="changePage(' + (currentPage + 1) + ')"'
-  }>다음</button>`;
-
-  html += "</div>";
-
-  paginationContainer.innerHTML = html;
 }
 
 // 직접 경매 테이블 렌더링
@@ -543,7 +592,7 @@ function updateBulkActionButtons() {
   document.getElementById("bulkMarkSubmittedBtn").disabled = checkedCount === 0;
 }
 
-// 입찰 완료 모달 열기
+// 입찰 완료 모달 열기 - 공통 함수 활용
 function openCompleteModal(bidId) {
   document.getElementById("completeBidId").value = bidId;
   document.getElementById("winningPrice").value = "";
@@ -551,7 +600,9 @@ function openCompleteModal(bidId) {
   document.getElementById("priceComparisonMessage").textContent = "";
   document.getElementById("priceComparisonMessage").className =
     "price-comparison";
-  openModal("completeModal");
+
+  const modal = setupModal("completeModal");
+  modal.show();
 }
 
 // 관부가세 포함 가격 업데이트
@@ -623,10 +674,12 @@ async function submitCompleteBid() {
   }
 }
 
-// 낙찰 실패 모달 열기
+// 낙찰 실패 모달 열기 - 공통 함수 활용
 function openCancelModal(bidId) {
   document.getElementById("cancelBidId").value = bidId;
-  openModal("cancelModal");
+
+  const modal = setupModal("cancelModal");
+  modal.show();
 }
 
 // 낙찰 실패 제출
@@ -648,10 +701,12 @@ async function submitCancelBid() {
   }
 }
 
-// 플랫폼 반영 완료 표시 모달 열기
+// 플랫폼 반영 완료 표시 모달 열기 - 공통 함수 활용
 function openMarkAsSubmittedModal(bidId) {
   document.getElementById("markSubmittedBidId").value = bidId;
-  openModal("markAsSubmittedModal");
+
+  const modal = setupModal("markAsSubmittedModal");
+  modal.show();
 }
 
 // 플랫폼 반영 완료 표시 처리
@@ -673,7 +728,7 @@ async function markAsSubmitted() {
   }
 }
 
-// 일괄 작업 모달 및 제출 함수들
+// 일괄 작업 모달 및 제출 함수들 - 공통 함수 활용
 function openBulkCompleteModal() {
   const count = document.querySelectorAll(".bid-checkbox:checked").length;
   if (count === 0) return;
@@ -681,7 +736,9 @@ function openBulkCompleteModal() {
   document.getElementById("bulkWinningPrice").value = "";
   document.getElementById("bulkWinningPriceKRW").textContent =
     "관부가세 포함: -";
-  openModal("bulkCompleteModal");
+
+  const modal = window.setupModal("bulkCompleteModal");
+  modal.show();
 }
 
 // 일괄 관부가세 포함 가격 업데이트
@@ -734,7 +791,9 @@ function openBulkCancelModal() {
   const count = document.querySelectorAll(".bid-checkbox:checked").length;
   if (count === 0) return;
   document.getElementById("bulkCancelCount").textContent = count;
-  openModal("bulkCancelModal");
+
+  const modal = window.setupModal("bulkCancelModal");
+  modal.show();
 }
 
 // 일괄 낙찰 실패 제출
@@ -767,7 +826,9 @@ function openBulkMarkAsSubmittedModal() {
   const count = document.querySelectorAll(".bid-checkbox:checked").length;
   if (count === 0) return;
   document.getElementById("bulkMarkSubmittedCount").textContent = count;
-  openModal("bulkMarkAsSubmittedModal");
+
+  const modal = window.setupModal("bulkMarkAsSubmittedModal");
+  modal.show();
 }
 
 // 일괄 플랫폼 반영 완료 제출
@@ -848,7 +909,8 @@ function openEditBidModal(bidId) {
   document.getElementById("editWinningPrice").value =
     currentBid.winning_price || "";
 
-  openModal("editBidModal");
+  const modal = window.setupModal("editBidModal");
+  modal.show();
 }
 
 // 수정 제출

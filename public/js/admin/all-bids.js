@@ -897,18 +897,10 @@ class UnifiedAuctionManager {
     ).textContent = `${filterText}: 총 ${totalCount}건 (현장 ${liveCount}건, 직접 ${directCount}건)`;
   }
 
-  // 날짜 포맷팅
+  // 날짜 포맷팅 - 공통 함수 활용
   formatScheduledDate(dateString) {
     if (!dateString) return "-";
-
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat("ko-KR", {
-      timeZone: "Asia/Seoul",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date);
+    return window.formatDateTime(dateString);
   }
 
   // 더보기 기능 (향후 구현 시 사용)
@@ -930,12 +922,13 @@ class UnifiedAuctionManager {
     ).innerHTML = `<tr><td colspan="7" class="text-center error">${message}</td></tr>`;
   }
 
-  // 모달 열기
+  // 모달 열기 - 공통 함수 활용
   openModal(modalId) {
-    document.getElementById(modalId).classList.add("active");
+    const modal = window.setupModal(modalId);
+    modal.show();
   }
 
-  // 모달 닫기
+  // 모달 닫기 - 공통 함수 활용
   closeModal() {
     document.querySelectorAll(".modal-overlay").forEach((modal) => {
       modal.classList.remove("active");
