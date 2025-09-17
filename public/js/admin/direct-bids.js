@@ -75,7 +75,7 @@ function updateURLState() {
 function updateUIFromState() {
   const searchInput = document.getElementById("searchInput");
   const sortBySelect = document.getElementById("sortBy");
-  const statusButtons = document.querySelectorAll(".status-filter");
+  const statusButtons = document.querySelectorAll(".filter-tab");
   const aucNumButtons = document.querySelectorAll(".auc-num-filter");
 
   if (searchInput) searchInput.value = currentSearch;
@@ -118,6 +118,28 @@ document.addEventListener("DOMContentLoaded", function () {
   // 빠른 날짜 필터 이벤트
   document.querySelectorAll("[data-range]").forEach((button) => {
     button.addEventListener("click", handleQuickDateFilter);
+  });
+
+  // 필터 탭 이벤트
+  document.querySelectorAll(".filter-tab").forEach((button) => {
+    button.addEventListener("click", function () {
+      const status = this.dataset.status;
+      currentStatus = status;
+      currentPage = 1;
+      updateURLState();
+      loadDirectBids();
+    });
+  });
+
+  // 경매장 필터 이벤트
+  document.querySelectorAll(".auc-num-filter").forEach((button) => {
+    button.addEventListener("click", function () {
+      const aucNum = this.dataset.aucNum;
+      currentAucNum = aucNum;
+      currentPage = 1;
+      updateURLState();
+      loadDirectBids();
+    });
   });
 
   // 필터 토글 이벤트

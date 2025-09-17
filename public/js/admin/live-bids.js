@@ -59,7 +59,7 @@ function updateURLState() {
 function updateUIFromState() {
   const searchInput = document.getElementById("searchInput");
   const sortBySelect = document.getElementById("sortBy");
-  const statusButtons = document.querySelectorAll(".status-filter");
+  const statusButtons = document.querySelectorAll(".filter-tab");
   const aucNumButtons = document.querySelectorAll(".auc-num-filter");
 
   if (searchInput) searchInput.value = currentSearch;
@@ -111,19 +111,12 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // 상태 필터 이벤트
-  const statusButtons = document.querySelectorAll(".status-filter");
+  // 필터 탭 이벤트
+  const statusButtons = document.querySelectorAll(".filter-tab");
   statusButtons.forEach((button) => {
     button.addEventListener("click", function () {
       const status = this.dataset.status;
-      if (currentStatus === status) {
-        currentStatus = "";
-        this.classList.remove("active");
-      } else {
-        currentStatus = status;
-        statusButtons.forEach((btn) => btn.classList.remove("active"));
-        this.classList.add("active");
-      }
+      currentStatus = status;
       currentPage = 1;
       updateURLState();
       loadLiveBids();
