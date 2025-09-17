@@ -550,7 +550,7 @@ class BrandAucCrawler extends AxiosCrawler {
       original_title: original_title,
       title: this.removeLeadingBrackets(original_title),
       brand: this.convertFullWidthToAscii(item.maker || ""),
-      rank: item.hyoka || "",
+      rank: this.convertFullWidthToAscii(item.hyoka || ""),
       starting_price: item.genzaiKng || item.startKng || 0,
       image: item.photoUrl
         ? item.photoUrl.replace(/(brand_img\/)(\d+)/, "$16")
@@ -1548,7 +1548,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
       original_title: original_title,
       title: this.removeLeadingBrackets(original_title),
       brand: this.convertFullWidthToAscii(item.maker || ""),
-      rank: item.hyoka || "",
+      rank: this.convertFullWidthToAscii(item.hyoka || ""),
       final_price: item.kekkaKng || 0,
       image: item.photoUrl
         ? item.photoUrl.replace(/(brand_img\/)(\d+)/, "$16")

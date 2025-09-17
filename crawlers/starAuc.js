@@ -609,7 +609,9 @@ class StarAucCrawler extends AxiosCrawler {
       original_title: scriptData.name,
       title: title,
       brand: title.split(" ")[0],
-      rank: scriptData.fixRank?.replace(/\\uff/g, ""),
+      rank: this.convertFullWidthToAscii(
+        scriptData.fixRank?.replace(/\\uff/g, "")
+      ),
       starting_price: parseInt(scriptData.startingPrice, 10),
       image: scriptData.thumbnailUrl,
       category: this.config.categoryTable[this.config.currentCategoryId],
@@ -1442,7 +1444,7 @@ class StarAucValueCrawler extends AxiosCrawler {
         original_title: title,
         title: this.removeLeadingBrackets(title),
         brand: brand,
-        rank: rank,
+        rank: this.convertFullWidthToAscii(rank),
         lot_no: lotNo,
         final_price: finalPrice,
         image: image,
