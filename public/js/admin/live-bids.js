@@ -635,7 +635,9 @@ function openSecondPriceModal(bidId) {
   document.getElementById("secondPrice").value = "";
 
   const modal = window.setupModal("secondPriceModal");
-  modal.show();
+  if (modal) {
+    modal.show();
+  }
 }
 
 // 2차 제안가 제안 제출
@@ -668,7 +670,9 @@ function openCompleteModal(bidId) {
     "price-comparison";
 
   const modal = window.setupModal("completeModal");
-  modal.show();
+  if (modal) {
+    modal.show();
+  }
 }
 
 // 관부가세 포함 가격 업데이트
@@ -742,7 +746,9 @@ function openCancelModal(bidId) {
 
   // 공통 모달 함수 사용
   const modal = window.setupModal("cancelModal");
-  modal.show();
+  if (modal) {
+    modal.show();
+  }
 }
 
 // 낙찰 실패 제출
@@ -777,7 +783,9 @@ function openBulkCompleteModal() {
     "관부가세 포함: -";
 
   const modal = window.setupModal("bulkCompleteModal");
-  modal.show();
+  if (modal) {
+    modal.show();
+  }
 }
 
 // 일괄 관부가세 포함 가격 업데이트
@@ -834,7 +842,9 @@ function openBulkCancelModal() {
   document.getElementById("bulkCancelCount").textContent = count;
 
   const modal = window.setupModal("bulkCancelModal");
-  modal.show();
+  if (modal) {
+    modal.show();
+  }
 }
 
 // 일괄 낙찰 실패 제출
@@ -929,7 +939,9 @@ function openEditBidModal(bidId) {
     currentBid.winning_price || "";
 
   const modal = window.setupModal("editBidModal");
-  modal.show();
+  if (modal) {
+    modal.show();
+  }
 }
 
 // 수정 제출

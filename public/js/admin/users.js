@@ -196,8 +196,10 @@ function openUserForm(user = null) {
     userPassword.required = true;
   }
 
-  const modal = setupModal("userFormModal");
-  modal.show();
+  const modal = window.setupModal("userFormModal");
+  if (modal) {
+    modal.show();
+  }
 }
 
 // 회원 저장 (등록 또는 수정)

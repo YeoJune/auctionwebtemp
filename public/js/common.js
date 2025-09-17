@@ -187,7 +187,7 @@ function setupModal(modalId) {
   const modal = document.getElementById(modalId);
   if (!modal) return null;
 
-  const closeBtn = modal.querySelector(".close");
+  const closeBtn = modal.querySelector(".close, .close-modal");
 
   if (closeBtn) {
     closeBtn.onclick = () => {

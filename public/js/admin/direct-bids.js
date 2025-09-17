@@ -611,8 +611,10 @@ function openCompleteModal(bidId) {
   document.getElementById("priceComparisonMessage").className =
     "price-comparison";
 
-  const modal = setupModal("completeModal");
-  modal.show();
+  const modal = window.setupModal("completeModal");
+  if (modal) {
+    modal.show();
+  }
 }
 
 // 관부가세 포함 가격 업데이트
@@ -688,8 +690,10 @@ async function submitCompleteBid() {
 function openCancelModal(bidId) {
   document.getElementById("cancelBidId").value = bidId;
 
-  const modal = setupModal("cancelModal");
-  modal.show();
+  const modal = window.setupModal("cancelModal");
+  if (modal) {
+    modal.show();
+  }
 }
 
 // 낙찰 실패 제출
@@ -715,8 +719,10 @@ async function submitCancelBid() {
 function openMarkAsSubmittedModal(bidId) {
   document.getElementById("markSubmittedBidId").value = bidId;
 
-  const modal = setupModal("markAsSubmittedModal");
-  modal.show();
+  const modal = window.setupModal("markAsSubmittedModal");
+  if (modal) {
+    modal.show();
+  }
 }
 
 // 플랫폼 반영 완료 표시 처리
@@ -748,7 +754,9 @@ function openBulkCompleteModal() {
     "관부가세 포함: -";
 
   const modal = window.setupModal("bulkCompleteModal");
-  modal.show();
+  if (modal) {
+    modal.show();
+  }
 }
 
 // 일괄 관부가세 포함 가격 업데이트
@@ -803,7 +811,9 @@ function openBulkCancelModal() {
   document.getElementById("bulkCancelCount").textContent = count;
 
   const modal = window.setupModal("bulkCancelModal");
-  modal.show();
+  if (modal) {
+    modal.show();
+  }
 }
 
 // 일괄 낙찰 실패 제출
@@ -838,7 +848,9 @@ function openBulkMarkAsSubmittedModal() {
   document.getElementById("bulkMarkSubmittedCount").textContent = count;
 
   const modal = window.setupModal("bulkMarkAsSubmittedModal");
-  modal.show();
+  if (modal) {
+    modal.show();
+  }
 }
 
 // 일괄 플랫폼 반영 완료 제출
@@ -920,7 +932,9 @@ function openEditBidModal(bidId) {
     currentBid.winning_price || "";
 
   const modal = window.setupModal("editBidModal");
-  modal.show();
+  if (modal) {
+    modal.show();
+  }
 }
 
 // 수정 제출
