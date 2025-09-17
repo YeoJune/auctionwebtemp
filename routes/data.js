@@ -71,6 +71,21 @@ async function buildBaseFilterConditions(isRecommendOnly = false) {
   return { conditions, queryParams };
 }
 
+// rank 정규화 함수 추가 (파일 상단에)
+function normalizeRank(rank) {
+  if (!rank) return rank;
+
+  // 전각 → 반각 변환
+  const fullToHalf = rank
+    .toString()
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, function (s) {
+      return String.fromCharCode(s.charCodeAt(0) - 0xfee0);
+    })
+    .trim();
+
+  return fullToHalf;
+}
+
 // ===== 메인 데이터 조회 라우터 =====
 router.get("/", async (req, res) => {
   const {
