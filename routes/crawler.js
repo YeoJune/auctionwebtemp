@@ -533,6 +533,19 @@ async function processChangedBids(changedItems) {
       )
       .map((bid) => bid.id);
 
+    let cancelledBidsData = [];
+    if (bidsToCancel.length > 0) {
+      [cancelledBidsData] = await conn.query(
+        `SELECT db.user_id, i.title 
+        FROM direct_bids db 
+        JOIN crawled_items i ON db.item_id = i.item_id 
+        WHERE db.status = 'active' AND db.id IN (${bidsToCancel
+          .map(() => "?")
+          .join(",")})`,
+        bidsToCancel
+      );
+    }
+
     // 취소 처리 - 100개씩 배치 처리
     for (let i = 0; i < bidsToCancel.length; i += 100) {
       const batch = bidsToCancel.slice(i, i + 100);
@@ -548,20 +561,6 @@ async function processChangedBids(changedItems) {
           } bids due to price changes`
         );
       }
-    }
-
-    // commit 전에 취소될 입찰 데이터 조회
-    let cancelledBidsData = [];
-    if (bidsToCancel.length > 0) {
-      [cancelledBidsData] = await conn.query(
-        `SELECT db.user_id, i.title 
-        FROM direct_bids db 
-        JOIN crawled_items i ON db.item_id = i.item_id 
-        WHERE db.status = 'active' AND db.id IN (${bidsToCancel
-          .map(() => "?")
-          .join(",")})`,
-        bidsToCancel
-      );
     }
 
     await conn.commit();
