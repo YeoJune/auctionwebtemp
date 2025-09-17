@@ -655,3 +655,34 @@ body {
     border: 1px solid #000;
   }
 }
+
+/* 상태 관리 클래스들 */
+.hidden {
+  display: none !important;
+}
+
+.show {
+  display: block !important;
+}
+
+.show-flex {
+  display: flex !important;
+}
+
+.show-inline-block {
+  display: inline-block !important;
+}
+
+/* 스크롤 방지 */
+.no-scroll {
+  overflow: hidden !important;
+}
+
+/* 로딩 상태 */
+.loading-visible {
+  display: block !important;
+}
+
+.loading-hidden {
+  display: none !important;
+}
