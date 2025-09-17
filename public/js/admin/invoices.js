@@ -205,51 +205,21 @@ function renderInvoicesTable(invoices) {
   tableBody.innerHTML = html;
 }
 
-// 페이지네이션 렌더링 (direct-bids.js 스타일로 변경)
+// 페이지네이션 렌더링
 function renderPagination(currentPage, totalPages, totalItems) {
+  // 공통 페이지네이션 함수 사용
+  createPagination(currentPage, totalPages, goToPage);
+
+  // 페이지 정보 표시
   const paginationContainer = document.getElementById("pagination");
-  if (!paginationContainer) return;
+  if (paginationContainer && totalPages > 0) {
+    const infoDiv = createElement("div", "pagination-info");
+    infoDiv.textContent = `총 ${totalItems}개 항목 중 ${
+      (currentPage - 1) * state.limit + 1
+    } - ${Math.min(currentPage * state.limit, totalItems)}개 표시`;
 
-  if (totalPages <= 1) {
-    paginationContainer.innerHTML = "";
-    return;
+    paginationContainer.insertBefore(infoDiv, paginationContainer.firstChild);
   }
-
-  let html = `<div class="pagination-info">총 ${totalItems}개 항목 중 ${
-    (currentPage - 1) * state.limit + 1
-  } - ${Math.min(currentPage * state.limit, totalItems)}개 표시</div>`;
-  html += '<div class="pagination-controls">';
-
-  // 이전 페이지 버튼
-  html += `<button class="btn btn-sm ${currentPage === 1 ? "disabled" : ""}" ${
-    currentPage === 1
-      ? "disabled"
-      : 'onclick="goToPage(' + (currentPage - 1) + ')"'
-  }>이전</button>`;
-
-  // 페이지 번호 버튼들
-  const maxPageButtons = 5;
-  const startPage = Math.max(1, currentPage - Math.floor(maxPageButtons / 2));
-  const endPage = Math.min(totalPages, startPage + maxPageButtons - 1);
-
-  for (let i = startPage; i <= endPage; i++) {
-    html += `<button class="btn btn-sm ${
-      i === currentPage ? "active" : ""
-    }" onclick="goToPage(${i})">${i}</button>`;
-  }
-
-  // 다음 페이지 버튼
-  html += `<button class="btn btn-sm ${
-    currentPage === totalPages ? "disabled" : ""
-  }" ${
-    currentPage === totalPages
-      ? "disabled"
-      : 'onclick="goToPage(' + (currentPage + 1) + ')"'
-  }>다음</button>`;
-
-  html += "</div>";
-
-  paginationContainer.innerHTML = html;
 }
 
 // 페이지 이동
