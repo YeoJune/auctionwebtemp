@@ -163,8 +163,6 @@ input[type="checkbox"]:checked + .toggle-slider:before {
 
 /* ========== 페이지네이션 ========== */
 .pagination {
-  display: flex;
-  flex-direction: column;
   margin: 25px 0;
   background-color: #fff;
   padding: 20px;
