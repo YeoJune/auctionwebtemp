@@ -1259,7 +1259,19 @@ window.ProductListController = (function () {
     if (!rankFilters) return;
 
     rankFilters.innerHTML = "";
-    const rankOrder = ["N", "S", "A", "AB", "B", "BC", "C", "D", "E", "F"];
+    const rankOrder = [
+      "N",
+      "S",
+      "SA",
+      "A",
+      "AB",
+      "B",
+      "BC",
+      "C",
+      "D",
+      "E",
+      "F",
+    ];
     const rankMap = new Map(ranks.map((r) => [r.rank, r]));
     console.log(ranks);
     console.log(rankMap);

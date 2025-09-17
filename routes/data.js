@@ -545,11 +545,11 @@ router.get("/ranks", async (req, res) => {
     );
 
     const [results] = await pool.query(
-      `SELECT ci.rank, COUNT(*) as count
+      `SELECT TRIM(ci.rank) as rank, COUNT(*) as count
        FROM crawled_items ci
        WHERE ${conditions.join(" AND ")}
-       GROUP BY ci.rank
-       ORDER BY FIELD(ci.rank, 'N', 'S', 'A', 'AB', 'B', 'BC', 'C', 'D', 'E', 'F')`,
+       GROUP BY TRIM(ci.rank)
+       ORDER BY FIELD(TRIM(ci.rank), 'N', 'S', 'SA', 'A', 'AB', 'B', 'BC', 'C', 'D', 'E', 'F')`,
       queryParams
     );
 
