@@ -1284,10 +1284,11 @@ select {
 
 .filter-close-btn {
   position: absolute;
-  top: 12px;
+  top: 50%;
   right: 15px;
   width: 36px;
   height: 36px;
+  transform: translateY(-50%); /* 수직 중앙 정렬 */
   color: white;
   border-radius: 50%;
   display: flex !important; /* Ensure display with !important */
@@ -1913,7 +1914,7 @@ select {
     width: 32px; /* 80% of 40px */
     height: 32px; /* 80% of 40px */
     font-size: 22px; /* 80% of 28px */
-    top: 8px; /* 80% of 10px */
+    top: 50%; /* 수직 중앙 정렬 유지 */
     right: 8px; /* 80% of 10px */
   }
 }
