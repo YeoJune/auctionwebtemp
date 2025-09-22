@@ -1409,7 +1409,7 @@ select {
     left: 0;
     width: 100%;
     background-color: white;
-    padding: 15px;
+    padding: 12px;
     display: flex;
     justify-content: space-between;
     box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
@@ -1421,7 +1421,7 @@ select {
   .reset-filters,
   .apply-filters {
     flex: 1;
-    margin: 0 5px;
+    margin: 0 4px;
   }
 
   /* 멀티셀렉트 컨테이너 너비 제한 */
@@ -1434,12 +1434,12 @@ select {
   .filter-row {
     flex-direction: column;
     align-items: flex-start;
-    margin-bottom: 15px;
+    margin-bottom: 12px;
   }
 
   .filter-label {
     width: 100%;
-    margin-bottom: 5px;
+    margin-bottom: 4px;
     font-weight: 600;
   }
 
@@ -1449,7 +1449,7 @@ select {
 
   /* 멀티셀렉트 내부 스크롤 최적화 */
   .multiselect-body {
-    max-height: 150px;
+    max-height: 120px;
   }
 
   /* 필터 아이템 가독성 개선 */
@@ -1470,7 +1470,7 @@ select {
 
   .bid-input-label {
     width: 100%;
-    padding: var(--spacing-xs);
+    padding: 6px;
     justify-content: center;
     border-bottom: 1px solid var(--border-color);
   }
@@ -1492,8 +1492,8 @@ select {
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: auto auto;
-    gap: var(--spacing-sm);
-    margin-bottom: var(--spacing-md);
+    gap: 8px;
+    margin-bottom: 12px;
   }
 
   .items-per-page {
@@ -1511,7 +1511,7 @@ select {
     grid-row: 2;
     display: flex;
     justify-content: center;
-    gap: var(--spacing-sm);
+    gap: 8px;
   }
 
   .items-per-page select,
@@ -1521,8 +1521,8 @@ select {
 
   .view-type .view-btn {
     flex: 0 0 auto;
-    min-width: 44px;
-    height: 44px;
+    min-width: 36px;
+    height: 36px;
   }
 
   /* 모바일에서 auction-type-indicator 위치 조정 */
@@ -1534,32 +1534,32 @@ select {
 
   .modal-body {
     flex-direction: column;
-    padding: 10px;
+    padding: 8px;
   }
 
   .modal-left,
   .modal-right {
     width: 100%;
-    padding: 10px;
+    padding: 8px;
   }
 
   .thumbnail {
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
   }
 
   .image-nav {
-    width: 32px;
-    height: 32px;
-    font-size: 18px;
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
   }
 
   .image-nav.prev {
-    left: 5px;
+    left: 4px;
   }
 
   .image-nav.next {
-    right: 5px;
+    right: 4px;
   }
 
   /* Dropdown position adjustment */
@@ -1579,234 +1579,7 @@ select {
   }
 
   .product-grid.list-view .product-card {
-    grid-template-columns: 90px 1fr;
-    grid-template-areas:
-      "image header"
-      "image price-info"
-      "timer timer"
-      "content content"
-      "actions actions";
-    gap: 10px;
-    padding: 10px;
-  }
-
-  .product-grid.list-view .product-image-container {
-    height: 90px;
-    width: 90px;
-  }
-
-  .product-grid.list-view .product-info-grid {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 6px;
-    align-items: flex-start;
-    justify-content: flex-start;
-    margin-top: 6px;
-  }
-
-  .product-grid.list-view .info-cell {
-    min-width: auto;
-    flex: 1;
-    text-align: center;
-    padding: 4px;
-    background-color: #f8f9fa;
-    border-radius: var(--border-radius-sm);
-    border-bottom: none;
-  }
-
-  .product-grid.list-view .product-brand {
-    font-size: 13px;
-  }
-
-  .product-grid.list-view .product-title {
-    font-size: 14px;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-  }
-
-  .product-grid.list-view .auction-number {
-    width: 26px;
-    height: 26px;
-    font-size: 10px;
-    top: 6px;
-    right: 6px;
-  }
-
-  .product-grid.list-view .product-rank {
-    width: 26px;
-    height: 26px;
-    font-size: 10px;
-    top: 6px;
-    left: 6px;
-  }
-
-  .product-grid.list-view .wishlist-buttons {
-    gap: 4px;
-    margin-top: 8px;
-  }
-
-  .product-grid.list-view .wishlist-btn {
-    padding: 6px 4px;
-    font-size: 10px;
-  }
-
-  .product-grid.list-view .bid-timer {
-    grid-area: timer;
-    padding: 6px 12px;
-    font-size: 12px;
-    margin-top: 4px;
-    width: 100%;
-    text-align: center;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .product-grid.list-view .bid-timer {
-    padding: 4px 8px;
-    font-size: 11px;
-    margin-top: 4px;
-    width: 100%;
-    text-align: center;
-  }
-}
-
-@media (max-width: 576px) {
-  .product-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--spacing-xs);
-  }
-
-  .product-card {
-    max-width: 100%;
-    font-size: 0.9em;
-  }
-
-  .wishlist-btn {
-    font-size: var(--font-size-xs);
-    padding: var(--spacing-xs);
-  }
-
-  .quick-bid-buttons {
-    flex-direction: column;
-    gap: var(--spacing-xs);
-  }
-
-  .product-title {
-    font-size: 12px;
-    margin-right: 40px;
-  }
-
-  .product-brand {
-    font-size: 10px;
-  }
-
-  .auction-number {
-    width: 28px;
-    height: 28px;
-    font-size: 12px;
-  }
-
-  .product-header {
-    padding: 6px;
-  }
-
-  .bid-timer {
-    padding: 2px 6px;
-    font-size: 10px;
-  }
-
-  .info-cell {
-    padding: 4px 2px;
-  }
-
-  .info-label {
-    font-size: 10px;
-  }
-
-  .info-value {
-    font-size: 14px;
-  }
-
-  .info-price-detail {
-    font-size: 9px;
-  }
-
-  .wishlist-btn {
-    font-size: 10px;
-    padding: 5px 2px;
-  }
-
-  /* Compact bid section */
-  .bid-section {
-    padding: 6px;
-  }
-
-  .bid-input-group {
-    height: 32px;
-  }
-
-  .bid-input {
-    font-size: 12px;
-  }
-
-  .bid-currency {
-    font-size: 12px;
-    padding: 0 6px;
-  }
-
-  .bid-button {
-    padding: 0 8px;
-    font-size: 12px;
-    height: 32px;
-  }
-
-  .quick-bid-buttons {
-    display: flex;
-    flex-direction: row;
-    gap: 3px;
-  }
-
-  .quick-bid-btn {
-    padding: 4px;
-    font-size: 10px;
-  }
-
-  /* 필터 레이블과 컨텐츠 간격 조정 */
-  .filter-label {
-    font-size: 14px;
-    padding: 3px 0;
-  }
-
-  /* 브랜드, 카테고리 옵션 크기 조정 */
-  .multiselect-container {
-    font-size: 13px;
-  }
-
-  .multiselect-search {
-    height: 32px;
-    font-size: 13px;
-  }
-
-  /* 체크박스 아이템 높이 조정 */
-  .filter-item {
-    padding: 2px 0;
-  }
-
-  /* 액션 버튼 패딩 줄이기 */
-  .filter-actions {
-    padding: 8px 10px;
-  }
-
-  .reset-filters,
-  .apply-filters {
-    padding: 8px 0;
-    font-size: 14px;
-  }
-
-  /* List View Mobile Optimizations */
-  .product-grid.list-view .product-card {
-    grid-template-columns: 75px 1fr;
+    grid-template-columns: 72px 1fr;
     grid-template-areas:
       "image header"
       "image price-info"
@@ -1818,59 +1591,286 @@ select {
   }
 
   .product-grid.list-view .product-image-container {
-    height: 75px;
-    width: 75px;
+    height: 72px;
+    width: 72px;
+  }
+
+  .product-grid.list-view .product-info-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-items: flex-start;
+    justify-content: flex-start;
+    margin-top: 5px;
+  }
+
+  .product-grid.list-view .info-cell {
+    min-width: auto;
+    flex: 1;
+    text-align: center;
+    padding: 3px;
+    background-color: #f8f9fa;
+    border-radius: var(--border-radius-sm);
+    border-bottom: none;
   }
 
   .product-grid.list-view .product-brand {
-    font-size: 11px;
+    font-size: 10px;
   }
 
   .product-grid.list-view .product-title {
-    font-size: 12px;
+    font-size: 11px;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .product-grid.list-view .auction-number {
+    width: 20px;
+    height: 20px;
+    font-size: 8px;
+    top: 5px;
+    right: 5px;
+  }
+
+  .product-grid.list-view .product-rank {
+    width: 20px;
+    height: 20px;
+    font-size: 8px;
+    top: 5px;
+    left: 5px;
+  }
+
+  .product-grid.list-view .wishlist-buttons {
+    gap: 3px;
+    margin-top: 6px;
+  }
+
+  .product-grid.list-view .wishlist-btn {
+    padding: 5px 3px;
+    font-size: 8px;
+  }
+
+  .product-grid.list-view .bid-timer {
+    grid-area: timer;
+    padding: 5px 10px;
+    font-size: 10px;
+    margin-top: 3px;
+    width: 100%;
+    text-align: center;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .product-grid.list-view .bid-timer {
+    padding: 3px 6px;
+    font-size: 9px;
+    margin-top: 3px;
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media (max-width: 576px) {
+  .product-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+
+  .product-card {
+    max-width: 100%;
+    font-size: 0.9em;
+  }
+
+  .wishlist-btn {
+    font-size: 10px;
+    padding: 6px;
+  }
+
+  .quick-bid-buttons {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .product-title {
+    font-size: 10px;
+    margin-right: 32px;
+  }
+
+  .product-brand {
+    font-size: 8px;
+  }
+
+  .auction-number {
+    width: 22px;
+    height: 22px;
+    font-size: 10px;
+  }
+
+  .product-header {
+    padding: 5px;
+  }
+
+  .bid-timer {
+    padding: 2px 5px;
+    font-size: 8px;
+  }
+
+  .info-cell {
+    padding: 3px 2px;
+  }
+
+  .info-label {
+    font-size: 8px;
+  }
+
+  .info-value {
+    font-size: 11px;
+  }
+
+  .info-price-detail {
+    font-size: 7px;
+  }
+
+  .wishlist-btn {
+    font-size: 8px;
+    padding: 4px 2px;
+  }
+
+  /* Compact bid section */
+  .bid-section {
+    padding: 5px;
+  }
+
+  .bid-input-group {
+    height: 26px;
+  }
+
+  .bid-input {
+    font-size: 10px;
+  }
+
+  .bid-currency {
+    font-size: 10px;
+    padding: 0 5px;
+  }
+
+  .bid-button {
+    padding: 0 6px;
+    font-size: 10px;
+    height: 26px;
+  }
+
+  .quick-bid-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 2px;
+  }
+
+  .quick-bid-btn {
+    padding: 3px;
+    font-size: 8px;
+  }
+
+  /* 필터 레이블과 컨텐츠 간격 조정 */
+  .filter-label {
+    font-size: 11px;
+    padding: 2px 0;
+  }
+
+  /* 브랜드, 카테고리 옵션 크기 조정 */
+  .multiselect-container {
+    font-size: 10px;
+  }
+
+  .multiselect-search {
+    height: 26px;
+    font-size: 10px;
+  }
+
+  /* 체크박스 아이템 높이 조정 */
+  .filter-item {
+    padding: 1px 0;
+  }
+
+  /* 액션 버튼 패딩 줄이기 */
+  .filter-actions {
+    padding: 6px 8px;
+  }
+
+  .reset-filters,
+  .apply-filters {
+    padding: 6px 0;
+    font-size: 11px;
+  }
+
+  /* List View Mobile Optimizations */
+  .product-grid.list-view .product-card {
+    grid-template-columns: 60px 1fr;
+    grid-template-areas:
+      "image header"
+      "image price-info"
+      "timer timer"
+      "content content"
+      "actions actions";
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .product-grid.list-view .product-image-container {
+    height: 60px;
+    width: 60px;
+  }
+
+  .product-grid.list-view .product-brand {
+    font-size: 9px;
+  }
+
+  .product-grid.list-view .product-title {
+    font-size: 10px;
     line-height: 1.3;
     -webkit-line-clamp: 2;
     line-clamp: 2;
   }
 
   .product-grid.list-view .info-cell {
-    padding: 4px 2px;
-    font-size: 10px;
+    padding: 3px 1px;
+    font-size: 8px;
   }
 
   .product-grid.list-view .info-label {
-    font-size: 8px;
+    font-size: 6px;
   }
 
   .product-grid.list-view .info-value {
-    font-size: 11px;
+    font-size: 9px;
   }
 
   .product-grid.list-view .auction-number {
-    width: 22px;
-    height: 22px;
-    font-size: 8px;
-    top: 4px;
-    right: 4px;
+    width: 18px;
+    height: 18px;
+    font-size: 6px;
+    top: 3px;
+    right: 3px;
   }
 
   .product-grid.list-view .product-rank {
-    width: 22px;
-    height: 22px;
-    font-size: 8px;
-    top: 4px;
-    left: 4px;
+    width: 18px;
+    height: 18px;
+    font-size: 6px;
+    top: 3px;
+    left: 3px;
   }
 
   .product-grid.list-view .wishlist-btn {
-    padding: 4px 2px;
-    font-size: 9px;
+    padding: 3px 1px;
+    font-size: 7px;
   }
 
   .product-grid.list-view .bid-timer {
     grid-area: timer;
-    padding: 5px 8px;
-    font-size: 11px;
+    padding: 4px 6px;
+    font-size: 9px;
     width: 100%;
     text-align: center;
     display: flex;
@@ -1910,11 +1910,11 @@ select {
   }
 
   .filter-close-btn {
-    width: 40px;
-    height: 40px;
-    font-size: 28px;
-    top: 10px;
-    right: 10px;
+    width: 32px;
+    height: 32px;
+    font-size: 22px;
+    top: 8px;
+    right: 8px;
   }
 }
 
@@ -1949,7 +1949,7 @@ select {
   }
 
   .view-controls {
-    gap: var(--spacing-xs);
+    gap: 6px;
   }
 
   .product-card {
@@ -1957,9 +1957,9 @@ select {
   }
 
   .auction-number {
-    width: 24px;
-    height: 24px;
-    font-size: 10px;
+    width: 20px;
+    height: 20px;
+    font-size: 8px;
   }
 }
 
