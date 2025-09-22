@@ -207,6 +207,8 @@ async function syncFilterSettingsToItems() {
   }
 }
 
+initializeFilterSettings();
+
 module.exports = {
   getFilterSettings,
   getEnabledFilters,
