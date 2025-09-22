@@ -238,7 +238,8 @@ button.auth-button:hover {
 /* 모바일 반응형 스타일 */
 @media (max-width: 768px) {
   .main-header {
-    padding: 8px;
+    padding: 8px; /* 80% of var(--spacing-sm) */
+    height: 48px; /* 80% of 60px */
   }
 
   .header-content {
@@ -249,15 +250,17 @@ button.auth-button:hover {
   .mobile-menu-toggle {
     display: flex;
     position: absolute;
-    right: 8px;
+    right: 8px; /* 80% of 10px */
     top: 50%;
     transform: translateY(-50%);
     z-index: var(--z-mobile-menu);
+    width: 34px; /* 80% of 42px */
+    height: 34px; /* 80% of 42px */
   }
 
   /* 모바일에서 인증 버튼 위치 조정 */
   .auth-container {
-    margin-right: 40px; /* 햄버거 버튼 공간 확보 */
+    margin-right: 40px; /* 80% of 50px */
   }
 
   /* 모바일에서 네비게이션 메뉴 기본 숨김 */
@@ -269,7 +272,7 @@ button.auth-button:hover {
   .nav-container.mobile-menu-active {
     display: flex;
     position: fixed;
-    top: var(--header-height);
+    top: 48px; /* 80% of var(--header-height) 60px */
     left: 0;
     right: 0;
     bottom: 0;
@@ -277,7 +280,7 @@ button.auth-button:hover {
     background-color: var(--blue-dark);
     z-index: var(--z-content-hover);
     flex-direction: column;
-    padding: 16px;
+    padding: 16px; /* 80% of 20px */
     overflow-y: auto;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   }
@@ -286,22 +289,22 @@ button.auth-button:hover {
   .nav-container.mobile-menu-active .nav-button {
     width: 100%;
     height: auto;
-    min-height: 48px;
+    min-height: 48px; /* 80% of 60px */
     flex-direction: row;
     justify-content: flex-start;
-    padding: 8px 12px;
-    margin-bottom: 4px;
+    padding: 8px 12px; /* 80% of 10px 15px */
+    margin-bottom: 4px; /* 80% of 5px */
     background-color: rgba(255, 255, 255, 0.05);
   }
 
   .nav-container.mobile-menu-active .nav-button i {
-    font-size: 16px;
-    margin-right: 12px;
+    font-size: 16px; /* 80% of 20px */
+    margin-right: 12px; /* 80% of 15px */
     margin-bottom: 0;
   }
 
   .nav-container.mobile-menu-active .nav-button span {
-    font-size: 13px;
+    font-size: 13px; /* 80% of 16px */
   }
 
   /* 모바일 환경에서 드롭다운 스타일 조정 */
@@ -309,14 +312,14 @@ button.auth-button:hover {
     position: static;
     width: 100%;
     box-shadow: none;
-    margin: 4px 0 8px 24px;
+    margin: 4px 0 8px 24px; /* 80% of 5px 0 10px 30px */
     background-color: rgba(255, 255, 255, 0.1);
     border-radius: var(--border-radius-sm);
   }
 
   .nav-container.mobile-menu-active .dropdown-content a {
     color: white;
-    padding: 8px 12px;
+    padding: 8px 12px; /* 80% of 10px 15px */
   }
 
   .nav-container.mobile-menu-active .dropdown-content a:hover {
@@ -391,7 +394,7 @@ button.auth-button:hover {
   .nav-container.mobile-menu-active {
     display: flex !important;
     position: fixed;
-    top: var(--header-height);
+    top: 48px; /* 80% of var(--header-height) 60px */
     left: 0;
     right: 0;
     bottom: 0;
@@ -399,7 +402,7 @@ button.auth-button:hover {
     background-color: var(--blue-dark);
     z-index: var(--z-mobile-menu);
     flex-direction: column;
-    padding: 16px;
+    padding: 16px; /* 80% of 20px */
     overflow-y: auto;
   }
 
@@ -408,7 +411,7 @@ button.auth-button:hover {
     position: static;
     width: 100%;
     max-width: none;
-    margin: 4px 0 8px 16px;
+    margin: 4px 0 8px 16px; /* 80% of 5px 0 10px 20px */
     background-color: rgba(255, 255, 255, 0.1);
     box-shadow: none;
   }

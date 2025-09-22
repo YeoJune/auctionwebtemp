@@ -452,13 +452,8 @@ input[type="time"]:focus {
 }
 
 @media (max-width: 768px) {
-  :root {
-    --spacing-md: 0.7rem;
-    --spacing-lg: 1rem;
-  }
-
   .container {
-    padding: 8px;
+    padding: 6px; /* 80% of var(--spacing-sm) 8px */
   }
 
   .modal-content {
@@ -469,22 +464,17 @@ input[type="time"]:focus {
   }
 
   .modal-header {
-    padding: 8px;
+    padding: 6px; /* 80% of var(--spacing-sm) 8px */
   }
 
   .modal-body {
-    padding: 8px;
+    padding: 6px; /* 80% of var(--spacing-sm) 8px */
   }
 }
 
 @media (max-width: 480px) {
-  :root {
-    --spacing-sm: 0.3rem;
-    --spacing-md: 0.6rem;
-  }
-
   .container {
-    padding: 6px;
+    padding: 2px; /* 80% of var(--spacing-xs) 4px */
   }
 }
 
