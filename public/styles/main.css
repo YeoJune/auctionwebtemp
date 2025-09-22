@@ -1284,11 +1284,10 @@ select {
 
 .filter-close-btn {
   position: absolute;
-  top: 50%;
+  top: 12px; /* filters-header 내부 중앙 위치 (60px height 기준) */
   right: 15px;
   width: 36px;
   height: 36px;
-  transform: translateY(-50%); /* 수직 중앙 정렬 */
   color: white;
   border-radius: 50%;
   display: flex !important; /* Ensure display with !important */
@@ -1914,7 +1913,7 @@ select {
     width: 32px; /* 80% of 40px */
     height: 32px; /* 80% of 40px */
     font-size: 22px; /* 80% of 28px */
-    top: 50%; /* 수직 중앙 정렬 유지 */
+    top: 10px; /* filters-header 영역 내에서 적절한 위치 */
     right: 8px; /* 80% of 10px */
   }
 }
