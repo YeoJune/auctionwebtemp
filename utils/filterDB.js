@@ -207,7 +207,7 @@ async function syncFilterSettingsToItems() {
   }
 }
 
-initializeFilterSettings();
+syncFilterSettingsToItems(); // 모듈 로드 시 즉시 동기화
 
 module.exports = {
   getFilterSettings,
