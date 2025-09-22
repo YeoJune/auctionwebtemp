@@ -151,6 +151,9 @@ async function initializeFilterSettings() {
       AND filter_value < CURDATE()
     `);
 
+    // 필터 설정 동기화
+    await syncFilterSettingsToItems();
+
     // 7. 변경 사항 요약 반환
     return {
       added: insertPromises.length,
@@ -206,8 +209,6 @@ async function syncFilterSettingsToItems() {
     conn.release();
   }
 }
-
-syncFilterSettingsToItems(); // 모듈 로드 시 즉시 동기화
 
 module.exports = {
   getFilterSettings,
