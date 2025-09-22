@@ -749,7 +749,7 @@ select {
   border: 1px solid #ccc;
   border-radius: 4px;
   overflow: hidden;
-  height: 38px;
+  height: 40px;
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-sm);
 }
@@ -1131,10 +1131,6 @@ select {
   padding: 4px 8px;
   font-size: 11px;
   min-width: 60px;
-}
-
-.product-grid.list-view .bid-input-group {
-  height: 32px;
 }
 
 .product-grid.list-view .bid-input {
@@ -1740,10 +1736,6 @@ select {
   /* Compact bid section */
   .bid-section {
     padding: 5px; /* 80% of 6px */
-  }
-
-  .bid-input-group {
-    height: 26px; /* 80% of 32px */
   }
 
   .bid-input {
