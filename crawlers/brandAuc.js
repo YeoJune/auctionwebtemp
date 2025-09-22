@@ -602,7 +602,7 @@ class BrandAucCrawler extends AxiosCrawler {
       const detail = response.data;
 
       // 이미지 URL 목록 처리
-      const images = detail.fileList || [];
+      const images = detail.fileListAdmin || detail.fileList || [];
       const formattedImages = images.map((url) =>
         url.replace(/(brand_img\/)(\d+)/, "$16")
       );
