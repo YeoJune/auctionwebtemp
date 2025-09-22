@@ -13,6 +13,14 @@
   color: white;
 }
 
+/* 모바일 환경에서 헤더 80% 축소 */
+@media (max-width: 768px) {
+  .main-header {
+    height: 48px; /* 60px의 80% */
+    padding: 10px; /* 12px의 약 80% */
+  }
+}
+
 .header-content {
   display: flex;
   justify-content: space-between;
@@ -69,6 +77,26 @@
   transition: all var(--transition-fast);
 }
 
+/* 모바일 환경에서 네비게이션 버튼 80% 축소 */
+@media (max-width: 768px) {
+  .nav-button {
+    width: 51px; /* 64px의 80% */
+    height: 51px; /* 64px의 80% */
+    padding: 6px 0; /* 8px의 75% */
+    min-height: 32px; /* 40px의 80% */
+    font-size: 11px; /* 14px의 약 80% */
+  }
+
+  .nav-button i {
+    font-size: 19px; /* 24px의 80% */
+    margin-bottom: 3px; /* 4px의 75% */
+  }
+
+  .nav-button span {
+    font-size: 9px; /* 11px의 약 80% */
+  }
+}
+
 .nav-button i {
   font-size: 24px;
   margin-bottom: 4px;
@@ -104,6 +132,15 @@ button.auth-button {
   transition: all 0.2s ease;
 }
 
+/* 모바일 환경에서 인증 버튼 80% 축소 */
+@media (max-width: 768px) {
+  button.auth-button {
+    height: 29px; /* 36px의 80% */
+    padding: 0 12px; /* 15px의 80% */
+    font-size: 11px; /* 약 80% */
+  }
+}
+
 button.auth-button:hover {
   background-color: rgba(255, 255, 255, 0.1);
 }
@@ -124,6 +161,15 @@ button.auth-button:hover {
   cursor: pointer;
   z-index: calc(var(--z-mobile-menu) + 10);
   transition: all 0.2s ease;
+}
+
+/* 모바일 환경에서 햄버거 버튼 80% 축소 */
+@media (max-width: 768px) {
+  .mobile-menu-toggle {
+    width: 34px; /* 42px의 80% */
+    height: 34px; /* 42px의 80% */
+    font-size: 1.2rem; /* 1.5rem의 80% */
+  }
 }
 
 .mobile-menu-toggle:hover {
@@ -260,7 +306,7 @@ button.auth-button:hover {
 
   /* 모바일에서 인증 버튼 위치 조정 */
   .auth-container {
-    margin-right: 40px; /* 80% of 50px */
+    margin-right: 55px; /* 햄버거 버튼과의 간격 증가 */
   }
 
   /* 모바일에서 네비게이션 메뉴 기본 숨김 */
