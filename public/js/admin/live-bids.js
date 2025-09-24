@@ -581,7 +581,7 @@ function renderLiveBidsTable(liveBids) {
     </td>
     <td>${statusBadge}</td>
     <td>${appraisalBadge}</td>
-    <td>${bid.updated_at}</td>
+    <td>${formatDateTime(bid.updated_at)}</td>
     <td>${actionButtons}</td>
   </tr>
  `;

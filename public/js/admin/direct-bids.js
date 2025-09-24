@@ -1,5 +1,8 @@
 // public/js/admin/direct-bids.js
 
+const { format } = require("path");
+const { formatDate } = require("tough-cookie");
+
 // 현재 선택된 필터 상태 - URL로 관리
 let currentStatus = "";
 let highestOnly = false;
@@ -662,7 +665,7 @@ function renderDirectBidsTable(directBids) {
    <td>
      <div>${scheduledDate}</div>
    </td>
-   <td>${bid.updated_at}</td>
+   <td>${formatDateTime(bid.updated_at)}</td>
    <td>${statusBadge}</td>
    <td>${appraisalBadge}</td>
    <td>${submittedBadge}</td>
