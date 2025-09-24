@@ -662,7 +662,7 @@ function renderDirectBidsTable(directBids) {
    <td>
      <div>${scheduledDate}</div>
    </td>
-   <td>${formatDate(bid.updated_at)}</td>
+   <td>${bid.updated_at}</td>
    <td>${statusBadge}</td>
    <td>${appraisalBadge}</td>
    <td>${submittedBadge}</td>
