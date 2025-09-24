@@ -1,8 +1,5 @@
 // public/js/admin/direct-bids.js
 
-const { format } = require("path");
-const { formatDate } = require("tough-cookie");
-
 // 현재 선택된 필터 상태 - URL로 관리
 let currentStatus = "";
 let highestOnly = false;
