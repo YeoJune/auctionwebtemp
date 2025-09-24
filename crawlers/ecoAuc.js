@@ -513,6 +513,7 @@ class EcoAucCrawler extends AxiosCrawler {
     return {
       item_id: itemId,
       scheduled_date: scheduledDate,
+      title: title,
     };
   }
 
