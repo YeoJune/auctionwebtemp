@@ -501,8 +501,13 @@ class EcoAucCrawler extends AxiosCrawler {
       $scheduledDate.length > 0 ? $scheduledDate.text().trim() : null;
     const scheduledDate = this.extractDate(scheduledDateText);
 
+    // 제목 추출
+    const $title = $element.find(this.config.crawlSelectors.title);
+    const title = $title.length > 0 ? $title.text().trim() : null;
+
     // 원본 로직과 일치하게 필터링
     if (!this.isCollectionDay(scheduledDate)) return null;
+    if (title.includes("▼")) return null;
     if (existingIds.has(itemId)) return { item_id: itemId };
 
     return {
@@ -514,9 +519,7 @@ class EcoAucCrawler extends AxiosCrawler {
   extractItemInfo($, element, item0) {
     const $element = element; // 이미 jQuery 객체여야 함
 
-    // 제목 추출
-    const $title = $element.find(this.config.crawlSelectors.title);
-    const title = $title.length > 0 ? $title.text().trim() : null;
+    const title = item0.title;
 
     // 브랜드 추출
     const $brand = $element.find(this.config.crawlSelectors.brand);
