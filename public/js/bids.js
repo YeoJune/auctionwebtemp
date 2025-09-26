@@ -142,8 +142,14 @@ window.BidManager = (function () {
     let timerText = "입찰마감";
     let isExpired = false;
 
+    console.log(bidInfo);
+
     // 현장 경매의 경우 입찰 단계 결정
-    if (bidInfo?.first_price && !bidInfo?.final_price) {
+    if (
+      bidInfo?.bidType == "live" &&
+      bidInfo?.first_price &&
+      !bidInfo?.final_price
+    ) {
       bidStage = "final";
       timerText = "최종입찰마감";
     } else if (!bidInfo?.first_price) {
