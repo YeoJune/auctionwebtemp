@@ -146,7 +146,7 @@ window.BidManager = (function () {
 
     // 현장 경매의 경우 입찰 단계 결정
     if (
-      bidInfo?.bidType == "live" &&
+      item?.bid_type == "live" &&
       bidInfo?.first_price &&
       !bidInfo?.final_price
     ) {
