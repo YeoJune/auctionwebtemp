@@ -145,17 +145,15 @@ window.BidManager = (function () {
     console.log(bidInfo);
 
     // 현장 경매의 경우 입찰 단계 결정
-    if (
-      item?.bid_type == "live" &&
-      bidInfo?.first_price &&
-      !bidInfo?.final_price
-    ) {
-      bidStage = "final";
-      timerText = "최종입찰마감";
-    } else if (!bidInfo?.first_price) {
-      timerText = "1차입찰마감";
-    } else if (bidInfo?.final_price) {
-      return `<div class="bid-timer completed">입찰완료</div>`;
+    if (item?.bid_type == "live") {
+      if (bidInfo?.first_price && !bidInfo?.final_price) {
+        bidStage = "final";
+        timerText = "최종입찰마감";
+      } else if (!bidInfo?.first_price) {
+        timerText = "1차입찰마감";
+      } else if (bidInfo?.final_price) {
+        return `<div class="bid-timer completed">입찰완료</div>`;
+      }
     }
 
     const timer = getRemainingTime(item.scheduled_date, bidStage);
