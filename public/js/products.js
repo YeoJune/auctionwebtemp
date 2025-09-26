@@ -437,6 +437,8 @@ window.ProductRenderer = (function () {
       (b) => b.item_id == item.item_id
     );
 
+    console.log(liveBidInfo, directBidInfo);
+
     // 입찰 섹션 HTML 생성
     try {
       if (item.bid_type === "direct") {
