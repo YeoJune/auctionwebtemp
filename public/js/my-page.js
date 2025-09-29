@@ -356,17 +356,8 @@ class MyPageManager {
 
   // 대시보드 렌더링
   async renderDashboard() {
-    // 데이터가 하나라도 비어있거나, bidType이 변경되었으면 재로드
-    const needsReload =
-      this.bidProductsState.liveBids.length === 0 ||
-      this.bidProductsState.directBids.length === 0 ||
-      this.bidProductsState.bidType !== "live"; // 대시보드는 항상 live 기준
-
-    if (needsReload) {
-      // bidType을 live로 되돌리고 양쪽 모두 로드
-      this.bidProductsState.bidType = "live";
-      await this.loadBidItemsData(true);
-    }
+    // 양쪽 데이터 강제 로드
+    await this.loadBidItemsData(true); // 항상 양쪽 모두 로드
 
     const stats = await this.calculateDashboardStats();
 
