@@ -392,6 +392,73 @@ window.AuthManager = (function () {
   };
 })();
 
+// 로그인 필수 모달 관리자
+window.LoginRequiredModal = (function () {
+  let modalManager;
+  let isInitialized = false;
+
+  function initialize() {
+    if (isInitialized) return;
+
+    // 기존 setupModal 시스템 사용
+    modalManager = setupModal("loginRequiredModal");
+    if (!modalManager) return;
+
+    setupEventListeners();
+    isInitialized = true;
+  }
+
+  function setupEventListeners() {
+    // 모달 버튼 이벤트 설정
+    const loginBtn = document.getElementById("loginModalBtn");
+    const inquiryBtn = document.getElementById("inquiryModalBtn");
+    const closeBtn = document.getElementById("closeModalBtn");
+
+    if (loginBtn) {
+      loginBtn.addEventListener("click", () => {
+        window.location.href = "/signinPage";
+      });
+    }
+
+    if (inquiryBtn) {
+      inquiryBtn.addEventListener("click", () => {
+        window.location.href = "/inquiryPage";
+      });
+    }
+
+    if (closeBtn) {
+      closeBtn.addEventListener("click", hide);
+    }
+  }
+
+  function show() {
+    if (modalManager) {
+      modalManager.show();
+    }
+  }
+
+  function hide() {
+    if (modalManager) {
+      modalManager.hide();
+    }
+  }
+
+  function checkLoginRequired() {
+    if (!window.AuthManager.isAuthenticated()) {
+      show();
+      return false;
+    }
+    return true;
+  }
+
+  return {
+    initialize,
+    show,
+    hide,
+    checkLoginRequired,
+  };
+})();
+
 // 모바일 메뉴 설정 (범용)
 function setupMobileMenu() {
   // 필요한 요소 찾기

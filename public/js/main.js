@@ -114,6 +114,11 @@ window.ProductListController = (function () {
       const isAuth = await window.AuthManager.checkAuthStatus();
       const currentUser = window.AuthManager.getUser();
 
+      // LoginRequiredModal 초기화
+      if (window.LoginRequiredModal) {
+        window.LoginRequiredModal.initialize();
+      }
+
       if (isAuth && currentUser && currentUser.id) {
         console.log("상품 페이지 - 현재 사용자 ID:", currentUser.id);
 
@@ -974,6 +979,14 @@ window.ProductListController = (function () {
 
   // 이벤트 핸들러들
   function handleSearch() {
+    // 비로그인 사용자가 검색을 시도할 때 체크
+    if (
+      window.LoginRequiredModal &&
+      !window.LoginRequiredModal.checkLoginRequired()
+    ) {
+      return;
+    }
+
     const searchInput = document.getElementById("searchInput");
     state.searchTerm = searchInput.value;
     state.currentPage = 1;
@@ -990,6 +1003,14 @@ window.ProductListController = (function () {
   }
 
   function handleApplyFilters() {
+    // 비로그인 사용자가 필터를 적용하려 할 때 체크
+    if (
+      window.LoginRequiredModal &&
+      !window.LoginRequiredModal.checkLoginRequired()
+    ) {
+      return;
+    }
+
     state.currentPage = 1;
 
     // 모바일 필터가 열려있으면 닫기
@@ -1082,6 +1103,15 @@ window.ProductListController = (function () {
   }
 
   function handlePageChange(page) {
+    // 비로그인 사용자가 1페이지가 아닌 페이지로 이동하려 할 때 체크
+    if (
+      page > 1 &&
+      window.LoginRequiredModal &&
+      !window.LoginRequiredModal.checkLoginRequired()
+    ) {
+      return;
+    }
+
     state.currentPage = page;
     fetchData(); // fetchData에서 URL 업데이트 처리
   }
