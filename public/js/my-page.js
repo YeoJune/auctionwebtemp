@@ -294,15 +294,6 @@ class MyPageManager {
         ...directBidsWithType,
       ];
 
-      console.log(
-        "Combined results:",
-        this.bidResultsState.combinedResults.map((b) => ({
-          id: b.item?.item_id,
-          status: b.status,
-          type: b.type,
-        }))
-      );
-
       // Core에 상태 업데이트 후 일별로 그룹화 (bid-results.js와 동일)
       this.bidResultsCore.setPageState(this.bidResultsState);
       this.bidResultsCore.groupResultsByDate();
@@ -819,41 +810,26 @@ class MyPageManager {
   setupDashboardEvents() {
     console.log("대시보드 이벤트 설정");
 
-    // 진행중 입찰 (현장 live / active)
-    const activeCountEl = document.getElementById("active-count");
-    if (activeCountEl) {
-      activeCountEl.parentElement.addEventListener("click", () => {
-        this.transitionToBidItems("live", "active");
-      });
-    }
+    // stat-card 전체에 이벤트 걸기
+    const statCards = document.querySelectorAll(".stat-card");
 
-    // 더 높은 입찰 발생 (직접 direct / higher-bid)
-    const higherBidCountEl = document.getElementById("higher-bid-count");
-    if (higherBidCountEl) {
-      higherBidCountEl.parentElement.addEventListener("click", () => {
-        this.transitionToBidItems("direct", "higher-bid");
-      });
-    }
+    statCards[0]?.addEventListener("click", () => {
+      this.transitionToBidItems("live", "active");
+    });
 
-    // 현재 최고가 (직접 direct / active)
-    const currentHighestCountEl = document.getElementById(
-      "current-highest-count"
-    );
-    if (currentHighestCountEl) {
-      currentHighestCountEl.parentElement.addEventListener("click", () => {
-        this.transitionToBidItems("direct", "active");
-      });
-    }
+    statCards[1]?.addEventListener("click", () => {
+      this.transitionToBidItems("direct", "higher-bid");
+    });
 
-    // 낙찰 건수 (입찰 결과로 이동)
-    const completedCountEl = document.getElementById("completed-count");
-    if (completedCountEl) {
-      completedCountEl.parentElement.addEventListener("click", () => {
-        if (!this.isTransitioning) {
-          this.showSection("bid-results");
-        }
-      });
-    }
+    statCards[2]?.addEventListener("click", () => {
+      this.transitionToBidItems("direct", "active");
+    });
+
+    statCards[3]?.addEventListener("click", () => {
+      if (!this.isTransitioning) {
+        this.showSection("bid-results");
+      }
+    });
   }
 
   // 입찰 항목 이벤트 설정 (섹션별 ID 사용)
