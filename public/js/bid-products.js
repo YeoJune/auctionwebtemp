@@ -255,6 +255,12 @@ async function fetchProducts() {
     core.updateSortButtonsUI();
 
     if (window.BidManager) {
+      // filteredResults의 item만 추출하여 currentData 업데이트
+      const items = window.state.filteredResults
+        .map((result) => result.item)
+        .filter((item) => item && item.item_id);
+
+      window.BidManager.updateCurrentData(items);
       window.BidManager.startTimerUpdates();
       window.BidManager.initializePriceCalculators();
     }

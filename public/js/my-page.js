@@ -356,19 +356,15 @@ class MyPageManager {
 
   // 대시보드 렌더링
   async renderDashboard() {
-    // 양쪽 데이터가 모두 로드되어 있는지 확인
     if (
       this.bidProductsState.liveBids.length === 0 ||
       this.bidProductsState.directBids.length === 0
     ) {
-      // 양쪽 데이터 다시 로드
       await this.loadBidItemsData(true);
     }
 
-    // 통계 계산
     const stats = await this.calculateDashboardStats();
 
-    // 통계 표시
     document.getElementById("active-count").textContent = formatNumber(
       stats.activeCount
     );
@@ -382,9 +378,18 @@ class MyPageManager {
       stats.completedCount
     );
 
-    // 최근 입찰 표시 - applyClientFilters 호출 후
     this.bidProductsCore.setPageState(this.bidProductsState);
-    this.bidProductsCore.applyClientFilters(); // 추가
+    this.bidProductsCore.applyClientFilters();
+
+    // currentData 업데이트 추가
+    if (window.BidManager) {
+      const items = this.bidProductsState.filteredResults
+        .map((result) => result.item)
+        .filter((item) => item && item.item_id);
+
+      window.BidManager.updateCurrentData(items);
+    }
+
     this.renderRecentBids();
   }
 
@@ -475,34 +480,29 @@ class MyPageManager {
     await this.bidProductsCore.showProductDetails(itemId);
   }
 
-  // 입찰 항목 섹션 렌더링 (bid-products.js와 완전히 동일한 방식)
   renderBidItemsSection() {
-    // UI 상태 업데이트
     this.updateBidItemsUI();
 
-    // Core를 사용하여 표시 (섹션별 컨테이너 ID 사용)
     this.bidProductsCore.setPageState(this.bidProductsState);
     this.bidProductsCore.displayProducts("bidItems-productList");
-
-    // 페이지네이션 업데이트 (bid-products.js와 완전히 동일)
     this.bidProductsCore.updatePagination(
       (page) => this.handleBidItemsPageChange(page),
       "bidItems-pagination"
     );
-
-    // 정렬 버튼 UI 업데이트 (bid-products.js와 동일한 순서)
     this.bidProductsCore.updateSortButtonsUI();
-
-    // 초기 UI 동기화
     this.updateBidItemsStatusFilterUI();
 
-    // 결과 카운트 업데이트 (섹션별 ID 사용) - totalItems 사용
     document.getElementById("bidItems-totalResults").textContent =
       this.bidProductsState.totalItems;
     document.getElementById("bidItems-loadingMsg").style.display = "none";
 
-    // BidManager 초기화
     if (window.BidManager) {
+      // filteredResults의 item만 추출
+      const items = this.bidProductsState.filteredResults
+        .map((result) => result.item)
+        .filter((item) => item && item.item_id);
+
+      window.BidManager.updateCurrentData(items);
       window.BidManager.startTimerUpdates();
       window.BidManager.initializePriceCalculators();
     }
