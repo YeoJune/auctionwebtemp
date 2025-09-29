@@ -489,6 +489,8 @@ window.BidManager = (function () {
     }
     if (!item) return "";
 
+    console.log(item);
+
     const timerHTML = generateBidTimerHTML(bidInfo, item, options.showTimer);
 
     // 최종 입찰가가 있는 경우 간단히 표시
