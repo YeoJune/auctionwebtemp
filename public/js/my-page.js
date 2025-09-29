@@ -473,7 +473,7 @@ class MyPageManager {
     await this.bidProductsCore.showProductDetails(itemId);
   }
 
-  // 입찰 항목 섹션 렌더링 (bid-products.js와 동일한 방식)
+  // 입찰 항목 섹션 렌더링 (bid-products.js와 완전히 동일한 방식)
   renderBidItemsSection() {
     // UI 상태 업데이트
     this.updateBidItemsUI();
@@ -481,18 +481,20 @@ class MyPageManager {
     // Core를 사용하여 표시 (섹션별 컨테이너 ID 사용)
     this.bidProductsCore.setPageState(this.bidProductsState);
     this.bidProductsCore.displayProducts("bidItems-productList");
+
+    // 페이지네이션 업데이트 (bid-products.js와 완전히 동일)
     this.bidProductsCore.updatePagination(
       (page) => this.handleBidItemsPageChange(page),
       "bidItems-pagination"
     );
 
+    // 정렬 버튼 UI 업데이트 (bid-products.js와 동일한 순서)
+    this.bidProductsCore.updateSortButtonsUI();
+
     // 결과 카운트 업데이트 (섹션별 ID 사용) - totalItems 사용
     document.getElementById("bidItems-totalResults").textContent =
       this.bidProductsState.totalItems;
     document.getElementById("bidItems-loadingMsg").style.display = "none";
-
-    // 정렬 버튼 UI 업데이트
-    this.bidProductsCore.updateSortButtonsUI();
 
     // BidManager 초기화
     if (window.BidManager) {
@@ -611,18 +613,30 @@ class MyPageManager {
     return statusMap[bid.status] || "unknown";
   }
 
-  // 입찰 항목 페이지 변경 (bid-products.js와 동일한 방식)
+  // 입찰 항목 페이지 변경 (현재 섹션 확인 후 처리)
   async handleBidItemsPageChange(page) {
+    // 현재 섹션이 bid-items가 아니면 처리하지 않음
+    if (this.currentSection !== "bid-items") return;
+
     await this.bidProductsCore.handlePageChange(page, async () => {
       await this.loadBidItemsData();
     });
   }
 
-  // 입찰 결과 페이지 변경 (bid-results.js와 동일한 방식)
+  // 입찰 결과 페이지 변경 (현재 섹션 확인 후 처리)
   handleBidResultsPageChange(page) {
+    // 현재 섹션이 bid-results가 아니면 처리하지 않음
+    if (this.currentSection !== "bid-results") return;
+
     page = parseInt(page, 10);
 
-    if (page === this.bidResultsState.currentPage) return;
+    if (
+      page === this.bidResultsState.currentPage ||
+      page < 1 ||
+      page > this.bidResultsState.totalPages
+    ) {
+      return;
+    }
 
     this.bidResultsState.currentPage = page;
     this.renderBidResultsSection();
