@@ -482,7 +482,7 @@ window.BidManager = (function () {
     category,
     options = { showTimer: true }
   ) {
-    const item = _state.currentData.find((item) => item.item_id === itemId);
+    let item = _state.currentData.find((item) => item.item_id === itemId);
 
     if (!item && bidInfo?.item) {
       item = bidInfo.item;
@@ -536,7 +536,7 @@ window.BidManager = (function () {
     category,
     options = { showTimer: true }
   ) {
-    const item = _state.currentData.find((item) => item.item_id === itemId);
+    let item = _state.currentData.find((item) => item.item_id === itemId);
 
     if (!item && bidInfo?.item) {
       item = bidInfo.item;
