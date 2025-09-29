@@ -483,6 +483,10 @@ window.BidManager = (function () {
     options = { showTimer: true }
   ) {
     const item = _state.currentData.find((item) => item.item_id === itemId);
+
+    if (!item && bidInfo?.item) {
+      item = bidInfo.item;
+    }
     if (!item) return "";
 
     const timerHTML = generateBidTimerHTML(bidInfo, item, options.showTimer);
@@ -533,6 +537,10 @@ window.BidManager = (function () {
     options = { showTimer: true }
   ) {
     const item = _state.currentData.find((item) => item.item_id === itemId);
+
+    if (!item && bidInfo?.item) {
+      item = bidInfo.item;
+    }
     if (!item) return "";
 
     // 마감 여부 확인
