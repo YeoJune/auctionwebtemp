@@ -316,7 +316,7 @@ class MyPageManager {
   }
 
   // 섹션 전환
-  showSection(sectionName) {
+  async showSection(sectionName) {
     // 탭 버튼 업데이트
     document.querySelectorAll(".tab-button").forEach((btn) => {
       btn.classList.remove("active");
@@ -338,16 +338,16 @@ class MyPageManager {
     // 섹션별 렌더링
     switch (sectionName) {
       case "dashboard":
-        this.renderDashboard();
+        await this.renderDashboard();
         break;
       case "bid-items":
-        this.renderBidItemsSection();
+        await this.renderBidItemsSection();
         break;
       case "bid-results":
         this.renderBidResultsSection();
         break;
       case "account":
-        this.renderAccountSection();
+        await this.renderAccountSection();
         break;
     }
 
@@ -480,7 +480,7 @@ class MyPageManager {
     await this.bidProductsCore.showProductDetails(itemId);
   }
 
-  renderBidItemsSection() {
+  async renderBidItemsSection() {
     // 데이터가 없거나 타입이 맞지 않으면 로드
     const needsLoad =
       (this.bidProductsState.bidType === "live" &&
@@ -489,14 +489,10 @@ class MyPageManager {
         this.bidProductsState.directBids.length === 0);
 
     if (needsLoad) {
-      // 비동기 로드 후 렌더링
-      this.loadBidItemsData().then(() => {
-        this._renderBidItemsUI();
-      });
-    } else {
-      // 즉시 렌더링
-      this._renderBidItemsUI();
+      await this.loadBidItemsData();
     }
+
+    this._renderBidItemsUI();
   }
 
   // 렌더링 로직 분리
@@ -768,13 +764,12 @@ class MyPageManager {
 
   // 대시보드 이벤트 설정
   setupDashboardEvents() {
-    let isTransitioning = false; // 전환 중 플래그
+    let isTransitioning = false;
 
-    // 진행중 입찰 카드 클릭
     const activeCountEl = document.getElementById("active-count");
     if (activeCountEl) {
       activeCountEl.parentElement.addEventListener("click", async () => {
-        if (isTransitioning) return; // 중복 실행 방지
+        if (isTransitioning) return;
         isTransitioning = true;
 
         try {
@@ -782,25 +777,13 @@ class MyPageManager {
           this.bidProductsState.status = "active";
           this.bidProductsState.currentPage = 1;
 
-          // 섹션 전환 먼저
-          this.showSection("bid-items");
-
-          // UI 업데이트
-          this.updateBidItemsUI();
-          this.updateBidItemsStatusFilterUI();
-
-          // 데이터 로드
-          await this.loadBidItemsData();
-
-          // 렌더링
-          this.renderBidItemsSection();
+          await this.showSection("bid-items"); // await 추가
         } finally {
           isTransitioning = false;
         }
       });
     }
 
-    // 더 높은 입찰 발생 카드 클릭
     const higherBidCountEl = document.getElementById("higher-bid-count");
     if (higherBidCountEl) {
       higherBidCountEl.parentElement.addEventListener("click", async () => {
@@ -812,19 +795,13 @@ class MyPageManager {
           this.bidProductsState.status = "higher-bid";
           this.bidProductsState.currentPage = 1;
 
-          this.showSection("bid-items");
-          this.updateBidItemsUI();
-          this.updateBidItemsStatusFilterUI();
-
-          await this.loadBidItemsData();
-          this.renderBidItemsSection();
+          await this.showSection("bid-items"); // await 추가
         } finally {
           isTransitioning = false;
         }
       });
     }
 
-    // 현재 최고가 카드 클릭
     const currentHighestCountEl = document.getElementById(
       "current-highest-count"
     );
@@ -840,12 +817,7 @@ class MyPageManager {
             this.bidProductsState.status = "active";
             this.bidProductsState.currentPage = 1;
 
-            this.showSection("bid-items");
-            this.updateBidItemsUI();
-            this.updateBidItemsStatusFilterUI();
-
-            await this.loadBidItemsData();
-            this.renderBidItemsSection();
+            await this.showSection("bid-items"); // await 추가
           } finally {
             isTransitioning = false;
           }
@@ -853,12 +825,11 @@ class MyPageManager {
       );
     }
 
-    // 낙찰 건수 카드 클릭
     const completedCountEl = document.getElementById("completed-count");
     if (completedCountEl) {
-      completedCountEl.parentElement.addEventListener("click", () => {
+      completedCountEl.parentElement.addEventListener("click", async () => {
         if (isTransitioning) return;
-        this.showSection("bid-results");
+        await this.showSection("bid-results");
       });
     }
   }
