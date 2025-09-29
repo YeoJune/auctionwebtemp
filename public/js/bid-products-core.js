@@ -100,17 +100,12 @@ window.BidProductsCore = (function () {
     if (product.type === "live") {
       switch (statusFilter) {
         case "active":
-          // 입찰 진행중: 1차/2차/최종 중 마감되지 않은 것
-          return (
-            ["first", "second", "final"].includes(product.status) && !isExpired
-          );
+          // 입찰 진행중: 1차/2차/최종 (마감 체크 제거)
+          return ["first", "second", "final"].includes(product.status);
 
         case "cancelled":
-          // 취소됨: cancelled 상태 + 마감된 입찰
-          return (
-            product.status === "cancelled" ||
-            (["first", "second", "final"].includes(product.status) && isExpired)
-          );
+          // 취소됨: cancelled 상태만
+          return product.status === "cancelled";
 
         case "completed":
           // 낙찰 완료
@@ -123,25 +118,21 @@ window.BidProductsCore = (function () {
           return true;
       }
     } else {
-      // direct
+      // direct - 기존 로직 유지
       switch (statusFilter) {
         case "active":
-          // 입찰 진행중: active 중 마감되지 않은 것
           return product.status === "active" && !isExpired;
 
         case "higher-bid":
-          // 더 높은 입찰 존재: cancelled 중 마감되지 않은 것
           return product.status === "cancelled" && !isExpired;
 
         case "cancelled":
-          // 취소됨: cancelled 중 마감된 것 + active 중 마감된 것
           return (
             (product.status === "cancelled" && isExpired) ||
             (product.status === "active" && isExpired)
           );
 
         case "completed":
-          // 낙찰 완료
           return ["completed", "shipped"].includes(product.status);
 
         case "all":
@@ -194,6 +185,17 @@ window.BidProductsCore = (function () {
     const now = new Date();
     const scheduled = new Date(scheduledDate);
 
+    // 직접경매 cancelled 상태의 경우 마감 여부에 따라 텍스트 변경
+    if (status === STATUS_TYPES.CANCELLED && bidInfo === null) {
+      // bidInfo가 null이면 direct 경매
+      if (now > scheduled) {
+        return "취소됨"; // 마감된 경우
+      } else {
+        return "더 높은 입찰 존재"; // 마감 전
+      }
+    }
+
+    // 현장경매 마감 체크 (기존 로직)
     if (
       status === STATUS_TYPES.ACTIVE ||
       status === STATUS_TYPES.FIRST ||
@@ -327,7 +329,7 @@ window.BidProductsCore = (function () {
       const statusText = getStatusDisplay(
         product.displayStatus,
         item.scheduled_date,
-        bidInfo
+        product.type === "live" ? bidInfo : null // direct는 null 전달
       );
 
       statusEl.textContent = statusText;
@@ -889,11 +891,13 @@ window.BidProductsCore = (function () {
   function displayReadOnlyBidInfo(product, item, container) {
     const statusClass = getStatusClass(
       product.displayStatus,
-      item.scheduled_date
+      item.scheduled_date,
+      product.type === "live" ? product : null
     );
     const statusText = getStatusDisplay(
       product.displayStatus,
-      item.scheduled_date
+      item.scheduled_date,
+      product.type === "live" ? product : null // direct는 null 전달
     );
 
     // 원화 가격 계산

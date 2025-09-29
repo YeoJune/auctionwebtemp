@@ -381,7 +381,9 @@ class MyPageManager {
       stats.completedCount
     );
 
-    // 최근 입찰 표시
+    // 최근 입찰 표시 - applyClientFilters 호출 후
+    this.bidProductsCore.setPageState(this.bidProductsState);
+    this.bidProductsCore.applyClientFilters(); // 추가
     this.renderRecentBids();
   }
 
