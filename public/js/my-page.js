@@ -409,18 +409,15 @@ class MyPageManager {
   async renderDashboard() {
     console.log("대시보드 렌더링 시작");
 
-    // 상태 초기화 (필수)
     this.bidProductsState.bidType = "live";
     this.bidProductsState.status = "all";
     this.bidProductsState.currentPage = 1;
 
-    // 양쪽 데이터 로드
-    await this.loadBidItemsData(true);
+    // 입찰 항목과 입찰 결과 모두 로드
+    await Promise.all([this.loadBidItemsData(true), this.loadBidResultsData()]);
 
-    // 통계 계산
     const stats = await this.calculateDashboardStats();
 
-    // 통계 표시
     document.getElementById("active-count").textContent = formatNumber(
       stats.activeCount
     );
@@ -434,11 +431,9 @@ class MyPageManager {
       stats.completedCount
     );
 
-    // 필터링 적용
     this.bidProductsCore.setPageState(this.bidProductsState);
     this.bidProductsCore.applyClientFilters();
 
-    // BidManager 업데이트
     if (window.BidManager) {
       const items = this.bidProductsState.filteredResults
         .map((result) => result.item)
@@ -447,18 +442,14 @@ class MyPageManager {
       window.BidManager.updateCurrentData(items);
     }
 
-    // 최근 입찰 렌더링
     this.renderRecentBids();
 
     console.log("대시보드 렌더링 완료");
   }
 
-  // 대시보드 통계 계산
   async calculateDashboardStats() {
-    // 전체 데이터에서 통계 계산 (필터링된 결과가 아닌)
     const allBids = this.bidProductsState.combinedResults;
 
-    // Core 필터링 함수 재사용
     const activeCount = allBids.filter((bid) =>
       this.bidProductsCore.filterByStatusAndDeadline(bid, "active")
     ).length;
@@ -477,8 +468,9 @@ class MyPageManager {
         bid.current_price > 0
     ).length;
 
-    const completedCount = this.bidResultsState.combinedResults.filter(
-      (bid) => bid.status === "completed"
+    // completed와 shipped 모두 포함
+    const completedCount = this.bidResultsState.combinedResults.filter((bid) =>
+      ["completed", "shipped"].includes(bid.status)
     ).length;
 
     return { activeCount, higherBidCount, currentHighestCount, completedCount };
