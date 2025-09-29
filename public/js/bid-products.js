@@ -2,8 +2,8 @@
 
 // 상태 관리
 window.state = {
-  bidType: "all", // 경매 타입: all, live, direct
-  status: "all", // 상태: all, active(진행 중), completed, cancelled
+  bidType: "live", // 경매 타입: live, direct
+  status: "all", // 상태: all, active(진행 중), completed, cancelled, higher-bid(직접경매용)
   dateRange: 30, // 날짜 범위(일)
   currentPage: 1, // 현재 페이지
   itemsPerPage: 10, // 페이지당 아이템 수
@@ -59,6 +59,7 @@ async function initialize() {
     Object.assign(window.state, urlState);
 
     updateUIFromState();
+    updateStatusFilterUI();
 
     // 이벤트 리스너 설정
     setupEventListeners();
@@ -139,21 +140,25 @@ async function fetchProducts() {
   }
 
   core.setPageState(window.state);
-
   core.toggleLoading(true);
 
   try {
-    // 선택된 상태에 따라 API 파라미터 준비
+    // 상태 파라미터 준비
     let statusParam;
     switch (window.state.status) {
       case "active":
         statusParam = core.STATUS_GROUPS.ACTIVE.join(",");
         break;
+      case "higher-bid":
+        // 직접경매 전용: cancelled만
+        statusParam = "cancelled";
+        break;
       case "completed":
         statusParam = core.STATUS_GROUPS.COMPLETED.join(",");
         break;
       case "cancelled":
-        statusParam = core.STATUS_GROUPS.CANCELLED.join(",");
+        // 취소됨: cancelled + active/first/second/final (마감된 것 포함)
+        statusParam = core.STATUS_GROUPS.ALL.join(",");
         break;
       case "all":
       default:
@@ -161,41 +166,34 @@ async function fetchProducts() {
         break;
     }
 
-    // 날짜 범위 계산
     const dateLimit = new Date();
     dateLimit.setDate(dateLimit.getDate() - window.state.dateRange);
     const fromDate = formatDate(dateLimit);
 
-    // API 파라미터
+    // 전체 데이터 요청 (페이지네이션은 클라이언트에서)
     const params = {
       status: statusParam,
       fromDate: fromDate,
-      page: window.state.currentPage,
-      limit: window.state.itemsPerPage,
+      page: 1,
+      limit: 0, // 전체 데이터
       sortBy: window.state.sortBy,
       sortOrder: window.state.sortOrder,
     };
 
-    // 키워드 검색 파라미터 추가
-    if (window.state.keyword && window.state.keyword.trim() !== "") {
+    if (window.state.keyword?.trim()) {
       params.keyword = window.state.keyword.trim();
     }
 
     const queryString = window.API.createURLParams(params);
-    let results;
 
-    // 경매 타입에 따른 API 호출
+    // 경매 타입에 따라 API 호출
     if (window.state.bidType === "direct") {
       const directResults = await window.API.fetchAPI(
         `/direct-bids?${queryString}`
       );
       window.state.directBids = directResults.bids || [];
       window.state.liveBids = [];
-      window.state.totalItems = directResults.total || 0;
-      window.state.totalPages = directResults.totalPages || 1;
-      results = directResults;
     } else {
-      // 기본값은 라이브 경매
       window.state.bidType = "live";
       document.getElementById("bidType-live").checked = true;
 
@@ -204,12 +202,9 @@ async function fetchProducts() {
       );
       window.state.liveBids = liveResults.bids || [];
       window.state.directBids = [];
-      window.state.totalItems = liveResults.total || 0;
-      window.state.totalPages = liveResults.totalPages || 1;
-      results = liveResults;
     }
 
-    // 데이터 타입 정보 추가
+    // 타입 정보 추가
     const liveBidsWithType = window.state.liveBids.map((bid) => ({
       ...bid,
       type: "live",
@@ -222,25 +217,13 @@ async function fetchProducts() {
       displayStatus: bid.status,
     }));
 
-    // 결합 결과 설정
     window.state.combinedResults = [...liveBidsWithType, ...directBidsWithType];
-    window.state.filteredResults = window.state.combinedResults;
 
-    // 페이지 번호 유효성 검사
-    if (window.state.totalPages === 0) {
-      window.state.totalPages = 1;
-    }
+    // 클라이언트 필터링은 displayProducts에서 수행됨
+    // totalItems와 totalPages는 applyClientFilters에서 계산됨
 
-    if (window.state.currentPage > window.state.totalPages) {
-      window.state.currentPage = 1;
-      return await fetchProducts();
-    }
-
-    // BidManager에 데이터 전달
+    // BidManager 업데이트
     if (window.BidManager) {
-      window.BidManager.updateCurrentData(
-        window.state.filteredResults.map((item) => item.item)
-      );
       window.BidManager.updateBidData(
         window.state.liveBids,
         window.state.directBids
@@ -249,7 +232,7 @@ async function fetchProducts() {
 
     // URL 업데이트
     const defaultState = {
-      bidType: "all",
+      bidType: "live",
       status: "all",
       dateRange: 30,
       currentPage: 1,
@@ -259,13 +242,12 @@ async function fetchProducts() {
     };
     window.URLStateManager.updateURL(window.state, defaultState);
 
-    // 결과 표시
+    // 결과 표시 (여기서 필터링 + 페이지네이션)
     core.displayProducts();
 
     // 페이지네이션 업데이트
     core.updatePagination(handlePageChange);
 
-    // 정렬 버튼 UI 업데이트
     core.updateSortButtonsUI();
 
     if (window.BidManager) {
@@ -288,6 +270,10 @@ function setupEventListeners() {
     radio.addEventListener("change", (e) => {
       window.state.bidType = e.target.value;
       window.state.currentPage = 1;
+
+      // UI 업데이트
+      updateStatusFilterUI();
+
       fetchProducts();
     });
   });
@@ -379,23 +365,35 @@ function handleSortChange(sortKey) {
     window.state.sortOrder = window.state.sortOrder === "asc" ? "desc" : "asc";
   } else {
     window.state.sortBy = sortKey;
-    if (sortKey === "scheduled_date") {
-      window.state.sortOrder = "asc";
-    } else if (sortKey === "starting_price" || sortKey === "current_price") {
-      window.state.sortOrder = "desc";
-    } else {
-      window.state.sortOrder = "asc";
-    }
+    window.state.sortOrder = "desc";
   }
 
-  core.setPageState(window.state);
-  core.updateSortButtonsUI();
+  window.state.currentPage = 1;
+
+  // 정렬은 API 재호출 필요
   fetchProducts();
+}
+
+// 상태 필터 UI 업데이트 함수
+function updateStatusFilterUI() {
+  const higherBidWrapper = document.getElementById("status-higher-bid-wrapper");
+
+  if (window.state.bidType === "direct") {
+    if (higherBidWrapper) higherBidWrapper.style.display = "block";
+  } else {
+    if (higherBidWrapper) higherBidWrapper.style.display = "none";
+    // 현재 선택이 higher-bid면 all로 변경
+    if (window.state.status === "higher-bid") {
+      window.state.status = "all";
+      const allRadio = document.getElementById("status-all");
+      if (allRadio) allRadio.checked = true;
+    }
+  }
 }
 
 // 필터 초기화
 function resetFilters() {
-  window.state.bidType = "all";
+  window.state.bidType = "live";
   window.state.status = "all";
   window.state.dateRange = 30;
   window.state.keyword = "";
@@ -405,12 +403,30 @@ function resetFilters() {
 
   core.setPageState(window.state);
   updateUIFromState();
+  updateStatusFilterUI();
   fetchProducts();
 }
 
 // 페이지 변경 처리
 async function handlePageChange(page) {
-  await core.handlePageChange(page, fetchProducts);
+  page = parseInt(page, 10);
+
+  if (
+    page === window.state.currentPage ||
+    page < 1 ||
+    page > window.state.totalPages
+  ) {
+    return;
+  }
+
+  window.state.currentPage = page;
+
+  // API 재호출 없이 클라이언트에서만 처리
+  core.setPageState(window.state);
+  core.displayProducts();
+  core.updatePagination(handlePageChange);
+
+  window.scrollTo(0, 0);
 }
 
 // 네비게이션 버튼 설정

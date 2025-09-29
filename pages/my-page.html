@@ -289,6 +289,20 @@
                         value="active" />
                       <label for="bidItems-status-active">입찰 진행중</label>
                     </div>
+                    <!-- 새로 추가: 직접경매 전용 -->
+                    <div
+                      class="radio-item"
+                      id="bidItems-status-higher-bid-wrapper"
+                      style="display: none">
+                      <input
+                        type="radio"
+                        name="bidItems-status"
+                        id="bidItems-status-higher-bid"
+                        value="higher-bid" />
+                      <label for="bidItems-status-higher-bid"
+                        >더 높은 입찰 존재</label
+                      >
+                    </div>
                     <div class="radio-item">
                       <input
                         type="radio"
@@ -303,9 +317,7 @@
                         name="bidItems-status"
                         id="bidItems-status-cancelled"
                         value="cancelled" />
-                      <label for="bidItems-status-cancelled"
-                        >더 높은 입찰 존재</label
-                      >
+                      <label for="bidItems-status-cancelled">취소됨</label>
                     </div>
                   </div>
                 </div>

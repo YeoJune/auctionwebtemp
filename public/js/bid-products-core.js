@@ -63,6 +63,131 @@ window.BidProductsCore = (function () {
   }
 
   /**
+   * 마감 여부 체크
+   */
+  function checkIfExpired(product) {
+    if (!product.item) return false;
+
+    let timer;
+    if (product.type === "live") {
+      if (product.first_price && !product.final_price) {
+        timer = window.BidManager?.getRemainingTime(
+          product.item.scheduled_date,
+          "final"
+        );
+      } else {
+        timer = window.BidManager?.getRemainingTime(
+          product.item.scheduled_date,
+          "first"
+        );
+      }
+    } else {
+      timer = window.BidManager?.getRemainingTime(
+        product.item.scheduled_date,
+        "first"
+      );
+    }
+
+    return !timer;
+  }
+
+  /**
+   * 상태와 마감 여부에 따른 필터링
+   */
+  function filterByStatusAndDeadline(product, statusFilter) {
+    const isExpired = checkIfExpired(product);
+
+    if (product.type === "live") {
+      switch (statusFilter) {
+        case "active":
+          // 입찰 진행중: 1차/2차/최종 중 마감되지 않은 것
+          return (
+            ["first", "second", "final"].includes(product.status) && !isExpired
+          );
+
+        case "cancelled":
+          // 취소됨: cancelled 상태 + 마감된 입찰
+          return (
+            product.status === "cancelled" ||
+            (["first", "second", "final"].includes(product.status) && isExpired)
+          );
+
+        case "completed":
+          // 낙찰 완료
+          return ["completed", "shipped"].includes(product.status);
+
+        case "all":
+          return true;
+
+        default:
+          return true;
+      }
+    } else {
+      // direct
+      switch (statusFilter) {
+        case "active":
+          // 입찰 진행중: active 중 마감되지 않은 것
+          return product.status === "active" && !isExpired;
+
+        case "higher-bid":
+          // 더 높은 입찰 존재: cancelled 중 마감되지 않은 것
+          return product.status === "cancelled" && !isExpired;
+
+        case "cancelled":
+          // 취소됨: cancelled 중 마감된 것 + active 중 마감된 것
+          return (
+            (product.status === "cancelled" && isExpired) ||
+            (product.status === "active" && isExpired)
+          );
+
+        case "completed":
+          // 낙찰 완료
+          return ["completed", "shipped"].includes(product.status);
+
+        case "all":
+          return true;
+
+        default:
+          return true;
+      }
+    }
+  }
+
+  /**
+   * 클라이언트 사이드 필터링 적용
+   */
+  function applyClientFilters() {
+    if (!_pageState) return;
+
+    _pageState.filteredResults = _pageState.combinedResults.filter((product) =>
+      filterByStatusAndDeadline(product, _pageState.status)
+    );
+
+    // 필터링 후 총 개수 및 페이지 수 재계산
+    _pageState.totalItems = _pageState.filteredResults.length;
+    _pageState.totalPages = Math.ceil(
+      _pageState.totalItems / _pageState.itemsPerPage
+    );
+
+    // 현재 페이지가 범위를 벗어나면 1페이지로
+    if (_pageState.currentPage > _pageState.totalPages) {
+      _pageState.currentPage = 1;
+    }
+  }
+
+  /**
+   * 페이지네이션을 위한 데이터 슬라이싱
+   */
+  function getPaginatedResults() {
+    if (!_pageState) return [];
+
+    const startIndex = (_pageState.currentPage - 1) * _pageState.itemsPerPage;
+    const endIndex = startIndex + _pageState.itemsPerPage;
+
+    return _pageState.filteredResults.slice(startIndex, endIndex);
+  }
+
+  /**
    * 상태에 맞는 표시 텍스트 반환
    */
   function getStatusDisplay(status, scheduledDate, bidInfo = null) {
@@ -493,18 +618,31 @@ window.BidProductsCore = (function () {
     if (!container) return;
 
     container.innerHTML = "";
-    const totalResultsElement = document.getElementById("totalResults");
+
+    // 필터링 적용
+    applyClientFilters();
+
+    // 페이지네이션된 결과 가져오기
+    const paginatedResults = getPaginatedResults();
+
+    // 컨테이너 ID를 기반으로 totalResults ID 추론
+    const totalResultsId =
+      containerId === "productList"
+        ? "totalResults"
+        : containerId.replace("-productList", "-totalResults");
+
+    const totalResultsElement = document.getElementById(totalResultsId);
     if (totalResultsElement) {
       totalResultsElement.textContent = _pageState.totalItems;
     }
 
-    if (_pageState.filteredResults.length === 0) {
+    if (paginatedResults.length === 0) {
       container.innerHTML =
         '<div class="no-results">표시할 상품이 없습니다.</div>';
       return;
     }
 
-    _pageState.filteredResults.forEach((product) => {
+    paginatedResults.forEach((product) => {
       const itemElement = renderBidResultItem(product);
       if (itemElement) {
         container.appendChild(itemElement);
@@ -913,5 +1051,11 @@ window.BidProductsCore = (function () {
     updatePagination,
     handlePageChange,
     addItemEventListeners,
+
+    // 새로 추가된 클라이언트 필터링 함수들
+    checkIfExpired,
+    filterByStatusAndDeadline,
+    applyClientFilters,
+    getPaginatedResults,
   };
 })();

@@ -139,17 +139,22 @@ class MyPageManager {
   // 입찰 항목 데이터 로드 (bid-products.js와 완전히 동일한 로직)
   async loadBidItemsData() {
     try {
-      // 선택된 상태에 따라 API 파라미터 준비
+      // 상태 파라미터 준비
       let statusParam;
       switch (this.bidProductsState.status) {
         case "active":
           statusParam = this.bidProductsCore.STATUS_GROUPS.ACTIVE.join(",");
           break;
+        case "higher-bid":
+          // 직접경매 전용: cancelled만
+          statusParam = "cancelled";
+          break;
         case "completed":
           statusParam = this.bidProductsCore.STATUS_GROUPS.COMPLETED.join(",");
           break;
         case "cancelled":
-          statusParam = this.bidProductsCore.STATUS_GROUPS.CANCELLED.join(",");
+          // 취소됨: cancelled + active/first/second/final (마감된 것 포함)
+          statusParam = this.bidProductsCore.STATUS_GROUPS.ALL.join(",");
           break;
         case "all":
         default:
@@ -157,44 +162,34 @@ class MyPageManager {
           break;
       }
 
-      // 날짜 범위 계산
       const dateLimit = new Date();
       dateLimit.setDate(dateLimit.getDate() - this.bidProductsState.dateRange);
       const fromDate = formatDate(dateLimit);
 
-      // API 파라미터
+      // 전체 데이터 요청 (페이지네이션은 클라이언트에서)
       const params = {
         status: statusParam,
         fromDate: fromDate,
-        page: this.bidProductsState.currentPage,
-        limit: this.bidProductsState.itemsPerPage,
+        page: 1,
+        limit: 0, // 전체 데이터
         sortBy: this.bidProductsState.sortBy,
         sortOrder: this.bidProductsState.sortOrder,
       };
 
-      // 키워드 검색 파라미터 추가
-      if (
-        this.bidProductsState.keyword &&
-        this.bidProductsState.keyword.trim() !== ""
-      ) {
+      if (this.bidProductsState.keyword?.trim()) {
         params.keyword = this.bidProductsState.keyword.trim();
       }
 
       const queryString = window.API.createURLParams(params);
-      let results;
 
-      // 경매 타입에 따른 API 호출 (bid-products.js와 동일)
+      // 경매 타입에 따라 API 호출
       if (this.bidProductsState.bidType === "direct") {
         const directResults = await window.API.fetchAPI(
           `/direct-bids?${queryString}`
         );
         this.bidProductsState.directBids = directResults.bids || [];
         this.bidProductsState.liveBids = [];
-        this.bidProductsState.totalItems = directResults.total || 0;
-        this.bidProductsState.totalPages = directResults.totalPages || 1;
-        results = directResults;
       } else {
-        // 기본값은 라이브 경매 (bid-products.js와 동일)
         this.bidProductsState.bidType = "live";
         // HTML 업데이트
         const liveRadio = document.getElementById("bidItems-bidType-live");
@@ -205,12 +200,9 @@ class MyPageManager {
         );
         this.bidProductsState.liveBids = liveResults.bids || [];
         this.bidProductsState.directBids = [];
-        this.bidProductsState.totalItems = liveResults.total || 0;
-        this.bidProductsState.totalPages = liveResults.totalPages || 1;
-        results = liveResults;
       }
 
-      // 데이터 타입 정보 추가
+      // 타입 정보 추가
       const liveBidsWithType = this.bidProductsState.liveBids.map((bid) => ({
         ...bid,
         type: "live",
@@ -225,46 +217,26 @@ class MyPageManager {
         })
       );
 
-      // 결합 결과 설정
       this.bidProductsState.combinedResults = [
         ...liveBidsWithType,
         ...directBidsWithType,
       ];
-      this.bidProductsState.filteredResults =
-        this.bidProductsState.combinedResults;
 
-      // 페이지 번호 유효성 검사 (bid-products.js와 동일)
-      if (this.bidProductsState.totalPages === 0) {
-        this.bidProductsState.totalPages = 1;
-      }
+      // 클라이언트 필터링은 displayProducts에서 수행됨
+      // totalItems와 totalPages는 applyClientFilters에서 계산됨
 
-      if (
-        this.bidProductsState.currentPage > this.bidProductsState.totalPages
-      ) {
-        this.bidProductsState.currentPage = 1;
-        return await this.loadBidItemsData();
-      }
+      // Core에 상태 업데이트
+      this.bidProductsCore.setPageState(this.bidProductsState);
 
-      // BidManager에 데이터 전달
+      // BidManager 업데이트
       if (window.BidManager) {
-        window.BidManager.updateCurrentData(
-          this.bidProductsState.filteredResults.map((item) => item.item)
-        );
         window.BidManager.updateBidData(
           this.bidProductsState.liveBids,
           this.bidProductsState.directBids
         );
       }
-
-      // Core에 상태 업데이트
-      this.bidProductsCore.setPageState(this.bidProductsState);
-
-      console.log(
-        `입찰 항목 데이터 로드 완료: 총 ${this.bidProductsState.filteredResults.length}건`
-      );
     } catch (error) {
-      console.error("입찰 항목 데이터 로드 실패:", error);
-      this.bidProductsState.filteredResults = [];
+      console.error("입찰 데이터를 가져오는 중 오류 발생:", error);
     }
   }
 
@@ -393,25 +365,30 @@ class MyPageManager {
 
   // 대시보드 통계 계산
   async calculateDashboardStats() {
-    const activeCount = this.bidProductsState.filteredResults.filter((bid) =>
-      ["active", "first", "second", "final"].includes(bid.status)
+    // 전체 데이터에서 통계 계산 (필터링된 결과가 아닌)
+    const allBids = this.bidProductsState.combinedResults;
+
+    // Core 필터링 함수 재사용
+    const activeCount = allBids.filter((bid) =>
+      this.bidProductsCore.filterByStatusAndDeadline(bid, "active")
+    ).length;
+
+    const higherBidCount = allBids.filter(
+      (bid) =>
+        bid.type === "direct" &&
+        this.bidProductsCore.filterByStatusAndDeadline(bid, "higher-bid")
+    ).length;
+
+    const currentHighestCount = allBids.filter(
+      (bid) =>
+        bid.type === "direct" &&
+        bid.status === "active" &&
+        !this.bidProductsCore.checkIfExpired(bid) &&
+        bid.current_price > 0
     ).length;
 
     const completedCount = this.bidResultsState.combinedResults.filter(
       (bid) => bid.status === "completed"
-    ).length;
-
-    // 더 높은 입찰 발생 개수
-    const higherBidCount = this.bidProductsState.filteredResults.filter(
-      (bid) => bid.status === "cancelled"
-    ).length;
-
-    // 현재 최고가 개수 (직접경매 + active 상태)
-    const currentHighestCount = this.bidProductsState.filteredResults.filter(
-      (bid) =>
-        bid.type === "direct" &&
-        bid.status === "active" &&
-        bid.current_price > 0
     ).length;
 
     return { activeCount, higherBidCount, currentHighestCount, completedCount };
@@ -490,6 +467,9 @@ class MyPageManager {
 
     // 정렬 버튼 UI 업데이트 (bid-products.js와 동일한 순서)
     this.bidProductsCore.updateSortButtonsUI();
+
+    // 초기 UI 동기화
+    this.updateBidItemsStatusFilterUI();
 
     // 결과 카운트 업데이트 (섹션별 ID 사용) - totalItems 사용
     document.getElementById("bidItems-totalResults").textContent =
@@ -728,41 +708,75 @@ class MyPageManager {
   // 대시보드 이벤트 설정
   setupDashboardEvents() {
     // 진행중 입찰 카드 클릭
+    // (현장경매 입찰 진행중 + 직접경매 입찰 진행중) -> 현장경매 / 입찰 진행중
     const activeCountEl = document.getElementById("active-count");
     if (activeCountEl) {
-      activeCountEl.parentElement.addEventListener("click", () => {
+      activeCountEl.parentElement.addEventListener("click", async () => {
+        this.bidProductsState.bidType = "live";
         this.bidProductsState.status = "active";
-        this.bidProductsState.bidType = "live"; // all 대신 live
+        this.bidProductsState.currentPage = 1;
+
+        // UI 업데이트
+        this.updateBidItemsUI();
+        this.updateBidItemsStatusFilterUI();
+
+        // 데이터 로드 후 섹션 전환
+        await this.loadBidItemsData();
         this.showSection("bid-items");
       });
     }
 
     // 더 높은 입찰 발생 카드 클릭
+    // (직접경매 더 높은 입찰) -> 직접경매 / 더 높은 입찰
     const higherBidCountEl = document.getElementById("higher-bid-count");
     if (higherBidCountEl) {
-      higherBidCountEl.parentElement.addEventListener("click", () => {
-        this.bidProductsState.status = "cancelled";
-        this.bidProductsState.bidType = "live"; // all 대신 live
+      higherBidCountEl.parentElement.addEventListener("click", async () => {
+        this.bidProductsState.bidType = "direct";
+        this.bidProductsState.status = "higher-bid";
+        this.bidProductsState.currentPage = 1;
+
+        // UI 업데이트
+        this.updateBidItemsUI();
+        this.updateBidItemsStatusFilterUI();
+
+        // 데이터 로드 후 섹션 전환
+        await this.loadBidItemsData();
         this.showSection("bid-items");
       });
     }
 
     // 현재 최고가 카드 클릭
+    // (직접경매 입찰 진행중) -> 직접경매 / 입찰 진행중
     const currentHighestCountEl = document.getElementById(
       "current-highest-count"
     );
     if (currentHighestCountEl) {
-      currentHighestCountEl.parentElement.addEventListener("click", () => {
-        this.bidProductsState.status = "active";
-        this.bidProductsState.bidType = "direct";
-        this.showSection("bid-items");
-      });
+      currentHighestCountEl.parentElement.addEventListener(
+        "click",
+        async () => {
+          this.bidProductsState.bidType = "direct";
+          this.bidProductsState.status = "active";
+          this.bidProductsState.currentPage = 1;
+
+          // UI 업데이트
+          this.updateBidItemsUI();
+          this.updateBidItemsStatusFilterUI();
+
+          // 데이터 로드 후 섹션 전환
+          await this.loadBidItemsData();
+          this.showSection("bid-items");
+        }
+      );
     }
 
     // 낙찰 건수 카드 클릭
+    // (현장경매 낙찰완료 + 직접경매 낙찰완료) -> 현장경매 / 낙찰 완료
     const completedCountEl = document.getElementById("completed-count");
     if (completedCountEl) {
-      completedCountEl.parentElement.addEventListener("click", () => {
+      completedCountEl.parentElement.addEventListener("click", async () => {
+        // 낙찰 결과는 bid-results 섹션으로 이동하는 것이 자연스러움
+
+        // 현재는 bid-results로 이동
         this.showSection("bid-results");
       });
     }
@@ -777,6 +791,10 @@ class MyPageManager {
         radio.addEventListener("change", async (e) => {
           this.bidProductsState.bidType = e.target.value;
           this.bidProductsState.currentPage = 1;
+
+          // UI 업데이트
+          this.updateBidItemsStatusFilterUI();
+
           await this.loadBidItemsData();
           this.renderBidItemsSection();
         });
@@ -1018,6 +1036,25 @@ class MyPageManager {
     } catch (error) {
       console.error("계정 정보 업데이트 실패:", error);
       alert("업데이트 중 오류가 발생했습니다.");
+    }
+  }
+
+  // 상태 필터 UI 업데이트 함수 (bid-products.js와 동일)
+  updateBidItemsStatusFilterUI() {
+    const higherBidWrapper = document.getElementById(
+      "bidItems-status-higher-bid-wrapper"
+    );
+
+    if (this.bidProductsState.bidType === "direct") {
+      if (higherBidWrapper) higherBidWrapper.style.display = "block";
+    } else {
+      if (higherBidWrapper) higherBidWrapper.style.display = "none";
+      // 현재 선택이 higher-bid면 all로 변경
+      if (this.bidProductsState.status === "higher-bid") {
+        this.bidProductsState.status = "all";
+        const allRadio = document.getElementById("bidItems-status-all");
+        if (allRadio) allRadio.checked = true;
+      }
     }
   }
 }
