@@ -185,13 +185,18 @@ window.BidProductsCore = (function () {
     const now = new Date();
     const scheduled = new Date(scheduledDate);
 
-    // 직접경매 cancelled 상태의 경우 마감 여부에 따라 텍스트 변경
-    if (status === STATUS_TYPES.CANCELLED && bidInfo === null) {
-      // bidInfo가 null이면 direct 경매
-      if (now > scheduled) {
-        return "취소됨"; // 마감된 경우
+    // cancelled 상태 처리
+    if (status === STATUS_TYPES.CANCELLED) {
+      if (bidInfo === null) {
+        // direct 경매
+        if (now > scheduled) {
+          return "취소됨";
+        } else {
+          return "더 높은 입찰 존재";
+        }
       } else {
-        return "더 높은 입찰 존재"; // 마감 전
+        // live 경매는 항상 "취소됨"
+        return "취소됨";
       }
     }
 

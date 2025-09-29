@@ -622,10 +622,27 @@ class MyPageManager {
     // 현재 섹션이 bid-items가 아니면 처리하지 않음
     if (this.currentSection !== "bid-items") return;
 
-    await this.bidProductsCore.handlePageChange(page, async () => {
-      await this.loadBidItemsData();
-      this.renderBidItemsSection();
-    });
+    page = parseInt(page, 10);
+
+    if (
+      page === this.bidProductsState.currentPage ||
+      page < 1 ||
+      page > this.bidProductsState.totalPages
+    ) {
+      return;
+    }
+
+    this.bidProductsState.currentPage = page;
+
+    // 클라이언트 페이지네이션만 수행 (API 재호출 없음)
+    this.bidProductsCore.setPageState(this.bidProductsState);
+    this.bidProductsCore.displayProducts("bidItems-productList");
+    this.bidProductsCore.updatePagination(
+      (page) => this.handleBidItemsPageChange(page),
+      "bidItems-pagination"
+    );
+
+    window.scrollTo(0, 0);
   }
 
   // 입찰 결과 페이지 변경 (현재 섹션 확인 후 처리)
