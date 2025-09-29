@@ -620,6 +620,7 @@ class MyPageManager {
 
     await this.bidProductsCore.handlePageChange(page, async () => {
       await this.loadBidItemsData();
+      this.renderBidItemsSection();
     });
   }
 
