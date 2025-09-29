@@ -219,7 +219,7 @@ window.BidProductsCore = (function () {
     ) {
       if (bidInfo?.first_price && !bidInfo?.final_price) {
         const deadline = new Date(scheduled);
-        deadline.setHours(22, 0, 0, 0);
+        deadline.setHours(23, 59, 59, 999);
         if (now > deadline) {
           return "마감됨";
         }
@@ -248,7 +248,7 @@ window.BidProductsCore = (function () {
     ) {
       if (bidInfo?.first_price && !bidInfo?.final_price) {
         const deadline = new Date(scheduled);
-        deadline.setHours(22, 0, 0, 0);
+        deadline.setHours(23, 59, 59, 999);
         if (now > deadline) {
           return "status-expired";
         }
