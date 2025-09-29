@@ -136,25 +136,21 @@ class MyPageManager {
     }
   }
 
-  // 입찰 항목 데이터 로드 (bid-products.js와 완전히 동일한 로직)
-  // 입찰 항목 데이터 로드 - 대시보드용으로 양쪽 모두 로드
+  // loadBidItemsData() 수정 - line 175
   async loadBidItemsData(forceLoadBoth = false) {
     try {
-      // 상태 파라미터 준비
       let statusParam;
       switch (this.bidProductsState.status) {
         case "active":
           statusParam = this.bidProductsCore.STATUS_GROUPS.ACTIVE.join(",");
           break;
         case "higher-bid":
-          // 직접경매 전용: cancelled만
           statusParam = "cancelled";
           break;
         case "completed":
           statusParam = this.bidProductsCore.STATUS_GROUPS.COMPLETED.join(",");
           break;
         case "cancelled":
-          // 취소됨: cancelled + active/first/second/final (마감된 것 포함)
           statusParam = this.bidProductsCore.STATUS_GROUPS.ALL.join(",");
           break;
         case "all":
@@ -167,12 +163,11 @@ class MyPageManager {
       dateLimit.setDate(dateLimit.getDate() - this.bidProductsState.dateRange);
       const fromDate = formatDate(dateLimit);
 
-      // 전체 데이터 요청 (페이지네이션은 클라이언트에서)
       const params = {
         status: statusParam,
         fromDate: fromDate,
         page: 1,
-        limit: 0, // 전체 데이터
+        limit: 0,
         sortBy: this.bidProductsState.sortBy,
         sortOrder: this.bidProductsState.sortOrder,
       };
@@ -183,9 +178,8 @@ class MyPageManager {
 
       const queryString = window.API.createURLParams(params);
 
-      // forceLoadBoth가 true이거나 대시보드 섹션인 경우 양쪽 모두 로드
-      if (forceLoadBoth || this.currentSection === "dashboard") {
-        // 양쪽 데이터 모두 가져오기
+      // forceLoadBoth가 true면 양쪽 모두 로드
+      if (forceLoadBoth) {
         const [liveResults, directResults] = await Promise.all([
           window.API.fetchAPI(`/live-bids?${queryString}`),
           window.API.fetchAPI(`/direct-bids?${queryString}`),
@@ -194,16 +188,15 @@ class MyPageManager {
         this.bidProductsState.liveBids = liveResults.bids || [];
         this.bidProductsState.directBids = directResults.bids || [];
       } else {
-        // 기존 로직: 선택된 타입만 로드
+        // 선택된 타입만 로드
         if (this.bidProductsState.bidType === "direct") {
           const directResults = await window.API.fetchAPI(
             `/direct-bids?${queryString}`
           );
           this.bidProductsState.directBids = directResults.bids || [];
-          this.bidProductsState.liveBids = [];
+          // liveBids는 유지 (비우지 않음)
         } else {
           this.bidProductsState.bidType = "live";
-          // HTML 업데이트
           const liveRadio = document.getElementById("bidItems-bidType-live");
           if (liveRadio) liveRadio.checked = true;
 
@@ -211,12 +204,13 @@ class MyPageManager {
             `/live-bids?${queryString}`
           );
           this.bidProductsState.liveBids = liveResults.bids || [];
-          this.bidProductsState.directBids = [];
+          // directBids는 유지 (비우지 않음)
         }
       }
 
+      // 필터링 적용
       const liveBidsWithType = this.bidProductsState.liveBids
-        .filter((bid) => bid.item && bid.item.item_id) // 추가
+        .filter((bid) => bid.item && bid.item.item_id)
         .map((bid) => ({
           ...bid,
           type: "live",
@@ -224,7 +218,7 @@ class MyPageManager {
         }));
 
       const directBidsWithType = this.bidProductsState.directBids
-        .filter((bid) => bid.item && bid.item.item_id) // 추가
+        .filter((bid) => bid.item && bid.item.item_id)
         .map((bid) => ({
           ...bid,
           type: "direct",
@@ -236,13 +230,8 @@ class MyPageManager {
         ...directBidsWithType,
       ];
 
-      // 클라이언트 필터링은 displayProducts에서 수행됨
-      // totalItems와 totalPages는 applyClientFilters에서 계산됨
-
-      // Core에 상태 업데이트
       this.bidProductsCore.setPageState(this.bidProductsState);
 
-      // BidManager 업데이트
       if (window.BidManager) {
         window.BidManager.updateBidData(
           this.bidProductsState.liveBids,
@@ -481,17 +470,8 @@ class MyPageManager {
   }
 
   async renderBidItemsSection() {
-    // 데이터가 없거나 타입이 맞지 않으면 로드
-    const needsLoad =
-      (this.bidProductsState.bidType === "live" &&
-        this.bidProductsState.liveBids.length === 0) ||
-      (this.bidProductsState.bidType === "direct" &&
-        this.bidProductsState.directBids.length === 0);
-
-    if (needsLoad) {
-      await this.loadBidItemsData();
-    }
-
+    // 항상 데이터 로드
+    await this.loadBidItemsData();
     this._renderBidItemsUI();
   }
 
