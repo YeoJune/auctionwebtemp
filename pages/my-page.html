@@ -309,9 +309,11 @@
                     </div>
                   </div>
                 </div>
+              </div>
 
+              <div class="filter-row">
                 <!-- Date Range Filter -->
-                <div class="filter-section inline-filter">
+                <div class="filter-section">
                   <h4>기간</h4>
                   <select id="bidItems-dateRange">
                     <option value="7">최근 1주일</option>
@@ -332,29 +334,31 @@
                   </button>
                 </div>
               </div>
-              <div class="view-controls">
-                <div class="sort-options">
-                  <button
-                    class="sort-btn active"
-                    data-sort="updated_at"
-                    data-section="bid-items">
-                    최신순 <i class="fas fa-sort"></i>
-                  </button>
-                  <button
-                    class="sort-btn"
-                    data-sort="starting_price"
-                    data-section="bid-items">
-                    가격순 <i class="fas fa-sort"></i>
-                  </button>
-                  <button
-                    class="sort-btn"
-                    data-sort="brand"
-                    data-section="bid-items">
-                    브랜드순 <i class="fas fa-sort"></i>
-                  </button>
-                </div>
-              </div>
             </section>
+
+            <!-- 뷰 컨트롤 섹션 -->
+            <div class="view-controls">
+              <div class="sort-options">
+                <button
+                  class="sort-btn active"
+                  data-sort="updated_at"
+                  data-section="bid-items">
+                  최신순 <i class="fas fa-sort"></i>
+                </button>
+                <button
+                  class="sort-btn"
+                  data-sort="starting_price"
+                  data-section="bid-items">
+                  가격순 <i class="fas fa-sort"></i>
+                </button>
+                <button
+                  class="sort-btn"
+                  data-sort="brand"
+                  data-section="bid-items">
+                  브랜드순 <i class="fas fa-sort"></i>
+                </button>
+              </div>
+            </div>
 
             <!-- 결과 카운트 -->
             <div class="results-header">

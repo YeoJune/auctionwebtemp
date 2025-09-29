@@ -1,5 +1,149 @@
 /* my-page.css - 일관성 있는 스타일 적용 */
 
+/* 검색 및 필터 툴바 - bid-products.css와 동일한 구조 */
+.search-toolbar {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 15px;
+}
+
+.filter-section {
+  display: flex;
+  flex-direction: column;
+  min-width: 120px;
+}
+
+.filter-section h4 {
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.inline-filter .radio-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.inline-filter .radio-buttons.horizontal {
+  flex-direction: row;
+}
+
+.radio-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.radio-item input[type="radio"] {
+  margin: 0;
+}
+
+.radio-item label {
+  font-size: 14px;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.filter-section select {
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 14px;
+  min-width: 150px;
+  background-color: white;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 12px;
+  margin-left: auto;
+  align-items: center;
+}
+
+.primary-button,
+.secondary-button {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.primary-button {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.primary-button:hover {
+  background-color: var(--primary-hover);
+}
+
+.secondary-button {
+  background-color: white;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.secondary-button:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+/* 뷰 컨트롤 */
+.view-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: white;
+  padding: 15px 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.sort-options {
+  display: flex;
+  gap: 8px;
+}
+
+.sort-btn {
+  background: white;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.sort-btn:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.sort-btn.active {
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
 /* 마이페이지 메인 레이아웃 */
 .my-page-content {
   display: flex;
@@ -297,52 +441,7 @@
   color: #757575;
 }
 
-/* 필터 버튼 */
-.filter-buttons {
-  display: flex;
-  gap: 15px;
-  margin-bottom: 15px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.filter-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.filter-group label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-right: 8px;
-  white-space: nowrap;
-}
-
-.filter-btn {
-  padding: 6px 12px;
-  background-color: white;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 13px;
-  font-weight: 500;
-  min-height: 32px;
-}
-
-.filter-btn:hover {
-  border-color: var(--primary-color);
-  color: var(--primary-color);
-}
-
-.filter-btn.active {
-  background-color: var(--primary-color);
-  color: white;
-  border-color: var(--primary-color);
-}
+/* 필터 버튼 스타일 제거 - 위에 더 나은 스타일로 통합됨 */
 
 /* 결과 헤더 */
 .results-header {
@@ -1258,43 +1357,28 @@
   cursor: not-allowed;
 }
 
-/* 버튼 스타일 */
-.primary-button {
-  background-color: var(--primary-color);
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.primary-button:hover:not(:disabled) {
-  background-color: var(--primary-hover);
-}
-
-.secondary-button {
-  background-color: white;
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.secondary-button:hover:not(:disabled) {
-  background-color: #f0f0f0;
-}
+/* 버튼 스타일 - 위에 통합된 스타일 사용 */
 
 /* 반응형 스타일 */
 @media (max-width: 1024px) {
   .dashboard-stats {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* 필터 반응형 개선 */
+  .filter-row {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+  }
+
+  .filter-section {
+    min-width: auto;
+  }
+
+  .filter-buttons {
+    margin-left: 0;
+    justify-content: flex-start;
   }
 
   .bid-result-item {
@@ -1360,15 +1444,57 @@
     grid-template-columns: 1fr;
   }
 
-  .filter-buttons {
-    gap: 8px;
-    flex-direction: column;
-    align-items: stretch;
+  /* 필터 모바일 개선 */
+  .search-toolbar {
+    padding: 15px;
   }
 
-  .filter-btn {
+  .filter-row {
+    gap: 12px;
+  }
+
+  .inline-filter .radio-buttons {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .radio-item {
+    min-width: auto;
+  }
+
+  .radio-item label {
+    font-size: 13px;
+  }
+
+  .filter-section h4 {
+    font-size: 13px;
+    margin-bottom: 6px;
+  }
+
+  .filter-section select {
+    font-size: 13px;
     padding: 6px 10px;
-    font-size: 12px;
+    min-width: 120px;
+  }
+
+  .filter-buttons {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .primary-button,
+  .secondary-button {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  .view-controls {
+    padding: 12px 15px;
+  }
+
+  .sort-btn {
+    padding: 6px 12px;
+    font-size: 13px;
   }
 
   .bid-result-item {
@@ -1422,6 +1548,40 @@
 
   .section-header h2 {
     font-size: 20px;
+  }
+
+  /* 필터 작은 화면 개선 */
+  .search-toolbar {
+    padding: 12px;
+  }
+
+  .filter-section h4 {
+    font-size: 12px;
+  }
+
+  .radio-item label {
+    font-size: 12px;
+  }
+
+  .filter-section select {
+    font-size: 12px;
+    padding: 5px 8px;
+    min-width: 100px;
+  }
+
+  .primary-button,
+  .secondary-button {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .view-controls {
+    padding: 10px 12px;
+  }
+
+  .sort-btn {
+    padding: 5px 10px;
+    font-size: 12px;
   }
 
   .stat-card {
