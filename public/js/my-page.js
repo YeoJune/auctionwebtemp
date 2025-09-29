@@ -6,6 +6,9 @@ class MyPageManager {
     this.currentSection = "dashboard";
     this.userData = null;
 
+    // 전환 상태 플래그
+    this.isTransitioning = false;
+
     // bid-products.js와 완전히 동일한 상태 구조
     this.bidProductsState = {
       bidType: "live", // bid-products.js와 동일: live 또는 direct (all 제거)
@@ -304,8 +307,43 @@ class MyPageManager {
     }
   }
 
-  // 섹션 전환
-  async showSection(sectionName) {
+  // 핵심: 입찰 항목 섹션으로 전환하는 단일 메서드
+  async transitionToBidItems(bidType, status) {
+    if (this.isTransitioning) {
+      console.log("전환 중입니다. 대기해주세요.");
+      return;
+    }
+
+    this.isTransitioning = true;
+
+    try {
+      console.log(`입찰 항목 전환: bidType=${bidType}, status=${status}`);
+
+      // 1. 상태 설정
+      this.bidProductsState.bidType = bidType;
+      this.bidProductsState.status = status;
+      this.bidProductsState.currentPage = 1;
+
+      // 2. 섹션 UI 전환 (탭, 섹션)
+      this._switchSectionUI("bid-items");
+
+      // 3. 데이터 로드
+      await this.loadBidItemsData();
+
+      // 4. 렌더링
+      this._renderBidItemsUI();
+
+      console.log("입찰 항목 전환 완료");
+    } catch (error) {
+      console.error("입찰 항목 전환 실패:", error);
+      alert("페이지 전환 중 오류가 발생했습니다.");
+    } finally {
+      this.isTransitioning = false;
+    }
+  }
+
+  // UI 전환만 담당 (데이터 로딩 없음)
+  _switchSectionUI(sectionName) {
     // 탭 버튼 업데이트
     document.querySelectorAll(".tab-button").forEach((btn) => {
       btn.classList.remove("active");
@@ -323,38 +361,66 @@ class MyPageManager {
     // URL 해시 업데이트
     window.location.hash = sectionName;
     this.currentSection = sectionName;
+  }
 
-    // 섹션별 렌더링
-    switch (sectionName) {
-      case "dashboard":
-        await this.renderDashboard();
-        break;
-      case "bid-items":
-        await this.renderBidItemsSection();
-        break;
-      case "bid-results":
-        this.renderBidResultsSection();
-        break;
-      case "account":
-        await this.renderAccountSection();
-        break;
+  // 섹션 전환
+  async showSection(sectionName) {
+    if (this.isTransitioning) {
+      console.log("전환 중입니다. 대기해주세요.");
+      return;
     }
 
-    console.log(`섹션 전환: ${sectionName}`);
+    this.isTransitioning = true;
+
+    try {
+      console.log(`섹션 전환: ${sectionName}`);
+
+      // UI 전환
+      this._switchSectionUI(sectionName);
+
+      // 섹션별 렌더링
+      switch (sectionName) {
+        case "dashboard":
+          await this.renderDashboard();
+          break;
+        case "bid-items":
+          // 현재 상태로 렌더링 (카드 클릭이 아닌 탭 클릭)
+          await this.loadBidItemsData();
+          this._renderBidItemsUI();
+          break;
+        case "bid-results":
+          this.renderBidResultsSection();
+          break;
+        case "account":
+          await this.renderAccountSection();
+          break;
+      }
+
+      console.log(`섹션 전환 완료: ${sectionName}`);
+    } catch (error) {
+      console.error(`섹션 전환 실패 (${sectionName}):`, error);
+      alert("페이지 전환 중 오류가 발생했습니다.");
+    } finally {
+      this.isTransitioning = false;
+    }
   }
 
   // 대시보드 렌더링
   async renderDashboard() {
-    // 대시보드는 항상 초기 상태로 리셋
+    console.log("대시보드 렌더링 시작");
+
+    // 상태 초기화 (필수)
     this.bidProductsState.bidType = "live";
     this.bidProductsState.status = "all";
     this.bidProductsState.currentPage = 1;
 
-    // 양쪽 데이터 강제 로드
+    // 양쪽 데이터 로드
     await this.loadBidItemsData(true);
 
+    // 통계 계산
     const stats = await this.calculateDashboardStats();
 
+    // 통계 표시
     document.getElementById("active-count").textContent = formatNumber(
       stats.activeCount
     );
@@ -368,9 +434,11 @@ class MyPageManager {
       stats.completedCount
     );
 
+    // 필터링 적용
     this.bidProductsCore.setPageState(this.bidProductsState);
     this.bidProductsCore.applyClientFilters();
 
+    // BidManager 업데이트
     if (window.BidManager) {
       const items = this.bidProductsState.filteredResults
         .map((result) => result.item)
@@ -379,7 +447,10 @@ class MyPageManager {
       window.BidManager.updateCurrentData(items);
     }
 
+    // 최근 입찰 렌더링
     this.renderRecentBids();
+
+    console.log("대시보드 렌더링 완료");
   }
 
   // 대시보드 통계 계산
@@ -469,14 +540,10 @@ class MyPageManager {
     await this.bidProductsCore.showProductDetails(itemId);
   }
 
-  async renderBidItemsSection() {
-    // 항상 데이터 로드
-    await this.loadBidItemsData();
-    this._renderBidItemsUI();
-  }
-
   // 렌더링 로직 분리
   _renderBidItemsUI() {
+    console.log("입찰 항목 UI 렌더링 시작");
+
     this.updateBidItemsUI();
     this.updateBidItemsStatusFilterUI();
 
@@ -501,6 +568,8 @@ class MyPageManager {
       window.BidManager.startTimerUpdates();
       window.BidManager.initializePriceCalculators();
     }
+
+    console.log("입찰 항목 UI 렌더링 완료");
   }
 
   // 입찰 결과 섹션 렌더링 (bid-results.js와 동일한 방식)
@@ -744,72 +813,41 @@ class MyPageManager {
 
   // 대시보드 이벤트 설정
   setupDashboardEvents() {
-    let isTransitioning = false;
+    console.log("대시보드 이벤트 설정");
 
+    // 진행중 입찰 (현장 live / active)
     const activeCountEl = document.getElementById("active-count");
     if (activeCountEl) {
-      activeCountEl.parentElement.addEventListener("click", async () => {
-        if (isTransitioning) return;
-        isTransitioning = true;
-
-        try {
-          this.bidProductsState.bidType = "live";
-          this.bidProductsState.status = "active";
-          this.bidProductsState.currentPage = 1;
-
-          await this.showSection("bid-items"); // await 추가
-        } finally {
-          isTransitioning = false;
-        }
+      activeCountEl.parentElement.addEventListener("click", () => {
+        this.transitionToBidItems("live", "active");
       });
     }
 
+    // 더 높은 입찰 발생 (직접 direct / higher-bid)
     const higherBidCountEl = document.getElementById("higher-bid-count");
     if (higherBidCountEl) {
-      higherBidCountEl.parentElement.addEventListener("click", async () => {
-        if (isTransitioning) return;
-        isTransitioning = true;
-
-        try {
-          this.bidProductsState.bidType = "direct";
-          this.bidProductsState.status = "higher-bid";
-          this.bidProductsState.currentPage = 1;
-
-          await this.showSection("bid-items"); // await 추가
-        } finally {
-          isTransitioning = false;
-        }
+      higherBidCountEl.parentElement.addEventListener("click", () => {
+        this.transitionToBidItems("direct", "higher-bid");
       });
     }
 
+    // 현재 최고가 (직접 direct / active)
     const currentHighestCountEl = document.getElementById(
       "current-highest-count"
     );
     if (currentHighestCountEl) {
-      currentHighestCountEl.parentElement.addEventListener(
-        "click",
-        async () => {
-          if (isTransitioning) return;
-          isTransitioning = true;
-
-          try {
-            this.bidProductsState.bidType = "direct";
-            this.bidProductsState.status = "active";
-            this.bidProductsState.currentPage = 1;
-
-            await this.showSection("bid-items"); // await 추가
-          } finally {
-            isTransitioning = false;
-          }
-        }
-      );
+      currentHighestCountEl.parentElement.addEventListener("click", () => {
+        this.transitionToBidItems("direct", "active");
+      });
     }
 
+    // 낙찰 건수 (입찰 결과로 이동)
     const completedCountEl = document.getElementById("completed-count");
     if (completedCountEl) {
-      completedCountEl.parentElement.addEventListener("click", async () => {
-        if (isTransitioning) return;
-        await this.showSection("bid-results");
+      completedCountEl.parentElement.addEventListener("click", () => {
+        if (!this.isTransitioning) {
+          this.showSection("bid-results");
+        }
       });
     }
   }
@@ -821,14 +859,21 @@ class MyPageManager {
       .querySelectorAll('input[name="bidItems-bidType"]')
       .forEach((radio) => {
         radio.addEventListener("change", async (e) => {
-          this.bidProductsState.bidType = e.target.value;
-          this.bidProductsState.currentPage = 1;
+          if (this.isTransitioning) return;
+          this.isTransitioning = true;
 
-          // UI 업데이트
-          this.updateBidItemsStatusFilterUI();
+          try {
+            this.bidProductsState.bidType = e.target.value;
+            this.bidProductsState.currentPage = 1;
 
-          await this.loadBidItemsData();
-          this.renderBidItemsSection();
+            // UI 업데이트
+            this.updateBidItemsStatusFilterUI();
+
+            await this.loadBidItemsData();
+            this._renderBidItemsUI();
+          } finally {
+            this.isTransitioning = false;
+          }
         });
       });
 
@@ -837,10 +882,18 @@ class MyPageManager {
       .querySelectorAll('input[name="bidItems-status"]')
       .forEach((radio) => {
         radio.addEventListener("change", async (e) => {
-          this.bidProductsState.status = e.target.value;
-          this.bidProductsState.currentPage = 1;
-          await this.loadBidItemsData();
-          this.renderBidItemsSection();
+          if (this.isTransitioning) return;
+          this.isTransitioning = true;
+
+          try {
+            this.bidProductsState.status = e.target.value;
+            this.bidProductsState.currentPage = 1;
+
+            await this.loadBidItemsData();
+            this._renderBidItemsUI();
+          } finally {
+            this.isTransitioning = false;
+          }
         });
       });
 
@@ -848,10 +901,18 @@ class MyPageManager {
     document
       .getElementById("bidItems-dateRange")
       ?.addEventListener("change", async (e) => {
-        this.bidProductsState.dateRange = parseInt(e.target.value);
-        this.bidProductsState.currentPage = 1;
-        await this.loadBidItemsData();
-        this.renderBidItemsSection();
+        if (this.isTransitioning) return;
+        this.isTransitioning = true;
+
+        try {
+          this.bidProductsState.dateRange = parseInt(e.target.value);
+          this.bidProductsState.currentPage = 1;
+
+          await this.loadBidItemsData();
+          this._renderBidItemsUI();
+        } finally {
+          this.isTransitioning = false;
+        }
       });
 
     // 정렬 버튼들 (섹션별 정렬 버튼만)
@@ -868,9 +929,16 @@ class MyPageManager {
     document
       .getElementById("bidItems-applyFilters")
       ?.addEventListener("click", async () => {
-        this.bidProductsState.currentPage = 1;
-        await this.loadBidItemsData();
-        this.renderBidItemsSection();
+        if (this.isTransitioning) return;
+        this.isTransitioning = true;
+
+        try {
+          this.bidProductsState.currentPage = 1;
+          await this.loadBidItemsData();
+          this._renderBidItemsUI();
+        } finally {
+          this.isTransitioning = false;
+        }
       });
 
     // 필터 초기화 버튼 (섹션별 ID 사용)
@@ -922,19 +990,26 @@ class MyPageManager {
 
   // 입찰 항목 정렬 변경 처리
   async handleBidItemsSortChange(sortKey) {
-    if (this.bidProductsState.sortBy === sortKey) {
-      // 같은 키면 정렬 순서 토글
-      this.bidProductsState.sortOrder =
-        this.bidProductsState.sortOrder === "desc" ? "asc" : "desc";
-    } else {
-      // 다른 키면 새로운 정렬 키 설정하고 기본 순서(desc)로
-      this.bidProductsState.sortBy = sortKey;
-      this.bidProductsState.sortOrder = "desc";
-    }
+    if (this.isTransitioning) return;
+    this.isTransitioning = true;
 
-    this.bidProductsState.currentPage = 1;
-    await this.loadBidItemsData();
-    this.renderBidItemsSection();
+    try {
+      if (this.bidProductsState.sortBy === sortKey) {
+        // 같은 키면 정렬 순서 토글
+        this.bidProductsState.sortOrder =
+          this.bidProductsState.sortOrder === "desc" ? "asc" : "desc";
+      } else {
+        // 다른 키면 새로운 정렬 키 설정하고 기본 순서(desc)로
+        this.bidProductsState.sortBy = sortKey;
+        this.bidProductsState.sortOrder = "desc";
+      }
+
+      this.bidProductsState.currentPage = 1;
+      await this.loadBidItemsData();
+      this._renderBidItemsUI();
+    } finally {
+      this.isTransitioning = false;
+    }
   }
 
   // 입찰 결과 정렬 변경 처리
@@ -957,17 +1032,24 @@ class MyPageManager {
 
   // 입찰 항목 필터 초기화
   async resetBidItemsFilters() {
-    this.bidProductsState.bidType = "live"; // all 대신 live
-    this.bidProductsState.status = "all";
-    this.bidProductsState.dateRange = 30;
-    this.bidProductsState.keyword = "";
-    this.bidProductsState.currentPage = 1;
-    this.bidProductsState.sortBy = "updated_at";
-    this.bidProductsState.sortOrder = "desc";
+    if (this.isTransitioning) return;
+    this.isTransitioning = true;
 
-    this.updateBidItemsUI();
-    await this.loadBidItemsData();
-    this.renderBidItemsSection();
+    try {
+      this.bidProductsState.bidType = "live"; // all 대신 live
+      this.bidProductsState.status = "all";
+      this.bidProductsState.dateRange = 30;
+      this.bidProductsState.keyword = "";
+      this.bidProductsState.currentPage = 1;
+      this.bidProductsState.sortBy = "updated_at";
+      this.bidProductsState.sortOrder = "desc";
+
+      this.updateBidItemsUI();
+      await this.loadBidItemsData();
+      this._renderBidItemsUI();
+    } finally {
+      this.isTransitioning = false;
+    }
   }
 
   // 입찰 결과 필터 초기화
