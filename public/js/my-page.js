@@ -294,6 +294,15 @@ class MyPageManager {
         ...directBidsWithType,
       ];
 
+      console.log(
+        "Combined results:",
+        this.bidResultsState.combinedResults.map((b) => ({
+          id: b.item?.item_id,
+          status: b.status,
+          type: b.type,
+        }))
+      );
+
       // Core에 상태 업데이트 후 일별로 그룹화 (bid-results.js와 동일)
       this.bidResultsCore.setPageState(this.bidResultsState);
       this.bidResultsCore.groupResultsByDate();
