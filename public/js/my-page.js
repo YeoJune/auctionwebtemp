@@ -215,20 +215,21 @@ class MyPageManager {
         }
       }
 
-      // 타입 정보 추가
-      const liveBidsWithType = this.bidProductsState.liveBids.map((bid) => ({
-        ...bid,
-        type: "live",
-        displayStatus: bid.status,
-      }));
+      const liveBidsWithType = this.bidProductsState.liveBids
+        .filter((bid) => bid.item && bid.item.item_id) // 추가
+        .map((bid) => ({
+          ...bid,
+          type: "live",
+          displayStatus: bid.status,
+        }));
 
-      const directBidsWithType = this.bidProductsState.directBids.map(
-        (bid) => ({
+      const directBidsWithType = this.bidProductsState.directBids
+        .filter((bid) => bid.item && bid.item.item_id) // 추가
+        .map((bid) => ({
           ...bid,
           type: "direct",
           displayStatus: bid.status,
-        })
-      );
+        }));
 
       this.bidProductsState.combinedResults = [
         ...liveBidsWithType,

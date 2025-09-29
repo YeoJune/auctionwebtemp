@@ -205,17 +205,21 @@ async function fetchProducts() {
     }
 
     // 타입 정보 추가
-    const liveBidsWithType = window.state.liveBids.map((bid) => ({
-      ...bid,
-      type: "live",
-      displayStatus: bid.status,
-    }));
+    const liveBidsWithType = window.state.liveBids
+      .filter((bid) => bid.item && bid.item.item_id) // null 제거
+      .map((bid) => ({
+        ...bid,
+        type: "live",
+        displayStatus: bid.status,
+      }));
 
-    const directBidsWithType = window.state.directBids.map((bid) => ({
-      ...bid,
-      type: "direct",
-      displayStatus: bid.status,
-    }));
+    const directBidsWithType = window.state.directBids
+      .filter((bid) => bid.item && bid.item.item_id) // null 제거
+      .map((bid) => ({
+        ...bid,
+        type: "direct",
+        displayStatus: bid.status,
+      }));
 
     window.state.combinedResults = [...liveBidsWithType, ...directBidsWithType];
 
