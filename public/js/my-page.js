@@ -476,6 +476,8 @@ class MyPageManager {
       ["completed", "shipped"].includes(bid.status)
     ).length;
 
+    console.log(this.bidResultsState.combinedResults);
+
     return { activeCount, higherBidCount, currentHighestCount, completedCount };
   }
 
