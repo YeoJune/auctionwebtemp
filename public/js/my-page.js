@@ -83,7 +83,7 @@ class MyPageManager {
       // 기본 데이터 로드
       await Promise.all([
         this.loadUserData(),
-        this.loadBidItemsData(),
+        this.loadBidItemsData(true), // true 전달: 양쪽 모두 로드
         this.loadBidResultsData(),
       ]);
 
@@ -137,7 +137,8 @@ class MyPageManager {
   }
 
   // 입찰 항목 데이터 로드 (bid-products.js와 완전히 동일한 로직)
-  async loadBidItemsData() {
+  // 입찰 항목 데이터 로드 - 대시보드용으로 양쪽 모두 로드
+  async loadBidItemsData(forceLoadBoth = false) {
     try {
       // 상태 파라미터 준비
       let statusParam;
@@ -182,24 +183,36 @@ class MyPageManager {
 
       const queryString = window.API.createURLParams(params);
 
-      // 경매 타입에 따라 API 호출
-      if (this.bidProductsState.bidType === "direct") {
-        const directResults = await window.API.fetchAPI(
-          `/direct-bids?${queryString}`
-        );
-        this.bidProductsState.directBids = directResults.bids || [];
-        this.bidProductsState.liveBids = [];
-      } else {
-        this.bidProductsState.bidType = "live";
-        // HTML 업데이트
-        const liveRadio = document.getElementById("bidItems-bidType-live");
-        if (liveRadio) liveRadio.checked = true;
+      // forceLoadBoth가 true이거나 대시보드 섹션인 경우 양쪽 모두 로드
+      if (forceLoadBoth || this.currentSection === "dashboard") {
+        // 양쪽 데이터 모두 가져오기
+        const [liveResults, directResults] = await Promise.all([
+          window.API.fetchAPI(`/live-bids?${queryString}`),
+          window.API.fetchAPI(`/direct-bids?${queryString}`),
+        ]);
 
-        const liveResults = await window.API.fetchAPI(
-          `/live-bids?${queryString}`
-        );
         this.bidProductsState.liveBids = liveResults.bids || [];
-        this.bidProductsState.directBids = [];
+        this.bidProductsState.directBids = directResults.bids || [];
+      } else {
+        // 기존 로직: 선택된 타입만 로드
+        if (this.bidProductsState.bidType === "direct") {
+          const directResults = await window.API.fetchAPI(
+            `/direct-bids?${queryString}`
+          );
+          this.bidProductsState.directBids = directResults.bids || [];
+          this.bidProductsState.liveBids = [];
+        } else {
+          this.bidProductsState.bidType = "live";
+          // HTML 업데이트
+          const liveRadio = document.getElementById("bidItems-bidType-live");
+          if (liveRadio) liveRadio.checked = true;
+
+          const liveResults = await window.API.fetchAPI(
+            `/live-bids?${queryString}`
+          );
+          this.bidProductsState.liveBids = liveResults.bids || [];
+          this.bidProductsState.directBids = [];
+        }
       }
 
       // 타입 정보 추가
@@ -342,6 +355,15 @@ class MyPageManager {
 
   // 대시보드 렌더링
   async renderDashboard() {
+    // 양쪽 데이터가 모두 로드되어 있는지 확인
+    if (
+      this.bidProductsState.liveBids.length === 0 ||
+      this.bidProductsState.directBids.length === 0
+    ) {
+      // 양쪽 데이터 다시 로드
+      await this.loadBidItemsData(true);
+    }
+
     // 통계 계산
     const stats = await this.calculateDashboardStats();
 
