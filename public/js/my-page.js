@@ -356,10 +356,15 @@ class MyPageManager {
 
   // 대시보드 렌더링
   async renderDashboard() {
-    if (
+    // 데이터가 하나라도 비어있거나, bidType이 변경되었으면 재로드
+    const needsReload =
       this.bidProductsState.liveBids.length === 0 ||
-      this.bidProductsState.directBids.length === 0
-    ) {
+      this.bidProductsState.directBids.length === 0 ||
+      this.bidProductsState.bidType !== "live"; // 대시보드는 항상 live 기준
+
+    if (needsReload) {
+      // bidType을 live로 되돌리고 양쪽 모두 로드
+      this.bidProductsState.bidType = "live";
       await this.loadBidItemsData(true);
     }
 
@@ -381,7 +386,6 @@ class MyPageManager {
     this.bidProductsCore.setPageState(this.bidProductsState);
     this.bidProductsCore.applyClientFilters();
 
-    // currentData 업데이트 추가
     if (window.BidManager) {
       const items = this.bidProductsState.filteredResults
         .map((result) => result.item)
@@ -749,46 +753,63 @@ class MyPageManager {
 
   // 대시보드 이벤트 설정
   setupDashboardEvents() {
+    let isTransitioning = false; // 전환 중 플래그
+
     // 진행중 입찰 카드 클릭
-    // (현장경매 입찰 진행중 + 직접경매 입찰 진행중) -> 현장경매 / 입찰 진행중
     const activeCountEl = document.getElementById("active-count");
     if (activeCountEl) {
       activeCountEl.parentElement.addEventListener("click", async () => {
-        this.bidProductsState.bidType = "live";
-        this.bidProductsState.status = "active";
-        this.bidProductsState.currentPage = 1;
+        if (isTransitioning) return; // 중복 실행 방지
+        isTransitioning = true;
 
-        // UI 업데이트
-        this.updateBidItemsUI();
-        this.updateBidItemsStatusFilterUI();
+        try {
+          this.bidProductsState.bidType = "live";
+          this.bidProductsState.status = "active";
+          this.bidProductsState.currentPage = 1;
 
-        // 데이터 로드 후 섹션 전환
-        await this.loadBidItemsData();
-        this.showSection("bid-items");
+          // 섹션 전환 먼저
+          this.showSection("bid-items");
+
+          // UI 업데이트
+          this.updateBidItemsUI();
+          this.updateBidItemsStatusFilterUI();
+
+          // 데이터 로드
+          await this.loadBidItemsData();
+
+          // 렌더링
+          this.renderBidItemsSection();
+        } finally {
+          isTransitioning = false;
+        }
       });
     }
 
     // 더 높은 입찰 발생 카드 클릭
-    // (직접경매 더 높은 입찰) -> 직접경매 / 더 높은 입찰
     const higherBidCountEl = document.getElementById("higher-bid-count");
     if (higherBidCountEl) {
       higherBidCountEl.parentElement.addEventListener("click", async () => {
-        this.bidProductsState.bidType = "direct";
-        this.bidProductsState.status = "higher-bid";
-        this.bidProductsState.currentPage = 1;
+        if (isTransitioning) return;
+        isTransitioning = true;
 
-        // UI 업데이트
-        this.updateBidItemsUI();
-        this.updateBidItemsStatusFilterUI();
+        try {
+          this.bidProductsState.bidType = "direct";
+          this.bidProductsState.status = "higher-bid";
+          this.bidProductsState.currentPage = 1;
 
-        // 데이터 로드 후 섹션 전환
-        await this.loadBidItemsData();
-        this.showSection("bid-items");
+          this.showSection("bid-items");
+          this.updateBidItemsUI();
+          this.updateBidItemsStatusFilterUI();
+
+          await this.loadBidItemsData();
+          this.renderBidItemsSection();
+        } finally {
+          isTransitioning = false;
+        }
       });
     }
 
     // 현재 최고가 카드 클릭
-    // (직접경매 입찰 진행중) -> 직접경매 / 입찰 진행중
     const currentHighestCountEl = document.getElementById(
       "current-highest-count"
     );
@@ -796,29 +817,32 @@ class MyPageManager {
       currentHighestCountEl.parentElement.addEventListener(
         "click",
         async () => {
-          this.bidProductsState.bidType = "direct";
-          this.bidProductsState.status = "active";
-          this.bidProductsState.currentPage = 1;
+          if (isTransitioning) return;
+          isTransitioning = true;
 
-          // UI 업데이트
-          this.updateBidItemsUI();
-          this.updateBidItemsStatusFilterUI();
+          try {
+            this.bidProductsState.bidType = "direct";
+            this.bidProductsState.status = "active";
+            this.bidProductsState.currentPage = 1;
 
-          // 데이터 로드 후 섹션 전환
-          await this.loadBidItemsData();
-          this.showSection("bid-items");
+            this.showSection("bid-items");
+            this.updateBidItemsUI();
+            this.updateBidItemsStatusFilterUI();
+
+            await this.loadBidItemsData();
+            this.renderBidItemsSection();
+          } finally {
+            isTransitioning = false;
+          }
         }
       );
     }
 
     // 낙찰 건수 카드 클릭
-    // (현장경매 낙찰완료 + 직접경매 낙찰완료) -> 현장경매 / 낙찰 완료
     const completedCountEl = document.getElementById("completed-count");
     if (completedCountEl) {
-      completedCountEl.parentElement.addEventListener("click", async () => {
-        // 낙찰 결과는 bid-results 섹션으로 이동하는 것이 자연스러움
-
-        // 현재는 bid-results로 이동
+      completedCountEl.parentElement.addEventListener("click", () => {
+        if (isTransitioning) return;
         this.showSection("bid-results");
       });
     }
