@@ -89,6 +89,7 @@ async function crawlAll() {
       );
       await DBManager.cleanupUnusedImages("products");
       await initializeFilterSettings();
+      await processLiveBidsAfterCrawl();
     } catch (error) {
       throw error;
     } finally {
@@ -498,6 +499,52 @@ async function crawlAllUpdatesWithId() {
     } finally {
       isUpdateCrawlingWithId = false;
     }
+  }
+}
+
+// live_bids의 winning_price 자동 업데이트 처리
+async function processLiveBidsAfterCrawl() {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // 1. 이미 cancelled 상태인 입찰들의 winning_price 업데이트
+    await conn.query(
+      `UPDATE live_bids lb
+       JOIN crawled_items ci ON lb.item_id = ci.item_id
+       SET lb.winning_price = ci.starting_price
+       WHERE lb.status = 'cancelled'`
+    );
+
+    // 2. final 상태이면서 final_price < starting_price인 입찰들 조회
+    const [bidsToCancel] = await conn.query(
+      `SELECT lb.id, ci.starting_price
+       FROM live_bids lb
+       JOIN crawled_items ci ON lb.item_id = ci.item_id
+       WHERE lb.status = 'final' AND lb.final_price < ci.starting_price`
+    );
+
+    if (bidsToCancel.length > 0) {
+      const bidIds = bidsToCancel.map((bid) => bid.id);
+      const placeholders = bidIds.map(() => "?").join(",");
+
+      // status를 cancelled로 변경하고 winning_price 설정
+      await conn.query(
+        `UPDATE live_bids lb
+         JOIN crawled_items ci ON lb.item_id = ci.item_id
+         SET lb.status = 'cancelled', lb.winning_price = ci.starting_price
+         WHERE lb.id IN (${placeholders})`,
+        bidIds
+      );
+    }
+
+    await conn.commit();
+    console.log("Live bids winning_price updated successfully after crawl");
+  } catch (error) {
+    await conn.rollback();
+    console.error("Error processing live bids after crawl:", error);
+  } finally {
+    conn.release();
   }
 }
 
