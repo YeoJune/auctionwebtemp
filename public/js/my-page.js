@@ -481,14 +481,8 @@ class MyPageManager {
     ).length;
 
     // completed와 shipped 모두 포함
-    const completedCount = this.bidResultsState.combinedResults.filter(
-      (bid) => {
-        const isCompleted = ["completed", "shipped"].includes(bid.status);
-        console.log(
-          `Bid ${bid.item?.item_id}: status=${bid.status}, isCompleted=${isCompleted}`
-        );
-        return isCompleted;
-      }
+    const completedCount = this.bidResultsState.combinedResults.filter((bid) =>
+      ["completed", "shipped"].includes(bid.status)
     ).length;
 
     return { activeCount, higherBidCount, currentHighestCount, completedCount };
