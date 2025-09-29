@@ -8,7 +8,7 @@ class MyPageManager {
 
     // bid-products.js와 완전히 동일한 상태 구조
     this.bidProductsState = {
-      bidType: "all", // bid-products.js와 동일하게 "all"로 유지 (실제로는 live로 처리)
+      bidType: "live", // bid-products.js와 동일: live 또는 direct (all 제거)
       status: "all",
       dateRange: 30,
       currentPage: 1,
@@ -183,7 +183,7 @@ class MyPageManager {
       const queryString = window.API.createURLParams(params);
       let results;
 
-      // 경매 타입에 따른 API 호출
+      // 경매 타입에 따른 API 호출 (bid-products.js와 동일)
       if (this.bidProductsState.bidType === "direct") {
         const directResults = await window.API.fetchAPI(
           `/direct-bids?${queryString}`
@@ -194,7 +194,7 @@ class MyPageManager {
         this.bidProductsState.totalPages = directResults.totalPages || 1;
         results = directResults;
       } else {
-        // 기본값은 라이브 경매
+        // 기본값은 라이브 경매 (bid-products.js와 동일)
         this.bidProductsState.bidType = "live";
         // HTML 업데이트
         const liveRadio = document.getElementById("bidItems-bidType-live");
@@ -233,7 +233,7 @@ class MyPageManager {
       this.bidProductsState.filteredResults =
         this.bidProductsState.combinedResults;
 
-      // 페이지 번호 유효성 검사
+      // 페이지 번호 유효성 검사 (bid-products.js와 동일)
       if (this.bidProductsState.totalPages === 0) {
         this.bidProductsState.totalPages = 1;
       }
@@ -717,7 +717,7 @@ class MyPageManager {
     if (activeCountEl) {
       activeCountEl.parentElement.addEventListener("click", () => {
         this.bidProductsState.status = "active";
-        this.bidProductsState.bidType = "all";
+        this.bidProductsState.bidType = "live"; // all 대신 live
         this.showSection("bid-items");
       });
     }
@@ -727,7 +727,7 @@ class MyPageManager {
     if (higherBidCountEl) {
       higherBidCountEl.parentElement.addEventListener("click", () => {
         this.bidProductsState.status = "cancelled";
-        this.bidProductsState.bidType = "all";
+        this.bidProductsState.bidType = "live"; // all 대신 live
         this.showSection("bid-items");
       });
     }
@@ -892,7 +892,7 @@ class MyPageManager {
 
   // 입찰 항목 필터 초기화
   async resetBidItemsFilters() {
-    this.bidProductsState.bidType = "all"; // 기본값은 all이지만 실제로는 live로 처리됨
+    this.bidProductsState.bidType = "live"; // all 대신 live
     this.bidProductsState.status = "all";
     this.bidProductsState.dateRange = 30;
     this.bidProductsState.keyword = "";
