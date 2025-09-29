@@ -442,6 +442,9 @@ class MyPageManager {
       window.BidManager.updateCurrentData(items);
     }
 
+    // 렌더링 후 이벤트 리스너 재등록
+    this.setupDashboardEvents();
+
     this.renderRecentBids();
 
     console.log("대시보드 렌더링 완료");
@@ -469,8 +472,14 @@ class MyPageManager {
     ).length;
 
     // completed와 shipped 모두 포함
-    const completedCount = this.bidResultsState.combinedResults.filter((bid) =>
-      ["completed", "shipped"].includes(bid.status)
+    const completedCount = this.bidResultsState.combinedResults.filter(
+      (bid) => {
+        const isCompleted = ["completed", "shipped"].includes(bid.status);
+        console.log(
+          `Bid ${bid.item?.item_id}: status=${bid.status}, isCompleted=${isCompleted}`
+        );
+        return isCompleted;
+      }
     ).length;
 
     return { activeCount, higherBidCount, currentHighestCount, completedCount };
