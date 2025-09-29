@@ -100,12 +100,22 @@ window.BidProductsCore = (function () {
     if (product.type === "live") {
       switch (statusFilter) {
         case "active":
-          // 입찰 진행중: 1차/2차/최종 (마감 체크 제거)
-          return ["first", "second", "final"].includes(product.status);
+          // 입찰 진행중:
+          // - 1차/2차 중 마감되지 않은 것
+          // - 최종(final)은 마감 여부 무관하게 포함
+          if (product.status === "final") {
+            return true;
+          }
+          return ["first", "second"].includes(product.status) && !isExpired;
 
         case "cancelled":
-          // 취소됨: cancelled 상태만
-          return product.status === "cancelled";
+          // 취소됨:
+          // - cancelled 상태
+          // - 1차/2차 중 마감된 것
+          return (
+            product.status === "cancelled" ||
+            (["first", "second"].includes(product.status) && isExpired)
+          );
 
         case "completed":
           // 낙찰 완료
