@@ -356,8 +356,13 @@ class MyPageManager {
 
   // 대시보드 렌더링
   async renderDashboard() {
+    // 대시보드는 항상 초기 상태로 리셋
+    this.bidProductsState.bidType = "live";
+    this.bidProductsState.status = "all";
+    this.bidProductsState.currentPage = 1;
+
     // 양쪽 데이터 강제 로드
-    await this.loadBidItemsData(true); // 항상 양쪽 모두 로드
+    await this.loadBidItemsData(true);
 
     const stats = await this.calculateDashboardStats();
 
@@ -476,7 +481,28 @@ class MyPageManager {
   }
 
   renderBidItemsSection() {
+    // 데이터가 없거나 타입이 맞지 않으면 로드
+    const needsLoad =
+      (this.bidProductsState.bidType === "live" &&
+        this.bidProductsState.liveBids.length === 0) ||
+      (this.bidProductsState.bidType === "direct" &&
+        this.bidProductsState.directBids.length === 0);
+
+    if (needsLoad) {
+      // 비동기 로드 후 렌더링
+      this.loadBidItemsData().then(() => {
+        this._renderBidItemsUI();
+      });
+    } else {
+      // 즉시 렌더링
+      this._renderBidItemsUI();
+    }
+  }
+
+  // 렌더링 로직 분리
+  _renderBidItemsUI() {
     this.updateBidItemsUI();
+    this.updateBidItemsStatusFilterUI();
 
     this.bidProductsCore.setPageState(this.bidProductsState);
     this.bidProductsCore.displayProducts("bidItems-productList");
@@ -485,14 +511,12 @@ class MyPageManager {
       "bidItems-pagination"
     );
     this.bidProductsCore.updateSortButtonsUI();
-    this.updateBidItemsStatusFilterUI();
 
     document.getElementById("bidItems-totalResults").textContent =
       this.bidProductsState.totalItems;
     document.getElementById("bidItems-loadingMsg").style.display = "none";
 
     if (window.BidManager) {
-      // filteredResults의 item만 추출
       const items = this.bidProductsState.filteredResults
         .map((result) => result.item)
         .filter((item) => item && item.item_id);
