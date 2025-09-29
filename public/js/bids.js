@@ -486,10 +486,9 @@ window.BidManager = (function () {
 
     if (!item && bidInfo?.item) {
       item = bidInfo.item;
+      item.bid_type = "live";
     }
     if (!item) return "";
-
-    console.log(item);
 
     const timerHTML = generateBidTimerHTML(bidInfo, item, options.showTimer);
 
@@ -542,6 +541,7 @@ window.BidManager = (function () {
 
     if (!item && bidInfo?.item) {
       item = bidInfo.item;
+      item.bid_type = "direct";
     }
     if (!item) return "";
 
