@@ -237,6 +237,10 @@ window.BidResultsCore = (function () {
     // 관리자만 총 합계 표시, 일반 사용자는 숨김
     updateSummaryStatsVisibility();
 
+    if (document.getElementById("totalItemCount") === null) {
+      return;
+    }
+
     // UI 업데이트
     document.getElementById("totalItemCount").textContent = `${formatNumber(
       _pageState.totalStats.itemCount
