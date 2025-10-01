@@ -513,7 +513,7 @@ async function processLiveBidsAfterCrawl() {
       `UPDATE live_bids lb
        JOIN crawled_items ci ON lb.item_id = ci.item_id
        SET lb.winning_price = ci.starting_price
-       WHERE lb.status = 'cancelled'`
+       WHERE lb.status = 'cancelled' AND lb.winning_price < ci.starting_price`
     );
 
     // 2. final 상태이면서 final_price < starting_price인 입찰들 조회
