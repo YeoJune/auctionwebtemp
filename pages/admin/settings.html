@@ -272,6 +272,29 @@
           </div>
         </div>
 
+        <!-- 접근 제한 설정 섹션 -->
+        <div class="card">
+          <div class="card-title">접근 제한 설정</div>
+          <div class="access-control-section">
+            <div class="form-group">
+              <label class="checkbox-label">
+                <input
+                  type="checkbox"
+                  id="requireLoginForFeatures"
+                  class="form-checkbox" />
+                비로그인 사용자 기능 제한 (검색, 필터, 페이지네이션)
+              </label>
+              <p class="help-text">
+                체크 시 비로그인 사용자는 검색, 필터 적용, 2페이지 이상 접근이
+                제한됩니다.
+              </p>
+            </div>
+            <button id="saveAccessControlBtn" class="btn mt-3">
+              설정 저장
+            </button>
+          </div>
+        </div>
+
         <!-- 공지 관리 섹션 -->
         <div class="card">
           <div class="card-title">공지 관리</div>

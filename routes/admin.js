@@ -196,6 +196,8 @@ router.post("/settings", isAdmin, async (req, res) => {
     const settings = {};
     if (req.body.crawlSchedule !== undefined)
       settings.crawlSchedule = req.body.crawlSchedule;
+    if (req.body.requireLoginForFeatures !== undefined)
+      settings.requireLoginForFeatures = req.body.requireLoginForFeatures;
 
     await updateAdminSettings(settings);
     res.json({ message: "Settings updated successfully" });

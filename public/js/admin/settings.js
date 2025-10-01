@@ -20,6 +20,9 @@ document.addEventListener("DOMContentLoaded", function () {
       handleError(error, "공지 목록을 불러오는데 실패했습니다.")
     );
 
+  // 접근 제한 설정 로드
+  loadAccessControlSettings();
+
   // 버튼 이벤트 리스너 등록
   document
     .getElementById("productCrawlBtn")
@@ -49,6 +52,11 @@ document.addEventListener("DOMContentLoaded", function () {
   document
     .getElementById("resetMetricsBtn")
     .addEventListener("click", resetMetricsData);
+
+  // 접근 제한 설정 저장 버튼
+  document
+    .getElementById("saveAccessControlBtn")
+    .addEventListener("click", saveAccessControlSettings);
   // 이미지 미리보기 이벤트 리스너
   document
     .getElementById("noticeImage")
@@ -593,5 +601,38 @@ async function deleteSelectedNotice(id) {
     displayNotices(notices);
   } catch (error) {
     handleError(error, "공지 삭제 중 오류가 발생했습니다.");
+  }
+}
+
+// ----- 접근 제한 설정 관리 -----
+
+// 접근 제한 설정 로드
+async function loadAccessControlSettings() {
+  try {
+    const settings = await window.AdminAPI.fetchAPI("/api/admin/settings");
+    document.getElementById("requireLoginForFeatures").checked =
+      settings.requireLoginForFeatures || false;
+  } catch (error) {
+    console.error("접근 제한 설정 로드 실패:", error);
+  }
+}
+
+// 접근 제한 설정 저장
+async function saveAccessControlSettings() {
+  try {
+    const requireLogin = document.getElementById(
+      "requireLoginForFeatures"
+    ).checked;
+
+    await window.AdminAPI.fetchAPI("/api/admin/settings", {
+      method: "POST",
+      body: JSON.stringify({
+        requireLoginForFeatures: requireLogin,
+      }),
+    });
+
+    showAlert("접근 제한 설정이 저장되었습니다.", "success");
+  } catch (error) {
+    handleError(error, "접근 제한 설정 저장 중 오류가 발생했습니다.");
   }
 }

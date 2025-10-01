@@ -4,6 +4,7 @@
 window.ProductListController = (function () {
   let config = null;
   let state = {};
+  let requireLoginForFeatures = false; // 접근 제한 설정
 
   // URL에 포함할 상태 키들 (페이지별로 다름)
   const getUrlStateKeys = () => {
@@ -979,8 +980,9 @@ window.ProductListController = (function () {
 
   // 이벤트 핸들러들
   function handleSearch() {
-    // 비로그인 사용자가 검색을 시도할 때 체크
+    // 설정이 활성화되어 있고 비로그인 상태일 때만 체크
     if (
+      requireLoginForFeatures &&
       window.LoginRequiredModal &&
       !window.LoginRequiredModal.checkLoginRequired()
     ) {
@@ -1003,8 +1005,9 @@ window.ProductListController = (function () {
   }
 
   function handleApplyFilters() {
-    // 비로그인 사용자가 필터를 적용하려 할 때 체크
+    // 설정이 활성화되어 있고 비로그인 상태일 때만 체크
     if (
+      requireLoginForFeatures &&
       window.LoginRequiredModal &&
       !window.LoginRequiredModal.checkLoginRequired()
     ) {
@@ -1103,8 +1106,9 @@ window.ProductListController = (function () {
   }
 
   function handlePageChange(page) {
-    // 비로그인 사용자가 1페이지가 아닌 페이지로 이동하려 할 때 체크
+    // 설정이 활성화되어 있고 2페이지 이상 접근 시 로그인 체크
     if (
+      requireLoginForFeatures &&
       page > 1 &&
       window.LoginRequiredModal &&
       !window.LoginRequiredModal.checkLoginRequired()
@@ -1112,6 +1116,7 @@ window.ProductListController = (function () {
       return;
     }
 
+    if (page < 1) return;
     state.currentPage = page;
     fetchData(); // fetchData에서 URL 업데이트 처리
   }

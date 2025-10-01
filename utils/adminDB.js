@@ -12,9 +12,13 @@ async function getAdminSettings() {
     if (rows.length > 0) {
       return {
         crawlSchedule: rows[0].crawl_schedule,
+        requireLoginForFeatures: rows[0].require_login_for_features || false,
       };
     }
-    return null;
+    return {
+      crawlSchedule: null,
+      requireLoginForFeatures: false,
+    };
   } catch (error) {
     console.error("Error getting admin settings:", error);
     throw error;
@@ -34,22 +38,42 @@ async function updateAdminSettings(settings) {
       throw new Error("Admin settings not found");
     }
 
-    const updatedSettings = {
-      crawl_schedule:
-        settings.crawlSchedule || currentSettings[0].crawl_schedule,
-    };
+    const updates = [];
+    const values = [];
+
+    if (settings.crawlSchedule !== undefined) {
+      updates.push("crawl_schedule = ?");
+      values.push(settings.crawlSchedule);
+    }
+
+    if (settings.requireLoginForFeatures !== undefined) {
+      updates.push("require_login_for_features = ?");
+      values.push(settings.requireLoginForFeatures);
+    }
+
+    if (updates.length === 0) {
+      return currentSettings[0];
+    }
+
+    values.push(1); // WHERE id = 1
 
     await conn.query(
-      `
-      UPDATE admin_settings 
-      SET crawl_schedule = ?
-      WHERE id = 1
-    `,
-      [updatedSettings.crawl_schedule]
+      `UPDATE admin_settings SET ${updates.join(", ")} WHERE id = ?`,
+      values
     );
 
     console.log("Admin settings updated successfully");
-    return updatedSettings;
+
+    // 업데이트된 설정 반환
+    const [updatedRows] = await conn.query(
+      "SELECT * FROM admin_settings WHERE id = 1"
+    );
+
+    return {
+      crawlSchedule: updatedRows[0].crawl_schedule,
+      requireLoginForFeatures:
+        updatedRows[0].require_login_for_features || false,
+    };
   } catch (error) {
     console.error("Error updating admin settings:", error);
     throw error;
