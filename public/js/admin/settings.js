@@ -609,7 +609,7 @@ async function deleteSelectedNotice(id) {
 // 접근 제한 설정 로드
 async function loadAccessControlSettings() {
   try {
-    const settings = await fetchAPI("/api/admin/settings");
+    const settings = await fetchAPI("/admin/settings");
     document.getElementById("requireLoginForFeatures").checked =
       settings.requireLoginForFeatures || false;
   } catch (error) {
@@ -624,7 +624,7 @@ async function saveAccessControlSettings() {
       "requireLoginForFeatures"
     ).checked;
 
-    await fetchAPI("/api/admin/settings", {
+    await fetchAPI("/admin/settings", {
       method: "POST",
       body: JSON.stringify({
         requireLoginForFeatures: requireLogin,
