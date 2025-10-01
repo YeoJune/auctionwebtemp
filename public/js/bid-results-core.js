@@ -144,7 +144,10 @@ window.BidResultsCore = (function () {
       return { status: "pending", finalPrice, winningPrice: null };
     }
 
-    if (finalPrice >= winningPrice) {
+    if (
+      finalPrice >= winningPrice &&
+      (item.status === "completed" || item.status === "shipped")
+    ) {
       return { status: "success", finalPrice, winningPrice };
     } else {
       return { status: "failed", finalPrice, winningPrice };
