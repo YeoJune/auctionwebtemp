@@ -545,6 +545,10 @@ class BrandAucCrawler extends AxiosCrawler {
 
     const original_title = this.convertFullWidthToAscii(item[titleField] || "");
 
+    let image =
+      item?.photoUrl || item?.photoAlbumUrl || item?.photoZoomUrl || null;
+    image = image ? image.replace(/(brand_img\/)(\d+)/, "$16") : null;
+
     return {
       item_id: item.uketsukeBng,
       original_title: original_title,
@@ -552,9 +556,7 @@ class BrandAucCrawler extends AxiosCrawler {
       brand: this.convertFullWidthToAscii(item.maker || ""),
       rank: this.convertFullWidthToAscii(item.hyoka || ""),
       starting_price: item.genzaiKng || item.startKng || 0,
-      image: item.photoUrl
-        ? item.photoUrl.replace(/(brand_img\/)(\d+)/, "$16")
-        : null,
+      image: image,
       category: category,
       original_scheduled_date: original_scheduled_date,
       scheduled_date: scheduled_date,
@@ -1543,6 +1545,10 @@ class BrandAucValueCrawler extends AxiosCrawler {
 
     const original_title = this.convertFullWidthToAscii(item.shohinEn || "");
 
+    let image =
+      item?.photoUrl || item?.photoAlbumUrl || item?.photoZoomUrl || null;
+    image = image ? image.replace(/(brand_img\/)(\d+)/, "$16") : null;
+
     return {
       item_id: item.uketsukeBng,
       original_title: original_title,
@@ -1550,9 +1556,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
       brand: this.convertFullWidthToAscii(item.maker || ""),
       rank: this.convertFullWidthToAscii(item.hyoka || ""),
       final_price: item.kekkaKng || 0,
-      image: item.photoUrl
-        ? item.photoUrl.replace(/(brand_img\/)(\d+)/, "$16")
-        : null,
+      image: image,
       category: category,
       scheduled_date: scheduledDate,
       auc_num: "2", // 고정값으로 보임
