@@ -622,7 +622,7 @@ router.get("/exchange-rate", async (req, res) => {
     }
 
     const response = await axios.get(apiUrl);
-    const rate = response.data.rates.KRW / response.data.rates.JPY;
+    const rate = response.data.rates.KRW / response.data.rates.JPY + 0.2;
 
     updateCache(cache.exchange, rate);
     res.json({ rate });
