@@ -111,7 +111,10 @@ window.ProductListController = (function () {
    */
   async function initializeAfterDOM() {
     try {
-      // ⭐ 인증 상태 확인 후 사용자 정보 활용
+      // 1. 접근 제한 설정 먼저 로드
+      await loadAccessControlSettings();
+
+      // 2. 인증 상태 확인 후 사용자 정보 활용
       const isAuth = await window.AuthManager.checkAuthStatus();
       const currentUser = window.AuthManager.getUser();
 
@@ -133,13 +136,13 @@ window.ProductListController = (function () {
         }
       }
 
-      // 2. URL에서 상태 로드 (필터 데이터 로드 전에)
+      // 3. URL에서 상태 로드 (필터 데이터 로드 전에)
       loadStateFromURL();
 
-      // 3. 필터 데이터 로드
+      // 4. 필터 데이터 로드
       await loadFilters();
 
-      // 4. UI 설정
+      // 5. UI 설정
       setupEventListeners();
       setupFilters();
       setupSearch();
@@ -147,20 +150,34 @@ window.ProductListController = (function () {
       setupViewControls();
       setupPagination();
 
-      // 5. UI를 상태에 맞게 업데이트
+      // 6. UI를 상태에 맞게 업데이트
       updateUIFromState();
 
-      // 6. 페이지별 특수 기능 초기화
+      // 7. 페이지별 특수 기능 초기화
       if (config.features.realtime) initializeSocket();
 
-      // 7. 초기 데이터 로드
+      // 8. 초기 데이터 로드
       await fetchData();
 
-      // 8. URL 파라미터 처리 (상세 모달)
+      // 9. URL 파라미터 처리 (상세 모달)
       handleUrlParameters();
     } catch (error) {
       console.error("페이지 초기화 중 오류:", error);
       alert("페이지 초기화 중 오류가 발생했습니다.");
+    }
+  }
+
+  /**
+   * 접근 제한 설정 로드
+   */
+  async function loadAccessControlSettings() {
+    try {
+      const settings = await window.API.fetchAPI("/admin/settings");
+      requireLoginForFeatures = settings.requireLoginForFeatures || false;
+      console.log("접근 제한 설정:", requireLoginForFeatures);
+    } catch (error) {
+      console.error("접근 제한 설정 로드 실패:", error);
+      requireLoginForFeatures = false;
     }
   }
 
