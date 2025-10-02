@@ -33,6 +33,54 @@ const isAdmin = (req, res, next) => {
   }
 };
 
+class AdaptiveScheduler {
+  constructor(baseInterval) {
+    this.base = baseInterval;
+    this.min = baseInterval;
+    this.max = baseInterval * 10;
+    this.current = baseInterval;
+    this.noChangeCount = 0;
+  }
+
+  next(changedCount) {
+    if (changedCount === 0) {
+      // Additive Increase with log acceleration
+      this.noChangeCount++;
+      const increment = this.base * Math.log2(this.noChangeCount + 1) * 0.1;
+      this.current = Math.min(this.current + increment, this.max);
+    } else {
+      // Multiplicative Decrease
+      this.noChangeCount = 0;
+      const changeRate = Math.min(changedCount / 10, 1.0);
+      const decreaseRate = 0.5 + 0.4 * changeRate;
+      this.current = Math.max(this.current * (1 - decreaseRate), this.min);
+    }
+    return Math.round(this.current);
+  }
+
+  reset() {
+    this.current = this.base;
+    this.noChangeCount = 0;
+  }
+
+  getStatus() {
+    return {
+      current: Math.round(this.current),
+      min: this.min,
+      max: this.max,
+      noChangeCount: this.noChangeCount,
+    };
+  }
+}
+
+// 스케줄러 인스턴스 생성
+const updateScheduler = new AdaptiveScheduler(
+  parseInt(process.env.UPDATE_INTERVAL, 10) || 40
+);
+const updateWithIdScheduler = new AdaptiveScheduler(
+  parseInt(process.env.UPDATE_INTERVAL_ID, 10) || 10
+);
+
 async function loginAll() {
   const crawlers = [
     ecoAucCrawler,
@@ -874,7 +922,9 @@ router.get("/crawl-status", isAdmin, (req, res) => {
       isCrawling,
       isValueCrawling,
       isUpdateCrawling,
-      updateInterval: process.env.UPDATE_INTERVAL || "3600",
+      isUpdateCrawlingWithId,
+      updateScheduler: updateScheduler.getStatus(),
+      updateWithIdScheduler: updateWithIdScheduler.getStatus(),
     });
   } catch (error) {
     console.error("Crawling status error:", error);
@@ -937,69 +987,97 @@ const scheduleCrawling = async () => {
 };
 
 const scheduleUpdateCrawling = () => {
-  const updateInterval = parseInt(process.env.UPDATE_INTERVAL, 10) || 3600; // 기본값은 1시간(3600초)
+  let timeoutId;
 
-  console.log(
-    `Scheduling update crawling to run every ${updateInterval} seconds`
-  );
+  const runUpdateCrawl = async () => {
+    console.log(
+      `Running update crawl (interval: ${updateScheduler.getStatus().current}s)`
+    );
 
-  // 밀리초 단위로 변환하여 setInterval 설정
-  setInterval(async () => {
-    console.log("Running scheduled update crawling task");
     try {
       if (!isCrawling && !isValueCrawling && !isUpdateCrawling) {
         const result = await crawlAllUpdates();
-        console.log("Scheduled update crawling completed successfully", {
-          ecoAucCount: result.ecoAucCount,
-          brandAucCount: result.brandAucCount,
-          starAucCount: result.starAucCount,
-          changedItemsCount: result.changedItemsCount,
-          executionTime: result.executionTime,
+
+        // 다음 interval 계산
+        const nextInterval = updateScheduler.next(result.changedItemsCount);
+
+        console.log("Update crawl completed", {
+          changedCount: result.changedItemsCount,
+          currentInterval: updateScheduler.getStatus().current,
+          nextInterval,
+          schedulerStatus: updateScheduler.getStatus(),
         });
+
+        // 다음 실행 예약
+        timeoutId = setTimeout(runUpdateCrawl, nextInterval * 1000);
       } else {
-        console.log(
-          "Skipping scheduled update crawling - another crawling process is active"
-        );
+        console.log("Skipping update crawl - another process is active");
+        // 스킵 시에도 다시 예약 (현재 interval 유지)
+        timeoutId = setTimeout(runUpdateCrawl, updateScheduler.current * 1000);
       }
     } catch (error) {
-      console.error("Scheduled update crawling error:", error);
+      console.error("Update crawl error:", error);
+      // 에러 시 기본 interval로 재시도
+      timeoutId = setTimeout(runUpdateCrawl, updateScheduler.base * 1000);
     }
-  }, updateInterval * 1000);
+  };
+
+  // 초기 실행
+  runUpdateCrawl();
+
+  return () => clearTimeout(timeoutId); // cleanup 함수 반환
 };
 
-// UPDATE_INTERVAL_ID 기반 스케줄링 추가
 const scheduleUpdateCrawlingWithId = () => {
-  const updateIntervalId = parseInt(process.env.UPDATE_INTERVAL_ID, 10) || 1800; // 기본값은 30분(1800초)
+  let timeoutId;
 
-  console.log(
-    `Scheduling update crawling with ID to run every ${updateIntervalId} seconds`
-  );
+  const runUpdateCrawlWithId = async () => {
+    console.log(
+      `Running update crawl with ID (interval: ${
+        updateWithIdScheduler.getStatus().current
+      }s)`
+    );
 
-  // 밀리초 단위로 변환하여 setInterval 설정
-  setInterval(async () => {
-    console.log("Running scheduled update crawling with ID task");
     try {
       if (!isCrawling && !isValueCrawling && !isUpdateCrawlingWithId) {
         const result = await crawlAllUpdatesWithId();
-        console.log(
-          "Scheduled update crawling with ID completed successfully",
-          {
-            ecoAucCount: result.ecoAucCount,
-            brandAucCount: result.brandAucCount,
-            starAucCount: result.starAucCount,
-            changedItemsCount: result.changedItemsCount,
-            executionTime: result.executionTime,
-          }
+
+        // 다음 interval 계산
+        const nextInterval = updateWithIdScheduler.next(
+          result.changedItemsCount
         );
+
+        console.log("Update crawl with ID completed", {
+          changedCount: result.changedItemsCount,
+          currentInterval: updateWithIdScheduler.getStatus().current,
+          nextInterval,
+          schedulerStatus: updateWithIdScheduler.getStatus(),
+        });
+
+        // 다음 실행 예약
+        timeoutId = setTimeout(runUpdateCrawlWithId, nextInterval * 1000);
       } else {
         console.log(
-          "Skipping scheduled update crawling with ID - another crawling process is active"
+          "Skipping update crawl with ID - another process is active"
+        );
+        timeoutId = setTimeout(
+          runUpdateCrawlWithId,
+          updateWithIdScheduler.current * 1000
         );
       }
     } catch (error) {
-      console.error("Scheduled update crawling with ID error:", error);
+      console.error("Update crawl with ID error:", error);
+      timeoutId = setTimeout(
+        runUpdateCrawlWithId,
+        updateWithIdScheduler.base * 1000
+      );
     }
-  }, updateIntervalId * 1000);
+  };
+
+  // 초기 실행
+  runUpdateCrawlWithId();
+
+  return () => clearTimeout(timeoutId); // cleanup 함수 반환
 };
 
 const scheduleExpiredBidsProcessing = () => {
