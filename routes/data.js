@@ -61,7 +61,7 @@ function updateCache(cacheItem, data) {
 
 // ===== 기본 필터 조건 (단순화) =====
 async function buildBaseFilterConditions(isRecommendOnly = false) {
-  const conditions = ["ci.is_enabled = 1"];
+  const conditions = ["ci.is_enabled = 1", "ci.auc_num != 3"];
   const queryParams = [];
 
   if (isRecommendOnly) {
@@ -141,7 +141,7 @@ router.get("/", async (req, res) => {
     // 3. 쿼리 구성 시작
     let baseQuery = "SELECT ci.* FROM crawled_items ci";
     const joins = [];
-    const conditions = ["ci.is_enabled = 1"]; // 기본 조건: 활성화된 아이템만
+    const conditions = ["ci.is_enabled = 1", "ci.auc_num != 3"]; // 기본 조건: 활성화된 아이템만
     const queryParams = [];
 
     // TEMP: 비로그인 사용자는 auc_num = 1 제외

@@ -87,8 +87,8 @@ async function loginAll() {
     ecoAucValueCrawler,
     brandAucCrawler,
     brandAucValueCrawler,
-    starAucCrawler,
-    starAucValueCrawler,
+    // starAucCrawler,
+    // starAucValueCrawler,
   ];
 
   await Promise.all(crawlers.map((crawler) => crawler.login()));
@@ -123,7 +123,7 @@ async function crawlAll() {
       let brandAucItems = await brandAucCrawler.crawlAllItems(
         existingBrandAuctionIds
       );
-      let starAucItems = await starAucCrawler.crawlAllItems(existingStarAucIds);
+      // let starAucItems = await starAucCrawler.crawlAllItems(existingStarAucIds);
 
       if (!ecoAucItems) ecoAucItems = [];
       if (!brandAucItems) brandAucItems = [];
@@ -234,11 +234,11 @@ async function crawlAllValues(options = {}) {
 
       if (runStarAuc) {
         console.log(`Running StarAuc value crawler for ${monthsMap[3]} months`);
-        crawlResults.starAucItems =
-          (await starAucValueCrawler.crawlAllItems(
-            existingStarAucIds,
-            monthsMap[3]
-          )) || [];
+        crawlResults.starAucItems = [];
+        // (await starAucValueCrawler.crawlAllItems(
+        //   existingStarAucIds,
+        //   monthsMap[3]
+        // )) || [];
       }
 
       // 결과 집계
@@ -288,12 +288,11 @@ async function crawlAllUpdates() {
 
     try {
       // 웹에서 데이터 크롤링 (병렬 처리)
-      const [ecoAucUpdates, brandAucUpdates, starAucUpdates] =
-        await Promise.all([
-          ecoAucCrawler.crawlUpdates(),
-          brandAucCrawler.crawlUpdates(),
-          starAucCrawler.crawlUpdates(),
-        ]);
+      const [ecoAucUpdates, brandAucUpdates] = await Promise.all([
+        ecoAucCrawler.crawlUpdates(),
+        brandAucCrawler.crawlUpdates(),
+        // starAucCrawler.crawlUpdates(),
+      ]);
 
       // null 체크 및 기본값 설정
       if (!ecoAucUpdates) ecoAucUpdates = [];
@@ -414,7 +413,7 @@ async function crawlAllUpdatesWithId() {
       const itemsByAuction = {
         1: [], // EcoAuc
         2: [], // BrandAuc
-        3: [], // StarAuc
+        // 3: [], // StarAuc
       };
 
       // 원래 아이템 정보 저장용 맵 (변경 사항 확인용)
@@ -441,12 +440,12 @@ async function crawlAllUpdatesWithId() {
       const crawlers = {
         1: ecoAucCrawler,
         2: brandAucCrawler,
-        3: starAucCrawler,
+        // 3: starAucCrawler,
       };
       const crawlerNames = {
         1: "EcoAuc",
         2: "BrandAuc",
-        3: "StarAuc",
+        // 3: "StarAuc",
       };
 
       // 각 경매사별 업데이트 병렬 수행
@@ -811,7 +810,7 @@ async function crawlAllInvoices() {
     // 세 크롤러에서 청구서 정보 크롤링
     const ecoInvoices = await ecoAucCrawler.crawlInvoices();
     const brandInvoices = await brandAucCrawler.crawlInvoices();
-    const starInvoices = await starAucCrawler.crawlInvoices();
+    // const starInvoices = await starAucCrawler.crawlInvoices();
 
     // 결과 합치기
     const allInvoices = [
