@@ -991,41 +991,35 @@ const scheduleUpdateCrawling = () => {
 
   const runUpdateCrawl = async () => {
     console.log(
-      `Running update crawl (interval: ${updateScheduler.getStatus().current}s)`
+      `[UpdateCrawl] Running (interval: ${
+        updateScheduler.getStatus().current
+      }s)`
     );
 
     try {
       if (!isCrawling && !isValueCrawling && !isUpdateCrawling) {
         const result = await crawlAllUpdates();
-
-        // 다음 interval 계산
         const nextInterval = updateScheduler.next(result.changedItemsCount);
 
-        console.log("Update crawl completed", {
-          changedCount: result.changedItemsCount,
-          currentInterval: updateScheduler.getStatus().current,
-          nextInterval,
-          schedulerStatus: updateScheduler.getStatus(),
-        });
+        console.log(
+          `[UpdateCrawl] Completed - changed: ${result.changedItemsCount}, next: ${nextInterval}s`
+        );
 
-        // 다음 실행 예약
         timeoutId = setTimeout(runUpdateCrawl, nextInterval * 1000);
       } else {
-        console.log("Skipping update crawl - another process is active");
-        // 스킵 시에도 다시 예약 (현재 interval 유지)
+        console.log("[UpdateCrawl] Skipped - another process active");
         timeoutId = setTimeout(runUpdateCrawl, updateScheduler.current * 1000);
       }
     } catch (error) {
-      console.error("Update crawl error:", error);
-      // 에러 시 기본 interval로 재시도
+      console.error("[UpdateCrawl] Error:", error.message);
       timeoutId = setTimeout(runUpdateCrawl, updateScheduler.base * 1000);
     }
   };
 
-  // 초기 실행
-  runUpdateCrawl();
+  // 첫 딜레이 후 실행
+  timeoutId = setTimeout(runUpdateCrawl, updateScheduler.base * 1000);
 
-  return () => clearTimeout(timeoutId); // cleanup 함수 반환
+  return () => clearTimeout(timeoutId);
 };
 
 const scheduleUpdateCrawlingWithId = () => {
@@ -1033,7 +1027,7 @@ const scheduleUpdateCrawlingWithId = () => {
 
   const runUpdateCrawlWithId = async () => {
     console.log(
-      `Running update crawl with ID (interval: ${
+      `[UpdateCrawlWithId] Running (interval: ${
         updateWithIdScheduler.getStatus().current
       }s)`
     );
@@ -1041,32 +1035,24 @@ const scheduleUpdateCrawlingWithId = () => {
     try {
       if (!isCrawling && !isValueCrawling && !isUpdateCrawlingWithId) {
         const result = await crawlAllUpdatesWithId();
-
-        // 다음 interval 계산
         const nextInterval = updateWithIdScheduler.next(
           result.changedItemsCount
         );
 
-        console.log("Update crawl with ID completed", {
-          changedCount: result.changedItemsCount,
-          currentInterval: updateWithIdScheduler.getStatus().current,
-          nextInterval,
-          schedulerStatus: updateWithIdScheduler.getStatus(),
-        });
+        console.log(
+          `[UpdateCrawlWithId] Completed - changed: ${result.changedItemsCount}, next: ${nextInterval}s`
+        );
 
-        // 다음 실행 예약
         timeoutId = setTimeout(runUpdateCrawlWithId, nextInterval * 1000);
       } else {
-        console.log(
-          "Skipping update crawl with ID - another process is active"
-        );
+        console.log("[UpdateCrawlWithId] Skipped - another process active");
         timeoutId = setTimeout(
           runUpdateCrawlWithId,
           updateWithIdScheduler.current * 1000
         );
       }
     } catch (error) {
-      console.error("Update crawl with ID error:", error);
+      console.error("[UpdateCrawlWithId] Error:", error.message);
       timeoutId = setTimeout(
         runUpdateCrawlWithId,
         updateWithIdScheduler.base * 1000
@@ -1074,10 +1060,13 @@ const scheduleUpdateCrawlingWithId = () => {
     }
   };
 
-  // 초기 실행
-  runUpdateCrawlWithId();
+  // 첫 딜레이 후 실행
+  timeoutId = setTimeout(
+    runUpdateCrawlWithId,
+    updateWithIdScheduler.base * 1000
+  );
 
-  return () => clearTimeout(timeoutId); // cleanup 함수 반환
+  return () => clearTimeout(timeoutId);
 };
 
 const scheduleExpiredBidsProcessing = () => {
