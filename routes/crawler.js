@@ -87,8 +87,8 @@ async function loginAll() {
     ecoAucValueCrawler,
     brandAucCrawler,
     brandAucValueCrawler,
-    // starAucCrawler,
-    // starAucValueCrawler,
+    starAucCrawler,
+    starAucValueCrawler,
   ];
 
   await Promise.all(crawlers.map((crawler) => crawler.login()));
@@ -292,7 +292,7 @@ async function crawlAllUpdates() {
         await Promise.all([
           ecoAucCrawler.crawlUpdates(),
           brandAucCrawler.crawlUpdates(),
-          // starAucCrawler.crawlUpdates(),
+          starAucCrawler.crawlUpdates(),
         ]);
 
       // null 체크 및 기본값 설정
@@ -414,7 +414,7 @@ async function crawlAllUpdatesWithId() {
       const itemsByAuction = {
         1: [], // EcoAuc
         2: [], // BrandAuc
-        // 3: [], // StarAuc
+        3: [], // StarAuc
       };
 
       // 원래 아이템 정보 저장용 맵 (변경 사항 확인용)
@@ -441,12 +441,12 @@ async function crawlAllUpdatesWithId() {
       const crawlers = {
         1: ecoAucCrawler,
         2: brandAucCrawler,
-        // 3: starAucCrawler,
+        3: starAucCrawler,
       };
       const crawlerNames = {
         1: "EcoAuc",
         2: "BrandAuc",
-        // 3: "StarAuc",
+        3: "StarAuc",
       };
 
       // 각 경매사별 업데이트 병렬 수행
