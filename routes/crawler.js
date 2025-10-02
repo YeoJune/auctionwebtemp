@@ -414,7 +414,7 @@ async function crawlAllUpdatesWithId() {
       const itemsByAuction = {
         1: [], // EcoAuc
         2: [], // BrandAuc
-        3: [], // StarAuc
+        // 3: [], // StarAuc
       };
 
       // 원래 아이템 정보 저장용 맵 (변경 사항 확인용)
@@ -446,7 +446,7 @@ async function crawlAllUpdatesWithId() {
       const crawlerNames = {
         1: "EcoAuc",
         2: "BrandAuc",
-        3: "StarAuc",
+        // 3: "StarAuc",
       };
 
       // 각 경매사별 업데이트 병렬 수행
