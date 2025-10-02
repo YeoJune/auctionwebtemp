@@ -87,8 +87,8 @@ async function loginAll() {
     ecoAucValueCrawler,
     brandAucCrawler,
     brandAucValueCrawler,
-    starAucCrawler,
-    starAucValueCrawler,
+    // starAucCrawler,
+    // starAucValueCrawler,
   ];
 
   await Promise.all(crawlers.map((crawler) => crawler.login()));
@@ -292,7 +292,7 @@ async function crawlAllUpdates() {
         await Promise.all([
           ecoAucCrawler.crawlUpdates(),
           brandAucCrawler.crawlUpdates(),
-          starAucCrawler.crawlUpdates(),
+          // starAucCrawler.crawlUpdates(),
         ]);
 
       // null 체크 및 기본값 설정
@@ -441,7 +441,7 @@ async function crawlAllUpdatesWithId() {
       const crawlers = {
         1: ecoAucCrawler,
         2: brandAucCrawler,
-        3: starAucCrawler,
+        // 3: starAucCrawler,
       };
       const crawlerNames = {
         1: "EcoAuc",
