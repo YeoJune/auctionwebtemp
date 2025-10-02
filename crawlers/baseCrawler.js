@@ -68,10 +68,8 @@ class AxiosCrawler {
     if (this.useMultipleClients) {
       this.initializeClients();
     } else {
-      // 기존 단일 클라이언트 초기화 (동기 방식 유지)
-      this.cookieJar = new tough.CookieJar();
-      this.tryRestoreSingleClientCookie(); // 쿠키 복원 시도 (동기)
-      this.initializeAxiosClient();
+      // 단일 클라이언트: 저장된 쿠키 복원 시도
+      this.initializeSingleClient();
     }
   }
 
@@ -89,21 +87,60 @@ class AxiosCrawler {
     return path.join(this.cookieDir, `${siteName}_client_${clientIndex}.json`);
   }
 
-  // 단일 클라이언트 쿠키 복원 시도 (동기 방식)
-  tryRestoreSingleClientCookie() {
+  // 단일 클라이언트 초기화 (쿠키 복원 포함)
+  async initializeSingleClient() {
     const cookiePath = this.getCookieFilePath(0);
 
     if (fs.existsSync(cookiePath)) {
+      console.log(`🔄 저장된 세션 복원 시도: ${cookiePath}`);
       try {
-        console.log(`🔄 저장된 쿠키 발견: ${cookiePath}`);
         const cookieData = fs.readFileSync(cookiePath, "utf8");
         const cookieJson = JSON.parse(cookieData);
+
+        // CookieJar 복원
         this.cookieJar = tough.CookieJar.deserializeSync(cookieJson);
-        console.log(`✅ 쿠키 복원 완료 (검증은 login() 호출 시 수행)`);
+        this.initializeAxiosClient();
+
+        // 세션 유효성 검증
+        const isValid = await this.validateRestoredSession();
+
+        if (isValid) {
+          this.isLoggedIn = true;
+          this.loginTime = Date.now();
+          console.log(`✅ 저장된 세션 복원 성공`);
+          return;
+        } else {
+          console.log(`⚠️ 저장된 세션 만료됨`);
+        }
       } catch (error) {
-        console.log(`⚠️ 쿠키 복원 실패: ${error.message}`);
-        this.cookieJar = new tough.CookieJar();
+        console.log(`⚠️ 세션 복원 실패: ${error.message}`);
       }
+    }
+
+    // 복원 실패 시 새로 생성
+    console.log(`🆕 새 세션 생성`);
+    this.cookieJar = new tough.CookieJar();
+    this.initializeAxiosClient();
+  }
+
+  // 복원된 세션 검증
+  async validateRestoredSession() {
+    if (
+      !this.config.loginCheckUrls ||
+      this.config.loginCheckUrls.length === 0
+    ) {
+      return true; // 검증 URL이 없으면 통과
+    }
+
+    try {
+      const responses = await Promise.all(
+        this.config.loginCheckUrls.map((url) =>
+          this.client.get(url, { timeout: 5000 })
+        )
+      );
+      return responses.every((response) => response.status === 200);
+    } catch (error) {
+      return false;
     }
   }
 
@@ -123,24 +160,31 @@ class AxiosCrawler {
   initializeClients() {
     this.clients = this.proxyManager.createAllClients();
 
-    // 각 클라이언트의 저장된 쿠키 복원 시도 (기존 클라이언트 구조 유지)
+    // 각 클라이언트의 저장된 쿠키 복원 시도
     this.clients.forEach((clientInfo, index) => {
       const cookiePath = this.getCookieFilePath(index);
 
       if (fs.existsSync(cookiePath)) {
         try {
-          console.log(`🔄 ${clientInfo.name} 쿠키 복원 시도`);
           const cookieData = fs.readFileSync(cookiePath, "utf8");
           const cookieJson = JSON.parse(cookieData);
+          clientInfo.cookieJar = tough.CookieJar.deserializeSync(cookieJson);
 
-          // 기존 cookieJar를 복원된 것으로 교체
-          const restoredJar = tough.CookieJar.deserializeSync(cookieJson);
-          clientInfo.cookieJar = restoredJar;
+          // 클라이언트 재생성 (복원된 쿠키 사용)
+          clientInfo.client = wrapper(
+            axios.create({
+              jar: clientInfo.cookieJar,
+              withCredentials: true,
+              headers: clientInfo.headers || {
+                "User-Agent": USER_AGENT,
+                "Accept-Language": "en-US,en;q=0.9",
+              },
+              maxRedirects: 5,
+              ...(clientInfo.proxy && { proxy: clientInfo.proxy }),
+            })
+          );
 
-          // 기존 클라이언트의 jar만 교체 (클라이언트 자체는 재생성 안 함)
-          clientInfo.client.defaults.jar = restoredJar;
-
-          console.log(`✅ ${clientInfo.name} 쿠키 복원 완료`);
+          console.log(`🔄 ${clientInfo.name} 쿠키 복원 완료`);
         } catch (error) {
           console.log(`⚠️ ${clientInfo.name} 쿠키 복원 실패: ${error.message}`);
         }
