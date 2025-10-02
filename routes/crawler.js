@@ -157,11 +157,11 @@ async function crawlAllValues(options = {}) {
   const runBrandAuc = runAll || aucNums.includes(2);
   const runStarAuc = runAll || aucNums.includes(3);
 
-  // 각 크롤러별 개월 수 매핑 (기본값: 3개월)
+  // 각 크롤러별 개월 수 매핑 (기본값: 1개월)
   const monthsMap = {
-    1: 3, // EcoAuc
-    2: 3, // BrandAuc
-    3: 3, // StarAuc
+    1: 1, // EcoAuc
+    2: 1, // BrandAuc
+    3: 1, // StarAuc
   };
 
   // 입력받은 months 배열이 있으면, aucNums와 매핑하여 설정
