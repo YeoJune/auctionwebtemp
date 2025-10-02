@@ -89,7 +89,6 @@ async function crawlAll() {
       );
       await DBManager.cleanupUnusedImages("products");
       await initializeFilterSettings();
-      await processLiveBidsAfterCrawl();
     } catch (error) {
       throw error;
     } finally {
@@ -207,7 +206,8 @@ async function crawlAllValues(options = {}) {
 
       // DB에 저장
       await DBManager.saveItems(allItems, "values_items");
-      await DBManager.cleanupOldValueItems(365);
+      await DBManager.cleanupOldValueItems(999);
+      processLiveBidsAfterCrawl();
 
       return {
         settings: {
@@ -511,17 +511,17 @@ async function processLiveBidsAfterCrawl() {
     // 1. 이미 cancelled 상태인 입찰들의 winning_price 업데이트
     await conn.query(
       `UPDATE live_bids lb
-       JOIN crawled_items ci ON lb.item_id = ci.item_id
-       SET lb.winning_price = ci.starting_price
-       WHERE lb.status = 'cancelled' AND lb.winning_price < ci.starting_price`
+       JOIN values_items vi ON lb.item_id = vi.item_id
+       SET lb.winning_price = vi.final_price
+       WHERE lb.status = 'cancelled' AND lb.winning_price < vi.final_price`
     );
 
-    // 2. final 상태이면서 final_price < starting_price인 입찰들 조회
+    // 2. final 상태이면서 final_price < vi.final_price인 입찰들 조회
     const [bidsToCancel] = await conn.query(
-      `SELECT lb.id, ci.starting_price
+      `SELECT lb.id, vi.final_price
        FROM live_bids lb
-       JOIN crawled_items ci ON lb.item_id = ci.item_id
-       WHERE lb.status = 'final' AND lb.final_price < ci.starting_price`
+       JOIN values_items vi ON lb.item_id = vi.item_id
+       WHERE lb.status = 'final' AND lb.final_price < vi.final_price`
     );
 
     if (bidsToCancel.length > 0) {
@@ -531,8 +531,8 @@ async function processLiveBidsAfterCrawl() {
       // status를 cancelled로 변경하고 winning_price 설정
       await conn.query(
         `UPDATE live_bids lb
-         JOIN crawled_items ci ON lb.item_id = ci.item_id
-         SET lb.status = 'cancelled', lb.winning_price = ci.starting_price
+         JOIN values_items vi ON lb.item_id = vi.item_id
+         SET lb.status = 'cancelled', lb.winning_price = vi.final_price
          WHERE lb.id IN (${placeholders})`,
         bidIds
       );
@@ -915,16 +915,11 @@ const scheduleCrawling = async () => {
           // 기본 상품 크롤링 실행
           await crawlAll();
 
-          // 현재 요일 확인 (0: 일요일, 1: 월요일, ...)
-          const currentDay = new Date().getDay();
+          // 시세표 크롤링도 실행
+          console.log("Running value crawling");
+          await crawlAllValues();
 
-          // 일요일이면 시세표 크롤링도 실행
-          if (currentDay === 0) {
-            console.log("Sunday detected - running value crawling as well");
-            await crawlAllValues();
-          }
-
-          // 매일 인보이스 크롤링도 실행
+          // 인보이스 크롤링도 실행
           console.log("Running invoice crawling");
           await crawlAllInvoices();
 
