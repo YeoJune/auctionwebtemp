@@ -38,7 +38,7 @@ class AdaptiveScheduler {
     this.base = baseInterval;
     this.min = baseInterval;
     this.max = baseInterval * 10;
-    this.current = baseInterval * 5;
+    this.current = baseInterval * 2;
     this.noChangeCount = 0;
   }
 

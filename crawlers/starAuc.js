@@ -8,8 +8,8 @@ let pLimit;
   pLimit = (await import("p-limit")).default;
 })();
 
-const LIMIT1 = 20;
-const LIMIT2 = 10;
+const LIMIT1 = 3;
+const LIMIT2 = 3;
 
 const starAucConfig = {
   name: "StarAuc",
@@ -22,7 +22,7 @@ const starAucConfig = {
     userId: process.env.CRAWLER_EMAIL3,
     password: process.env.CRAWLER_PASSWORD3,
   },
-  useMultipleClients: true, // 추가
+  useMultipleClients: false, // 추가
   categoryIds: [1, 2, 3, 5, 6, 7, 8, 9],
   categoryTable: {
     1: "시계",
@@ -78,7 +78,7 @@ const starAucValueConfig = {
     userId: process.env.CRAWLER_EMAIL3,
     password: process.env.CRAWLER_PASSWORD3,
   },
-  useMultipleClients: true, // 추가
+  useMultipleClients: false, // 추가
   categoryIds: [1, 2, 3, 5, 6, 7, 8],
   categoryTable: {
     1: "시계",
