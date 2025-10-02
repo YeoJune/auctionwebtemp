@@ -288,7 +288,7 @@ async function crawlAllUpdates() {
 
     try {
       // 웹에서 데이터 크롤링 (병렬 처리)
-      const [ecoAucUpdates, brandAucUpdates] = await Promise.all([
+      let [ecoAucUpdates, brandAucUpdates, starAucUpdates] = await Promise.all([
         ecoAucCrawler.crawlUpdates(),
         brandAucCrawler.crawlUpdates(),
         // starAucCrawler.crawlUpdates(),
