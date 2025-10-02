@@ -4,8 +4,6 @@ const axios = require("axios");
 const tough = require("tough-cookie");
 const { wrapper } = require("axios-cookiejar-support");
 const { ProxyManager } = require("../utils/proxy");
-const fs = require("fs");
-const path = require("path");
 
 let pLimit;
 (async () => {
@@ -20,10 +18,6 @@ const USER_AGENT =
 class AxiosCrawler {
   constructor(config, proxyManager = null) {
     this.config = config;
-
-    // 쿠키 저장 디렉토리 설정
-    this.cookieDir = path.join(process.cwd(), ".cookies");
-    this.ensureCookieDir();
 
     // 프록시 매니저 의존성 주입
     this.proxyManager =
@@ -57,10 +51,10 @@ class AxiosCrawler {
     this.loginPromise = null;
 
     // 다중 클라이언트용 로그인 관리 변수들
-    this.clientLoginPromises = new Map();
-    this.clientLoginInProgress = new Map();
-    this.clientLastLoginCheck = new Map();
-    this.clientLastLoginCheckResult = new Map();
+    this.clientLoginPromises = new Map(); // clientIndex -> Promise
+    this.clientLoginInProgress = new Map(); // clientIndex -> boolean
+    this.clientLastLoginCheck = new Map(); // clientIndex -> timestamp
+    this.clientLastLoginCheckResult = new Map(); // clientIndex -> boolean
 
     // 로그인 체크 캐싱을 위한 변수
     this.loginCheckInterval = 1000 * 60 * 5; // 5분
@@ -68,129 +62,14 @@ class AxiosCrawler {
     if (this.useMultipleClients) {
       this.initializeClients();
     } else {
-      // 단일 클라이언트: 저장된 쿠키 복원 시도
-      this.initializeSingleClient();
+      // 기존 단일 클라이언트 초기화
+      this.cookieJar = new tough.CookieJar();
+      this.initializeAxiosClient();
     }
   }
 
-  // 쿠키 디렉토리 생성
-  ensureCookieDir() {
-    if (!fs.existsSync(this.cookieDir)) {
-      fs.mkdirSync(this.cookieDir, { recursive: true });
-      console.log(`📁 쿠키 디렉토리 생성: ${this.cookieDir}`);
-    }
-  }
-
-  // 쿠키 파일 경로 생성
-  getCookieFilePath(clientIndex = 0) {
-    const siteName = this.config.siteName || "default";
-    return path.join(this.cookieDir, `${siteName}_client_${clientIndex}.json`);
-  }
-
-  // 단일 클라이언트 초기화 (쿠키 복원 포함)
-  async initializeSingleClient() {
-    const cookiePath = this.getCookieFilePath(0);
-
-    if (fs.existsSync(cookiePath)) {
-      console.log(`🔄 저장된 세션 복원 시도: ${cookiePath}`);
-      try {
-        const cookieData = fs.readFileSync(cookiePath, "utf8");
-        const cookieJson = JSON.parse(cookieData);
-
-        // CookieJar 복원
-        this.cookieJar = tough.CookieJar.deserializeSync(cookieJson);
-        this.initializeAxiosClient();
-
-        // 세션 유효성 검증
-        const isValid = await this.validateRestoredSession();
-
-        if (isValid) {
-          this.isLoggedIn = true;
-          this.loginTime = Date.now();
-          console.log(`✅ 저장된 세션 복원 성공`);
-          return;
-        } else {
-          console.log(`⚠️ 저장된 세션 만료됨`);
-        }
-      } catch (error) {
-        console.log(`⚠️ 세션 복원 실패: ${error.message}`);
-      }
-    }
-
-    // 복원 실패 시 새로 생성
-    console.log(`🆕 새 세션 생성`);
-    this.cookieJar = new tough.CookieJar();
-    this.initializeAxiosClient();
-  }
-
-  // 복원된 세션 검증
-  async validateRestoredSession() {
-    if (
-      !this.config.loginCheckUrls ||
-      this.config.loginCheckUrls.length === 0
-    ) {
-      return true; // 검증 URL이 없으면 통과
-    }
-
-    try {
-      const responses = await Promise.all(
-        this.config.loginCheckUrls.map((url) =>
-          this.client.get(url, { timeout: 5000 })
-        )
-      );
-      return responses.every((response) => response.status === 200);
-    } catch (error) {
-      return false;
-    }
-  }
-
-  // 쿠키 저장
-  saveCookies(clientIndex = 0, cookieJar = this.cookieJar) {
-    try {
-      const cookiePath = this.getCookieFilePath(clientIndex);
-      const cookieJson = cookieJar.serializeSync();
-      fs.writeFileSync(cookiePath, JSON.stringify(cookieJson, null, 2));
-      console.log(`💾 쿠키 저장 완료: ${cookiePath}`);
-    } catch (error) {
-      console.error(`❌ 쿠키 저장 실패:`, error.message);
-    }
-  }
-
-  // 다중 클라이언트 초기화
   initializeClients() {
     this.clients = this.proxyManager.createAllClients();
-
-    // 각 클라이언트의 저장된 쿠키 복원 시도
-    this.clients.forEach((clientInfo, index) => {
-      const cookiePath = this.getCookieFilePath(index);
-
-      if (fs.existsSync(cookiePath)) {
-        try {
-          const cookieData = fs.readFileSync(cookiePath, "utf8");
-          const cookieJson = JSON.parse(cookieData);
-          clientInfo.cookieJar = tough.CookieJar.deserializeSync(cookieJson);
-
-          // 클라이언트 재생성 (복원된 쿠키 사용)
-          clientInfo.client = wrapper(
-            axios.create({
-              jar: clientInfo.cookieJar,
-              withCredentials: true,
-              headers: clientInfo.headers || {
-                "User-Agent": USER_AGENT,
-                "Accept-Language": "en-US,en;q=0.9",
-              },
-              maxRedirects: 5,
-              ...(clientInfo.proxy && { proxy: clientInfo.proxy }),
-            })
-          );
-
-          console.log(`🔄 ${clientInfo.name} 쿠키 복원 완료`);
-        } catch (error) {
-          console.log(`⚠️ ${clientInfo.name} 쿠키 복원 실패: ${error.message}`);
-        }
-      }
-    });
-
     console.log(
       `${
         this.clients.length
@@ -235,7 +114,7 @@ class AxiosCrawler {
   // 직접 연결 클라이언트 반환 (입찰/결제용)
   getDirectClient() {
     if (this.useMultipleClients) {
-      return this.clients[0];
+      return this.clients[0]; // 첫 번째는 항상 직접 연결
     } else {
       return {
         client: this.client,
@@ -292,7 +171,7 @@ class AxiosCrawler {
     );
   }
 
-  // 개선된 단일 클라이언트 로그인 - 쿠키 자동 저장 포함
+  // 개선된 단일 클라이언트 로그인 - 일관된 세션 관리
   async loginWithClient(clientInfo, forceLogin = false) {
     const clientIndex = clientInfo.index;
 
@@ -349,10 +228,6 @@ class AxiosCrawler {
       if (result) {
         clientInfo.isLoggedIn = true;
         clientInfo.loginTime = Date.now();
-
-        // ⭐ 쿠키 저장
-        this.saveCookies(clientIndex, clientInfo.cookieJar);
-
         console.log(`✅ ${clientInfo.name} 로그인 성공`);
       } else {
         console.log(`❌ ${clientInfo.name} 로그인 실패`);
@@ -371,7 +246,7 @@ class AxiosCrawler {
     }
   }
 
-  // 특정 클라이언트 강제 로그아웃 - 쿠키 파일도 삭제
+  // 특정 클라이언트 강제 로그아웃 - cookieJar 새로 발급
   async forceLogoutClient(clientInfo) {
     const clientIndex = clientInfo.index;
     console.log(`Forcing logout for ${clientInfo.name}...`);
@@ -381,13 +256,6 @@ class AxiosCrawler {
     this.clientLoginPromises.delete(clientIndex);
     this.clientLastLoginCheck.delete(clientIndex);
     this.clientLastLoginCheckResult.delete(clientIndex);
-
-    // 쿠키 파일 삭제
-    const cookiePath = this.getCookieFilePath(clientIndex);
-    if (fs.existsSync(cookiePath)) {
-      fs.unlinkSync(cookiePath);
-      console.log(`🗑️ 쿠키 파일 삭제: ${cookiePath}`);
-    }
 
     // 프록시 매니저를 사용하여 클라이언트 재생성 (새로운 cookieJar 포함)
     const newClientConfig = this.proxyManager.recreateClient(clientIndex);
@@ -402,26 +270,7 @@ class AxiosCrawler {
   async loginAllClients(forceLogin = false) {
     console.log("\n=== 모든 클라이언트 로그인 ===");
 
-    // 복원된 세션 검증 먼저 수행
-    if (!forceLogin) {
-      const validationTasks = this.clients.map(async (clientInfo) => {
-        if (clientInfo.cookieJar) {
-          // 복원된 쿠키가 있는 경우 검증
-          const isValid = await this.loginCheckWithClient(clientInfo);
-          if (isValid) {
-            clientInfo.isLoggedIn = true;
-            clientInfo.loginTime = Date.now();
-            console.log(`✅ ${clientInfo.name} - 저장된 세션 유효`);
-            return true;
-          }
-        }
-        return false;
-      });
-
-      await Promise.all(validationTasks);
-    }
-
-    // 로그인이 필요한 클라이언트만 로그인
+    // 모든 클라이언트에 대해 동시에 로그인 시도
     const loginTasks = this.clients.map((clientInfo) =>
       this.loginWithClient(clientInfo, forceLogin)
     );
@@ -457,7 +306,7 @@ class AxiosCrawler {
     return this.getNextClient();
   }
 
-  // 강제 로그아웃 - 모든 세션 정보 및 쿠키 파일 초기화
+  // 강제 로그아웃 - 모든 세션 정보 초기화
   forceLogout() {
     console.log("Forcing logout and clearing all session data...");
 
@@ -468,24 +317,10 @@ class AxiosCrawler {
       this.clientLastLoginCheck.clear();
       this.clientLastLoginCheckResult.clear();
 
-      // 모든 쿠키 파일 삭제
-      this.clients.forEach((_, index) => {
-        const cookiePath = this.getCookieFilePath(index);
-        if (fs.existsSync(cookiePath)) {
-          fs.unlinkSync(cookiePath);
-        }
-      });
-
       // 프록시 매니저를 사용하여 모든 클라이언트 재생성
       this.clients = this.proxyManager.createAllClients();
       this.currentClientIndex = 0;
     } else {
-      // 단일 클라이언트 쿠키 파일 삭제
-      const cookiePath = this.getCookieFilePath(0);
-      if (fs.existsSync(cookiePath)) {
-        fs.unlinkSync(cookiePath);
-      }
-
       // 단일 클라이언트 초기화
       this.cookieJar = new tough.CookieJar();
       this.initializeAxiosClient();
@@ -571,6 +406,7 @@ class AxiosCrawler {
   }
 
   removeLeadingBrackets(title) {
+    // 앞쪽의 대괄호와 소괄호 제거
     return title.replace(/^[\[\(][^\]\)]*[\]\)]\s*/, "");
   }
 
@@ -588,7 +424,8 @@ class AxiosCrawler {
 
   convertToKST(utcString) {
     const date = new Date(utcString);
-    const offset = 9 * 60;
+    // 한국 표준시는 UTC+9
+    const offset = 9 * 60; // 분 단위
     const kstDate = new Date(date.getTime() + offset * 60 * 1000);
     return kstDate.toISOString().replace("Z", "+09:00");
   }
@@ -596,6 +433,7 @@ class AxiosCrawler {
   extractDate(text) {
     if (!text) return null;
 
+    // 월 이름과 숫자 매핑
     const monthNames = {
       jan: "01",
       january: "01",
@@ -622,8 +460,10 @@ class AxiosCrawler {
       december: "12",
     };
 
+    // 텍스트 전처리: 모든 문자를 소문자로 변환
     const lowerText = text.toLowerCase();
 
+    // 패턴 1: 영문 월 + 일 + 연도 + 시간 (예: May 14, 2025 18:00)
     const pattern1 =
       /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|june|july|august|september|october|november|december)[,\s.-]*(\d{1,2})[,\s.-]*(\d{4}).*?(\d{1,2})[：:\s]*(\d{2})/i;
     const match1 = lowerText.match(pattern1);
@@ -637,6 +477,7 @@ class AxiosCrawler {
       return `${year}-${month}-${day} ${hour}:${minute}:00`;
     }
 
+    // 패턴 2: 영문 월 + 일 + 연도 (시간 없음) (예: May 14, 2025)
     const pattern2 =
       /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|june|july|august|september|october|november|december)[,\s.-]*(\d{1,2})[,\s.-]*(\d{4})/i;
     const match2 = lowerText.match(pattern2);
@@ -648,6 +489,7 @@ class AxiosCrawler {
       return `${year}-${month}-${day} 00:00:00`;
     }
 
+    // 패턴 3: YYYY-MM-DD HH:MM 형식 (예: 2025-05-14 18:00)
     const pattern3 =
       /(\d{4})[-./](\d{1,2})[-./](\d{1,2}).*?(\d{1,2})[：:\s]*(\d{2})/;
     const match3 = text.match(pattern3);
@@ -661,6 +503,7 @@ class AxiosCrawler {
       return `${year}-${month}-${day} ${hour}:${minute}:00`;
     }
 
+    // 패턴 4: YYYY-MM-DD 형식 (시간 없음) (예: 2025-05-14)
     const pattern4 = /(\d{4})[-./](\d{1,2})[-./](\d{1,2})/;
     const match4 = text.match(pattern4);
 
@@ -671,11 +514,13 @@ class AxiosCrawler {
       return `${year}-${month}-${day} 00:00:00`;
     }
 
+    // 패턴 5: MM/DD/YYYY HH:MM 형식 (미국식) (예: 05/14/2025 18:00)
     const pattern5 =
       /(\d{1,2})[-./](\d{1,2})[-./](\d{4}).*?(\d{1,2})[：:\s]*(\d{2})/;
     const match5 = text.match(pattern5);
 
     if (match5) {
+      // 미국식(MM/DD/YYYY)으로 가정
       const month = match5[1].padStart(2, "0");
       const day = match5[2].padStart(2, "0");
       const year = match5[3];
@@ -684,10 +529,12 @@ class AxiosCrawler {
       return `${year}-${month}-${day} ${hour}:${minute}:00`;
     }
 
+    // 패턴 6: MM/DD/YYYY 형식 (시간 없음) (예: 05/14/2025)
     const pattern6 = /(\d{1,2})[-./](\d{1,2})[-./](\d{4})/;
     const match6 = text.match(pattern6);
 
     if (match6) {
+      // 미국식(MM/DD/YYYY)으로 가정
       const month = match6[1].padStart(2, "0");
       const day = match6[2].padStart(2, "0");
       const year = match6[3];
@@ -700,7 +547,7 @@ class AxiosCrawler {
   isCollectionDay(date) {
     if (!date) return true;
     const day = new Date(date).getDay();
-    return ![2, 4].includes(day);
+    return ![2, 4].includes(day); // 화요일, 목요일 제외
   }
 
   convertFullWidthToAscii(str) {
@@ -732,6 +579,7 @@ class AxiosCrawler {
   }
 
   getPreviousDayAt18(scheduledDate) {
+    // scheduledDate를 기준으로 전날 18시를 계산
     const scheduleDate = new Date(scheduledDate);
     const previousDay = new Date(scheduleDate);
     previousDay.setDate(previousDay.getDate() - 1);
