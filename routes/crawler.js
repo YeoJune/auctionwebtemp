@@ -123,7 +123,7 @@ async function crawlAll() {
       let brandAucItems = await brandAucCrawler.crawlAllItems(
         existingBrandAuctionIds
       );
-      // let starAucItems = await starAucCrawler.crawlAllItems(existingStarAucIds);
+      let starAucItems = []; //await starAucCrawler.crawlAllItems(existingStarAucIds);
 
       if (!ecoAucItems) ecoAucItems = [];
       if (!brandAucItems) brandAucItems = [];
