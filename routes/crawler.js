@@ -255,7 +255,7 @@ async function crawlAllValues(options = {}) {
       // DB에 저장
       await DBManager.saveItems(allItems, "values_items");
       await DBManager.cleanupOldValueItems(999);
-      processLiveBidsAfterCrawl();
+      processBidsAfterCrawl();
 
       return {
         settings: {
@@ -389,13 +389,13 @@ async function crawlAllUpdatesWithId() {
     console.log(`Starting update crawl with ID at ${new Date().toISOString()}`);
 
     try {
-      // DB에서 direct_bids와 crawled_items를 JOIN하여 active 상태 아이템과 필요한 정보 조회
+      // DB에서 direct_bids와 crawled_items를 JOIN하여 active 혹은 오늘 상태 아이템과 필요한 정보 조회
       const [activeBids] = await pool.query(
         `SELECT DISTINCT db.item_id, ci.auc_num, ci.kaisaiKaisu, ci.kaijoCd, 
           ci.scheduled_date, ci.starting_price
          FROM direct_bids db
          JOIN crawled_items ci ON db.item_id = ci.item_id
-         WHERE db.status = 'active' AND ci.bid_type = 'direct'`
+         WHERE ci.bid_type = 'direct' AND (db.status = 'active' OR DATE(ci.scheduled_date) = CURDATE())`
       );
 
       if (activeBids.length === 0) {
@@ -550,7 +550,7 @@ async function crawlAllUpdatesWithId() {
 }
 
 // live_bids의 winning_price 자동 업데이트 처리
-async function processLiveBidsAfterCrawl() {
+async function processBidsAfterCrawl() {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
@@ -563,11 +563,17 @@ async function processLiveBidsAfterCrawl() {
        WHERE lb.status = 'cancelled' AND (lb.winning_price IS NULL OR lb.winning_price < vi.final_price)`
     );
 
+    // 우선 final_price로 업데이트
     await conn.query(
       `UPDATE direct_bids db
        JOIN values_items vi ON db.item_id = vi.item_id
        SET db.winning_price = vi.final_price
        WHERE db.status = 'cancelled' AND (db.winning_price IS NULL OR db.winning_price < vi.final_price)`
+    );
+
+    // 나머지는 NULL 상태인 입찰들의 winning_price를 current_price로 설정
+    await conn.query(
+      `UPDATE direct_bids SET winning_price = current_price WHERE winning_price IS NULL`
     );
 
     // 2. final 상태이면서 final_price < vi.final_price인 입찰들 조회
