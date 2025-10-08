@@ -549,8 +549,6 @@ async function crawlAllUpdatesWithId() {
   }
 }
 
-processLiveBidsAfterCrawl();
-
 // live_bids의 winning_price 자동 업데이트 처리
 async function processLiveBidsAfterCrawl() {
   const conn = await pool.getConnection();
