@@ -79,13 +79,7 @@ async function testConnection() {
     console.log("Successfully connected to the database");
 
     // 연결 상태 확인 쿼리들
-    const queries = [
-      `SELECT DISTINCT db.item_id, ci.auc_num, ci.kaisaiKaisu, ci.kaijoCd, 
-          ci.scheduled_date, ci.starting_price, ci.bid_type
-         FROM direct_bids db
-         JOIN crawled_items ci ON db.item_id = ci.item_id
-         WHERE ci.bid_type = 'direct' AND (db.status = 'active' OR ci.scheduled_date >= DATE_SUB(NOW(), INTERVAL 1 HOUR))`,
-    ];
+    const queries = [`SELECT * FROM values_items LIMIT 10`];
 
     // 각 쿼리 순차 실행
     for (const query of queries) {

@@ -389,13 +389,13 @@ async function crawlAllUpdatesWithId() {
     console.log(`Starting update crawl with ID at ${new Date().toISOString()}`);
 
     try {
-      // DB에서 direct_bids와 crawled_items를 JOIN하여 active 혹은 오늘 상태 아이템과 필요한 정보 조회
+      // DB에서 direct_bids와 crawled_items를 JOIN하여 active 혹은 마감된지 1시간 이내 상태 아이템과 필요한 정보 조회
       const [activeBids] = await pool.query(
         `SELECT DISTINCT db.item_id, ci.auc_num, ci.kaisaiKaisu, ci.kaijoCd, 
           ci.scheduled_date, ci.starting_price
          FROM direct_bids db
          JOIN crawled_items ci ON db.item_id = ci.item_id
-         WHERE ci.bid_type = 'direct' AND (db.status = 'active' OR DATE(ci.scheduled_date) = CURDATE())`
+         WHERE ci.bid_type = 'direct' AND (db.status = 'active' OR ci.scheduled_date >= DATE_SUB(NOW(), INTERVAL 1 HOUR))`
       );
 
       if (activeBids.length === 0) {
