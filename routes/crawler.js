@@ -549,6 +549,8 @@ async function crawlAllUpdatesWithId() {
   }
 }
 
+processLiveBidsAfterCrawl();
+
 // live_bids의 winning_price 자동 업데이트 처리
 async function processLiveBidsAfterCrawl() {
   const conn = await pool.getConnection();
@@ -560,7 +562,14 @@ async function processLiveBidsAfterCrawl() {
       `UPDATE live_bids lb
        JOIN values_items vi ON lb.item_id = vi.item_id
        SET lb.winning_price = vi.final_price
-       WHERE lb.status = 'cancelled' AND lb.winning_price < vi.final_price`
+       WHERE lb.status = 'cancelled' AND (lb.winning_price IS NULL OR lb.winning_price < vi.final_price)`
+    );
+
+    await conn.query(
+      `UPDATE direct_bids db
+       JOIN values_items vi ON db.item_id = vi.item_id
+       SET db.winning_price = vi.final_price
+       WHERE db.status = 'cancelled' AND (db.winning_price IS NULL OR db.winning_price < vi.final_price)`
     );
 
     // 2. final 상태이면서 final_price < vi.final_price인 입찰들 조회
