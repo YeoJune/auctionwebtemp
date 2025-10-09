@@ -571,11 +571,6 @@ async function processBidsAfterCrawl() {
        WHERE db.status = 'cancelled' AND (db.winning_price IS NULL OR db.winning_price < vi.final_price)`
     );
 
-    // 나머지는 NULL 상태인 입찰들의 winning_price를 current_price로 설정
-    await conn.query(
-      `UPDATE direct_bids SET winning_price = current_price WHERE winning_price IS NULL`
-    );
-
     // 2. final 상태이면서 final_price < vi.final_price인 입찰들 조회
     const [bidsToCancel] = await conn.query(
       `SELECT lb.id, vi.final_price
@@ -599,7 +594,7 @@ async function processBidsAfterCrawl() {
     }
 
     await conn.commit();
-    console.log("Live bids winning_price updated successfully after crawl");
+    console.log("Winning_price updated successfully after crawl");
   } catch (error) {
     await conn.rollback();
     console.error("Error processing live bids after crawl:", error);
