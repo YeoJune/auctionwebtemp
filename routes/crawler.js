@@ -616,24 +616,16 @@ async function processChangedBids(changedItems) {
   try {
     await conn.beginTransaction();
 
-    // 가격이 변경된 아이템 ID 추출
-    const itemIds = priceChangedItems.map((item) => item.item_id);
-
     // 관련된 모든 active 입찰 조회
     const [activeBids] = await conn.query(
       "SELECT db.id, db.item_id, db.current_price, ci.starting_price " +
         "FROM direct_bids db " +
         "JOIN crawled_items ci ON db.item_id = ci.item_id " +
-        "WHERE db.item_id IN (?) AND db.status = 'active'",
-      [itemIds]
+        "WHERE db.current_price < ci.starting_price AND db.status = 'active'"
     );
 
     // 취소해야 할 입찰 ID 찾기
-    const bidsToCancel = activeBids
-      .filter(
-        (bid) => parseFloat(bid.current_price) < parseFloat(bid.starting_price)
-      )
-      .map((bid) => bid.id);
+    const bidsToCancel = activeBids.map((bid) => bid.id);
 
     let cancelledBidsData = [];
     if (bidsToCancel.length > 0) {
