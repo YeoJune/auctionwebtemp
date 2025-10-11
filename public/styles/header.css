@@ -238,63 +238,58 @@ button.auth-button:hover {
 
 /* 중간 화면 (769px~1200px) */
 @media (max-width: 1200px) and (min-width: 769px) {
-  /* 헤더 컴팩트 */
+  /* 헤더 - 높이와 패딩 비례 축소 */
   .main-header {
-    height: var(--header-height);
+    height: 52px; /* 60px의 약 87% (56/64 비율과 동일) */
     padding: var(--spacing-md) var(--spacing-sm);
   }
 
   .header-content {
-    height: 100%;
     gap: var(--spacing-xs);
   }
 
-  /* 로고 조정 */
+  /* 로고 - 비례 축소 */
   .logo-container img {
-    max-height: 2.2rem;
+    max-height: 2.2rem; /* 2.5rem의 88% */
   }
 
-  /* 네비게이션 56px 기준 조정 */
+  /* 네비게이션 - 크기 비례 축소 */
   .nav-container {
     gap: 1px;
-    justify-content: center;
   }
 
   .nav-button {
-    width: 56px;
-    height: 56px;
-    padding: 6px 0;
-    font-size: var(--font-size-sm);
+    width: 56px; /* 64px의 87.5% */
+    height: 56px; /* 64px의 87.5% */
+    padding: 6px 0; /* 8px의 75% */
   }
 
   .nav-button i {
-    font-size: 18px;
+    font-size: 20px; /* 24px의 83% */
     margin-bottom: 3px;
   }
 
   .nav-button span {
-    font-size: 9px;
+    font-size: 10px; /* 11px의 91% */
   }
 
-  /* 인증 버튼 */
+  /* 인증 버튼 - 비례 축소 */
   .auth-container button {
-    height: 32px;
-    padding: 0 8px;
-    font-size: 11px;
+    height: 32px; /* 36px의 89% */
+    padding: 0 10px; /* 15px의 67% */
+    font-size: 12px;
   }
 
-  /* 드롭다운 */
+  /* 드롭다운 - 비례 축소 */
   .dropdown-content {
-    min-width: 140px;
+    min-width: 160px; /* 180px의 89% */
   }
 
   .dropdown-content a {
-    padding: 6px 10px;
-    font-size: 12px;
+    padding: 10px 12px; /* 기본 패딩의 적절한 비율 */
+    font-size: 13px;
   }
-}
-
-/* 모바일 (768px 이하) */
+} /* 모바일 (768px 이하) */
 @media (max-width: 768px) {
   /* 헤더 */
   .main-header {
