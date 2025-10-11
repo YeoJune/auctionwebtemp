@@ -30,37 +30,20 @@
   position: relative;
 }
 
-/* 화면이 좁을 때 2줄 배치 */
+/* 중간 화면에서 헤더 컴팩트하게 */
 @media (max-width: 1200px) and (min-width: 769px) {
   .main-header {
-    height: auto;
-    min-height: calc(var(--header-height) * 1.4);
-    padding: var(--spacing-sm) var(--spacing-md);
+    height: 50px; /* 기본 60px에서 50px로 축소 */
+    padding: var(--spacing-xs) var(--spacing-md);
   }
 
   .header-content {
-    flex-wrap: wrap;
-    align-content: flex-start;
-    height: auto;
-    min-height: 100%;
+    height: 100%;
+    gap: var(--spacing-sm); /* 간격 줄임 */
   }
 
-  .logo-container {
-    order: 1;
-    flex: 0 0 auto;
-  }
-
-  .auth-container {
-    order: 2;
-    flex: 0 0 auto;
-  }
-
-  .nav-container {
-    order: 3;
-    flex: 1 1 100%;
-    width: 100%;
-    justify-content: center;
-    margin-top: var(--spacing-xs);
+  .logo-container img {
+    max-height: 2rem; /* 2.5rem에서 2rem으로 축소 */
   }
 }
 
@@ -90,23 +73,29 @@
 /* 중간 화면에서 네비게이션 버튼 크기 조정 */
 @media (max-width: 1200px) and (min-width: 769px) {
   .nav-container {
-    flex: none;
-    width: 100%;
-    justify-content: center;
+    gap: 1px; /* 간격 더 좁게 */
   }
 
   .nav-button {
-    width: 56px; /* 조금 작게 */
-    height: 56px;
-    font-size: 0.8rem;
+    width: 52px; /* 64px에서 52px로 축소 */
+    height: 40px; /* 64px에서 40px로 축소 */
+    font-size: 0.75rem;
+    padding: 4px 0;
   }
 
   .nav-button i {
-    font-size: 20px;
+    font-size: 16px; /* 24px에서 16px로 축소 */
+    margin-bottom: 2px;
   }
 
   .nav-button span {
-    font-size: 10px;
+    font-size: 9px; /* 11px에서 9px로 축소 */
+  }
+
+  .auth-container button {
+    height: 28px; /* 36px에서 28px로 축소 */
+    padding: 0 10px; /* 15px에서 10px로 축소 */
+    font-size: 12px;
   }
 }
 
