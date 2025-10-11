@@ -94,8 +94,8 @@
 
   .auth-container button {
     height: 36px; /* 높이는 그대로 유지 */
-    padding: 0 8px; /* 좌우 패딩만 축소 */
-    font-size: 13px;
+    padding: 0 6px; /* 좌우 패딩 더 축소 8px → 6px */
+    font-size: 12px; /* 폰트 크기도 살짝 더 축소 */
   }
 }
 
