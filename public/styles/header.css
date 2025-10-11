@@ -13,14 +13,6 @@
   color: white;
 }
 
-/* 모바일 환경에서 헤더 80% 축소 */
-@media (max-width: 768px) {
-  .main-header {
-    height: 48px; /* 60px의 80% */
-    padding: 10px; /* 12px의 약 80% */
-  }
-}
-
 .header-content {
   display: flex;
   justify-content: space-between;
@@ -28,23 +20,6 @@
   height: 100%;
   gap: var(--spacing-md);
   position: relative;
-}
-
-/* 중간 화면에서 헤더 컴팩트하게 */
-@media (max-width: 1200px) and (min-width: 769px) {
-  .main-header {
-    height: var(--header-height); /* 높이는 그대로 유지 */
-    padding: var(--spacing-md) var(--spacing-sm); /* 좌우 패딩만 줄임 */
-  }
-
-  .header-content {
-    height: 100%;
-    gap: var(--spacing-xs); /* 좌우 간격 줄임 */
-  }
-
-  .logo-container img {
-    max-height: 2.5rem; /* 로고 크기는 그대로 유지 */
-  }
 }
 
 .logo-container {
@@ -70,35 +45,6 @@
   transition: all 0.3s ease;
 }
 
-/* 중간 화면에서 네비게이션 버튼 크기 조정 */
-@media (max-width: 1200px) and (min-width: 769px) {
-  .nav-container {
-    gap: 1px; /* 좌우 간격만 줄임 */
-  }
-
-  .header-content .nav-container .nav-button {
-    width: 48px !important;
-    height: 48px !important;
-    font-size: var(--font-size-sm);
-    padding: 8px 0; /* 상하 패딩은 그대로 유지 */
-  }
-
-  .header-content .nav-container .nav-button i {
-    font-size: 20px;
-    margin-bottom: 4px;
-  }
-
-  .header-content .nav-container .nav-button span {
-    font-size: 10px;
-  }
-
-  .auth-container button {
-    height: 36px; /* 높이는 그대로 유지 */
-    padding: 0 6px; /* 좌우 패딩 더 축소 8px → 6px */
-    font-size: 12px; /* 폰트 크기도 살짝 더 축소 */
-  }
-}
-
 .nav-item {
   position: relative;
 }
@@ -121,26 +67,6 @@
   align-items: center;
   justify-content: center;
   transition: all var(--transition-fast);
-}
-
-/* 모바일 환경에서 네비게이션 버튼 80% 축소 */
-@media (max-width: 768px) {
-  .nav-button {
-    width: 51px; /* 64px의 80% */
-    height: 51px; /* 64px의 80% */
-    padding: 6px 0; /* 8px의 75% */
-    min-height: 32px; /* 40px의 80% */
-    font-size: 11px; /* 14px의 약 80% */
-  }
-
-  .nav-button i {
-    font-size: 19px; /* 24px의 80% */
-    margin-bottom: 3px; /* 4px의 75% */
-  }
-
-  .nav-button span {
-    font-size: 9px; /* 11px의 약 80% */
-  }
 }
 
 .nav-button i {
@@ -178,22 +104,13 @@ button.auth-button {
   transition: all 0.2s ease;
 }
 
-/* 모바일 환경에서 인증 버튼 80% 축소 */
-@media (max-width: 768px) {
-  button.auth-button {
-    height: 29px; /* 36px의 80% */
-    padding: 0 12px; /* 15px의 80% */
-    font-size: 11px; /* 약 80% */
-  }
-}
-
 button.auth-button:hover {
   background-color: rgba(255, 255, 255, 0.1);
 }
 
 /* 햄버거 메뉴 버튼 스타일 */
 .mobile-menu-toggle {
-  display: none; /* 기본적으로 숨김 */
+  display: none;
   background-color: transparent;
   border: 1px solid rgba(255, 255, 255, 0.3);
   color: white;
@@ -209,26 +126,15 @@ button.auth-button:hover {
   transition: all 0.2s ease;
 }
 
-/* 모바일 환경에서 햄버거 버튼 80% 축소 */
-@media (max-width: 768px) {
-  .mobile-menu-toggle {
-    width: 34px; /* 42px의 80% */
-    height: 34px; /* 42px의 80% */
-    font-size: 1.2rem; /* 1.5rem의 80% */
-  }
-}
-
 .mobile-menu-toggle:hover {
   background-color: rgba(255, 255, 255, 0.1);
 }
 
-/* 햄버거 버튼 활성화 스타일 */
 .mobile-menu-toggle.active {
   background-color: rgba(255, 255, 255, 0.15);
   border-color: rgba(255, 255, 255, 0.5);
 }
 
-/* 햄버거 아이콘 전환 애니메이션 */
 .mobile-menu-toggle i {
   transition: transform 0.3s ease;
 }
@@ -259,6 +165,7 @@ button.auth-button:hover {
   overflow: hidden;
   border: 1px solid rgba(0, 0, 0, 0.1);
 }
+
 .dropdown-content.active {
   display: block;
   opacity: 1;
@@ -303,7 +210,9 @@ button.auth-button:hover {
   display: none;
 }
 
-/* 데스크탑 환경에서 드롭다운 스타일 조정 */
+/* ===== MEDIA QUERIES ===== */
+
+/* 데스크탑 (769px 이상) */
 @media (min-width: 769px) {
   .dropdown-content {
     width: auto;
@@ -327,64 +236,145 @@ button.auth-button:hover {
   }
 }
 
-/* 중간 화면에서 드롭다운 위치 조정 */
+/* 중간 화면 (769px~1200px) */
 @media (max-width: 1200px) and (min-width: 769px) {
+  /* 헤더 컴팩트 */
+  .main-header {
+    height: var(--header-height);
+    padding: var(--spacing-md) var(--spacing-sm);
+  }
+
+  .header-content {
+    height: 100%;
+    gap: var(--spacing-xs);
+  }
+
+  /* 로고 조정 */
+  .logo-container img {
+    max-height: 2.2rem;
+  }
+
+  /* 네비게이션 56px 기준 조정 */
+  .nav-container {
+    gap: 1px;
+    justify-content: center;
+  }
+
+  .nav-button {
+    width: 56px;
+    height: 56px;
+    padding: 6px 0;
+    font-size: var(--font-size-sm);
+  }
+
+  .nav-button i {
+    font-size: 18px;
+    margin-bottom: 3px;
+  }
+
+  .nav-button span {
+    font-size: 9px;
+  }
+
+  /* 인증 버튼 */
+  .auth-container button {
+    height: 32px;
+    padding: 0 8px;
+    font-size: 11px;
+  }
+
+  /* 드롭다운 */
   .dropdown-content {
-    min-width: 160px; /* 조금 작게 */
+    min-width: 140px;
   }
 
   .dropdown-content a {
-    padding: 8px 12px; /* 패딩 줄임 */
-    font-size: 13px; /* 폰트 크기 줄임 */
+    padding: 6px 10px;
+    font-size: 12px;
   }
 }
 
-/* 모바일 반응형 스타일 */
+/* 모바일 (768px 이하) */
 @media (max-width: 768px) {
+  /* 헤더 */
   .main-header {
-    padding: 8px; /* 80% of var(--spacing-sm) */
-    height: 48px; /* 80% of 60px */
+    height: 48px;
+    padding: 8px;
   }
 
   .header-content {
     height: 100%;
   }
 
-  /* 모바일에서 햄버거 메뉴 버튼 표시 */
+  /* 네비게이션 버튼 */
+  .nav-button {
+    width: 51px;
+    height: 51px;
+    padding: 6px 0;
+    min-height: 32px;
+    font-size: 11px;
+  }
+
+  .nav-button i {
+    font-size: 19px;
+    margin-bottom: 3px;
+  }
+
+  .nav-button span {
+    font-size: 9px;
+  }
+
+  /* 인증 버튼 */
+  button.auth-button {
+    height: 29px;
+    padding: 0 12px;
+    font-size: 11px;
+  }
+
+  /* 햄버거 버튼 */
   .mobile-menu-toggle {
-    display: flex;
+    display: flex !important;
     position: absolute;
-    right: 8px; /* 80% of 10px */
+    right: 8px;
     top: 50%;
     transform: translateY(-50%);
     z-index: var(--z-mobile-menu);
-    width: 34px; /* 80% of 42px */
-    height: 34px; /* 80% of 42px */
+    width: 34px;
+    height: 34px;
+    font-size: 1.2rem;
   }
 
-  /* 모바일에서 인증 버튼 위치 조정 */
+  /* 인증 버튼 위치 조정 */
   .auth-container {
-    margin-right: 55px; /* 햄버거 버튼과의 간격 증가 */
+    margin-right: 55px;
   }
 
-  /* 모바일에서 네비게이션 메뉴 기본 숨김 */
+  /* 네비게이션 메뉴 기본 숨김 */
   .nav-container {
+    display: none;
+  }
+
+  .nav-container:not(.active) {
+    display: none;
+  }
+
+  .nav-container:not(.mobile-menu-active) {
     display: none;
   }
 
   /* 모바일 메뉴 활성화 시 스타일 */
   .nav-container.mobile-menu-active {
-    display: flex;
+    display: flex !important;
     position: fixed;
-    top: 48px; /* 80% of var(--header-height) 60px */
+    top: 48px;
     left: 0;
     right: 0;
     bottom: 0;
     width: 100%;
     background-color: var(--blue-dark);
-    z-index: var(--z-content-hover);
+    z-index: var(--z-mobile-menu);
     flex-direction: column;
-    padding: 16px; /* 80% of 20px */
+    padding: 16px;
     overflow-y: auto;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   }
@@ -393,22 +383,22 @@ button.auth-button:hover {
   .nav-container.mobile-menu-active .nav-button {
     width: 100%;
     height: auto;
-    min-height: 48px; /* 80% of 60px */
+    min-height: 48px;
     flex-direction: row;
     justify-content: flex-start;
-    padding: 8px 12px; /* 80% of 10px 15px */
-    margin-bottom: 4px; /* 80% of 5px */
+    padding: 8px 12px;
+    margin-bottom: 4px;
     background-color: rgba(255, 255, 255, 0.05);
   }
 
   .nav-container.mobile-menu-active .nav-button i {
-    font-size: 16px; /* 80% of 20px */
-    margin-right: 12px; /* 80% of 15px */
+    font-size: 16px;
+    margin-right: 12px;
     margin-bottom: 0;
   }
 
   .nav-container.mobile-menu-active .nav-button span {
-    font-size: 13px; /* 80% of 16px */
+    font-size: 13px;
   }
 
   /* 모바일 환경에서 드롭다운 스타일 조정 */
@@ -416,14 +406,14 @@ button.auth-button:hover {
     position: static;
     width: 100%;
     box-shadow: none;
-    margin: 4px 0 8px 24px; /* 80% of 5px 0 10px 30px */
+    margin: 4px 0 8px 24px;
     background-color: rgba(255, 255, 255, 0.1);
     border-radius: var(--border-radius-sm);
   }
 
   .nav-container.mobile-menu-active .dropdown-content a {
     color: white;
-    padding: 8px 12px; /* 80% of 10px 15px */
+    padding: 8px 12px;
   }
 
   .nav-container.mobile-menu-active .dropdown-content a:hover {
@@ -473,49 +463,13 @@ button.auth-button:hover {
     .nav-button.active::after {
     content: "▲";
   }
-}
-
-/* header.css 또는 별도 스타일 파일에 추가할 CSS */
-
-/* 모바일 환경에서 메뉴와 토글 버튼 표시 확보 */
-@media (max-width: 768px) {
-  /* 모바일 메뉴 토글 버튼 항상 표시 */
-  .mobile-menu-toggle {
-    display: flex !important;
-  }
-
-  /* 네비게이션 컨테이너 기본 숨김 상태 */
-  .nav-container:not(.active) {
-    display: none;
-  }
-
-  /* 네비게이션 컨테이너 기본 숨김 상태 */
-  .nav-container:not(.mobile-menu-active) {
-    display: none;
-  }
-
-  /* 네비게이션 컨테이너 활성화 시 표시 */
-  .nav-container.mobile-menu-active {
-    display: flex !important;
-    position: fixed;
-    top: 48px; /* 80% of var(--header-height) 60px */
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    background-color: var(--blue-dark);
-    z-index: var(--z-mobile-menu);
-    flex-direction: column;
-    padding: 16px; /* 80% of 20px */
-    overflow-y: auto;
-  }
 
   /* 모바일 메뉴에서 드롭다운 표시 개선 */
   .nav-container.mobile-menu-active .dropdown-content {
     position: static;
     width: 100%;
     max-width: none;
-    margin: 4px 0 8px 16px; /* 80% of 5px 0 10px 20px */
+    margin: 4px 0 8px 16px;
     background-color: rgba(255, 255, 255, 0.1);
     box-shadow: none;
   }
