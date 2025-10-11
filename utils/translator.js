@@ -1,38 +1,36 @@
 // utils/translator.js
+const {
+  TranslateClient,
+  TranslateTextCommand,
+} = require("@aws-sdk/client-translate");
+const { pool } = require("./DB");
 
 class Translator {
   constructor(config = {}) {
-    this.translate = new TranslateClient({
+    this.client = new TranslateClient({
+      // ✅ 변경
       region: config.region || "ap-northeast-2",
     });
 
-    // 설정값
     this.callInterval = config.callInterval || 100;
     this.maxRetries = config.maxRetries || 3;
     this.retryDelay = config.retryDelay || 1000;
     this.maxCacheSize = config.maxCacheSize || 10000;
     this.cacheExpireDays = config.cacheExpireDays || 30;
-
-    // 상태
     this.lastCallTime = Date.now();
   }
 
   async translate(text) {
-    // 1. 캐시 확인
     const cached = await this.getFromCache(text);
     if (cached) return cached;
 
-    // 2. API 호출
     const translated = await this.callAPI(text);
-
-    // 3. 캐시 저장
     await this.saveToCache(text, translated);
 
     return translated;
   }
 
   async callAPI(text, retries = 0) {
-    // 인터벌 체크
     const now = Date.now();
     if (now - this.lastCallTime < this.callInterval) {
       await this.delay(this.callInterval - (now - this.lastCallTime));
@@ -41,14 +39,14 @@ class Translator {
 
     const params = {
       Text: text,
-      SourceLanguageCode: "ja", // 일본어
-      TargetLanguageCode: "en", // 영어 ✅
+      SourceLanguageCode: "ja",
+      TargetLanguageCode: "en",
     };
 
     const command = new TranslateTextCommand(params);
 
     try {
-      const result = await this.translate.send(command);
+      const result = await this.client.send(command); // ✅ 변경
       return result.TranslatedText;
     } catch (error) {
       if (error.name === "ThrottlingException" && retries < this.maxRetries) {
@@ -75,7 +73,6 @@ class Translator {
       );
 
       if (rows.length > 0) {
-        // updated_at 갱신
         await conn.query(
           "UPDATE translation_cache SET updated_at = NOW() WHERE source_text = ?",
           [text]
@@ -113,13 +110,11 @@ class Translator {
     try {
       conn = await pool.getConnection();
 
-      // 1. 전체 개수 확인
       const [countRows] = await conn.query(
         "SELECT COUNT(*) as count FROM translation_cache"
       );
       const count = countRows[0].count;
 
-      // 2. 최대 개수 초과 시 오래된 것부터 삭제
       if (count > this.maxCacheSize) {
         const deleteCount = count - this.maxCacheSize;
         await conn.query(
@@ -129,7 +124,6 @@ class Translator {
         console.log(`Cleaned up ${deleteCount} old cache entries (size limit)`);
       }
 
-      // 3. 만료된 캐시 삭제
       const [result] = await conn.query(
         "DELETE FROM translation_cache WHERE updated_at < DATE_SUB(NOW(), INTERVAL ? DAY)",
         [this.cacheExpireDays]
