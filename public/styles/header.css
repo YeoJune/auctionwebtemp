@@ -32,36 +32,35 @@
 
 /* 화면이 좁을 때 2줄 배치 */
 @media (max-width: 1200px) and (min-width: 769px) {
-  .header-content {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-sm) 0;
+  .main-header {
     height: auto;
-    min-height: 100%;
-    flex-wrap: wrap;
+    min-height: calc(var(--header-height) * 1.4);
+    padding: var(--spacing-sm) var(--spacing-md);
   }
 
-  .main-header {
-    min-height: calc(var(--header-height) * 1.5); /* 1.5배 높이 */
-    padding: var(--spacing-sm) var(--spacing-md);
+  .header-content {
+    flex-wrap: wrap;
+    align-content: flex-start;
     height: auto;
+    min-height: 100%;
   }
 
   .logo-container {
-    align-self: flex-start;
-    margin-bottom: var(--spacing-xs);
-  }
-
-  .nav-container {
-    width: 100%;
-    justify-content: center;
+    order: 1;
+    flex: 0 0 auto;
   }
 
   .auth-container {
-    position: absolute;
-    right: 0;
-    top: var(--spacing-sm);
+    order: 2;
+    flex: 0 0 auto;
+  }
+
+  .nav-container {
+    order: 3;
+    flex: 1 1 100%;
+    width: 100%;
+    justify-content: center;
+    margin-top: var(--spacing-xs);
   }
 }
 
