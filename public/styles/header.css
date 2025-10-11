@@ -77,19 +77,19 @@
   }
 
   .nav-button {
-    width: 50px; /* 좌우 너비만 축소 64px → 50px */
+    width: 46px; /* 좌우 너비 더 축소 50px → 46px */
     height: 64px; /* 높이는 그대로 유지 */
     font-size: var(--font-size-sm);
     padding: 8px 0; /* 상하 패딩은 그대로 유지 */
   }
 
   .nav-button i {
-    font-size: 20px; /* 아이콘 크기 약간만 축소 */
+    font-size: 18px; /* 아이콘 크기 살짝 더 축소 20px → 18px */
     margin-bottom: 4px;
   }
 
   .nav-button span {
-    font-size: 10px; /* 텍스트만 약간 축소 */
+    font-size: 9px; /* 텍스트 더 축소 10px → 9px */
   }
 
   .auth-container button {
