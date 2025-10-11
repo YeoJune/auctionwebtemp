@@ -9,15 +9,14 @@
   position: sticky;
   top: 0;
   z-index: var(--z-header);
-  min-height: var(--header-height);
-  height: auto; /* 자동 높이로 변경 */
+  height: var(--header-height);
   color: white;
 }
 
 /* 모바일 환경에서 헤더 80% 축소 */
 @media (max-width: 768px) {
   .main-header {
-    min-height: 48px; /* 60px의 80% */
+    height: 48px; /* 60px의 80% */
     padding: 10px; /* 12px의 약 80% */
   }
 }
@@ -26,10 +25,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  min-height: 100%;
+  height: 100%;
   gap: var(--spacing-md);
   position: relative;
-  flex-wrap: wrap; /* 줄바꿈 허용 */
 }
 
 /* 화면이 좁을 때 2줄 배치 */
@@ -39,11 +37,15 @@
     flex-direction: column;
     gap: var(--spacing-sm);
     padding: var(--spacing-sm) 0;
+    height: auto;
+    min-height: 100%;
+    flex-wrap: wrap;
   }
 
   .main-header {
     min-height: calc(var(--header-height) * 1.5); /* 1.5배 높이 */
     padding: var(--spacing-sm) var(--spacing-md);
+    height: auto;
   }
 
   .logo-container {
