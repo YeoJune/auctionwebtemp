@@ -9,14 +9,15 @@
   position: sticky;
   top: 0;
   z-index: var(--z-header);
-  height: var(--header-height);
+  min-height: var(--header-height);
+  height: auto; /* 자동 높이로 변경 */
   color: white;
 }
 
 /* 모바일 환경에서 헤더 80% 축소 */
 @media (max-width: 768px) {
   .main-header {
-    height: 48px; /* 60px의 80% */
+    min-height: 48px; /* 60px의 80% */
     padding: 10px; /* 12px의 약 80% */
   }
 }
@@ -25,9 +26,41 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 100%;
+  min-height: 100%;
   gap: var(--spacing-md);
   position: relative;
+  flex-wrap: wrap; /* 줄바꿈 허용 */
+}
+
+/* 화면이 좁을 때 2줄 배치 */
+@media (max-width: 1200px) and (min-width: 769px) {
+  .header-content {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) 0;
+  }
+
+  .main-header {
+    min-height: calc(var(--header-height) * 1.5); /* 1.5배 높이 */
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+
+  .logo-container {
+    align-self: flex-start;
+    margin-bottom: var(--spacing-xs);
+  }
+
+  .nav-container {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .auth-container {
+    position: absolute;
+    right: 0;
+    top: var(--spacing-sm);
+  }
 }
 
 .logo-container {
@@ -51,6 +84,29 @@
   gap: 2px;
   flex: 1;
   transition: all 0.3s ease;
+}
+
+/* 중간 화면에서 네비게이션 버튼 크기 조정 */
+@media (max-width: 1200px) and (min-width: 769px) {
+  .nav-container {
+    flex: none;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .nav-button {
+    width: 56px; /* 조금 작게 */
+    height: 56px;
+    font-size: 0.8rem;
+  }
+
+  .nav-button i {
+    font-size: 20px;
+  }
+
+  .nav-button span {
+    font-size: 10px;
+  }
 }
 
 .nav-item {
@@ -278,6 +334,18 @@ button.auth-button:hover {
 
   .dropdown-container .nav-button.active::after {
     transform: rotate(180deg);
+  }
+}
+
+/* 중간 화면에서 드롭다운 위치 조정 */
+@media (max-width: 1200px) and (min-width: 769px) {
+  .dropdown-content {
+    min-width: 160px; /* 조금 작게 */
+  }
+
+  .dropdown-content a {
+    padding: 8px 12px; /* 패딩 줄임 */
+    font-size: 13px; /* 폰트 크기 줄임 */
   }
 }
 
