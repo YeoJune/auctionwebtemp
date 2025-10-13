@@ -7,6 +7,7 @@ const {
   ecoAucCrawler,
   brandAucCrawler,
   starAucCrawler,
+  mekikiAucCrawler,
 } = require("../crawlers/index");
 const { validateBidByAuction } = require("../utils/submitBid");
 

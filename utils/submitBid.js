@@ -4,6 +4,7 @@ const {
   ecoAucCrawler,
   brandAucCrawler,
   starAucCrawler,
+  mekikiAucCrawler,
 } = require("../crawlers/index");
 
 /**
@@ -141,6 +142,12 @@ async function submitBid(bidData, item) {
       `Submitting bid to StarAuc platform for item ${item.item_id} with price ${price}`
     );
     bidResult = await starAucCrawler.directBid(item.item_id, price);
+  } else if (item.auc_num == 4) {
+    // MekikiAuc 경매
+    console.log(
+      `Submitting bid to MekikiAuc platform for item ${item.item_id} with price ${price}`
+    );
+    bidResult = await mekikiAucCrawler.directBid(item.item_id, price);
   } else {
     console.log(`Unknown auction platform: ${item.auc_num}`);
     await connection.rollback();

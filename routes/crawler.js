@@ -8,6 +8,7 @@ const {
   brandAucValueCrawler,
   starAucCrawler,
   starAucValueCrawler,
+  mekikiAucCrawler,
 } = require("../crawlers/index");
 const DBManager = require("../utils/DBManager");
 const { pool } = require("../utils/DB");
@@ -89,6 +90,7 @@ async function loginAll() {
     brandAucValueCrawler,
     // starAucCrawler,
     // starAucValueCrawler,
+    mekikiAucCrawler,
   ];
 
   await Promise.all(crawlers.map((crawler) => crawler.login()));
@@ -117,6 +119,11 @@ async function crawlAll() {
           .filter((item) => item.auc_num == 3)
           .map((item) => item.item_id)
       );
+      const existingMekikiAucIds = new Set(
+        existingItems
+          .filter((item) => item.auc_num == 4)
+          .map((item) => item.item_id)
+      );
 
       isCrawling = true;
       let ecoAucItems = await ecoAucCrawler.crawlAllItems(existingEcoAucIds);
@@ -124,12 +131,22 @@ async function crawlAll() {
         existingBrandAuctionIds
       );
       let starAucItems = []; //await starAucCrawler.crawlAllItems(existingStarAucIds);
+      let mekikiAucItems = await mekikiAucCrawler.crawlAllItems(
+        existingMekikiAucIds
+      );
 
       if (!ecoAucItems) ecoAucItems = [];
       if (!brandAucItems) brandAucItems = [];
       if (!starAucItems) starAucItems = [];
+      if (!mekikiAucItems) mekikiAucItems = [];
 
-      const allItems = [...ecoAucItems, ...brandAucItems, ...starAucItems];
+      const allItems = [
+        ...ecoAucItems,
+        ...brandAucItems,
+        ...starAucItems,
+        ...mekikiAucItems,
+      ];
+
       await DBManager.saveItems(allItems, "crawled_items");
       await DBManager.deleteItemsWithout(
         allItems.map((item) => item.item_id),
@@ -288,21 +305,25 @@ async function crawlAllUpdates() {
 
     try {
       // 웹에서 데이터 크롤링 (병렬 처리)
-      let [ecoAucUpdates, brandAucUpdates, starAucUpdates] = await Promise.all([
-        ecoAucCrawler.crawlUpdates(),
-        brandAucCrawler.crawlUpdates(),
-        // starAucCrawler.crawlUpdates(),
-      ]);
+      let [ecoAucUpdates, brandAucUpdates, starAucUpdates, mekikiAucUpdates] =
+        await Promise.all([
+          ecoAucCrawler.crawlUpdates(),
+          brandAucCrawler.crawlUpdates(),
+          // starAucCrawler.crawlUpdates(),
+          mekikiAucCrawler.crawlUpdates(),
+        ]);
 
       // null 체크 및 기본값 설정
       if (!ecoAucUpdates) ecoAucUpdates = [];
       if (!brandAucUpdates) brandAucUpdates = [];
       if (!starAucUpdates) starAucUpdates = [];
+      if (!mekikiAucUpdates) mekikiAucUpdates = [];
 
       const allUpdates = [
         ...ecoAucUpdates,
         ...brandAucUpdates,
         ...starAucUpdates,
+        ...mekikiAucUpdates,
       ];
 
       // DB에서 기존 데이터 가져오기
@@ -368,6 +389,7 @@ async function crawlAllUpdates() {
         ecoAucCount: ecoAucUpdates.length,
         brandAucCount: brandAucUpdates.length,
         starAucCount: starAucUpdates.length,
+        mekikiAucCount: mekikiAucUpdates.length,
         changedItemsCount: changedItems.length,
         executionTime: formatExecutionTime(executionTime),
       };
@@ -404,6 +426,7 @@ async function crawlAllUpdatesWithId() {
           ecoAucCount: 0,
           brandAucCount: 0,
           starAucCount: 0,
+          mekikiAucCount: 0,
           changedItemsCount: 0,
           executionTime: "0h 0m 0s",
         };
@@ -441,11 +464,13 @@ async function crawlAllUpdatesWithId() {
         1: ecoAucCrawler,
         2: brandAucCrawler,
         // 3: starAucCrawler,
+        4: mekikiAucCrawler,
       };
       const crawlerNames = {
         1: "EcoAuc",
         2: "BrandAuc",
         // 3: "StarAuc",
+        4: "MekikiAuc",
       };
 
       // 각 경매사별 업데이트 병렬 수행
@@ -479,6 +504,7 @@ async function crawlAllUpdatesWithId() {
         ...(updateResults.ecoAucUpdates || []),
         ...(updateResults.brandAucUpdates || []),
         ...(updateResults.starAucUpdates || []),
+        ...(updateResults.mekikiAucUpdates || []),
       ];
 
       // 변경된 항목 필터링
@@ -537,6 +563,7 @@ async function crawlAllUpdatesWithId() {
         ecoAucCount: updateResults.ecoAucUpdates?.length || 0,
         brandAucCount: updateResults.brandAucUpdates?.length || 0,
         starAucCount: updateResults.starAucUpdates?.length || 0,
+        mekikiAucCount: updateResults.mekikiAucUpdates?.length || 0,
         changedItemsCount: changedItems.length,
         executionTime: formatExecutionTime(executionTime),
       };

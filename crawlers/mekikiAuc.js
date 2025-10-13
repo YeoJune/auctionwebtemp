@@ -1,6 +1,7 @@
 // crawlers/mekikiAuc.js
 const { AxiosCrawler } = require("./baseCrawler");
 const { processImagesInChunks } = require("../utils/processImage");
+const translator = require("../utils/translator");
 
 let pLimit;
 (async () => {
@@ -25,7 +26,14 @@ const mekikiAucConfig = {
   },
   useMultipleClients: false,
   categoryTable: {
-    1: "brand",
+    1: "가방",
+    2: "악세서리",
+    3: "시계",
+    4: "귀금속",
+    6: "의류",
+    7: "기타",
+    8: "귀금속",
+    19: "기타",
   },
 };
 
@@ -55,6 +63,16 @@ class MekikiAucCrawler extends AxiosCrawler {
       if (loginResponse.status !== 200) {
         throw new Error("Login request failed");
       }
+
+      // API 토큰 저장
+      const authToken = loginResponse.data.api_token;
+      console.log(`API Token received: ${authToken.substring(0, 20)}...`);
+
+      // 클라이언트의 기본 헤더에 Bearer 토큰 추가
+      clientInfo.client.defaults.headers.common[
+        "Authorization"
+      ] = `Bearer ${authToken}`;
+      console.log(`Bearer token set for ${clientInfo.name}`);
 
       // 로그인 확인 및 user_id 추출
       const meResponse = await clientInfo.client.get(
@@ -199,10 +217,8 @@ class MekikiAucCrawler extends AxiosCrawler {
         {
           params: {
             sort: 8,
-            per_page: 40,
+            per_page: 100,
             page: 1,
-            "kind[]": [1, 2],
-            "statuses[]": [1, 5, 6, 7, 8, 9, 10, 11],
             group_flag: false,
             user_id: this.userId,
           },
@@ -221,7 +237,7 @@ class MekikiAucCrawler extends AxiosCrawler {
 
       // 첫 페이지 아이템 처리
       const allItems = [];
-      const firstPageItems = this.processItemsPage(
+      const firstPageItems = await this.processItemsPage(
         firstPageResponse.data.collection,
         existingIds
       );
@@ -245,10 +261,8 @@ class MekikiAucCrawler extends AxiosCrawler {
                 {
                   params: {
                     sort: 8,
-                    per_page: 40,
+                    per_page: 100,
                     page: page,
-                    "kind[]": [1, 2],
-                    "statuses[]": [1, 5, 6, 7, 8, 9, 10, 11],
                     group_flag: false,
                     user_id: this.userId,
                   },
@@ -258,7 +272,7 @@ class MekikiAucCrawler extends AxiosCrawler {
                 }
               );
 
-              const pageItems = this.processItemsPage(
+              const pageItems = await this.processItemsPage(
                 response.data.collection,
                 existingIds
               );
@@ -295,7 +309,7 @@ class MekikiAucCrawler extends AxiosCrawler {
   }
 
   // 페이지 아이템 처리
-  processItemsPage(items, existingIds) {
+  async processItemsPage(items, existingIds) {
     const processedItems = [];
 
     for (const item of items) {
@@ -305,7 +319,7 @@ class MekikiAucCrawler extends AxiosCrawler {
         continue;
       }
 
-      const processedItem = this.extractItemInfo(item);
+      const processedItem = await this.extractItemInfo(item);
       if (processedItem) {
         processedItems.push(processedItem);
       }
@@ -315,25 +329,23 @@ class MekikiAucCrawler extends AxiosCrawler {
   }
 
   // 아이템 정보 추출
-  extractItemInfo(item) {
+  async extractItemInfo(item) {
     try {
       const itemId = item.id.toString();
       const boxId = item.box_id || "";
       const boxNo = item.box_no || "";
-      const brandName = item.brand?.name || "";
+      const brandName = await translator.translate(item.brand?.name || "");
+      item.brandTrans = brandName; // 번역된 브랜드명 저장
 
       const title = brandName;
       const originalTitle = `${boxId}-${boxNo} ${brandName}`;
       const scheduledDate = this.extractDate(item.end_datetime);
-      const category =
-        this.config.categoryTable[item.category?.id] ||
-        item.category?.name?.en ||
-        "";
+      const category = this.config.categoryTable[item.category?.id] || "기타";
       const rank = item.grade || "N";
       const startingPrice = item.current_price || 0;
       const image = item.thumbnails?.[0] || item.images?.[0] || null;
       const additionalImages = item.images || [];
-      const description = this.buildDescription(item);
+      const description = await this.buildDescription(item);
       const accessoryCode = item.subcategory?.name?.en || "";
 
       return {
@@ -362,28 +374,36 @@ class MekikiAucCrawler extends AxiosCrawler {
   }
 
   // Description 생성
-  buildDescription(item) {
+  async buildDescription(item) {
     const getValue = (val) => val || "-";
+    const model = await translator.translate(item.model1 || "-");
+    const line = await translator.translate(item.line || "-");
+    const material = await translator.translate(item.material || "-");
+    const color = await translator.translate(item.color || "-");
+    const serialNumber = await translator.translate(item.serial_number || "-");
+    const accessoryNote = await translator.translate(
+      item.accessory_note || "-"
+    );
+    const detail = await translator.translate(item.detail || "-");
 
     const parts = [
-      getValue(item.comment),
       `Category: ${getValue(item.category?.name?.en)}`,
       `Subcategory: ${getValue(item.subcategory?.name?.en)}`,
-      `Brand: ${getValue(item.brand?.name)}`,
+      `Brand: ${getValue(item.brandTrans)}`,
       `Grade: ${getValue(item.grade)}`,
       `Outer Grade: ${getValue(item.grade_outside)}`,
       `Inner Grade: ${getValue(item.grade_inside)}`,
       `Retail Price: ${getValue(item.retail_price)}`,
-      `Model: ${getValue(item.model1)}`,
+      `Model: ${model}`,
       `Model Number: ${getValue(item.model_number)}`,
-      `Line: ${getValue(item.line)}`,
-      `Material: ${getValue(item.material)}`,
-      `Color: ${getValue(item.color)}`,
-      `Serial Number: ${getValue(item.serial_number)}`,
-      `Accessory Note: ${getValue(item.accessory_note)}`,
+      `Line: ${line}`,
+      `Material: ${material}`,
+      `Color: ${color}`,
+      `Serial Number: ${serialNumber}`,
+      `Accessory Note: ${accessoryNote}`,
       `Size: ${getValue(item.size)}`,
       `Quantity: ${getValue(item.quantity)}`,
-      `Detail: ${getValue(item.detail)}`,
+      `Detail: ${detail}`,
     ];
 
     return parts.join(", ");
@@ -503,10 +523,8 @@ class MekikiAucCrawler extends AxiosCrawler {
         {
           params: {
             sort: 8,
-            per_page: 40,
+            per_page: 100,
             page: 1,
-            "kind[]": [1, 2],
-            "statuses[]": [1, 5, 6, 7, 8, 9, 10, 11],
             group_flag: false,
             user_id: this.userId,
           },
@@ -548,10 +566,8 @@ class MekikiAucCrawler extends AxiosCrawler {
                 {
                   params: {
                     sort: 8,
-                    per_page: 40,
+                    per_page: 100,
                     page: page,
-                    "kind[]": [1, 2],
-                    "statuses[]": [1, 5, 6, 7, 8, 9, 10, 11],
                     group_flag: false,
                     user_id: this.userId,
                   },

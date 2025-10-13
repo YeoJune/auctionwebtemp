@@ -8,6 +8,7 @@ const {
   ecoAucCrawler,
   brandAucCrawler,
   starAucCrawler,
+  mekikiAucCrawler,
 } = require("../crawlers/index");
 const { notifyClientsOfChanges } = require("./crawler");
 const { createAppraisalFromAuction } = require("../utils/appr");
@@ -490,6 +491,7 @@ router.post("/", async (req, res) => {
         1: ecoAucCrawler,
         2: brandAucCrawler,
         3: starAucCrawler,
+        4: mekikiAucCrawler,
       }[item.auc_num];
 
       if (crawler && crawler.crawlUpdateWithId) {
@@ -664,15 +666,6 @@ router.post("/", async (req, res) => {
         );
       }
     }
-
-    // commit 전에 취소될 입찰 데이터 조회
-    const [cancelledBidsData] = await connection.query(
-      `SELECT d.user_id, i.title 
-      FROM direct_bids d 
-      JOIN crawled_items i ON d.item_id = i.item_id 
-      WHERE d.item_id = ? AND d.current_price < ? AND d.status = 'active'`,
-      [itemId, currentPrice]
-    );
 
     await connection.commit();
 
