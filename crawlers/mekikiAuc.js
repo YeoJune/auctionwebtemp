@@ -8,8 +8,8 @@ let pLimit;
   pLimit = (await import("p-limit")).default;
 })();
 
-const LIMIT1 = 5;
-const LIMIT2 = 5;
+const LIMIT1 = 10;
+const LIMIT2 = 10;
 
 const mekikiAucConfig = {
   name: "MekikiAuc",
@@ -24,7 +24,7 @@ const mekikiAucConfig = {
     password: process.env.CRAWLER_PASSWORD4,
     remember_me: true,
   },
-  useMultipleClients: false,
+  useMultipleClients: true,
   categoryTable: {
     1: "가방",
     2: "악세서리",
