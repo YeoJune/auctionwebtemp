@@ -5,11 +5,6 @@ const tough = require("tough-cookie");
 const { wrapper } = require("axios-cookiejar-support");
 const { ProxyManager } = require("../utils/proxy");
 
-let pLimit;
-(async () => {
-  pLimit = (await import("p-limit")).default;
-})();
-
 dotenv.config();
 
 const USER_AGENT =
@@ -59,6 +54,9 @@ class AxiosCrawler {
     // 로그인 체크 캐싱을 위한 변수
     this.loginCheckInterval = 1000 * 60 * 5; // 5분
 
+    this.backgroundLoginInProgress = false;
+    this.loginDelayBetweenClients = 10 * 1000; // 로그인 간격 (ms)
+
     if (this.useMultipleClients) {
       this.initializeClients();
     } else {
@@ -94,18 +92,32 @@ class AxiosCrawler {
     );
   }
 
-  // 라운드 로빈으로 다음 클라이언트 선택
-  getNextClient() {
-    const client = this.clients[this.currentClientIndex];
-    this.currentClientIndex =
-      (this.currentClientIndex + 1) % this.clients.length;
-    return client;
-  }
-
   // 클라이언트 선택 메서드 (프록시/단일 클라이언트 통합)
   getClient() {
     if (this.useMultipleClients) {
-      return this.getNextClient();
+      // 로그인된 클라이언트만 필터링
+      const loggedInClients = this.getLoggedInClients();
+
+      if (loggedInClients.length === 0) {
+        console.warn(
+          "⚠️ 현재 로그인된 클라이언트가 없습니다. 백그라운드 로그인 진행 중..."
+        );
+        // 백그라운드에서 로그인 시작 (await 하지 않음)
+        if (!this.backgroundLoginInProgress) {
+          this.backgroundLoginInProgress = true;
+          this.loginAllClients()
+            .catch((err) => console.error("백그라운드 로그인 실패:", err))
+            .finally(() => (this.backgroundLoginInProgress = false));
+        }
+        return null;
+      }
+
+      // 로그인된 클라이언트 중에서 라운드 로빈
+      const client =
+        loggedInClients[this.currentClientIndex % loggedInClients.length];
+      this.currentClientIndex =
+        (this.currentClientIndex + 1) % loggedInClients.length;
+      return client;
     } else {
       return { client: this.client, name: "직접연결" };
     }
@@ -268,14 +280,27 @@ class AxiosCrawler {
 
   // 모든 클라이언트 로그인 - 동시 실행 지원
   async loginAllClients(forceLogin = false) {
-    console.log("\n=== 모든 클라이언트 로그인 ===");
+    console.log("\n=== 모든 클라이언트 로그인 (순차 처리) ===");
 
-    // 모든 클라이언트에 대해 동시에 로그인 시도
-    const loginTasks = this.clients.map((clientInfo) =>
-      this.loginWithClient(clientInfo, forceLogin)
-    );
+    const results = [];
 
-    const results = await Promise.all(loginTasks);
+    for (let i = 0; i < this.clients.length; i++) {
+      const clientInfo = this.clients[i];
+      console.log(
+        `[${i + 1}/${this.clients.length}] ${clientInfo.name} 로그인 시도...`
+      );
+
+      const result = await this.loginWithClient(clientInfo, forceLogin);
+      results.push(result);
+
+      // 마지막 클라이언트가 아니면 대기
+      if (i < this.clients.length - 1 && this.loginDelayBetweenClients > 0) {
+        console.log(
+          `다음 로그인까지 ${this.loginDelayBetweenClients}ms 대기...`
+        );
+        await this.sleep(this.loginDelayBetweenClients);
+      }
+    }
 
     const successCount = results.filter((result) => result).length;
     console.log(`로그인 완료: ${successCount}/${this.clients.length} 성공`);
@@ -288,22 +313,6 @@ class AxiosCrawler {
     return this.clients.filter(
       (client) => client.isLoggedIn && this.isSessionValid(client.loginTime)
     );
-  }
-
-  // 사용 가능한 클라이언트 반환 (로그인 상태 및 세션 유효성 확인)
-  async getAvailableClient() {
-    const loggedInClients = this.getLoggedInClients();
-
-    if (loggedInClients.length === 0) {
-      console.log(
-        "No logged in clients available, attempting to login all clients"
-      );
-      await this.loginAllClients();
-      return this.getLoggedInClients()[0] || null;
-    }
-
-    // 라운드 로빈으로 선택
-    return this.getNextClient();
   }
 
   // 강제 로그아웃 - 모든 세션 정보 초기화
