@@ -1128,6 +1128,13 @@ class EcoAucCrawler extends AxiosCrawler {
       const response = await clientInfo.client.get(url, { timeout: 5 * 1000 });
       const $ = cheerio.load(response.data, { xmlMode: true });
 
+      const startingPriceText = $(
+        "dt:contains('Starting price') + dd big.canopy-large-value"
+      )
+        .text()
+        .trim();
+      const startingPrice = this.currencyToInt(startingPriceText);
+
       // Price 추출
       const priceText = $("dt:contains('Price') + dd big.canopy-large-value")
         .text()
@@ -1142,7 +1149,7 @@ class EcoAucCrawler extends AxiosCrawler {
 
       return {
         item_id: itemId,
-        starting_price: price,
+        starting_price: price || startingPrice,
         scheduled_date: scheduledDate,
       };
     });
@@ -1537,5 +1544,8 @@ class EcoAucValueCrawler extends AxiosCrawler {
 
 const ecoAucCrawler = new EcoAucCrawler(ecoAucConfig);
 const ecoAucValueCrawler = new EcoAucValueCrawler(ecoAucValueConfig);
+ecoAucCrawler.login().then(() => {
+  ecoAucCrawler.crawlUpdateWithId("8037596").then((data) => console.log(data));
+});
 
 module.exports = { ecoAucCrawler, ecoAucValueCrawler };
