@@ -1147,6 +1147,13 @@ class EcoAucCrawler extends AxiosCrawler {
         .trim();
       let scheduledDate = this.extractDate(scheduledDateText);
 
+      console.log({
+        itemId,
+        startingPrice,
+        price,
+        scheduledDate,
+      });
+
       return {
         item_id: itemId,
         starting_price: price || startingPrice,
