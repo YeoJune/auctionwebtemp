@@ -1192,6 +1192,7 @@ class EcoAucCrawler extends AxiosCrawler {
       await Promise.all(promises);
 
       console.log(`Update crawl completed for ${results.length} items`);
+      console.log(results);
       return results;
     } catch (error) {
       console.error("Update crawl with IDs failed:", error);
