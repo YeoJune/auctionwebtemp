@@ -49,13 +49,13 @@ function calculateLocalFee(price, auctionId, category) {
   if (!price) return 0;
   price = Number(price);
 
-  // ecoauc (auctionId: 1)
+  // ecoauc (auctionId: 1) - 변경된 수수료
   if (auctionId == 1) {
-    if (price < 10000) return 1800;
-    if (price < 50000) return 2800;
-    if (price < 100000) return 4800;
-    if (price < 1000000) return 8800;
-    return 10800;
+    if (price < 10000) return 2200; // 1,800 → 2,200
+    if (price < 50000) return 3300; // 2,800 → 3,300
+    if (price < 100000) return 5500; // 4,800 → 5,500
+    if (price < 1000000) return 11000; // 8,800 → 11,000
+    return 10800; // 변경 없음
   }
 
   // brand auction (auctionId: 2)
@@ -68,12 +68,10 @@ function calculateLocalFee(price, auctionId, category) {
 
   // starbuyers (auctionId: 3)
   if (auctionId == 3) {
-    // 1. 기본 수수료 계산
     const baseFee = price * 0.05;
     const vat = baseFee * 0.1;
     const insurance = (baseFee + vat) * 0.005;
 
-    // 2. 카테고리별 추가 수수료
     let categoryFee = 0;
     switch (category) {
       case "가방":
@@ -92,8 +90,12 @@ function calculateLocalFee(price, auctionId, category) {
         break;
     }
 
-    // 3. 최종 수수료 (전체 합계 + 10%)
     return Math.round((baseFee + vat + insurance + categoryFee) * 1.1);
+  }
+
+  // mekiki (auctionId: 4) - 신규 추가
+  if (auctionId == 4) {
+    return Math.round(price * 0.055 + 10000);
   }
 
   return 0;

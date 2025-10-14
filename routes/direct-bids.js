@@ -377,7 +377,8 @@ router.get("/bid-options/:itemId", async (req, res) => {
     let minIncrement = 1000; // 기본값
 
     switch (item.auc_num) {
-      case "1": // 에코옥션 - 1000원 단위
+      case "1": // 에코옥션 - 1000엔 단위
+      case "4": // 메키키옥션 - 1000엔 단위
         minIncrement = 1000;
         nextValidBid =
           Math.ceil((parseFloat(item.starting_price) + minIncrement) / 1000) *
@@ -441,6 +442,7 @@ router.get("/bid-options/:itemId", async (req, res) => {
           unit: isFirstBid ? 1000 : 500,
         },
         3: { description: "자동 최소금액 계산", unit: minIncrement },
+        4: { description: "1,000엔 단위 입찰", unit: 1000 },
       }[item.auc_num],
     });
   } catch (err) {

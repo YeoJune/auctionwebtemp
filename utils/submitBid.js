@@ -19,11 +19,12 @@ function validateBidByAuction(auctionNum, bidPrice, currentPrice, isFirstBid) {
   currentPrice = parseFloat(currentPrice);
   bidPrice = parseFloat(bidPrice);
   switch (String(auctionNum)) {
-    case "1": // 에코옥션 - 기존 1000원 단위
+    case "1":
+    case "4": // 에코옥션, 메키키옥션 - 1000엔 단위
       if (bidPrice % 1000 !== 0) {
         return {
           valid: false,
-          message: "가격을 1000원 단위로 입력해야 합니다",
+          message: "가격을 1000엔 단위로 입력해야 합니다",
         };
       }
       break;
