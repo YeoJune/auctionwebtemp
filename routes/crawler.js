@@ -510,6 +510,8 @@ async function crawlAllUpdatesWithId() {
           return false;
         }
 
+        console.log(originalItem, newItem);
+
         // 날짜 변경 확인
         let dateChanged = false;
         if (newItem.scheduled_date) {
