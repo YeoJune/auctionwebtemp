@@ -18,6 +18,7 @@ const { initializeFilterSettings } = require("../utils/filterDB");
 const dotenv = require("dotenv");
 const socketIO = require("socket.io");
 const { sendHigherBidAlerts } = require("../utils/message");
+const { all } = require("axios");
 
 dotenv.config();
 
@@ -502,6 +503,8 @@ async function crawlAllUpdatesWithId() {
         ...(updateResults.mekikiAucUpdates || []),
       ];
 
+      console.log(allUpdates);
+
       // 변경된 항목 필터링
       const changedItems = allUpdates.filter((newItem) => {
         const originalItem = originalItems[newItem.item_id];
@@ -509,8 +512,6 @@ async function crawlAllUpdatesWithId() {
           console.log(`Original item not found for: ${newItem.item_id}`);
           return false;
         }
-
-        console.log(originalItem, newItem);
 
         // 날짜 변경 확인
         let dateChanged = false;
