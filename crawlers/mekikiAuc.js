@@ -8,8 +8,8 @@ let pLimit;
   pLimit = (await import("p-limit")).default;
 })();
 
-const LIMIT1 = 10;
-const LIMIT2 = 10;
+const LIMIT1 = 5;
+const LIMIT2 = 5;
 
 const mekikiAucConfig = {
   name: "MekikiAuc",
@@ -159,6 +159,8 @@ class MekikiAucCrawler extends AxiosCrawler {
 
         const eventItems = await this.crawlEvent(event.id, existingIds, true);
 
+        console.log(eventItems);
+
         if (eventItems && eventItems.length > 0) {
           allCrawledItems.push(...eventItems);
           console.log(
@@ -278,6 +280,8 @@ class MekikiAucCrawler extends AxiosCrawler {
                 response.data.collection || [],
                 existingIds
               );
+
+              await this.sleep(30 * 1000);
 
               console.log(
                 `Processed ${pageItems.length} items from page ${page}`
@@ -660,5 +664,10 @@ class MekikiAucCrawler extends AxiosCrawler {
 }
 
 const mekikiAucCrawler = new MekikiAucCrawler(mekikiAucConfig);
+
+mekikiAucCrawler.login();
+setTimeout(() => {
+  mekikiAucCrawler.crawlAllItems();
+}, 2000);
 
 module.exports = { mekikiAucCrawler };
