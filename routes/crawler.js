@@ -417,7 +417,7 @@ async function crawlAllUpdatesWithId() {
           ci.scheduled_date, ci.starting_price
          FROM direct_bids db
          JOIN crawled_items ci ON db.item_id = ci.item_id
-         WHERE ci.bid_type = 'direct' AND (db.status = 'active' OR ci.scheduled_date >= DATE_SUB(NOW(), INTERVAL 1 HOUR))`
+         WHERE ci.bid_type = 'direct' AND (db.status = 'active' AND ci.scheduled_date >= DATE_SUB(NOW(), INTERVAL 1 HOUR))`
       );
 
       if (activeBids.length === 0) {
@@ -437,6 +437,7 @@ async function crawlAllUpdatesWithId() {
         1: [], // EcoAuc
         2: [], // BrandAuc
         // 3: [], // StarAuc
+        4: [], // MekikiAuc
       };
 
       // 원래 아이템 정보 저장용 맵 (변경 사항 확인용)
