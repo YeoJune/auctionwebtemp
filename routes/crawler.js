@@ -518,7 +518,7 @@ async function crawlAllUpdatesWithId() {
 
         // 날짜 변경 확인
         let dateChanged = false;
-        if (newItem.scheduled_date && originalItem.scheduled_date) {
+        if (newItem.scheduled_date) {
           const newDate = new Date(newItem.scheduled_date);
           const originalDate = new Date(originalItem.scheduled_date);
           dateChanged = newDate.getTime() !== originalDate.getTime();
@@ -526,10 +526,7 @@ async function crawlAllUpdatesWithId() {
 
         // 가격 변경 확인
         let priceChanged = false;
-        if (
-          newItem.starting_price !== undefined &&
-          originalItem.starting_price !== undefined
-        ) {
+        if (newItem.starting_price) {
           const newPrice = parseFloat(newItem.starting_price) || 0;
           const originalPrice = parseFloat(originalItem.starting_price) || 0;
           priceChanged = Math.abs(newPrice - originalPrice) > 0.01;

@@ -1147,13 +1147,6 @@ class EcoAucCrawler extends AxiosCrawler {
         .trim();
       let scheduledDate = this.extractDate(scheduledDateText);
 
-      console.log({
-        itemId,
-        startingPrice,
-        price,
-        scheduledDate,
-      });
-
       return {
         item_id: itemId,
         starting_price: price || startingPrice,
@@ -1192,7 +1185,6 @@ class EcoAucCrawler extends AxiosCrawler {
       await Promise.all(promises);
 
       console.log(`Update crawl completed for ${results.length} items`);
-      console.log(results);
       return results;
     } catch (error) {
       console.error("Update crawl with IDs failed:", error);
