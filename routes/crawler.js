@@ -333,7 +333,6 @@ async function crawlAllUpdates() {
         [itemIds]
       );
 
-      // ✅ 해결책 3: 개선된 변경 감지 로직
       const changedItems = allUpdates.filter((newItem) => {
         const existingItem = existingItems.find(
           (item) => item.item_id === newItem.item_id
@@ -344,20 +343,15 @@ async function crawlAllUpdates() {
           return false;
         }
 
-        // ✅ 날짜 비교 개선
         let dateChanged = false;
-        if (newItem.scheduled_date && existingItem.scheduled_date) {
+        if (newItem.scheduled_date) {
           const newDate = new Date(newItem.scheduled_date);
           const existingDate = new Date(existingItem.scheduled_date);
           dateChanged = newDate.getTime() !== existingDate.getTime();
         }
 
-        // ✅ 가격 비교 개선
         let priceChanged = false;
-        if (
-          newItem.starting_price !== undefined &&
-          existingItem.starting_price !== undefined
-        ) {
+        if (newItem.starting_price) {
           const newPrice = parseFloat(newItem.starting_price) || 0;
           const existingPrice = parseFloat(existingItem.starting_price) || 0;
           priceChanged = Math.abs(newPrice - existingPrice) > 0.01; // 부동소수점 오차 고려
