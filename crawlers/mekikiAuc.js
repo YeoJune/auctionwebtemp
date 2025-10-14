@@ -281,7 +281,7 @@ class MekikiAucCrawler extends AxiosCrawler {
                 existingIds
               );
 
-              await this.sleep(30 * 1000);
+              // await this.sleep(30 * 1000);
 
               console.log(
                 `Processed ${pageItems.length} items from page ${page}`
@@ -665,9 +665,9 @@ class MekikiAucCrawler extends AxiosCrawler {
 
 const mekikiAucCrawler = new MekikiAucCrawler(mekikiAucConfig);
 
-mekikiAucCrawler.login();
-setTimeout(() => {
-  mekikiAucCrawler.crawlAllItems();
-}, 2000);
+// mekikiAucCrawler.login();
+// setTimeout(() => {
+//   mekikiAucCrawler.crawlAllItems();
+// }, 2000);
 
 module.exports = { mekikiAucCrawler };
