@@ -497,13 +497,11 @@ async function crawlAllUpdatesWithId() {
 
       // 모든 업데이트 결과 합치기
       const allUpdates = [
-        ...(updateResults.ecoAucUpdates || []),
-        ...(updateResults.brandAucUpdates || []),
-        ...(updateResults.starAucUpdates || []),
-        ...(updateResults.mekikiAucUpdates || []),
+        ...(updateResults.ecoaucUpdates || []),
+        ...(updateResults.brandaucUpdates || []),
+        ...(updateResults.staraucUpdates || []),
+        ...(updateResults.mekikiaucUpdates || []),
       ];
-
-      console.log(allUpdates);
 
       // 변경된 항목 필터링
       const changedItems = allUpdates.filter((newItem) => {
