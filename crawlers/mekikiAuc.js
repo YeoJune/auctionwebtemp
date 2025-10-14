@@ -239,7 +239,7 @@ class MekikiAucCrawler extends AxiosCrawler {
       // 첫 페이지 아이템 처리
       const allItems = [];
       const firstPageItems = await this.processItemsPage(
-        firstPageResponse.data.collection,
+        firstPageResponse.data.collection || [],
         existingIds
       );
       allItems.push(...firstPageItems);
@@ -275,7 +275,7 @@ class MekikiAucCrawler extends AxiosCrawler {
               );
 
               const pageItems = await this.processItemsPage(
-                response.data.collection,
+                response.data.collection || [],
                 existingIds
               );
 
