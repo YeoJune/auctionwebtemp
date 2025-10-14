@@ -431,8 +431,8 @@ async function crawlAllUpdatesWithId() {
       const itemsByAuction = {
         1: [], // EcoAuc
         2: [], // BrandAuc
-        3: [], // StarAuc
-        4: [], // MekikiAuc
+        // 3: [], // StarAuc
+        // 4: [], // MekikiAuc
       };
 
       // 원래 아이템 정보 저장용 맵 (변경 사항 확인용)
