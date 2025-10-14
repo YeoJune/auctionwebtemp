@@ -327,6 +327,18 @@ async function crawlAllUpdates() {
         ...mekikiAucUpdates,
       ];
 
+      if (allUpdates.length === 0) {
+        console.log("No updates found during crawl");
+        return {
+          ecoAucCount: 0,
+          brandAucCount: 0,
+          starAucCount: 0,
+          mekikiAucCount: 0,
+          changedItemsCount: 0,
+          executionTime: "0h 0m 0s",
+        };
+      }
+
       // DB에서 기존 데이터 가져오기
       const itemIds = allUpdates.map((item) => item.item_id);
       const [existingItems] = await pool.query(
