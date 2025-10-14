@@ -310,8 +310,8 @@ async function crawlAllUpdates() {
         await Promise.all([
           ecoAucCrawler.crawlUpdates(),
           brandAucCrawler.crawlUpdates(),
-          // starAucCrawler.crawlUpdates(),
-          mekikiAucCrawler.crawlUpdates(),
+          [], // starAucCrawler.crawlUpdates(),
+          [], //mekikiAucCrawler.crawlUpdates(),
         ]);
 
       // null 체크 및 기본값 설정
@@ -431,7 +431,7 @@ async function crawlAllUpdatesWithId() {
       const itemsByAuction = {
         1: [], // EcoAuc
         2: [], // BrandAuc
-        // 3: [], // StarAuc
+        3: [], // StarAuc
         4: [], // MekikiAuc
       };
 
@@ -460,13 +460,13 @@ async function crawlAllUpdatesWithId() {
         1: ecoAucCrawler,
         2: brandAucCrawler,
         // 3: starAucCrawler,
-        4: mekikiAucCrawler,
+        // 4: mekikiAucCrawler,
       };
       const crawlerNames = {
         1: "EcoAuc",
         2: "BrandAuc",
         // 3: "StarAuc",
-        4: "MekikiAuc",
+        // 4: "MekikiAuc",
       };
 
       // 각 경매사별 업데이트 병렬 수행
