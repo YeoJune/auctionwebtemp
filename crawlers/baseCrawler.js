@@ -278,23 +278,136 @@ class AxiosCrawler {
     console.log(`Complete session reset completed for ${clientInfo.name}`);
   }
 
-  // 모든 클라이언트 로그인 - 동시 실행 지원
+  // 모든 클라이언트 로그인 - 세션 확인은 병렬, 실제 로그인은 순차
   async loginAllClients(forceLogin = false) {
-    console.log("\n=== 모든 클라이언트 로그인 (순차 처리) ===");
+    console.log("\n=== 모든 클라이언트 로그인 ===");
 
+    // 1단계: 모든 클라이언트의 로그인 필요 여부를 병렬로 확인
+    const loginCheckTasks = this.clients.map(async (clientInfo) => {
+      const clientIndex = clientInfo.index;
+      let needsLogin = false;
+      let reason = "";
+
+      try {
+        // 강제 로그인
+        if (forceLogin) {
+          reason = "Force login requested";
+          needsLogin = true;
+          await this.forceLogoutClient(clientInfo);
+        }
+        // 첫 로그인
+        else if (!clientInfo.isLoggedIn) {
+          reason = "First time login";
+          needsLogin = true;
+        }
+        // 기존 로그인 상태 체크
+        else if (clientInfo.isLoggedIn) {
+          // 로컬 세션 체크
+          if (!this.isSessionValid(clientInfo.loginTime)) {
+            reason = "Local session expired";
+            needsLogin = true;
+            await this.forceLogoutClient(clientInfo);
+          }
+          // 서버 세션 체크
+          else {
+            const serverLoginValid = await this.loginCheckWithClient(
+              clientInfo
+            );
+            if (serverLoginValid) {
+              reason = "Session is valid";
+              needsLogin = false;
+            } else {
+              reason = "Server session expired";
+              needsLogin = true;
+              await this.forceLogoutClient(clientInfo);
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`${clientInfo.name} - 세션 확인 실패:`, error.message);
+        reason = "Session check failed";
+        needsLogin = true;
+      }
+
+      return { clientInfo, needsLogin, reason };
+    });
+
+    const loginChecks = await Promise.all(loginCheckTasks);
+
+    // 로그인이 필요한 클라이언트 필터링
+    const clientsNeedingLogin = loginChecks.filter((check) => check.needsLogin);
+    const clientsAlreadyLoggedIn = loginChecks.filter(
+      (check) => !check.needsLogin
+    );
+
+    console.log(
+      `세션 확인 완료: 로그인 필요 ${clientsNeedingLogin.length}개, 유효 ${clientsAlreadyLoggedIn.length}개`
+    );
+
+    // 이미 로그인된 클라이언트 로그 출력
+    clientsAlreadyLoggedIn.forEach(({ clientInfo, reason }) => {
+      console.log(`✅ ${clientInfo.name} - ${reason}`);
+    });
+
+    // 2단계: 로그인이 필요한 클라이언트만 순차적으로 로그인
     const results = [];
 
-    for (let i = 0; i < this.clients.length; i++) {
-      const clientInfo = this.clients[i];
+    for (let i = 0; i < clientsNeedingLogin.length; i++) {
+      const { clientInfo, reason } = clientsNeedingLogin[i];
+      const clientIndex = clientInfo.index;
+
       console.log(
-        `[${i + 1}/${this.clients.length}] ${clientInfo.name} 로그인 시도...`
+        `[${i + 1}/${clientsNeedingLogin.length}] ${
+          clientInfo.name
+        } - ${reason}, 로그인 시작...`
       );
 
-      const result = await this.loginWithClient(clientInfo, forceLogin);
-      results.push(result);
+      // 이미 로그인이 진행 중인 경우 기다림
+      if (
+        this.clientLoginInProgress.get(clientIndex) &&
+        this.clientLoginPromises.has(clientIndex)
+      ) {
+        console.log(
+          `${clientInfo.name} - Login already in progress, waiting for completion`
+        );
+        results.push(await this.clientLoginPromises.get(clientIndex));
+        continue;
+      }
+
+      this.clientLoginInProgress.set(clientIndex, true);
+
+      try {
+        // 로그인 Promise 생성 및 저장
+        const loginPromise = this.performLoginWithClient(clientInfo);
+        this.clientLoginPromises.set(clientIndex, loginPromise);
+
+        const result = await loginPromise;
+
+        if (result) {
+          clientInfo.isLoggedIn = true;
+          clientInfo.loginTime = Date.now();
+          console.log(`✅ ${clientInfo.name} 로그인 성공`);
+        } else {
+          console.log(`❌ ${clientInfo.name} 로그인 실패`);
+          await this.forceLogoutClient(clientInfo);
+        }
+
+        results.push(result);
+      } catch (error) {
+        console.error(`❌ ${clientInfo.name} 로그인 과정 실패:`, error.message);
+        await this.forceLogoutClient(clientInfo);
+        results.push(false);
+      } finally {
+        // 로그인 상태 정리
+        this.clientLoginInProgress.set(clientIndex, false);
+        this.clientLoginPromises.delete(clientIndex);
+      }
 
       // 마지막 클라이언트가 아니면 대기
-      if (i < this.clients.length - 1 && this.loginDelayBetweenClients > 0) {
+      if (
+        i < clientsNeedingLogin.length - 1 &&
+        this.loginDelayBetweenClients > 0
+      ) {
         console.log(
           `다음 로그인까지 ${this.loginDelayBetweenClients}ms 대기...`
         );
@@ -302,10 +415,11 @@ class AxiosCrawler {
       }
     }
 
-    const successCount = results.filter((result) => result).length;
-    console.log(`로그인 완료: ${successCount}/${this.clients.length} 성공`);
+    const totalSuccess =
+      clientsAlreadyLoggedIn.length + results.filter((r) => r).length;
+    console.log(`로그인 완료: ${totalSuccess}/${this.clients.length} 성공`);
 
-    return results;
+    return [...clientsAlreadyLoggedIn.map(() => true), ...results];
   }
 
   // 로그인된 클라이언트 반환
