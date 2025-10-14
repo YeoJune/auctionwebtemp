@@ -8,8 +8,8 @@ let pLimit;
   pLimit = (await import("p-limit")).default;
 })();
 
-const LIMIT1 = 5;
-const LIMIT2 = 5;
+const LIMIT1 = 10;
+const LIMIT2 = 10;
 
 const mekikiAucConfig = {
   name: "MekikiAuc",
@@ -664,10 +664,5 @@ class MekikiAucCrawler extends AxiosCrawler {
 }
 
 const mekikiAucCrawler = new MekikiAucCrawler(mekikiAucConfig);
-
-// mekikiAucCrawler.login();
-// setTimeout(() => {
-//   mekikiAucCrawler.crawlAllItems();
-// }, 2000);
 
 module.exports = { mekikiAucCrawler };
