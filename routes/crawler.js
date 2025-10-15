@@ -1104,7 +1104,6 @@ const scheduleUpdateCrawlingWithIdForAuction = (aucNum) => {
             itemIds,
             originalItems
           );
-          console.log(aucNum, itemIds, originalItems, result);
 
           if (result) {
             const nextInterval = scheduler.next(result.changedItemsCount);
