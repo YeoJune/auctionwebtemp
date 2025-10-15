@@ -18,6 +18,7 @@ const { initializeFilterSettings } = require("../utils/filterDB");
 const dotenv = require("dotenv");
 const socketIO = require("socket.io");
 const { sendHigherBidAlerts } = require("../utils/message");
+const { all } = require("axios");
 
 dotenv.config();
 
@@ -74,71 +75,24 @@ class AdaptiveScheduler {
   }
 }
 
-// 경매사 설정
-const AUCTION_CONFIG = {
-  1: {
-    name: "EcoAuc",
-    crawler: ecoAucCrawler,
-    valueCrawler: ecoAucValueCrawler,
-    enabled: true,
-    updateInterval: parseInt(process.env.UPDATE_INTERVAL, 10) || 40,
-    updateWithIdInterval: parseInt(process.env.UPDATE_INTERVAL_ID, 10) || 10,
-  },
-  2: {
-    name: "BrandAuc",
-    crawler: brandAucCrawler,
-    valueCrawler: brandAucValueCrawler,
-    enabled: true,
-    updateInterval: parseInt(process.env.UPDATE_INTERVAL, 10) || 40,
-    updateWithIdInterval: parseInt(process.env.UPDATE_INTERVAL_ID, 10) || 10,
-  },
-  3: {
-    name: "StarAuc",
-    crawler: starAucCrawler,
-    valueCrawler: starAucValueCrawler,
-    enabled: false,
-    updateInterval: parseInt(process.env.UPDATE_INTERVAL, 10) || 40,
-    updateWithIdInterval: parseInt(process.env.UPDATE_INTERVAL_ID, 10) || 10,
-  },
-  4: {
-    name: "MekikiAuc",
-    crawler: mekikiAucCrawler,
-    valueCrawler: null,
-    enabled: false,
-    updateInterval: parseInt(process.env.UPDATE_INTERVAL, 10) || 40,
-    updateWithIdInterval: parseInt(process.env.UPDATE_INTERVAL_ID, 10) || 10,
-  },
-};
-
-// 경매사별 스케줄러 인스턴스 생성
-const updateSchedulers = {};
-const updateWithIdSchedulers = {};
-const crawlingStatus = {
-  update: {},
-  updateWithId: {},
-};
-
-Object.entries(AUCTION_CONFIG).forEach(([aucNum, config]) => {
-  if (config.enabled) {
-    updateSchedulers[aucNum] = new AdaptiveScheduler(config.updateInterval);
-    updateWithIdSchedulers[aucNum] = new AdaptiveScheduler(
-      config.updateWithIdInterval
-    );
-    crawlingStatus.update[aucNum] = false;
-    crawlingStatus.updateWithId[aucNum] = false;
-  }
-});
+// 스케줄러 인스턴스 생성
+const updateScheduler = new AdaptiveScheduler(
+  parseInt(process.env.UPDATE_INTERVAL, 10) || 40
+);
+const updateWithIdScheduler = new AdaptiveScheduler(
+  parseInt(process.env.UPDATE_INTERVAL_ID, 10) || 10
+);
 
 async function loginAll() {
-  const crawlers = [];
-
-  // Config에서 활성화된 모든 크롤러 수집
-  Object.values(AUCTION_CONFIG).forEach((config) => {
-    if (config.enabled) {
-      if (config.crawler) crawlers.push(config.crawler);
-      if (config.valueCrawler) crawlers.push(config.valueCrawler);
-    }
-  });
+  const crawlers = [
+    ecoAucCrawler,
+    ecoAucValueCrawler,
+    brandAucCrawler,
+    brandAucValueCrawler,
+    // starAucCrawler,
+    // starAucValueCrawler,
+    // mekikiAucCrawler,
+  ];
 
   await Promise.all(crawlers.map((crawler) => crawler.login()));
 }
@@ -151,35 +105,48 @@ async function crawlAll() {
       const [existingItems] = await pool.query(
         "SELECT item_id, auc_num FROM crawled_items"
       );
-
-      // Config 기반으로 기존 아이템 ID 그룹화
-      const existingIdsByAuction = {};
-      Object.keys(AUCTION_CONFIG).forEach((aucNum) => {
-        existingIdsByAuction[aucNum] = new Set(
-          existingItems
-            .filter((item) => item.auc_num == aucNum)
-            .map((item) => item.item_id)
-        );
-      });
+      const existingEcoAucIds = new Set(
+        existingItems
+          .filter((item) => item.auc_num == 1)
+          .map((item) => item.item_id)
+      );
+      const existingBrandAuctionIds = new Set(
+        existingItems
+          .filter((item) => item.auc_num == 2)
+          .map((item) => item.item_id)
+      );
+      const existingStarAucIds = new Set(
+        existingItems
+          .filter((item) => item.auc_num == 3)
+          .map((item) => item.item_id)
+      );
+      const existingMekikiAucIds = new Set(
+        existingItems
+          .filter((item) => item.auc_num == 4)
+          .map((item) => item.item_id)
+      );
 
       isCrawling = true;
+      let ecoAucItems = await ecoAucCrawler.crawlAllItems(existingEcoAucIds);
+      let brandAucItems = await brandAucCrawler.crawlAllItems(
+        existingBrandAuctionIds
+      );
+      let starAucItems = []; //await starAucCrawler.crawlAllItems(existingStarAucIds);
+      let mekikiAucItems = await mekikiAucCrawler.crawlAllItems(
+        existingMekikiAucIds
+      );
 
-      // 활성화된 모든 경매사 크롤링 (직렬)
-      const allItems = [];
-      for (const [aucNum, config] of Object.entries(AUCTION_CONFIG)) {
-        if (config.enabled && config.crawler) {
-          try {
-            const items = await config.crawler.crawlAllItems(
-              existingIdsByAuction[aucNum]
-            );
-            if (items && items.length > 0) {
-              allItems.push(...items);
-            }
-          } catch (error) {
-            console.error(`[${config.name}] Crawl failed:`, error);
-          }
-        }
-      }
+      if (!ecoAucItems) ecoAucItems = [];
+      if (!brandAucItems) brandAucItems = [];
+      if (!starAucItems) starAucItems = [];
+      if (!mekikiAucItems) mekikiAucItems = [];
+
+      const allItems = [
+        ...ecoAucItems,
+        ...brandAucItems,
+        ...starAucItems,
+        ...mekikiAucItems,
+      ];
 
       await DBManager.saveItems(allItems, "crawled_items");
       await DBManager.deleteItemsWithout(
@@ -329,115 +296,6 @@ async function crawlAllValues(options = {}) {
   }
 }
 
-// 개별 경매사 업데이트 크롤링
-async function crawlUpdateForAuction(aucNum) {
-  const config = AUCTION_CONFIG[aucNum];
-
-  if (!config || !config.enabled) {
-    console.log(`Auction ${aucNum} is not enabled`);
-    return null;
-  }
-
-  // 전역 크롤링 체크
-  if (isCrawling || isValueCrawling) {
-    throw new Error("Another global crawling in progress");
-  }
-
-  // 해당 경매사 크롤링 체크
-  if (crawlingStatus.update[aucNum]) {
-    throw new Error(`Auction ${config.name} update already in progress`);
-  }
-
-  crawlingStatus.update[aucNum] = true;
-  const startTime = Date.now();
-  console.log(
-    `[${config.name}] Starting update crawl at ${new Date().toISOString()}`
-  );
-
-  try {
-    // 크롤링 실행
-    let updates = await config.crawler.crawlUpdates();
-    if (!updates) updates = [];
-
-    if (updates.length === 0) {
-      console.log(`[${config.name}] No updates found`);
-      return {
-        aucNum,
-        name: config.name,
-        count: 0,
-        changedItemsCount: 0,
-        executionTime: formatExecutionTime(Date.now() - startTime),
-      };
-    }
-
-    // DB에서 기존 데이터 가져오기
-    const itemIds = updates.map((item) => item.item_id);
-    const [existingItems] = await pool.query(
-      "SELECT item_id, scheduled_date, starting_price FROM crawled_items WHERE item_id IN (?) AND bid_type = 'direct' AND auc_num = ?",
-      [itemIds, aucNum]
-    );
-
-    // 변경된 아이템 필터링
-    const changedItems = updates.filter((newItem) => {
-      const existingItem = existingItems.find(
-        (item) => item.item_id === newItem.item_id
-      );
-
-      if (!existingItem) {
-        return false;
-      }
-
-      let dateChanged = false;
-      if (newItem.scheduled_date) {
-        const newDate = new Date(newItem.scheduled_date);
-        const existingDate = new Date(existingItem.scheduled_date);
-        dateChanged = newDate.getTime() !== existingDate.getTime();
-      }
-
-      let priceChanged = false;
-      if (newItem.starting_price) {
-        const newPrice = parseFloat(newItem.starting_price) || 0;
-        const existingPrice = parseFloat(existingItem.starting_price) || 0;
-        priceChanged = Math.abs(newPrice - existingPrice) > 0.01;
-      }
-
-      return dateChanged || priceChanged;
-    });
-
-    // 변경된 아이템이 있으면 DB 업데이트 비동기로 실행
-    if (changedItems.length > 0) {
-      console.log(
-        `[${config.name}] Found ${changedItems.length} changed items`
-      );
-      DBManager.updateItems(changedItems, "crawled_items").then(() => {
-        processChangedBids(changedItems).then(() => {
-          notifyClientsOfChanges(changedItems);
-        });
-      });
-    }
-
-    const executionTime = Date.now() - startTime;
-    console.log(
-      `[${config.name}] Update crawl completed in ${formatExecutionTime(
-        executionTime
-      )}`
-    );
-
-    return {
-      aucNum,
-      name: config.name,
-      count: updates.length,
-      changedItemsCount: changedItems.length,
-      executionTime: formatExecutionTime(executionTime),
-    };
-  } catch (error) {
-    console.error(`[${config.name}] Update crawl failed:`, error);
-    throw error;
-  } finally {
-    crawlingStatus.update[aucNum] = false;
-  }
-}
-
 async function crawlAllUpdates() {
   if (isUpdateCrawling || isCrawling || isValueCrawling) {
     throw new Error("update crawling already in progress");
@@ -447,33 +305,84 @@ async function crawlAllUpdates() {
     console.log(`Starting update crawl at ${new Date().toISOString()}`);
 
     try {
-      // 모든 활성화된 경매사를 병렬로 크롤링
-      const enabledAucNums = Object.keys(AUCTION_CONFIG).filter(
-        (num) => AUCTION_CONFIG[num].enabled
+      // 웹에서 데이터 크롤링 (병렬 처리)
+      let [ecoAucUpdates, brandAucUpdates, starAucUpdates, mekikiAucUpdates] =
+        await Promise.all([
+          ecoAucCrawler.crawlUpdates(),
+          brandAucCrawler.crawlUpdates(),
+          [], // starAucCrawler.crawlUpdates(),
+          [], //mekikiAucCrawler.crawlUpdates(),
+        ]);
+
+      // null 체크 및 기본값 설정
+      if (!ecoAucUpdates) ecoAucUpdates = [];
+      if (!brandAucUpdates) brandAucUpdates = [];
+      if (!starAucUpdates) starAucUpdates = [];
+      if (!mekikiAucUpdates) mekikiAucUpdates = [];
+
+      const allUpdates = [
+        ...ecoAucUpdates,
+        ...brandAucUpdates,
+        ...starAucUpdates,
+        ...mekikiAucUpdates,
+      ];
+
+      if (allUpdates.length === 0) {
+        console.log("No updates found during crawl");
+        return {
+          ecoAucCount: 0,
+          brandAucCount: 0,
+          starAucCount: 0,
+          mekikiAucCount: 0,
+          changedItemsCount: 0,
+          executionTime: "0h 0m 0s",
+        };
+      }
+
+      // DB에서 기존 데이터 가져오기
+      const itemIds = allUpdates.map((item) => item.item_id);
+      const [existingItems] = await pool.query(
+        "SELECT item_id, scheduled_date, starting_price FROM crawled_items WHERE item_id IN (?) AND bid_type = 'direct'",
+        [itemIds]
       );
 
-      const results = await Promise.allSettled(
-        enabledAucNums.map((num) => crawlUpdateForAuction(parseInt(num)))
-      );
+      const changedItems = allUpdates.filter((newItem) => {
+        const existingItem = existingItems.find(
+          (item) => item.item_id === newItem.item_id
+        );
 
-      // 결과 집계
-      const resultsByAucNum = {};
-      let totalChangedCount = 0;
-
-      results.forEach((result, index) => {
-        const aucNum = parseInt(enabledAucNums[index]);
-        if (result.status === "fulfilled" && result.value) {
-          resultsByAucNum[aucNum] = result.value;
-          totalChangedCount += result.value.changedItemsCount || 0;
-        } else if (result.status === "rejected") {
-          console.error(`[Auction ${aucNum}] Update failed:`, result.reason);
-          resultsByAucNum[aucNum] = {
-            count: 0,
-            changedItemsCount: 0,
-            error: result.reason.message,
-          };
+        if (!existingItem) {
+          // console.log(`New item found: ${newItem.item_id}`);
+          return false;
         }
+
+        let dateChanged = false;
+        if (newItem.scheduled_date) {
+          const newDate = new Date(newItem.scheduled_date);
+          const existingDate = new Date(existingItem.scheduled_date);
+          dateChanged = newDate.getTime() !== existingDate.getTime();
+        }
+
+        let priceChanged = false;
+        if (newItem.starting_price) {
+          const newPrice = parseFloat(newItem.starting_price) || 0;
+          const existingPrice = parseFloat(existingItem.starting_price) || 0;
+          priceChanged = Math.abs(newPrice - existingPrice) > 0.01; // 부동소수점 오차 고려
+        }
+
+        return dateChanged || priceChanged;
       });
+
+      // 변경된 아이템이 있으면 DB 업데이트 비동기로 실행
+      if (changedItems.length > 0) {
+        // await 제거하여 비동기로 DB 업데이트 처리
+        DBManager.updateItems(changedItems, "crawled_items").then(() => {
+          // 가격 변경된 아이템에 대한 입찰 취소 처리
+          processChangedBids(changedItems).then(() => {
+            notifyClientsOfChanges(changedItems);
+          });
+        });
+      }
 
       const endTime = Date.now();
       const executionTime = endTime - startTime;
@@ -483,15 +392,13 @@ async function crawlAllUpdates() {
         )}`
       );
 
-      // 기존 API 호환성을 위한 응답 형식 유지
       return {
-        ecoAucCount: resultsByAucNum[1]?.count || 0,
-        brandAucCount: resultsByAucNum[2]?.count || 0,
-        starAucCount: resultsByAucNum[3]?.count || 0,
-        mekikiAucCount: resultsByAucNum[4]?.count || 0,
-        changedItemsCount: totalChangedCount,
+        ecoAucCount: ecoAucUpdates.length,
+        brandAucCount: brandAucUpdates.length,
+        starAucCount: starAucUpdates.length,
+        mekikiAucCount: mekikiAucUpdates.length,
+        changedItemsCount: changedItems.length,
         executionTime: formatExecutionTime(executionTime),
-        detailedResults: resultsByAucNum, // 추가 정보
       };
     } catch (error) {
       console.error("Update crawl failed:", error);
@@ -499,105 +406,6 @@ async function crawlAllUpdates() {
     } finally {
       isUpdateCrawling = false;
     }
-  }
-}
-
-// 개별 경매사 ID 기반 업데이트 크롤링
-async function crawlUpdateWithIdForAuction(aucNum, itemIds, originalItems) {
-  const config = AUCTION_CONFIG[aucNum];
-
-  if (!config || !config.enabled) {
-    console.log(`Auction ${aucNum} is not enabled`);
-    return null;
-  }
-
-  // 전역 크롤링 체크
-  if (isCrawling || isValueCrawling) {
-    throw new Error("Another global crawling in progress");
-  }
-
-  // 해당 경매사 크롤링 체크
-  if (crawlingStatus.updateWithId[aucNum]) {
-    throw new Error(`Auction ${config.name} updateWithId already in progress`);
-  }
-
-  if (!itemIds || itemIds.length === 0) {
-    return {
-      aucNum,
-      name: config.name,
-      count: 0,
-      changedItemsCount: 0,
-    };
-  }
-
-  crawlingStatus.updateWithId[aucNum] = true;
-  const startTime = Date.now();
-  console.log(
-    `[${config.name}] Starting updateWithId for ${itemIds.length} items`
-  );
-
-  try {
-    // 크롤링 실행
-    let updates = await config.crawler.crawlUpdateWithIds(itemIds);
-    if (!updates) updates = [];
-
-    // 변경된 항목 필터링
-    const changedItems = updates.filter((newItem) => {
-      const originalItem = originalItems[newItem.item_id];
-      if (!originalItem) {
-        return false;
-      }
-
-      // 날짜 변경 확인
-      let dateChanged = false;
-      if (newItem.scheduled_date) {
-        const newDate = new Date(newItem.scheduled_date);
-        const originalDate = new Date(originalItem.scheduled_date);
-        dateChanged = newDate.getTime() !== originalDate.getTime();
-      }
-
-      // 가격 변경 확인
-      let priceChanged = false;
-      if (newItem.starting_price) {
-        const newPrice = parseFloat(newItem.starting_price) || 0;
-        const originalPrice = parseFloat(originalItem.starting_price) || 0;
-        priceChanged = Math.abs(newPrice - originalPrice) > 0.01;
-      }
-
-      return dateChanged || priceChanged;
-    });
-
-    // 변경된 아이템이 있으면 DB 업데이트 비동기로 실행
-    if (changedItems.length > 0) {
-      console.log(
-        `[${config.name}] Found ${changedItems.length} changed items`
-      );
-      DBManager.updateItems(changedItems, "crawled_items").then(() => {
-        processChangedBids(changedItems).then(() => {
-          notifyClientsOfChanges(changedItems);
-        });
-      });
-    }
-
-    const executionTime = Date.now() - startTime;
-    console.log(
-      `[${config.name}] UpdateWithId completed in ${formatExecutionTime(
-        executionTime
-      )}`
-    );
-
-    return {
-      aucNum,
-      name: config.name,
-      count: updates.length,
-      changedItemsCount: changedItems.length,
-      executionTime: formatExecutionTime(executionTime),
-    };
-  } catch (error) {
-    console.error(`[${config.name}] UpdateWithId failed:`, error);
-    throw error;
-  } finally {
-    crawlingStatus.updateWithId[aucNum] = false;
   }
 }
 
@@ -631,21 +439,22 @@ async function crawlAllUpdatesWithId() {
         };
       }
 
-      // 경매사별로 아이템 ID 그룹화 (config 기반)
-      const itemsByAuction = {};
-      const originalItems = {};
+      // 경매사별로 아이템 ID 그룹화
+      const itemsByAuction = {
+        1: [], // EcoAuc
+        2: [], // BrandAuc
+        // 3: [], // StarAuc
+        // 4: [], // MekikiAuc
+      };
 
-      // Config에서 활성화된 경매사만 초기화
-      Object.keys(AUCTION_CONFIG).forEach((aucNum) => {
-        if (AUCTION_CONFIG[aucNum].enabled) {
-          itemsByAuction[aucNum] = [];
-        }
-      });
+      // 원래 아이템 정보 저장용 맵 (변경 사항 확인용)
+      const originalItems = {};
 
       // 아이템을 경매사별로 분류하고 원본 정보 저장
       activeBids.forEach((bid) => {
         const auc_num = bid.auc_num;
-        if (itemsByAuction[auc_num] !== undefined) {
+        if (itemsByAuction[auc_num]) {
+          // 아이템 ID 추가
           itemsByAuction[auc_num].push(bid.item_id);
 
           // 원본 아이템 정보 저장
@@ -657,38 +466,95 @@ async function crawlAllUpdatesWithId() {
         }
       });
 
-      // 각 경매사별 업데이트 병렬 수행 (config 기반)
-      const results = await Promise.allSettled(
-        Object.keys(itemsByAuction).map((aucNum) =>
-          crawlUpdateWithIdForAuction(
-            parseInt(aucNum),
-            itemsByAuction[aucNum],
-            originalItems
-          )
-        )
-      );
+      // 각 경매사별로 아이템 업데이트 요청
+      const updateResults = {};
+      const crawlers = {
+        1: ecoAucCrawler,
+        2: brandAucCrawler,
+        // 3: starAucCrawler,
+        // 4: mekikiAucCrawler,
+      };
+      const crawlerNames = {
+        1: "EcoAuc",
+        2: "BrandAuc",
+        // 3: "StarAuc",
+        // 4: "MekikiAuc",
+      };
 
-      // 결과 집계
-      const resultsByAucNum = {};
-      let totalChangedCount = 0;
+      // 각 경매사별 업데이트 병렬 수행
+      const updatePromises = Object.keys(itemsByAuction).map(async (aucNum) => {
+        const itemIds = itemsByAuction[aucNum];
+        const crawlerName = crawlerNames[aucNum];
+        const resultsKey = `${crawlerName.toLowerCase()}Updates`;
 
-      results.forEach((result, index) => {
-        const aucNum = parseInt(Object.keys(itemsByAuction)[index]);
-        if (result.status === "fulfilled" && result.value) {
-          resultsByAucNum[aucNum] = result.value;
-          totalChangedCount += result.value.changedItemsCount || 0;
-        } else if (result.status === "rejected") {
-          console.error(
-            `[Auction ${aucNum}] UpdateWithId failed:`,
-            result.reason
-          );
-          resultsByAucNum[aucNum] = {
-            count: 0,
-            changedItemsCount: 0,
-            error: result.reason.message,
-          };
+        if (itemIds.length > 0) {
+          console.log(`Updating ${itemIds.length} ${crawlerName} items`);
+
+          // 크롤러 호출 (itemInfoMaps 전달 없이)
+          const crawler = crawlers[aucNum];
+          const result = await crawler.crawlUpdateWithIds(itemIds);
+          return { key: resultsKey, result };
+        } else {
+          return { key: resultsKey, result: [] };
         }
       });
+
+      // 모든 병렬 작업 완료 대기
+      const updateResultsArray = await Promise.all(updatePromises);
+
+      // 결과를 updateResults 객체에 저장
+      updateResultsArray.forEach(({ key, result }) => {
+        updateResults[key] = result;
+      });
+
+      // 모든 업데이트 결과 합치기
+      const allUpdates = [
+        ...(updateResults.ecoaucUpdates || []),
+        ...(updateResults.brandaucUpdates || []),
+        ...(updateResults.staraucUpdates || []),
+        ...(updateResults.mekikiaucUpdates || []),
+      ];
+
+      // 변경된 항목 필터링
+      const changedItems = allUpdates.filter((newItem) => {
+        const originalItem = originalItems[newItem.item_id];
+        if (!originalItem) {
+          console.log(`Original item not found for: ${newItem.item_id}`);
+          return false;
+        }
+
+        // 날짜 변경 확인
+        let dateChanged = false;
+        if (newItem.scheduled_date) {
+          const newDate = new Date(newItem.scheduled_date);
+          const originalDate = new Date(originalItem.scheduled_date);
+          dateChanged = newDate.getTime() !== originalDate.getTime();
+        }
+
+        // 가격 변경 확인
+        let priceChanged = false;
+        if (newItem.starting_price) {
+          const newPrice = parseFloat(newItem.starting_price) || 0;
+          const originalPrice = parseFloat(originalItem.starting_price) || 0;
+          priceChanged = Math.abs(newPrice - originalPrice) > 0.01;
+        }
+
+        return dateChanged || priceChanged;
+      });
+
+      // 변경된 아이템이 있으면 DB 업데이트 비동기로 실행
+      if (changedItems.length > 0) {
+        console.log(`Found ${changedItems.length} changed items to update`);
+        // 비동기로 DB 업데이트 처리
+        DBManager.updateItems(changedItems, "crawled_items").then(() => {
+          // 가격 변경된 아이템에 대한 입찰 취소 처리
+          processChangedBids(changedItems).then(() => {
+            notifyClientsOfChanges(changedItems);
+          });
+        });
+      } else {
+        console.log("No items have changed");
+      }
 
       const endTime = Date.now();
       const executionTime = endTime - startTime;
@@ -698,15 +564,13 @@ async function crawlAllUpdatesWithId() {
         )}`
       );
 
-      // 기존 API 호환성을 위한 응답 형식 유지
       return {
-        ecoAucCount: resultsByAucNum[1]?.count || 0,
-        brandAucCount: resultsByAucNum[2]?.count || 0,
-        starAucCount: resultsByAucNum[3]?.count || 0,
-        mekikiAucCount: resultsByAucNum[4]?.count || 0,
-        changedItemsCount: totalChangedCount,
+        ecoAucCount: updateResults.ecoAucUpdates?.length || 0,
+        brandAucCount: updateResults.brandAucUpdates?.length || 0,
+        starAucCount: updateResults.starAucUpdates?.length || 0,
+        mekikiAucCount: updateResults.mekikiAucUpdates?.length || 0,
+        changedItemsCount: changedItems.length,
         executionTime: formatExecutionTime(executionTime),
-        detailedResults: resultsByAucNum, // 추가 정보
       };
     } catch (error) {
       console.error("Update crawl with ID failed:", error);
@@ -975,30 +839,17 @@ async function crawlAllInvoices() {
     console.log(`Starting invoice crawl at ${new Date().toISOString()}`);
     const startTime = Date.now();
 
-    // Config 기반으로 활성화된 크롤러에서 인보이스 크롤링
-    const invoicePromises = [];
-    const resultsByAucNum = {};
+    // 세 크롤러에서 청구서 정보 크롤링
+    const ecoInvoices = await ecoAucCrawler.crawlInvoices();
+    const brandInvoices = await brandAucCrawler.crawlInvoices();
+    // const starInvoices = await starAucCrawler.crawlInvoices();
 
-    Object.entries(AUCTION_CONFIG).forEach(([aucNum, config]) => {
-      if (config.enabled && config.crawler && config.crawler.crawlInvoices) {
-        invoicePromises.push(
-          config.crawler
-            .crawlInvoices()
-            .then((invoices) => {
-              resultsByAucNum[aucNum] = invoices || [];
-              return invoices || [];
-            })
-            .catch((error) => {
-              console.error(`[${config.name}] Invoice crawl failed:`, error);
-              resultsByAucNum[aucNum] = [];
-              return [];
-            })
-        );
-      }
-    });
-
-    const results = await Promise.all(invoicePromises);
-    const allInvoices = results.flat();
+    // 결과 합치기
+    const allInvoices = [
+      ...(ecoInvoices || []),
+      ...(brandInvoices || []),
+      ...(starInvoices || []),
+    ];
 
     // DB에 저장
     await DBManager.saveItems(allInvoices, "invoices");
@@ -1011,10 +862,9 @@ async function crawlAllInvoices() {
     );
 
     return {
-      ecoAucCount: resultsByAucNum[1]?.length || 0,
-      brandAucCount: resultsByAucNum[2]?.length || 0,
-      starAucCount: resultsByAucNum[3]?.length || 0,
-      mekikiAucCount: resultsByAucNum[4]?.length || 0,
+      ecoAucCount: ecoInvoices?.length || 0,
+      brandAucCount: brandInvoices?.length || 0,
+      starAucCount: starInvoices?.length || 0,
       totalCount: allInvoices.length,
       executionTime: formatExecutionTime(executionTime),
     };
@@ -1099,32 +949,13 @@ router.get("/crawl-values", isAdmin, async (req, res) => {
 
 router.get("/crawl-status", isAdmin, (req, res) => {
   try {
-    // 각 경매사별 스케줄러 상태
-    const auctionStatuses = {};
-    Object.keys(AUCTION_CONFIG).forEach((aucNum) => {
-      const config = AUCTION_CONFIG[aucNum];
-      auctionStatuses[aucNum] = {
-        name: config.name,
-        enabled: config.enabled,
-        update: {
-          crawling: crawlingStatus.update[aucNum] || false,
-          scheduler: updateSchedulers[aucNum]?.getStatus() || null,
-        },
-        updateWithId: {
-          crawling: crawlingStatus.updateWithId[aucNum] || false,
-          scheduler: updateWithIdSchedulers[aucNum]?.getStatus() || null,
-        },
-      };
-    });
-
     res.json({
-      global: {
-        isCrawling,
-        isValueCrawling,
-        isUpdateCrawling,
-        isUpdateCrawlingWithId,
-      },
-      auctions: auctionStatuses,
+      isCrawling,
+      isValueCrawling,
+      isUpdateCrawling,
+      isUpdateCrawlingWithId,
+      updateScheduler: updateScheduler.getStatus(),
+      updateWithIdScheduler: updateWithIdScheduler.getStatus(),
     });
   } catch (error) {
     console.error("Crawling status error:", error);
@@ -1186,172 +1017,87 @@ const scheduleCrawling = async () => {
   }
 };
 
-// 개별 경매사별 업데이트 크롤링 스케줄링
-const scheduleUpdateCrawlingForAuction = (aucNum) => {
-  const config = AUCTION_CONFIG[aucNum];
-  const scheduler = updateSchedulers[aucNum];
-
-  if (!config || !scheduler) {
-    console.log(`Cannot schedule update crawling for auction ${aucNum}`);
-    return null;
-  }
-
+const scheduleUpdateCrawling = () => {
   let timeoutId;
 
   const runUpdateCrawl = async () => {
     console.log(
-      `[${config.name}] Running update crawl (interval: ${
-        scheduler.getStatus().current
+      `[UpdateCrawl] Running (interval: ${
+        updateScheduler.getStatus().current
       }s)`
     );
 
     try {
-      if (!isCrawling && !isValueCrawling) {
-        const result = await crawlUpdateForAuction(aucNum);
+      if (!isCrawling && !isValueCrawling && !isUpdateCrawling) {
+        const result = await crawlAllUpdates();
+        const nextInterval = updateScheduler.next(result.changedItemsCount);
 
-        if (result) {
-          const nextInterval = scheduler.next(result.changedItemsCount);
-          console.log(
-            `[${config.name}] Completed - changed: ${result.changedItemsCount}, next: ${nextInterval}s`
-          );
-          timeoutId = setTimeout(runUpdateCrawl, nextInterval * 1000);
-        } else {
-          timeoutId = setTimeout(runUpdateCrawl, scheduler.base * 1000);
-        }
+        console.log(
+          `[UpdateCrawl] Completed - changed: ${result.changedItemsCount}, next: ${nextInterval}s`
+        );
+
+        timeoutId = setTimeout(runUpdateCrawl, nextInterval * 1000);
       } else {
-        console.log(`[${config.name}] Skipped - global crawling active`);
-        timeoutId = setTimeout(runUpdateCrawl, scheduler.current * 1000);
+        console.log("[UpdateCrawl] Skipped - another process active");
+        timeoutId = setTimeout(runUpdateCrawl, updateScheduler.current * 1000);
       }
     } catch (error) {
-      console.error(`[${config.name}] Error:`, error.message);
-      timeoutId = setTimeout(runUpdateCrawl, scheduler.base * 1000);
+      console.error("[UpdateCrawl] Error:", error.message);
+      timeoutId = setTimeout(runUpdateCrawl, updateScheduler.base * 1000);
     }
   };
 
   // 첫 딜레이 후 실행
-  timeoutId = setTimeout(runUpdateCrawl, scheduler.base * 1000);
+  timeoutId = setTimeout(runUpdateCrawl, updateScheduler.base * 1000);
 
   return () => clearTimeout(timeoutId);
 };
 
-// 모든 활성화된 경매사의 업데이트 크롤링 스케줄링
-const scheduleUpdateCrawling = () => {
-  const cancelFunctions = [];
-
-  Object.keys(AUCTION_CONFIG).forEach((aucNum) => {
-    if (AUCTION_CONFIG[aucNum].enabled) {
-      const cancelFn = scheduleUpdateCrawlingForAuction(parseInt(aucNum));
-      if (cancelFn) {
-        cancelFunctions.push(cancelFn);
-      }
-    }
-  });
-
-  // 모든 스케줄 취소 함수 반환
-  return () => {
-    cancelFunctions.forEach((fn) => fn());
-  };
-};
-
-// 개별 경매사별 ID 기반 업데이트 크롤링 스케줄링
-const scheduleUpdateCrawlingWithIdForAuction = (aucNum) => {
-  const config = AUCTION_CONFIG[aucNum];
-  const scheduler = updateWithIdSchedulers[aucNum];
-
-  if (!config || !scheduler) {
-    console.log(`Cannot schedule updateWithId crawling for auction ${aucNum}`);
-    return null;
-  }
-
+const scheduleUpdateCrawlingWithId = () => {
   let timeoutId;
 
   const runUpdateCrawlWithId = async () => {
     console.log(
-      `[${config.name}] Running updateWithId (interval: ${
-        scheduler.getStatus().current
+      `[UpdateCrawlWithId] Running (interval: ${
+        updateWithIdScheduler.getStatus().current
       }s)`
     );
 
     try {
-      if (!isCrawling && !isValueCrawling) {
-        // active bids를 조회하고 해당 경매사 아이템만 필터링
-        const [activeBids] = await pool.query(
-          `SELECT DISTINCT db.item_id, ci.scheduled_date, ci.starting_price
-           FROM direct_bids db
-           JOIN crawled_items ci ON db.item_id = ci.item_id
-           WHERE ci.bid_type = 'direct' 
-             AND ci.auc_num = ?
-             AND db.status = 'active' 
-             AND ci.scheduled_date >= DATE_SUB(NOW(), INTERVAL 1 HOUR)`,
-          [aucNum]
+      if (!isCrawling && !isValueCrawling && !isUpdateCrawlingWithId) {
+        const result = await crawlAllUpdatesWithId();
+        const nextInterval = updateWithIdScheduler.next(
+          result.changedItemsCount
         );
 
-        if (activeBids.length > 0) {
-          const itemIds = activeBids.map((bid) => bid.item_id);
-          const originalItems = {};
-          activeBids.forEach((bid) => {
-            originalItems[bid.item_id] = {
-              item_id: bid.item_id,
-              scheduled_date: bid.scheduled_date,
-              starting_price: bid.starting_price,
-            };
-          });
+        console.log(
+          `[UpdateCrawlWithId] Completed - changed: ${result.changedItemsCount}, next: ${nextInterval}s`
+        );
 
-          const result = await crawlUpdateWithIdForAuction(
-            aucNum,
-            itemIds,
-            originalItems
-          );
-
-          if (result) {
-            const nextInterval = scheduler.next(result.changedItemsCount);
-            console.log(
-              `[${config.name}] Completed - changed: ${result.changedItemsCount}, next: ${nextInterval}s`
-            );
-            timeoutId = setTimeout(runUpdateCrawlWithId, nextInterval * 1000);
-          } else {
-            timeoutId = setTimeout(runUpdateCrawlWithId, scheduler.base * 1000);
-          }
-        } else {
-          // active bid가 없으면 기본 interval로 다시 체크
-          timeoutId = setTimeout(
-            runUpdateCrawlWithId,
-            scheduler.current * 1000
-          );
-        }
+        timeoutId = setTimeout(runUpdateCrawlWithId, nextInterval * 1000);
       } else {
-        console.log(`[${config.name}] Skipped - global crawling active`);
-        timeoutId = setTimeout(runUpdateCrawlWithId, scheduler.current * 1000);
+        console.log("[UpdateCrawlWithId] Skipped - another process active");
+        timeoutId = setTimeout(
+          runUpdateCrawlWithId,
+          updateWithIdScheduler.current * 1000
+        );
       }
     } catch (error) {
-      console.error(`[${config.name}] Error:`, error.message);
-      timeoutId = setTimeout(runUpdateCrawlWithId, scheduler.base * 1000);
+      console.error("[UpdateCrawlWithId] Error:", error.message);
+      timeoutId = setTimeout(
+        runUpdateCrawlWithId,
+        updateWithIdScheduler.base * 1000
+      );
     }
   };
 
   // 첫 딜레이 후 실행
-  timeoutId = setTimeout(runUpdateCrawlWithId, scheduler.base * 1000);
+  timeoutId = setTimeout(
+    runUpdateCrawlWithId,
+    updateWithIdScheduler.base * 1000
+  );
 
   return () => clearTimeout(timeoutId);
-};
-
-// 모든 활성화된 경매사의 ID 기반 업데이트 크롤링 스케줄링
-const scheduleUpdateCrawlingWithId = () => {
-  const cancelFunctions = [];
-
-  Object.keys(AUCTION_CONFIG).forEach((aucNum) => {
-    if (AUCTION_CONFIG[aucNum].enabled) {
-      const cancelFn = scheduleUpdateCrawlingWithIdForAuction(parseInt(aucNum));
-      if (cancelFn) {
-        cancelFunctions.push(cancelFn);
-      }
-    }
-  });
-
-  // 모든 스케줄 취소 함수 반환
-  return () => {
-    cancelFunctions.forEach((fn) => fn());
-  };
 };
 
 const scheduleExpiredBidsProcessing = () => {
