@@ -11,7 +11,8 @@ let pLimit;
 const LIMIT1 = 1;
 const LIMIT2 = 1;
 
-const API_DELAY = 1 * 1000; // 1초
+const API_DELAY = 5 * 1000; // 5초
+const PER_PAGE = 100;
 
 const mekikiAucConfig = {
   name: "MekikiAuc",
@@ -26,7 +27,7 @@ const mekikiAucConfig = {
     password: process.env.CRAWLER_PASSWORD4,
     remember_me: true,
   },
-  useMultipleClients: true,
+  useMultipleClients: false,
   categoryTable: {
     1: "가방",
     2: "악세서리",
@@ -221,7 +222,7 @@ class MekikiAucCrawler extends AxiosCrawler {
         {
           params: {
             sort: 8,
-            per_page: 100,
+            per_page: PER_PAGE,
             page: 1,
             "kind[]": 1,
             group_flag: false,
@@ -266,7 +267,7 @@ class MekikiAucCrawler extends AxiosCrawler {
                 {
                   params: {
                     sort: 8,
-                    per_page: 100,
+                    per_page: PER_PAGE,
                     page: page,
                     "kind[]": 1,
                     group_flag: false,
@@ -529,7 +530,7 @@ class MekikiAucCrawler extends AxiosCrawler {
         {
           params: {
             sort: 8,
-            per_page: 100,
+            per_page: PER_PAGE,
             page: 1,
             "kind[]": 1,
             group_flag: false,
@@ -575,7 +576,7 @@ class MekikiAucCrawler extends AxiosCrawler {
                 {
                   params: {
                     sort: 8,
-                    per_page: 100,
+                    per_page: PER_PAGE,
                     page: page,
                     "kind[]": 1,
                     group_flag: false,
@@ -678,7 +679,7 @@ if (require.main === module) {
       console.log(`Crawled ${items.length} updated items`);
       console.log(items);
     });
-  }, 60 * 1000);
+  }, 3 * 1000);
 }
 
 module.exports = { mekikiAucCrawler };

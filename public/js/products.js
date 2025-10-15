@@ -54,7 +54,7 @@ const productPageConfig = {
   tooltips: {
     enabled: true,
     cardTooltips: [
-      // 1.1 관부가세 포함 금액 설명 - .price-detail 선택자 (BidManager 생성)
+      // 1. 관부가세 포함 금액 설명 - .price-detail 선택자 (BidManager 생성)
       {
         selector: ".price-detail",
         type: "price-detail",
@@ -63,17 +63,17 @@ const productPageConfig = {
           "까사트레이드 수수료를 제외한 모든 비용\n(관부가세, 출품사수수료, 현지세금)이\n반영된 실시간 원화 금액입니다.",
       },
 
-      // 1.2 직접경매 - 실시간 라벨 (템플릿)
+      // 2. 직접경매 - 실시간 라벨 (템플릿)
       {
         selector: ".info-cell:nth-child(2) .info-label",
         type: "direct-realtime",
         textCondition: "실시간",
         condition: (item) => item.bid_type === "direct",
         message:
-          "실시간 경쟁 입찰가입니다.\n마감이 가까울수록 급변할 수 있습니다.",
+          "실시간 경쟁입찰가입니다.\n마감이 가까울수록 급변할 수 있습니다.",
       },
 
-      // 1.3 현장경매 - 시작 금액 라벨 (템플릿에서 setupPriceInfo가 변경)
+      // 3. 현장경매 - 시작 금액 라벨 (템플릿에서 setupPriceInfo가 변경)
       {
         selector: ".info-cell:nth-child(2) .info-label",
         type: "live-starting",
@@ -83,7 +83,7 @@ const productPageConfig = {
           "표시 금액은 사전입찰 시작가이며,\n실제 현장 낙찰가는 경합 정도에 따라\n크게 달라질 수 있습니다.",
       },
 
-      // 1.4 현장경매 1차 입찰
+      // 4. 현장경매 1차 입찰
       {
         selector: ".bid-input-label",
         type: "live-first-bid",
@@ -91,10 +91,10 @@ const productPageConfig = {
         condition: (item, bidInfo) =>
           item.bid_type === "live" && !bidInfo?.first_price,
         message:
-          "현장경매 참여를 위한 1차 입찰 금액입니다.\n이 금액으로 현장경매에 참여할 수 있습니다.",
+          "1차 입찰가를 입력하시면,\n해당 경매 담당자가 데이터·경쟁도 분석을 통해\n2차 제안가를 안내드립니다.",
       },
 
-      // 1.4 현장경매 2차 제안 (템플릿 3번째 칸) - 조건1: first_price 있고 final_price 없음
+      // 5. 현장경매 2차 제안 (템플릿 3번째 칸) - 조건1: first_price 있고 second_price, final_price 없음
       {
         selector: ".info-cell:nth-child(3) .info-label",
         type: "live-second-proposal",
@@ -105,10 +105,10 @@ const productPageConfig = {
           !bidInfo?.second_price &&
           !bidInfo?.final_price,
         message:
-          "현장에서 경합이 발생할 경우\n자동으로 제안될 최대 금액입니다.",
+          "1차 입찰가 입력 후, 최근 낙찰가·경쟁도 데이터를\n분석해 산출한 '낙찰 확률 높은' 제안 금액입니다.\n\n*1차금액 입력 후 영업시간 기준 2시간 이내에 작성됩니다.",
       },
 
-      // 1.4 현장경매 최대금액 (템플릿 3번째 칸) - 조건2: first_price와 second_price 있고 final_price 없음
+      // 6. 현장경매 최대금액 (템플릿 3번째 칸) - 조건2: first_price와 second_price 있고 final_price 없음
       {
         selector: ".info-cell:nth-child(3) .info-label",
         type: "live-max-amount",
@@ -119,10 +119,10 @@ const productPageConfig = {
           bidInfo?.second_price &&
           !bidInfo?.final_price,
         message:
-          "현장에서 경합이 발생할 경우\n자동으로 제안될 최대 금액입니다.",
+          "1차 입찰가 입력 후, 최근 낙찰가·경쟁도 데이터를\n분석해 산출한 '낙찰 확률 높은' 제안 금액입니다.\n\n*1차금액 입력 후 영업시간 기준 2시간 이내에 작성됩니다.",
       },
 
-      // 1.4 현장경매 최종입찰
+      // 7. 현장경매 최종입찰
       {
         selector: ".bid-input-label",
         type: "live-final-bid",
@@ -132,11 +132,10 @@ const productPageConfig = {
           bidInfo?.first_price &&
           bidInfo?.second_price &&
           !bidInfo?.final_price,
-        message:
-          "현장경매 최종 입찰 금액입니다.\n이 금액으로 최종 경쟁에 참여합니다.",
+        message: "2차 제안금액 참고 후\n해당상품에 지불 가능한 최대금액 입력",
       },
 
-      // 1.5 타이머 정보 아이콘 (에코옥션, 스타옥션만)
+      // 8. 타이머 정보 아이콘 (에코옥션, 스타옥션만)
       {
         selector: ".timer-info-icon",
         type: "timer-info",
@@ -146,7 +145,7 @@ const productPageConfig = {
           "마감 전 5분 입찰 발생 시\n5분씩 자동 연장\n\n추가 입찰 없을 시\n마지막 입찰 금액 낙찰",
       },
 
-      // 1.6 스타옥션 입찰 정보
+      // 9. 스타옥션 입찰 정보
       {
         selector: ".quick-bid-buttons.star-auction .bid-info-tooltip-trigger",
         type: "star-bid-info",
@@ -156,7 +155,7 @@ const productPageConfig = {
     ],
 
     modalTooltips: [
-      // 2.1 관부가세 포함 금액 설명 (모든 선택자)
+      // 1. 관부가세 포함 금액 설명 (모든 선택자)
       {
         selector: ".price-detail",
         type: "price-detail",
@@ -179,7 +178,7 @@ const productPageConfig = {
           "까사트레이드 수수료를 제외한 모든 비용\n(관부가세, 출품사수수료, 현지세금)이\n반영된 실시간 원화 금액입니다.",
       },
 
-      // 2.2 입찰 섹션 툴팁 (addLiveBidStageTooltipsToModal + addDirectBidTooltipsToModal 로직)
+      // 2. 입찰 섹션 툴팁
       {
         selector: ".bid-input-label",
         type: "live-first-bid",
@@ -187,7 +186,7 @@ const productPageConfig = {
         condition: (item, bidInfo) =>
           item.bid_type === "live" && !bidInfo?.first_price,
         message:
-          "현장경매 참여를 위한 1차 입찰 금액입니다.\n이 금액으로 현장경매에 참여할 수 있습니다.",
+          "1차 입찰가를 입력하시면,\n해당 경매 담당자가 데이터·경쟁도 분석을 통해\n2차 제안가를 안내드립니다.",
       },
       {
         selector: ".bid-price-info p",
@@ -198,7 +197,7 @@ const productPageConfig = {
           bidInfo?.first_price &&
           !bidInfo?.final_price,
         message:
-          "현장에서 경합이 발생할 경우\n자동으로 제안될 최대 금액입니다.",
+          "1차 입찰가 입력 후, 최근 낙찰가·경쟁도 데이터를\n분석해 산출한 '낙찰 확률 높은' 제안 금액입니다.\n\n*1차금액 입력 후 영업시간 기준 2시간 이내에 작성됩니다.",
       },
       {
         selector: ".bid-input-label",
@@ -209,11 +208,10 @@ const productPageConfig = {
           bidInfo?.first_price &&
           bidInfo?.second_price &&
           !bidInfo?.final_price,
-        message:
-          "현장경매 최종 입찰 금액입니다.\n이 금액으로 최종 경쟁에 참여합니다.",
+        message: "2차 제안금액 참고 후\n해당상품에 지불 가능한 최대금액 입력",
       },
 
-      // 2.4 스타옥션 입찰 정보
+      // 3. 스타옥션 입찰 정보
       {
         selector: ".quick-bid-buttons.star-auction .bid-info-tooltip-trigger",
         type: "star-bid-info",
