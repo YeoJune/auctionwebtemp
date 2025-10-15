@@ -38,7 +38,7 @@ function formatDateTime(dateString, isUTC2KST = false) {
 
 // 숫자 포맷팅 (1000 -> 1,000)
 function formatNumber(num) {
-  return (num || 0).toLocaleString();
+  return parseInt(num || 0).toLocaleString();
 }
 
 // 통화 포맷팅
