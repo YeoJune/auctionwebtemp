@@ -1116,11 +1116,8 @@ const scheduleUpdateCrawlingWithIdForAuction = (aucNum) => {
             timeoutId = setTimeout(runUpdateCrawlWithId, scheduler.base * 1000);
           }
         } else {
-          // active bid가 없으면 기본 interval로 다시 체크
-          timeoutId = setTimeout(
-            runUpdateCrawlWithId,
-            scheduler.current * 1000
-          );
+          const nextInterval = scheduler.next(0);
+          timeoutId = setTimeout(runUpdateCrawlWithId, nextInterval * 1000);
         }
       } else {
         console.log(`[${config.name}] Skipped - global crawling active`);
