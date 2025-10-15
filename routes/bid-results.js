@@ -47,25 +47,23 @@ router.get("/", async (req, res) => {
     let userCondition = "";
     const dateParams = [fromDate];
 
-    if (!isAdmin) {
-      userCondition = "AND user_id = ?";
-      dateParams.push(userId);
-    }
+    userCondition = "AND user_id = ?";
+    dateParams.push(userId);
 
     const [allDates] = await connection.query(
       `SELECT DISTINCT DATE(i.scheduled_date) as bid_date
        FROM (
          SELECT item_id, user_id FROM live_bids 
-         WHERE user_id ${isAdmin ? "IS NOT NULL" : "= ?"}
+         WHERE user_id = ?
          UNION
          SELECT item_id, user_id FROM direct_bids 
-         WHERE user_id ${isAdmin ? "IS NOT NULL" : "= ?"}
+         WHERE user_id = ?
        ) as bids
        LEFT JOIN crawled_items i ON bids.item_id = i.item_id
        WHERE DATE(i.scheduled_date) >= ?
        ${userCondition}
        ORDER BY bid_date ${sortOrder.toUpperCase()}`,
-      isAdmin ? [fromDate] : [userId, userId, fromDate]
+      [userId, userId, fromDate]
     );
 
     console.log(`총 ${allDates.length}개의 입찰 날짜 발견`);
