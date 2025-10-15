@@ -125,7 +125,7 @@ router.get("/", async (req, res) => {
 
       const allItems = [...liveBids, ...directBids];
 
-      // 상태별 분류
+      // 상태별 분류 및 관부가세 계산
       const successItems = [];
       const failedItems = [];
       const pendingItems = [];
@@ -133,8 +133,30 @@ router.get("/", async (req, res) => {
       allItems.forEach((item) => {
         const bid_status = classifyBidStatus(item);
 
+        // ✨ 관부가세 포함 가격 계산
+        let koreanPrice = 0;
+        if (bid_status === "success" || bid_status === "failed") {
+          const price = item.winning_price || 0;
+          if (price > 0 && item.auc_num && item.category) {
+            try {
+              koreanPrice = calculateTotalPrice(
+                price,
+                item.auc_num,
+                item.category,
+                settlement.exchange_rate
+              );
+            } catch (error) {
+              console.error("관부가세 계산 오류:", error);
+              koreanPrice = 0;
+            }
+          }
+        }
+
         const itemData = {
           ...item,
+          koreanPrice, // ✨ 추가
+          finalPrice: item.final_price,
+          winningPrice: item.winning_price,
           item: {
             item_id: item.item_id,
             original_title: item.original_title,
