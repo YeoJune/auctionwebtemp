@@ -4,6 +4,7 @@ const router = express.Router();
 const { pool } = require("../utils/DB");
 const { createAppraisalFromAuction } = require("../utils/appr");
 const { createOrUpdateSettlement } = require("../utils/settlement");
+const { calculateTotalPrice } = require("../utils/calculate-fee");
 
 // 미들웨어
 const isAdmin = (req, res, next) => {
