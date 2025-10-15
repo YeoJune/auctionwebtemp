@@ -226,7 +226,7 @@ router.get("/", async (req, res) => {
         // 관부가세 포함 가격 계산
         let koreanPrice = 0;
         if (bid_status === "success" || bid_status === "failed") {
-          const price = item.winning_price || 0;
+          const price = parseInt(item.winning_price) || 0;
           if (price > 0 && item.auc_num && item.category) {
             try {
               koreanPrice = calculateTotalPrice(
