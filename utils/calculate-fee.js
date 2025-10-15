@@ -7,8 +7,17 @@
     // Node.js 환경
     module.exports = factory();
   } else {
-    // 브라우저 환경
-    root.CalculateFee = factory();
+    const exports = factory();
+
+    // 각 함수를 전역으로 노출
+    root.fetchExchangeRate = exports.fetchExchangeRate;
+    root.fetchUserCommissionRate = exports.fetchUserCommissionRate;
+    root.calculateLocalFee = exports.calculateLocalFee;
+    root.calculateCustomsDuty = exports.calculateCustomsDuty;
+    root.calculateComplexCustomsDuty = exports.calculateComplexCustomsDuty;
+    root.calculateVAT = exports.calculateVAT;
+    root.calculateTotalPrice = exports.calculateTotalPrice;
+    root.calculateFee = exports.calculateFee;
   }
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
