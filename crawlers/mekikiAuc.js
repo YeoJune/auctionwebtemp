@@ -675,10 +675,7 @@ const mekikiAucCrawler = new MekikiAucCrawler(mekikiAucConfig);
 if (require.main === module) {
   mekikiAucCrawler.login();
   setTimeout(() => {
-    mekikiAucCrawler.crawlUpdates().then((items) => {
-      console.log(`Crawled ${items.length} updated items`);
-      console.log(items);
-    });
+    mekikiAucCrawler.crawlUpdates();
   }, 3 * 1000);
 }
 
