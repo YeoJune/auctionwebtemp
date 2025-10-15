@@ -131,6 +131,8 @@ router.get("/", async (req, res) => {
       const failedItems = [];
       const pendingItems = [];
 
+      console.log(allItems);
+
       allItems.forEach((item) => {
         const bid_status = classifyBidStatus(item);
 
