@@ -44,12 +44,6 @@ router.get("/", async (req, res) => {
     const fromDate = dateLimit.toISOString().split("T")[0];
 
     // ✨ 1. 모든 입찰 날짜 조회 (성공/실패/대기 모두 포함)
-    let userCondition = "";
-    const dateParams = [fromDate];
-
-    userCondition = "AND user_id = ?";
-    dateParams.push(userId);
-
     const [allDates] = await connection.query(
       `SELECT DISTINCT DATE(i.scheduled_date) as bid_date
        FROM (
@@ -61,7 +55,6 @@ router.get("/", async (req, res) => {
        ) as bids
        LEFT JOIN crawled_items i ON bids.item_id = i.item_id
        WHERE DATE(i.scheduled_date) >= ?
-       ${userCondition}
        ORDER BY bid_date ${sortOrder.toUpperCase()}`,
       [userId, userId, fromDate]
     );
