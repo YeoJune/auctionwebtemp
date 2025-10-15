@@ -11,7 +11,7 @@ const {
   mekikiAucCrawler,
 } = require("../crawlers/index");
 const { notifyClientsOfChanges } = require("./crawler");
-const { createAppraisalFromAuction } = require("../utils/appr");
+const { createOrUpdateSettlement } = require("../utils/settlement");
 
 const isAdmin = (req, res, next) => {
   if (req.session.user && req.session.user.id === "admin") {
@@ -795,6 +795,11 @@ router.put("/complete", isAdmin, async (req, res) => {
 
     await connection.commit();
 
+    for (const bid of completedBidsData) {
+      const date = new Date(bid.scheduled_date).toISOString().split("T")[0];
+      createOrUpdateSettlement(bid.user_id, date).catch(console.error);
+    }
+
     // 응답 메시지 구성
     let message;
     if (id) {
@@ -1170,90 +1175,6 @@ router.put("/:id", isAdmin, async (req, res) => {
     await connection.rollback();
     console.error("Error updating bid:", err);
     res.status(500).json({ message: "Error updating bid" });
-  } finally {
-    connection.release();
-  }
-});
-
-// 감정서 신청 API - POST /direct-bids/:id/request-appraisal
-router.post("/:id/request-appraisal", async (req, res) => {
-  const bidId = req.params.id;
-
-  if (!req.session.user) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
-  const userId = req.session.user.id;
-  const connection = await pool.getConnection();
-
-  try {
-    await connection.beginTransaction();
-
-    // 1. bid 정보와 item 정보 함께 조회 (additional_images 포함)
-    const [bids] = await connection.query(
-      `SELECT d.*, i.brand, i.title, i.category, i.image, i.additional_images
-       FROM direct_bids d 
-       JOIN crawled_items i ON d.item_id = i.item_id 
-       WHERE d.id = ? AND d.status IN ('completed', 'shipped') AND d.winning_price > 0`,
-      [bidId]
-    );
-
-    if (
-      bids.length === 0 ||
-      !(bids[0].user_id == userId || userId == "admin")
-    ) {
-      await connection.rollback();
-      return res.status(404).json({
-        message: "낙찰된 상품을 찾을 수 없거나 접근 권한이 없습니다.",
-      });
-    }
-
-    const bid = bids[0];
-
-    // 2. 이미 감정서를 신청했는지 확인
-    if (bid.appr_id) {
-      await connection.rollback();
-      return res.status(400).json({
-        message: "이미 감정서를 신청했습니다.",
-        appraisal_id: bid.appr_id,
-      });
-    }
-
-    // 3. 공통 함수를 사용하여 감정서 생성
-    const { appraisal_id, certificate_number } =
-      await createAppraisalFromAuction(
-        connection,
-        bid,
-        {
-          brand: bid.brand,
-          title: bid.title,
-          category: bid.category,
-          image: bid.image,
-          additional_images: bid.additional_images,
-        },
-        userId
-      );
-
-    // 4. direct_bids 테이블의 appr_id 업데이트
-    await connection.query("UPDATE direct_bids SET appr_id = ? WHERE id = ?", [
-      appraisal_id,
-      bidId,
-    ]);
-
-    await connection.commit();
-
-    res.status(201).json({
-      message: "감정서 신청이 완료되었습니다.",
-      appraisal_id: appraisal_id,
-      certificate_number: certificate_number,
-      status: "pending",
-    });
-  } catch (err) {
-    await connection.rollback();
-    console.error("감정서 신청 중 오류 발생:", err);
-    res.status(500).json({
-      message: err.message || "감정서 신청 중 오류가 발생했습니다.",
-    });
   } finally {
     connection.release();
   }

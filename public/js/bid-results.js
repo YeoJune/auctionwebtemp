@@ -113,75 +113,46 @@ async function fetchCompletedBids() {
     return;
   }
 
-  // Core에 최신 상태 전달
-  core.setPageState(window.state);
-
-  // common.js의 toggleLoading 사용
   core.toggleLoading(true);
 
   try {
-    // 날짜 범위 계산
-    const dateLimit = new Date();
-    dateLimit.setDate(dateLimit.getDate() - window.state.dateRange);
-    const fromDate = formatDate(dateLimit);
-
-    // 정렬 및 페이지네이션 파라미터
     const params = {
-      status: "active,final,completed,shipped,cancelled", // shipped 상태 추가
-      fromDate: fromDate,
-      sortBy: "scheduled_date", // scheduled_date로 변경
-      sortOrder: "desc",
-      limit: 0, // 모든 데이터 가져오기
+      dateRange: window.state.dateRange,
+      sortBy: window.state.sortBy,
+      sortOrder: window.state.sortOrder,
+      page: window.state.currentPage,
+      limit: window.state.itemsPerPage,
     };
 
-    // API 요청 URL 생성
     const queryString = window.API.createURLParams(params);
 
-    // 경매 타입에 관계없이 모든 데이터 가져오기
-    const [liveResults, directResults] = await Promise.all([
-      window.API.fetchAPI(`/live-bids?${queryString}`),
-      window.API.fetchAPI(`/direct-bids?${queryString}`),
-    ]);
+    // ✨ 한 번만 호출
+    const response = await window.API.fetchAPI(`/bid-results?${queryString}`);
 
-    // 결합 및 타입 정보 추가
-    const liveBids = liveResults.bids || [];
-    const directBids = directResults.bids || [];
+    // ✨ 백엔드에서 이미 처리된 데이터 받음
+    window.state.dailyResults = response.dailyResults;
+    window.state.filteredResults = response.dailyResults;
+    window.state.totalStats = response.totalStats;
+    window.state.totalItems = response.pagination.totalItems;
+    window.state.totalPages = response.pagination.totalPages;
+    window.state.currentPage = response.pagination.currentPage;
 
-    const liveBidsWithType = liveBids
-      .filter((bid) => bid)
-      .map((bid) => ({
-        ...bid,
-        type: "live",
-      }));
-
-    const directBidsWithType = directBids
-      .filter((bid) => bid)
-      .map((bid) => ({
-        ...bid,
-        type: "direct",
-      }));
-
-    window.state.combinedResults = [...liveBidsWithType, ...directBidsWithType];
-
-    // Core에 상태 업데이트 후 일별로 그룹화
-    core.setPageState(window.state);
-    core.groupResultsByDate();
-
-    // URL 업데이트
     updateURL();
 
-    // 결과 표시
+    // ✨ 바로 표시
     core.displayResults();
 
-    // 페이지네이션 업데이트 - common.js 함수 사용
     createPagination(
       window.state.currentPage,
       window.state.totalPages,
       handlePageChange
     );
 
-    // 정렬 버튼 UI 업데이트
     core.updateSortButtonsUI();
+
+    if (window.state.totalStats) {
+      updateTotalStatsUI();
+    }
   } catch (error) {
     console.error("낙찰 데이터를 가져오는 중 오류 발생:", error);
     document.getElementById("resultsList").innerHTML =
@@ -189,6 +160,30 @@ async function fetchCompletedBids() {
   } finally {
     core.toggleLoading(false);
   }
+}
+
+function updateTotalStatsUI() {
+  if (!window.state.totalStats) return;
+
+  const stats = window.state.totalStats;
+
+  document.getElementById("totalItemCount").textContent = formatNumber(
+    stats.itemCount || 0
+  );
+  document.getElementById("totalJapaneseAmount").textContent =
+    formatNumber(stats.japaneseAmount || 0) + " ¥";
+  document.getElementById("totalKoreanAmount").textContent =
+    formatNumber(stats.koreanAmount || 0) + " ₩";
+  document.getElementById("totalFeeAmount").textContent =
+    formatNumber(stats.feeAmount || 0) + " ₩";
+  document.getElementById("totalVatAmount").textContent =
+    formatNumber(stats.vatAmount || 0) + " ₩";
+  document.getElementById("totalAppraisalFee").textContent =
+    formatNumber(stats.appraisalFee || 0) + " ₩";
+  document.getElementById("totalAppraisalVat").textContent =
+    formatNumber(stats.appraisalVat || 0) + " ₩";
+  document.getElementById("grandTotalAmount").textContent =
+    formatNumber(stats.grandTotalAmount || 0) + " ₩";
 }
 
 // 이벤트 리스너 설정 - 인증 관련 제거 (common.js에서 처리)
@@ -221,26 +216,15 @@ function setupEventListeners() {
 // 정렬 변경 처리
 function handleSortChange(sortKey) {
   if (window.state.sortBy === sortKey) {
-    // 같은 정렬 기준이면 정렬 방향 전환
     window.state.sortOrder = window.state.sortOrder === "asc" ? "desc" : "asc";
   } else {
-    // 새로운 정렬 기준
     window.state.sortBy = sortKey;
-    window.state.sortOrder = "desc"; // 기본 내림차순 (최신순, 가격 높은순, 개수 많은순)
+    window.state.sortOrder = "desc";
   }
 
-  // Core에 상태 전달
-  core.setPageState(window.state);
-
-  // 정렬 버튼 UI 업데이트
-  core.updateSortButtonsUI();
-
-  // 정렬 적용
-  core.sortDailyResults();
-  core.displayResults();
-
-  // URL 업데이트
-  updateURL();
+  // ✨ 백엔드에 다시 요청
+  window.state.currentPage = 1;
+  fetchCompletedBids();
 }
 
 // 필터 초기화
@@ -283,13 +267,16 @@ window.requestAppraisal = async function (item) {
   ) {
     try {
       core.toggleLoading(true);
-      const endpoint = item.type === "direct" ? "direct-bids" : "live-bids";
-      const response = await window.API.fetchAPI(
-        `/${endpoint}/${item.id}/request-appraisal`,
-        {
-          method: "POST",
-        }
-      );
+
+      // ✨ 통합 엔드포인트 사용
+      const endpoint =
+        item.type === "direct"
+          ? `/bid-results/direct/${item.id}/request-appraisal`
+          : `/bid-results/live/${item.id}/request-appraisal`;
+
+      const response = await window.API.fetchAPI(endpoint, {
+        method: "POST",
+      });
 
       if (response.message) {
         alert("감정서 신청이 완료되었습니다.");

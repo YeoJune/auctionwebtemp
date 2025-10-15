@@ -27,6 +27,7 @@ const liveBidsRoutes = require("./routes/live-bids");
 const directBidsRoutes = require("./routes/direct-bids");
 const userRoutes = require("./routes/users");
 const dashboardRoutes = require("./routes/dashboard");
+const bidResultsRouter = require("./routes/bid-results");
 
 // --- 감정 시스템 관련 라우트 ---
 const appraisalsApprRoutes = require("./routes/appr/appraisals");
@@ -142,6 +143,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.get("/api/metrics", metricsModule.getMetrics);
 app.post("/api/metrics/reset", metricsModule.resetMetrics);
+app.use("/api/bid-results", bidResultsRouter);
 
 app.use("/api/appr/appraisals", appraisalsApprRoutes);
 app.use("/api/appr/restorations", restorationsApprRoutes);
@@ -178,6 +180,11 @@ app.get("/naver113e5904aa2153fc24ab52f90746a797.html", (req, res) => {
   res.sendFile(
     path.join(__dirname, "public", "naver113e5904aa2153fc24ab52f90746a797.html")
   );
+});
+
+app.get("/js/calculate-fee.js", (req, res) => {
+  res.setHeader("Content-Type", "application/javascript");
+  res.sendFile(path.join(__dirname, "utils", "calculate-fee.js"));
 });
 
 if (process.env.NODE_ENV !== "production") {

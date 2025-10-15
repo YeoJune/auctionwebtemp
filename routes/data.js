@@ -7,6 +7,10 @@ const router = express.Router();
 const axios = require("axios");
 const { pool } = require("../utils/DB");
 const { processItem } = require("../utils/processItem");
+const {
+  getExchangeRate,
+  getCachedExchangeRate,
+} = require("../utils/exchange-rate");
 
 let pLimit;
 (async () => {
@@ -17,13 +21,8 @@ const apiUrl = `https://api.currencyfreaks.com/v2.0/rates/latest?apikey=${proces
 
 // ===== 캐싱 관련 설정 =====
 const STATS_CACHE_DURATION = 10 * 60 * 1000; // 통계 캐시: 10분
-const EXCHANGE_CACHE_DURATION = 60 * 60 * 1000; // 환율 캐시: 1시간
 
 const cache = {
-  exchange: {
-    data: null,
-    lastFetched: null,
-  },
   filters: {
     withStats: {
       brands: { data: null, lastFetched: null },
@@ -617,27 +616,18 @@ router.get("/categories", async (req, res) => {
 // ===== 환율 조회 =====
 router.get("/exchange-rate", async (req, res) => {
   try {
-    if (isCacheValid(cache.exchange, EXCHANGE_CACHE_DURATION)) {
-      return res.json({ rate: cache.exchange.data });
-    }
-
-    const response = await axios.get(apiUrl);
-    const rate = response.data.rates.KRW / response.data.rates.JPY + 0.2;
-
-    updateCache(cache.exchange, rate);
+    const rate = await getExchangeRate();
     res.json({ rate });
   } catch (error) {
     console.error("Error fetching exchange rate:", error);
 
-    if (cache.exchange.data !== null) {
-      return res.json({
-        rate: cache.exchange.data,
-        cached: true,
-        error: "Failed to fetch new exchange rate, using cached data",
-      });
-    }
-
-    res.status(500).json({ error: "Failed to fetch exchange rate" });
+    // 실패 시 캐시된 환율 반환
+    const cachedRate = getCachedExchangeRate();
+    res.json({
+      rate: cachedRate,
+      cached: true,
+      error: "Failed to fetch new exchange rate, using cached data",
+    });
   }
 });
 
