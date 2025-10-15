@@ -678,7 +678,7 @@ if (require.main === module) {
       console.log(`Crawled ${items.length} updated items`);
       console.log(items);
     });
-  }, 1000);
+  }, 10 * 1000);
 }
 
 module.exports = { mekikiAucCrawler };
