@@ -4,7 +4,7 @@ const router = express.Router();
 const { pool } = require("../utils/DB");
 const { createAppraisalFromAuction } = require("../utils/appr");
 const { createOrUpdateSettlement } = require("../utils/settlement");
-const { calculateTotalPrice } = require("../utils/calculate-fee");
+const { calculateTotalPrice, calculateFee } = require("../utils/calculate-fee");
 const { getExchangeRate } = require("../utils/exchange-rate");
 
 // 미들웨어
@@ -44,37 +44,50 @@ router.get("/", async (req, res) => {
   const connection = await pool.getConnection();
 
   try {
-    // ✨ 날짜 범위 계산
+    // 날짜 범위 계산
     const dateLimit = new Date();
     dateLimit.setDate(dateLimit.getDate() - parseInt(dateRange));
     const fromDate = dateLimit.toISOString().split("T")[0];
 
-    // ✨ 1단계: 모든 입찰이 있는 날짜 조회 (성공/실패/집계중 모두 포함)
-    let userCondition = "";
-    const dateParams = [fromDate];
+    // ✅ 1단계: 모든 입찰이 있는 날짜 조회
+    let dateQuery;
+    let dateParams;
 
-    if (!isAdminUser) {
-      userCondition = "AND user_id = ?";
-      dateParams.push(userId);
+    if (isAdminUser) {
+      // 관리자: 모든 사용자의 날짜
+      dateQuery = `
+        SELECT DISTINCT DATE(i.scheduled_date) as bid_date
+        FROM (
+          SELECT item_id FROM live_bids
+          UNION
+          SELECT item_id FROM direct_bids
+        ) as bids
+        JOIN crawled_items i ON bids.item_id = i.item_id
+        WHERE DATE(i.scheduled_date) >= ?
+        ORDER BY bid_date ${sortOrder.toUpperCase()}
+      `;
+      dateParams = [fromDate];
+    } else {
+      // 일반 사용자: 해당 사용자의 날짜만
+      dateQuery = `
+        SELECT DISTINCT DATE(i.scheduled_date) as bid_date
+        FROM (
+          SELECT item_id FROM live_bids WHERE user_id = ?
+          UNION
+          SELECT item_id FROM direct_bids WHERE user_id = ?
+        ) as bids
+        JOIN crawled_items i ON bids.item_id = i.item_id
+        WHERE DATE(i.scheduled_date) >= ?
+        ORDER BY bid_date ${sortOrder.toUpperCase()}
+      `;
+      dateParams = [userId, userId, fromDate];
     }
 
-    // live_bids와 direct_bids에서 scheduled_date가 있는 모든 날짜 조회
-    const [allDates] = await connection.query(
-      `SELECT DISTINCT DATE(i.scheduled_date) as bid_date
-       FROM (
-         SELECT item_id, user_id FROM live_bids WHERE 1=1 ${userCondition}
-         UNION
-         SELECT item_id, user_id FROM direct_bids WHERE 1=1 ${userCondition}
-       ) as bids
-       JOIN crawled_items i ON bids.item_id = i.item_id
-       WHERE DATE(i.scheduled_date) >= ?
-       ORDER BY bid_date ${sortOrder.toUpperCase()}`,
-      dateParams
-    );
+    const [allDates] = await connection.query(dateQuery, dateParams);
 
     const totalDates = allDates.length;
 
-    // ✨ 페이지네이션 적용
+    // 페이지네이션 적용
     const offset = (page - 1) * limit;
     const paginatedDates = allDates.slice(offset, offset + parseInt(limit));
 
@@ -82,55 +95,109 @@ router.get("/", async (req, res) => {
       `총 ${totalDates}개 날짜 중 ${paginatedDates.length}개 날짜 조회`
     );
 
-    // ✨ 2단계: 각 날짜별 데이터 수집
+    // ✅ 2단계: 각 날짜별 데이터 수집
     const dailyResults = [];
 
     for (const dateRow of paginatedDates) {
       const targetDate = dateRow.bid_date;
 
-      // ✨ 정산 정보 조회 (있으면 가져오고, 없으면 기본값)
-      let settlementInfo = null;
+      // ✅ 정산 정보 조회
+      let settlementQuery;
+      let settlementParams;
+
+      if (isAdminUser) {
+        settlementQuery = `
+          SELECT * FROM daily_settlements 
+          WHERE settlement_date = ?
+        `;
+        settlementParams = [targetDate];
+      } else {
+        settlementQuery = `
+          SELECT * FROM daily_settlements 
+          WHERE user_id = ? AND settlement_date = ?
+        `;
+        settlementParams = [userId, targetDate];
+      }
+
       const [settlements] = await connection.query(
-        `SELECT * FROM daily_settlements 
-         WHERE ${isAdminUser ? "1=1" : "user_id = ?"} AND settlement_date = ?`,
-        isAdminUser ? [targetDate] : [userId, targetDate]
+        settlementQuery,
+        settlementParams
       );
 
+      let settlementInfo = null;
       if (settlements.length > 0) {
         settlementInfo = settlements[0];
       }
 
-      // ✨ 해당 날짜의 모든 입찰 조회
-      const userParam = isAdminUser ? [] : [userId];
+      // ✅ 해당 날짜의 모든 입찰 조회 - live_bids
+      let liveBidsQuery;
+      let liveBidsParams;
 
-      const [liveBids] = await connection.query(
-        `SELECT 
-          l.id, 'live' as type, l.status, l.user_id,
-          l.first_price, l.second_price, l.final_price, l.winning_price, 
-          l.appr_id, l.created_at, l.updated_at,
-          i.item_id, i.original_title, i.title, i.brand, i.category, i.image, 
-          i.scheduled_date, i.auc_num, i.rank, i.starting_price
-         FROM live_bids l
-         JOIN crawled_items i ON l.item_id = i.item_id
-         WHERE ${
-           isAdminUser ? "1=1" : "l.user_id = ?"
-         } AND DATE(i.scheduled_date) = ?`,
-        [...userParam, targetDate]
-      );
+      if (isAdminUser) {
+        liveBidsQuery = `
+          SELECT 
+            l.id, 'live' as type, l.status, l.user_id,
+            l.first_price, l.second_price, l.final_price, l.winning_price, 
+            l.appr_id, l.created_at, l.updated_at,
+            i.item_id, i.original_title, i.title, i.brand, i.category, i.image, 
+            i.scheduled_date, i.auc_num, i.rank, i.starting_price
+          FROM live_bids l
+          JOIN crawled_items i ON l.item_id = i.item_id
+          WHERE DATE(i.scheduled_date) = ?
+        `;
+        liveBidsParams = [targetDate];
+      } else {
+        liveBidsQuery = `
+          SELECT 
+            l.id, 'live' as type, l.status, l.user_id,
+            l.first_price, l.second_price, l.final_price, l.winning_price, 
+            l.appr_id, l.created_at, l.updated_at,
+            i.item_id, i.original_title, i.title, i.brand, i.category, i.image, 
+            i.scheduled_date, i.auc_num, i.rank, i.starting_price
+          FROM live_bids l
+          JOIN crawled_items i ON l.item_id = i.item_id
+          WHERE l.user_id = ? AND DATE(i.scheduled_date) = ?
+        `;
+        liveBidsParams = [userId, targetDate];
+      }
+
+      const [liveBids] = await connection.query(liveBidsQuery, liveBidsParams);
+
+      // ✅ 해당 날짜의 모든 입찰 조회 - direct_bids
+      let directBidsQuery;
+      let directBidsParams;
+
+      if (isAdminUser) {
+        directBidsQuery = `
+          SELECT 
+            d.id, 'direct' as type, d.status, d.user_id,
+            d.current_price as final_price, d.winning_price, 
+            d.appr_id, d.created_at, d.updated_at,
+            i.item_id, i.original_title, i.title, i.brand, i.category, i.image,
+            i.scheduled_date, i.auc_num, i.rank, i.starting_price
+          FROM direct_bids d
+          JOIN crawled_items i ON d.item_id = i.item_id
+          WHERE DATE(i.scheduled_date) = ?
+        `;
+        directBidsParams = [targetDate];
+      } else {
+        directBidsQuery = `
+          SELECT 
+            d.id, 'direct' as type, d.status, d.user_id,
+            d.current_price as final_price, d.winning_price, 
+            d.appr_id, d.created_at, d.updated_at,
+            i.item_id, i.original_title, i.title, i.brand, i.category, i.image,
+            i.scheduled_date, i.auc_num, i.rank, i.starting_price
+          FROM direct_bids d
+          JOIN crawled_items i ON d.item_id = i.item_id
+          WHERE d.user_id = ? AND DATE(i.scheduled_date) = ?
+        `;
+        directBidsParams = [userId, targetDate];
+      }
 
       const [directBids] = await connection.query(
-        `SELECT 
-          d.id, 'direct' as type, d.status, d.user_id,
-          d.current_price as final_price, d.winning_price, 
-          d.appr_id, d.created_at, d.updated_at,
-          i.item_id, i.original_title, i.title, i.brand, i.category, i.image,
-          i.scheduled_date, i.auc_num, i.rank, i.starting_price
-         FROM direct_bids d
-         JOIN crawled_items i ON d.item_id = i.item_id
-         WHERE ${
-           isAdminUser ? "1=1" : "d.user_id = ?"
-         } AND DATE(i.scheduled_date) = ?`,
-        [...userParam, targetDate]
+        directBidsQuery,
+        directBidsParams
       );
 
       const allItems = [...liveBids, ...directBids];
@@ -139,12 +206,12 @@ router.get("/", async (req, res) => {
         continue; // 이 날짜는 건너뜀
       }
 
-      // ✨ 환율 결정 (정산 정보가 있으면 해당 환율, 없으면 현재 환율)
+      // 환율 결정
       const exchangeRate = settlementInfo
         ? settlementInfo.exchange_rate
-        : getExchangeRate();
+        : await getExchangeRate();
 
-      // ✨ 상태별 분류 및 관부가세 계산
+      // ✅ 상태별 분류 및 관부가세 계산
       const successItems = [];
       const failedItems = [];
       const pendingItems = [];
@@ -212,7 +279,7 @@ router.get("/", async (req, res) => {
         }
       });
 
-      // ✨ 수수료 계산 (성공 아이템이 있을 때만)
+      // ✅ 수수료 계산 (성공 아이템이 있을 때만)
       let feeAmount = 0;
       let vatAmount = 0;
       let appraisalFee = 0;
@@ -227,10 +294,7 @@ router.get("/", async (req, res) => {
         appraisalVat = settlementInfo.appraisal_vat;
         grandTotal = settlementInfo.final_amount;
       } else if (successItems.length > 0) {
-        // 정산 정보가 없지만 성공 아이템이 있으면 계산
-        const { calculateFee } = require("../utils/calculate-fee");
-
-        // 사용자 수수료율 조회
+        // ✅ 사용자 수수료율 조회 (일반 사용자만)
         let userCommissionRate = null;
         if (!isAdminUser) {
           const [userRows] = await connection.query(
@@ -273,12 +337,9 @@ router.get("/", async (req, res) => {
       });
     }
 
-    // ✨ 관리자용 총 통계 (전체 기간)
+    // ✅ 관리자용 총 통계 (전체 기간)
     let totalStats = null;
     if (isAdminUser) {
-      const statsWhereClause = "settlement_date >= ?";
-      const statsParams = [fromDate];
-
       const [statsResult] = await connection.query(
         `SELECT 
           SUM(item_count) as itemCount,
@@ -289,8 +350,8 @@ router.get("/", async (req, res) => {
           SUM(appraisal_vat) as appraisalVat,
           SUM(final_amount) as grandTotalAmount
          FROM daily_settlements
-         WHERE ${statsWhereClause}`,
-        statsParams
+         WHERE settlement_date >= ?`,
+        [fromDate]
       );
 
       totalStats = statsResult[0];
