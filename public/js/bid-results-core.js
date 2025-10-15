@@ -3,7 +3,7 @@
 // 입찰 결과 관리 - 공통 로직
 window.BidResultsCore = (function () {
   // 상수 정의
-  const MINIMUM_FEE = 10000; // 최소 수수료 (₩)
+  const MINIMUM_FEE = 10000;
 
   // 내부 상태
   let _pageState = null;
@@ -13,13 +13,17 @@ window.BidResultsCore = (function () {
    */
   function setPageState(state) {
     _pageState = state;
+    console.log("BidResultsCore: 상태 설정됨", _pageState);
   }
 
   /**
-   * 총 합계 표시/숨김 제어 - CSS 클래스 사용
+   * 총 합계 표시/숨김 제어
    */
   function updateSummaryStatsVisibility() {
-    if (!_pageState) return;
+    if (!_pageState) {
+      console.warn("페이지 상태가 설정되지 않았습니다.");
+      return;
+    }
 
     const summaryStats = document.querySelector(".summary-stats");
     if (summaryStats) {
@@ -34,47 +38,73 @@ window.BidResultsCore = (function () {
   }
 
   /**
-   * 결과 표시 (컨테이너 독립적)
+   * 결과 표시
    */
   function displayResults(containerId = "resultsList") {
+    console.log("BidResultsCore: displayResults 시작");
+
     if (!_pageState) {
       console.error("페이지 상태가 설정되지 않았습니다.");
       return;
     }
 
     const container = document.getElementById(containerId);
-    if (!container) return;
-
-    container.innerHTML = "";
-    const totalResultsElement = document.getElementById("totalResults");
-    if (totalResultsElement) {
-      totalResultsElement.textContent = _pageState.totalItems;
+    if (!container) {
+      console.error(`Container not found: ${containerId}`);
+      return;
     }
 
-    if (_pageState.filteredResults.length === 0) {
+    // 컨테이너 초기화
+    container.innerHTML = "";
+
+    // totalResults 업데이트
+    const totalResultsElement = document.getElementById("totalResults");
+    if (totalResultsElement) {
+      totalResultsElement.textContent = _pageState.totalItems || 0;
+    }
+
+    // dailyResults 검증
+    if (!_pageState.dailyResults || !Array.isArray(_pageState.dailyResults)) {
+      console.warn("dailyResults가 배열이 아닙니다:", _pageState.dailyResults);
       container.innerHTML =
         '<div class="no-results">표시할 결과가 없습니다.</div>';
       return;
     }
 
-    // 현재 페이지에 해당하는 결과만 표시
-    const startIdx = (_pageState.currentPage - 1) * _pageState.itemsPerPage;
-    const endIdx = Math.min(
-      startIdx + _pageState.itemsPerPage,
-      _pageState.filteredResults.length
+    if (_pageState.dailyResults.length === 0) {
+      console.log("표시할 결과가 없습니다.");
+      container.innerHTML =
+        '<div class="no-results">표시할 결과가 없습니다.</div>';
+      return;
+    }
+
+    console.log(
+      `총 ${_pageState.dailyResults.length}개의 일별 결과를 표시합니다.`
     );
 
-    for (let i = startIdx; i < endIdx; i++) {
-      const dayResult = _pageState.filteredResults[i];
-      const dateRow = createDailyResultRow(dayResult);
-      container.appendChild(dateRow);
-    }
+    // 각 일별 결과 표시
+    _pageState.dailyResults.forEach((dayResult, index) => {
+      try {
+        console.log(`일별 결과 ${index + 1} 렌더링:`, dayResult.date);
+        const dateRow = createDailyResultRow(dayResult);
+        container.appendChild(dateRow);
+      } catch (error) {
+        console.error(`일별 결과 ${index + 1} 렌더링 실패:`, error, dayResult);
+      }
+    });
+
+    console.log("BidResultsCore: displayResults 완료");
   }
 
   /**
    * 일별 결과 행 생성
    */
   function createDailyResultRow(dayResult) {
+    if (!dayResult || typeof dayResult !== "object") {
+      console.error("잘못된 dayResult:", dayResult);
+      return createElement("div", "daily-result-item", "데이터 오류");
+    }
+
     const dateRow = createElement("div", "daily-result-item");
 
     // 날짜 헤더
@@ -82,7 +112,7 @@ window.BidResultsCore = (function () {
     const dateLabel = createElement(
       "h3",
       "",
-      formatDisplayDate(dayResult.date)
+      formatDisplayDate(dayResult.date || new Date())
     );
     const toggleButton = createElement("button", "toggle-details");
     toggleButton.innerHTML = '<i class="fas fa-chevron-down"></i>';
@@ -93,7 +123,7 @@ window.BidResultsCore = (function () {
     // 요약 정보
     const summary = createSummarySection(dayResult);
 
-    // 상세 정보 (접혀있는 상태)
+    // 상세 정보
     const details = createElement("div", "date-details hidden");
     const detailsTable = createDetailsTable(dayResult);
     details.appendChild(detailsTable);
@@ -102,11 +132,9 @@ window.BidResultsCore = (function () {
     toggleButton.addEventListener("click", function () {
       const isExpanded = !details.classList.contains("hidden");
       if (isExpanded) {
-        // 닫기: show 제거하고 hidden 추가
         details.classList.remove("show");
         details.classList.add("hidden");
       } else {
-        // 열기: hidden 제거하고 show 추가
         details.classList.remove("hidden");
         details.classList.add("show");
       }
@@ -115,7 +143,6 @@ window.BidResultsCore = (function () {
         : '<i class="fas fa-chevron-up"></i>';
     });
 
-    // 모두 조합
     dateRow.appendChild(dateHeader);
     dateRow.appendChild(summary);
     dateRow.appendChild(details);
@@ -132,22 +159,22 @@ window.BidResultsCore = (function () {
     const summaryItems = [
       {
         label: "상품 수",
-        value: `${formatNumber(dayResult.itemCount)}/${formatNumber(
+        value: `${formatNumber(dayResult.itemCount || 0)}/${formatNumber(
           dayResult.totalItemCount || 0
         )}개`,
       },
       {
         label: "총액 (¥)",
-        value: `${formatNumber(dayResult.totalJapanesePrice)} ¥`,
+        value: `${formatNumber(dayResult.totalJapanesePrice || 0)} ¥`,
       },
       {
         label: "관부가세 포함 (₩)",
-        value: `${formatNumber(dayResult.totalKoreanPrice)} ₩`,
+        value: `${formatNumber(dayResult.totalKoreanPrice || 0)} ₩`,
       },
       {
         label: "수수료 (₩)",
-        value: `${formatNumber(dayResult.feeAmount)} ₩`,
-        note: `VAT ${formatNumber(dayResult.vatAmount)} ₩`,
+        value: `${formatNumber(dayResult.feeAmount || 0)} ₩`,
+        note: `VAT ${formatNumber(dayResult.vatAmount || 0)} ₩`,
       },
       {
         label: "감정서 수수료 (₩)",
@@ -156,7 +183,7 @@ window.BidResultsCore = (function () {
       },
       {
         label: "총액 (₩)",
-        value: `${formatNumber(dayResult.grandTotal)} ₩`,
+        value: `${formatNumber(dayResult.grandTotal || 0)} ₩`,
       },
     ];
 
@@ -187,55 +214,85 @@ window.BidResultsCore = (function () {
 
     const tableHeader = createElement("thead");
     tableHeader.innerHTML = `
-    <tr>
-      <th>이미지</th>
-      <th>브랜드</th>
-      <th>상품명</th>
-      <th>최종입찰금액 (¥)</th>
-      <th>실제낙찰금액 (¥)</th>
-      <th>관부가세 포함 (₩)</th>
-      <th>출고 여부</th>
-      <th>감정서</th>
-    </tr>
+      <tr>
+        <th>이미지</th>
+        <th>브랜드</th>
+        <th>상품명</th>
+        <th>최종입찰금액 (¥)</th>
+        <th>실제낙찰금액 (¥)</th>
+        <th>관부가세 포함 (₩)</th>
+        <th>출고 여부</th>
+        <th>감정서</th>
+      </tr>
     `;
     detailsTable.appendChild(tableHeader);
 
     const tableBody = createElement("tbody");
 
-    // 낙찰 성공 상품들 먼저 표시 (연한 초록 배경)
-    dayResult.successItems?.forEach((item) => {
+    // 배열 검증
+    const successItems = Array.isArray(dayResult.successItems)
+      ? dayResult.successItems
+      : [];
+    const failedItems = Array.isArray(dayResult.failedItems)
+      ? dayResult.failedItems
+      : [];
+    const pendingItems = Array.isArray(dayResult.pendingItems)
+      ? dayResult.pendingItems
+      : [];
+
+    // 낙찰 성공
+    successItems.forEach((item) => {
       const row = createItemRow(item, "success");
       tableBody.appendChild(row);
     });
 
-    // 낙찰 실패 상품들 표시 (연한 빨간 배경)
-    dayResult.failedItems?.forEach((item) => {
+    // 낙찰 실패
+    failedItems.forEach((item) => {
       const row = createItemRow(item, "failed");
       tableBody.appendChild(row);
     });
 
-    // 집계중 상품들 표시 (기본 배경)
-    dayResult.pendingItems?.forEach((item) => {
+    // 집계중
+    pendingItems.forEach((item) => {
       const row = createItemRow(item, "pending");
       tableBody.appendChild(row);
     });
+
+    if (tableBody.children.length === 0) {
+      const emptyRow = createElement("tr");
+      const emptyCell = createElement("td", "", "표시할 아이템이 없습니다.");
+      emptyCell.setAttribute("colspan", "8");
+      emptyCell.style.textAlign = "center";
+      emptyRow.appendChild(emptyCell);
+      tableBody.appendChild(emptyRow);
+    }
 
     detailsTable.appendChild(tableBody);
     return detailsTable;
   }
 
   /**
-   * 상품 행 생성 함수
+   * 상품 행 생성
    */
   function createItemRow(item, status) {
+    if (!item || typeof item !== "object") {
+      console.error("잘못된 item:", item);
+      const row = createElement("tr");
+      row.innerHTML = '<td colspan="8">데이터 오류</td>';
+      return row;
+    }
+
     const row = createElement("tr");
     row.classList.add(`bid-${status}`);
 
     // 이미지 셀
     const imageCell = createElement("td");
-    if (item.image && item.image !== "/images/placeholder.png") {
+    const itemImage = item.item?.image || item.image;
+    if (itemImage && itemImage !== "/images/placeholder.png") {
       const imageElement = createElement("img");
-      imageElement.src = item.image;
+      imageElement.src = window.API?.validateImageUrl
+        ? window.API.validateImageUrl(itemImage)
+        : itemImage;
       imageElement.alt = item.item?.title || "상품 이미지";
       imageElement.classList.add("product-thumbnail");
       imageElement.onerror = function () {
@@ -257,12 +314,22 @@ window.BidResultsCore = (function () {
     }
 
     // 다른 셀들
-    const brandCell = createElement("td", "", item.item?.brand || "-");
-    const titleCell = createElement("td", "", item.item?.title || "제목 없음");
+    const brandCell = createElement(
+      "td",
+      "",
+      item.item?.brand || item.brand || "-"
+    );
+    const titleCell = createElement(
+      "td",
+      "",
+      item.item?.title || item.title || "제목 없음"
+    );
+
+    const finalPrice = item.final_price || item.finalPrice || 0;
     const finalPriceCell = createElement(
       "td",
       "",
-      `${formatNumber(item.finalPrice)} ¥`
+      `${formatNumber(finalPrice)} ¥`
     );
 
     const winningPriceCell = createElement("td");
@@ -270,19 +337,22 @@ window.BidResultsCore = (function () {
       winningPriceCell.textContent = "집계중";
       winningPriceCell.classList.add("pending-text");
     } else {
-      winningPriceCell.textContent = `${formatNumber(item.winningPrice)} ¥`;
+      const winningPrice = item.winning_price || item.winningPrice || 0;
+      winningPriceCell.textContent = `${formatNumber(winningPrice)} ¥`;
     }
 
     const koreanCell = createElement("td");
     if (status === "success") {
-      koreanCell.textContent = `${formatNumber(item.koreanPrice)} ₩`;
+      const koreanPrice = item.korean_price || item.koreanPrice || 0;
+      koreanCell.textContent = `${formatNumber(koreanPrice)} ₩`;
     } else if (status === "failed") {
-      koreanCell.textContent = `${formatNumber(item.koreanPrice)} ₩`;
+      const koreanPrice = item.korean_price || item.koreanPrice || 0;
+      koreanCell.textContent = `${formatNumber(koreanPrice)} ₩`;
     } else {
       koreanCell.textContent = "-";
     }
 
-    // 출고 여부 셀
+    // 출고 여부
     const shippingCell = createElement("td");
     if (status === "success") {
       const shippingStatus = createShippingStatus(item);
@@ -291,7 +361,7 @@ window.BidResultsCore = (function () {
       shippingCell.textContent = "-";
     }
 
-    // 감정서 셀
+    // 감정서
     const appraisalCell = createElement("td");
     if (status === "success") {
       const appraisalBtn = createAppraisalButton(item);
@@ -300,7 +370,6 @@ window.BidResultsCore = (function () {
       appraisalCell.textContent = "-";
     }
 
-    // 모든 셀 추가
     [
       imageCell,
       brandCell,
@@ -331,7 +400,6 @@ window.BidResultsCore = (function () {
       button.textContent = "감정서 신청";
       button.classList.add("primary-button");
       button.onclick = () => {
-        // 페이지별 함수를 전역에서 찾아서 호출
         if (window.requestAppraisal) {
           window.requestAppraisal(item);
         }
@@ -365,13 +433,21 @@ window.BidResultsCore = (function () {
    * 표시용 날짜 포맷
    */
   function formatDisplayDate(dateStr) {
-    const date = new Date(dateStr);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const weekday = ["일", "월", "화", "수", "목", "금", "토"][date.getDay()];
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) {
+        return "날짜 오류";
+      }
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      const weekday = ["일", "월", "화", "수", "목", "금", "토"][date.getDay()];
 
-    return `${year}년 ${month}월 ${day}일 (${weekday})`;
+      return `${year}년 ${month}월 ${day}일 (${weekday})`;
+    } catch (error) {
+      console.error("날짜 포맷 오류:", error, dateStr);
+      return "날짜 오류";
+    }
   }
 
   /**
@@ -383,10 +459,8 @@ window.BidResultsCore = (function () {
     const sortButtons = document.querySelectorAll(".sort-btn");
 
     sortButtons.forEach((btn) => {
-      // 모든 버튼에서 active 클래스와 방향 표시 제거
       btn.classList.remove("active", "asc", "desc");
 
-      // 현재 정렬 기준인 버튼에 클래스 추가
       if (btn.dataset.sort === _pageState.sortBy) {
         btn.classList.add("active", _pageState.sortOrder);
       }
@@ -430,27 +504,16 @@ window.BidResultsCore = (function () {
 
   // 공개 API
   return {
-    // 상수
     MINIMUM_FEE,
-
-    // 상태 관리
     setPageState,
-
-    // 데이터 처리
     updateSummaryStatsVisibility,
-
-    // UI 생성
     createDailyResultRow,
     createSummarySection,
     createDetailsTable,
     createItemRow,
     createAppraisalButton,
     createShippingStatus,
-
-    // 표시 함수
     displayResults,
-
-    // 유틸리티
     formatDisplayDate,
     updateSortButtonsUI,
     handlePageChange,

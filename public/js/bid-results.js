@@ -21,6 +21,8 @@ const core = window.BidResultsCore;
 // 초기화 함수
 async function initialize() {
   try {
+    console.log("입찰 결과 페이지 초기화 시작");
+
     // API 초기화
     await window.API.initialize();
 
@@ -40,6 +42,11 @@ async function initialize() {
     window.state.isAuthenticated = window.AuthManager.isAuthenticated();
     window.state.isAdmin = window.AuthManager.isAdmin();
 
+    console.log("사용자 인증 완료:", {
+      isAuthenticated: window.state.isAuthenticated,
+      isAdmin: window.state.isAdmin,
+    });
+
     // Core에 페이지 상태 전달
     core.setPageState(window.state);
 
@@ -49,17 +56,20 @@ async function initialize() {
     // 이벤트 리스너 설정
     setupEventListeners();
 
-    // 네비게이션 버튼 설정
-    setupNavButtons();
-
     // 초기 데이터 로드
     await fetchCompletedBids();
 
     // 관리자 통계 표시 여부 설정
     core.updateSummaryStatsVisibility();
+
+    console.log("입찰 결과 페이지 초기화 완료");
   } catch (error) {
     console.error("초기화 중 오류 발생:", error);
-    alert("페이지 초기화 중 오류가 발생했습니다.");
+    const container = document.getElementById("resultsList");
+    if (container) {
+      container.innerHTML =
+        '<div class="no-results">페이지 초기화 중 오류가 발생했습니다.</div>';
+    }
   }
 }
 
@@ -99,15 +109,23 @@ function updateUIFromState() {
   core.updateSortButtonsUI();
 }
 
-// ✨ 완료된 입찰 데이터 가져오기 (통합 API 사용)
+// 완료된 입찰 데이터 가져오기
 async function fetchCompletedBids() {
   if (!window.state.isAuthenticated) {
+    console.warn("인증되지 않은 상태입니다.");
     return;
   }
 
   core.toggleLoading(true);
 
   try {
+    console.log("입찰 결과 데이터 로드 시작:", {
+      dateRange: window.state.dateRange,
+      page: window.state.currentPage,
+      sortBy: window.state.sortBy,
+      sortOrder: window.state.sortOrder,
+    });
+
     const params = {
       dateRange: window.state.dateRange,
       sortBy: window.state.sortBy,
@@ -118,30 +136,60 @@ async function fetchCompletedBids() {
 
     const queryString = window.API.createURLParams(params);
 
-    // ✨ 통합 API 호출
+    // 통합 API 호출
     const response = await window.API.fetchAPI(`/bid-results?${queryString}`);
 
-    // ✨ 백엔드에서 이미 처리된 데이터 받음
-    window.state.dailyResults = response.dailyResults;
-    window.state.totalStats = response.totalStats;
-    window.state.totalItems = response.pagination.totalItems;
-    window.state.totalPages = response.pagination.totalPages;
-    window.state.currentPage = response.pagination.currentPage;
+    console.log("백엔드 응답:", response);
 
-    // Core에 상태 업데이트
+    // 응답 데이터 검증
+    if (!response || typeof response !== "object") {
+      throw new Error("잘못된 응답 형식");
+    }
+
+    // dailyResults가 배열인지 확인
+    if (!Array.isArray(response.dailyResults)) {
+      console.error("dailyResults가 배열이 아닙니다:", response.dailyResults);
+      response.dailyResults = [];
+    }
+
+    // pagination 객체 검증
+    if (!response.pagination || typeof response.pagination !== "object") {
+      console.error("pagination 정보가 없습니다:", response.pagination);
+      response.pagination = {
+        currentPage: 1,
+        totalPages: 0,
+        totalItems: 0,
+      };
+    }
+
+    // 상태 업데이트
+    window.state.dailyResults = response.dailyResults;
+    window.state.totalStats = response.totalStats || null;
+    window.state.totalItems = response.pagination.totalItems || 0;
+    window.state.totalPages = response.pagination.totalPages || 0;
+    window.state.currentPage = response.pagination.currentPage || 1;
+
+    console.log("상태 업데이트 완료:", {
+      dailyResultsCount: window.state.dailyResults.length,
+      totalItems: window.state.totalItems,
+      totalPages: window.state.totalPages,
+    });
+
+    // Core에 상태 전달
     core.setPageState(window.state);
 
     // URL 업데이트
     updateURL();
 
     // 결과 표시
-    core.displayResults();
+    core.displayResults("resultsList");
 
     // 페이지네이션 생성
     createPagination(
       window.state.currentPage,
       window.state.totalPages,
-      handlePageChange
+      handlePageChange,
+      "pagination"
     );
 
     // 정렬 버튼 UI 업데이트
@@ -154,27 +202,46 @@ async function fetchCompletedBids() {
     }
 
     // 관리자 통계 업데이트
-    if (window.state.totalStats) {
+    if (window.state.isAdmin && window.state.totalStats) {
       updateTotalStatsUI();
     }
+
+    console.log("입찰 결과 데이터 표시 완료");
   } catch (error) {
     console.error("낙찰 데이터를 가져오는 중 오류 발생:", error);
-    document.getElementById("resultsList").innerHTML =
-      '<div class="no-results">데이터를 불러오는 데 실패했습니다.</div>';
+    const container = document.getElementById("resultsList");
+    if (container) {
+      container.innerHTML = `
+        <div class="no-results">
+          <p>데이터를 불러오는 데 실패했습니다.</p>
+          <p style="color: #666; font-size: 0.9em;">${error.message}</p>
+          <button onclick="window.location.reload()" class="primary-button" style="margin-top: 10px;">
+            새로고침
+          </button>
+        </div>
+      `;
+    }
   } finally {
     core.toggleLoading(false);
   }
 }
 
-// ✨ 통계 UI 업데이트
+// 통계 UI 업데이트
 function updateTotalStatsUI() {
-  if (!window.state.totalStats) return;
+  if (!window.state.totalStats) {
+    console.warn("totalStats가 없습니다.");
+    return;
+  }
 
   const stats = window.state.totalStats;
 
   const updateElement = (id, value, suffix = "") => {
     const el = document.getElementById(id);
-    if (el) el.textContent = formatNumber(value || 0) + suffix;
+    if (el) {
+      el.textContent = formatNumber(value || 0) + suffix;
+    } else {
+      console.warn(`Element not found: ${id}`);
+    }
   };
 
   updateElement("totalItemCount", stats.itemCount);
@@ -189,11 +256,14 @@ function updateTotalStatsUI() {
 // 이벤트 리스너 설정
 function setupEventListeners() {
   // 기간 드롭다운
-  document.getElementById("dateRange")?.addEventListener("change", (e) => {
-    window.state.dateRange = parseInt(e.target.value);
-    window.state.currentPage = 1;
-    fetchCompletedBids();
-  });
+  const dateRange = document.getElementById("dateRange");
+  if (dateRange) {
+    dateRange.addEventListener("change", (e) => {
+      window.state.dateRange = parseInt(e.target.value);
+      window.state.currentPage = 1;
+      fetchCompletedBids();
+    });
+  }
 
   // 정렬 버튼들
   const sortButtons = document.querySelectorAll(".sort-btn");
@@ -204,18 +274,24 @@ function setupEventListeners() {
   });
 
   // 필터 적용 버튼
-  document.getElementById("applyFilters")?.addEventListener("click", () => {
-    window.state.currentPage = 1;
-    fetchCompletedBids();
-  });
+  const applyButton = document.getElementById("applyFilters");
+  if (applyButton) {
+    applyButton.addEventListener("click", () => {
+      window.state.currentPage = 1;
+      fetchCompletedBids();
+    });
+  }
 
   // 필터 초기화 버튼
-  document.getElementById("resetFilters")?.addEventListener("click", () => {
-    resetFilters();
-  });
+  const resetButton = document.getElementById("resetFilters");
+  if (resetButton) {
+    resetButton.addEventListener("click", () => {
+      resetFilters();
+    });
+  }
 }
 
-// ✨ 정렬 변경 처리 (백엔드 재요청)
+// 정렬 변경 처리
 function handleSortChange(sortKey) {
   if (window.state.sortBy === sortKey) {
     window.state.sortOrder = window.state.sortOrder === "asc" ? "desc" : "asc";
@@ -240,7 +316,7 @@ function resetFilters() {
   fetchCompletedBids();
 }
 
-// ✨ 페이지 변경 처리 (백엔드 재요청)
+// 페이지 변경 처리
 function handlePageChange(page) {
   page = parseInt(page, 10);
 
@@ -257,43 +333,37 @@ function handlePageChange(page) {
   window.scrollTo(0, 0);
 }
 
-// 네비게이션 버튼 설정
-function setupNavButtons() {
-  const navButtons = document.querySelectorAll(".nav-button");
-  navButtons.forEach((button) => {
-    // 필요시 추가 처리
-  });
-}
-
-// ✨ 감정서 신청 함수 (통합 엔드포인트 사용)
+// 감정서 신청 함수
 window.requestAppraisal = async function (item) {
   if (
-    confirm(
+    !confirm(
       "감정서를 신청하시겠습니까?\n수수료 16,500원(VAT포함)이 추가됩니다."
     )
   ) {
-    try {
-      core.toggleLoading(true);
+    return;
+  }
 
-      const endpoint =
-        item.type === "direct"
-          ? `/bid-results/direct/${item.id}/request-appraisal`
-          : `/bid-results/live/${item.id}/request-appraisal`;
+  try {
+    core.toggleLoading(true);
 
-      const response = await window.API.fetchAPI(endpoint, {
-        method: "POST",
-      });
+    const endpoint =
+      item.type === "direct"
+        ? `/bid-results/direct/${item.id}/request-appraisal`
+        : `/bid-results/live/${item.id}/request-appraisal`;
 
-      if (response.message) {
-        alert("감정서 신청이 완료되었습니다.");
-        await fetchCompletedBids();
-      }
-    } catch (error) {
-      console.error("감정서 신청 중 오류:", error);
-      alert("감정서 신청 중 오류가 발생했습니다.");
-    } finally {
-      core.toggleLoading(false);
+    const response = await window.API.fetchAPI(endpoint, {
+      method: "POST",
+    });
+
+    if (response.message) {
+      alert("감정서 신청이 완료되었습니다.");
+      await fetchCompletedBids();
     }
+  } catch (error) {
+    console.error("감정서 신청 중 오류:", error);
+    alert(error.message || "감정서 신청 중 오류가 발생했습니다.");
+  } finally {
+    core.toggleLoading(false);
   }
 };
 
