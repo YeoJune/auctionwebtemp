@@ -286,7 +286,7 @@ router.get("/", async (req, res) => {
       let appraisalVat = 0;
       let grandTotal = 0;
 
-      if (settlementInfo) {
+      if (!isAdminUser && settlementInfo) {
         // 정산 정보가 있으면 사용
         feeAmount = settlementInfo.fee_amount;
         vatAmount = settlementInfo.vat_amount;
