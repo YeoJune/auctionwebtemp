@@ -5,6 +5,7 @@ const { pool } = require("../utils/DB");
 const { createAppraisalFromAuction } = require("../utils/appr");
 const { createOrUpdateSettlement } = require("../utils/settlement");
 const { calculateTotalPrice } = require("../utils/calculate-fee");
+const { getExchangeRate } = require("../utils/exchange-rate");
 
 // 미들웨어
 const isAdmin = (req, res, next) => {
@@ -19,13 +20,17 @@ const isAdmin = (req, res, next) => {
 // 일반 사용자 API
 // =====================================================
 
+/**
+ * GET /api/bid-results
+ * 사용자의 일별 입찰 결과 조회
+ */
 router.get("/", async (req, res) => {
   if (!req.session.user) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
   const userId = req.session.user.id;
-  const isAdmin = userId === "admin";
+  const isAdminUser = userId === "admin";
 
   const {
     dateRange = 30,
@@ -39,95 +44,114 @@ router.get("/", async (req, res) => {
   const connection = await pool.getConnection();
 
   try {
+    // ✨ 날짜 범위 계산
     const dateLimit = new Date();
     dateLimit.setDate(dateLimit.getDate() - parseInt(dateRange));
     const fromDate = dateLimit.toISOString().split("T")[0];
 
-    // ✨ 1. 모든 입찰 날짜 조회 (성공/실패/대기 모두 포함)
+    // ✨ 1단계: 모든 입찰이 있는 날짜 조회 (성공/실패/집계중 모두 포함)
+    let userCondition = "";
+    const dateParams = [fromDate];
+
+    if (!isAdminUser) {
+      userCondition = "AND user_id = ?";
+      dateParams.push(userId);
+    }
+
+    // live_bids와 direct_bids에서 scheduled_date가 있는 모든 날짜 조회
     const [allDates] = await connection.query(
       `SELECT DISTINCT DATE(i.scheduled_date) as bid_date
        FROM (
-         SELECT item_id, user_id FROM live_bids 
-         WHERE user_id = ?
+         SELECT item_id, user_id FROM live_bids WHERE 1=1 ${userCondition}
          UNION
-         SELECT item_id, user_id FROM direct_bids 
-         WHERE user_id = ?
+         SELECT item_id, user_id FROM direct_bids WHERE 1=1 ${userCondition}
        ) as bids
-       LEFT JOIN crawled_items i ON bids.item_id = i.item_id
+       JOIN crawled_items i ON bids.item_id = i.item_id
        WHERE DATE(i.scheduled_date) >= ?
        ORDER BY bid_date ${sortOrder.toUpperCase()}`,
-      [userId, userId, fromDate]
+      dateParams
     );
 
-    console.log(`총 ${allDates.length}개의 입찰 날짜 발견`);
-
-    // ✨ 2. 페이지네이션 적용
     const totalDates = allDates.length;
-    const totalPages = Math.ceil(totalDates / limit);
+
+    // ✨ 페이지네이션 적용
     const offset = (page - 1) * limit;
     const paginatedDates = allDates.slice(offset, offset + parseInt(limit));
 
-    // ✨ 3. 각 날짜별로 데이터 조회
+    console.log(
+      `총 ${totalDates}개 날짜 중 ${paginatedDates.length}개 날짜 조회`
+    );
+
+    // ✨ 2단계: 각 날짜별 데이터 수집
     const dailyResults = [];
 
     for (const dateRow of paginatedDates) {
-      const date = dateRow.bid_date;
+      const targetDate = dateRow.bid_date;
 
-      // 3-1. 해당 날짜의 settlement 정보 조회
+      // ✨ 정산 정보 조회 (있으면 가져오고, 없으면 기본값)
+      let settlementInfo = null;
       const [settlements] = await connection.query(
         `SELECT * FROM daily_settlements 
-         WHERE settlement_date = ? AND user_id ${
-           isAdmin ? "IS NOT NULL" : "= ?"
-         }`,
-        isAdmin ? [date] : [date, userId]
+         WHERE ${isAdminUser ? "1=1" : "user_id = ?"} AND settlement_date = ?`,
+        isAdminUser ? [targetDate] : [userId, targetDate]
       );
 
-      const settlement = settlements[0] || null;
+      if (settlements.length > 0) {
+        settlementInfo = settlements[0];
+      }
 
-      // 3-2. 해당 날짜의 모든 입찰 조회
-      const userFilter = isAdmin ? "1=1" : "l.user_id = ?";
-      const userParams = isAdmin ? [date] : [userId, date];
+      // ✨ 해당 날짜의 모든 입찰 조회
+      const userParam = isAdminUser ? [] : [userId];
 
       const [liveBids] = await connection.query(
         `SELECT 
-          l.id, 'live' as type, l.status,
+          l.id, 'live' as type, l.status, l.user_id,
           l.first_price, l.second_price, l.final_price, l.winning_price, 
-          l.appr_id, l.user_id, l.created_at, l.updated_at,
+          l.appr_id, l.created_at, l.updated_at,
           i.item_id, i.original_title, i.title, i.brand, i.category, i.image, 
           i.scheduled_date, i.auc_num, i.rank, i.starting_price
          FROM live_bids l
-         LEFT JOIN crawled_items i ON l.item_id = i.item_id
-         WHERE ${userFilter} AND DATE(i.scheduled_date) = ?`,
-        userParams
+         JOIN crawled_items i ON l.item_id = i.item_id
+         WHERE ${
+           isAdminUser ? "1=1" : "l.user_id = ?"
+         } AND DATE(i.scheduled_date) = ?`,
+        [...userParam, targetDate]
       );
 
       const [directBids] = await connection.query(
         `SELECT 
-          d.id, 'direct' as type, d.status,
+          d.id, 'direct' as type, d.status, d.user_id,
           d.current_price as final_price, d.winning_price, 
-          d.appr_id, d.user_id, d.created_at, d.updated_at,
+          d.appr_id, d.created_at, d.updated_at,
           i.item_id, i.original_title, i.title, i.brand, i.category, i.image,
           i.scheduled_date, i.auc_num, i.rank, i.starting_price
          FROM direct_bids d
-         LEFT JOIN crawled_items i ON d.item_id = i.item_id
-         WHERE ${userFilter} AND DATE(i.scheduled_date) = ?`,
-        userParams
+         JOIN crawled_items i ON d.item_id = i.item_id
+         WHERE ${
+           isAdminUser ? "1=1" : "d.user_id = ?"
+         } AND DATE(i.scheduled_date) = ?`,
+        [...userParam, targetDate]
       );
 
       const allItems = [...liveBids, ...directBids];
 
       if (allItems.length === 0) {
-        console.log(`${date}: 입찰 없음 (스킵)`);
-        continue;
+        continue; // 이 날짜는 건너뜀
       }
 
-      // 3-3. 상태별 분류 및 가격 계산
+      // ✨ 환율 결정 (정산 정보가 있으면 해당 환율, 없으면 현재 환율)
+      const exchangeRate = settlementInfo
+        ? settlementInfo.exchange_rate
+        : getExchangeRate();
+
+      // ✨ 상태별 분류 및 관부가세 계산
       const successItems = [];
       const failedItems = [];
       const pendingItems = [];
 
-      // 환율: settlement가 있으면 그 환율, 없으면 현재 환율
-      const exchangeRate = settlement?.exchange_rate || 9.5;
+      let totalJapanesePrice = 0;
+      let totalKoreanPrice = 0;
+      let appraisalCount = 0;
 
       allItems.forEach((item) => {
         const bid_status = classifyBidStatus(item);
@@ -147,6 +171,15 @@ router.get("/", async (req, res) => {
             } catch (error) {
               console.error("관부가세 계산 오류:", error);
               koreanPrice = 0;
+            }
+          }
+
+          // 성공한 아이템만 집계
+          if (bid_status === "success") {
+            totalJapanesePrice += price;
+            totalKoreanPrice += koreanPrice;
+            if (item.appr_id) {
+              appraisalCount++;
             }
           }
         }
@@ -179,37 +212,73 @@ router.get("/", async (req, res) => {
         }
       });
 
-      // 3-4. 일별 결과 추가
+      // ✨ 수수료 계산 (성공 아이템이 있을 때만)
+      let feeAmount = 0;
+      let vatAmount = 0;
+      let appraisalFee = 0;
+      let appraisalVat = 0;
+      let grandTotal = 0;
+
+      if (settlementInfo) {
+        // 정산 정보가 있으면 사용
+        feeAmount = settlementInfo.fee_amount;
+        vatAmount = settlementInfo.vat_amount;
+        appraisalFee = settlementInfo.appraisal_fee;
+        appraisalVat = settlementInfo.appraisal_vat;
+        grandTotal = settlementInfo.final_amount;
+      } else if (successItems.length > 0) {
+        // 정산 정보가 없지만 성공 아이템이 있으면 계산
+        const { calculateFee } = require("../utils/calculate-fee");
+
+        // 사용자 수수료율 조회
+        let userCommissionRate = null;
+        if (!isAdminUser) {
+          const [userRows] = await connection.query(
+            "SELECT commission_rate FROM users WHERE id = ?",
+            [userId]
+          );
+          if (userRows.length > 0) {
+            userCommissionRate = userRows[0].commission_rate;
+          }
+        }
+
+        feeAmount = Math.max(
+          calculateFee(totalKoreanPrice, userCommissionRate),
+          10000
+        );
+        vatAmount = Math.round((feeAmount / 1.1) * 0.1);
+        appraisalFee = appraisalCount * 16500;
+        appraisalVat = Math.round(appraisalFee / 11);
+        grandTotal = totalKoreanPrice + feeAmount + appraisalFee;
+      }
+
       dailyResults.push({
-        date: date,
+        date: targetDate,
         successItems,
         failedItems,
         pendingItems,
         itemCount: successItems.length,
         totalItemCount: allItems.length,
-
-        // Settlement 정보 (있으면 사용, 없으면 0 또는 계산)
-        totalJapanesePrice:
-          settlement?.total_japanese_yen ||
-          successItems.reduce((sum, item) => sum + (item.winningPrice || 0), 0),
-        totalKoreanPrice:
-          settlement?.total_amount ||
-          successItems.reduce((sum, item) => sum + (item.koreanPrice || 0), 0),
-        feeAmount: settlement?.fee_amount || 0,
-        vatAmount: settlement?.vat_amount || 0,
-        appraisalFee: settlement?.appraisal_fee || 0,
-        appraisalVat: settlement?.appraisal_vat || 0,
-        appraisalCount: settlement?.appraisal_count || 0,
-        grandTotal: settlement?.final_amount || 0,
-        exchangeRate: exchangeRate,
-        settlementId: settlement?.id || null,
-        paymentStatus: settlement?.status || null,
+        totalJapanesePrice,
+        totalKoreanPrice,
+        feeAmount,
+        vatAmount,
+        appraisalFee,
+        appraisalVat,
+        appraisalCount,
+        grandTotal,
+        exchangeRate,
+        settlementId: settlementInfo?.id || null,
+        paymentStatus: settlementInfo?.status || null,
       });
     }
 
-    // ✨ 4. 관리자용 총 통계 (모든 날짜 기준)
+    // ✨ 관리자용 총 통계 (전체 기간)
     let totalStats = null;
-    if (isAdmin) {
+    if (isAdminUser) {
+      const statsWhereClause = "settlement_date >= ?";
+      const statsParams = [fromDate];
+
       const [statsResult] = await connection.query(
         `SELECT 
           SUM(item_count) as itemCount,
@@ -220,8 +289,8 @@ router.get("/", async (req, res) => {
           SUM(appraisal_vat) as appraisalVat,
           SUM(final_amount) as grandTotalAmount
          FROM daily_settlements
-         WHERE settlement_date >= ?`,
-        [fromDate]
+         WHERE ${statsWhereClause}`,
+        statsParams
       );
 
       totalStats = statsResult[0];
@@ -232,7 +301,7 @@ router.get("/", async (req, res) => {
       totalStats,
       pagination: {
         currentPage: parseInt(page),
-        totalPages: totalPages,
+        totalPages: Math.ceil(totalDates / limit),
         totalItems: totalDates,
       },
     });
