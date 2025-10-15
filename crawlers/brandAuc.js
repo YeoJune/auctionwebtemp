@@ -1225,7 +1225,7 @@ class BrandAucCrawler extends AxiosCrawler {
               `Error crawling update for item ${itemId}:`,
               error.message
             );
-            return null;
+            return [];
           }
         })
       );
