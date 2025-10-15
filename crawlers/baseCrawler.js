@@ -55,7 +55,7 @@ class AxiosCrawler {
     this.loginCheckInterval = 1000 * 60 * 5; // 5분
 
     this.backgroundLoginInProgress = false;
-    this.loginDelayBetweenClients = 10 * 1000; // 로그인 간격 (ms)
+    this.loginDelayBetweenClients = 0 * 1000; // 로그인 간격 (ms)
 
     if (this.useMultipleClients) {
       this.initializeClients();

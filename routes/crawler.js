@@ -91,7 +91,7 @@ async function loginAll() {
     brandAucValueCrawler,
     // starAucCrawler,
     // starAucValueCrawler,
-    mekikiAucCrawler,
+    // mekikiAucCrawler,
   ];
 
   await Promise.all(crawlers.map((crawler) => crawler.login()));

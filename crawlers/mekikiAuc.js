@@ -8,8 +8,10 @@ let pLimit;
   pLimit = (await import("p-limit")).default;
 })();
 
-const LIMIT1 = 10;
-const LIMIT2 = 10;
+const LIMIT1 = 1;
+const LIMIT2 = 1;
+
+const API_DELAY = 1 * 1000; // 1초
 
 const mekikiAucConfig = {
   name: "MekikiAuc",
@@ -281,8 +283,6 @@ class MekikiAucCrawler extends AxiosCrawler {
                 existingIds
               );
 
-              // await this.sleep(30 * 1000);
-
               console.log(
                 `Processed ${pageItems.length} items from page ${page}`
               );
@@ -541,6 +541,8 @@ class MekikiAucCrawler extends AxiosCrawler {
         }
       );
 
+      await this.sleep(API_DELAY);
+
       const totalPages = firstPageResponse.data.meta?.pages || 1;
       const totalItems = firstPageResponse.data.meta?.total || 0;
 
@@ -584,6 +586,10 @@ class MekikiAucCrawler extends AxiosCrawler {
                   },
                 }
               );
+
+              await this.sleep(API_DELAY);
+
+              console.log(response);
 
               const pageItems = this.processUpdateItemsPage(
                 response.data.collection
@@ -664,5 +670,15 @@ class MekikiAucCrawler extends AxiosCrawler {
 }
 
 const mekikiAucCrawler = new MekikiAucCrawler(mekikiAucConfig);
+
+if (require.main === module) {
+  mekikiAucCrawler.login();
+  setTimeout(() => {
+    mekikiAucCrawler.crawlUpdates().then((items) => {
+      console.log(`Crawled ${items.length} updated items`);
+      console.log(items);
+    });
+  }, 1000);
+}
 
 module.exports = { mekikiAucCrawler };
