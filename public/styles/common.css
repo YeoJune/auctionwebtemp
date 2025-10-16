@@ -190,6 +190,20 @@ button:disabled,
   position: relative;
 }
 
+.modal-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.modal-item-id {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 400;
+  opacity: 0.7;
+  user-select: all;
+}
+
 .modal-body {
   flex: 1;
   padding: var(--spacing-md);

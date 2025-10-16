@@ -903,6 +903,9 @@ window.ProductListController = (function () {
   function initializeModal(item) {
     document.querySelector(".modal-brand").textContent = item.brand || "";
     document.querySelector(".modal-title").textContent = item.title || "";
+    document.querySelector(
+      ".modal-item-id"
+    ).textContent = `id: ${item.item_id}`;
     document.querySelector(".main-image").src = API.validateImageUrl(
       item.image
     );
@@ -944,6 +947,9 @@ window.ProductListController = (function () {
     document.querySelector(".modal-brand").textContent = item.brand || "";
     document.querySelector(".modal-brand2").textContent = item.brand || "";
     document.querySelector(".modal-title").textContent = item.title || "";
+    document.querySelector(
+      ".modal-item-id"
+    ).textContent = `id: ${item.item_id}`;
     document.querySelector(".modal-rank").textContent = item.rank || "N";
 
     if (config.type === "products") {
