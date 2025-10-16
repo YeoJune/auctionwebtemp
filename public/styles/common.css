@@ -188,20 +188,20 @@ button:disabled,
   justify-content: space-between;
   align-items: flex-start;
   position: relative;
-}
-
-.modal-header-right {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-md);
 }
 
 .modal-item-id {
   font-size: 11px;
   color: var(--text-secondary);
   font-weight: 400;
-  opacity: 0.7;
+  opacity: 0.6;
   user-select: all;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  margin-left: auto;
+  padding-right: var(--spacing-xs);
 }
 
 .modal-body {
