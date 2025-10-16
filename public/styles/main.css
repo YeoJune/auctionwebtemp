@@ -424,17 +424,16 @@ select {
   white-space: nowrap;
 }
 
-/* auction-number에 auc_num이 없을 때 (관리자가 아닐 때) auction-type-indicator를 크게 */
+/* auction-number에 auc_num이 없을 때 (관리자가 아닐 때) - 원 모양 유지하면서 가운데 표시 */
 .auction-number.no-auc-num {
-  width: auto;
-  height: auto;
-  padding: 4px 8px;
+  padding-bottom: 0; /* 기본 padding-bottom 제거 */
 }
 
 .auction-number.no-auc-num .auction-type-indicator {
   position: static;
   transform: none;
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 600;
   padding: 0;
   border-radius: 0;
   display: inline-block;
