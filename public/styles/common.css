@@ -201,7 +201,7 @@ button:disabled,
   align-items: center;
   white-space: nowrap;
   margin-left: auto;
-  padding-right: var(--spacing-xs);
+  padding-right: 40px;
 }
 
 .modal-body {
