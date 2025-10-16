@@ -755,6 +755,8 @@ window.ProductListController = (function () {
    */
   function processConditionalElements(card, item) {
     const conditionalElements = card.querySelectorAll("[data-if]");
+    let hasAdminAucNum = false;
+
     conditionalElements.forEach((element) => {
       const condition = element.dataset.if;
       let shouldShow = false;
@@ -768,7 +770,14 @@ window.ProductListController = (function () {
           break;
         case "hasAdminEdit":
           shouldShow =
-            config.features.adminEdit && window.AuthManager.user?.isAdmin;
+            config.features.adminEdit && window.AuthManager.isAdmin();
+          break;
+        case "isAdmin":
+          shouldShow = window.AuthManager.isAdmin();
+          // auc_num 관련 요소인지 체크
+          if (element.dataset.field === "auc_num") {
+            hasAdminAucNum = shouldShow;
+          }
           break;
       }
 
@@ -776,6 +785,14 @@ window.ProductListController = (function () {
         element.remove();
       }
     });
+
+    // auc_num이 숨겨졌으면 auction-number에 클래스 추가
+    if (!hasAdminAucNum) {
+      const auctionNumber = card.querySelector(".auction-number");
+      if (auctionNumber) {
+        auctionNumber.classList.add("no-auc-num");
+      }
+    }
   }
 
   /**
