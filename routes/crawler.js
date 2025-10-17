@@ -500,8 +500,6 @@ async function crawlUpdateWithIdForAuction(aucNum, itemIds, originalItems) {
         priceChanged = Math.abs(newPrice - originalPrice) > 0.01;
       }
 
-      console.log(originalItem, newItem);
-
       return dateChanged || priceChanged;
     });
 
@@ -1085,6 +1083,7 @@ const scheduleUpdateCrawlingWithIdForAuction = (aucNum) => {
            JOIN crawled_items ci ON db.item_id = ci.item_id
            WHERE ci.bid_type = 'direct' 
              AND ci.auc_num = ?
+             AND db.status = 'active'
              AND ci.scheduled_date >= DATE_SUB(NOW(), INTERVAL 10 HOUR)`,
           [aucNum]
         );
