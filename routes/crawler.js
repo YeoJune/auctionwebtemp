@@ -500,6 +500,8 @@ async function crawlUpdateWithIdForAuction(aucNum, itemIds, originalItems) {
         priceChanged = Math.abs(newPrice - originalPrice) > 0.01;
       }
 
+      console.log(originalItem, newItem);
+
       return dateChanged || priceChanged;
     });
 
