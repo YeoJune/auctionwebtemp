@@ -1083,7 +1083,7 @@ const scheduleUpdateCrawlingWithIdForAuction = (aucNum) => {
            JOIN crawled_items ci ON db.item_id = ci.item_id
            WHERE ci.bid_type = 'direct' 
              AND ci.auc_num = ?
-             AND ci.scheduled_date >= DATE_SUB(NOW(), INTERVAL 1 HOUR)`,
+             AND ci.scheduled_date >= DATE_SUB(NOW(), INTERVAL 10 HOUR)`,
           [aucNum]
         );
 
