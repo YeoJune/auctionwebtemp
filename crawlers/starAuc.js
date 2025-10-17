@@ -948,6 +948,7 @@ class StarAucCrawler extends AxiosCrawler {
         item_id: itemId,
         starting_price: parseInt(currentPrice, 10),
         scheduled_date: scheduledDate,
+        original_scheduled_date: scheduledDate,
       };
     });
   }

@@ -1151,6 +1151,7 @@ class EcoAucCrawler extends AxiosCrawler {
         item_id: itemId,
         starting_price: price || startingPrice,
         scheduled_date: scheduledDate,
+        original_scheduled_date: scheduledDate,
       };
     });
   }
