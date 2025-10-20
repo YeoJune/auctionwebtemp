@@ -856,6 +856,7 @@ class BrandAucCrawler extends AxiosCrawler {
       item_id: item.uketsukeBng,
       starting_price: item.genzaiKng || item.startKng || 0,
       scheduled_date: scheduled_date,
+      original_scheduled_date: scheduled_date,
     };
   }
 
