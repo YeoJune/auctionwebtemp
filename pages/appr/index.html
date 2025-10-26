@@ -91,6 +91,41 @@
       .slider-item.active {
         opacity: 1;
       }
+
+      /* 메인 배너: 반응형 높이와 텍스트 크기 조정
+         - 기본: 최대 650px, 화면이 작을땐 뷰포트 비율로 줄임
+         - h1/p는 inline 스타일을 사용하는 요소가 있어도 덮어쓰기 위해 !important 사용
+      */
+      .main-slider {
+        height: min(55vh, 650px);
+        position: relative;
+        overflow: hidden;
+        border-radius: 0 0 30px 30px;
+      }
+
+      .main-slider .slider-container {
+        width: 100%;
+        height: 100%;
+      }
+
+      .main-slider h1 {
+        font-size: clamp(1.6rem, 6vw, 3.5rem) !important;
+        line-height: 1.15 !important;
+      }
+
+      .main-slider p {
+        font-size: clamp(0.9rem, 3.2vw, 1.25rem) !important;
+      }
+
+      /* very small screens: 조금 더 컴팩트하게 */
+      @media (max-width: 420px) {
+        .main-slider {
+          height: min(48vh, 520px);
+        }
+        .main-slider .container {
+          padding: 0 14px;
+        }
+      }
       /* 반응형 그리드 설정 */
 
       @media (min-width: 768px) {
@@ -390,7 +425,6 @@
           class="main-slider"
           style="
             position: relative;
-            height: 650px;
             overflow: hidden;
             border-radius: 0 0 30px 30px;
           ">
