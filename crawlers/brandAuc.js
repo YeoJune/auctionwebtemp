@@ -689,7 +689,7 @@ class BrandAucCrawler extends AxiosCrawler {
       this.auctionKaisu = auctionInfoResponse?.data?.kaisaiKaisu;
 
       // 경매가 열리지 않은 경우
-      if (auctionDates?.length == 0) {
+      if (!auctionDates?.length) {
         return [];
       }
 
