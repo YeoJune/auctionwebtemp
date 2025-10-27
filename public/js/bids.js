@@ -87,7 +87,9 @@ window.BidManager = (function () {
    */
   async function getBidOptions(itemId, auctionNum, currentPrice) {
     try {
-      const response = await API.fetchAPI(`/direct-bids/bid-options/${itemId}`);
+      const response = await API.fetchAPI(
+        `/direct-bids/bid-options/${itemId}?aucNum=${auctionNum}`
+      );
       return response;
     } catch (error) {
       console.error("입찰 옵션 정보를 가져오는데 실패했습니다:", error);
@@ -632,7 +634,11 @@ window.BidManager = (function () {
       } else {
         await API.fetchAPI("/live-bids", {
           method: "POST",
-          body: JSON.stringify({ itemId, firstPrice: numericValue }),
+          body: JSON.stringify({
+            itemId,
+            aucNum: item.auc_num,
+            firstPrice: numericValue,
+          }),
         });
         alert("1차 입찰금액이 등록되었습니다.");
       }
@@ -703,7 +709,11 @@ window.BidManager = (function () {
     try {
       await API.fetchAPI("/direct-bids", {
         method: "POST",
-        body: JSON.stringify({ itemId, currentPrice: numericValue }),
+        body: JSON.stringify({
+          itemId,
+          aucNum: item.auc_num,
+          currentPrice: numericValue,
+        }),
       });
 
       alert("입찰 금액이 등록되었습니다.");

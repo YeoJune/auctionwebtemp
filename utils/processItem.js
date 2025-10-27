@@ -22,6 +22,7 @@ const DBManager = require("./DBManager");
  * @param {boolean} returnData - If true, returns the item data instead of sending response.
  * @param {number|string|null} userId - The ID of the user to fetch bid data for (optional).
  * @param {number} priority - Processing priority (1-3, default: 2).
+ * @param {string|null} aucNum - The auction number to filter by (optional).
  * @returns {Promise<object|null>} - Item data if returnData is true, otherwise null.
  */
 async function processItem(
@@ -30,21 +31,37 @@ async function processItem(
   res,
   returnData = false,
   userId = null,
-  priority = 2
+  priority = 2,
+  aucNum = null
 ) {
   try {
     const tableName = isValue ? "values_items" : "crawled_items";
     // 테이블에 따라 이미지 저장 폴더 결정
     const imageFolder = isValue ? "values" : "products";
 
-    const [items] = await pool.query(
-      `SELECT * FROM ${tableName} WHERE item_id = ?`,
-      [itemId]
-    );
+    // aucNum이 제공된 경우 WHERE 조건에 추가
+    let query;
+    let params;
+    if (aucNum !== null) {
+      query = `SELECT * FROM ${tableName} WHERE item_id = ? AND auc_num = ?`;
+      params = [itemId, aucNum];
+    } else {
+      query = `SELECT * FROM ${tableName} WHERE item_id = ?`;
+      params = [itemId];
+    }
+
+    const [items] = await pool.query(query, params);
 
     if (items.length === 0) {
       if (returnData) return null;
       return res.status(404).json({ message: "Item not found" });
+    }
+
+    // 여러 개의 item이 반환되는 경우 (같은 item_id, 다른 auc_num)
+    if (items.length > 1) {
+      console.warn(
+        `Multiple items found for item_id ${itemId}, using first one`
+      );
     }
 
     let item = items[0];
@@ -150,7 +167,8 @@ async function processItem(
           await DBManager.updateItemDetails(
             itemId,
             processedDetails,
-            tableName
+            tableName,
+            item.auc_num // auc_num 추가
           );
 
           // Fetch the updated item data

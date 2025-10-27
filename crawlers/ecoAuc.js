@@ -590,8 +590,7 @@ class EcoAucCrawler extends AxiosCrawler {
       scheduled_date: scheduled_date,
       auc_num: "1",
 
-      kaijoCd: 0,
-      kaisaiKaisu: 0,
+      additional_info: {},
     };
 
     // 원본과 동일하게 객체 병합
@@ -1480,6 +1479,7 @@ class EcoAucValueCrawler extends AxiosCrawler {
         image: image,
         category: this.config.categoryTable[this.config.currentCategoryId],
         auc_num: "1",
+        additional_info: {},
       };
     } catch (error) {
       console.error("Error extracting item info:", error);

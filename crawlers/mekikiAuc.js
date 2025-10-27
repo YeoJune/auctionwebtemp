@@ -245,7 +245,8 @@ class MekikiAucCrawler extends AxiosCrawler {
       const allItems = [];
       const firstPageItems = await this.processItemsPage(
         firstPageResponse.data.collection || [],
-        existingIds
+        existingIds,
+        eventId
       );
       allItems.push(...firstPageItems);
 
@@ -281,7 +282,8 @@ class MekikiAucCrawler extends AxiosCrawler {
 
               const pageItems = await this.processItemsPage(
                 response.data.collection || [],
-                existingIds
+                existingIds,
+                eventId
               );
 
               console.log(
@@ -316,7 +318,7 @@ class MekikiAucCrawler extends AxiosCrawler {
   }
 
   // 페이지 아이템 처리
-  async processItemsPage(items, existingIds) {
+  async processItemsPage(items, existingIds, eventId) {
     const processedItems = [];
 
     for (const item of items) {
@@ -326,7 +328,7 @@ class MekikiAucCrawler extends AxiosCrawler {
         continue;
       }
 
-      const processedItem = await this.extractItemInfo(item);
+      const processedItem = await this.extractItemInfo(item, eventId);
       if (processedItem) {
         processedItems.push(processedItem);
       }
@@ -336,7 +338,7 @@ class MekikiAucCrawler extends AxiosCrawler {
   }
 
   // 아이템 정보 추출
-  async extractItemInfo(item) {
+  async extractItemInfo(item, eventId) {
     try {
       const itemId = item.id.toString();
       const boxId = item.box_id || "";
@@ -370,9 +372,8 @@ class MekikiAucCrawler extends AxiosCrawler {
         additional_images: JSON.stringify(additionalImages),
         description: description,
         accessory_code: accessoryCode,
-        kaijoCd: 0,
-        kaisaiKaisu: 0,
-        bid_type: "direct",
+        additional_info: { event_id: eventId },
+        bid_type: "live",
       };
     } catch (error) {
       console.error(`Error extracting item info for item ${item.id}:`, error);
@@ -416,11 +417,11 @@ class MekikiAucCrawler extends AxiosCrawler {
     return parts.join(", ");
   }
 
-  // Direct Bid
-  async directBid(item_id, price, event_id) {
+  // Live Bid
+  async liveBid(item_id, price, event_id) {
     try {
       console.log(
-        `Placing direct bid for item ${item_id} with price ${price}...`
+        `Placing live bid for item ${item_id} with price ${price}...`
       );
 
       // 로그인 확인
@@ -465,193 +466,53 @@ class MekikiAucCrawler extends AxiosCrawler {
     }
   }
 
-  // Update 크롤링
-  async crawlUpdates() {
+  // Add Wishlist (Like)
+  async addWishlist(item_id, event_id) {
     try {
-      const startTime = Date.now();
-      console.log(
-        `Starting Mekiki updates crawl at ${new Date().toISOString()}`
-      );
+      console.log(`Adding item ${item_id} to wishlist (like)...`);
 
-      // 로그인
+      // 로그인 확인
       await this.login();
 
-      // 활성 이벤트 가져오기
-      const activeEvents = await this.getActiveEvents();
+      // 직접 연결 클라이언트 사용
+      const directClient = this.getDirectClient();
 
-      if (activeEvents.length === 0) {
-        console.log("No active events found");
-        return [];
-      }
-
-      const allUpdateItems = [];
-
-      // 각 이벤트별로 업데이트 크롤링
-      for (const event of activeEvents) {
-        console.log(
-          `\n=== Crawling updates for event: ${event.title} (ID: ${event.id}) ===`
-        );
-
-        const eventUpdateItems = await this.crawlEventUpdates(event.id);
-
-        if (eventUpdateItems && eventUpdateItems.length > 0) {
-          allUpdateItems.push(...eventUpdateItems);
-          console.log(
-            `Completed update crawl for event ${event.id}. Items found: ${eventUpdateItems.length}`
-          );
-        }
-      }
-
-      console.log(`Total update items processed: ${allUpdateItems.length}`);
-
-      const endTime = Date.now();
-      const executionTime = endTime - startTime;
-      console.log(
-        `Update crawl operation completed in ${this.formatExecutionTime(
-          executionTime
-        )}`
-      );
-
-      return allUpdateItems;
-    } catch (error) {
-      console.error("Update crawl failed:", error.message);
-      return [];
-    }
-  }
-
-  // 특정 이벤트의 업데이트 크롤링
-  async crawlEventUpdates(eventId) {
-    try {
-      const clientInfo = this.getClient();
-
-      // 첫 페이지로 전체 페이지 수 확인
-      const firstPageResponse = await clientInfo.client.get(
-        `${this.config.itemsUrl}/${eventId}/items`,
+      // 위시리스트(좋아요) 요청
+      const likeResponse = await directClient.client.post(
+        `${this.config.itemsUrl}/${event_id}/items/${item_id}/like`,
+        {},
         {
           params: {
-            sort: 8,
-            per_page: PER_PAGE,
-            page: 1,
-            "kind[]": 1,
-            group_flag: false,
             user_id: this.userId,
           },
           headers: {
+            "Content-Type": "application/json",
             Accept: "application/json",
           },
         }
       );
 
-      await this.sleep(API_DELAY);
-
-      const totalPages = firstPageResponse.data.meta?.pages || 1;
-      const totalItems = firstPageResponse.data.meta?.total || 0;
-
-      console.log(
-        `Event ${eventId} updates: Found ${totalItems} items across ${totalPages} pages`
-      );
-
-      // 첫 페이지 아이템 처리
-      const allUpdateItems = [];
-      const firstPageItems = this.processUpdateItemsPage(
-        firstPageResponse.data.collection
-      );
-      allUpdateItems.push(...firstPageItems);
-
-      // 나머지 페이지 병렬 처리
-      if (totalPages > 1) {
-        const limit = pLimit(LIMIT1);
-        const pagePromises = [];
-
-        for (let page = 2; page <= totalPages; page++) {
-          pagePromises.push(
-            limit(async () => {
-              console.log(
-                `Crawling event ${eventId} updates, page ${page} of ${totalPages}`
-              );
-
-              const pageClientInfo = this.getClient();
-              const response = await pageClientInfo.client.get(
-                `${this.config.itemsUrl}/${eventId}/items`,
-                {
-                  params: {
-                    sort: 8,
-                    per_page: PER_PAGE,
-                    page: page,
-                    "kind[]": 1,
-                    group_flag: false,
-                    user_id: this.userId,
-                  },
-                  headers: {
-                    Accept: "application/json",
-                  },
-                }
-              );
-
-              await this.sleep(API_DELAY);
-
-              console.log(response);
-
-              const pageItems = this.processUpdateItemsPage(
-                response.data.collection
-              );
-
-              console.log(
-                `Processed ${pageItems.length} update items from page ${page}`
-              );
-
-              return pageItems;
-            })
-          );
-        }
-
-        const pageResults = await Promise.all(pagePromises);
-        pageResults.forEach((pageItems) => {
-          if (pageItems && pageItems.length > 0) {
-            allUpdateItems.push(...pageItems);
-          }
-        });
+      // 응답 확인
+      if (likeResponse.status === 200 || likeResponse.status === 201) {
+        console.log(`Wishlist successful for item ${item_id}`);
+        return {
+          success: true,
+          message: "Wishlist added successfully",
+          data: likeResponse.data,
+        };
+      } else {
+        throw new Error(`Wishlist failed for item ${item_id}`);
       }
-
-      return allUpdateItems;
     } catch (error) {
       console.error(
-        `Error crawling updates for event ${eventId}:`,
+        `Error adding wishlist for item ${item_id}:`,
         error.message
       );
-      return [];
-    }
-  }
-
-  // 업데이트 페이지 아이템 처리
-  processUpdateItemsPage(items) {
-    const updateItems = [];
-
-    for (const item of items) {
-      const updateItem = this.extractUpdateItemInfo(item);
-      if (updateItem) {
-        updateItems.push(updateItem);
-      }
-    }
-
-    return updateItems;
-  }
-
-  // 업데이트 아이템 정보 추출
-  extractUpdateItemInfo(item) {
-    try {
-      const itemId = item.id.toString();
-      const currentPrice = item.current_price || 0;
-      const scheduledDate = this.extractDate(item.end_datetime);
-
       return {
-        item_id: itemId,
-        starting_price: currentPrice,
-        scheduled_date: scheduledDate,
+        success: false,
+        message: "Wishlist failed",
+        error: error.message,
       };
-    } catch (error) {
-      console.error(`Error extracting update info for item ${item.id}:`, error);
-      return null;
     }
   }
 

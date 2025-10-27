@@ -618,8 +618,7 @@ class StarAucCrawler extends AxiosCrawler {
       bid_type: "direct",
       auc_num: "3",
       lotNo: scriptData.lotNo,
-      kaijoCd: 0,
-      kaisaiKaisu: 0,
+      additional_info: {},
     };
 
     if (scriptData.currentBiddingPrice) {
@@ -1453,6 +1452,7 @@ class StarAucValueCrawler extends AxiosCrawler {
         accessory_info: accessoryInfo,
         category: this.config.categoryTable[this.config.currentCategoryId],
         auc_num: "3", // StarAuc 고유 번호
+        additional_info: {},
       };
     } catch (error) {
       console.error("아이템 정보 추출 실패:", error);

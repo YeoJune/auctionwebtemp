@@ -342,7 +342,9 @@ router.get("/", async (req, res) => {
       const limit = pLimit(5);
       const processItemsInBatches = async (items) => {
         const promises = items.map((item) =>
-          limit(() => processItem(item.item_id, false, null, true, 2))
+          limit(() =>
+            processItem(item.item_id, false, null, true, null, 2, item.auc_num)
+          )
         );
         const processedItems = await Promise.all(promises);
         return processedItems.filter((item) => item !== null);

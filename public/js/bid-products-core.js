@@ -766,6 +766,7 @@ window.BidProductsCore = (function () {
         `/detail/item-details/${itemId}`,
         {
           method: "POST",
+          body: JSON.stringify({ aucNum: item.auc_num }),
         }
       );
 

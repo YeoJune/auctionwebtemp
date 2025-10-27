@@ -563,16 +563,17 @@ class BrandAucCrawler extends AxiosCrawler {
       bid_type: bidType,
       auc_num: "2",
 
-      // 상세 정보 요청 시 필요한 데이터 - 타입별로 다르게 설정
-      ...(bidType === "direct"
-        ? {
-            kaisaiKaisu: this.auctionKaisu,
-            kaijoKbn: item.kaijoKbn || 1,
-          }
-        : {
-            kaijoCd: item.kaijoCd,
-            kaisaiKaisu: item.kaisaiKaisu,
-          }),
+      // 상세 정보 요청 시 필요한 데이터 - additional_info에 저장
+      additional_info:
+        bidType === "direct"
+          ? {
+              kaisaiKaisu: this.auctionKaisu,
+              kaijoKbn: item.kaijoKbn || 1,
+            }
+          : {
+              kaijoCd: item.kaijoCd,
+              kaisaiKaisu: item.kaisaiKaisu,
+            },
     };
   }
 
@@ -581,8 +582,13 @@ class BrandAucCrawler extends AxiosCrawler {
       const clientInfo = this.getClient();
       await this.loginWithClient(clientInfo);
 
-      const kaisaiKaisu = item.kaisaiKaisu;
-      const kaijoCd = item.kaijoCd || 1;
+      // additional_info에서 데이터 가져오기
+      const additionalInfo =
+        typeof item.additional_info === "string"
+          ? JSON.parse(item.additional_info)
+          : item.additional_info || {};
+      const kaisaiKaisu = additionalInfo.kaisaiKaisu;
+      const kaijoCd = additionalInfo.kaijoCd || 1;
 
       // 상세 정보 URL 구성 (올바른 kaisaiKaisu 사용)
       const detailUrl = `https://u.brand-auc.com/api/v1/auction/auctionItems/bag/${kaijoCd}/${kaisaiKaisu}/${itemId}/B02-01`;
@@ -1562,9 +1568,11 @@ class BrandAucValueCrawler extends AxiosCrawler {
       scheduled_date: scheduledDate,
       auc_num: "2", // 고정값으로 보임
 
-      // 상세 정보 요청 시 필요한 데이터
-      kaijoCd: item.kaijoCd,
-      kaisaiKaisu: item.kaisaiKaisu,
+      // 상세 정보 요청 시 필요한 데이터 - additional_info에 저장
+      additional_info: {
+        kaijoCd: item.kaijoCd,
+        kaisaiKaisu: item.kaisaiKaisu,
+      },
     };
   }
 
@@ -1573,8 +1581,13 @@ class BrandAucValueCrawler extends AxiosCrawler {
       const clientInfo = this.getClient();
       await this.loginWithClient(clientInfo);
 
-      const kaisaiKaisu = item.kaisaiKaisu;
-      const kaijoCd = item.kaijoCd || 1;
+      // additional_info에서 데이터 가져오기
+      const additionalInfo =
+        typeof item.additional_info === "string"
+          ? JSON.parse(item.additional_info)
+          : item.additional_info || {};
+      const kaisaiKaisu = additionalInfo.kaisaiKaisu;
+      const kaijoCd = additionalInfo.kaijoCd || 1;
 
       // 상세 정보 URL 구성 (올바른 kaisaiKaisu 사용)
       const detailUrl = `https://e-auc.brand-auc.com/api/v1/marketprice/marketpriceItems/detail/${kaijoCd}/${kaisaiKaisu}/${itemId}`;

@@ -266,6 +266,7 @@ router.get("/", async (req, res) => {
 // 입찰 옵션 정보 제공 API
 router.get("/bid-options/:itemId", async (req, res) => {
   const { itemId } = req.params;
+  const { aucNum } = req.query;
 
   if (!req.session.user) {
     return res.status(401).json({ message: "Unauthorized" });
@@ -277,8 +278,8 @@ router.get("/bid-options/:itemId", async (req, res) => {
   try {
     // 1. 아이템 정보 조회
     const [items] = await connection.query(
-      "SELECT * FROM crawled_items WHERE item_id = ?",
-      [itemId]
+      "SELECT * FROM crawled_items WHERE item_id = ? AND auc_num = ?",
+      [itemId, aucNum]
     );
 
     if (items.length === 0) {
@@ -344,14 +345,15 @@ router.get("/bid-options/:itemId", async (req, res) => {
             // DB 업데이트가 필요하면 실행
             if (needsUpdate) {
               updateValues.push(itemId);
+              updateValues.push(item.auc_num);
               pool.query(
                 `UPDATE crawled_items SET ${updates.join(
                   ", "
-                )} WHERE item_id = ?`,
+                )} WHERE item_id = ? AND auc_num = ?`,
                 updateValues
               );
               console.log(
-                `Updated item ${itemId} in database with latest info`
+                `Updated item ${itemId} (auc_num=${item.auc_num}) in database with latest info`
               );
               notifyClientsOfChanges([{ item_id: itemId }]);
             }
@@ -455,7 +457,7 @@ router.get("/bid-options/:itemId", async (req, res) => {
 
 // 사용자의 입찰 (자동 생성/업데이트) - 자동 제출 기능 추가
 router.post("/", async (req, res) => {
-  const { itemId, currentPrice, autoSubmit = true } = req.body;
+  const { itemId, aucNum, currentPrice, autoSubmit = true } = req.body;
 
   if (!req.session.user) {
     return res.status(401).json({ message: "Unauthorized" });
@@ -463,8 +465,10 @@ router.post("/", async (req, res) => {
 
   const userId = req.session.user.id;
 
-  if (!itemId || !currentPrice) {
-    return res.status(400).json({ message: "Item ID and price are required" });
+  if (!itemId || !aucNum || !currentPrice) {
+    return res
+      .status(400)
+      .json({ message: "Item ID, auction number, and price are required" });
   }
 
   const connection = await pool.getConnection();
@@ -474,8 +478,8 @@ router.post("/", async (req, res) => {
 
     // 1. 아이템 정보 확인
     const [items] = await connection.query(
-      "SELECT * FROM crawled_items WHERE item_id = ?",
-      [itemId]
+      "SELECT * FROM crawled_items WHERE item_id = ? AND auc_num = ?",
+      [itemId, aucNum]
     );
 
     if (items.length === 0) {
@@ -548,13 +552,16 @@ router.post("/", async (req, res) => {
           // DB 업데이트가 필요하면 실행
           if (needsUpdate) {
             updateValues.push(itemId);
+            updateValues.push(item.auc_num);
             pool.query(
               `UPDATE crawled_items SET ${updates.join(
                 ", "
-              )} WHERE item_id = ?`,
+              )} WHERE item_id = ? AND auc_num = ?`,
               updateValues
             );
-            console.log(`Updated item ${itemId} in database with latest info`);
+            console.log(
+              `Updated item ${itemId} (auc_num=${item.auc_num}) in database with latest info`
+            );
             notifyClientsOfChanges([{ item_id: itemId }]);
           }
         }
@@ -656,10 +663,11 @@ router.post("/", async (req, res) => {
 
         // 업데이트
         await connection.query(
-          "UPDATE crawled_items SET scheduled_date = ? WHERE item_id = ?",
+          "UPDATE crawled_items SET scheduled_date = ? WHERE item_id = ? AND auc_num = ?",
           [
             newScheduledDate.toISOString().slice(0, 19).replace("T", " "),
             itemId,
+            item.auc_num,
           ]
         );
 
@@ -923,16 +931,17 @@ router.post("/:id/submit", isAdmin, async (req, res) => {
         });
       }
 
-      const [items] = await connection.query(
-        "SELECT * FROM crawled_items WHERE item_id = ?",
-        [bid.item_id]
+      // JOIN을 사용하여 item 정보 가져오기
+      const [itemResults] = await connection.query(
+        "SELECT i.* FROM crawled_items i JOIN direct_bids b ON i.item_id = b.item_id AND i.auc_num = (SELECT auc_num FROM crawled_items WHERE item_id = b.item_id LIMIT 1) WHERE b.id = ?",
+        [id]
       );
 
-      if (items.length === 0) {
+      if (itemResults.length === 0) {
         return res.status(404).json({ message: "Item not found" });
       }
 
-      const item = items[0];
+      const item = itemResults[0];
 
       // submitBid 함수 호출
       const result = await submitBid(
@@ -1043,10 +1052,10 @@ router.get("/:id", async (req, res) => {
         .json({ message: "Not authorized to view this bid" });
     }
 
-    // 아이템 정보 가져오기
+    // 아이템 정보 가져오기 (JOIN 사용)
     const [items] = await connection.query(
-      "SELECT * FROM crawled_items WHERE item_id = ?",
-      [bid.item_id]
+      "SELECT i.* FROM crawled_items i JOIN direct_bids b ON i.item_id = b.item_id WHERE b.id = ? LIMIT 1",
+      [id]
     );
 
     const bidWithItem = {

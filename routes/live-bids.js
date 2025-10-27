@@ -232,7 +232,7 @@ router.get("/", async (req, res) => {
 // 고객의 1차 입찰 제출
 // 1차 입찰 제출 부분 수정 (기존 router.post("/", async (req, res) => { 부분)
 router.post("/", async (req, res) => {
-  const { itemId, firstPrice } = req.body;
+  const { itemId, aucNum, firstPrice } = req.body;
 
   if (!req.session.user) {
     return res.status(401).json({ message: "Unauthorized" });
@@ -240,10 +240,10 @@ router.post("/", async (req, res) => {
 
   const userId = req.session.user.id;
 
-  if (!itemId || !firstPrice) {
-    return res
-      .status(400)
-      .json({ message: "Item ID and first price are required" });
+  if (!itemId || !aucNum || !firstPrice) {
+    return res.status(400).json({
+      message: "Item ID, auction number, and first price are required",
+    });
   }
 
   const connection = await pool.getConnection();
@@ -253,8 +253,8 @@ router.post("/", async (req, res) => {
 
     // 상품 정보 체크 (scheduled_date 포함)
     const [items] = await connection.query(
-      "SELECT * FROM crawled_items WHERE item_id = ?",
-      [itemId]
+      "SELECT * FROM crawled_items WHERE item_id = ? AND auc_num = ?",
+      [itemId, aucNum]
     );
 
     if (items.length === 0) {
@@ -389,7 +389,7 @@ router.put("/:id/final", async (req, res) => {
 
     // 입찰 정보와 상품 정보 함께 확인
     const [bids] = await connection.query(
-      `SELECT l.*, i.scheduled_date, i.auc_num, i.kaisaiKaisu, i.starting_price
+      `SELECT l.*, i.scheduled_date, i.auc_num, i.additional_info, i.starting_price
        FROM live_bids l 
        JOIN crawled_items i ON l.item_id = i.item_id 
        WHERE l.id = ?`,
@@ -464,7 +464,28 @@ router.put("/:id/final", async (req, res) => {
       ecoAucCrawler.addWishlist(bid.item_id, 1);
     } else if (bid.auc_num == 2 && brandAucCrawler) {
       brandAucCrawler.liveBid(bid.item_id, finalPrice);
-      brandAucCrawler.addWishlist(bid.item_id, "A", bid.kaisaiKaisu);
+      // additional_info에서 kaisaiKaisu 추출
+      const additionalInfo =
+        typeof bid.additional_info === "string"
+          ? JSON.parse(bid.additional_info)
+          : bid.additional_info || {};
+      brandAucCrawler.addWishlist(
+        bid.item_id,
+        "A",
+        additionalInfo.kaisaiKaisu || 0
+      );
+    } else if (bid.auc_num == 4 && mekikiAucCrawler) {
+      // additional_info에서 event_id 추출
+      const additionalInfo =
+        typeof bid.additional_info === "string"
+          ? JSON.parse(bid.additional_info)
+          : bid.additional_info || {};
+      mekikiAucCrawler.liveBid(
+        bid.item_id,
+        finalPrice,
+        additionalInfo.event_id
+      );
+      mekikiAucCrawler.addWishlist(bid.item_id, additionalInfo.event_id);
     }
 
     res.status(200).json({
@@ -673,10 +694,10 @@ router.get("/:id", async (req, res) => {
         .json({ message: "Not authorized to view this bid" });
     }
 
-    // Get item details
+    // Get item details (JOIN 사용)
     const [items] = await connection.query(
-      "SELECT * FROM crawled_items WHERE item_id = ?",
-      [bid.item_id]
+      "SELECT i.* FROM crawled_items i JOIN live_bids b ON i.item_id = b.item_id WHERE b.id = ? LIMIT 1",
+      [id]
     );
 
     const bidWithItem = {

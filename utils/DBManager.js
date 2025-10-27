@@ -25,8 +25,7 @@ class DatabaseManager {
       "additional_images",
       "accessory_code",
       "final_price",
-      "kaijoCd",
-      "kaisaiKaisu",
+      "additional_info",
       "bid_type",
       "original_scheduled_date",
     ];
@@ -48,8 +47,7 @@ class DatabaseManager {
         "additional_images",
         "accessory_code",
         "final_price",
-        "kaijoCd",
-        "kaisaiKaisu",
+        "additional_info",
         "bid_type",
         "original_scheduled_date",
       ],
@@ -68,8 +66,7 @@ class DatabaseManager {
         "additional_images",
         "accessory_code",
         "final_price",
-        "kaijoCd",
-        "kaisaiKaisu",
+        "additional_info",
       ],
       invoices: ["date", "auc_num", "status", "amount"],
       // 필요한 다른 테이블들의 컬럼 정의를 여기에 추가할 수 있습니다
@@ -144,7 +141,7 @@ class DatabaseManager {
     }
   }
 
-  async updateItemDetails(itemId, newDetails, tableName) {
+  async updateItemDetails(itemId, newDetails, tableName, aucNum = null) {
     let conn;
     try {
       await this.withRetry(async () => {
@@ -169,14 +166,27 @@ class DatabaseManager {
           return;
         }
 
-        const updateQuery = `UPDATE ${tableName} SET ${updateFields.join(
-          ", "
-        )} WHERE item_id = ?`;
-        updateValues.push(itemId);
+        // auc_num이 제공된 경우 WHERE 조건에 추가
+        let updateQuery;
+        if (aucNum !== null) {
+          updateQuery = `UPDATE ${tableName} SET ${updateFields.join(
+            ", "
+          )} WHERE item_id = ? AND auc_num = ?`;
+          updateValues.push(itemId, aucNum);
+        } else {
+          updateQuery = `UPDATE ${tableName} SET ${updateFields.join(
+            ", "
+          )} WHERE item_id = ?`;
+          updateValues.push(itemId);
+        }
 
         await conn.query(updateQuery, updateValues);
 
-        console.log(`Item ${itemId} details updated successfully`);
+        console.log(
+          `Item ${itemId}${
+            aucNum ? ` (auc_num=${aucNum})` : ""
+          } details updated successfully`
+        );
       });
     } catch (error) {
       console.error(`Error updating item ${itemId} details:`, error.message);
@@ -466,7 +476,15 @@ class DatabaseManager {
             const values = batch.flatMap((item) =>
               columns.map((col) => {
                 // 속성이 없는 경우 null을 사용
-                const value = item.hasOwnProperty(col) ? item[col] : null;
+                let value = item.hasOwnProperty(col) ? item[col] : null;
+                // additional_info는 JSON으로 변환
+                if (
+                  col === "additional_info" &&
+                  value !== null &&
+                  typeof value === "object"
+                ) {
+                  value = JSON.stringify(value);
+                }
                 return value;
               })
             );
@@ -482,9 +500,17 @@ class DatabaseManager {
               for (let j = 0; j < batch.length; j++) {
                 const singleItemValues = columns.map((col) => {
                   // 속성이 없는 경우 null을 사용
-                  const value = batch[j].hasOwnProperty(col)
+                  let value = batch[j].hasOwnProperty(col)
                     ? batch[j][col]
                     : null;
+                  // additional_info는 JSON으로 변환
+                  if (
+                    col === "additional_info" &&
+                    value !== null &&
+                    typeof value === "object"
+                  ) {
+                    value = JSON.stringify(value);
+                  }
                   return value;
                 });
                 const singleInsertQuery = `
