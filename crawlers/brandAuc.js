@@ -604,7 +604,7 @@ class BrandAucCrawler extends AxiosCrawler {
       const detail = response.data;
 
       // 이미지 URL 목록 처리
-      const images = detail.fileListAdmin || detail.fileList || [];
+      const images = [...detail.fileList, ...detail.fileListAdmin] || [];
       const formattedImages = images.map((url) =>
         url.replace(/(brand_img\/)(\d+)/, "$16")
       );
@@ -1596,7 +1596,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
       const detail = response.data;
 
       // 이미지 URL 목록 처리
-      const images = detail.fileListAdmin || detail.fileList || [];
+      const images = [...detail.fileList, ...detail.fileListAdmin] || [];
       const formattedImages = images.map((url) =>
         url.replace(/(brand_img\/)(\d+)/, "$16")
       );
