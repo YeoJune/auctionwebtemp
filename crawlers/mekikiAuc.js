@@ -162,8 +162,6 @@ class MekikiAucCrawler extends AxiosCrawler {
 
         const eventItems = await this.crawlEvent(event.id, existingIds, true);
 
-        console.log(eventItems);
-
         if (eventItems && eventItems.length > 0) {
           allCrawledItems.push(...eventItems);
           console.log(
