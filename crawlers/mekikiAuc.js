@@ -346,7 +346,8 @@ class MekikiAucCrawler extends AxiosCrawler {
 
       const title = brandName;
       const originalTitle = `${boxId}-${boxNo} ${brandName}`;
-      const scheduledDate = this.extractDate(item.end_datetime);
+      const original_scheduled_date = this.extractDate(item.end_datetime);
+      const scheduled_date = this.getPreviousDayAt18(original_scheduled_date);
       const category = this.config.categoryTable[item.category?.id] || "기타";
       const rank = item.grade || "N";
       const startingPrice = item.current_price || 0;
@@ -359,8 +360,8 @@ class MekikiAucCrawler extends AxiosCrawler {
         item_id: itemId,
         title: title,
         original_title: originalTitle,
-        scheduled_date: scheduledDate,
-        original_scheduled_date: scheduledDate,
+        scheduled_date: scheduled_date,
+        original_scheduled_date: original_scheduled_date,
         auc_num: "4",
         category: category,
         brand: brandName,
