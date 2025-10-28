@@ -104,9 +104,9 @@ const AUCTION_CONFIG = {
     name: "MekikiAuc",
     crawler: mekikiAucCrawler,
     valueCrawler: null,
-    enabled: false,
-    updateInterval: parseInt(process.env.UPDATE_INTERVAL, 10) || 40,
-    updateWithIdInterval: parseInt(process.env.UPDATE_INTERVAL_ID, 10) || 10,
+    enabled: true,
+    updateInterval: 0,
+    updateWithIdInterval: 0,
   },
 };
 
@@ -120,12 +120,18 @@ const crawlingStatus = {
 
 Object.entries(AUCTION_CONFIG).forEach(([aucNum, config]) => {
   if (config.enabled) {
-    updateSchedulers[aucNum] = new AdaptiveScheduler(config.updateInterval);
-    updateWithIdSchedulers[aucNum] = new AdaptiveScheduler(
-      config.updateWithIdInterval
-    );
-    crawlingStatus.update[aucNum] = false;
-    crawlingStatus.updateWithId[aucNum] = false;
+    // updateInterval이 0이 아닐 때만 스케줄러 생성
+    if (config.updateInterval > 0) {
+      updateSchedulers[aucNum] = new AdaptiveScheduler(config.updateInterval);
+      crawlingStatus.update[aucNum] = false;
+    }
+    // updateWithIdInterval이 0이 아닐 때만 스케줄러 생성
+    if (config.updateWithIdInterval > 0) {
+      updateWithIdSchedulers[aucNum] = new AdaptiveScheduler(
+        config.updateWithIdInterval
+      );
+      crawlingStatus.updateWithId[aucNum] = false;
+    }
   }
 });
 
@@ -993,8 +999,8 @@ const scheduleUpdateCrawlingForAuction = (aucNum) => {
   const config = AUCTION_CONFIG[aucNum];
   const scheduler = updateSchedulers[aucNum];
 
-  if (!config || !scheduler) {
-    console.log(`Cannot schedule update crawling for auction ${aucNum}`);
+  if (!config || !scheduler || config.updateInterval === 0) {
+    console.log(`Update crawling disabled for auction ${aucNum}`);
     return null;
   }
 
@@ -1060,8 +1066,8 @@ const scheduleUpdateCrawlingWithIdForAuction = (aucNum) => {
   const config = AUCTION_CONFIG[aucNum];
   const scheduler = updateWithIdSchedulers[aucNum];
 
-  if (!config || !scheduler) {
-    console.log(`Cannot schedule updateWithId crawling for auction ${aucNum}`);
+  if (!config || !scheduler || config.updateWithIdInterval === 0) {
+    console.log(`UpdateWithId crawling disabled for auction ${aucNum}`);
     return null;
   }
 
