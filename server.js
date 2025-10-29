@@ -220,6 +220,10 @@ app.get("/", (req, res) => {
   res.redirect("/productPage");
 });
 
+app.get("/signupCompletePage", (req, res) => {
+  res.sendFile(path.join(mainPagesPath, "signup-complete.html"));
+});
+
 app.get("/productPage", (req, res) => {
   res.sendFile(path.join(mainPagesPath, "product.html"));
 });
