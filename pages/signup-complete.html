@@ -7,40 +7,11 @@
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <link rel="stylesheet" href="/styles/common.css" />
     <style>
-      :root {
-        --primary-color: #2c3e50;
-        --primary-hover: #1a252f;
-        --success-color: #27ae60;
-        --text-primary: #2c3e50;
-        --text-secondary: #7f8c8d;
-        --background-light: #f8f9fa;
-        --border-color: #dcdcdc;
-        --border-radius-sm: 4px;
-        --border-radius-md: 8px;
-        --spacing-xs: 0.5rem;
-        --spacing-sm: 0.75rem;
-        --spacing-md: 1rem;
-        --spacing-lg: 1.5rem;
-        --spacing-xl: 3rem;
-        --font-size-md: 1rem;
-        --font-size-lg: 1.25rem;
-        --font-size-xl: 2rem;
-        --transition-normal: 0.3s ease;
-      }
-
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-
+      /* 회원가입 완료 페이지 전용 스타일 */
       body {
-        font-family: "Noto Sans KR", -apple-system, BlinkMacSystemFont,
-          "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        line-height: 1.6;
-        color: var(--text-primary);
-        background-color: #ffffff;
+        background-color: var(--background-light);
       }
 
       .signup-complete-container {
@@ -53,27 +24,16 @@
         padding: var(--spacing-xl);
       }
 
-      .logo {
-        margin-bottom: var(--spacing-xl);
-      }
-
-      .logo-text {
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: var(--primary-color);
-        letter-spacing: -1px;
-      }
-
-      .success-icon {
-        font-size: 5rem;
+      .complete-icon {
+        font-size: 4rem;
         color: var(--success-color);
         margin-bottom: var(--spacing-lg);
-        animation: scaleIn 0.5s ease-out;
+        animation: pulse 2s infinite;
       }
 
       .complete-title {
         font-size: var(--font-size-xl);
-        font-weight: 700;
+        font-weight: 600;
         color: var(--text-primary);
         margin-bottom: var(--spacing-md);
       }
@@ -81,148 +41,78 @@
       .complete-message {
         font-size: var(--font-size-lg);
         color: var(--text-secondary);
-        margin-bottom: var(--spacing-xl);
-        line-height: 1.8;
-        max-width: 600px;
+        margin-bottom: var(--spacing-lg);
+        line-height: 1.6;
       }
 
-      .complete-message strong {
-        color: var(--primary-color);
-        font-weight: 600;
-      }
-
-      .info-box {
+      .complete-info {
         background-color: var(--background-light);
-        border: 2px solid var(--success-color);
+        border: 1px solid var(--border-color);
         border-radius: var(--border-radius-md);
-        padding: var(--spacing-xl);
-        margin-bottom: var(--spacing-xl);
-        max-width: 600px;
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        max-width: 500px;
         width: 100%;
       }
 
-      .info-box h3 {
-        color: var(--success-color);
-        margin-bottom: var(--spacing-lg);
+      .complete-info h3 {
+        color: var(--primary-color);
+        margin-bottom: var(--spacing-sm);
         font-size: var(--font-size-lg);
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: var(--spacing-sm);
       }
 
-      .info-box p {
-        margin-bottom: var(--spacing-md);
-        line-height: 1.8;
-        font-size: var(--font-size-md);
-        color: var(--text-primary);
+      .complete-info p {
+        margin-bottom: var(--spacing-sm);
+        line-height: 1.5;
       }
 
-      .info-box p:last-child {
-        margin-bottom: 0;
-      }
-
-      .highlight-text {
+      .complete-info p strong {
         color: var(--primary-color);
         font-weight: 600;
-        font-size: 1.1rem;
       }
 
-      .contact-buttons {
+      .contact-info {
         display: flex;
         align-items: center;
         justify-content: center;
         gap: var(--spacing-md);
         margin-top: var(--spacing-lg);
-        flex-wrap: wrap;
       }
 
       .contact-btn {
         background-color: var(--primary-color);
         color: white;
-        padding: var(--spacing-md) var(--spacing-xl);
+        padding: var(--spacing-sm) var(--spacing-lg);
         border-radius: var(--border-radius-sm);
         text-decoration: none;
         display: inline-flex;
         align-items: center;
-        justify-content: center;
-        gap: var(--spacing-sm);
+        gap: var(--spacing-xs);
         transition: all var(--transition-normal);
         border: none;
         cursor: pointer;
-        font-size: var(--font-size-md);
-        font-weight: 600;
-        min-width: 180px;
       }
 
       .contact-btn:hover {
         background-color: var(--primary-hover);
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       }
 
-      .contact-btn.kakao {
-        background-color: #fee500;
-        color: #000000;
-      }
-
-      .contact-btn.kakao:hover {
-        background-color: #fdd835;
-      }
-
-      .contact-btn.phone {
-        background-color: var(--success-color);
-      }
-
-      .contact-btn.phone:hover {
-        background-color: #229954;
-      }
-
-      .footer {
-        margin-top: var(--spacing-xl);
-        padding-top: var(--spacing-xl);
-        border-top: 1px solid var(--border-color);
-        color: var(--text-secondary);
-        font-size: 0.9rem;
-      }
-
-      .footer-content {
-        max-width: 600px;
-        margin: 0 auto;
-      }
-
-      .company-name {
-        font-weight: 600;
-        color: var(--primary-color);
-        margin-bottom: var(--spacing-sm);
-      }
-
-      @keyframes scaleIn {
+      @keyframes pulse {
         0% {
-          transform: scale(0);
-          opacity: 0;
+          transform: scale(1);
         }
         50% {
           transform: scale(1.1);
         }
         100% {
           transform: scale(1);
-          opacity: 1;
         }
       }
 
       @media (max-width: 768px) {
-        .signup-complete-container {
-          padding: var(--spacing-lg);
-        }
-
-        .logo-text {
-          font-size: 2rem;
-        }
-
-        .success-icon {
-          font-size: 4rem;
+        .complete-icon {
+          font-size: 3rem;
         }
 
         .complete-title {
@@ -233,30 +123,16 @@
           font-size: var(--font-size-md);
         }
 
-        .info-box {
-          padding: var(--spacing-lg);
-        }
-
-        .contact-buttons {
+        .contact-info {
           flex-direction: column;
-          width: 100%;
           gap: var(--spacing-sm);
-        }
-
-        .contact-btn {
-          width: 100%;
-          min-width: auto;
         }
       }
     </style>
   </head>
   <body>
     <div class="signup-complete-container">
-      <div class="logo">
-        <div class="logo-text">까사트레이드</div>
-      </div>
-
-      <div class="success-icon">
+      <div class="complete-icon">
         <i class="fas fa-check-circle"></i>
       </div>
 
@@ -267,41 +143,22 @@
         더 빠른 승인을 위해 아래 안내를 확인해 주세요.
       </p>
 
-      <div class="info-box">
-        <h3>
-          <i class="fas fa-lightbulb"></i>
-          빠른 승인 안내
-        </h3>
+      <div class="complete-info">
+        <h3><i class="fas fa-info-circle"></i> 빠른 승인 안내</h3>
         <p>
-          고객센터로 회원가입 하신<br />
-          <span class="highlight-text">상호명(이름)</span>을 먼저 남겨주시면<br />
-          더 빠른 회원가입 승인이 가능합니다.
+          고객센터로 회원가입 하신 <strong>상호명(이름)</strong>을 먼저
+          남겨주시면
         </p>
+        <p>더 빠른 회원가입 승인이 가능합니다.</p>
       </div>
 
-      <div class="contact-buttons">
-        <a
-          href="http://pf.kakao.com/_xcCxoqn/chat"
-          target="_blank"
-          class="contact-btn kakao">
-          <i class="fas fa-comment"></i>
-          카카오톡 문의하기
-        </a>
-        <a href="tel:02-6959-9640" class="contact-btn phone">
-          <i class="fas fa-phone"></i>
-          전화 문의하기
-        </a>
-      </div>
-
-      <div class="footer">
-        <div class="footer-content">
-          <div class="company-name">까사트레이드</div>
-          <p>전화: 02-6959-9640</p>
-          <p>이메일: casatrade.kr@gmail.com</p>
-          <p style="margin-top: 1rem">
-            © 2024 까사트레이드. All rights reserved.
-          </p>
-        </div>
+      <div class="contact-info">
+        <button
+          class="contact-btn"
+          onclick="window.open('http://pf.kakao.com/_xcCxoqn/chat', '_blank')">
+          <i class="fas fa-comments"></i>
+          실시간 문의
+        </button>
       </div>
     </div>
   </body>
