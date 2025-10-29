@@ -72,7 +72,7 @@
   /**
    * 현지 수수료 계산
    */
-  function calculateLocalFee(price, auctionId, category) {
+  function calculateLocalFee(price, auctionId, category, exchangeRate = 9.5) {
     if (!price) return 0;
     price = Number(price);
 
@@ -118,7 +118,9 @@
     }
 
     if (auctionId == 4) {
-      return Math.round(price * 0.055 + 10000);
+      const feeInKRW = 10000; // 10,000원 고정 수수료
+      const feeInYen = feeInKRW / exchangeRate; // 환율로 나눠서 엔화로 변환
+      return Math.round(price * 0.055 + feeInYen);
     }
 
     return 0;
@@ -207,7 +209,7 @@
       rate = 9.5;
     }
 
-    const localFee = calculateLocalFee(price, auctionId, category);
+    const localFee = calculateLocalFee(price, auctionId, category, rate);
     const totalAmountKRW = (price + localFee) * rate;
     const customsDuty = calculateCustomsDuty(totalAmountKRW, category);
     const vat = calculateVAT(totalAmountKRW, customsDuty, category);
