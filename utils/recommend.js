@@ -197,7 +197,7 @@ async function syncRecommendSettingsToItems() {
   }
 }
 
-syncRecommendSettingsToItems();
+// syncRecommendSettingsToItems();
 
 module.exports = {
   getRecommendSettings,
