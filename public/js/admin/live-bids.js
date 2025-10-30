@@ -478,7 +478,7 @@ function renderLiveBidsTable(liveBids) {
     if (bid.item && bid.item.auc_num && linkFunc[bid.item.auc_num]) {
       itemUrl = linkFunc[bid.item.auc_num](
         bid.item_id,
-        bid.item.additional_info
+        JSON.parse(bid.item.additional_info)
       );
     }
 
