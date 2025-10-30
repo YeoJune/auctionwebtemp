@@ -400,6 +400,8 @@ function renderLiveBidsTable(liveBids) {
     1: (itemId) => `https://www.ecoauc.com/client/auction-items/view/${itemId}`,
     2: (itemId) => itemId,
     3: (itemId) => `https://www.starbuyers-global-auction.com/item/${itemId}`,
+    4: (itemId, additionalInfo) =>
+      `https://auction.mekiki.ai/en/auction/${additionalInfo.event_id}/${itemId}`,
   };
 
   liveBids.forEach((bid) => {
@@ -474,7 +476,10 @@ function renderLiveBidsTable(liveBids) {
     // auc_num을 이용한, 적절한 URL 생성
     let itemUrl = "#";
     if (bid.item && bid.item.auc_num && linkFunc[bid.item.auc_num]) {
-      itemUrl = linkFunc[bid.item.auc_num](bid.item_id);
+      itemUrl = linkFunc[bid.item.auc_num](
+        bid.item_id,
+        bid.item.additional_info
+      );
     }
 
     // 이미지 경로

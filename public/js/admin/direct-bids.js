@@ -489,6 +489,8 @@ function renderDirectBidsTable(directBids) {
     2: (itemId) =>
       `https://bid.brand-auc.com/items/detail?uketsukeBng=${itemId}`,
     3: (itemId) => `https://www.starbuyers-global-auction.com/item/${itemId}`,
+    4: (itemId, additionalInfo) =>
+      `https://auction.mekiki.ai/en/auction/${additionalInfo.event_id}/${itemId}`,
   };
 
   directBids.forEach((bid) => {
@@ -592,7 +594,10 @@ function renderDirectBidsTable(directBids) {
     // auc_num을 이용한, 적절한 URL 생성
     let itemUrl = "#";
     if (bid.item && bid.item.auc_num && linkFunc[bid.item.auc_num]) {
-      itemUrl = linkFunc[bid.item.auc_num](bid.item_id);
+      itemUrl = linkFunc[bid.item.auc_num](
+        bid.item_id,
+        bid.item.additional_info
+      );
     }
 
     // 수수료 포함 가격 계산
