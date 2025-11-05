@@ -97,6 +97,36 @@ h2 {
   box-shadow: none;
 }
 
+/* Sign Up Section */
+.signup-section {
+  margin-top: var(--spacing-lg);
+}
+
+.btn-signup {
+  display: block;
+  text-decoration: none;
+  text-align: center;
+  background-color: white;
+  color: var(--primary-color);
+  border: 2px solid var(--primary-color);
+}
+
+.btn-signup:hover {
+  background-color: var(--primary-color);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-signup:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.btn-signup i {
+  margin-right: var(--spacing-xs);
+}
+
 /* Error Message */
 .error-message {
   color: var(--error-color);
@@ -160,7 +190,7 @@ input:-webkit-autofill:focus {
   }
 
   h2 {
-    font-size: var(--font-size-lg);
+    font-size: calc(var(--font-size-lg) * 0.9);
     margin-bottom: var(--spacing-lg);
   }
 
@@ -168,8 +198,21 @@ input:-webkit-autofill:focus {
     margin-bottom: var(--spacing-md);
   }
 
+  .form-group label {
+    font-size: calc(var(--font-size-sm) * 0.9);
+  }
+
   .form-group input,
   .btn {
     padding: var(--spacing-sm);
+    font-size: calc(var(--font-size-md) * 0.9);
+  }
+
+  .text-center {
+    font-size: calc(var(--font-size-sm) * 0.9);
+  }
+
+  .preview-button {
+    font-size: calc(var(--font-size-sm) * 0.9);
   }
 }
