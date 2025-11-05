@@ -118,7 +118,10 @@ function createPagination(
   containerId = "pagination"
 ) {
   const container = document.getElementById(containerId);
-  if (!container) return;
+  if (!container) {
+    console.error("Pagination container not found:", containerId);
+    return;
+  }
 
   container.innerHTML = "";
   if (totalPages <= 1) return;

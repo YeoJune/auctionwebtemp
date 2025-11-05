@@ -317,24 +317,7 @@
         color: #fff;
       }
 
-      /* 10페이지 점프 버튼 스타일 */
-      .pagination-item.page-jump {
-        background-color: #e0f2fe;
-        color: #0284c7;
-        font-weight: 600;
-        border: 2px solid #0284c7;
-        padding: 8px 16px;
-      }
-
-      .pagination-item.page-jump:hover:not(.disabled) {
-        background-color: #0284c7;
-        color: white;
-      }
-
       .pagination-item.page-jump.disabled {
-        background-color: #f3f4f6;
-        color: #9ca3af;
-        border-color: #d1d5db;
         opacity: 0.5;
         cursor: not-allowed;
       }
@@ -1802,12 +1785,17 @@
 
       // 페이지네이션 생성 유틸리티 함수
       function createPagination(
-        containerId,
         currentPage,
         totalPages,
-        callback
+        callback,
+        containerId
       ) {
         const container = document.getElementById(containerId);
+        if (!container) {
+          console.error("Pagination container not found:", containerId);
+          return;
+        }
+
         container.innerHTML = "";
 
         if (totalPages <= 1) return;
