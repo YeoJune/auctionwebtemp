@@ -2246,3 +2246,183 @@ select {
     font-size: var(--font-size-sm);
   }
 }
+
+/* ============================================
+   회원가입 팝업 버튼 (비로그인 사용자용)
+   ============================================ */
+.signup-popup-button {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+
+  background-color: var(--primary-color);
+  color: white;
+
+  padding: 12px 24px;
+  border-radius: var(--border-radius-sm);
+
+  display: none; /* 기본 숨김 */
+  align-items: center;
+  gap: 8px;
+
+  font-size: var(--font-size-md);
+  font-weight: 500;
+
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  z-index: 999;
+
+  transition: all var(--transition-fast);
+  border: none;
+  outline: none;
+}
+
+.signup-popup-button:hover {
+  background-color: var(--primary-hover);
+  transform: translateX(-50%) translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.signup-popup-button:active {
+  transform: translateX(-50%) translateY(0px);
+}
+
+.signup-popup-button.show {
+  display: flex;
+}
+
+.signup-popup-button i {
+  font-size: var(--font-size-lg);
+}
+
+/* 모바일 대응 */
+@media (max-width: 768px) {
+  .signup-popup-button {
+    bottom: 20px;
+    padding: 10px 20px;
+    font-size: var(--font-size-sm);
+  }
+
+  .signup-popup-button i {
+    font-size: var(--font-size-md);
+  }
+}
+
+/* ============================================
+   로그인 필수 모달 (심플 버전)
+   ============================================ */
+.login-required-modal {
+  max-width: 400px !important;
+  padding: 0 !important;
+  border-radius: var(--border-radius-md) !important;
+  overflow: hidden !important;
+}
+
+.login-required-modal .modal-header {
+  background-color: var(--primary-color);
+  color: white;
+  padding: 24px;
+  text-align: center;
+  border-bottom: none;
+  position: relative;
+}
+
+.login-required-modal .modal-header h2 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+}
+
+.login-required-modal .modal-header .close {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  color: white;
+  font-size: 28px;
+  font-weight: 300;
+  opacity: 0.8;
+  transition: opacity var(--transition-fast);
+}
+
+.login-required-modal .modal-header .close:hover {
+  opacity: 1;
+}
+
+.login-required-modal .modal-body {
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.login-required-modal .modal-body p {
+  margin: 0 0 24px 0;
+  font-size: var(--font-size-md);
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.login-required-modal .login-required-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.login-required-modal .btn {
+  flex: 1;
+  max-width: 150px;
+  padding: 12px 24px;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  border-radius: var(--border-radius-sm);
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.login-required-modal .btn-primary {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.login-required-modal .btn-primary:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 48, 135, 0.3);
+}
+
+.login-required-modal .btn-secondary {
+  background-color: var(--background-dark);
+  color: var(--text-secondary);
+}
+
+.login-required-modal .btn-secondary:hover {
+  background-color: #e0e0e0;
+}
+
+/* 모바일 대응 */
+@media (max-width: 480px) {
+  .login-required-modal {
+    max-width: 90% !important;
+    margin: 0 5% !important;
+  }
+
+  .login-required-modal .modal-header {
+    padding: 20px;
+  }
+
+  .login-required-modal .modal-header h2 {
+    font-size: var(--font-size-md);
+  }
+
+  .login-required-modal .modal-body {
+    padding: 24px 16px;
+  }
+
+  .login-required-modal .login-required-actions {
+    flex-direction: column;
+  }
+
+  .login-required-modal .btn {
+    max-width: 100%;
+  }
+}

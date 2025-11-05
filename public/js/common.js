@@ -438,18 +438,11 @@ window.LoginRequiredModal = (function () {
   function setupEventListeners() {
     // 모달 버튼 이벤트 설정
     const loginBtn = document.getElementById("loginModalBtn");
-    const inquiryBtn = document.getElementById("inquiryModalBtn");
     const closeBtn = document.getElementById("closeModalBtn");
 
     if (loginBtn) {
       loginBtn.addEventListener("click", () => {
         window.location.href = "/signinPage";
-      });
-    }
-
-    if (inquiryBtn) {
-      inquiryBtn.addEventListener("click", () => {
-        window.location.href = "/inquiryPage";
       });
     }
 
@@ -483,6 +476,52 @@ window.LoginRequiredModal = (function () {
     show,
     hide,
     checkLoginRequired,
+  };
+})();
+
+// 회원가입 팝업 버튼 관리자 (비로그인 사용자용)
+window.SignupPopupManager = (function () {
+  let buttonElement = null;
+
+  function init() {
+    buttonElement = document.getElementById("signupPopupBtn");
+    if (!buttonElement) {
+      console.log("SignupPopupBtn element not found");
+      return;
+    }
+
+    // AuthManager 초기화 후 표시 여부 결정
+    checkAndShow();
+
+    console.log("SignupPopupManager 초기화 완료");
+  }
+
+  function checkAndShow() {
+    // 비로그인 상태일 때만 버튼 표시
+    if (!window.AuthManager.isAuthenticated()) {
+      show();
+    } else {
+      hide();
+    }
+  }
+
+  function show() {
+    if (buttonElement) {
+      buttonElement.classList.add("show");
+    }
+  }
+
+  function hide() {
+    if (buttonElement) {
+      buttonElement.classList.remove("show");
+    }
+  }
+
+  return {
+    init,
+    checkAndShow,
+    show,
+    hide,
   };
 })();
 
@@ -1699,7 +1738,13 @@ document.addEventListener("DOMContentLoaded", function () {
   setupMobileFilters();
   setupBasicEventListeners();
 
-  window.AuthManager.checkAuthStatus();
+  // 인증 상태 체크 (비동기)
+  window.AuthManager.checkAuthStatus().then(() => {
+    // 인증 상태 체크 완료 후 회원가입 팝업 버튼 초기화
+    if (window.SignupPopupManager) {
+      window.SignupPopupManager.init();
+    }
+  });
 
   // 툴팁 시스템 초기화
   if (window.TooltipManager) {
