@@ -162,13 +162,13 @@ function displayPaymentList(payments, pagination) {
 
   // 페이지네이션 생성
   createPagination(
-    "payments-pagination",
     pagination.currentPage,
     pagination.totalPages,
     (page) => {
       currentPaymentPage = page;
       loadPaymentList();
-    }
+    },
+    "payments-pagination"
   );
 }
 

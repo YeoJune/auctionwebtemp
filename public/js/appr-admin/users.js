@@ -132,13 +132,13 @@ function displayUserList(users, pagination) {
 
   // 페이지네이션 생성
   createPagination(
-    "users-pagination",
     pagination.currentPage,
     pagination.totalPages,
     (page) => {
       currentUserPage = page;
       loadUserList();
-    }
+    },
+    "users-pagination"
   );
 }
 

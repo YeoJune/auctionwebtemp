@@ -317,6 +317,28 @@
         color: #fff;
       }
 
+      /* 10페이지 점프 버튼 스타일 */
+      .pagination-item.page-jump {
+        background-color: #e0f2fe;
+        color: #0284c7;
+        font-weight: 600;
+        border: 2px solid #0284c7;
+        padding: 8px 16px;
+      }
+
+      .pagination-item.page-jump:hover:not(.disabled) {
+        background-color: #0284c7;
+        color: white;
+      }
+
+      .pagination-item.page-jump.disabled {
+        background-color: #f3f4f6;
+        color: #9ca3af;
+        border-color: #d1d5db;
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
       .alert {
         padding: 15px;
         border-radius: 6px;
@@ -1800,6 +1822,27 @@
           container.appendChild(firstLink);
         }
 
+        // -10 버튼 (10페이지 이상일 때만 표시)
+        if (totalPages >= 10) {
+          const prev10Link = document.createElement("a");
+          prev10Link.href = "#";
+          prev10Link.classList.add("pagination-item", "page-jump");
+          prev10Link.textContent = "-10";
+          prev10Link.title = "10페이지 이전으로";
+          if (currentPage <= 10) {
+            prev10Link.classList.add("disabled");
+            prev10Link.style.opacity = "0.5";
+            prev10Link.style.cursor = "not-allowed";
+          } else {
+            prev10Link.addEventListener("click", (e) => {
+              e.preventDefault();
+              const targetPage = Math.max(1, currentPage - 10);
+              callback(targetPage);
+            });
+          }
+          container.appendChild(prev10Link);
+        }
+
         // 이전 페이지
         if (currentPage > 1) {
           const prevLink = document.createElement("a");
@@ -1839,6 +1882,27 @@
           nextLink.textContent = "›";
           nextLink.addEventListener("click", () => callback(currentPage + 1));
           container.appendChild(nextLink);
+        }
+
+        // +10 버튼 (10페이지 이상일 때만 표시)
+        if (totalPages >= 10) {
+          const next10Link = document.createElement("a");
+          next10Link.href = "#";
+          next10Link.classList.add("pagination-item", "page-jump");
+          next10Link.textContent = "+10";
+          next10Link.title = "10페이지 다음으로";
+          if (currentPage > totalPages - 10) {
+            next10Link.classList.add("disabled");
+            next10Link.style.opacity = "0.5";
+            next10Link.style.cursor = "not-allowed";
+          } else {
+            next10Link.addEventListener("click", (e) => {
+              e.preventDefault();
+              const targetPage = Math.min(totalPages, currentPage + 10);
+              callback(targetPage);
+            });
+          }
+          container.appendChild(next10Link);
         }
 
         // 마지막 페이지

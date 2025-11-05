@@ -127,13 +127,13 @@ function displayRestorationRequestList(restorations, pagination) {
 
   // 페이지네이션 생성
   createPagination(
-    "restoration-requests-pagination",
     pagination.currentPage,
     pagination.totalPages,
     (page) => {
       currentRequestPage = page;
       loadRestorationRequestList();
-    }
+    },
+    "restoration-requests-pagination"
   );
 }
 

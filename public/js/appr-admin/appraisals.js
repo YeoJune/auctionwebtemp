@@ -514,13 +514,13 @@ function displayAppraisalList(appraisals, pagination) {
 
   // 페이지네이션 생성
   createPagination(
-    "appraisals-pagination",
     pagination.currentPage,
     pagination.totalPages,
     (page) => {
       currentAppraisalPage = page;
       loadAppraisalList();
-    }
+    },
+    "appraisals-pagination"
   );
 }
 

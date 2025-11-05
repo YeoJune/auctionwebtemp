@@ -123,6 +123,18 @@ function createPagination(
   container.innerHTML = "";
   if (totalPages <= 1) return;
 
+  // -10 버튼 (10페이지 이상일 때만 표시)
+  if (totalPages >= 10) {
+    const prev10Button = createElement("button", "page-jump", "-10");
+    prev10Button.disabled = currentPage <= 10;
+    prev10Button.title = "10페이지 이전으로";
+    prev10Button.addEventListener("click", () => {
+      const targetPage = Math.max(1, currentPage - 10);
+      onPageChange(targetPage);
+    });
+    container.appendChild(prev10Button);
+  }
+
   // 이전 버튼
   const prevButton = createElement("button", "", "이전");
   prevButton.disabled = currentPage <= 1;
@@ -150,6 +162,18 @@ function createPagination(
   nextButton.disabled = currentPage >= totalPages;
   nextButton.addEventListener("click", () => onPageChange(currentPage + 1));
   container.appendChild(nextButton);
+
+  // +10 버튼 (10페이지 이상일 때만 표시)
+  if (totalPages >= 10) {
+    const next10Button = createElement("button", "page-jump", "+10");
+    next10Button.disabled = currentPage > totalPages - 10;
+    next10Button.title = "10페이지 다음으로";
+    next10Button.addEventListener("click", () => {
+      const targetPage = Math.min(totalPages, currentPage + 10);
+      onPageChange(targetPage);
+    });
+    container.appendChild(next10Button);
+  }
 }
 
 // 페이지 번호 생성
