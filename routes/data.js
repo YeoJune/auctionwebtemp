@@ -143,11 +143,6 @@ router.get("/", async (req, res) => {
     const conditions = ["ci.is_enabled = 1", "ci.auc_num != 3"]; // 기본 조건: 활성화된 아이템만
     const queryParams = [];
 
-    // // TEMP: 비로그인 사용자는 auc_num = 1 제외
-    // if (!userId) {
-    //   conditions.push("ci.auc_num != 1");
-    // }
-
     // 4. 추천 점수 필터
     if (minRecommend && parseInt(minRecommend) > 0) {
       conditions.push("ci.recommend >= ?");
@@ -169,14 +164,7 @@ router.get("/", async (req, res) => {
 
     // 6. 기본 조건들
     if (excludeExpired === "true") {
-      conditions.push(`
-      (
-        (ci.bid_type = 'direct' AND ci.scheduled_date > NOW()) OR
-        (ci.bid_type = 'live' AND
-          (ci.scheduled_date > NOW() OR DATE(ci.scheduled_date) = DATE(NOW()))
-        )
-      )
-      `);
+      conditions.push("ci.is_expired = 0");
     }
 
     // 입찰한 아이템만 보기

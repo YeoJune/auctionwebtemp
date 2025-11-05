@@ -20,15 +20,13 @@ const {
   updateFilterSetting,
   initializeFilterSettings,
   syncFilterSettingsToItems,
-} = require("../utils/filterDB");
-const {
   getRecommendSettings,
   addRecommendSetting,
   updateRecommendSetting,
   updateRecommendSettingsBatch,
   deleteRecommendSetting,
   syncRecommendSettingsToItems,
-} = require("../utils/recommend");
+} = require("../utils/dataUtils");
 const DBManager = require("../utils/DBManager");
 
 // Middleware to check if user is admin

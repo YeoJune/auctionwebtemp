@@ -14,8 +14,7 @@ const DBManager = require("../utils/DBManager");
 const { pool } = require("../utils/DB");
 const cron = require("node-cron");
 const { getAdminSettings } = require("../utils/adminDB");
-const { initializeFilterSettings } = require("../utils/filterDB");
-const { syncRecommendSettingsToItems } = require("../utils/recommend");
+const { syncAllData } = require("../utils/dataUtils");
 const dotenv = require("dotenv");
 const socketIO = require("socket.io");
 const { sendHigherBidAlerts } = require("../utils/message");
@@ -194,8 +193,7 @@ async function crawlAll() {
         "crawled_items"
       );
       await DBManager.cleanupUnusedImages("products");
-      await initializeFilterSettings();
-      await syncRecommendSettingsToItems();
+      await syncAllData();
     } catch (error) {
       throw error;
     } finally {

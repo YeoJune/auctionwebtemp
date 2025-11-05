@@ -9,7 +9,8 @@ const bodyParser = require("body-parser");
 const path = require("path");
 const { pool, sessionPool } = require("./utils/DB");
 const fs = require("fs");
-const { isAuthenticated } = require("./utils/middleware"); // 인증 미들웨어
+const { isAuthenticated } = require("./utils/middleware");
+const { startExpiredSchedulers } = require("./utils/dataUtils");
 
 // --- 사이트맵 라우트 ---
 const sitemapRoutes = require("./routes/sitemap");
@@ -442,4 +443,7 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Frontend URL for QR/Links: ${process.env.FRONTEND_URL}`);
+
+  // 만료 상태 자동 동기화 시작 (Direct: 1분, Live: 1시간)
+  startExpiredSchedulers();
 });
