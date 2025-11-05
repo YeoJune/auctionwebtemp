@@ -534,6 +534,9 @@ async function createAppraisalFromAuction(conn, bid, item, userId) {
 
     // additional_images에서 이미지 가져오기
     let rawImages = [];
+
+    if (item.image) rawImages.push(item.image);
+
     if (item.additional_images) {
       try {
         const additionalImages = JSON.parse(item.additional_images);
@@ -543,10 +546,6 @@ async function createAppraisalFromAuction(conn, bid, item, userId) {
       } catch (error) {
         console.error("additional_images JSON 파싱 오류:", error);
       }
-    }
-
-    if (rawImages.length === 0 && item.image) {
-      rawImages = [item.image];
     }
 
     // 경매 이미지들에 워터마크 적용 (최적화됨)
