@@ -641,8 +641,8 @@ class BrandAucCrawler extends AxiosCrawler {
       return {
         additional_images:
           formattedImages.length > 0 ? JSON.stringify(formattedImages) : null,
-        description: description,
-        accessory_code: accessoryCode,
+        description: description + accessoryCode,
+        accessory_code: "",
       };
     } catch (error) {
       console.error(
@@ -1642,8 +1642,8 @@ class BrandAucValueCrawler extends AxiosCrawler {
       return {
         additional_images:
           formattedImages.length > 0 ? JSON.stringify(formattedImages) : null,
-        description: description,
-        accessory_code: accessoryCode,
+        description: description + accessoryCode,
+        accessory_code: "",
       };
     } catch (error) {
       console.error(
