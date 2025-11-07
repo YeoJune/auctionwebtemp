@@ -633,6 +633,8 @@ class BrandAucCrawler extends AxiosCrawler {
         accessoryParts.push(`열쇠: ${detail.kanadeKey}`);
       if (detail.seal && detail.seal !== "なし")
         accessoryParts.push(`태그: ${detail.seal}`);
+      if (detail.shuppinBiko2List && detail.shuppinBiko2List.length > 0)
+        accessoryParts.push(`기타: ${detail.shuppinBiko2List.join(", ")}`);
 
       const accessoryCode = accessoryParts.join(", ") || "";
 
@@ -1632,6 +1634,8 @@ class BrandAucValueCrawler extends AxiosCrawler {
         accessoryParts.push(`열쇠: ${detail.kanadeKey}`);
       if (detail.seal && detail.seal !== "なし")
         accessoryParts.push(`태그: ${detail.seal}`);
+      if (detail.shuppinBiko2List && detail.shuppinBiko2List.length > 0)
+        accessoryParts.push(`기타: ${detail.shuppinBiko2List.join(", ")}`);
 
       const accessoryCode = accessoryParts.join(", ") || "";
 
