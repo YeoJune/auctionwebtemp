@@ -1226,7 +1226,6 @@ if (process.env.ENV === "development") {
   scheduleUpdateCrawlingWithId(); // 추가
   // scheduleExpiredBidsProcessing();
   loginAll();
-  syncAllData();
 }
 
 module.exports = { router, initializeSocket, notifyClientsOfChanges };
