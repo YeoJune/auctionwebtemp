@@ -581,6 +581,7 @@ function stopExpiredSchedulers() {
 async function syncAllData() {
   console.log("🔄 Starting full data synchronization...");
   try {
+    await initializeFilterSettings();
     await syncFilterSettingsToItems();
     await syncRecommendSettingsToItems();
     await syncAllExpiredStatus();
@@ -625,3 +626,5 @@ module.exports = {
   // All-in-one
   syncAllData,
 };
+
+syncAllData();
