@@ -563,6 +563,17 @@ class EcoAucCrawler extends AxiosCrawler {
       ? imageSrc.replace(/\?.*$/, "") + "?w=520&h=390"
       : null;
 
+    // itemNo 추출 (이미지 URL에서)
+    let itemNo = null;
+    if (imageSrc) {
+      // URL 형식: https://resize.ecoauc.com/images/item/20251105/257903351-1-dihkgmbyoerlfpwtvujxacqsnz.jpg?w=220&h=160
+      // /20251105/ 다음에 오는 숫자-문자열에서 첫 번째 - 앞의 숫자 추출
+      const match = imageSrc.match(/\/item\/\d+\/(\d+)-/);
+      if (match) {
+        itemNo = match[1];
+      }
+    }
+
     const original_scheduled_date = item0.scheduled_date;
     let scheduled_date = original_scheduled_date;
 
@@ -590,7 +601,9 @@ class EcoAucCrawler extends AxiosCrawler {
       scheduled_date: scheduled_date,
       auc_num: "1",
 
-      additional_info: {},
+      additional_info: {
+        ...(itemNo && { itemNo }),
+      },
     };
 
     // 원본과 동일하게 객체 병합
