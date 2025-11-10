@@ -1638,6 +1638,20 @@
   .bid-button {
     font-size: 11px;
     padding: 6px;
+
+    /* 페이지네이션 크기 축소 */
+    .pagination {
+      gap: 4px;
+      margin-top: 15px;
+      padding: 10px 0;
+    }
+
+    .pagination button {
+      min-width: 28px;
+      min-height: 28px;
+      padding: 4px;
+      font-size: 12px;
+    }
     min-width: 40px;
   }
 

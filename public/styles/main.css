@@ -1923,6 +1923,20 @@ select {
     top: 22px; /* 모바일에서 헤더 중앙 위치 조정 */
     right: 8px; /* 80% of 10px */
   }
+
+  /* 페이지네이션 크기 축소 */
+  .pagination {
+    gap: 4px;
+    margin-top: var(--spacing-md);
+    padding: var(--spacing-sm) 0;
+  }
+
+  .pagination button {
+    min-width: 28px;
+    min-height: 28px;
+    padding: 4px;
+    font-size: 12px;
+  }
 }
 
 /* 입찰 버튼 로딩 스타일 */

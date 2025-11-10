@@ -711,6 +711,20 @@
     padding: 8px 16px;
     font-size: 13px;
   }
+
+  /* 페이지네이션 크기 축소 */
+  .pagination {
+    gap: 4px;
+    margin-top: 15px;
+    padding: 10px 0;
+  }
+
+  .pagination button {
+    min-width: 28px;
+    min-height: 28px;
+    padding: 4px;
+    font-size: 12px;
+  }
 }
 
 /* Bid-products 페이지 전용 오버라이드 - bid-action 내부 요소 컴팩트화 */
