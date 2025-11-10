@@ -11,7 +11,7 @@ let pLimit;
 const LIMIT1 = 1;
 const LIMIT2 = 1;
 
-const API_DELAY = 5 * 1000; // 5초
+const API_DELAY = 10 * 1000; // 10초
 const PER_PAGE = 100;
 
 const mekikiAucConfig = {
