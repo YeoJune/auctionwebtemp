@@ -600,6 +600,17 @@ function renderDirectBidsTable(directBids) {
       );
     }
 
+    // additional_info에서 itemNo 추출 (1번 경매장인 경우)
+    let itemNo = null;
+    if (bid.item && bid.item.auc_num === "1" && bid.item.additional_info) {
+      try {
+        const additionalInfo = JSON.parse(bid.item.additional_info);
+        itemNo = additionalInfo.itemNo || null;
+      } catch (e) {
+        // JSON 파싱 실패 시 무시
+      }
+    }
+
     // 수수료 포함 가격 계산
     let totalPrice = "-";
     let winningTotalPrice = "-";
@@ -636,6 +647,7 @@ function renderDirectBidsTable(directBids) {
         <div class="item-details">
           <div><a href="${itemUrl}" target="_blank">${bid.item_id}</a></div>
           <div class="item-meta">
+            ${itemNo ? `<span>품번: ${itemNo}</span>` : ""}
             <span>제목: ${bid.item?.original_title || "-"}</span>
             <span>경매번호: ${bid.item?.auc_num || "-"}</span>
             <span>카테고리: ${bid.item?.category || "-"}</span>
