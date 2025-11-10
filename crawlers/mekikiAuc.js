@@ -231,6 +231,7 @@ class MekikiAucCrawler extends AxiosCrawler {
           },
         }
       );
+      await this.sleep(API_DELAY);
 
       const totalPages = firstPageResponse.data.meta?.pages || 1;
       const totalItems = firstPageResponse.data.meta?.total || 0;
@@ -277,6 +278,8 @@ class MekikiAucCrawler extends AxiosCrawler {
                   },
                 }
               );
+
+              await this.sleep(API_DELAY);
 
               const pageItems = await this.processItemsPage(
                 response.data.collection || [],
