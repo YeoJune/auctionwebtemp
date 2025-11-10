@@ -490,6 +490,11 @@ window.SignupPopupManager = (function () {
       return;
     }
 
+    // 클릭 이벤트 추가
+    buttonElement.addEventListener("click", () => {
+      window.location.href = "https://casastrade.com/inquiryPage";
+    });
+
     // AuthManager 초기화 후 표시 여부 결정
     checkAndShow();
 
