@@ -869,39 +869,145 @@ class BrandAucCrawler extends AxiosCrawler {
   }
 
   async directBid(item_id, price) {
-    try {
-      // 로그인 상태 확인
-      await this.login();
+    return await this.retryOperation(
+      async () => {
+        // 로그인 상태 확인
+        await this.login();
 
-      // 직접 연결 클라이언트 사용
-      const directClient = this.getDirectClient();
+        // 직접 연결 클라이언트 사용
+        const directClient = this.getDirectClient();
 
-      // XSRF 토큰 추출 (쿠키에서)
-      const cookies = await directClient.cookieJar.getCookies(
-        "https://bid.brand-auc.com"
-      );
-      const xsrfToken = cookies.find(
-        (cookie) => cookie.key === "XSRF-TOKEN"
-      )?.value;
+        // XSRF 토큰 추출 (쿠키에서)
+        const cookies = await directClient.cookieJar.getCookies(
+          "https://bid.brand-auc.com"
+        );
+        const xsrfToken = cookies.find(
+          (cookie) => cookie.key === "XSRF-TOKEN"
+        )?.value;
 
-      if (!xsrfToken) {
-        throw new Error("XSRF token not found in cookies");
-      }
+        if (!xsrfToken) {
+          throw new Error("XSRF token not found in cookies");
+        }
 
-      try {
-        // 첫 번째 API 호출 시도 (기존 방식)
+        try {
+          // 첫 번째 API 호출 시도 (기존 방식)
+          const response = await directClient.client.post(
+            "https://bid.brand-auc.com/api/v1/brand-bid/jizen-nyusatsu/",
+            {
+              uketsukeBng: item_id,
+              kaijoKbn: 1,
+              nyusatsuKng: price,
+            },
+            {
+              timeout: 5000,
+              headers: {
+                "Content-Type": "application/json",
+                Referer: "https://bid.brand-auc.com/",
+                "X-Requested-With": "XMLHttpRequest",
+                "X-XSRF-TOKEN": xsrfToken,
+              },
+            }
+          );
+
+          // 첫 번째 API 성공
+          if (response.status === 201) {
+            return {
+              success: true,
+              message: "Bid successful",
+              data: response.data,
+            };
+          }
+
+          // 첫 번째 API 실패 (201이 아닌 응답)
+          throw new Error("First API endpoint failed");
+        } catch (firstApiError) {
+          console.log("First API failed, trying alternative endpoint...");
+
+          // 두 번째 API 호출 시도 (대체 API)
+          const altResponse = await directClient.client.post(
+            "https://bid.brand-auc.com/api/v1/brand-bid/com/bid?gamenId=B201-01&viewType=1",
+            {
+              uketsukeBng: item_id,
+              nyusatsuKng: price,
+              startKng: 0,
+              kaijoKbn: 1,
+            },
+            {
+              timeout: 5000,
+              headers: {
+                "Content-Type": "application/json",
+                Referer: "https://bid.brand-auc.com/",
+                "X-Requested-With": "XMLHttpRequest",
+                "X-XSRF-TOKEN": xsrfToken,
+              },
+            }
+          );
+
+          // 두 번째 API 응답 확인
+          if (altResponse.status === 200 || altResponse.status === 201) {
+            return {
+              success: true,
+              message: "Bid successful (alternative method)",
+              data: altResponse.data,
+            };
+          } else {
+            return {
+              success: false,
+              message: "Bid failed (alternative method)",
+              error: altResponse.data,
+            };
+          }
+        }
+      },
+      3,
+      1000
+    ).catch((error) => {
+      console.error(`Error placing bid for item ${item_id}:`, error.message);
+      return {
+        success: false,
+        message: "Bid failed",
+        error: error.message,
+      };
+    });
+  }
+
+  async liveBid(item_id, price) {
+    return await this.retryOperation(
+      async () => {
+        // 로그인 상태 확인
+        await this.login();
+
+        // 직접 연결 클라이언트 사용
+        const directClient = this.getDirectClient();
+
+        // XSRF 토큰 추출 (쿠키에서)
+        const cookies = await directClient.cookieJar.getCookies(
+          "https://u.brand-auc.com/"
+        );
+        const xsrfToken = cookies.find(
+          (cookie) => cookie.key === "XSRF-TOKEN"
+        )?.value;
+
+        if (!xsrfToken) {
+          throw new Error("XSRF token not found in cookies");
+        }
+
         const response = await directClient.client.post(
-          "https://bid.brand-auc.com/api/v1/brand-bid/jizen-nyusatsu/",
+          "https://u.brand-auc.com/api/v1/auction/nyusatsu/create",
           {
             uketsukeBng: item_id,
-            kaijoKbn: 1,
-            nyusatsuKng: price,
+            nyuKng: price,
+            nyuLockVersion: null,
           },
           {
+            timeout: 5000,
+            params: {
+              gamenId: "B02-03",
+            },
             headers: {
               "Content-Type": "application/json",
-              Referer: "https://bid.brand-auc.com/",
-              "X-Requested-With": "XMLHttpRequest",
+              "accept-encoding": "gzip, deflate, br, zstd",
+              Referer: "hhttps://u.brand-auc.com/",
               "X-XSRF-TOKEN": xsrfToken,
             },
           }
@@ -914,113 +1020,20 @@ class BrandAucCrawler extends AxiosCrawler {
             message: "Bid successful",
             data: response.data,
           };
-        }
-
-        // 첫 번째 API 실패 (201이 아닌 응답)
-        throw new Error("First API endpoint failed");
-      } catch (firstApiError) {
-        console.log("First API failed, trying alternative endpoint...");
-
-        // 두 번째 API 호출 시도 (대체 API)
-        const altResponse = await directClient.client.post(
-          "https://bid.brand-auc.com/api/v1/brand-bid/com/bid?gamenId=B201-01&viewType=1",
-          {
-            uketsukeBng: item_id,
-            nyusatsuKng: price,
-            startKng: 0,
-            kaijoKbn: 1,
-          },
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Referer: "https://bid.brand-auc.com/",
-              "X-Requested-With": "XMLHttpRequest",
-              "X-XSRF-TOKEN": xsrfToken,
-            },
-          }
-        );
-
-        // 두 번째 API 응답 확인
-        if (altResponse.status === 200 || altResponse.status === 201) {
-          return {
-            success: true,
-            message: "Bid successful (alternative method)",
-            data: altResponse.data,
-          };
         } else {
-          return {
-            success: false,
-            message: "Bid failed (alternative method)",
-            error: altResponse.data,
-          };
+          throw new Error("Bid failed with status " + response.status);
         }
-      }
-    } catch (error) {
+      },
+      3,
+      1000
+    ).catch((error) => {
       console.error(`Error placing bid for item ${item_id}:`, error.message);
       return {
         success: false,
         message: "Bid failed",
         error: error.message,
       };
-    }
-  }
-
-  async liveBid(item_id, price) {
-    try {
-      // 로그인 상태 확인
-      await this.login();
-
-      // 직접 연결 클라이언트 사용
-      const directClient = this.getDirectClient();
-
-      // XSRF 토큰 추출 (쿠키에서)
-      const cookies = await directClient.cookieJar.getCookies(
-        "https://u.brand-auc.com/"
-      );
-      const xsrfToken = cookies.find(
-        (cookie) => cookie.key === "XSRF-TOKEN"
-      )?.value;
-
-      if (!xsrfToken) {
-        throw new Error("XSRF token not found in cookies");
-      }
-
-      const response = await directClient.client.post(
-        "https://u.brand-auc.com/api/v1/auction/nyusatsu/create",
-        {
-          uketsukeBng: item_id,
-          nyuKng: price,
-          nyuLockVersion: null,
-        },
-        {
-          params: {
-            gamenId: "B02-03",
-          },
-          headers: {
-            "Content-Type": "application/json",
-            "accept-encoding": "gzip, deflate, br, zstd",
-            Referer: "hhttps://u.brand-auc.com/",
-            "X-XSRF-TOKEN": xsrfToken,
-          },
-        }
-      );
-
-      // 첫 번째 API 성공
-      if (response.status === 201) {
-        return {
-          success: true,
-          message: "Bid successful",
-          data: response.data,
-        };
-      }
-    } catch (error) {
-      console.error(`Error placing bid for item ${item_id}:`, error.message);
-      return {
-        success: false,
-        message: "Bid failed",
-        error: error.message,
-      };
-    }
+    });
   }
 
   async addWishlist(item_id, favorite_number = "A", kaisaiKaisu = 0) {

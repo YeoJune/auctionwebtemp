@@ -418,51 +418,56 @@ class MekikiAucCrawler extends AxiosCrawler {
 
   // Live Bid
   async liveBid(item_id, price, event_id) {
-    try {
-      console.log(
-        `Placing live bid for item ${item_id} with price ${price}...`
-      );
+    return await this.retryOperation(
+      async () => {
+        console.log(
+          `Placing live bid for item ${item_id} with price ${price}...`
+        );
 
-      // 로그인 확인
-      await this.login();
+        // 로그인 확인
+        await this.login();
 
-      // 직접 연결 클라이언트 사용
-      const directClient = this.getDirectClient();
+        // 직접 연결 클라이언트 사용
+        const directClient = this.getDirectClient();
 
-      // 입찰 요청
-      const bidResponse = await directClient.client.post(
-        `${this.config.itemsUrl}/${event_id}/items/${item_id}/auto_bid`,
-        { price: price },
-        {
-          params: {
-            user_id: this.userId,
-          },
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
+        // 입찰 요청
+        const bidResponse = await directClient.client.post(
+          `${this.config.itemsUrl}/${event_id}/items/${item_id}/auto_bid`,
+          { price: price },
+          {
+            timeout: 5000,
+            params: {
+              user_id: this.userId,
+            },
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+          }
+        );
+
+        // 응답 확인
+        if (bidResponse.status === 200 && bidResponse.data?.item) {
+          console.log(`Bid successful for item ${item_id} with price ${price}`);
+          return {
+            success: true,
+            message: "Bid placed successfully",
+            data: bidResponse.data,
+          };
+        } else {
+          throw new Error(`Bid failed for item ${item_id} with price ${price}`);
         }
-      );
-
-      // 응답 확인
-      if (bidResponse.status === 200 && bidResponse.data?.item) {
-        console.log(`Bid successful for item ${item_id} with price ${price}`);
-        return {
-          success: true,
-          message: "Bid placed successfully",
-          data: bidResponse.data,
-        };
-      } else {
-        throw new Error(`Bid failed for item ${item_id} with price ${price}`);
-      }
-    } catch (error) {
+      },
+      3,
+      1000
+    ).catch((error) => {
       console.error(`Error placing bid for item ${item_id}:`, error.message);
       return {
         success: false,
         message: "Bid failed",
         error: error.message,
       };
-    }
+    });
   }
 
   // Add Wishlist (Like)
