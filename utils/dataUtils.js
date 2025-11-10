@@ -626,5 +626,3 @@ module.exports = {
   // All-in-one
   syncAllData,
 };
-
-syncAllData();
