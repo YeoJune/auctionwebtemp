@@ -105,9 +105,19 @@ class DatabaseManager {
 
       for (const item of items) {
         // item_id와 scheduled_date, starting_price만 업데이트
-        if (item.item_id && (item.scheduled_date || item.starting_price)) {
+        if (
+          item.item_id &&
+          (item.original_scheduled_date ||
+            item.scheduled_date ||
+            item.starting_price)
+        ) {
           const updateFields = [];
           const values = [];
+
+          if (item.original_scheduled_date) {
+            updateFields.push("original_scheduled_date = ?");
+            values.push(item.original_scheduled_date);
+          }
 
           if (item.scheduled_date) {
             updateFields.push("scheduled_date = ?");

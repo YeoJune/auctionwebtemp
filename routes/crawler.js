@@ -188,6 +188,15 @@ async function crawlAll() {
       }
 
       await DBManager.saveItems(allItems, "crawled_items");
+
+      // existing 아이템 업데이트 (title 없는 아이템)
+      const itemsToUpdate = allItems.filter(
+        (item) => !item.title && item.item_id
+      );
+      if (itemsToUpdate.length > 0) {
+        await DBManager.updateItems(itemsToUpdate, "crawled_items");
+      }
+
       await DBManager.deleteItemsWithout(
         allItems.map((item) => item.item_id),
         "crawled_items"

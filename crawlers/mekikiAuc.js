@@ -322,7 +322,10 @@ class MekikiAucCrawler extends AxiosCrawler {
     for (const item of items) {
       // 이미 처리된 아이템 제외
       if (existingIds.has(item.id.toString())) {
-        processedItems.push({ item_id: item.id.toString() });
+        processedItems.push({
+          item_id: item.id.toString(),
+          starting_price: item.current_price || 0,
+        });
         continue;
       }
 
