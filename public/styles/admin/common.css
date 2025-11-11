@@ -716,3 +716,68 @@
 .dropdown-container {
   position: relative;
 }
+
+/* ========== 페이지네이션 ========== */
+.pagination {
+  margin: 25px 0;
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e9ecef;
+}
+
+.pagination-info {
+  margin-bottom: 15px;
+  font-size: 15px;
+  color: #6c757d;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* common.js 기본 페이지네이션 구조에 맞춘 스타일 */
+#pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+#pagination > div:first-child {
+  /* pagination-info div */
+  width: 100%;
+  font-size: 15px;
+  color: #6c757d;
+  text-align: center;
+  font-weight: 500;
+  margin-bottom: 15px;
+}
+
+#pagination button {
+  min-width: 40px;
+  height: 38px;
+  font-size: 14px;
+  border: 1px solid #e9ecef;
+  background-color: #fff;
+  color: #495057;
+  margin: 0 4px;
+}
+
+#pagination button:hover {
+  background-color: #3498db;
+  color: white;
+  border-color: #2980b9;
+}
+
+#pagination button.active {
+  background-color: #3498db;
+  color: white;
+  border-color: #2980b9;
+  font-weight: 600;
+}
+
+#pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
