@@ -141,7 +141,7 @@ router.get("/", async (req, res) => {
           SELECT 
             l.id, 'live' as type, l.status, l.user_id,
             l.first_price, l.second_price, l.final_price, l.winning_price, 
-            l.appr_id, l.created_at, l.updated_at, l.completed_at,
+            l.appr_id, l.repair_requested_at, l.created_at, l.updated_at, l.completed_at,
             i.item_id, i.original_title, i.title, i.brand, i.category, i.image, 
             i.scheduled_date, i.auc_num, i.rank, i.starting_price
           FROM live_bids l
@@ -154,7 +154,7 @@ router.get("/", async (req, res) => {
           SELECT 
             l.id, 'live' as type, l.status, l.user_id,
             l.first_price, l.second_price, l.final_price, l.winning_price, 
-            l.appr_id, l.created_at, l.updated_at, l.completed_at,
+            l.appr_id, l.repair_requested_at, l.created_at, l.updated_at, l.completed_at,
             i.item_id, i.original_title, i.title, i.brand, i.category, i.image, 
             i.scheduled_date, i.auc_num, i.rank, i.starting_price
           FROM live_bids l
@@ -175,7 +175,7 @@ router.get("/", async (req, res) => {
           SELECT 
             d.id, 'direct' as type, d.status, d.user_id,
             d.current_price as final_price, d.winning_price, 
-            d.appr_id, d.created_at, d.updated_at, d.completed_at,
+            d.appr_id, d.repair_requested_at, d.created_at, d.updated_at, d.completed_at,
             i.item_id, i.original_title, i.title, i.brand, i.category, i.image,
             i.scheduled_date, i.auc_num, i.rank, i.starting_price
           FROM direct_bids d
@@ -188,7 +188,7 @@ router.get("/", async (req, res) => {
           SELECT 
             d.id, 'direct' as type, d.status, d.user_id,
             d.current_price as final_price, d.winning_price, 
-            d.appr_id, d.created_at, d.updated_at, d.completed_at,
+            d.appr_id, d.repair_requested_at, d.created_at, d.updated_at, d.completed_at,
             i.item_id, i.original_title, i.title, i.brand, i.category, i.image,
             i.scheduled_date, i.auc_num, i.rank, i.starting_price
           FROM direct_bids d

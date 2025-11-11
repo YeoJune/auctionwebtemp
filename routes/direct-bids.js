@@ -223,6 +223,7 @@ router.get("/", async (req, res) => {
         winning_price: row.winning_price,
         notification_sent_at: row.notification_sent_at,
         appr_id: row.appr_id,
+        repair_requested_at: row.repair_requested_at,
       };
 
       // Only include item if it exists
