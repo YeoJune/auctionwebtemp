@@ -661,6 +661,12 @@
   border: 1px solid #bbdefb;
 }
 
+.status-shipping {
+  background-color: #e8f5e9;
+  color: #388e3c;
+  border: 1px solid #a5d6a7;
+}
+
 .status-waiting {
   background-color: #fff3e0;
   color: #f57c00;
