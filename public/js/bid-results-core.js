@@ -419,8 +419,25 @@ window.BidResultsCore = (function () {
       statusSpan.textContent = "출고됨";
       statusSpan.classList.add("status-shipped");
     } else if (item.status === "completed") {
-      statusSpan.textContent = "출고 대기";
-      statusSpan.classList.add("status-waiting");
+      // completed_at이 있고 1일 이상 지났는지 확인
+      if (item.completed_at) {
+        const completedDate = new Date(item.completed_at);
+        const now = new Date();
+        const daysSinceCompleted =
+          (now - completedDate) / (1000 * 60 * 60 * 24);
+
+        if (daysSinceCompleted >= 1) {
+          statusSpan.textContent = "해외배송중";
+          statusSpan.classList.add("status-shipping");
+        } else {
+          statusSpan.textContent = "출고 대기";
+          statusSpan.classList.add("status-waiting");
+        }
+      } else {
+        // completed_at이 없으면 출고 대기로 표시
+        statusSpan.textContent = "출고 대기";
+        statusSpan.classList.add("status-waiting");
+      }
     } else {
       statusSpan.textContent = "-";
       statusSpan.classList.add("status-none");

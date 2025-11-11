@@ -185,6 +185,7 @@ router.get("/", async (req, res) => {
         status: row.status,
         created_at: row.created_at,
         updated_at: row.updated_at,
+        completed_at: row.completed_at,
         winning_price: row.winning_price,
         notification_sent_at: row.notification_sent_at,
         appr_id: row.appr_id,
@@ -539,7 +540,7 @@ router.put("/complete", isAdmin, async (req, res) => {
 
       // 완료 처리: winningPrice <= final_price
       const [completeResult] = await connection.query(
-        `UPDATE live_bids SET status = 'completed', winning_price = ? WHERE id IN (${placeholders}) AND status = 'final' AND final_price >= ?`,
+        `UPDATE live_bids SET status = 'completed', winning_price = ?, completed_at = NOW() WHERE id IN (${placeholders}) AND status = 'final' AND final_price >= ?`,
         [winningPrice, ...bidIds, winningPrice]
       );
       completedCount = completeResult.affectedRows;
@@ -550,7 +551,7 @@ router.put("/complete", isAdmin, async (req, res) => {
     } else {
       // 낙찰 금액이 없을 경우 기존 최종 입찰가를 winning_price로 설정하여 완료 처리
       [updateResult] = await connection.query(
-        `UPDATE live_bids SET status = 'completed', winning_price = final_price WHERE id IN (${placeholders}) AND status = 'final'`,
+        `UPDATE live_bids SET status = 'completed', winning_price = final_price, completed_at = NOW() WHERE id IN (${placeholders}) AND status = 'final'`,
         bidIds
       );
       completedCount = updateResult.affectedRows;
