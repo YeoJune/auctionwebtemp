@@ -7,6 +7,9 @@ const { createOrUpdateSettlement } = require("../utils/settlement");
 const { calculateTotalPrice, calculateFee } = require("../utils/calculate-fee");
 const { getExchangeRate } = require("../utils/exchange-rate");
 
+// 수수료 상수 (나중에 수정 가능)
+const REPAIR_FEE = 0; // 원 (VAT 포함) - 나중에 수수료 추가 시 이 값만 변경
+
 // 미들웨어
 const isAdmin = (req, res, next) => {
   if (req.session.user?.id === "admin") {
@@ -546,6 +549,162 @@ router.post("/direct/:id/request-appraisal", async (req, res) => {
     console.error("감정서 신청 중 오류 발생:", err);
     res.status(500).json({
       message: err.message || "감정서 신청 중 오류가 발생했습니다.",
+    });
+  } finally {
+    connection.release();
+  }
+});
+
+/**
+ * POST /api/bid-results/live/:id/request-repair
+ * 현장 경매 수선 접수
+ */
+router.post("/live/:id/request-repair", async (req, res) => {
+  const bidId = req.params.id;
+
+  if (!req.session.user) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const userId = req.session.user.id;
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [bids] = await connection.query(
+      `SELECT l.*, i.brand, i.title 
+       FROM live_bids l 
+       JOIN crawled_items i ON l.item_id = i.item_id 
+       WHERE l.id = ? AND l.status IN ('completed', 'shipped') AND l.winning_price > 0`,
+      [bidId]
+    );
+
+    if (
+      bids.length === 0 ||
+      !(bids[0].user_id == userId || userId == "admin")
+    ) {
+      await connection.rollback();
+      return res.status(404).json({
+        message: "낙찰된 상품을 찾을 수 없거나 접근 권한이 없습니다.",
+      });
+    }
+
+    const bid = bids[0];
+
+    if (bid.repair_requested_at) {
+      await connection.rollback();
+      return res.status(400).json({
+        message: "이미 수선을 접수했습니다.",
+        requested_at: bid.repair_requested_at,
+      });
+    }
+
+    await connection.query(
+      "UPDATE live_bids SET repair_requested_at = NOW() WHERE id = ?",
+      [bidId]
+    );
+
+    await connection.commit();
+
+    // 정산 업데이트 (수수료가 0원이어도 기록)
+    if (bid.scheduled_date) {
+      const settlementDate = new Date(bid.scheduled_date)
+        .toISOString()
+        .split("T")[0];
+      createOrUpdateSettlement(bid.user_id, settlementDate).catch(
+        console.error
+      );
+    }
+
+    res.status(201).json({
+      message: "수선 접수가 완료되었습니다.",
+      requested_at: new Date(),
+      fee: REPAIR_FEE,
+    });
+  } catch (err) {
+    await connection.rollback();
+    console.error("수선 접수 중 오류 발생:", err);
+    res.status(500).json({
+      message: err.message || "수선 접수 중 오류가 발생했습니다.",
+    });
+  } finally {
+    connection.release();
+  }
+});
+
+/**
+ * POST /api/bid-results/direct/:id/request-repair
+ * 직접 경매 수선 접수
+ */
+router.post("/direct/:id/request-repair", async (req, res) => {
+  const bidId = req.params.id;
+
+  if (!req.session.user) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const userId = req.session.user.id;
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [bids] = await connection.query(
+      `SELECT d.*, i.brand, i.title 
+       FROM direct_bids d 
+       JOIN crawled_items i ON d.item_id = i.item_id 
+       WHERE d.id = ? AND d.status IN ('completed', 'shipped') AND d.winning_price > 0`,
+      [bidId]
+    );
+
+    if (
+      bids.length === 0 ||
+      !(bids[0].user_id == userId || userId == "admin")
+    ) {
+      await connection.rollback();
+      return res.status(404).json({
+        message: "낙찰된 상품을 찾을 수 없거나 접근 권한이 없습니다.",
+      });
+    }
+
+    const bid = bids[0];
+
+    if (bid.repair_requested_at) {
+      await connection.rollback();
+      return res.status(400).json({
+        message: "이미 수선을 접수했습니다.",
+        requested_at: bid.repair_requested_at,
+      });
+    }
+
+    await connection.query(
+      "UPDATE direct_bids SET repair_requested_at = NOW() WHERE id = ?",
+      [bidId]
+    );
+
+    await connection.commit();
+
+    // 정산 업데이트 (수수료가 0원이어도 기록)
+    if (bid.scheduled_date) {
+      const settlementDate = new Date(bid.scheduled_date)
+        .toISOString()
+        .split("T")[0];
+      createOrUpdateSettlement(bid.user_id, settlementDate).catch(
+        console.error
+      );
+    }
+
+    res.status(201).json({
+      message: "수선 접수가 완료되었습니다.",
+      requested_at: new Date(),
+      fee: REPAIR_FEE,
+    });
+  } catch (err) {
+    await connection.rollback();
+    console.error("수선 접수 중 오류 발생:", err);
+    res.status(500).json({
+      message: err.message || "수선 접수 중 오류가 발생했습니다.",
     });
   } finally {
     connection.release();

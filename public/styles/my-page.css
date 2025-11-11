@@ -1015,6 +1015,27 @@
   opacity: 0.9;
 }
 
+/* 수선 버튼 */
+.repair-btn {
+  background-color: #ff9800;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.repair-btn.success-button {
+  background-color: #4caf50;
+}
+
+.repair-btn:hover {
+  opacity: 0.9;
+}
+
 /* 계정 관리 */
 .account-content {
   display: block;

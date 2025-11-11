@@ -521,6 +521,14 @@ function renderDirectBidsTable(directBids) {
       appraisalBadge = '<span class="badge badge-secondary">미발급</span>';
     }
 
+    // 수선 상태 배지
+    let repairBadge = "";
+    if (bid.repair_requested_at) {
+      repairBadge = '<span class="badge badge-success">접수됨</span>';
+    } else {
+      repairBadge = '<span class="badge badge-secondary">미접수</span>';
+    }
+
     // 플랫폼 반영 상태 배지
     let submittedBadge = "";
     if (bid.submitted_to_platform) {
@@ -682,6 +690,7 @@ function renderDirectBidsTable(directBids) {
    <td>${formatDateTime(bid.updated_at)}</td>
    <td>${statusBadge}</td>
    <td>${appraisalBadge}</td>
+   <td>${repairBadge}</td>
    <td>${submittedBadge}</td>
    <td>
      ${actionButtons}

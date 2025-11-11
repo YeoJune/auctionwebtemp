@@ -438,6 +438,14 @@ function renderLiveBidsTable(liveBids) {
       appraisalBadge = '<span class="badge badge-secondary">미발급</span>';
     }
 
+    // 수선 상태 배지
+    let repairBadge = "";
+    if (bid.repair_requested_at) {
+      repairBadge = '<span class="badge badge-success">접수됨</span>';
+    } else {
+      repairBadge = '<span class="badge badge-secondary">미접수</span>';
+    }
+
     // 작업 버튼 - 수정 버튼 추가
     let actionButtons = `<button class="btn btn-sm btn-secondary" onclick="openEditBidModal(${bid.id})">수정</button>`;
 
@@ -598,6 +606,7 @@ function renderLiveBidsTable(liveBids) {
     </td>
     <td>${statusBadge}</td>
     <td>${appraisalBadge}</td>
+    <td>${repairBadge}</td>
     <td>${formatDateTime(bid.updated_at)}</td>
     <td>${actionButtons}</td>
   </tr>

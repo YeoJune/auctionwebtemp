@@ -80,6 +80,7 @@ async function createOrUpdateSettlement(userId, date) {
     let totalJapaneseYen = 0;
     let totalAmount = 0;
     let appraisalCount = 0;
+    let repairCount = 0;
 
     items.forEach((item) => {
       totalJapaneseYen += Number(item.winning_price);
@@ -97,6 +98,11 @@ async function createOrUpdateSettlement(userId, date) {
       if (item.appr_id) {
         appraisalCount++;
       }
+
+      // 수선 개수
+      if (item.repair_requested_at) {
+        repairCount++;
+      }
     });
 
     // 5. 수수료 계산 (사용자별 수수료율 적용)
@@ -110,8 +116,13 @@ async function createOrUpdateSettlement(userId, date) {
     const appraisalFee = appraisalCount * 16500;
     const appraisalVat = Math.round(appraisalFee / 11);
 
-    // 7. 최종 금액
-    const finalAmount = totalAmount + feeAmount + appraisalFee;
+    // 7. 수선 수수료 (나중에 수정 가능)
+    const REPAIR_FEE = 0; // 원 (VAT 포함)
+    const repairFee = repairCount * REPAIR_FEE;
+    const repairVat = REPAIR_FEE > 0 ? Math.round(repairFee / 11) : 0;
+
+    // 8. 최종 금액
+    const finalAmount = totalAmount + feeAmount + appraisalFee + repairFee;
 
     // 8. 정산 저장 (INSERT or UPDATE)
     const [existing] = await connection.query(
@@ -131,6 +142,9 @@ async function createOrUpdateSettlement(userId, date) {
              appraisal_fee = ?,
              appraisal_vat = ?,
              appraisal_count = ?,
+             repair_fee = ?,
+             repair_vat = ?,
+             repair_count = ?,
              final_amount = ?, 
              exchange_rate = ?
          WHERE id = ?`,
@@ -143,6 +157,9 @@ async function createOrUpdateSettlement(userId, date) {
           appraisalFee,
           appraisalVat,
           appraisalCount,
+          repairFee,
+          repairVat,
+          repairCount,
           finalAmount,
           exchangeRate,
           existing[0].id,
@@ -155,8 +172,9 @@ async function createOrUpdateSettlement(userId, date) {
          (user_id, settlement_date, item_count, total_japanese_yen, 
           total_amount, fee_amount, vat_amount, 
           appraisal_fee, appraisal_vat, appraisal_count,
+          repair_fee, repair_vat, repair_count,
           final_amount, exchange_rate)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           userId,
           date,
@@ -168,6 +186,9 @@ async function createOrUpdateSettlement(userId, date) {
           appraisalFee,
           appraisalVat,
           appraisalCount,
+          repairFee,
+          repairVat,
+          repairCount,
           finalAmount,
           exchangeRate,
         ]

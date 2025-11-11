@@ -223,6 +223,7 @@ window.BidResultsCore = (function () {
         <th>관부가세 포함 (₩)</th>
         <th>출고 여부</th>
         <th>감정서</th>
+        <th>수선</th>
       </tr>
     `;
     detailsTable.appendChild(tableHeader);
@@ -370,6 +371,15 @@ window.BidResultsCore = (function () {
       appraisalCell.textContent = "-";
     }
 
+    // 수선
+    const repairCell = createElement("td");
+    if (status === "success") {
+      const repairBtn = createRepairButton(item);
+      repairCell.appendChild(repairBtn);
+    } else {
+      repairCell.textContent = "-";
+    }
+
     [
       imageCell,
       brandCell,
@@ -379,6 +389,7 @@ window.BidResultsCore = (function () {
       koreanCell,
       shippingCell,
       appraisalCell,
+      repairCell,
     ].forEach((cell) => {
       row.appendChild(cell);
     });
@@ -402,6 +413,29 @@ window.BidResultsCore = (function () {
       button.onclick = () => {
         if (window.requestAppraisal) {
           window.requestAppraisal(item);
+        }
+      };
+    }
+
+    return button;
+  }
+
+  /**
+   * 수선 버튼 생성
+   */
+  function createRepairButton(item) {
+    const button = createElement("button", "repair-btn small-button");
+
+    if (item.repair_requested_at) {
+      button.textContent = "접수 완료";
+      button.classList.add("success-button");
+      button.onclick = () => {};
+    } else {
+      button.textContent = "수선 접수";
+      button.classList.add("primary-button");
+      button.onclick = () => {
+        if (window.requestRepair) {
+          window.requestRepair(item);
         }
       };
     }

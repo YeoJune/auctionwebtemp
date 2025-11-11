@@ -401,6 +401,25 @@
   color: white;
 }
 
+/* 수선 버튼 */
+.repair-btn {
+  padding: 4px 8px;
+  font-size: 12px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+}
+
+.repair-btn.primary-button {
+  background-color: #ff9800;
+  color: white;
+}
+
+.repair-btn.success-button {
+  background-color: #4caf50;
+  color: white;
+}
+
 /* 로딩 메시지 */
 .loading-msg {
   text-align: center;
