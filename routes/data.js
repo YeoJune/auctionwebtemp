@@ -287,7 +287,7 @@ router.get("/", async (req, res) => {
     }
 
     const sortDirection = sortOrder.toLowerCase() === "desc" ? "DESC" : "ASC";
-    finalQuery += ` ORDER BY ${orderByClause} ${sortDirection}`;
+    finalQuery += ` ORDER BY ${orderByClause} ${sortDirection}, ci.auc_num DESC`;
 
     // 11. 카운트 쿼리 (LIMIT 전에)
     const countQuery = `SELECT COUNT(*) as total FROM (${finalQuery}) as subquery`;

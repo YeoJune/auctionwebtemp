@@ -189,7 +189,7 @@ router.get("/", async (req, res) => {
     }
 
     const sortDirection = sortOrder.toLowerCase() === "desc" ? "DESC" : "ASC";
-    query += ` ORDER BY ${orderByClause} ${sortDirection}`;
+    query += ` ORDER BY ${orderByClause} ${sortDirection}, auc_num DESC`;
 
     // 원본과 동일한 보조 정렬
     if (orderByClause !== "item_id") {
