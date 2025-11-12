@@ -423,6 +423,66 @@
       </div>
     </div>
 
+    <!-- 수선 접수 모달 -->
+    <div class="modal-overlay" id="repairModal">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3 class="modal-title">수선 접수</h3>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="repairBidId" />
+          <input type="hidden" id="repairBidType" />
+
+          <!-- 수선 신청 시간 표시 -->
+          <div
+            class="form-group"
+            id="repairRequestedAtGroup"
+            style="display: none">
+            <label class="form-label">수선 신청 시간</label>
+            <div
+              class="form-control-plaintext"
+              id="repairRequestedAt"
+              style="padding: 0.5rem 0; color: #666"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="repairDetails">수선 내용</label>
+            <textarea
+              id="repairDetails"
+              class="form-control"
+              rows="4"
+              placeholder="수선 내용을 입력하세요"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="repairFee"
+              >수선 비용 (원화, VAT 포함)</label
+            >
+            <input
+              type="number"
+              id="repairFee"
+              class="form-control"
+              placeholder="수선 비용 입력 (예: 50000)"
+              step="1000" />
+            <small class="form-text text-muted">
+              ※ 비용을 입력하지 않으면 0원으로 처리됩니다.
+            </small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary close-modal">닫기</button>
+          <button
+            class="btn btn-danger"
+            id="cancelRepair"
+            style="display: none">
+            신청 취소
+          </button>
+          <button class="btn" id="submitRepair">접수하기</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 공통 스크립트 먼저 로드 -->
     <script src="/js/common.js"></script>
     <script src="/js/api.js"></script>

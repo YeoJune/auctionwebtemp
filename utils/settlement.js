@@ -41,7 +41,7 @@ async function createOrUpdateSettlement(userId, date) {
 
     // 3. 해당 날짜의 낙찰 성공 아이템 조회
     const [liveBids] = await connection.query(
-      `SELECT l.winning_price, l.appr_id, i.auc_num, i.category
+      `SELECT l.winning_price, l.appr_id, l.repair_requested_at, l.repair_fee, i.auc_num, i.category
        FROM live_bids l
        LEFT JOIN crawled_items i ON l.item_id = i.item_id
        WHERE l.user_id = ? 
@@ -53,7 +53,7 @@ async function createOrUpdateSettlement(userId, date) {
     );
 
     const [directBids] = await connection.query(
-      `SELECT d.winning_price, d.appr_id, i.auc_num, i.category
+      `SELECT d.winning_price, d.appr_id, d.repair_requested_at, d.repair_fee, i.auc_num, i.category
        FROM direct_bids d
        LEFT JOIN crawled_items i ON d.item_id = i.item_id
        WHERE d.user_id = ? 
@@ -81,6 +81,7 @@ async function createOrUpdateSettlement(userId, date) {
     let totalAmount = 0;
     let appraisalCount = 0;
     let repairCount = 0;
+    let totalRepairFee = 0; // 수선 비용 합계
 
     items.forEach((item) => {
       totalJapaneseYen += Number(item.winning_price);
@@ -99,9 +100,11 @@ async function createOrUpdateSettlement(userId, date) {
         appraisalCount++;
       }
 
-      // 수선 개수
+      // 수선 개수 및 비용
       if (item.repair_requested_at) {
         repairCount++;
+        // 개별 수선 비용이 있으면 합산, 없으면 0
+        totalRepairFee += Number(item.repair_fee) || 0;
       }
     });
 
@@ -116,10 +119,9 @@ async function createOrUpdateSettlement(userId, date) {
     const appraisalFee = appraisalCount * 16500;
     const appraisalVat = Math.round(appraisalFee / 11);
 
-    // 7. 수선 수수료 (나중에 수정 가능)
-    const REPAIR_FEE = 0; // 원 (VAT 포함)
-    const repairFee = repairCount * REPAIR_FEE;
-    const repairVat = REPAIR_FEE > 0 ? Math.round(repairFee / 11) : 0;
+    // 7. 수선 수수료 (개별 금액 합산)
+    const repairFee = totalRepairFee; // 각 수선의 repair_fee 합계
+    const repairVat = repairFee > 0 ? Math.round(repairFee / 11) : 0;
 
     // 8. 최종 금액
     const finalAmount = totalAmount + feeAmount + appraisalFee + repairFee;

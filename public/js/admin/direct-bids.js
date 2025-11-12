@@ -521,12 +521,25 @@ function renderDirectBidsTable(directBids) {
       appraisalBadge = '<span class="badge badge-secondary">미발급</span>';
     }
 
-    // 수선 상태 배지
-    let repairBadge = "";
-    if (bid.repair_requested_at) {
-      repairBadge = '<span class="badge badge-success">접수됨</span>';
+    // 수선 접수 버튼
+    let repairButton = "";
+    if (bid.status === "completed" || bid.status === "shipped") {
+      if (bid.repair_requested_at) {
+        // 수선 접수됨 - 클릭 시 수정 모달 열기
+        const repairData = {
+          repair_details: bid.repair_details || "",
+          repair_fee: bid.repair_fee || 0,
+          repair_requested_at: bid.repair_requested_at || null,
+        };
+        repairButton = `<button class="btn btn-sm btn-success" onclick='openRepairModal(${
+          bid.id
+        }, "direct", ${JSON.stringify(repairData)})'>접수됨</button>`;
+      } else {
+        // 수선 미접수 - 클릭 시 수선 접수 모달
+        repairButton = `<button class="btn btn-sm btn-secondary" onclick="openRepairModal(${bid.id}, 'direct')">수선 접수</button>`;
+      }
     } else {
-      repairBadge = '<span class="badge badge-secondary">미접수</span>';
+      repairButton = "-";
     }
 
     // 플랫폼 반영 상태 배지
@@ -690,7 +703,7 @@ function renderDirectBidsTable(directBids) {
    <td>${formatDateTime(bid.updated_at)}</td>
    <td>${statusBadge}</td>
    <td>${appraisalBadge}</td>
-   <td>${repairBadge}</td>
+   <td>${repairButton}</td>
    <td>${submittedBadge}</td>
    <td>
      ${actionButtons}
@@ -1148,3 +1161,140 @@ async function bulkMarkAsShipped() {
     handleError(error, "일괄 상태 변경 중 오류가 발생했습니다.");
   }
 }
+
+// ===================================
+// 수선 접수 기능
+// ===================================
+
+// 수선 모달 열기 (신규 접수 또는 수정)
+function openRepairModal(bidId, bidType, repairData = null) {
+  // 필드 초기화 및 활성화
+  document.getElementById("repairBidId").value = bidId;
+  document.getElementById("repairBidType").value = bidType;
+
+  const requestedAtGroup = document.getElementById("repairRequestedAtGroup");
+  const requestedAtText = document.getElementById("repairRequestedAt");
+  const cancelButton = document.getElementById("cancelRepair");
+
+  if (repairData && repairData.repair_requested_at) {
+    // 수정 모드
+    document.querySelector("#repairModal .modal-title").textContent =
+      "수선 정보 수정";
+    document.getElementById("repairDetails").value =
+      repairData.repair_details || "";
+    document.getElementById("repairFee").value = repairData.repair_fee || "";
+    document.getElementById("submitRepair").textContent = "수정하기";
+
+    // 신청 시간 표시
+    requestedAtGroup.style.display = "block";
+    requestedAtText.textContent = formatDateTime(
+      repairData.repair_requested_at
+    );
+
+    // 취소 버튼 표시
+    cancelButton.style.display = "inline-block";
+  } else {
+    // 신규 접수 모드
+    document.querySelector("#repairModal .modal-title").textContent =
+      "수선 접수";
+    document.getElementById("repairDetails").value = "";
+    document.getElementById("repairFee").value = "";
+    document.getElementById("submitRepair").textContent = "접수하기";
+
+    // 신청 시간 숨김
+    requestedAtGroup.style.display = "none";
+
+    // 취소 버튼 숨김
+    cancelButton.style.display = "none";
+  }
+
+  // 항상 편집 가능
+  document.getElementById("repairDetails").disabled = false;
+  document.getElementById("repairFee").disabled = false;
+
+  // 제출 버튼 표시
+  document.getElementById("submitRepair").style.display = "inline-block";
+
+  const modal = document.getElementById("repairModal");
+  modal.classList.add("active");
+}
+
+// 수선 접수/수정 제출
+async function submitRepair() {
+  const bidId = document.getElementById("repairBidId").value;
+  const bidType = document.getElementById("repairBidType").value;
+  const repairDetails = document.getElementById("repairDetails").value.trim();
+  const repairFee = document.getElementById("repairFee").value;
+  const isEdit =
+    document.getElementById("submitRepair").textContent === "수정하기";
+
+  if (!repairDetails) {
+    showAlert("수선 내용을 입력해주세요.", "warning");
+    return;
+  }
+
+  try {
+    const endpoint = `/bid-results/${bidType}/${bidId}/request-repair`;
+
+    const response = await window.AdminAPI.fetchAPI(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        repair_details: repairDetails,
+        repair_fee: repairFee ? parseInt(repairFee) : null,
+      }),
+    });
+
+    closeAllModals();
+    showAlert(
+      response.message ||
+        (isEdit
+          ? "수선 정보가 수정되었습니다."
+          : "수선 접수가 완료되었습니다."),
+      "success"
+    );
+    await loadDirectBids();
+  } catch (error) {
+    handleError(
+      error,
+      isEdit
+        ? "수선 정보 수정 중 오류가 발생했습니다."
+        : "수선 접수 중 오류가 발생했습니다."
+    );
+  }
+}
+
+// 수선 신청 취소
+async function cancelRepair() {
+  const bidId = document.getElementById("repairBidId").value;
+  const bidType = document.getElementById("repairBidType").value;
+
+  if (!confirm("수선 접수를 취소하시겠습니까?")) {
+    return;
+  }
+
+  try {
+    const endpoint = `/bid-results/${bidType}/${bidId}/repair`;
+
+    const response = await window.AdminAPI.fetchAPI(endpoint, {
+      method: "DELETE",
+    });
+
+    closeAllModals();
+    showAlert(response.message || "수선 접수가 취소되었습니다.", "success");
+    await loadDirectBids();
+  } catch (error) {
+    handleError(error, "수선 취소 중 오류가 발생했습니다.");
+  }
+}
+
+// 이벤트 리스너 추가
+document
+  .getElementById("submitRepair")
+  ?.addEventListener("click", submitRepair);
+
+document
+  .getElementById("cancelRepair")
+  ?.addEventListener("click", cancelRepair);

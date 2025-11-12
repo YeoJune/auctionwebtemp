@@ -409,25 +409,6 @@ window.BidResultsCore = (function () {
     return button;
   }
 
-  // 수선 버튼 기능은 어드민에서만 사용
-  // function createRepairButton(item) {
-  //   const button = createElement("button", "repair-btn small-button");
-  //   if (item.repair_requested_at) {
-  //     button.textContent = "접수 완료";
-  //     button.classList.add("success-button");
-  //     button.onclick = () => {};
-  //   } else {
-  //     button.textContent = "수선 접수";
-  //     button.classList.add("primary-button");
-  //     button.onclick = () => {
-  //       if (window.requestRepair) {
-  //         window.requestRepair(item);
-  //       }
-  //     };
-  //   }
-  //   return button;
-  // }
-
   /**
    * 출고 상태 생성
    */

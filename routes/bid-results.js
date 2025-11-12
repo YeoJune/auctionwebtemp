@@ -7,9 +7,6 @@ const { createOrUpdateSettlement } = require("../utils/settlement");
 const { calculateTotalPrice, calculateFee } = require("../utils/calculate-fee");
 const { getExchangeRate } = require("../utils/exchange-rate");
 
-// 수수료 상수 (나중에 수정 가능)
-const REPAIR_FEE = 0; // 원 (VAT 포함) - 나중에 수수료 추가 시 이 값만 변경
-
 // 미들웨어
 const isAdmin = (req, res, next) => {
   if (req.session.user?.id === "admin") {
@@ -557,57 +554,73 @@ router.post("/direct/:id/request-appraisal", async (req, res) => {
 
 /**
  * POST /api/bid-results/live/:id/request-repair
- * 현장 경매 수선 접수
+ * 현장 경매 수선 접수/수정 (어드민 전용)
  */
 router.post("/live/:id/request-repair", async (req, res) => {
   const bidId = req.params.id;
+  const { repair_details, repair_fee } = req.body;
 
   if (!req.session.user) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
   const userId = req.session.user.id;
+
+  // 어드민만 수선 접수 가능
+  if (userId !== "admin") {
+    return res
+      .status(403)
+      .json({ message: "관리자만 수선 접수가 가능합니다." });
+  }
+
   const connection = await pool.getConnection();
 
   try {
     await connection.beginTransaction();
 
     const [bids] = await connection.query(
-      `SELECT l.*, i.brand, i.title 
+      `SELECT l.*, i.brand, i.title, i.scheduled_date
        FROM live_bids l 
        JOIN crawled_items i ON l.item_id = i.item_id 
        WHERE l.id = ? AND l.status IN ('completed', 'shipped') AND l.winning_price > 0`,
       [bidId]
     );
 
-    if (
-      bids.length === 0 ||
-      !(bids[0].user_id == userId || userId == "admin")
-    ) {
+    if (bids.length === 0) {
       await connection.rollback();
       return res.status(404).json({
-        message: "낙찰된 상품을 찾을 수 없거나 접근 권한이 없습니다.",
+        message: "낙찰된 상품을 찾을 수 없습니다.",
       });
     }
 
     const bid = bids[0];
+    const isUpdate = !!bid.repair_requested_at;
 
-    if (bid.repair_requested_at) {
-      await connection.rollback();
-      return res.status(400).json({
-        message: "이미 수선을 접수했습니다.",
-        requested_at: bid.repair_requested_at,
-      });
+    // 수선 내용과 금액 업데이트 (신규 또는 수정)
+    if (isUpdate) {
+      // 수정
+      await connection.query(
+        `UPDATE live_bids 
+         SET repair_details = ?, 
+             repair_fee = ? 
+         WHERE id = ?`,
+        [repair_details || null, repair_fee || null, bidId]
+      );
+    } else {
+      // 신규 접수
+      await connection.query(
+        `UPDATE live_bids 
+         SET repair_requested_at = NOW(), 
+             repair_details = ?, 
+             repair_fee = ? 
+         WHERE id = ?`,
+        [repair_details || null, repair_fee || null, bidId]
+      );
     }
-
-    await connection.query(
-      "UPDATE live_bids SET repair_requested_at = NOW() WHERE id = ?",
-      [bidId]
-    );
 
     await connection.commit();
 
-    // 정산 업데이트 (수수료가 0원이어도 기록)
+    // 정산 업데이트
     if (bid.scheduled_date) {
       const settlementDate = new Date(bid.scheduled_date)
         .toISOString()
@@ -617,16 +630,19 @@ router.post("/live/:id/request-repair", async (req, res) => {
       );
     }
 
-    res.status(201).json({
-      message: "수선 접수가 완료되었습니다.",
-      requested_at: new Date(),
-      fee: REPAIR_FEE,
+    res.status(isUpdate ? 200 : 201).json({
+      message: isUpdate
+        ? "수선 정보가 수정되었습니다."
+        : "수선 접수가 완료되었습니다.",
+      requested_at: bid.repair_requested_at || new Date(),
+      repair_details,
+      repair_fee,
     });
   } catch (err) {
     await connection.rollback();
-    console.error("수선 접수 중 오류 발생:", err);
+    console.error("수선 처리 중 오류 발생:", err);
     res.status(500).json({
-      message: err.message || "수선 접수 중 오류가 발생했습니다.",
+      message: err.message || "수선 처리 중 오류가 발생했습니다.",
     });
   } finally {
     connection.release();
@@ -635,57 +651,73 @@ router.post("/live/:id/request-repair", async (req, res) => {
 
 /**
  * POST /api/bid-results/direct/:id/request-repair
- * 직접 경매 수선 접수
+ * 직접 경매 수선 접수/수정 (어드민 전용)
  */
 router.post("/direct/:id/request-repair", async (req, res) => {
   const bidId = req.params.id;
+  const { repair_details, repair_fee } = req.body;
 
   if (!req.session.user) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
   const userId = req.session.user.id;
+
+  // 어드민만 수선 접수 가능
+  if (userId !== "admin") {
+    return res
+      .status(403)
+      .json({ message: "관리자만 수선 접수가 가능합니다." });
+  }
+
   const connection = await pool.getConnection();
 
   try {
     await connection.beginTransaction();
 
     const [bids] = await connection.query(
-      `SELECT d.*, i.brand, i.title 
+      `SELECT d.*, i.brand, i.title, i.scheduled_date
        FROM direct_bids d 
        JOIN crawled_items i ON d.item_id = i.item_id 
        WHERE d.id = ? AND d.status IN ('completed', 'shipped') AND d.winning_price > 0`,
       [bidId]
     );
 
-    if (
-      bids.length === 0 ||
-      !(bids[0].user_id == userId || userId == "admin")
-    ) {
+    if (bids.length === 0) {
       await connection.rollback();
       return res.status(404).json({
-        message: "낙찰된 상품을 찾을 수 없거나 접근 권한이 없습니다.",
+        message: "낙찰된 상품을 찾을 수 없습니다.",
       });
     }
 
     const bid = bids[0];
+    const isUpdate = !!bid.repair_requested_at;
 
-    if (bid.repair_requested_at) {
-      await connection.rollback();
-      return res.status(400).json({
-        message: "이미 수선을 접수했습니다.",
-        requested_at: bid.repair_requested_at,
-      });
+    // 수선 내용과 금액 업데이트 (신규 또는 수정)
+    if (isUpdate) {
+      // 수정
+      await connection.query(
+        `UPDATE direct_bids 
+         SET repair_details = ?, 
+             repair_fee = ? 
+         WHERE id = ?`,
+        [repair_details || null, repair_fee || null, bidId]
+      );
+    } else {
+      // 신규 접수
+      await connection.query(
+        `UPDATE direct_bids 
+         SET repair_requested_at = NOW(), 
+             repair_details = ?, 
+             repair_fee = ? 
+         WHERE id = ?`,
+        [repair_details || null, repair_fee || null, bidId]
+      );
     }
-
-    await connection.query(
-      "UPDATE direct_bids SET repair_requested_at = NOW() WHERE id = ?",
-      [bidId]
-    );
 
     await connection.commit();
 
-    // 정산 업데이트 (수수료가 0원이어도 기록)
+    // 정산 업데이트
     if (bid.scheduled_date) {
       const settlementDate = new Date(bid.scheduled_date)
         .toISOString()
@@ -695,16 +727,189 @@ router.post("/direct/:id/request-repair", async (req, res) => {
       );
     }
 
-    res.status(201).json({
-      message: "수선 접수가 완료되었습니다.",
-      requested_at: new Date(),
-      fee: REPAIR_FEE,
+    res.status(isUpdate ? 200 : 201).json({
+      message: isUpdate
+        ? "수선 정보가 수정되었습니다."
+        : "수선 접수가 완료되었습니다.",
+      requested_at: bid.repair_requested_at || new Date(),
+      repair_details,
+      repair_fee,
     });
   } catch (err) {
     await connection.rollback();
-    console.error("수선 접수 중 오류 발생:", err);
+    console.error("수선 처리 중 오류 발생:", err);
     res.status(500).json({
-      message: err.message || "수선 접수 중 오류가 발생했습니다.",
+      message: err.message || "수선 처리 중 오류가 발생했습니다.",
+    });
+  } finally {
+    connection.release();
+  }
+});
+
+/**
+ * DELETE /api/bid-results/live/:id/repair
+ * 현장 경매 수선 접수 취소 (어드민 전용)
+ */
+router.delete("/live/:id/repair", async (req, res) => {
+  const bidId = req.params.id;
+
+  if (!req.session.user) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const userId = req.session.user.id;
+
+  // 어드민만 취소 가능
+  if (userId !== "admin") {
+    return res
+      .status(403)
+      .json({ message: "관리자만 수선 접수를 취소할 수 있습니다." });
+  }
+
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [bids] = await connection.query(
+      `SELECT l.*, i.scheduled_date
+       FROM live_bids l 
+       JOIN crawled_items i ON l.item_id = i.item_id 
+       WHERE l.id = ?`,
+      [bidId]
+    );
+
+    if (bids.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({
+        message: "입찰을 찾을 수 없습니다.",
+      });
+    }
+
+    const bid = bids[0];
+
+    if (!bid.repair_requested_at) {
+      await connection.rollback();
+      return res.status(400).json({
+        message: "수선이 접수되지 않은 상품입니다.",
+      });
+    }
+
+    // 수선 정보 삭제
+    await connection.query(
+      `UPDATE live_bids 
+       SET repair_requested_at = NULL, 
+           repair_details = NULL, 
+           repair_fee = NULL 
+       WHERE id = ?`,
+      [bidId]
+    );
+
+    await connection.commit();
+
+    // 정산 업데이트
+    if (bid.scheduled_date) {
+      const settlementDate = new Date(bid.scheduled_date)
+        .toISOString()
+        .split("T")[0];
+      createOrUpdateSettlement(bid.user_id, settlementDate).catch(
+        console.error
+      );
+    }
+
+    res.status(200).json({
+      message: "수선 접수가 취소되었습니다.",
+    });
+  } catch (err) {
+    await connection.rollback();
+    console.error("수선 취소 중 오류 발생:", err);
+    res.status(500).json({
+      message: err.message || "수선 취소 중 오류가 발생했습니다.",
+    });
+  } finally {
+    connection.release();
+  }
+});
+
+/**
+ * DELETE /api/bid-results/direct/:id/repair
+ * 직접 경매 수선 접수 취소 (어드민 전용)
+ */
+router.delete("/direct/:id/repair", async (req, res) => {
+  const bidId = req.params.id;
+
+  if (!req.session.user) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const userId = req.session.user.id;
+
+  // 어드민만 취소 가능
+  if (userId !== "admin") {
+    return res
+      .status(403)
+      .json({ message: "관리자만 수선 접수를 취소할 수 있습니다." });
+  }
+
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [bids] = await connection.query(
+      `SELECT d.*, i.scheduled_date
+       FROM direct_bids d 
+       JOIN crawled_items i ON d.item_id = i.item_id 
+       WHERE d.id = ?`,
+      [bidId]
+    );
+
+    if (bids.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({
+        message: "입찰을 찾을 수 없습니다.",
+      });
+    }
+
+    const bid = bids[0];
+
+    if (!bid.repair_requested_at) {
+      await connection.rollback();
+      return res.status(400).json({
+        message: "수선이 접수되지 않은 상품입니다.",
+      });
+    }
+
+    // 수선 정보 삭제
+    await connection.query(
+      `UPDATE direct_bids 
+       SET repair_requested_at = NULL, 
+           repair_details = NULL, 
+           repair_fee = NULL 
+       WHERE id = ?`,
+      [bidId]
+    );
+
+    await connection.commit();
+
+    // 정산 업데이트
+    if (bid.scheduled_date) {
+      const settlementDate = new Date(bid.scheduled_date)
+        .toISOString()
+        .split("T")[0];
+      createOrUpdateSettlement(bid.user_id, settlementDate).catch(
+        console.error
+      );
+    }
+
+    res.status(200).json({
+      message: "수선 접수가 취소되었습니다.",
+    });
+  } catch (err) {
+    await connection.rollback();
+    console.error("수선 취소 중 오류 발생:", err);
+    res.status(500).json({
+      message: err.message || "수선 취소 중 오류가 발생했습니다.",
     });
   } finally {
     connection.release();
