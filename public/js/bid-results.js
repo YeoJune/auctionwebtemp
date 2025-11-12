@@ -367,43 +367,30 @@ window.requestAppraisal = async function (item) {
   }
 };
 
-// 수선 접수 함수
-window.requestRepair = async function (item) {
-  // 수선 수수료 (나중에 수정 가능)
-  const REPAIR_FEE = 0; // 원 (VAT 포함)
-
-  const confirmMessage =
-    REPAIR_FEE > 0
-      ? `수선을 접수하시겠습니까?\n수수료 ${REPAIR_FEE.toLocaleString()}원(VAT포함)이 추가됩니다.`
-      : "수선을 접수하시겠습니까?";
-
-  if (!confirm(confirmMessage)) {
-    return;
-  }
-
-  try {
-    core.toggleLoading(true);
-
-    const endpoint =
-      item.type === "direct"
-        ? `/bid-results/direct/${item.id}/request-repair`
-        : `/bid-results/live/${item.id}/request-repair`;
-
-    const response = await window.API.fetchAPI(endpoint, {
-      method: "POST",
-    });
-
-    if (response.message) {
-      alert("수선 접수가 완료되었습니다.");
-      await fetchCompletedBids();
-    }
-  } catch (error) {
-    console.error("수선 접수 중 오류:", error);
-    alert(error.message || "수선 접수 중 오류가 발생했습니다.");
-  } finally {
-    core.toggleLoading(false);
-  }
-};
+// 수선 접수는 어드민에서만 가능
+// window.requestRepair = async function (item) {
+//   const REPAIR_FEE = 0;
+//   const confirmMessage = REPAIR_FEE > 0
+//     ? `수선을 접수하시겠습니까?\n수수료 ${REPAIR_FEE.toLocaleString()}원(VAT포함)이 추가됩니다.`
+//     : "수선을 접수하시겠습니까?";
+//   if (!confirm(confirmMessage)) return;
+//   try {
+//     core.toggleLoading(true);
+//     const endpoint = item.type === "direct"
+//       ? `/bid-results/direct/${item.id}/request-repair`
+//       : `/bid-results/live/${item.id}/request-repair`;
+//     const response = await window.API.fetchAPI(endpoint, { method: "POST" });
+//     if (response.message) {
+//       alert("수선 접수가 완료되었습니다.");
+//       await fetchCompletedBids();
+//     }
+//   } catch (error) {
+//     console.error("수선 접수 중 오류:", error);
+//     alert(error.message || "수선 접수 중 오류가 발생했습니다.");
+//   } finally {
+//     core.toggleLoading(false);
+//   }
+// };
 
 // DOM 완료 시 실행
 document.addEventListener("DOMContentLoaded", initialize);
