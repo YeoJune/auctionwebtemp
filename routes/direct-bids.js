@@ -224,6 +224,8 @@ router.get("/", async (req, res) => {
         notification_sent_at: row.notification_sent_at,
         appr_id: row.appr_id,
         repair_requested_at: row.repair_requested_at,
+        repair_details: row.repair_details,
+        repair_fee: row.repair_fee,
       };
 
       // Only include item if it exists
