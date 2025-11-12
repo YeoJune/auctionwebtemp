@@ -1,5 +1,13 @@
 // public/js/admin/live-bids.js
 
+// HTML 이스케이프 함수
+function escapeHtml(text) {
+  if (!text) return "";
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 // 현재 선택된 필터 상태 - URL로 관리
 let currentStatus = "";
 let currentPage = 1;
@@ -443,14 +451,13 @@ function renderLiveBidsTable(liveBids) {
     if (bid.status === "completed" || bid.status === "shipped") {
       if (bid.repair_requested_at) {
         // 수선 접수됨 - 클릭 시 수정 모달 열기
-        const repairData = {
-          repair_details: bid.repair_details || "",
-          repair_fee: bid.repair_fee || 0,
-          repair_requested_at: bid.repair_requested_at || null,
-        };
-        repairButton = `<button class="btn btn-sm btn-success" onclick='openRepairModal(${
-          bid.id
-        }, "live", ${JSON.stringify(repairData)})'>접수됨</button>`;
+        repairButton = `<button class="btn btn-sm btn-success" 
+          data-bid-id="${bid.id}" 
+          data-bid-type="live"
+          data-repair-details="${escapeHtml(bid.repair_details || "")}"
+          data-repair-fee="${bid.repair_fee || 0}"
+          data-repair-requested-at="${bid.repair_requested_at || ""}"
+          onclick="openRepairModalFromButton(this)">접수됨</button>`;
       } else {
         // 수선 미접수 - 클릭 시 수선 접수 모달
         repairButton = `<button class="btn btn-sm btn-secondary" onclick="openRepairModal(${bid.id}, 'live')">수선 접수</button>`;
@@ -1063,6 +1070,19 @@ async function bulkMarkAsShipped() {
 // ===================================
 // 수선 접수 기능
 // ===================================
+
+// 수선 모달 열기 (버튼에서 data 속성으로 호출)
+function openRepairModalFromButton(button) {
+  const bidId = button.dataset.bidId;
+  const bidType = button.dataset.bidType;
+  const repairData = {
+    repair_details: button.dataset.repairDetails || "",
+    repair_fee: button.dataset.repairFee || 0,
+    repair_requested_at: button.dataset.repairRequestedAt || null,
+  };
+
+  openRepairModal(bidId, bidType, repairData);
+}
 
 // 수선 모달 열기 (신규 접수 또는 수정)
 function openRepairModal(bidId, bidType, repairData = null) {
