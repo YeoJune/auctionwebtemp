@@ -1134,7 +1134,7 @@ async function submitRepair() {
   try {
     const endpoint = `/bid-results/${bidType}/${bidId}/request-repair`;
 
-    const response = await window.AdminAPI.fetchAPI(endpoint, {
+    const response = await fetchAPI(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1176,7 +1176,7 @@ async function cancelRepair() {
   try {
     const endpoint = `/bid-results/${bidType}/${bidId}/repair`;
 
-    const response = await window.AdminAPI.fetchAPI(endpoint, {
+    const response = await fetchAPI(endpoint, {
       method: "DELETE",
     });
 
