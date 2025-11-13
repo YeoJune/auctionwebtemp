@@ -1108,13 +1108,6 @@ router.put("/:id", isAdmin, async (req, res) => {
     const params = [];
 
     if (current_price !== undefined) {
-      // 가격이 1000단위인지 확인
-      if (current_price % 1000 !== 0) {
-        await connection.rollback();
-        return res
-          .status(400)
-          .json({ message: "Price must be in units of 1000" });
-      }
       updates.push("current_price = ?");
       params.push(current_price);
     }
