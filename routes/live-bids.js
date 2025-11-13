@@ -281,9 +281,9 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // 이미 입찰한 내역이 있는지 체크
+    // 이미 입찰한 내역이 있는지 체크 (FOR UPDATE로 락 걸기)
     const [existingBids] = await connection.query(
-      "SELECT * FROM live_bids WHERE item_id = ? AND user_id = ?",
+      "SELECT * FROM live_bids WHERE item_id = ? AND user_id = ? FOR UPDATE",
       [itemId, userId]
     );
 
@@ -311,6 +311,14 @@ router.post("/", async (req, res) => {
   } catch (err) {
     await connection.rollback();
     console.error("Error submitting first bid:", err);
+
+    // Duplicate entry error check
+    if (err.code === "ER_DUP_ENTRY") {
+      return res
+        .status(400)
+        .json({ message: "You already have a bid for this item" });
+    }
+
     res.status(500).json({ message: "Error submitting bid" });
   } finally {
     connection.release();

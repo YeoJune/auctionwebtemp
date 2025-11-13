@@ -45,6 +45,7 @@ window.BidManager = (function () {
     directBidData: [],
     isAuthenticated: false,
     currentData: [],
+    submittingBids: new Set(), // 현재 제출 중인 입찰 추적 (중복 방지)
   };
 
   // 내부 API 참조
@@ -598,6 +599,13 @@ window.BidManager = (function () {
       return;
     }
 
+    // 중복 제출 방지: 이미 제출 중인 경우 무시
+    const bidKey = `live-${itemId}`;
+    if (_state.submittingBids.has(bidKey)) {
+      console.log("입찰 제출이 이미 진행 중입니다.");
+      return;
+    }
+
     const item = _state.currentData.find((item) => item.item_id === itemId);
     const bidInfo = _state.liveBidData.find((bid) => bid.item_id === itemId);
 
@@ -626,6 +634,9 @@ window.BidManager = (function () {
     }
 
     const numericValue = parseFloat(value) * 1000;
+
+    // 제출 중 상태로 설정
+    _state.submittingBids.add(bidKey);
 
     try {
       if (bidInfo) {
@@ -659,6 +670,9 @@ window.BidManager = (function () {
     } catch (error) {
       alert(`입찰 신청 중 오류가 발생했습니다: ${error.message}`);
     } finally {
+      // 제출 완료 후 상태 제거
+      _state.submittingBids.delete(bidKey);
+
       if (window.bidLoadingUI && buttonElement) {
         window.bidLoadingUI.hideBidLoading(buttonElement);
       }
