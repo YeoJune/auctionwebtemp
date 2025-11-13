@@ -582,7 +582,6 @@ async function syncAllData() {
   console.log("🔄 Starting full data synchronization...");
   try {
     await initializeFilterSettings();
-    await syncFilterSettingsToItems();
     await syncRecommendSettingsToItems();
     await syncAllExpiredStatus();
     console.log("✅ Full data synchronization completed");

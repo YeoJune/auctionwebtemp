@@ -425,7 +425,7 @@ router.put("/filter-settings/batch", isAdmin, async (req, res) => {
     }
 
     // 배치 업데이트 완료 후 즉시 동기화
-    await syncFilterSettingsToItems();
+    await initializeFilterSettings();
 
     res.json({
       message: "Batch update completed",
