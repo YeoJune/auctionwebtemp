@@ -46,9 +46,7 @@ async function createOrUpdateSettlement(userId, date) {
        LEFT JOIN crawled_items i ON l.item_id = i.item_id
        WHERE l.user_id = ? 
          AND DATE(i.scheduled_date) = ?
-         AND l.status IN ('completed', 'shipped')
-         AND l.winning_price > 0
-         AND l.final_price >= l.winning_price`,
+         AND l.status IN ('completed', 'shipped')`,
       [userId, date]
     );
 
@@ -58,9 +56,7 @@ async function createOrUpdateSettlement(userId, date) {
        LEFT JOIN crawled_items i ON d.item_id = i.item_id
        WHERE d.user_id = ? 
          AND DATE(i.scheduled_date) = ?
-         AND d.status IN ('completed', 'shipped')
-         AND d.winning_price > 0
-         AND d.current_price >= d.winning_price`,
+         AND d.status IN ('completed', 'shipped')`,
       [userId, date]
     );
 
@@ -208,5 +204,7 @@ async function createOrUpdateSettlement(userId, date) {
     connection.release();
   }
 }
+
+createOrUpdateSettlement("hj5333", "2025-11-03");
 
 module.exports = { createOrUpdateSettlement };
