@@ -176,7 +176,9 @@ function getFilterChanges() {
 
   Object.keys(currentFilterState).forEach((key) => {
     if (currentFilterState[key] !== originalState[key]) {
-      const [filterType, filterValue] = key.split(":");
+      const colonIndex = key.indexOf(":");
+      const filterType = key.substring(0, colonIndex);
+      const filterValue = key.substring(colonIndex + 1);
       changes.push({
         filterType,
         filterValue,
@@ -240,9 +242,8 @@ function filterBrandList(searchTerm) {
 
   const brandItems = brandGrid.querySelectorAll(".filter-item");
   brandItems.forEach((item) => {
-    const brandName = item
-      .querySelector(".filter-value")
-      .textContent.toLowerCase();
+    const checkbox = item.querySelector(".filter-checkbox");
+    const brandName = checkbox.dataset.filterValue.toLowerCase();
     const matches = brandName.includes(searchTerm.toLowerCase());
     item.style.display = matches ? "flex" : "none";
   });
