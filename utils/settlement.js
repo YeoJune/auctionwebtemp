@@ -205,6 +205,4 @@ async function createOrUpdateSettlement(userId, date) {
   }
 }
 
-createOrUpdateSettlement("hj5333", "2025-11-03");
-
 module.exports = { createOrUpdateSettlement };
