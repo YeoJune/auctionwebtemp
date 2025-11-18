@@ -1,5 +1,280 @@
 // public/js/common.js
 
+// ===== 헤더 동적 생성 =====
+function renderHeader(currentPage = "") {
+  const headerContainer = document.getElementById("main-header");
+  if (!headerContainer) return; // 플레이스홀더가 없으면 스킵
+
+  const isMobile = window.innerWidth <= 768;
+
+  // 메뉴 설정
+  const menuConfig = {
+    pc: [
+      {
+        type: "dropdown",
+        id: "productListBtn",
+        icon: "fas fa-list",
+        text: "상품 리스트",
+        page: "product",
+        items: [
+          { text: "전체 상품", href: "/productPage" },
+          { text: "현장 경매", href: "/productPage?selectedAuctionTypes=live" },
+          {
+            text: "직접 경매",
+            href: "/productPage?selectedAuctionTypes=direct",
+          },
+        ],
+      },
+      {
+        type: "dropdown",
+        id: "favoritesBtn",
+        icon: "fas fa-star",
+        text: "즐겨찾기",
+        page: "favorites",
+        items: [
+          {
+            text: "즐겨찾기 ①",
+            href: "/productPage?selectedFavoriteNumbers=1",
+          },
+          {
+            text: "즐겨찾기 ②",
+            href: "/productPage?selectedFavoriteNumbers=2",
+          },
+          {
+            text: "즐겨찾기 ③",
+            href: "/productPage?selectedFavoriteNumbers=3",
+          },
+        ],
+      },
+      {
+        type: "button",
+        id: "recommendBtn",
+        icon: "fas fa-crown",
+        text: "추천 상품",
+        page: "recommend",
+        href: "/recommendPage",
+      },
+      {
+        type: "button",
+        id: "myPageBtn",
+        icon: "fas fa-user",
+        text: "마이페이지",
+        page: "mypage",
+        href: "/myPage",
+      },
+      {
+        type: "button",
+        icon: "fas fa-chart-line",
+        text: "낙찰 시세표",
+        page: "values",
+        href: "/valuesPage",
+      },
+      {
+        type: "button",
+        icon: "fas fa-comments",
+        text: "실시간 문의",
+        page: "inquiry-chat",
+        href: "http://pf.kakao.com/_xcCxoqn/chat",
+        target: "_blank",
+      },
+      {
+        type: "button",
+        icon: "fas fa-user-plus",
+        text: "회원가입",
+        page: "inquiry",
+        href: "/inquiryPage",
+      },
+      {
+        type: "button",
+        icon: "fas fa-book",
+        text: "이용가이드",
+        page: "guide",
+        href: "/guidePage",
+      },
+    ],
+    mobileTop: [
+      {
+        type: "button",
+        id: "signinBtn",
+        icon: "fas fa-sign-in-alt",
+        text: "로그인",
+        class: "auth-button-mobile",
+      },
+      {
+        type: "button",
+        id: "mobileFilterBtn",
+        icon: "fas fa-filter",
+        text: "필터",
+        class: "mobile-filter-toggle",
+      },
+      {
+        type: "button",
+        id: "myPageBtn",
+        icon: "fas fa-user",
+        text: "MY",
+        page: "mypage",
+        href: "/myPage",
+      },
+    ],
+    mobileBottom: [
+      {
+        type: "button",
+        icon: "fas fa-th-large",
+        text: "상품",
+        page: "product",
+        href: "/productPage",
+      },
+      {
+        type: "button",
+        icon: "fas fa-crown",
+        text: "추천상품",
+        page: "recommend",
+        href: "/recommendPage",
+      },
+      {
+        type: "button",
+        icon: "fas fa-chart-line",
+        text: "시세표",
+        page: "values",
+        href: "/valuesPage",
+      },
+      {
+        type: "button",
+        icon: "fas fa-comments",
+        text: "실시간문의",
+        page: "inquiry-chat",
+        href: "http://pf.kakao.com/_xcCxoqn/chat",
+        target: "_blank",
+      },
+      {
+        type: "button",
+        icon: "fas fa-user-plus",
+        text: "회원가입",
+        page: "inquiry",
+        href: "/inquiryPage",
+      },
+      {
+        type: "button",
+        icon: "fas fa-book",
+        text: "이용가이드",
+        page: "guide",
+        href: "/guidePage",
+      },
+    ],
+  };
+
+  // PC 헤더 생성
+  if (!isMobile) {
+    const navItems = menuConfig.pc
+      .map((item) => {
+        const isActive = item.page === currentPage ? "active" : "";
+
+        if (item.type === "dropdown") {
+          const dropdownItems = item.items
+            .map((subItem) => `<a href="${subItem.href}">${subItem.text}</a>`)
+            .join("");
+
+          return `
+            <div class="nav-item dropdown-container">
+              <button class="nav-button ${isActive}" id="${item.id}">
+                <i class="${item.icon}"></i>
+                <span>${item.text}</span>
+              </button>
+              <div class="dropdown-content">
+                ${dropdownItems}
+              </div>
+            </div>
+          `;
+        } else {
+          const target = item.target ? `target="${item.target}"` : "";
+          const onclick = item.href
+            ? item.target === "_blank"
+              ? `onclick="window.open('${item.href}', '_blank')"`
+              : `onclick="window.location.href = '${item.href}'"`
+            : "";
+
+          return `
+            <button class="nav-button ${isActive}" ${
+            item.id ? `id="${item.id}"` : ""
+          } ${onclick}>
+              <i class="${item.icon}"></i>
+              <span>${item.text}</span>
+            </button>
+          `;
+        }
+      })
+      .join("");
+
+    headerContainer.innerHTML = `
+      <header class="main-header">
+        <div class="header-content">
+          <div class="logo-container">
+            <img src="images/logo.png" alt="Logo" onclick="location.href = '/productPage'" />
+          </div>
+          <div class="nav-container">
+            ${navItems}
+          </div>
+          <div class="auth-container auth-unauthenticated">
+            <button id="signinBtn" class="auth-button auth-signin">로그인</button>
+            <button id="signoutBtn" class="auth-button auth-signout">로그아웃</button>
+          </div>
+        </div>
+      </header>
+    `;
+  } else {
+    // 모바일 헤더 생성
+    const topNavItems = menuConfig.mobileTop
+      .map((item) => {
+        const onclick = item.href
+          ? `onclick="window.location.href = '${item.href}'"`
+          : "";
+        return `
+          <button class="mobile-nav-button ${item.class || ""}" ${
+          item.id ? `id="${item.id}"` : ""
+        } ${onclick}>
+            <i class="${item.icon}"></i>
+          </button>
+        `;
+      })
+      .join("");
+
+    const bottomNavItems = menuConfig.mobileBottom
+      .map((item) => {
+        const isActive = item.page === currentPage ? "active" : "";
+        const target = item.target ? `target="${item.target}"` : "";
+        const onclick = item.href
+          ? item.target === "_blank"
+            ? `onclick="window.open('${item.href}', '_blank')"`
+            : `onclick="window.location.href = '${item.href}'"`
+          : "";
+
+        return `
+          <button class="mobile-bottom-button ${isActive}" ${onclick}>
+            <i class="${item.icon}"></i>
+            <span>${item.text}</span>
+          </button>
+        `;
+      })
+      .join("");
+
+    headerContainer.innerHTML = `
+      <header class="main-header mobile-header">
+        <div class="header-top">
+          <div class="logo-container">
+            <img src="images/logo.png" alt="Logo" onclick="location.href = '/productPage'" />
+          </div>
+          <div class="mobile-top-nav">
+            ${topNavItems}
+          </div>
+        </div>
+        <div class="header-bottom">
+          ${bottomNavItems}
+        </div>
+      </header>
+    `;
+  }
+}
+
 // 날짜 포맷팅
 function formatDate(dateString, isUTC2KST = false) {
   if (!dateString) return "-";
@@ -1736,6 +2011,13 @@ window.ModalImageGallery = (function () {
 
 // 페이지 로드 시 초기화
 document.addEventListener("DOMContentLoaded", function () {
+  // 헤더 렌더링 (페이지 정보는 main-header의 data-page 속성에서 가져옴)
+  const headerContainer = document.getElementById("main-header");
+  const currentPage = headerContainer
+    ? headerContainer.getAttribute("data-page") || ""
+    : "";
+  renderHeader(currentPage);
+
   // 기본 UI 설정
   setupMobileMenu();
   setupDropdownMenus();
