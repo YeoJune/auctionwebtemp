@@ -6,26 +6,34 @@
   padding: var(--spacing-md);
   margin-bottom: var(--spacing-lg);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: var(--z-header);
   height: var(--header-height);
   color: white;
-  /* sticky가 작동하려면 container 밖으로 빼야 함 */
+}
+
+/* PC 헤더를 위한 body padding */
+body {
+  padding-top: var(--header-height);
 }
 
 /* 모바일 헤더 구조 */
 .main-header.mobile-header {
   padding: 0;
   height: auto;
-  display: block; /* flex에서 block으로 변경 - sticky 작동 위해 */
+  display: block;
   margin-bottom: 0;
-  position: sticky;
-  top: 0;
 }
 
 /* 모바일에서 콘텐츠 여백 확보 */
 @media (max-width: 768px) {
+  body {
+    padding-top: 48px; /* 모바일 상단 바 높이 */
+  }
+
   .main-content {
     padding-bottom: 70px; /* 하단 바 높이 + 여백 */
   }
@@ -38,7 +46,6 @@
   padding: 8px;
   background-color: var(--blue-dark);
   height: 48px;
-  /* position 제거 - 부모가 sticky이므로 */
 }
 
 .header-bottom {
