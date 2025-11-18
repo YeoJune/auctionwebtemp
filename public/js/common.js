@@ -56,6 +56,14 @@ function renderHeader(currentPage = "") {
       },
       {
         type: "button",
+        id: "bidResultsBtn",
+        icon: "fas fa-gavel",
+        text: "입찰 결과",
+        page: "bid-results",
+        href: "/bidResultsPage",
+      },
+      {
+        type: "button",
         id: "myPageBtn",
         icon: "fas fa-user",
         text: "마이페이지",
@@ -103,7 +111,7 @@ function renderHeader(currentPage = "") {
       {
         type: "button",
         id: "mobileFilterBtn",
-        icon: "fas fa-filter",
+        icon: "fas fa-search",
         text: "필터",
         class: "mobile-filter-toggle",
       },
