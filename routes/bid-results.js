@@ -1123,6 +1123,426 @@ router.put("/admin/settlements/bulk-update", isAdmin, async (req, res) => {
 });
 
 // =====================================================
+// 디버깅 API
+// =====================================================
+
+/**
+ * GET /api/bid-results/debug/settlement-mismatch
+ * Settlement와 실제 입찰 데이터가 맞지 않는 경우 조사
+ */
+router.get("/debug/settlement-mismatch", isAdmin, async (req, res) => {
+  const connection = await pool.getConnection();
+
+  try {
+    // 1. 모든 정산 데이터 조회
+    const [settlements] = await connection.query(
+      `SELECT * FROM daily_settlements ORDER BY user_id, settlement_date`
+    );
+
+    const mismatches = [];
+
+    for (const settlement of settlements) {
+      // 2. 해당 정산에 해당하는 실제 입찰 데이터 조회
+      const [liveBids] = await connection.query(
+        `SELECT l.*, i.auc_num, i.category
+         FROM live_bids l
+         LEFT JOIN crawled_items i ON l.item_id = i.item_id
+         WHERE l.user_id = ? 
+           AND DATE(i.scheduled_date) = ?
+           AND l.status IN ('completed', 'shipped')
+           AND l.winning_price > 0
+           AND l.final_price >= l.winning_price`,
+        [settlement.user_id, settlement.settlement_date]
+      );
+
+      const [directBids] = await connection.query(
+        `SELECT d.*, i.auc_num, i.category
+         FROM direct_bids d
+         LEFT JOIN crawled_items i ON d.item_id = i.item_id
+         WHERE d.user_id = ? 
+           AND DATE(i.scheduled_date) = ?
+           AND d.status IN ('completed', 'shipped')
+           AND d.winning_price > 0
+           AND d.current_price >= d.winning_price`,
+        [settlement.user_id, settlement.settlement_date]
+      );
+
+      const actualItems = [...liveBids, ...directBids];
+
+      // 3. 실제 데이터와 정산 데이터 비교
+      const actualItemCount = actualItems.length;
+      const settlementItemCount = settlement.item_count;
+
+      // 실제 엔화 총액 계산
+      let actualTotalJpy = 0;
+      let actualAppraisalCount = 0;
+      let actualRepairCount = 0;
+      let actualRepairFee = 0;
+
+      actualItems.forEach((item) => {
+        actualTotalJpy += Number(item.winning_price);
+        if (item.appr_id) actualAppraisalCount++;
+        if (item.repair_requested_at) {
+          actualRepairCount++;
+          actualRepairFee += Number(item.repair_fee) || 0;
+        }
+      });
+
+      // 불일치 확인
+      const hasMismatch =
+        actualItemCount !== settlementItemCount ||
+        actualTotalJpy !== Number(settlement.total_japanese_yen) ||
+        actualAppraisalCount !== settlement.appraisal_count ||
+        actualRepairCount !== settlement.repair_count ||
+        actualRepairFee !== Number(settlement.repair_fee);
+
+      if (hasMismatch) {
+        mismatches.push({
+          settlement_id: settlement.id,
+          user_id: settlement.user_id,
+          settlement_date: settlement.settlement_date,
+          discrepancies: {
+            item_count: {
+              settlement: settlementItemCount,
+              actual: actualItemCount,
+              match: actualItemCount === settlementItemCount,
+            },
+            total_japanese_yen: {
+              settlement: Number(settlement.total_japanese_yen),
+              actual: actualTotalJpy,
+              match: actualTotalJpy === Number(settlement.total_japanese_yen),
+            },
+            appraisal_count: {
+              settlement: settlement.appraisal_count,
+              actual: actualAppraisalCount,
+              match: actualAppraisalCount === settlement.appraisal_count,
+            },
+            repair_count: {
+              settlement: settlement.repair_count,
+              actual: actualRepairCount,
+              match: actualRepairCount === settlement.repair_count,
+            },
+            repair_fee: {
+              settlement: Number(settlement.repair_fee),
+              actual: actualRepairFee,
+              match: actualRepairFee === Number(settlement.repair_fee),
+            },
+          },
+          actual_items: actualItems.map((item) => ({
+            id: item.id,
+            item_id: item.item_id,
+            winning_price: item.winning_price,
+            appr_id: item.appr_id,
+            repair_requested_at: item.repair_requested_at,
+            repair_fee: item.repair_fee,
+            status: item.status,
+          })),
+        });
+      }
+    }
+
+    // 4. 정산은 있는데 실제 입찰이 없는 경우 체크
+    const [orphanSettlements] = await connection.query(
+      `SELECT s.* 
+       FROM daily_settlements s
+       WHERE NOT EXISTS (
+         SELECT 1 FROM live_bids l 
+         JOIN crawled_items i ON l.item_id = i.item_id
+         WHERE l.user_id = s.user_id 
+           AND DATE(i.scheduled_date) = s.settlement_date
+           AND l.status IN ('completed', 'shipped')
+           AND l.winning_price > 0
+       )
+       AND NOT EXISTS (
+         SELECT 1 FROM direct_bids d
+         JOIN crawled_items i ON d.item_id = i.item_id
+         WHERE d.user_id = s.user_id 
+           AND DATE(i.scheduled_date) = s.settlement_date
+           AND d.status IN ('completed', 'shipped')
+           AND d.winning_price > 0
+       )`
+    );
+
+    // 5. 입찰은 있는데 정산이 없는 경우 체크
+    const [missingSettlements] = await connection.query(
+      `SELECT DISTINCT l.user_id, DATE(i.scheduled_date) as settlement_date, COUNT(*) as item_count
+       FROM live_bids l
+       JOIN crawled_items i ON l.item_id = i.item_id
+       WHERE l.status IN ('completed', 'shipped')
+         AND l.winning_price > 0
+         AND l.final_price >= l.winning_price
+         AND NOT EXISTS (
+           SELECT 1 FROM daily_settlements s
+           WHERE s.user_id = l.user_id 
+             AND s.settlement_date = DATE(i.scheduled_date)
+         )
+       GROUP BY l.user_id, DATE(i.scheduled_date)
+       
+       UNION
+       
+       SELECT DISTINCT d.user_id, DATE(i.scheduled_date) as settlement_date, COUNT(*) as item_count
+       FROM direct_bids d
+       JOIN crawled_items i ON d.item_id = i.item_id
+       WHERE d.status IN ('completed', 'shipped')
+         AND d.winning_price > 0
+         AND d.current_price >= d.winning_price
+         AND NOT EXISTS (
+           SELECT 1 FROM daily_settlements s
+           WHERE s.user_id = d.user_id 
+             AND s.settlement_date = DATE(i.scheduled_date)
+         )
+       GROUP BY d.user_id, DATE(i.scheduled_date)`
+    );
+
+    res.json({
+      summary: {
+        total_settlements: settlements.length,
+        mismatched_count: mismatches.length,
+        orphan_settlements_count: orphanSettlements.length,
+        missing_settlements_count: missingSettlements.length,
+      },
+      mismatches: mismatches,
+      orphan_settlements: orphanSettlements,
+      missing_settlements: missingSettlements,
+    });
+  } catch (err) {
+    console.error("Error checking settlement mismatch:", err);
+    res.status(500).json({ message: "Error checking settlement mismatch" });
+  } finally {
+    connection.release();
+  }
+});
+
+/**
+ * POST /api/bid-results/debug/fix-settlement-mismatch
+ * Settlement 불일치 수정 (누락된 정산만 생성, 기존 환율 최대한 활용)
+ */
+router.post("/debug/fix-settlement-mismatch", isAdmin, async (req, res) => {
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const results = {
+      created: [],
+      deleted: [],
+      skipped: [],
+      errors: [],
+    };
+
+    // 1. 입찰은 있는데 정산이 없는 경우 → 정산 생성
+    const [missingSettlements] = await connection.query(
+      `SELECT DISTINCT l.user_id, DATE(i.scheduled_date) as settlement_date
+       FROM live_bids l
+       JOIN crawled_items i ON l.item_id = i.item_id
+       WHERE l.status IN ('completed', 'shipped')
+         AND l.winning_price > 0
+         AND l.final_price >= l.winning_price
+         AND NOT EXISTS (
+           SELECT 1 FROM daily_settlements s
+           WHERE s.user_id = l.user_id 
+             AND s.settlement_date = DATE(i.scheduled_date)
+         )
+       
+       UNION
+       
+       SELECT DISTINCT d.user_id, DATE(i.scheduled_date) as settlement_date
+       FROM direct_bids d
+       JOIN crawled_items i ON d.item_id = i.item_id
+       WHERE d.status IN ('completed', 'shipped')
+         AND d.winning_price > 0
+         AND d.current_price >= d.winning_price
+         AND NOT EXISTS (
+           SELECT 1 FROM daily_settlements s
+           WHERE s.user_id = d.user_id 
+             AND s.settlement_date = DATE(i.scheduled_date)
+         )`
+    );
+
+    for (const missing of missingSettlements) {
+      try {
+        await createOrUpdateSettlement(
+          missing.user_id,
+          missing.settlement_date
+        );
+        results.created.push({
+          user_id: missing.user_id,
+          settlement_date: missing.settlement_date,
+        });
+      } catch (err) {
+        results.errors.push({
+          user_id: missing.user_id,
+          settlement_date: missing.settlement_date,
+          error: err.message,
+        });
+      }
+    }
+
+    // 2. 정산은 있는데 입찰이 없는 경우 → 정산 삭제
+    const [orphanSettlements] = await connection.query(
+      `SELECT s.* 
+       FROM daily_settlements s
+       WHERE NOT EXISTS (
+         SELECT 1 FROM live_bids l 
+         JOIN crawled_items i ON l.item_id = i.item_id
+         WHERE l.user_id = s.user_id 
+           AND DATE(i.scheduled_date) = s.settlement_date
+           AND l.status IN ('completed', 'shipped')
+           AND l.winning_price > 0
+       )
+       AND NOT EXISTS (
+         SELECT 1 FROM direct_bids d
+         JOIN crawled_items i ON d.item_id = i.item_id
+         WHERE d.user_id = s.user_id 
+           AND DATE(i.scheduled_date) = s.settlement_date
+           AND d.status IN ('completed', 'shipped')
+           AND d.winning_price > 0
+       )`
+    );
+
+    for (const orphan of orphanSettlements) {
+      await connection.query("DELETE FROM daily_settlements WHERE id = ?", [
+        orphan.id,
+      ]);
+      results.deleted.push({
+        settlement_id: orphan.id,
+        user_id: orphan.user_id,
+        settlement_date: orphan.settlement_date,
+      });
+    }
+
+    // 3. 정산과 입찰이 모두 있지만 데이터가 맞지 않는 경우 → createOrUpdateSettlement 호출
+    const [allSettlements] = await connection.query(
+      `SELECT DISTINCT user_id, settlement_date FROM daily_settlements`
+    );
+
+    for (const settlement of allSettlements) {
+      // 이미 생성되거나 삭제된 항목은 스킵
+      const alreadyProcessed =
+        results.created.some(
+          (c) =>
+            c.user_id === settlement.user_id &&
+            c.settlement_date === settlement.settlement_date
+        ) ||
+        results.deleted.some(
+          (d) =>
+            d.user_id === settlement.user_id &&
+            d.settlement_date === settlement.settlement_date
+        );
+
+      if (alreadyProcessed) {
+        continue;
+      }
+
+      try {
+        // 실제 입찰 데이터 조회
+        const [liveBids] = await connection.query(
+          `SELECT l.winning_price, l.appr_id, l.repair_requested_at, l.repair_fee
+           FROM live_bids l
+           LEFT JOIN crawled_items i ON l.item_id = i.item_id
+           WHERE l.user_id = ? 
+             AND DATE(i.scheduled_date) = ?
+             AND l.status IN ('completed', 'shipped')
+             AND l.winning_price > 0
+             AND l.final_price >= l.winning_price`,
+          [settlement.user_id, settlement.settlement_date]
+        );
+
+        const [directBids] = await connection.query(
+          `SELECT d.winning_price, d.appr_id, d.repair_requested_at, d.repair_fee
+           FROM direct_bids d
+           LEFT JOIN crawled_items i ON d.item_id = i.item_id
+           WHERE d.user_id = ? 
+             AND DATE(i.scheduled_date) = ?
+             AND d.status IN ('completed', 'shipped')
+             AND d.winning_price > 0
+             AND d.current_price >= d.winning_price`,
+          [settlement.user_id, settlement.settlement_date]
+        );
+
+        const actualItems = [...liveBids, ...directBids];
+
+        // 정산 데이터 조회
+        const [settlementData] = await connection.query(
+          `SELECT * FROM daily_settlements WHERE user_id = ? AND settlement_date = ?`,
+          [settlement.user_id, settlement.settlement_date]
+        );
+
+        if (settlementData.length === 0) continue;
+
+        const currentSettlement = settlementData[0];
+
+        // 실제 값 계산
+        let actualTotalJpy = 0;
+        let actualAppraisalCount = 0;
+        let actualRepairCount = 0;
+        let actualRepairFee = 0;
+
+        actualItems.forEach((item) => {
+          actualTotalJpy += Number(item.winning_price);
+          if (item.appr_id) actualAppraisalCount++;
+          if (item.repair_requested_at) {
+            actualRepairCount++;
+            actualRepairFee += Number(item.repair_fee) || 0;
+          }
+        });
+
+        // 불일치 확인
+        const hasMismatch =
+          actualItems.length !== currentSettlement.item_count ||
+          actualTotalJpy !== Number(currentSettlement.total_japanese_yen) ||
+          actualAppraisalCount !== currentSettlement.appraisal_count ||
+          actualRepairCount !== currentSettlement.repair_count ||
+          actualRepairFee !== Number(currentSettlement.repair_fee);
+
+        if (hasMismatch) {
+          await createOrUpdateSettlement(
+            settlement.user_id,
+            settlement.settlement_date
+          );
+          results.created.push({
+            user_id: settlement.user_id,
+            settlement_date: settlement.settlement_date,
+            note: "Updated existing settlement due to mismatch",
+          });
+        } else {
+          results.skipped.push({
+            user_id: settlement.user_id,
+            settlement_date: settlement.settlement_date,
+            reason: "No mismatch found",
+          });
+        }
+      } catch (err) {
+        results.errors.push({
+          user_id: settlement.user_id,
+          settlement_date: settlement.settlement_date,
+          error: err.message,
+        });
+      }
+    }
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      summary: {
+        created_count: results.created.length,
+        deleted_count: results.deleted.length,
+        skipped_count: results.skipped.length,
+        error_count: results.errors.length,
+      },
+      details: results,
+    });
+  } catch (err) {
+    await connection.rollback();
+    console.error("Error fixing settlement mismatch:", err);
+    res.status(500).json({ message: "Error fixing settlement mismatch" });
+  } finally {
+    connection.release();
+  }
+});
+
+// =====================================================
 // 헬퍼 함수
 // =====================================================
 

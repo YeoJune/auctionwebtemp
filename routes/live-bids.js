@@ -828,6 +828,26 @@ router.put("/:id", isAdmin, async (req, res) => {
       [id]
     );
 
+    // status나 winning_price가 변경된 경우 정산 업데이트
+    if (status !== undefined || winning_price !== undefined) {
+      const [bidWithItem] = await connection.query(
+        `SELECT l.user_id, i.scheduled_date 
+         FROM live_bids l 
+         JOIN crawled_items i ON l.item_id = i.item_id 
+         WHERE l.id = ?`,
+        [id]
+      );
+
+      if (bidWithItem.length > 0 && bidWithItem[0].scheduled_date) {
+        const settlementDate = new Date(bidWithItem[0].scheduled_date)
+          .toISOString()
+          .split("T")[0];
+        createOrUpdateSettlement(bidWithItem[0].user_id, settlementDate).catch(
+          console.error
+        );
+      }
+    }
+
     res.status(200).json({
       message: "Bid updated successfully",
       bid: updatedBids[0],
