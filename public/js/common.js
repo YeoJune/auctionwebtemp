@@ -236,11 +236,14 @@ function renderHeader(currentPage = "") {
         const onclick = item.href
           ? `onclick="window.location.href = '${item.href}'"`
           : "";
+        // 로그인 버튼은 텍스트, 나머지는 아이콘
+        const content =
+          item.id === "signinBtn" ? item.text : `<i class="${item.icon}"></i>`;
         return `
           <button class="mobile-nav-button ${item.class || ""}" ${
           item.id ? `id="${item.id}"` : ""
         } ${onclick}>
-            ${item.text}
+            ${content}
           </button>
         `;
       })

@@ -106,6 +106,13 @@
   padding: 0;
 }
 
+/* 로그인 버튼은 텍스트로 표시되므로 더 넓게 */
+.mobile-nav-button.auth-button-mobile {
+  width: auto;
+  padding: 0 12px;
+  min-width: 60px;
+}
+
 .mobile-nav-button:hover {
   background-color: rgba(255, 255, 255, 0.1);
 }
