@@ -498,8 +498,13 @@ button.auth-button:hover {
     font-size: 1.2rem;
   }
 
-  /* 인증 버튼 위치 조정 */
-  .auth-container {
+  /* 모바일 헤더의 auth-container는 margin-right 제거 */
+  .mobile-top-nav .auth-container {
+    margin-right: 0;
+  }
+
+  /* PC 헤더의 인증 버튼 위치 조정 (햄버거 메뉴용) */
+  .main-header:not(.mobile-header) .auth-container {
     margin-right: 55px;
   }
 
