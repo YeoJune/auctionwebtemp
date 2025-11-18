@@ -3,32 +3,34 @@
 /* Common Header */
 .main-header {
   background-color: var(--blue-dark);
-  padding: var(--spacing-md);
-  margin-bottom: var(--spacing-lg);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   position: sticky;
   top: 0;
   z-index: var(--z-header);
-  height: var(--header-height);
   color: white;
-  /* container 안에 있어도 전체 너비로 확장 */
-  margin-left: calc(-1 * var(--spacing-md));
-  margin-right: calc(-1 * var(--spacing-md));
-  padding-left: var(--spacing-md);
-  padding-right: var(--spacing-md);
+  width: 100%;
+}
+
+/* Header wrapper - container와 동일한 스타일 */
+.header-wrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--spacing-md);
+  width: 100%;
 }
 
 /* 모바일 헤더 구조 */
 .main-header.mobile-header {
   padding: 0;
   height: auto;
-  display: block; /* flex에서 block으로 변경 - sticky 작동 위해 */
-  margin-bottom: 0;
+  display: block;
   position: sticky;
   top: 0;
-  /* 모바일에서는 container padding이 6px이므로 음수 마진 조정 */
-  margin-left: -6px;
-  margin-right: -6px;
+}
+
+/* 모바일 헤더의 wrapper는 padding 없음 */
+.main-header.mobile-header .header-wrapper {
+  padding: 8px;
 }
 
 /* 모바일에서 콘텐츠 여백 확보 */
@@ -36,22 +38,14 @@
   .main-content {
     padding-bottom: 70px; /* 하단 바 높이 + 여백 */
   }
-
-  /* PC 헤더도 모바일에서는 6px 음수 마진 */
-  .main-header {
-    margin-left: -6px;
-    margin-right: -6px;
-  }
 }
 
 .header-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px;
   background-color: var(--blue-dark);
   height: 48px;
-  /* position 제거 - 부모가 sticky이므로 */
 }
 
 .header-bottom {

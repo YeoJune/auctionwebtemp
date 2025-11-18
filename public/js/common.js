@@ -207,16 +207,18 @@ function renderHeader(currentPage = "") {
 
     headerContainer.innerHTML = `
       <header class="main-header">
-        <div class="header-content">
-          <div class="logo-container">
-            <img src="images/logo.png" alt="Logo" onclick="location.href = '/productPage'" />
-          </div>
-          <div class="nav-container">
-            ${navItems}
-          </div>
-          <div class="auth-container auth-unauthenticated">
-            <button id="signinBtn" class="auth-button auth-signin">로그인</button>
-            <button id="signoutBtn" class="auth-button auth-signout">로그아웃</button>
+        <div class="header-wrapper">
+          <div class="header-content">
+            <div class="logo-container">
+              <img src="images/logo.png" alt="Logo" onclick="location.href = '/productPage'" />
+            </div>
+            <div class="nav-container">
+              ${navItems}
+            </div>
+            <div class="auth-container auth-unauthenticated">
+              <button id="signinBtn" class="auth-button auth-signin">로그인</button>
+              <button id="signoutBtn" class="auth-button auth-signout">로그아웃</button>
+            </div>
           </div>
         </div>
       </header>
@@ -260,11 +262,13 @@ function renderHeader(currentPage = "") {
     headerContainer.innerHTML = `
       <header class="main-header mobile-header">
         <div class="header-top">
-          <div class="logo-container">
-            <img src="images/logo.png" alt="Logo" onclick="location.href = '/productPage'" />
-          </div>
-          <div class="mobile-top-nav">
-            ${topNavItems}
+          <div class="header-wrapper">
+            <div class="logo-container">
+              <img src="images/logo.png" alt="Logo" onclick="location.href = '/productPage'" />
+            </div>
+            <div class="mobile-top-nav">
+              ${topNavItems}
+            </div>
           </div>
         </div>
         <div class="header-bottom">
