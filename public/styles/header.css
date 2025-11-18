@@ -8,27 +8,25 @@
   top: 0;
   z-index: var(--z-header);
   color: white;
-  width: 100%;
+  /* container 밖으로 확장 */
+  margin-left: calc(-1 * var(--spacing-md));
+  margin-right: calc(-1 * var(--spacing-md));
+  margin-bottom: var(--spacing-lg);
 }
 
-/* Header wrapper - container와 동일한 스타일 */
+/* Header wrapper - padding 복원 */
 .header-wrapper {
-  max-width: 1200px;
-  margin: 0 auto;
   padding: var(--spacing-md);
-  width: 100%;
 }
 
 /* 모바일 헤더 구조 */
 .main-header.mobile-header {
-  padding: 0;
   height: auto;
   display: block;
-  position: sticky;
-  top: 0;
+  margin-bottom: 0;
 }
 
-/* 모바일 헤더의 wrapper는 padding 없음 */
+/* 모바일 헤더의 wrapper */
 .main-header.mobile-header .header-wrapper {
   padding: 8px;
 }
@@ -37,6 +35,12 @@
 @media (max-width: 768px) {
   .main-content {
     padding-bottom: 70px; /* 하단 바 높이 + 여백 */
+  }
+
+  /* 모바일에서 container padding이 다르므로 조정 */
+  .main-header {
+    margin-left: -6px;
+    margin-right: -6px;
   }
 }
 
