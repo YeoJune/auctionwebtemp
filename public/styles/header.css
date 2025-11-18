@@ -11,6 +11,10 @@
   z-index: var(--z-header);
   height: var(--header-height);
   color: white;
+  /* container 제약에서 벗어나기 위한 설정 */
+  margin-left: calc(-1 * var(--spacing-md));
+  margin-right: calc(-1 * var(--spacing-md));
+  width: calc(100% + 2 * var(--spacing-md));
 }
 
 /* 모바일 헤더 구조 */
