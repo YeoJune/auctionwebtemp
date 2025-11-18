@@ -276,6 +276,9 @@ function renderHeader(currentPage = "") {
           </div>
           <div class="mobile-top-nav">
             ${topNavItems}
+            <div class="auth-container auth-unauthenticated">
+              <button id="signoutBtn" class="mobile-nav-button auth-button-mobile auth-signout">로그아웃</button>
+            </div>
           </div>
         </div>
         <div class="header-bottom">
