@@ -261,6 +261,9 @@ app.get("/myPage", (req, res) => {
     res.redirect("/signinPage");
   }
 });
+app.get("/bidGuidePage", (req, res) => {
+  res.sendFile(path.join(mainPagesPath, "bid-guide.html"));
+});
 
 // 메인 서비스 관리자 페이지 (제공해주신 원본 코드의 라우트들)
 app.get("/admin", (req, res) => {
