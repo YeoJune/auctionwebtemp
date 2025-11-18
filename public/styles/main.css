@@ -1,5 +1,16 @@
 /* main.css - Merged Version */
 
+/* Bid Guide Notice */
+.bid-guide-notice {
+  text-align: center;
+  margin: var(--spacing-md) 0;
+}
+
+.bid-guide-notice .btn {
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: var(--font-size-sm);
+}
+
 /* Filter Section */
 .filters-container {
   padding: 15px;
