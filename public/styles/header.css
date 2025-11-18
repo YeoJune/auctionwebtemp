@@ -11,15 +11,17 @@
   z-index: var(--z-header);
   height: var(--header-height);
   color: white;
+  /* sticky가 작동하려면 container 밖으로 빼야 함 */
 }
 
 /* 모바일 헤더 구조 */
 .main-header.mobile-header {
   padding: 0;
   height: auto;
-  display: flex;
-  flex-direction: column;
+  display: block; /* flex에서 block으로 변경 - sticky 작동 위해 */
   margin-bottom: 0;
+  position: sticky;
+  top: 0;
 }
 
 /* 모바일에서 콘텐츠 여백 확보 */
@@ -36,9 +38,7 @@
   padding: 8px;
   background-color: var(--blue-dark);
   height: 48px;
-  position: sticky;
-  top: 0;
-  z-index: var(--z-header);
+  /* position 제거 - 부모가 sticky이므로 */
 }
 
 .header-bottom {
