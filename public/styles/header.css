@@ -3,15 +3,12 @@
 /* Common Header */
 .main-header {
   background-color: var(--blue-dark);
-  padding: var(--spacing-md);
-  margin-bottom: var(--spacing-lg);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   z-index: var(--z-header);
-  height: var(--header-height);
   color: white;
 }
 
@@ -19,7 +16,8 @@
 .main-header .header-content {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 var(--spacing-md);
+  padding: var(--spacing-md);
+  height: var(--header-height);
 }
 
 /* 모바일 헤더 구조 */
@@ -41,7 +39,7 @@
   .notice-section {
     margin-top: 48px; /* 모바일 상단 바 높이 */
   }
-  
+
   .main-content {
     padding-bottom: 70px; /* 하단 바 높이 + 여백 */
   }
@@ -141,10 +139,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 100%;
   gap: var(--spacing-md);
   position: relative;
-  /* max-width와 padding은 위에서 정의됨 */
+  /* max-width, padding, height는 위에서 정의됨 */
 }
 
 .logo-container {
@@ -368,9 +365,9 @@ button.auth-button:hover {
 
 /* 중간 화면 (769px~1200px) */
 @media (max-width: 1200px) and (min-width: 769px) {
-  /* 헤더 - 높이와 패딩 비례 축소 */
-  .main-header {
-    height: 52px; /* 60px의 약 87% (56/64 비율과 동일) */
+  /* 헤더 콘텐츠 - 패딩 축소 */
+  .main-header .header-content {
+    height: 52px; /* 60px의 약 87% */
     padding: var(--spacing-md) var(--spacing-sm);
   }
 
@@ -421,14 +418,10 @@ button.auth-button:hover {
   }
 } /* 모바일 (768px 이하) */
 @media (max-width: 768px) {
-  /* 헤더 */
-  .main-header {
+  /* 헤더 콘텐츠 */
+  .main-header .header-content {
     height: 48px;
     padding: 8px;
-  }
-
-  .header-content {
-    height: 100%;
   }
 
   /* 네비게이션 버튼 */

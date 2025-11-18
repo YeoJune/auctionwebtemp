@@ -19,7 +19,10 @@ function renderHeader(currentPage = "") {
         items: [
           { text: "전체 상품", href: "/productPage" },
           { text: "현장 경매", href: "/productPage?selectedAuctionTypes=live" },
-          { text: "직접 경매", href: "/productPage?selectedAuctionTypes=direct" },
+          {
+            text: "직접 경매",
+            href: "/productPage?selectedAuctionTypes=direct",
+          },
         ],
       },
       {
@@ -29,9 +32,18 @@ function renderHeader(currentPage = "") {
         text: "즐겨찾기",
         page: "favorites",
         items: [
-          { text: "즐겨찾기 ①", href: "/productPage?selectedFavoriteNumbers=1" },
-          { text: "즐겨찾기 ②", href: "/productPage?selectedFavoriteNumbers=2" },
-          { text: "즐겨찾기 ③", href: "/productPage?selectedFavoriteNumbers=3" },
+          {
+            text: "즐겨찾기 ①",
+            href: "/productPage?selectedFavoriteNumbers=1",
+          },
+          {
+            text: "즐겨찾기 ②",
+            href: "/productPage?selectedFavoriteNumbers=2",
+          },
+          {
+            text: "즐겨찾기 ③",
+            href: "/productPage?selectedFavoriteNumbers=3",
+          },
         ],
       },
       {
@@ -182,7 +194,9 @@ function renderHeader(currentPage = "") {
             : "";
 
           return `
-            <button class="nav-button ${isActive}" ${item.id ? `id="${item.id}"` : ""} ${onclick}>
+            <button class="nav-button ${isActive}" ${
+            item.id ? `id="${item.id}"` : ""
+          } ${onclick}>
               <i class="${item.icon}"></i>
               <span>${item.text}</span>
             </button>
@@ -215,7 +229,9 @@ function renderHeader(currentPage = "") {
           ? `onclick="window.location.href = '${item.href}'"`
           : "";
         return `
-          <button class="mobile-nav-button ${item.class || ""}" ${item.id ? `id="${item.id}"` : ""} ${onclick}>
+          <button class="mobile-nav-button ${item.class || ""}" ${
+          item.id ? `id="${item.id}"` : ""
+        } ${onclick}>
             <i class="${item.icon}"></i>
           </button>
         `;
@@ -1997,7 +2013,9 @@ window.ModalImageGallery = (function () {
 document.addEventListener("DOMContentLoaded", function () {
   // 헤더 렌더링 (페이지 정보는 main-header의 data-page 속성에서 가져옴)
   const headerContainer = document.getElementById("main-header");
-  const currentPage = headerContainer ? headerContainer.getAttribute("data-page") || "" : "";
+  const currentPage = headerContainer
+    ? headerContainer.getAttribute("data-page") || ""
+    : "";
   renderHeader(currentPage);
 
   // 기본 UI 설정
