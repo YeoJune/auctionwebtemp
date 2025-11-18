@@ -3,32 +3,23 @@
 /* Common Header */
 .main-header {
   background-color: var(--blue-dark);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   position: sticky;
   top: 0;
   z-index: var(--z-header);
+  height: var(--header-height);
   color: white;
-  /* container 밖으로 확장 */
-  margin-left: calc(-1 * var(--spacing-md));
-  margin-right: calc(-1 * var(--spacing-md));
-  margin-bottom: var(--spacing-lg);
-}
-
-/* Header wrapper - padding 복원 */
-.header-wrapper {
-  padding: var(--spacing-md);
 }
 
 /* 모바일 헤더 구조 */
 .main-header.mobile-header {
+  padding: 0;
   height: auto;
-  display: block;
+  display: flex;
+  flex-direction: column;
   margin-bottom: 0;
-}
-
-/* 모바일 헤더의 wrapper */
-.main-header.mobile-header .header-wrapper {
-  padding: 8px;
 }
 
 /* 모바일에서 콘텐츠 여백 확보 */
@@ -36,20 +27,18 @@
   .main-content {
     padding-bottom: 70px; /* 하단 바 높이 + 여백 */
   }
-
-  /* 모바일에서 container padding이 다르므로 조정 */
-  .main-header {
-    margin-left: -6px;
-    margin-right: -6px;
-  }
 }
 
 .header-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 8px;
   background-color: var(--blue-dark);
   height: 48px;
+  position: sticky;
+  top: 0;
+  z-index: var(--z-header);
 }
 
 .header-bottom {
