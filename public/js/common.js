@@ -607,26 +607,27 @@ window.AuthManager = (function () {
    * 인증 UI 업데이트
    */
   function updateAuthUI() {
-    const authContainer = document.querySelector(".auth-container");
-    const signinBtn = document.getElementById("signinBtn");
-    const signoutBtn = document.getElementById("signoutBtn");
+    // 모든 auth-container 찾기 (PC와 모바일)
+    const authContainers = document.querySelectorAll(".auth-container");
+    const signinBtns = document.querySelectorAll("#signinBtn");
+    const signoutBtns = document.querySelectorAll("#signoutBtn");
 
-    if (!signinBtn || !signoutBtn) return;
+    if (signinBtns.length === 0 || signoutBtns.length === 0) return;
 
     if (isAuthenticated) {
-      if (authContainer) {
-        authContainer.classList.remove("auth-unauthenticated");
-        authContainer.classList.add("auth-authenticated");
-      }
-      signinBtn.style.display = "none";
-      signoutBtn.style.display = "inline-block";
+      authContainers.forEach((container) => {
+        container.classList.remove("auth-unauthenticated");
+        container.classList.add("auth-authenticated");
+      });
+      signinBtns.forEach((btn) => (btn.style.display = "none"));
+      signoutBtns.forEach((btn) => (btn.style.display = "inline-flex"));
     } else {
-      if (authContainer) {
-        authContainer.classList.remove("auth-authenticated");
-        authContainer.classList.add("auth-unauthenticated");
-      }
-      signinBtn.style.display = "inline-block";
-      signoutBtn.style.display = "none";
+      authContainers.forEach((container) => {
+        container.classList.remove("auth-authenticated");
+        container.classList.add("auth-unauthenticated");
+      });
+      signinBtns.forEach((btn) => (btn.style.display = "inline-flex"));
+      signoutBtns.forEach((btn) => (btn.style.display = "none"));
     }
   }
 
@@ -2033,7 +2034,7 @@ document.addEventListener("DOMContentLoaded", function () {
   setupMobileFilters();
   setupBasicEventListeners();
 
-  // 인증 상태 체크 (비동기)
+  // 인증 상태 체크 (비동기) - 헤더 렌더링 후 즉시 실행
   window.AuthManager.checkAuthStatus().then(() => {
     // 인증 상태 체크 완료 후 회원가입 팝업 버튼 초기화
     if (window.SignupPopupManager) {
