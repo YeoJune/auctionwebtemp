@@ -13,8 +13,8 @@
   z-index: var(--z-header);
   height: var(--header-height);
   color: white;
-  max-width: 1200px;
-  width: calc(100% - 2rem);
+  max-width: calc(1200px - 2rem);
+  width: calc(100% - 4rem);
 }
 
 /* 헤더 내부 콘텐츠 */
