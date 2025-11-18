@@ -6,11 +6,20 @@
   padding: var(--spacing-md);
   margin-bottom: var(--spacing-lg);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: var(--z-header);
   height: var(--header-height);
   color: white;
+}
+
+/* 헤더 내부 콘텐츠를 container와 동일하게 제한 */
+.main-header .header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-md);
 }
 
 /* 모바일 헤더 구조 */
@@ -22,8 +31,17 @@
   margin-bottom: 0;
 }
 
+/* PC에서 헤더 아래 첫 번째 요소 여백 */
+.notice-section {
+  margin-top: 84px; /* 헤더 높이(60px) + margin-bottom(24px) */
+}
+
 /* 모바일에서 콘텐츠 여백 확보 */
 @media (max-width: 768px) {
+  .notice-section {
+    margin-top: 48px; /* 모바일 상단 바 높이 */
+  }
+  
   .main-content {
     padding-bottom: 70px; /* 하단 바 높이 + 여백 */
   }
@@ -36,8 +54,10 @@
   padding: 8px;
   background-color: var(--blue-dark);
   height: 48px;
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: var(--z-header);
 }
 
@@ -124,6 +144,7 @@
   height: 100%;
   gap: var(--spacing-md);
   position: relative;
+  /* max-width와 padding은 위에서 정의됨 */
 }
 
 .logo-container {
