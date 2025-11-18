@@ -240,7 +240,7 @@ function renderHeader(currentPage = "") {
           <button class="mobile-nav-button ${item.class || ""}" ${
           item.id ? `id="${item.id}"` : ""
         } ${onclick}>
-            <i class="${item.icon}"></i>
+            ${item.text}
           </button>
         `;
       })
