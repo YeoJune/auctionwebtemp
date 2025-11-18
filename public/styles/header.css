@@ -2,55 +2,45 @@
 
 /* Common Header */
 .main-header {
-  position: fixed;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  max-width: 1200px;
-  width: 100%;
   background-color: var(--blue-dark);
   padding: var(--spacing-md);
   margin-bottom: var(--spacing-lg);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
   z-index: var(--z-header);
   height: var(--header-height);
   color: white;
-}
-
-/* 헤더 내부 컨텐츠를 container와 동일하게 정렬 */
-.header-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 100%;
-  gap: var(--spacing-md);
-  position: relative;
-}
-
-/* PC 헤더를 위한 body padding */
-body {
-  padding-top: var(--header-height);
+  /* container 안에 있어도 전체 너비로 확장 */
+  margin-left: calc(-1 * var(--spacing-md));
+  margin-right: calc(-1 * var(--spacing-md));
+  padding-left: var(--spacing-md);
+  padding-right: var(--spacing-md);
 }
 
 /* 모바일 헤더 구조 */
 .main-header.mobile-header {
   padding: 0;
   height: auto;
-  display: block;
+  display: block; /* flex에서 block으로 변경 - sticky 작동 위해 */
   margin-bottom: 0;
+  position: sticky;
+  top: 0;
+  /* 모바일에서는 container padding이 6px이므로 음수 마진 조정 */
+  margin-left: -6px;
+  margin-right: -6px;
 }
 
 /* 모바일에서 콘텐츠 여백 확보 */
 @media (max-width: 768px) {
-  body {
-    padding-top: 48px; /* 모바일 상단 바 높이 */
-  }
-
   .main-content {
     padding-bottom: 70px; /* 하단 바 높이 + 여백 */
+  }
+
+  /* PC 헤더도 모바일에서는 6px 음수 마진 */
+  .main-header {
+    margin-left: -6px;
+    margin-right: -6px;
   }
 }
 
@@ -58,9 +48,10 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px var(--spacing-md);
+  padding: 8px;
   background-color: var(--blue-dark);
   height: 48px;
+  /* position 제거 - 부모가 sticky이므로 */
 }
 
 .header-bottom {
@@ -69,16 +60,15 @@ body {
   align-items: center;
   background-color: var(--blue-dark);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 4px var(--spacing-md);
+  padding: 4px 0;
   height: 56px;
   position: fixed;
   bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  max-width: 1200px;
-  width: 100%;
+  left: 0;
+  right: 0;
   z-index: var(--z-header);
 }
+
 .mobile-top-nav {
   display: flex;
   gap: 8px;
@@ -138,6 +128,15 @@ body {
   color: white;
   background-color: rgba(255, 255, 255, 0.1);
   border-radius: var(--border-radius-sm);
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 100%;
+  gap: var(--spacing-md);
+  position: relative;
 }
 
 .logo-container {
