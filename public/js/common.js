@@ -103,13 +103,6 @@ function renderHeader(currentPage = "") {
     mobileTop: [
       {
         type: "button",
-        id: "signinBtn",
-        icon: "fas fa-sign-in-alt",
-        text: "로그인",
-        class: "auth-button-mobile",
-      },
-      {
-        type: "button",
         id: "mobileFilterBtn",
         icon: "fas fa-search",
         text: "필터",
@@ -275,10 +268,11 @@ function renderHeader(currentPage = "") {
             <img src="images/logo.png" alt="Logo" onclick="location.href = '/productPage'" />
           </div>
           <div class="mobile-top-nav">
-            ${topNavItems}
             <div class="auth-container auth-unauthenticated">
+              <button id="signinBtn" class="mobile-nav-button auth-button-mobile auth-signin">로그인</button>
               <button id="signoutBtn" class="mobile-nav-button auth-button-mobile auth-signout">로그아웃</button>
             </div>
+            ${topNavItems}
           </div>
         </div>
         <div class="header-bottom">
