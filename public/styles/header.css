@@ -20,6 +20,8 @@
   display: flex;
   flex-direction: column;
   margin-bottom: 0;
+  position: sticky;
+  top: 0;
 }
 
 /* 모바일에서 콘텐츠 여백 확보 */
@@ -36,8 +38,6 @@
   padding: 8px;
   background-color: var(--blue-dark);
   height: 48px;
-  position: sticky;
-  top: 0;
   z-index: var(--z-header);
 }
 
