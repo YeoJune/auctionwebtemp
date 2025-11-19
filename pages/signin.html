@@ -14,11 +14,6 @@
     <div class="container">
       <h2>Sign In</h2>
       <div id="error-message" class="error-message"></div>
-      <div class="preview-login">
-        <button id="previewLoginBtn" class="preview-button">
-          <i class="fas fa-eye"></i> 미리보기
-        </button>
-      </div>
       <form id="signin-form">
         <div class="form-group">
           <label for="id">id</label>
@@ -88,11 +83,6 @@
             document.getElementById("error-message").textContent =
               "An error occurred. Please try again.";
           }
-        });
-      document
-        .getElementById("previewLoginBtn")
-        .addEventListener("click", () => {
-          location.href = "/productPage";
         });
     </script>
     <!-- Meta Pixel Code -->

@@ -616,6 +616,9 @@ window.AuthManager = (function () {
     const authUnauthenticatedElements = document.querySelectorAll(
       ".auth-unauthenticated:not(.auth-container)"
     );
+    const authAuthenticatedElements = document.querySelectorAll(
+      ".auth-authenticated:not(.auth-container)"
+    );
 
     if (signinBtns.length === 0 || signoutBtns.length === 0) return;
 
@@ -628,6 +631,10 @@ window.AuthManager = (function () {
       authUnauthenticatedElements.forEach((el) => {
         el.style.display = "none";
       });
+      // 로그인 전용 요소 표시
+      authAuthenticatedElements.forEach((el) => {
+        el.style.display = "";
+      });
       signinBtns.forEach((btn) => (btn.style.display = "none"));
       signoutBtns.forEach((btn) => (btn.style.display = "inline-flex"));
     } else {
@@ -638,6 +645,10 @@ window.AuthManager = (function () {
       // 비로그인 전용 요소 표시
       authUnauthenticatedElements.forEach((el) => {
         el.style.display = "";
+      });
+      // 로그인 전용 요소 숨기기
+      authAuthenticatedElements.forEach((el) => {
+        el.style.display = "none";
       });
       signinBtns.forEach((btn) => (btn.style.display = "inline-flex"));
       signoutBtns.forEach((btn) => (btn.style.display = "none"));
