@@ -6,21 +6,11 @@
   padding: var(--spacing-md);
   margin-bottom: var(--spacing-lg);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
   z-index: var(--z-header);
   height: var(--header-height);
   color: white;
-}
-
-/* PC 헤더만 fixed 위치 */
-@media (min-width: 769px) {
-  .main-header {
-    position: fixed;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    max-width: calc(1200px - 2rem);
-    width: calc(100% - 4rem);
-  }
 }
 
 /* 헤더 내부 콘텐츠 */
@@ -38,16 +28,14 @@
 }
 
 /* PC에서 헤더 아래 첫 번째 요소 여백 */
-.notice-section,
-.main-content {
-  margin-top: 84px; /* 헤더 높이(60px) + margin-bottom(24px) */
+.notice-section {
+  /* sticky는 margin-top 불필요 */
 }
 
 /* 모바일에서 콘텐츠 여백 확보 */
 @media (max-width: 768px) {
-  .notice-section,
-  .main-content {
-    margin-top: 48px; /* 모바일 상단 바 높이 */
+  .notice-section {
+    /* sticky는 margin-top 불필요 */
   }
 
   .main-content {
@@ -62,10 +50,8 @@
   padding: 8px;
   background-color: var(--blue-dark);
   height: 48px;
-  position: fixed;
+  position: sticky;
   top: 0;
-  left: 0;
-  right: 0;
   z-index: var(--z-header);
 }
 
@@ -88,11 +74,6 @@
   display: flex;
   gap: 8px;
   align-items: center;
-}
-
-/* 모바일 헤더의 auth-container gap 조정 */
-.mobile-top-nav .auth-container {
-  gap: 4px;
 }
 
 .mobile-nav-button {
@@ -447,13 +428,9 @@ button.auth-button:hover {
   .main-header {
     height: 48px;
     padding: 8px;
-    position: fixed;
+    position: sticky;
     top: 0;
-    left: 0;
-    right: 0;
     width: 100%;
-    transform: none;
-    max-width: none;
   }
 
   .main-header .header-content {
