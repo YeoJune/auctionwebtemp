@@ -430,19 +430,35 @@ async function syncRecommendSettingsToItems() {
 async function syncDirectExpiredStatus() {
   const conn = await pool.getConnection();
   try {
-    const [result] = await conn.query(`
+    // 1. 만료되어야 하는데 아직 is_expired = 0인 것들
+    const [expireResult] = await conn.query(`
       UPDATE crawled_items
-      SET is_expired = CASE
-        WHEN scheduled_date <= NOW() THEN 1
-        ELSE 0
-      END
+      SET is_expired = 1
       WHERE bid_type = 'direct'
+        AND scheduled_date <= NOW()
+        AND is_expired = 0
     `);
 
-    if (result.changedRows > 0) {
-      console.log(`✅ Direct expired sync: ${result.changedRows} rows updated`);
+    // 2. 만료 해제되어야 하는데 아직 is_expired = 1인 것들
+    const [unexpireResult] = await conn.query(`
+      UPDATE crawled_items
+      SET is_expired = 0
+      WHERE bid_type = 'direct'
+        AND scheduled_date > NOW()
+        AND is_expired = 1
+    `);
+
+    const totalUpdated = expireResult.changedRows + unexpireResult.changedRows;
+    if (totalUpdated > 0) {
+      console.log(
+        `✅ Direct expired sync: ${totalUpdated} rows updated (expired: ${expireResult.changedRows}, unexpired: ${unexpireResult.changedRows})`
+      );
     }
-    return { success: true, updated: result.changedRows };
+    return {
+      success: true,
+      expired: expireResult.changedRows,
+      unexpired: unexpireResult.changedRows,
+    };
   } catch (error) {
     console.error("❌ Error syncing direct expired status:", error);
     throw error;
@@ -454,28 +470,49 @@ async function syncDirectExpiredStatus() {
 /**
  * Live 입찰의 만료 상태 업데이트 (날짜 기준)
  * 자동 실행: 1시간마다
- * - 기본: scheduled_date까지
- * - 입찰 존재 시: scheduled_date 당일까지 (23:59:59)
  */
 async function syncLiveExpiredStatus() {
   const conn = await pool.getConnection();
   try {
-    const [result] = await conn.query(`
+    // 1. 만료되어야 하는데 아직 is_expired = 0인 것들
+    // (입찰이 없고 scheduled_date 지남)
+    const [expireResult] = await conn.query(`
       UPDATE crawled_items ci
-      SET is_expired = CASE
-        WHEN EXISTS (
-          SELECT 1 FROM live_bids lb WHERE lb.item_id = ci.item_id
-        ) AND DATE(ci.scheduled_date) >= CURDATE() THEN 0
-        WHEN ci.scheduled_date <= NOW() THEN 1
-        ELSE 0
-      END
+      SET is_expired = 1
       WHERE bid_type = 'live'
+        AND is_expired = 0
+        AND scheduled_date <= NOW()
+        AND NOT EXISTS (
+          SELECT 1 FROM live_bids lb WHERE lb.item_id = ci.item_id
+        )
     `);
 
-    if (result.changedRows > 0) {
-      console.log(`✅ Live expired sync: ${result.changedRows} rows updated`);
+    // 2. 만료 해제되어야 하는데 아직 is_expired = 1인 것들
+    // (입찰이 생겼고 scheduled_date 당일이거나 미래)
+    const [unexpireResult] = await conn.query(`
+      UPDATE crawled_items ci
+      SET is_expired = 0
+      WHERE bid_type = 'live'
+        AND is_expired = 1
+        AND (
+          DATE(ci.scheduled_date) >= CURDATE()
+          OR EXISTS (
+            SELECT 1 FROM live_bids lb WHERE lb.item_id = ci.item_id
+          )
+        )
+    `);
+
+    const totalUpdated = expireResult.changedRows + unexpireResult.changedRows;
+    if (totalUpdated > 0) {
+      console.log(
+        `✅ Live expired sync: ${totalUpdated} rows updated (expired: ${expireResult.changedRows}, unexpired: ${unexpireResult.changedRows})`
+      );
     }
-    return { success: true, updated: result.changedRows };
+    return {
+      success: true,
+      expired: expireResult.changedRows,
+      unexpired: unexpireResult.changedRows,
+    };
   } catch (error) {
     console.error("❌ Error syncing live expired status:", error);
     throw error;
