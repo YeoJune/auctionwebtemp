@@ -134,6 +134,13 @@ function renderHeader(currentPage = "") {
       },
       {
         type: "button",
+        icon: "fas fa-star",
+        text: "즐겨찾기",
+        page: "favorites",
+        href: "/productPage?selectedFavoriteNumbers=1,2,3",
+      },
+      {
+        type: "button",
         icon: "fas fa-chart-line",
         text: "시세표",
         page: "values",
