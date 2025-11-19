@@ -612,6 +612,11 @@ window.AuthManager = (function () {
     const signinBtns = document.querySelectorAll("#signinBtn");
     const signoutBtns = document.querySelectorAll("#signoutBtn");
 
+    // 인증 상태에 따라 표시할 요소들 찾기
+    const authUnauthenticatedElements = document.querySelectorAll(
+      ".auth-unauthenticated:not(.auth-container)"
+    );
+
     if (signinBtns.length === 0 || signoutBtns.length === 0) return;
 
     if (isAuthenticated) {
@@ -619,12 +624,20 @@ window.AuthManager = (function () {
         container.classList.remove("auth-unauthenticated");
         container.classList.add("auth-authenticated");
       });
+      // 비로그인 전용 요소 숨기기
+      authUnauthenticatedElements.forEach((el) => {
+        el.style.display = "none";
+      });
       signinBtns.forEach((btn) => (btn.style.display = "none"));
       signoutBtns.forEach((btn) => (btn.style.display = "inline-flex"));
     } else {
       authContainers.forEach((container) => {
         container.classList.remove("auth-authenticated");
         container.classList.add("auth-unauthenticated");
+      });
+      // 비로그인 전용 요소 표시
+      authUnauthenticatedElements.forEach((el) => {
+        el.style.display = "";
       });
       signinBtns.forEach((btn) => (btn.style.display = "inline-flex"));
       signoutBtns.forEach((btn) => (btn.style.display = "none"));
