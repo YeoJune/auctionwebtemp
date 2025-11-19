@@ -417,6 +417,11 @@ input[type="time"]:focus {
   display: none !important;
 }
 
+/* 비로그인 시에만 표시 */
+.auth-authenticated .auth-unauthenticated {
+  display: none !important;
+}
+
 /* 공지사항 상태 */
 .notice-visible {
   display: block !important;
