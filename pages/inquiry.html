@@ -3,17 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>까사트레이드 - 회원가입</title>
+    <title>까사트레이드 - 입점신청</title>
+    <script async src="https://tally.so/widgets/embed.js"></script>
     <link
-      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap"
       rel="stylesheet" />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
-    <link rel="stylesheet" href="/styles/common.css" />
-    <link rel="stylesheet" href="/styles/main.css" />
-    <link rel="stylesheet" href="/styles/header.css" />
-    <script async src="https://tally.so/widgets/embed.js"></script>
     <style>
       * {
         margin: 0;
@@ -21,256 +18,1013 @@
         box-sizing: border-box;
       }
 
+      :root {
+        --primary: #127ef1;
+        --text: #09090b;
+        --bg: #ffffff;
+        --bg-alt: #fafafa;
+        --border: #e4e4e7;
+        --shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
       body {
-        font-family: "Noto Sans KR", -apple-system, BlinkMacSystemFont,
-          sans-serif;
+        font-family: "Noto Sans KR", -apple-system, BlinkSystemFont, "Segoe UI",
+          "Inter", sans-serif;
         line-height: 1.6;
-        color: #1a1a1a;
-        background-color: #fafafa;
+        color: var(--text);
+        background: var(--bg);
+        font-size: 16px;
+        letter-spacing: -0.01em;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
       }
 
       .section {
-        padding: 40px 24px;
+        padding: 100px 0;
+        position: relative;
       }
 
       .section-container {
-        max-width: 1280px;
+        max-width: 1200px;
         margin: 0 auto;
+        padding: 0 24px;
       }
 
       .section-title {
-        text-align: center;
-        font-size: 36px;
+        font-size: 52px;
         font-weight: 700;
-        color: #1a1a1a;
-        margin-bottom: 48px;
-        letter-spacing: -0.02em;
-      }
-
-      /* 헤더 배너 스타일 */
-      .header-banner {
-        background-color: #1e3a8a;
-        color: white;
-        padding: 60px 20px;
-        text-align: center;
-        margin-bottom: 40px;
-      }
-
-      .header-content {
-        max-width: 1280px;
-        margin: 0 auto;
-      }
-
-      .header-title {
-        font-size: 42px;
+        color: var(--text);
         margin-bottom: 20px;
-        font-weight: 700;
+        letter-spacing: -0.04em;
+        line-height: 1.15;
+        text-align: center;
       }
 
-      .header-description {
+      .section-subtitle {
         font-size: 18px;
-        margin-bottom: 30px;
+        color: var(--text);
+        opacity: 0.6;
+        margin-bottom: 56px;
+        line-height: 1.6;
+        font-weight: 400;
+        text-align: center;
+        max-width: 700px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      /* 섹션 7: 전환 */
+      .conversion-section {
+        background: var(--text);
+        color: var(--bg);
+        text-align: center;
+      }
+
+      .conversion-section .section-title,
+      .conversion-section .section-subtitle {
+        color: var(--bg);
+      }
+
+      .conversion-form {
+        background: var(--bg);
+        border-radius: 12px;
+        padding: 48px;
+        margin-top: 48px;
         max-width: 800px;
         margin-left: auto;
         margin-right: auto;
       }
 
-      /* 문의 양식 스타일 */
-      .inquiry {
-        background-color: #f8faff;
-        padding: 60px 0;
-      }
-
-      .inquiry-container {
-        max-width: 800px;
-        margin: 0 auto;
-        padding: 0 20px;
-      }
-
-      .inquiry-notice {
-        text-align: center;
-        margin-bottom: 24px;
-        padding: 16px;
-        background-color: #eff6ff;
+      .qualification-box {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        padding: 24px;
         border-radius: 8px;
-        color: #1e3a8a;
+        margin-bottom: 32px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .qualification-box p {
+        color: var(--bg);
+        opacity: 0.9;
+      }
+
+      /* 개인정보 처리방침 모달 */
+      .privacy-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 1000;
+        overflow: auto;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .privacy-modal.active {
+        display: flex;
+        opacity: 1;
+      }
+
+      .privacy-modal-content {
+        max-width: 800px;
+        background: var(--bg);
+        border-radius: 20px;
+        padding: 0;
+        overflow: hidden;
+        position: relative;
+        margin: auto;
+        max-height: 90vh;
+        width: 90%;
+        transform: scale(0.95);
+        transition: transform 0.3s ease;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+      }
+
+      .privacy-modal.active .privacy-modal-content {
+        transform: scale(1);
+      }
+
+      .privacy-modal-header {
+        background: var(--text);
+        color: var(--bg);
+        padding: 24px 32px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .privacy-modal-header h3 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 700;
+      }
+
+      .privacy-modal-close {
+        background: none;
+        border: none;
+        color: var(--bg);
+        font-size: 24px;
+        cursor: pointer;
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: all 0.2s ease;
+      }
+
+      .privacy-modal-close:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: rotate(90deg);
+      }
+
+      .privacy-modal-body {
+        padding: 32px;
+        max-height: 70vh;
+        overflow-y: auto;
+        line-height: 1.6;
+        color: var(--text);
+      }
+
+      .privacy-modal-body h4 {
+        color: var(--text);
+        margin-bottom: 16px;
+        font-size: 18px;
+        font-weight: 700;
+      }
+
+      .privacy-modal-body h5 {
+        color: var(--primary);
+        margin-bottom: 12px;
+        font-size: 16px;
+        font-weight: 600;
+      }
+
+      .privacy-modal-body p {
+        margin-bottom: 8px;
+        color: var(--text);
+        opacity: 0.8;
+      }
+
+      .privacy-modal-body strong {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .privacy-notice {
+        background: var(--bg-alt);
+        padding: 16px;
+        border-radius: 8px;
+        border-left: 4px solid var(--primary);
+        margin-top: 24px;
+      }
+
+      .privacy-notice p {
+        margin: 0;
+        font-size: 14px;
+        color: var(--text);
+        opacity: 0.7;
+      }
+
+      .privacy-link {
+        display: inline-block;
+        margin-top: 24px;
+        padding: 12px 24px;
+        background: var(--text);
+        color: var(--bg);
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 14px;
+        transition: all 0.2s ease;
+      }
+
+      .privacy-link:hover {
+        background: var(--primary);
+        transform: translateY(-1px);
+      }
+
+      /* 섹션 6: 가격 */
+      .pricing-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 32px;
+        margin-top: 48px;
+      }
+
+      .pricing-card {
+        background: var(--bg);
+        border-radius: 12px;
+        padding: 48px 40px;
+        border: 1px solid var(--border);
+        text-align: center;
+        position: relative;
+        transition: all 0.2s ease;
+      }
+
+      .pricing-card:hover {
+        border-color: var(--primary);
+      }
+
+      .pricing-card.featured {
+        border: 2px solid var(--primary);
+        transform: none;
+      }
+
+      .pricing-badge {
+        position: absolute;
+        top: -12px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--primary);
+        color: var(--bg);
+        padding: 6px 20px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+      }
+
+      .pricing-title {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 24px;
+        color: var(--text);
+      }
+
+      .pricing-price {
+        font-size: 48px;
+        font-weight: 700;
+        color: var(--primary);
+        margin-bottom: 8px;
+      }
+
+      .pricing-note {
+        color: var(--text);
+        opacity: 0.5;
+        font-size: 14px;
+        margin-bottom: 24px;
+      }
+
+      .pricing-features {
+        text-align: left;
+        list-style: none;
+        padding: 0;
+      }
+
+      .pricing-features li {
+        padding: 12px 0;
+        padding-left: 24px;
+        position: relative;
+        border-bottom: 1px solid var(--border);
+        color: var(--text);
+        opacity: 0.7;
+        line-height: 1.6;
+        display: flex;
+        align-items: flex-start;
+      }
+
+      .pricing-features li::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 12px;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--primary);
+        transform: translateY(calc(0.8em - 3px));
+      }
+
+      .pricing-features li:last-child {
+        border-bottom: none;
+      }
+
+      .pricing-detail-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--primary);
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        padding: 8px 16px;
+        border: 1px solid var(--primary);
+        border-radius: 6px;
+        transition: all 0.2s ease;
+      }
+
+      .pricing-detail-btn:hover {
+        background: var(--primary);
+        color: var(--bg);
+      }
+
+      .pricing-detail-btn i {
+        font-size: 12px;
+        transition: transform 0.2s ease;
+      }
+
+      .pricing-detail-btn:hover i {
+        transform: translateX(2px);
+      }
+
+      /* 보증금 FAQ 모달 */
+      .deposit-faq-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 1000;
+        overflow: auto;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .deposit-faq-modal.active {
+        display: flex;
+        opacity: 1;
+      }
+
+      .deposit-faq-modal-content {
+        max-width: 700px;
+        background: var(--bg);
+        border-radius: 20px;
+        padding: 0;
+        overflow: hidden;
+        position: relative;
+        margin: auto;
+        max-height: 90vh;
+        width: 90%;
+        transform: scale(0.95);
+        transition: transform 0.3s ease;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+      }
+
+      .deposit-faq-modal.active .deposit-faq-modal-content {
+        transform: scale(1);
+      }
+
+      .deposit-faq-modal-header {
+        background: var(--text);
+        color: var(--bg);
+        padding: 24px 32px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .deposit-faq-modal-header h3 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 700;
+      }
+
+      .deposit-faq-modal-close {
+        background: none;
+        border: none;
+        color: var(--bg);
+        font-size: 24px;
+        cursor: pointer;
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: all 0.2s ease;
+      }
+
+      .deposit-faq-modal-close:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: rotate(90deg);
+      }
+
+      .deposit-faq-modal-body {
+        padding: 32px;
+        max-height: 70vh;
+        overflow-y: auto;
+        line-height: 1.6;
+        color: var(--text);
+      }
+
+      .deposit-faq-modal-body p {
+        margin: 12px 0;
+        color: var(--text);
+        opacity: 0.8;
         line-height: 1.6;
       }
 
-      .inquiry-form {
-        background-color: white;
-        border-radius: 12px;
-        padding: 32px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+      .deposit-faq-modal-body p:first-child {
+        margin-top: 0;
       }
 
-      .pricing-link {
-        color: #1e3a8a;
-        text-decoration: underline;
+      .deposit-faq-modal-body strong {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      /* 월이용료 FAQ 모달 */
+      .monthly-fee-faq-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 1000;
+        overflow: auto;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .monthly-fee-faq-modal.active {
+        display: flex;
+        opacity: 1;
+      }
+
+      .monthly-fee-faq-modal-content {
+        max-width: 700px;
+        background: var(--bg);
+        border-radius: 20px;
+        padding: 0;
+        overflow: hidden;
+        position: relative;
+        margin: auto;
+        max-height: 90vh;
+        width: 90%;
+        transform: scale(0.95);
+        transition: transform 0.3s ease;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+      }
+
+      .monthly-fee-faq-modal.active .monthly-fee-faq-modal-content {
+        transform: scale(1);
+      }
+
+      .monthly-fee-faq-modal-header {
+        background: var(--text);
+        color: var(--bg);
+        padding: 24px 32px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .monthly-fee-faq-modal-header h3 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 700;
+      }
+
+      .monthly-fee-faq-modal-close {
+        background: none;
+        border: none;
+        color: var(--bg);
+        font-size: 24px;
         cursor: pointer;
+        padding: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: all 0.2s ease;
+      }
+
+      .monthly-fee-faq-modal-close:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: rotate(90deg);
+      }
+
+      .monthly-fee-faq-modal-body {
+        padding: 32px;
+        max-height: 70vh;
+        overflow-y: auto;
+        line-height: 1.6;
+        color: var(--text);
+      }
+
+      .monthly-fee-faq-modal-body p {
+        margin: 12px 0;
+        color: var(--text);
+        opacity: 0.8;
+        line-height: 1.6;
+      }
+
+      .monthly-fee-faq-modal-body p:first-child {
+        margin-top: 0;
+      }
+
+      .monthly-fee-faq-modal-body strong {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .monthly-fee-faq-modal-body ul {
+        list-style: none;
+        padding: 0;
+        margin: 16px 0;
+      }
+
+      .monthly-fee-faq-modal-body ul li {
+        padding: 8px 0;
+        padding-left: 24px;
+        position: relative;
+      }
+
+      .monthly-fee-faq-modal-body ul li:before {
+        content: "✓";
+        position: absolute;
+        left: 0;
+        color: #10b981;
+        font-weight: 600;
+      }
+
+      .monthly-fee-price-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .monthly-fee-price-list li {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid #e5e7eb;
+        color: var(--text);
+        opacity: 0.8;
+        line-height: 1.6;
+      }
+
+      .monthly-fee-price-list li:last-child {
+        border-bottom: none;
+      }
+
+      .monthly-fee-price-list li span:first-child {
         font-weight: 500;
       }
 
-      .pricing-link:hover {
-        color: #1e40af;
+      .monthly-fee-price-list li span:last-child {
+        font-weight: 600;
       }
 
-      /* 모바일 스타일 */
       @media (max-width: 768px) {
-        .section-title {
-          font-size: 28px;
-          margin-bottom: 36px;
+        .section {
+          padding: 60px 0;
         }
-        .inquiry-form {
+
+        .section-container {
+          padding: 0 20px;
+        }
+
+        .section-title {
+          font-size: 32px;
+          margin-bottom: 16px;
+        }
+
+        .section-subtitle {
+          font-size: 16px;
+          margin-bottom: 32px;
+        }
+
+        .pricing-grid {
+          grid-template-columns: 1fr;
+          gap: 24px;
+          margin-top: 32px;
+        }
+
+        .pricing-card {
+          padding: 32px 24px;
+        }
+
+        .pricing-title {
+          font-size: 20px;
+          margin-bottom: 20px;
+        }
+
+        .pricing-price {
+          font-size: 36px;
+        }
+
+        .conversion-form {
           padding: 24px;
         }
-        .header-title {
-          font-size: 32px;
+
+        .privacy-modal-body {
+          padding: 24px;
+        }
+
+        .deposit-faq-modal-content {
+          width: 95%;
+          max-height: 85vh;
+        }
+
+        .deposit-faq-modal-header {
+          padding: 20px 24px;
+        }
+
+        .deposit-faq-modal-body {
+          padding: 24px;
         }
       }
     </style>
+    <link rel="stylesheet" href="/styles/common.css" />
+    <link rel="stylesheet" href="/styles/main.css" />
+    <link rel="stylesheet" href="/styles/header.css" />
   </head>
-
   <body>
     <div id="main-header" data-page="inquiry"></div>
-    <div class="container">
-      <!-- 입점신청 섹션 -->
-      <section class="section inquiry" id="inquiry">
-        <div class="section-container">
-          <h2 class="section-title">회원가입</h2>
-          <div class="inquiry-container">
-            <p class="inquiry-notice">
-              <strong
-                >까사트레이드는 기업 고객을 위한 B2B 명품 경매
-                플랫폼입니다.</strong
-              ><br /><br />
+    <!-- 섹션 6: The Offer -->
+    <section class="section">
+      <div class="section-container">
+        <h2 class="section-title">신규 입점 고객을 위한<br />파격적인 혜택</h2>
+        <p class="section-subtitle">
+          투명한 가격 정책과 무료 혜택으로 시작하세요
+        </p>
 
-              개인 구매를 위한 서비스가 아닌, 사업 목적의 명품 매입을 위해
-              운영되고 있습니다.<br /><br />
-
-              또한 경매의 메리트 유지를 위해 입점 가능한 고객사 수를 제한하고
-              있습니다.<br /><br />
-
-              아래 신청서를 작성해 주시면, 검토 후 담당자가 순차적으로
-              연락드리겠습니다.
+        <div class="pricing-grid">
+          <div class="pricing-card featured">
+            <div class="pricing-badge">1개월 무료</div>
+            <h3 class="pricing-title">월 이용료</h3>
+            <div class="pricing-price">
+              <span style="text-decoration: line-through; opacity: 0.5"
+                >99,000원</span
+              >
+            </div>
+            <p
+              style="
+                margin: 16px 0;
+                padding: 12px;
+                background: var(--bg-alt);
+                border-radius: 8px;
+                font-size: 14px;
+                color: var(--text);
+                opacity: 0.8;
+                text-align: center;
+              ">
+              1개월 무료 이용, 사용해보고 결정하세요
             </p>
-
-            <div class="inquiry-form">
-              <div
-                style="
-                  margin: 16px 0;
-                  padding: 16px;
-                  background: #f8fafc;
-                  border-radius: 8px;
-                  border: 1px solid #e5e7eb;
-                ">
-                <div
-                  style="
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    flex-wrap: wrap;
-                    gap: 12px;
-                  ">
-                  <div style="flex: 1">
-                    <p
-                      style="
-                        margin: 0;
-                        font-weight: 500;
-                        color: #374151;
-                        font-size: 14px;
-                      ">
-                      💰 보증금에 대한 자세한 내용은 이용가이드 요금안내 탭을
-                      참고해주세요
-                    </p>
-                  </div>
-                  <button
-                    onclick="window.location.href = '/guidePage'"
-                    style="
-                      background-color: #1e3a8a;
-                      color: white;
-                      border: none;
-                      border-radius: 6px;
-                      padding: 8px 16px;
-                      font-size: 14px;
-                      font-weight: 500;
-                      cursor: pointer;
-                      white-space: nowrap;
-                    "
-                    onmouseover="this.style.backgroundColor='#1E40AF'"
-                    onmouseout="this.style.backgroundColor='#1E3A8A'">
-                    요금안내 보기
-                  </button>
-                </div>
-              </div>
-
-              <div
-                style="
-                  margin-top: 20px;
-                  background: #f8fafc;
-                  padding: 20px;
-                  border-radius: 8px;
-                  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-                ">
-                <h4
-                  style="margin-bottom: 15px; font-size: 18px; color: #1e3a8a">
-                  회원가입
-                </h4>
-
-                <iframe
-                  data-tally-src="https://tally.so/r/mVRN4j?transparentBackground=1"
-                  width="100%"
-                  height="800"
-                  frameborder="0"
-                  marginheight="0"
-                  marginwidth="0"
-                  style="border-radius: 8px"
-                  title="까사트레이드 회원가입폼">
-                  로딩 중...
-                </iframe>
-              </div>
+            <ul class="pricing-features">
+              <li>모든 경매 접근 권한</li>
+              <li>담당 경매사 배정</li>
+              <li>아이템 추천 카테고리</li>
+            </ul>
+            <div style="margin-top: 20px; text-align: center">
+              <a
+                href="#"
+                class="pricing-detail-btn"
+                onclick="openMonthlyFeeFaqModal(); return false;"
+                >자세히보기 <i class="fas fa-chevron-right"></i
+              ></a>
             </div>
           </div>
+
+          <div class="pricing-card">
+            <h3 class="pricing-title">보증금</h3>
+            <div class="pricing-price">-</div>
+            <div class="pricing-note">1일 최대 입찰 한도 설정</div>
+            <ul class="pricing-features">
+              <li>회원가입 할때 납입후 이용종료시 환급되는 보증금</li>
+              <li>경매 입찰은 납부하신 보증금 한도 내에서만 가능합니다</li>
+            </ul>
+            <div style="margin-top: 20px; text-align: center">
+              <a
+                href="#"
+                class="pricing-detail-btn"
+                onclick="openDepositFaqModal(); return false;"
+                >자세히보기 <i class="fas fa-chevron-right"></i
+              ></a>
+            </div>
+          </div>
+
+          <div class="pricing-card">
+            <h3 class="pricing-title">입찰/통관 수수료</h3>
+            <div class="pricing-price">-</div>
+            <div class="pricing-note">1일 총낙찰 합산금액 기준</div>
+            <ul class="pricing-features">
+              <li>10만원 미만: 제품당 10,000원</li>
+              <li>~500만원: 10%</li>
+              <li>500만~1천만: 7%</li>
+              <li>1천만~5천만: 5%</li>
+              <li>5천만원 이상: 별도 협의</li>
+            </ul>
+          </div>
         </div>
-      </section>
+      </div>
+    </section>
+
+    <!-- 섹션 7: The Conversion -->
+    <section class="section conversion-section" id="conversion">
+      <div class="section-container">
+        <h2 class="section-title">
+          지금 바로 입점신청하고,<br />1개월 무료 혜택을 받으세요
+        </h2>
+
+        <div class="conversion-form">
+          <iframe
+            src="https://tally.so/embed/mVRN4j?alignLeft=1&hideTitle=1&transparentBackground=1&dynamicHeight=1&formEventsForwarding=1"
+            width="100%"
+            height="800"
+            frameborder="0"
+            marginheight="0"
+            marginwidth="0"
+            style="border-radius: 8px">
+            로딩 중...
+          </iframe>
+
+          <div style="margin-top: 24px; text-align: center">
+            <a
+              href="#"
+              class="privacy-link"
+              onclick="openPrivacyModal(); return false;"
+              >개인정보 처리방침 전문 보기</a
+            >
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 보증금 FAQ 모달 -->
+    <div id="depositFaqModal" class="deposit-faq-modal">
+      <div class="deposit-faq-modal-content">
+        <div class="deposit-faq-modal-header">
+          <h3>보증금 관련 질문들</h3>
+          <button
+            class="deposit-faq-modal-close"
+            onclick="closeDepositFaqModal()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="deposit-faq-modal-body">
+          <p><strong>보증금을 왜 넣어야 하나요?</strong></p>
+          <p>
+            실시간으로 입찰 반영이 되기 때문에 미결제 방지를 위해 1일 입찰한도
+            만큼의 보증금이 필요합니다
+          </p>
+          <p>
+            <strong>추가 납부:</strong> 보증금보다 추가적으로 입찰을 원할시
+            해당경매 이전 1일전까지 보증금 증액이 가능합니다.
+          </p>
+          <p>
+            <strong>전액 환불:</strong> 계약 종료 시 14영업일 이내에 전액
+            환급됩니다.
+          </p>
+          <p>
+            <strong>부분 환불:</strong> 일부 금액만 환불받고 서비스를 계속
+            이용하는 것이 가능합니다.
+          </p>
+          <p>
+            <strong>환불 절차:</strong> 고객센터에 계약종료 요청 및 계좌번호
+            제공 시 자동으로 환급 처리됩니다.
+          </p>
+          <p>
+            <strong>미결제 시 처리:</strong> 낙찰 후 미결제 또는 월 이용료
+            미결제 시 보증금에서 차감되며, 로그인이 제한됩니다. 부족한 차액은
+            법적 절차를 통해 청구될 수 있습니다.
+          </p>
+        </div>
+      </div>
     </div>
 
-    <!-- Meta Pixel Code -->
+    <!-- 월이용료 FAQ 모달 -->
+    <div id="monthlyFeeFaqModal" class="monthly-fee-faq-modal">
+      <div class="monthly-fee-faq-modal-content">
+        <div class="monthly-fee-faq-modal-header">
+          <h3>월 이용료 요금표</h3>
+          <button
+            class="monthly-fee-faq-modal-close"
+            onclick="closeMonthlyFeeFaqModal()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="monthly-fee-faq-modal-body">
+          <ul class="monthly-fee-price-list">
+            <li><span>1개월</span> <span>99,000원</span></li>
+            <li><span>3개월</span> <span>279,000원</span></li>
+            <li><span>6개월</span> <span>495,000원</span></li>
+            <li><span>12개월</span> <span>990,000원</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 개인정보 처리방침 모달 -->
+    <div id="privacyModal" class="privacy-modal">
+      <div class="privacy-modal-content">
+        <div class="privacy-modal-header">
+          <h3>개인정보 처리방침</h3>
+          <button class="privacy-modal-close" onclick="closePrivacyModal()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="privacy-modal-body">
+          <h4>㈜까사트레이드 개인정보 처리방침</h4>
+
+          <div style="margin-bottom: 24px">
+            <h5>1. 개인정보 수집·이용 목적</h5>
+            <p>• 입점신청 검토 및 회원가입 절차 진행</p>
+            <p>• 서비스 이용 관련 상담 및 고객지원</p>
+            <p>• 경매 참여 자격 확인 및 보증금 관리</p>
+            <p>• 법령에 따른 의무 이행 및 분쟁 해결</p>
+          </div>
+
+          <div style="margin-bottom: 24px">
+            <h5>2. 수집하는 개인정보 항목</h5>
+            <p>
+              <strong>필수정보:</strong> 회사명, 대표자명, 사업자등록번호,
+              연락처, 이메일
+            </p>
+            <p>
+              <strong>선택정보:</strong> 주요 취급 브랜드, 월 예상 거래량, 기타
+              문의사항
+            </p>
+          </div>
+
+          <div style="margin-bottom: 24px">
+            <h5>3. 개인정보 보유·이용 기간</h5>
+            <p>
+              • 회원탈퇴 시까지 (단, 법령에 따른 보존 의무가 있는 경우 해당
+              기간)
+            </p>
+            <p>• 상법, 전자상거래법에 따른 거래기록: 5년</p>
+            <p>• 소비자 불만 및 분쟁처리 기록: 3년</p>
+          </div>
+
+          <div style="margin-bottom: 24px">
+            <h5>4. 개인정보 제3자 제공</h5>
+            <p>
+              고객의 별도 동의 없이는 제3자에게 개인정보를 제공하지 않습니다.
+              다만, 법령에 따른 요구가 있는 경우는 예외로 합니다.
+            </p>
+          </div>
+
+          <div style="margin-bottom: 24px">
+            <h5>5. 개인정보 처리 위탁</h5>
+            <p>
+              서비스 제공을 위해 필요한 경우, 개인정보 처리업무를 위탁할 수
+              있으며 이 경우 위탁계약을 통해 개인정보 보호를 위한 필요한 사항을
+              규정합니다.
+            </p>
+          </div>
+
+          <div style="margin-bottom: 24px">
+            <h5>6. 개인정보보호 책임자</h5>
+            <p><strong>성명:</strong> 황승하</p>
+            <p><strong>연락처:</strong> 02-6959-9640</p>
+            <p><strong>이메일:</strong> casatrade.kr@gmail.com</p>
+          </div>
+
+          <div class="privacy-notice">
+            <p>
+              본 개인정보 처리방침은 2025년 1월 1일부터 시행되며, 변경 시에는
+              웹사이트를 통해 공지합니다. 개인정보 처리에 관한 문의사항이
+              있으시면 언제든지 연락주시기 바랍니다.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script>
-      !(function (f, b, e, v, n, t, s) {
-        if (f.fbq) return;
-        n = f.fbq = function () {
-          n.callMethod
-            ? n.callMethod.apply(n, arguments)
-            : n.queue.push(arguments);
-        };
-        if (!f._fbq) f._fbq = n;
-        n.push = n;
-        n.loaded = !0;
-        n.version = "2.0";
-        n.queue = [];
-        t = b.createElement(e);
-        t.async = !0;
-        t.src = v;
-        s = b.getElementsByTagName(e)[0];
-        s.parentNode.insertBefore(t, s);
-      })(
-        window,
-        document,
-        "script",
-        "https://connect.facebook.net/en_US/fbevents.js"
-      );
-      fbq("init", "3072535019552512");
-      fbq("track", "PageView");
+      // 보증금 FAQ 모달 열기/닫기 함수
+      function openDepositFaqModal() {
+        document.getElementById("depositFaqModal").classList.add("active");
+        document.body.style.overflow = "hidden";
+      }
+
+      function closeDepositFaqModal() {
+        document.getElementById("depositFaqModal").classList.remove("active");
+        document.body.style.overflow = "";
+      }
+
+      // 월이용료 FAQ 모달 열기/닫기 함수
+      function openMonthlyFeeFaqModal() {
+        document.getElementById("monthlyFeeFaqModal").classList.add("active");
+        document.body.style.overflow = "hidden";
+      }
+
+      function closeMonthlyFeeFaqModal() {
+        document
+          .getElementById("monthlyFeeFaqModal")
+          .classList.remove("active");
+        document.body.style.overflow = "";
+      }
+
+      // 개인정보 처리방침 모달 열기/닫기 함수
+      function openPrivacyModal() {
+        document.getElementById("privacyModal").classList.add("active");
+        document.body.style.overflow = "hidden";
+      }
+
+      function closePrivacyModal() {
+        document.getElementById("privacyModal").classList.remove("active");
+        document.body.style.overflow = "";
+      }
+
+      // ESC 키 누르면 모달 닫기
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") {
+          if (
+            document.getElementById("privacyModal").classList.contains("active")
+          ) {
+            closePrivacyModal();
+          }
+          if (
+            document
+              .getElementById("depositFaqModal")
+              .classList.contains("active")
+          ) {
+            closeDepositFaqModal();
+          }
+        }
+      });
+
+      // 개인정보 처리방침 모달 바깥 클릭시 닫기
+      document
+        .getElementById("privacyModal")
+        .addEventListener("click", function (e) {
+          if (e.target === this) {
+            closePrivacyModal();
+          }
+        });
+
+      // 보증금 FAQ 모달 바깥 클릭시 닫기
+      document
+        .getElementById("depositFaqModal")
+        .addEventListener("click", function (e) {
+          if (e.target === this) {
+            closeDepositFaqModal();
+          }
+        });
     </script>
-    <noscript
-      ><img
-        height="1"
-        width="1"
-        style="display: none"
-        src="https://www.facebook.com/tr?id=3072535019552512&ev=PageView&noscript=1"
-    /></noscript>
-    <!-- End Meta Pixel Code -->
     <script src="/js/common.js"></script>
   </body>
 </html>
