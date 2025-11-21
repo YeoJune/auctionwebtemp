@@ -1,45 +1,42 @@
-/* header.css - 드롭다운 메뉴 개선 버전 */
-
 /* Common Header */
 .main-header {
-  background-color: var(--blue-dark);
-  padding: var(--spacing-md);
-  margin-bottom: var(--spacing-lg);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   position: sticky;
   top: 0;
   z-index: var(--z-header);
-  height: var(--header-height);
-  color: white;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--spacing-md);
+  padding-top: 0;
 }
 
 /* 헤더 내부 콘텐츠 */
 .main-header .header-content {
-  height: 100%;
+  background-color: var(--blue-dark);
+  padding: var(--spacing-md);
+  height: var(--header-height);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-md);
+  position: relative;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  /* max-width, margin 제거 - 부모가 이미 제한함 */
 }
 
 /* 모바일 헤더 구조 */
 .main-header.mobile-header {
+  max-width: none; /* 모바일은 전체 너비 */
   padding: 0;
   height: auto;
   display: flex;
   flex-direction: column;
-  margin-bottom: 0;
-}
-
-/* PC에서 헤더 아래 첫 번째 요소 여백 */
-.notice-section {
-  /* sticky는 margin-top 불필요 */
+  background-color: var(--blue-dark);
 }
 
 /* 모바일에서 콘텐츠 여백 확보 */
 @media (max-width: 768px) {
-  .notice-section {
-    /* sticky는 margin-top 불필요 */
-  }
-
   .main-content {
-    padding-bottom: 70px; /* 하단 바 높이 + 여백 */
+    padding-bottom: 70px;
   }
 }
 
@@ -48,11 +45,10 @@
   justify-content: space-between;
   align-items: center;
   padding: 8px;
-  background-color: var(--blue-dark);
   height: 48px;
-  position: sticky;
-  top: 0;
-  z-index: var(--z-header);
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .header-bottom {
@@ -68,74 +64,6 @@
   left: 0;
   right: 0;
   z-index: var(--z-header);
-}
-
-.mobile-top-nav {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.mobile-nav-button {
-  background-color: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: white;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--border-radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 16px;
-  padding: 0;
-}
-
-/* 로그인 버튼은 텍스트로 표시되므로 더 넓게 */
-.mobile-nav-button.auth-button-mobile {
-  width: auto;
-  padding: 0 12px;
-  min-width: 60px;
-}
-
-.mobile-nav-button:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.mobile-bottom-button {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  background-color: transparent;
-  border: none;
-  color: rgba(255, 255, 255, 0.7);
-  padding: 6px 4px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  min-width: 0;
-}
-
-.mobile-bottom-button i {
-  font-size: 18px;
-}
-
-.mobile-bottom-button span {
-  font-size: 10px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-
-.mobile-bottom-button.active,
-.mobile-bottom-button:hover {
-  color: white;
-  background-color: rgba(255, 255, 255, 0.1);
-  border-radius: var(--border-radius-sm);
 }
 
 .header-content {
@@ -159,7 +87,6 @@
   cursor: pointer;
 }
 
-/* 모바일에서 로고 크기 조정 */
 .mobile-header .logo-container img {
   max-height: 1.8rem;
 }
@@ -224,7 +151,6 @@
   align-items: center;
 }
 
-/* 인증 버튼 스타일 */
 button.auth-button {
   background-color: transparent;
   border: 1px solid white;
@@ -237,7 +163,73 @@ button.auth-button:hover {
   background-color: rgba(255, 255, 255, 0.1);
 }
 
-/* 햄버거 메뉴 버튼 스타일 */
+.mobile-nav-button {
+  background-color: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--border-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 16px;
+  padding: 0;
+}
+
+.mobile-nav-button.auth-button-mobile {
+  width: auto;
+  padding: 0 12px;
+  min-width: 60px;
+}
+
+.mobile-nav-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.mobile-top-nav {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.mobile-bottom-button {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background-color: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 6px 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 0;
+}
+
+.mobile-bottom-button i {
+  font-size: 18px;
+}
+
+.mobile-bottom-button span {
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.mobile-bottom-button.active,
+.mobile-bottom-button:hover {
+  color: white;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: var(--border-radius-sm);
+}
+
 .mobile-menu-toggle {
   display: none;
   background-color: transparent;
@@ -272,12 +264,10 @@ button.auth-button:hover {
   transform: rotate(90deg);
 }
 
-/* 드롭다운 컨테이너 */
 .dropdown-container {
   position: relative;
 }
 
-/* 드롭다운 메뉴 스타일 */
 .dropdown-content {
   position: absolute;
   top: 100%;
@@ -315,7 +305,6 @@ button.auth-button:hover {
   background-color: var(--background-dark);
 }
 
-/* 드롭다운 백드롭 (모바일용) */
 .dropdown-backdrop {
   position: fixed;
   top: 0;
@@ -327,7 +316,6 @@ button.auth-button:hover {
   display: none;
 }
 
-/* 메뉴 백드롭 (모바일용) */
 .menu-backdrop {
   position: fixed;
   top: 0;
@@ -341,14 +329,12 @@ button.auth-button:hover {
 
 /* ===== MEDIA QUERIES ===== */
 
-/* 데스크탑 (769px 이상) */
 @media (min-width: 769px) {
   .dropdown-content {
     width: auto;
     min-width: 180px;
   }
 
-  /* 드롭다운 화살표 표시 */
   .dropdown-container .nav-button::after {
     content: "";
     display: inline-block;
@@ -365,79 +351,72 @@ button.auth-button:hover {
   }
 }
 
-/* 중간 화면 (769px~1200px) */
 @media (max-width: 1200px) and (min-width: 769px) {
-  /* 헤더 - 높이와 패딩 비례 축소 */
-  .main-header {
-    height: 52px; /* 60px의 약 87% */
+  .main-header .header-content {
     padding: var(--spacing-md) var(--spacing-sm);
+    height: 52px;
   }
 
-  .main-header .header-content {
-    height: 100%;
+  .header-top {
+    padding: 8px var(--spacing-sm);
   }
 
   .header-content {
     gap: var(--spacing-xs);
   }
 
-  /* 로고 - 비례 축소 */
   .logo-container img {
-    max-height: 2.2rem; /* 2.5rem의 88% */
+    max-height: 2.2rem;
   }
 
-  /* 네비게이션 - 크기 비례 축소 */
   .nav-container {
     gap: 1px;
   }
 
   .nav-button {
-    width: 56px; /* 64px의 87.5% */
-    height: 56px; /* 64px의 87.5% */
-    padding: 6px 0; /* 8px의 75% */
+    width: 56px;
+    height: 56px;
+    padding: 6px 0;
   }
 
   .nav-button i {
-    font-size: 20px; /* 24px의 83% */
+    font-size: 20px;
     margin-bottom: 3px;
   }
 
   .nav-button span {
-    font-size: 10px; /* 11px의 91% */
+    font-size: 10px;
   }
 
-  /* 인증 버튼 - 비례 축소 */
   .auth-container button {
-    height: 32px; /* 36px의 89% */
-    padding: 0 10px; /* 15px의 67% */
+    height: 32px;
+    padding: 0 10px;
     font-size: 12px;
   }
 
-  /* 드롭다운 - 비례 축소 */
   .dropdown-content {
-    min-width: 160px; /* 180px의 89% */
+    min-width: 160px;
   }
 
   .dropdown-content a {
-    padding: 10px 12px; /* 기본 패딩의 적절한 비율 */
+    padding: 10px 12px;
     font-size: 13px;
   }
-} /* 모바일 (768px 이하) */
+}
+
 @media (max-width: 768px) {
-  /* 헤더 */
   .main-header {
-    height: 48px;
-    padding: 8px;
+    height: auto;
+    padding: 0;
     position: sticky;
     top: 0;
     width: 100%;
   }
 
-  .main-header .header-content {
-    height: 100%;
+  .header-top {
+    padding: 8px;
   }
 
-  /* 네비게이션 버튼 */
   .nav-button {
     width: 51px;
     height: 51px;
@@ -455,14 +434,12 @@ button.auth-button:hover {
     font-size: 9px;
   }
 
-  /* 인증 버튼 */
   button.auth-button {
     height: 29px;
     padding: 0 12px;
     font-size: 11px;
   }
 
-  /* 햄버거 버튼 */
   .mobile-menu-toggle {
     display: flex !important;
     position: absolute;
@@ -475,17 +452,14 @@ button.auth-button:hover {
     font-size: 1.2rem;
   }
 
-  /* 모바일 헤더의 auth-container는 margin-right 제거 */
   .mobile-top-nav .auth-container {
     margin-right: 0;
   }
 
-  /* PC 헤더의 인증 버튼 위치 조정 (햄버거 메뉴용) */
   .main-header:not(.mobile-header) .auth-container {
     margin-right: 55px;
   }
 
-  /* 네비게이션 메뉴 기본 숨김 */
   .nav-container {
     display: none;
   }
@@ -498,7 +472,6 @@ button.auth-button:hover {
     display: none;
   }
 
-  /* 모바일 메뉴 활성화 시 스타일 */
   .nav-container.mobile-menu-active {
     display: flex !important;
     position: fixed;
@@ -515,7 +488,6 @@ button.auth-button:hover {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   }
 
-  /* 모바일 메뉴에서 네비게이션 버튼 스타일 */
   .nav-container.mobile-menu-active .nav-button {
     width: 100%;
     height: auto;
@@ -537,7 +509,6 @@ button.auth-button:hover {
     font-size: 13px;
   }
 
-  /* 모바일 환경에서 드롭다운 스타일 조정 */
   .nav-container.mobile-menu-active .dropdown-content {
     position: static;
     width: 100%;
@@ -556,7 +527,6 @@ button.auth-button:hover {
     background-color: rgba(255, 255, 255, 0.05);
   }
 
-  /* 모바일 메뉴가 닫혀있을 때 드롭다운 표시 */
   .nav-container:not(.active) .dropdown-content.active {
     position: fixed;
     top: auto;
@@ -578,14 +548,12 @@ button.auth-button:hover {
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   }
 
-  /* 드롭다운 활성화 표시 */
   .nav-container.mobile-menu-active .dropdown-container > .nav-button {
     position: relative;
     background-color: rgba(255, 255, 255, 0.15);
     border-color: rgba(255, 255, 255, 0.5);
   }
 
-  /* 모바일에서 드롭다운 화살표 표시 */
   .nav-container.mobile-menu-active .dropdown-container .nav-button::after {
     content: "▼";
     font-size: 10px;
@@ -600,7 +568,6 @@ button.auth-button:hover {
     content: "▲";
   }
 
-  /* 모바일 메뉴에서 드롭다운 표시 개선 */
   .nav-container.mobile-menu-active .dropdown-content {
     position: static;
     width: 100%;

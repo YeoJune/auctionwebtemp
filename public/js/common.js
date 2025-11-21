@@ -7,6 +7,11 @@ function renderHeader(currentPage = "") {
 
   const isMobile = window.innerWidth <= 768;
 
+  // 헤더 엘리먼트에 클래스 추가
+  headerContainer.className = isMobile
+    ? "main-header mobile-header"
+    : "main-header";
+
   // 메뉴 설정
   const menuConfig = {
     pc: [
@@ -194,7 +199,6 @@ function renderHeader(currentPage = "") {
             </div>
           `;
         } else {
-          const target = item.target ? `target="${item.target}"` : "";
           const onclick = item.href
             ? item.target === "_blank"
               ? `onclick="window.open('${item.href}', '_blank')"`
@@ -214,20 +218,18 @@ function renderHeader(currentPage = "") {
       .join("");
 
     headerContainer.innerHTML = `
-      <header class="main-header">
-        <div class="header-content">
-          <div class="logo-container">
-            <img src="images/logo.png" alt="Logo" onclick="location.href = '/productPage'" />
-          </div>
-          <div class="nav-container">
-            ${navItems}
-          </div>
-          <div class="auth-container auth-unauthenticated">
-            <button id="signinBtn" class="auth-button auth-signin">로그인</button>
-            <button id="signoutBtn" class="auth-button auth-signout">로그아웃</button>
-          </div>
+      <div class="header-content">
+        <div class="logo-container">
+          <img src="images/logo.png" alt="Logo" onclick="location.href = '/productPage'" />
         </div>
-      </header>
+        <div class="nav-container">
+          ${navItems}
+        </div>
+        <div class="auth-container auth-unauthenticated">
+          <button id="signinBtn" class="auth-button auth-signin">로그인</button>
+          <button id="signoutBtn" class="auth-button auth-signout">로그아웃</button>
+        </div>
+      </div>
     `;
   } else {
     // 모바일 헤더 생성
@@ -236,7 +238,6 @@ function renderHeader(currentPage = "") {
         const onclick = item.href
           ? `onclick="window.location.href = '${item.href}'"`
           : "";
-        // 로그인 버튼은 텍스트, 나머지는 아이콘
         const content =
           item.id === "signinBtn" ? item.text : `<i class="${item.icon}"></i>`;
         return `
@@ -252,7 +253,6 @@ function renderHeader(currentPage = "") {
     const bottomNavItems = menuConfig.mobileBottom
       .map((item) => {
         const isActive = item.page === currentPage ? "active" : "";
-        const target = item.target ? `target="${item.target}"` : "";
         const onclick = item.href
           ? item.target === "_blank"
             ? `onclick="window.open('${item.href}', '_blank')"`
@@ -269,23 +269,21 @@ function renderHeader(currentPage = "") {
       .join("");
 
     headerContainer.innerHTML = `
-      <header class="main-header mobile-header">
-        <div class="header-top">
-          <div class="logo-container">
-            <img src="images/logo.png" alt="Logo" onclick="location.href = '/productPage'" />
-          </div>
-          <div class="mobile-top-nav">
-            <div class="auth-container auth-unauthenticated">
-              <button id="signinBtn" class="mobile-nav-button auth-button-mobile auth-signin">로그인</button>
-              <button id="signoutBtn" class="mobile-nav-button auth-button-mobile auth-signout">로그아웃</button>
-            </div>
-            ${topNavItems}
-          </div>
+      <div class="header-top">
+        <div class="logo-container">
+          <img src="images/logo.png" alt="Logo" onclick="location.href = '/productPage'" />
         </div>
-        <div class="header-bottom">
-          ${bottomNavItems}
+        <div class="mobile-top-nav">
+          <div class="auth-container auth-unauthenticated">
+            <button id="signinBtn" class="mobile-nav-button auth-button-mobile auth-signin">로그인</button>
+            <button id="signoutBtn" class="mobile-nav-button auth-button-mobile auth-signout">로그아웃</button>
+          </div>
+          ${topNavItems}
         </div>
-      </header>
+      </div>
+      <div class="header-bottom">
+        ${bottomNavItems}
+      </div>
     `;
   }
 }
@@ -791,57 +789,6 @@ window.LoginRequiredModal = (function () {
     show,
     hide,
     checkLoginRequired,
-  };
-})();
-
-// 회원가입 팝업 버튼 관리자 (비로그인 사용자용)
-window.SignupPopupManager = (function () {
-  let buttonElement = null;
-
-  function init() {
-    buttonElement = document.getElementById("signupPopupBtn");
-    if (!buttonElement) {
-      console.log("SignupPopupBtn element not found");
-      return;
-    }
-
-    // 클릭 이벤트 추가
-    buttonElement.addEventListener("click", () => {
-      window.location.href = "https://casastrade.com/inquiryPage";
-    });
-
-    // AuthManager 초기화 후 표시 여부 결정
-    checkAndShow();
-
-    console.log("SignupPopupManager 초기화 완료");
-  }
-
-  function checkAndShow() {
-    // 비로그인 상태일 때만 버튼 표시
-    if (!window.AuthManager.isAuthenticated()) {
-      show();
-    } else {
-      hide();
-    }
-  }
-
-  function show() {
-    if (buttonElement) {
-      buttonElement.classList.add("show");
-    }
-  }
-
-  function hide() {
-    if (buttonElement) {
-      buttonElement.classList.remove("show");
-    }
-  }
-
-  return {
-    init,
-    checkAndShow,
-    show,
-    hide,
   };
 })();
 
@@ -2064,14 +2011,6 @@ document.addEventListener("DOMContentLoaded", function () {
   preventEventConflicts();
   setupMobileFilters();
   setupBasicEventListeners();
-
-  // 인증 상태 체크 (비동기) - 헤더 렌더링 후 즉시 실행
-  window.AuthManager.checkAuthStatus().then(() => {
-    // 인증 상태 체크 완료 후 회원가입 팝업 버튼 초기화
-    if (window.SignupPopupManager) {
-      window.SignupPopupManager.init();
-    }
-  });
 
   // 툴팁 시스템 초기화
   if (window.TooltipManager) {
