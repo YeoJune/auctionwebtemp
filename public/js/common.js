@@ -125,7 +125,7 @@ function renderHeader(currentPage = "") {
     mobileBottom: [
       {
         type: "button",
-        icon: "fas fa-th-large",
+        icon: "fas fa-list",
         text: "상품",
         page: "product",
         href: "/productPage",
@@ -154,7 +154,7 @@ function renderHeader(currentPage = "") {
       {
         type: "button",
         icon: "fas fa-comments",
-        text: "실시간문의",
+        text: "문의",
         page: "inquiry-chat",
         href: "http://pf.kakao.com/_xcCxoqn/chat",
         target: "_blank",
@@ -169,7 +169,7 @@ function renderHeader(currentPage = "") {
       {
         type: "button",
         icon: "fas fa-book",
-        text: "이용가이드",
+        text: "가이드",
         page: "guide",
         href: "/guidePage",
       },
