@@ -35,8 +35,8 @@
 
 /* 모바일에서 콘텐츠 여백 확보 */
 @media (max-width: 768px) {
-  .main-content {
-    padding-bottom: 70px;
+  body {
+    padding-bottom: 56px; /* 하단 바 높이만큼 */
   }
 }
 
