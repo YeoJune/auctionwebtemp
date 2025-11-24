@@ -103,6 +103,64 @@
         font-size: 15px;
       }
 
+      /* 모바일용 경매 방식 섹션 */
+      .mobile-auction-section {
+        display: none;
+      }
+
+      .mobile-auction-card {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+      }
+
+      .mobile-auction-title {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 20px;
+        text-align: center;
+        padding-bottom: 16px;
+        border-bottom: 2px solid var(--primary);
+      }
+
+      .mobile-auction-item {
+        margin-bottom: 20px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .mobile-auction-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+      }
+
+      .mobile-auction-item-label {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 12px;
+        padding: 8px 12px;
+        background: var(--bg-alt);
+        border-radius: 8px;
+      }
+
+      .mobile-auction-item-content {
+        font-size: 15px;
+        color: var(--text);
+        line-height: 1.6;
+        padding-left: 12px;
+        margin-left: 0;
+      }
+
+      .mobile-auction-item-content > div {
+        padding-left: 0;
+        margin-left: 0;
+      }
+
       .comparison-table {
         width: 100%;
         border-collapse: collapse;
@@ -821,74 +879,168 @@
           margin-bottom: 24px;
         }
 
+        /* 데스크톱 테이블 숨기기 */
         .comparison-table {
-          font-size: 12px;
-          display: block;
-          overflow-x: auto;
-          -webkit-overflow-scrolling: touch;
-        }
-
-        .comparison-table thead {
           display: none;
         }
 
-        .comparison-table tbody {
+        /* 모바일 섹션 표시 */
+        .mobile-auction-section {
           display: block;
         }
 
-        .comparison-table tbody tr {
-          display: block;
+        .mobile-auction-card {
+          padding: 20px;
+        }
+
+        .mobile-auction-title {
+          font-size: 20px;
           margin-bottom: 16px;
-          border: 1px solid var(--border);
-          border-radius: 12px;
-          overflow: hidden;
-          background: var(--bg);
         }
 
-        .comparison-table tbody tr:nth-child(even) {
-          background: var(--bg);
+        .mobile-auction-item {
+          margin-bottom: 16px;
+          padding-bottom: 16px;
         }
 
-        .comparison-table td {
-          display: block;
-          padding: 16px;
-          text-align: left;
-          border: none;
-          border-bottom: 1px solid var(--border);
-        }
-
-        .comparison-table td:first-child {
-          background: var(--bg-alt);
-          font-weight: 700;
+        .mobile-auction-item-label {
           font-size: 14px;
-          border-right: none;
-          border-bottom: 2px solid var(--primary);
+          margin-bottom: 10px;
         }
 
-        .comparison-table td:nth-child(2),
-        .comparison-table td:nth-child(3) {
-          border-left: none;
-          border-right: none;
+        .mobile-auction-item-content {
+          font-size: 14px;
+          padding-left: 12px;
+          margin-left: 0;
+          width: 100%;
+          overflow-x: hidden;
         }
 
-        .comparison-table td:nth-child(2)::before {
-          content: "직접경매: ";
-          font-weight: 700;
-          color: var(--primary);
-          display: block;
-          margin-bottom: 8px;
+        .mobile-auction-item-content > div {
+          padding-left: 0;
+          margin-left: 0;
+          width: 100%;
+          max-width: 100%;
+          margin-bottom: 4px;
         }
 
-        .comparison-table td:nth-child(3)::before {
-          content: "현장경매: ";
-          font-weight: 700;
-          color: var(--primary);
-          display: block;
-          margin-bottom: 8px;
+        .mobile-auction-item-content div[style*="margin-top"] {
+          margin-left: 0 !important;
+          padding-left: 0 !important;
         }
 
-        .comparison-table td:last-child {
-          border-bottom: none;
+        .mobile-auction-item-content div[style*="350px"] {
+          width: 100% !important;
+          max-width: 100% !important;
+          height: auto !important;
+          min-height: auto !important;
+          padding: 12px !important;
+        }
+
+        .mobile-auction-item-content div[style*="font-size: 28px"] {
+          font-size: 20px !important;
+        }
+
+        .mobile-auction-item-content div[style*="font-size: 20px"] {
+          font-size: 16px !important;
+        }
+
+        .mobile-auction-item-content div[style*="font-size: 15px"] {
+          font-size: 13px !important;
+        }
+
+        .mobile-auction-item-content div[style*="font-size: 16px"] {
+          font-size: 14px !important;
+        }
+
+        .mobile-auction-item-content div[style*="font-size: 10px"] {
+          font-size: 9px !important;
+        }
+
+        .mobile-auction-item-content div[style*="font-size: 12px"] {
+          font-size: 11px !important;
+        }
+
+        .mobile-auction-item-content div[style*="font-size: 11px"] {
+          font-size: 10px !important;
+        }
+
+        .mobile-auction-item-content div[style*="width: 45px"] {
+          width: 45px !important;
+          height: 45px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
+
+        .mobile-auction-item-content div[style*="width: 55px"] {
+          width: 55px !important;
+          height: 55px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
+
+        .mobile-auction-item-content
+          div[style*="display: flex"][style*="flex-direction: column"] {
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
+
+        .mobile-auction-item-content div[style*="width: 12px"] {
+          width: 12px !important;
+          height: 12px !important;
+          display: block !important;
+        }
+
+        .mobile-auction-item-content div[style*="width: 16px"] {
+          width: 16px !important;
+          height: 16px !important;
+          display: block !important;
+        }
+
+        .mobile-auction-item-content div[style*="width: 20px"] {
+          width: 20px !important;
+          height: 16px !important;
+          display: block !important;
+        }
+
+        .mobile-auction-item-content div[style*="width: 24px"] {
+          width: 24px !important;
+          height: 18px !important;
+          display: block !important;
+        }
+
+        .mobile-auction-item-content div[style*="background: #94a3b8"] {
+          background: #64748b !important;
+          opacity: 1 !important;
+        }
+
+        .mobile-auction-item-content
+          div[style*="background: white"][style*="border-radius: 50%"],
+        .mobile-auction-item-content
+          div[style*="background: white"][style*="border-radius: 12px"] {
+          background: white !important;
+          opacity: 1 !important;
+        }
+
+        .mobile-auction-item-content div[style*="background: #cbd5e1"] {
+          background: #cbd5e1 !important;
+        }
+
+        .mobile-auction-item-content div[style*="background: #fb923c"] {
+          background: #fb923c !important;
+        }
+
+        .mobile-auction-item-content div[style*="display: flex"] {
+          flex-wrap: wrap !important;
+          gap: 8px !important;
+        }
+
+        .mobile-auction-item-content div[style*="justify-content: center"] {
+          flex-wrap: wrap !important;
         }
 
         .modal-overlay {
@@ -1207,20 +1359,13 @@
     <header id="main-header" data-page="bid-guide"></header>
     <section class="section">
       <div class="section-container">
-        <h1 class="section-title">
-          대표님의 스타일에 맞게 입찰하세요:<br />2가지 경매 방식
-        </h1>
+        <h1 class="section-title">두 가지 경매 방식의 핵심 차이</h1>
         <p class="section-subtitle">
-          초보자부터 전문가까지, 모든 고객의 니즈에 맞는 경매 방식을 제공합니다
+          경매는 보증금 한도 내에서 입찰 가능합니다
         </p>
 
         <!-- 핵심 차이점 비교 -->
         <div class="comparison-box">
-          <h2 class="comparison-box-title">두 가지 경매 방식의 핵심 차이</h2>
-          <p class="comparison-box-subtitle">
-            경매는 보증금 한도 내에서 입찰 가능합니다
-          </p>
-
           <table class="comparison-table">
             <thead>
               <tr>
@@ -1363,22 +1508,7 @@
                             font-weight: 500;
                             margin-bottom: 6px;
                           ">
-                          3차 입찰
-                        </div>
-                        <div
-                          style="
-                            font-size: 28px;
-                            font-weight: 700;
-                            color: #1e293b;
-                          ">
-                          50,000<span
-                            style="
-                              font-size: 20px;
-                              color: #64748b;
-                              margin-left: 4px;
-                            "
-                            >¥</span
-                          >
+                          고객님의 최종 3차입찰
                         </div>
                       </div>
 
@@ -1426,29 +1556,33 @@
                                 border-radius: 50%;
                                 margin: 6px 0;
                                 position: relative;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
                               ">
                               <div
                                 style="
-                                  position: absolute;
-                                  top: 11px;
-                                  left: 50%;
-                                  transform: translateX(-50%);
-                                  width: 12px;
-                                  height: 12px;
-                                  background: #94a3b8;
-                                  border-radius: 50%;
-                                "></div>
-                              <div
-                                style="
-                                  position: absolute;
-                                  top: 23px;
-                                  left: 50%;
-                                  transform: translateX(-50%);
-                                  width: 20px;
-                                  height: 16px;
-                                  background: #94a3b8;
-                                  border-radius: 10px 10px 20px 20px;
-                                "></div>
+                                  display: flex;
+                                  flex-direction: column;
+                                  align-items: center;
+                                  justify-content: center;
+                                ">
+                                <div
+                                  style="
+                                    width: 12px;
+                                    height: 12px;
+                                    background: #94a3b8;
+                                    border-radius: 50%;
+                                    margin-bottom: 2px;
+                                  "></div>
+                                <div
+                                  style="
+                                    width: 20px;
+                                    height: 16px;
+                                    background: #94a3b8;
+                                    border-radius: 10px 10px 20px 20px;
+                                  "></div>
+                              </div>
                             </div>
                             <div
                               style="
@@ -1508,29 +1642,33 @@
                                 border-radius: 50%;
                                 margin: 6px 0;
                                 position: relative;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
                               ">
                               <div
                                 style="
-                                  position: absolute;
-                                  top: 13px;
-                                  left: 50%;
-                                  transform: translateX(-50%);
-                                  width: 16px;
-                                  height: 16px;
-                                  background: white;
-                                  border-radius: 50%;
-                                "></div>
-                              <div
-                                style="
-                                  position: absolute;
-                                  top: 30px;
-                                  left: 50%;
-                                  transform: translateX(-50%);
-                                  width: 24px;
-                                  height: 18px;
-                                  background: white;
-                                  border-radius: 12px 12px 24px 24px;
-                                "></div>
+                                  display: flex;
+                                  flex-direction: column;
+                                  align-items: center;
+                                  justify-content: center;
+                                ">
+                                <div
+                                  style="
+                                    width: 16px;
+                                    height: 16px;
+                                    background: white;
+                                    border-radius: 50%;
+                                    margin-bottom: 2px;
+                                  "></div>
+                                <div
+                                  style="
+                                    width: 24px;
+                                    height: 18px;
+                                    background: white;
+                                    border-radius: 12px 12px 24px 24px;
+                                  "></div>
+                              </div>
                             </div>
                             <div
                               style="
@@ -1576,6 +1714,18 @@
                           41,000¥
                         </div>
                       </div>
+                      <div
+                        style="
+                          margin-top: 12px;
+                          text-align: center;
+                          color: var(--text);
+                          font-size: 13px;
+                          line-height: 1.5;
+                          padding: 0 8px;
+                        ">
+                        50,000¥으로 3차 입찰을 넣으셔도 실시간으로 진행되는
+                        경매이다보니 더 낮은 금액에 낙찰될 수 있습니다
+                      </div>
                     </div>
                   </div>
                 </td>
@@ -1616,6 +1766,435 @@
               </tr>
             </tbody>
           </table>
+
+          <!-- 모바일용 경매 방식 섹션 -->
+          <div class="mobile-auction-section">
+            <!-- 직접경매 카드 -->
+            <div class="mobile-auction-card">
+              <h3 class="mobile-auction-title">직접경매</h3>
+
+              <div class="mobile-auction-item">
+                <div class="mobile-auction-item-label">참여 방식</div>
+                <div class="mobile-auction-item-content">
+                  <div
+                    style="
+                      color: var(--text);
+                      font-weight: 600;
+                      margin-bottom: 4px;
+                    ">
+                    회원님이 직접
+                  </div>
+                  <div
+                    style="color: var(--text); opacity: 0.7; font-size: 14px">
+                    온라인으로 입찰
+                  </div>
+                </div>
+              </div>
+
+              <div class="mobile-auction-item">
+                <div class="mobile-auction-item-label">적합한 상품</div>
+                <div class="mobile-auction-item-content">
+                  <div style="color: var(--text)">시세가 명확한 상품</div>
+                  <div style="color: var(--text); margin-top: 4px">
+                    중저가 아이템
+                  </div>
+                  <div
+                    style="
+                      color: var(--text);
+                      opacity: 0.7;
+                      font-size: 14px;
+                      margin-top: 6px;
+                    ">
+                    초보자 추천
+                  </div>
+                </div>
+              </div>
+
+              <div class="mobile-auction-item">
+                <div class="mobile-auction-item-label">낙찰 방식</div>
+                <div class="mobile-auction-item-content">
+                  <div style="color: var(--text)">자동 낙찰</div>
+                  <div
+                    style="
+                      color: var(--text);
+                      opacity: 0.7;
+                      font-size: 13px;
+                      margin-top: 4px;
+                    ">
+                    마감 시간까지 가장 높은 입찰가
+                  </div>
+                  <div
+                    style="
+                      color: var(--text);
+                      opacity: 0.7;
+                      font-size: 13px;
+                      margin-top: 2px;
+                    ">
+                    (마감 5분 전 입찰 시 5분 연장 가능)
+                  </div>
+                </div>
+              </div>
+
+              <div class="mobile-auction-item">
+                <div class="mobile-auction-item-label">결과 확인</div>
+                <div class="mobile-auction-item-content">
+                  <div
+                    style="
+                      color: var(--primary);
+                      font-weight: 600;
+                      font-size: 15px;
+                    ">
+                    1영업일 후
+                  </div>
+                </div>
+              </div>
+
+              <div class="mobile-auction-item">
+                <div class="mobile-auction-item-label">수정/취소</div>
+                <div class="mobile-auction-item-content">
+                  <div style="color: var(--text)">
+                    실시간 진행으로 취소 어려움
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 현장경매 카드 -->
+            <div class="mobile-auction-card">
+              <h3 class="mobile-auction-title">현장경매</h3>
+
+              <div class="mobile-auction-item">
+                <div class="mobile-auction-item-label">참여 방식</div>
+                <div class="mobile-auction-item-content">
+                  <div
+                    style="
+                      color: var(--text);
+                      font-weight: 600;
+                      margin-bottom: 4px;
+                    ">
+                    까사트레이드 담당자
+                  </div>
+                  <div
+                    style="color: var(--text); opacity: 0.7; font-size: 14px">
+                    현지에서 대신 참여
+                  </div>
+                </div>
+              </div>
+
+              <div class="mobile-auction-item">
+                <div class="mobile-auction-item-label">적합한 상품</div>
+                <div class="mobile-auction-item-content">
+                  <div style="color: var(--text)">고가 아이템</div>
+                  <div style="color: var(--text); margin-top: 4px">
+                    시세를 모르는 상품
+                  </div>
+                  <div
+                    style="
+                      color: var(--text);
+                      opacity: 0.7;
+                      font-size: 14px;
+                      margin-top: 6px;
+                    ">
+                    전문가 추천
+                  </div>
+                </div>
+              </div>
+
+              <div class="mobile-auction-item">
+                <div class="mobile-auction-item-label">낙찰 방식</div>
+                <div class="mobile-auction-item-content">
+                  <div style="color: var(--text)">3단계 협상 과정</div>
+                  <div
+                    style="
+                      color: var(--text);
+                      opacity: 0.7;
+                      font-size: 13px;
+                      margin-top: 4px;
+                    ">
+                    1차 신청 → 2차 제안 → 3차 최종입찰
+                  </div>
+                  <!-- 현장경매 예시 이미지 -->
+                  <div
+                    style="
+                      margin: 20px 0;
+                      display: flex;
+                      justify-content: center;
+                    ">
+                    <div
+                      style="
+                        background: white;
+                        border-radius: 16px;
+                        padding: 18px;
+                        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+                        width: 100%;
+                        max-width: 350px;
+                        height: auto;
+                        min-height: 380px;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: space-between;
+                        overflow: hidden;
+                      ">
+                      <div
+                        style="
+                          background: #f8fafc;
+                          border: 2px solid #e2e8f0;
+                          border-radius: 12px;
+                          padding: 12px 15px;
+                          text-align: center;
+                        ">
+                        <div
+                          style="
+                            font-size: 15px;
+                            color: #64748b;
+                            font-weight: 500;
+                            margin-bottom: 6px;
+                          ">
+                          고객님의 최종 3차입찰
+                        </div>
+                      </div>
+
+                      <div
+                        style="
+                          position: relative;
+                          flex: 1;
+                          display: flex;
+                          align-items: center;
+                          justify-content: center;
+                          margin: 8px 0;
+                        ">
+                        <div
+                          style="
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            width: 100%;
+                            position: relative;
+                          ">
+                          <div
+                            style="
+                              display: flex;
+                              flex-direction: column;
+                              align-items: center;
+                            ">
+                            <div
+                              style="
+                                background: white;
+                                border: 2px solid #e2e8f0;
+                                border-radius: 12px;
+                                padding: 6px 12px;
+                                font-size: 15px;
+                                font-weight: 600;
+                                color: #475569;
+                                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+                              ">
+                              40,000¥
+                            </div>
+                            <div
+                              style="
+                                width: 45px;
+                                height: 45px;
+                                background: #cbd5e1;
+                                border-radius: 50%;
+                                margin: 6px 0;
+                                position: relative;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                              ">
+                              <div
+                                style="
+                                  display: flex;
+                                  flex-direction: column;
+                                  align-items: center;
+                                  justify-content: center;
+                                ">
+                                <div
+                                  style="
+                                    width: 12px;
+                                    height: 12px;
+                                    background: #94a3b8;
+                                    border-radius: 50%;
+                                    margin-bottom: 2px;
+                                  "></div>
+                                <div
+                                  style="
+                                    width: 20px;
+                                    height: 16px;
+                                    background: #94a3b8;
+                                    border-radius: 10px 10px 20px 20px;
+                                  "></div>
+                              </div>
+                            </div>
+                            <div
+                              style="
+                                margin-top: 4px;
+                                font-size: 10px;
+                                color: #64748b;
+                                font-weight: 500;
+                                text-align: center;
+                                line-height: 1.2;
+                              ">
+                              경쟁자가 마지막으로<br />입찰한 금액
+                            </div>
+                          </div>
+
+                          <div
+                            style="
+                              position: absolute;
+                              top: 50%;
+                              left: 50%;
+                              transform: translate(-50%, -50%);
+                              background: #059669;
+                              color: white;
+                              font-size: 15px;
+                              font-weight: 700;
+                              padding: 6px 10px;
+                              border-radius: 18px;
+                              box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+                              z-index: 10;
+                            ">
+                            +1,000¥
+                          </div>
+
+                          <div
+                            style="
+                              display: flex;
+                              flex-direction: column;
+                              align-items: center;
+                            ">
+                            <div
+                              style="
+                                background: #fb923c;
+                                color: white;
+                                border: 2px solid #fb923c;
+                                border-radius: 12px;
+                                padding: 6px 12px;
+                                font-size: 16px;
+                                font-weight: 600;
+                                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+                              ">
+                              41,000¥
+                            </div>
+                            <div
+                              style="
+                                width: 55px;
+                                height: 55px;
+                                background: #fb923c;
+                                border-radius: 50%;
+                                margin: 6px 0;
+                                position: relative;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                              ">
+                              <div
+                                style="
+                                  display: flex;
+                                  flex-direction: column;
+                                  align-items: center;
+                                  justify-content: center;
+                                ">
+                                <div
+                                  style="
+                                    width: 16px;
+                                    height: 16px;
+                                    background: white;
+                                    border-radius: 50%;
+                                    margin-bottom: 2px;
+                                  "></div>
+                                <div
+                                  style="
+                                    width: 24px;
+                                    height: 18px;
+                                    background: white;
+                                    border-radius: 12px 12px 24px 24px;
+                                  "></div>
+                              </div>
+                            </div>
+                            <div
+                              style="
+                                margin-top: 4px;
+                                font-size: 10px;
+                                color: #64748b;
+                                font-weight: 500;
+                                text-align: center;
+                              ">
+                              까사트레이드
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div
+                        style="
+                          background: linear-gradient(
+                            135deg,
+                            #0ea5e9 0%,
+                            #3b82f6 100%
+                          );
+                          border-radius: 12px;
+                          padding: 12px;
+                          color: white;
+                          text-align: center;
+                        ">
+                        <div
+                          style="
+                            font-size: 12px;
+                            opacity: 0.9;
+                            margin-bottom: 4px;
+                            font-weight: 600;
+                          ">
+                          실제 낙찰금액
+                        </div>
+                        <div
+                          style="
+                            font-size: 24px;
+                            font-weight: 800;
+                            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+                          ">
+                          41,000¥
+                        </div>
+                      </div>
+                      <div
+                        style="
+                          margin-top: 12px;
+                          text-align: center;
+                          color: var(--text);
+                          font-size: 13px;
+                          line-height: 1.5;
+                          padding: 0 8px;
+                        ">
+                        50,000¥으로 3차 입찰을 넣으셔도 실시간으로 진행되는
+                        경매이다보니 더 낮은 금액에 낙찰될 수 있습니다
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mobile-auction-item">
+                <div class="mobile-auction-item-label">결과 확인</div>
+                <div class="mobile-auction-item-content">
+                  <div
+                    style="
+                      color: var(--primary);
+                      font-weight: 600;
+                      font-size: 15px;
+                    ">
+                    2영업일 후
+                  </div>
+                </div>
+              </div>
+
+              <div class="mobile-auction-item">
+                <div class="mobile-auction-item-label">수정/취소</div>
+                <div class="mobile-auction-item-content">
+                  <div style="color: var(--text)">3차 입찰시 취소 어려움</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- 모달 팝업 -->
@@ -1709,18 +2288,7 @@
                         font-weight: 500;
                         margin-bottom: 6px;
                       ">
-                      3차 입찰
-                    </div>
-                    <div
-                      style="font-size: 28px; font-weight: 700; color: #1e293b">
-                      50,000<span
-                        style="
-                          font-size: 20px;
-                          color: #64748b;
-                          margin-left: 4px;
-                        "
-                        >¥</span
-                      >
+                      고객님의 최종 3차입찰
                     </div>
                   </div>
 
@@ -1913,15 +2481,22 @@
                       style="
                         font-size: 24px;
                         font-weight: 800;
-                        margin-bottom: 4px;
                         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
                       ">
                       41,000¥
                     </div>
-                    <div
-                      style="font-size: 11px; opacity: 0.95; line-height: 1.3">
-                      50,000¥으로 설정해도 더 낮은 금액에 낙찰될 수 있습니다!
-                    </div>
+                  </div>
+                  <div
+                    style="
+                      margin-top: 12px;
+                      text-align: center;
+                      color: var(--text);
+                      font-size: 13px;
+                      line-height: 1.5;
+                      padding: 0 8px;
+                    ">
+                    50,000¥으로 3차 입찰을 넣으셔도 실시간으로 진행되는
+                    경매이다보니 41,000¥에 낙찰될 수 있습니다
                   </div>
                 </div>
               </div>
