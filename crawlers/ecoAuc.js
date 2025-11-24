@@ -825,10 +825,10 @@ class EcoAucCrawler extends AxiosCrawler {
         await this.login();
 
         // 직접 연결 클라이언트 사용
-        const directClient = this.getDirectClient();
+        const clientInfo = this.getClient();
 
         // CSRF 토큰 가져오기 - 메인 페이지에서
-        const mainPageResponse = await directClient.client.get(
+        const mainPageResponse = await clientInfo.client.get(
           ecoAucConfig.searchUrl,
           { timeout: 5000 }
         );
@@ -858,7 +858,7 @@ class EcoAucCrawler extends AxiosCrawler {
         const bidUrl = "https://www.ecoauc.com/client/timelimit-auctions/bid";
         console.log(`Sending bid request to: ${bidUrl}`);
 
-        const bidResponse = await directClient.client.post(bidUrl, bidData, {
+        const bidResponse = await clientInfo.client.post(bidUrl, bidData, {
           timeout: 5000,
           headers: {
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
@@ -906,10 +906,10 @@ class EcoAucCrawler extends AxiosCrawler {
         await this.login();
 
         // 직접 연결 클라이언트 사용
-        const directClient = this.getDirectClient();
+        const clientInfo = this.getClient();
 
         // CSRF 토큰 가져오기 - 메인 페이지에서
-        const mainPageResponse = await directClient.client.get(
+        const mainPageResponse = await clientInfo.client.get(
           ecoAucConfig.searchUrl,
           { timeout: 5000 }
         );
@@ -939,7 +939,7 @@ class EcoAucCrawler extends AxiosCrawler {
         const bidUrl = "https://www.ecoauc.com/client/pre-bids/add";
         console.log(`Sending bid request to: ${bidUrl}`);
 
-        const bidResponse = await directClient.client.post(bidUrl, bidData, {
+        const bidResponse = await clientInfo.client.post(bidUrl, bidData, {
           timeout: 5000,
           headers: {
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
@@ -984,10 +984,10 @@ class EcoAucCrawler extends AxiosCrawler {
       await this.login();
 
       // 직접 연결 클라이언트 사용
-      const directClient = this.getDirectClient();
+      const clientInfo = this.getClient();
 
       // CSRF 토큰 가져오기 - 메인 페이지에서
-      const mainPageResponse = await directClient.client.get(
+      const mainPageResponse = await clientInfo.client.get(
         ecoAucConfig.searchUrl
       );
       const $ = cheerio.load(mainPageResponse.data, { xmlMode: true });
@@ -1016,7 +1016,7 @@ class EcoAucCrawler extends AxiosCrawler {
       const wishlistUrl = "https://www.ecoauc.com/client/favorites/add";
       console.log(`Sending wishlist request to: ${wishlistUrl}`);
 
-      const wishlistResponse = await directClient.client.post(
+      const wishlistResponse = await clientInfo.client.post(
         wishlistUrl,
         wishlistData,
         {

@@ -434,10 +434,10 @@ class MekikiAucCrawler extends AxiosCrawler {
         await this.login();
 
         // 직접 연결 클라이언트 사용
-        const directClient = this.getDirectClient();
+        const clientInfo = this.getClient();
 
         // 입찰 요청
-        const bidResponse = await directClient.client.post(
+        const bidResponse = await clientInfo.client.post(
           `${this.config.itemsUrl}/${event_id}/items/${item_id}/auto_bid`,
           { price: price },
           {
@@ -485,10 +485,10 @@ class MekikiAucCrawler extends AxiosCrawler {
       await this.login();
 
       // 직접 연결 클라이언트 사용
-      const directClient = this.getDirectClient();
+      const clientInfo = this.getClient();
 
       // 위시리스트(좋아요) 요청
-      const likeResponse = await directClient.client.post(
+      const likeResponse = await clientInfo.client.post(
         `${this.config.itemsUrl}/${event_id}/items/${item_id}/like`,
         {},
         {

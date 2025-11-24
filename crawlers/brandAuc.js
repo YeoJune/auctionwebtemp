@@ -875,10 +875,10 @@ class BrandAucCrawler extends AxiosCrawler {
         await this.login();
 
         // 직접 연결 클라이언트 사용
-        const directClient = this.getDirectClient();
+        const clientInfo = this.getClient();
 
         // XSRF 토큰 추출 (쿠키에서)
-        const cookies = await directClient.cookieJar.getCookies(
+        const cookies = await clientInfo.cookieJar.getCookies(
           "https://bid.brand-auc.com"
         );
         const xsrfToken = cookies.find(
@@ -891,7 +891,7 @@ class BrandAucCrawler extends AxiosCrawler {
 
         try {
           // 첫 번째 API 호출 시도 (기존 방식)
-          const response = await directClient.client.post(
+          const response = await clientInfo.client.post(
             "https://bid.brand-auc.com/api/v1/brand-bid/jizen-nyusatsu/",
             {
               uketsukeBng: item_id,
@@ -924,7 +924,7 @@ class BrandAucCrawler extends AxiosCrawler {
           console.log("First API failed, trying alternative endpoint...");
 
           // 두 번째 API 호출 시도 (대체 API)
-          const altResponse = await directClient.client.post(
+          const altResponse = await clientInfo.client.post(
             "https://bid.brand-auc.com/api/v1/brand-bid/com/bid?gamenId=B201-01&viewType=1",
             {
               uketsukeBng: item_id,
@@ -951,11 +951,7 @@ class BrandAucCrawler extends AxiosCrawler {
               data: altResponse.data,
             };
           } else {
-            return {
-              success: false,
-              message: "Bid failed (alternative method)",
-              error: altResponse.data,
-            };
+            throw new Error("Bid failed with alternative endpoint");
           }
         }
       },
@@ -978,10 +974,10 @@ class BrandAucCrawler extends AxiosCrawler {
         await this.login();
 
         // 직접 연결 클라이언트 사용
-        const directClient = this.getDirectClient();
+        const clientInfo = this.getClient();
 
         // XSRF 토큰 추출 (쿠키에서)
-        const cookies = await directClient.cookieJar.getCookies(
+        const cookies = await clientInfo.cookieJar.getCookies(
           "https://u.brand-auc.com/"
         );
         const xsrfToken = cookies.find(
@@ -992,7 +988,7 @@ class BrandAucCrawler extends AxiosCrawler {
           throw new Error("XSRF token not found in cookies");
         }
 
-        const response = await directClient.client.post(
+        const response = await clientInfo.client.post(
           "https://u.brand-auc.com/api/v1/auction/nyusatsu/create",
           {
             uketsukeBng: item_id,
@@ -1042,10 +1038,10 @@ class BrandAucCrawler extends AxiosCrawler {
       await this.login();
 
       // 직접 연결 클라이언트 사용
-      const directClient = this.getDirectClient();
+      const clientInfo = this.getClient();
 
       // XSRF 토큰 추출 (쿠키에서)
-      const cookies = await directClient.cookieJar.getCookies(
+      const cookies = await clientInfo.cookieJar.getCookies(
         "https://u.brand-auc.com/"
       );
       const xsrfToken = cookies.find(
@@ -1056,7 +1052,7 @@ class BrandAucCrawler extends AxiosCrawler {
         throw new Error("XSRF token not found in cookies");
       }
 
-      const response = await directClient.client.post(
+      const response = await clientInfo.client.post(
         "https://u.brand-auc.com/api/v1/auction/mylists/create",
         {
           kaijoCd: 1,
@@ -1086,6 +1082,8 @@ class BrandAucCrawler extends AxiosCrawler {
           message: "Wishlist successful",
           data: response.data,
         };
+      } else {
+        throw new Error("Wishlist failed with status " + response.status);
       }
     } catch (error) {
       console.error(
@@ -1108,11 +1106,11 @@ class BrandAucCrawler extends AxiosCrawler {
       await this.login();
 
       // 직접 연결 클라이언트 사용
-      const directClient = this.getDirectClient();
+      const clientInfo = this.getClient();
 
       // 청구서 페이지 요청
       const url = "https://u.brand-auc.com/api/v1/auction/cal/calList";
-      const response = await directClient.client.get(url, {
+      const response = await clientInfo.client.get(url, {
         params: {
           sort: "",
           pageNumber: 0,

@@ -208,10 +208,10 @@ class StarAucCrawler extends AxiosCrawler {
         await this.login();
 
         // 직접 연결 클라이언트 사용
-        const directClient = this.getDirectClient();
+        const clientInfo = this.getClient();
 
         // 쿠키에서 XSRF 토큰 추출
-        const cookies = await directClient.cookieJar.getCookies(
+        const cookies = await clientInfo.cookieJar.getCookies(
           "https://www.starbuyers-global-auction.com"
         );
         const xsrfCookie = cookies.find(
@@ -230,7 +230,7 @@ class StarAucCrawler extends AxiosCrawler {
         formData.append(`bids[${item_id}]`, price.toString());
 
         // 입찰 요청 (직접 연결 클라이언트 사용)
-        const bidResponse = await directClient.client.post(
+        const bidResponse = await clientInfo.client.post(
           "https://www.starbuyers-global-auction.com/front_api/item/bid",
           formData,
           {
@@ -319,9 +319,9 @@ class StarAucCrawler extends AxiosCrawler {
       await this.login();
 
       // 직접 연결 클라이언트 사용
-      const directClient = this.getDirectClient();
+      const clientInfo = this.getClient();
 
-      const cookies = await directClient.cookieJar.getCookies(
+      const cookies = await clientInfo.cookieJar.getCookies(
         "https://www.starbuyers-global-auction.com"
       );
       const xsrfCookie = cookies.find((cookie) => cookie.key === "XSRF-TOKEN");
@@ -338,7 +338,7 @@ class StarAucCrawler extends AxiosCrawler {
         formData.append(`bids[${item_id}]`, price.toString());
       });
 
-      const bidResponse = await directClient.client.post(
+      const bidResponse = await clientInfo.client.post(
         "https://www.starbuyers-global-auction.com/front_api/item/bid",
         formData,
         {
