@@ -110,6 +110,41 @@ const uploadInquiry = multer({
   },
 });
 
+const bidGuideStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "pages/");
+  },
+  filename: function (req, file, cb) {
+    cb(null, "bid-guide.html");
+  },
+});
+
+const uploadBidGuide = multer({
+  storage: bidGuideStorage,
+  fileFilter: (req, file, cb) => {
+    // HTML 파일만 허용
+    if (file.mimetype === "text/html") {
+      cb(null, true);
+    } else {
+      cb(new Error("HTML 파일만 업로드 가능합니다."), false);
+    }
+  },
+});
+
+// guide.html 업로드 라우트
+router.post(
+  "/upload-guide",
+  isAdmin,
+  uploadGuide.single("guide"),
+  (req, res) => {
+    if (req.file) {
+      res.json({ message: "guide.html이 성공적으로 업로드되었습니다." });
+    } else {
+      res.status(400).json({ message: "guide.html 업로드에 실패했습니다." });
+    }
+  }
+);
+
 // inquiry.html 업로드 라우트 추가
 router.post(
   "/upload-inquiry",
@@ -120,6 +155,22 @@ router.post(
       res.json({ message: "inquiry.html이 성공적으로 업로드되었습니다." });
     } else {
       res.status(400).json({ message: "inquiry.html 업로드에 실패했습니다." });
+    }
+  }
+);
+
+// bid-guide.html 업로드 라우트
+router.post(
+  "/upload-bid-guide",
+  isAdmin,
+  uploadBidGuide.single("bidGuide"),
+  (req, res) => {
+    if (req.file) {
+      res.json({ message: "bid-guide.html이 성공적으로 업로드되었습니다." });
+    } else {
+      res
+        .status(400)
+        .json({ message: "bid-guide.html 업로드에 실패했습니다." });
     }
   }
 );
@@ -154,20 +205,6 @@ router.get("/check-status", async (req, res) => {
   const isAdmin = req.session.user && req.session.user.id === "admin";
   res.json({ isAdmin });
 });
-
-// guide.html 업로드 라우트
-router.post(
-  "/upload-guide",
-  isAdmin,
-  uploadGuide.single("guide"),
-  (req, res) => {
-    if (req.file) {
-      res.json({ message: "guide.html이 성공적으로 업로드되었습니다." });
-    } else {
-      res.status(400).json({ message: "guide.html 업로드에 실패했습니다." });
-    }
-  }
-);
 
 // Route to upload logo
 router.post("/upload-logo", isAdmin, uploadLogo.single("logo"), (req, res) => {
