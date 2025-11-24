@@ -2011,7 +2011,7 @@ document.addEventListener("DOMContentLoaded", function () {
   preventEventConflicts();
   setupMobileFilters();
   setupBasicEventListeners();
-  checkAuthStatus();
+  window.AuthManager.checkAuthStatus();
 
   // 툴팁 시스템 초기화
   if (window.TooltipManager) {
