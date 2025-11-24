@@ -1408,7 +1408,7 @@
   }
 
   .bid-result-item {
-    grid-template-columns: 80px 1fr;
+    grid-template-columns: 100 1fr;
     grid-template-areas:
       "image info"
       "bid-section bid-section"
@@ -1423,7 +1423,7 @@
   }
 
   .bid-item {
-    grid-template-columns: 80px 1fr;
+    grid-template-columns: 100px 1fr;
     grid-template-areas:
       "image info"
       "bid-section bid-section"
@@ -1524,11 +1524,11 @@
   }
 
   .bid-result-item {
-    grid-template-columns: 60px 1fr;
+    grid-template-columns: 100px 1fr;
   }
 
   .bid-item {
-    grid-template-columns: 60px 1fr;
+    grid-template-columns: 100px 1fr;
     grid-template-areas:
       "image info"
       "price price"
