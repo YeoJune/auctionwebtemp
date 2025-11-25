@@ -478,21 +478,22 @@ if (require.main === module) {
     output: process.stdout,
   });
 
-  async function queryMessageHistory() {
+  async function queryMessageHistory(startDate, endDate) {
     const messageService = createMessageService();
 
     try {
+      // YYYY-MM-DD 형식을 YYYYMMDD로 변환
+      const formattedStartDate = startDate.replace(/-/g, "");
+      const formattedEndDate = endDate.replace(/-/g, "");
+
       const formData = new URLSearchParams({
         apikey: messageService.apiKey,
         userid: messageService.userId,
         senderkey: messageService.senderKey,
         page: "1",
         page_cnt: "50",
-        start_date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0]
-          .replace(/-/g, ""),
-        end_date: new Date().toISOString().split("T")[0].replace(/-/g, ""),
+        start_date: formattedStartDate,
+        end_date: formattedEndDate,
       });
 
       const response = await axios.post(
@@ -504,6 +505,7 @@ if (require.main === module) {
       );
 
       console.log("\n=== 카카오톡 발송 내역 ===");
+      console.log(`조회 기간: ${startDate} ~ ${endDate}`);
       console.log(JSON.stringify(response.data, null, 2));
     } catch (error) {
       console.error("발송 내역 조회 실패:", error.message);
@@ -512,5 +514,9 @@ if (require.main === module) {
     }
   }
 
-  queryMessageHistory();
+  // 시작일과 종료일 설정 (YYYY-MM-DD 형식)
+  const START_DATE = "2025-11-18"; // 원하는 시작일로 수정
+  const END_DATE = "2025-11-18"; // 원하는 종료일로 수정
+
+  queryMessageHistory(START_DATE, END_DATE);
 }
