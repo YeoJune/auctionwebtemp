@@ -469,3 +469,48 @@ module.exports = {
   sendFinalBidRequests,
   sendHigherBidAlerts,
 };
+
+// 직접 실행 시에만 카톡 발송 내역 조회
+if (require.main === module) {
+  const readline = require("readline");
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  async function queryMessageHistory() {
+    const messageService = createMessageService();
+
+    try {
+      const formData = new URLSearchParams({
+        apikey: messageService.apiKey,
+        userid: messageService.userId,
+        senderkey: messageService.senderKey,
+        page: "1",
+        page_cnt: "50",
+        start_date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split("T")[0]
+          .replace(/-/g, ""),
+        end_date: new Date().toISOString().split("T")[0].replace(/-/g, ""),
+      });
+
+      const response = await axios.post(
+        "https://kakaoapi.aligo.in/akv10/history/list/",
+        formData.toString(),
+        {
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        }
+      );
+
+      console.log("\n=== 카카오톡 발송 내역 ===");
+      console.log(JSON.stringify(response.data, null, 2));
+    } catch (error) {
+      console.error("발송 내역 조회 실패:", error.message);
+    } finally {
+      rl.close();
+    }
+  }
+
+  queryMessageHistory();
+}
