@@ -469,3 +469,74 @@ module.exports = {
   sendFinalBidRequests,
   sendHigherBidAlerts,
 };
+
+if (require.main === module) {
+  async function testMessages() {
+    const messageService = createMessageService();
+    const testPhone = "01051341771";
+
+    console.log("=== 테스트 메시지 발송 시작 ===\n");
+
+    // 1. 낙찰 완료 알림 테스트
+    console.log("1. 낙찰 완료 알림 테스트...");
+    const winningMessages = [
+      {
+        phone: testPhone,
+        params: {
+          날짜: "2025-11-26",
+          고객명: "테스트유저",
+          건수: "3",
+          계좌텍스트: ACCOUNT_TEXT,
+        },
+      },
+    ];
+    await safeSendMessage(
+      messageService,
+      "sendWinningNotification",
+      winningMessages,
+      "TEST: winning notification"
+    );
+
+    // 2. 최종 입찰 요청 테스트
+    console.log("\n2. 최종 입찰 요청 테스트...");
+    const finalBidMessages = [
+      {
+        phone: testPhone,
+        params: {
+          고객명: "테스트유저",
+        },
+      },
+    ];
+    await safeSendMessage(
+      messageService,
+      "sendFinalBidRequest",
+      finalBidMessages,
+      "TEST: final bid request"
+    );
+
+    // 3. 더 높은 입찰 알림 테스트
+    console.log("\n3. 더 높은 입찰 알림 테스트...");
+    const higherBidMessages = [
+      {
+        phone: testPhone,
+        params: {
+          상품명: "테스트 상품명",
+        },
+      },
+    ];
+    await safeSendMessage(
+      messageService,
+      "sendHigherBidAlert",
+      higherBidMessages,
+      "TEST: higher bid alert"
+    );
+
+    console.log("\n=== 테스트 메시지 발송 완료 ===");
+    process.exit(0);
+  }
+
+  testMessages().catch((error) => {
+    console.error("테스트 실행 중 오류:", error);
+    process.exit(1);
+  });
+}
