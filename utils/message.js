@@ -515,8 +515,8 @@ if (require.main === module) {
   }
 
   // 시작일과 종료일 설정 (YYYY-MM-DD 형식)
-  const START_DATE = "2025-11-18"; // 원하는 시작일로 수정
-  const END_DATE = "2025-11-18"; // 원하는 종료일로 수정
+  const START_DATE = "2025-11-17"; // 원하는 시작일로 수정
+  const END_DATE = "2025-11-19"; // 원하는 종료일로 수정
 
   queryMessageHistory(START_DATE, END_DATE);
 }
