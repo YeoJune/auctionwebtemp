@@ -636,9 +636,7 @@ async function processChangedBids(changedItems) {
         `SELECT db.user_id, i.title 
         FROM direct_bids db 
         JOIN crawled_items i ON db.item_id = i.item_id 
-        WHERE db.status = 'active' AND db.id IN (${bidsToCancel
-          .map(() => "?")
-          .join(",")})`,
+        WHERE db.id IN (${bidsToCancel.map(() => "?").join(",")})`,
         bidsToCancel
       );
     }
@@ -673,132 +671,6 @@ async function processChangedBids(changedItems) {
   } catch (error) {
     await conn.rollback();
     console.error("Error cancelling bids:", error);
-  } finally {
-    conn.release();
-  }
-}
-
-async function processExpiredBids() {
-  const conn = await pool.getConnection();
-  try {
-    await conn.beginTransaction();
-
-    // JOIN을 사용하여 만료된 아이템과 관련 입찰을 함께 조회
-    const [expiredItemBids] = await conn.query(
-      "SELECT db.id, db.item_id, db.current_price, ci.starting_price " +
-        "FROM direct_bids db " +
-        "JOIN crawled_items ci ON ci.item_id = db.item_id " +
-        "WHERE ci.scheduled_date < NOW() " +
-        "AND ci.bid_type = 'direct' " +
-        "AND db.status = 'active' " +
-        "AND db.submitted_to_platform = 1 " +
-        "ORDER BY db.item_id, db.current_price DESC"
-    );
-
-    if (expiredItemBids.length === 0) {
-      console.log("No expired scheduled items with active bids found");
-      return;
-    }
-
-    // 아이템별로 그룹화
-    const bidsByItem = {};
-    const uniqueItemIds = new Set();
-
-    expiredItemBids.forEach((bid) => {
-      if (!bidsByItem[bid.item_id]) {
-        bidsByItem[bid.item_id] = [];
-        uniqueItemIds.add(bid.item_id);
-      }
-      bidsByItem[bid.item_id].push(bid);
-    });
-
-    console.log(`Found ${uniqueItemIds.size} expired items with active bids`);
-
-    const bidsToComplete = [];
-    const bidsToCancel = [];
-
-    // 각 만료된 아이템별로 처리
-    Object.keys(bidsByItem).forEach((itemId) => {
-      const itemBids = bidsByItem[itemId];
-      if (itemBids.length === 0) return;
-
-      // 최고가 입찰
-      const highestBid = itemBids[0]; // 이미 DESC로 정렬되어 있음
-
-      // starting_price와 일치하는지 확인
-      if (
-        parseFloat(highestBid.current_price) ===
-        parseFloat(highestBid.starting_price)
-      ) {
-        // 최고가 입찰은 완료 처리
-        bidsToComplete.push(highestBid.id);
-
-        // 나머지 입찰들은 취소 처리
-        itemBids.slice(1).forEach((bid) => {
-          bidsToCancel.push(bid.id);
-        });
-      } else {
-        // 최고가 입찰이 starting_price보다 낮으면 모두 취소 처리
-        itemBids.forEach((bid) => {
-          bidsToCancel.push(bid.id);
-        });
-      }
-    });
-
-    // 완료 처리 - 100개씩 배치 처리
-    for (let i = 0; i < bidsToComplete.length; i += 100) {
-      const batch = bidsToComplete.slice(i, i + 100);
-      if (batch.length > 0) {
-        await conn.query(
-          "UPDATE direct_bids SET status = 'completed' WHERE id IN (?) AND status = 'active'",
-          [batch]
-        );
-
-        console.log(
-          `Completed batch ${Math.floor(i / 100) + 1}: ${
-            batch.length
-          } bids for expired items`
-        );
-      }
-    }
-
-    // 취소 처리 - 100개씩 배치 처리
-    for (let i = 0; i < bidsToCancel.length; i += 100) {
-      const batch = bidsToCancel.slice(i, i + 100);
-      if (batch.length > 0) {
-        await conn.query(
-          "UPDATE direct_bids SET status = 'cancelled' WHERE id IN (?) AND status = 'active'",
-          [batch]
-        );
-
-        console.log(
-          `Cancelled batch ${Math.floor(i / 100) + 1}: ${
-            batch.length
-          } bids for expired items`
-        );
-      }
-    }
-
-    // commit 전에 완료될 입찰 데이터 조회
-    let completedBidsData = [];
-    if (bidsToComplete.length > 0) {
-      [completedBidsData] = await conn.query(
-        `SELECT db.user_id, db.current_price as winning_price, i.title, i.scheduled_date 
-        FROM direct_bids db 
-        JOIN crawled_items i ON db.item_id = i.item_id 
-        WHERE db.id IN (${bidsToComplete.map(() => "?").join(",")})`,
-        bidsToComplete
-      );
-    }
-
-    await conn.commit();
-
-    console.log(
-      `Expired items processed: ${uniqueItemIds.size}, completed: ${bidsToComplete.length}, cancelled: ${bidsToCancel.length}`
-    );
-  } catch (error) {
-    await conn.rollback();
-    console.error("Error processing expired bids:", error);
   } finally {
     conn.release();
   }
@@ -1166,24 +1038,6 @@ const scheduleUpdateCrawlingWithId = () => {
   return () => {
     cancelFunctions.forEach((fn) => fn());
   };
-};
-
-const scheduleExpiredBidsProcessing = () => {
-  const expiredBidInterval = 10 * 60 + 7; // 10분 7초
-
-  console.log(
-    `Scheduling expired bids processing to run every ${expiredBidInterval} seconds`
-  );
-
-  setInterval(async () => {
-    console.log("Running scheduled expired bids processing task");
-    try {
-      await processExpiredBids();
-      console.log("Scheduled expired bids processing completed successfully");
-    } catch (error) {
-      console.error("Scheduled expired bids processing error:", error);
-    }
-  }, expiredBidInterval * 1000);
 };
 
 // Socket.IO 초기화 (server.js에서 불러옴)
