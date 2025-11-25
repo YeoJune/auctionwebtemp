@@ -491,9 +491,9 @@ if (require.main === module) {
         userid: messageService.userId,
         senderkey: messageService.senderKey,
         page: "1",
-        page_cnt: "500",
-        start_date: formattedStartDate,
-        end_date: formattedEndDate,
+        limit: "500",
+        startdate: formattedStartDate,
+        enddate: formattedEndDate,
       });
 
       const response = await axios.post(
