@@ -491,7 +491,7 @@ if (require.main === module) {
         userid: messageService.userId,
         senderkey: messageService.senderKey,
         page: "1",
-        page_cnt: "50",
+        page_cnt: "500",
         start_date: formattedStartDate,
         end_date: formattedEndDate,
       });
