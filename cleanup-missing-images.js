@@ -38,6 +38,7 @@ class MissingImageCleaner {
    * S3/CloudFront URL 존재 확인
    */
   async checkS3Url(url) {
+    return true;
     try {
       const response = await axios.head(url, {
         timeout: 5000,
