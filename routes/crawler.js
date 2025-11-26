@@ -1113,9 +1113,8 @@ if (process.env.ENV === "development") {
 } else {
   console.log("product env");
   scheduleCrawling();
-  // scheduleUpdateCrawling();
-  // scheduleUpdateCrawlingWithId();
-  // scheduleExpiredBidsProcessing();
+  scheduleUpdateCrawling();
+  scheduleUpdateCrawlingWithId();
   loginAll();
 }
 
