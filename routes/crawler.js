@@ -9,6 +9,7 @@ const {
   starAucCrawler,
   starAucValueCrawler,
   mekikiAucCrawler,
+  mekikiAucValueCrawler,
 } = require("../crawlers/index");
 const DBManager = require("../utils/DBManager");
 const { pool } = require("../utils/DB");
@@ -104,7 +105,7 @@ const AUCTION_CONFIG = {
   4: {
     name: "MekikiAuc",
     crawler: mekikiAucCrawler,
-    valueCrawler: null,
+    valueCrawler: mekikiAucValueCrawler,
     enabled: true,
     updateInterval: 0,
     updateWithIdInterval: 0,
@@ -223,12 +224,14 @@ async function crawlAllValues(options = {}) {
   const runEcoAuc = runAll || aucNums.includes(1);
   const runBrandAuc = runAll || aucNums.includes(2);
   const runStarAuc = runAll || aucNums.includes(3);
+  const runMekikiAuc = runAll || aucNums.includes(4);
 
   // 각 크롤러별 개월 수 매핑 (기본값: 1개월)
   const monthsMap = {
     1: 1, // EcoAuc
     2: 1, // BrandAuc
     3: 1, // StarAuc
+    4: 1, // MekikiAuc
   };
 
   // 입력받은 months 배열이 있으면, aucNums와 매핑하여 설정
@@ -261,6 +264,11 @@ async function crawlAllValues(options = {}) {
           .filter((item) => item.auc_num == 3)
           .map((item) => item.item_id)
       );
+      const existingMekikiAucIds = new Set(
+        existingItems
+          .filter((item) => item.auc_num == 4)
+          .map((item) => item.item_id)
+      );
 
       isValueCrawling = true;
       console.log("Starting value crawling with options:", {
@@ -269,6 +277,7 @@ async function crawlAllValues(options = {}) {
         runEcoAuc,
         runBrandAuc,
         runStarAuc,
+        runMekikiAuc,
       });
 
       // 직렬 처리를 위한 결과 객체
@@ -276,6 +285,7 @@ async function crawlAllValues(options = {}) {
         ecoAucItems: [],
         brandAucItems: [],
         starAucItems: [],
+        mekikiAucItems: [],
       };
 
       // 각 크롤러 순차적 실행
@@ -308,11 +318,23 @@ async function crawlAllValues(options = {}) {
         // )) || [];
       }
 
+      if (runMekikiAuc) {
+        console.log(
+          `Running MekikiAuc value crawler for ${monthsMap[4]} months`
+        );
+        crawlResults.mekikiAucItems =
+          (await mekikiAucValueCrawler.crawlAllItems(
+            existingMekikiAucIds,
+            monthsMap[4]
+          )) || [];
+      }
+
       // 결과 집계
       const allItems = [
         ...crawlResults.ecoAucItems,
         ...crawlResults.brandAucItems,
         ...crawlResults.starAucItems,
+        ...crawlResults.mekikiAucItems,
       ];
 
       console.log(
@@ -326,13 +348,14 @@ async function crawlAllValues(options = {}) {
 
       return {
         settings: {
-          aucNums: aucNums.length > 0 ? aucNums : [1, 2, 3],
+          aucNums: aucNums.length > 0 ? aucNums : [1, 2, 3, 4],
           months: monthsMap,
         },
         results: {
           ecoAucCount: crawlResults.ecoAucItems.length,
           brandAucCount: crawlResults.brandAucItems.length,
           starAucCount: crawlResults.starAucItems.length,
+          mekikiAucCount: crawlResults.mekikiAucItems.length,
           totalCount: allItems.length,
         },
       };

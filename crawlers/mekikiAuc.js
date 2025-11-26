@@ -39,6 +39,31 @@ const mekikiAucConfig = {
   },
 };
 
+const mekikiAucValueConfig = {
+  name: "MekikiAucValue",
+  baseUrl: "https://api-prod-auction.mekiki.ai",
+  loginCheckUrls: ["https://api-prod-auction.mekiki.ai/api/users/me"],
+  loginPageUrl: null,
+  loginPostUrl: "https://api-prod-auction.mekiki.ai/api/login",
+  eventsUrl: "https://api-prod-auction.mekiki.ai/api/events/finished_events",
+  itemsUrl: "https://api-prod-auction.mekiki.ai/api/events",
+  loginData: {
+    login_id: process.env.CRAWLER_EMAIL4,
+    password: process.env.CRAWLER_PASSWORD4,
+    remember_me: true,
+  },
+  useMultipleClients: false,
+  categoryTable: {
+    1: "가방",
+    2: "악세서리",
+    3: "시계",
+    4: "귀금속",
+    6: "의류",
+    8: "귀금속",
+    19: "기타",
+  },
+};
+
 class MekikiAucCrawler extends AxiosCrawler {
   constructor(config) {
     super(config);
@@ -538,13 +563,435 @@ class MekikiAucCrawler extends AxiosCrawler {
   }
 }
 
-const mekikiAucCrawler = new MekikiAucCrawler(mekikiAucConfig);
+class MekikiAucValueCrawler extends AxiosCrawler {
+  constructor(config) {
+    super(config);
+    this.userId = null;
+    this.authToken = null;
+  }
 
-if (require.main === module) {
-  mekikiAucCrawler.login();
-  setTimeout(() => {
-    mekikiAucCrawler.crawlUpdates();
-  }, 3 * 1000);
+  // 로그인 구현
+  async performLoginWithClient(clientInfo) {
+    return this.retryOperation(async () => {
+      console.log(`${clientInfo.name} Mekiki Auction Value 로그인 중...`);
+
+      // 로그인 요청
+      const loginResponse = await clientInfo.client.post(
+        this.config.loginPostUrl,
+        this.config.loginData,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (loginResponse.status !== 200) {
+        throw new Error("Login request failed");
+      }
+
+      // API 토큰 저장
+      const authToken = loginResponse.data.api_token;
+      console.log(`API Token received: ${authToken.substring(0, 20)}...`);
+
+      // 클라이언트의 기본 헤더에 Bearer 토큰 추가
+      clientInfo.client.defaults.headers.common[
+        "Authorization"
+      ] = `Bearer ${authToken}`;
+      console.log(`Bearer token set for ${clientInfo.name}`);
+
+      // 로그인 확인 및 user_id 추출
+      const meResponse = await clientInfo.client.get(
+        this.config.loginCheckUrls[0]
+      );
+
+      if (meResponse.status === 200 && meResponse.data?.id) {
+        this.userId = meResponse.data.id;
+        console.log(`User ID: ${this.userId}`);
+        return true;
+      } else {
+        throw new Error("Login verification failed");
+      }
+    });
+  }
+
+  async performLogin() {
+    const directClient = this.getDirectClient();
+    return await this.performLoginWithClient(directClient);
+  }
+
+  // 종료된 이벤트 목록 가져오기
+  async getFinishedEvents(months = 3) {
+    const clientInfo = this.getClient();
+
+    return this.retryOperation(async () => {
+      console.log("Fetching finished events...");
+
+      let allEvents = [];
+      let page = 1;
+      let hasMore = true;
+
+      // 모든 종료된 이벤트 가져오기
+      while (hasMore) {
+        console.log(`Fetching finished events page ${page}...`);
+
+        const response = await clientInfo.client.get(this.config.eventsUrl, {
+          params: {
+            per_page: 20,
+            page: page,
+            user_id: this.userId,
+          },
+          headers: {
+            Accept: "application/json",
+          },
+        });
+
+        if (!response.data?.collection) {
+          throw new Error("Failed to get finished events");
+        }
+
+        allEvents.push(...response.data.collection);
+
+        // 페이지네이션 체크
+        if (page >= response.data.meta.pages) {
+          hasMore = false;
+        }
+        page++;
+
+        await this.sleep(API_DELAY);
+      }
+
+      // months 개월 이내 이벤트만 필터링
+      const cutoffDate = new Date();
+      cutoffDate.setMonth(cutoffDate.getMonth() - months);
+
+      const recentEvents = allEvents.filter((event) => {
+        const endDate = new Date(event.end_datetime);
+        return endDate >= cutoffDate;
+      });
+
+      console.log(
+        `Found ${recentEvents.length} finished events in last ${months} months (out of ${allEvents.length} total)`
+      );
+
+      return recentEvents;
+    });
+  }
+
+  // 전체 아이템 크롤링
+  async crawlAllItems(existingIds = new Set(), months = 3) {
+    try {
+      const startTime = Date.now();
+      console.log(`Starting Mekiki Value crawl at ${new Date().toISOString()}`);
+      console.log(`Crawling data for the last ${months} months`);
+
+      // 로그인
+      await this.login();
+
+      // 종료된 이벤트 가져오기
+      const finishedEvents = await this.getFinishedEvents(months);
+
+      if (finishedEvents.length === 0) {
+        console.log("No finished events found");
+        return [];
+      }
+
+      const allCrawledItems = [];
+
+      // 각 이벤트별로 크롤링
+      for (const event of finishedEvents) {
+        console.log(
+          `\n=== Crawling finished event: ${event.title} (ID: ${event.id}) ===`
+        );
+        console.log(
+          `Event period: ${event.start_datetime} ~ ${event.end_datetime}`
+        );
+
+        const eventItems = await this.crawlEvent(event, existingIds, true);
+
+        if (eventItems && eventItems.length > 0) {
+          allCrawledItems.push(...eventItems);
+          console.log(
+            `Completed crawl for event ${event.id}. Items found: ${eventItems.length}`
+          );
+        }
+      }
+
+      if (allCrawledItems.length === 0) {
+        console.log("No items were crawled. Aborting save operation.");
+        return [];
+      }
+
+      // 전체 이미지 일괄 처리
+      console.log(
+        `Starting image processing for ${allCrawledItems.length} items...`
+      );
+      const itemsWithImages = allCrawledItems.filter((item) => item.image);
+      const finalProcessedItems = await processImagesInChunks(
+        itemsWithImages,
+        "values",
+        3
+      );
+
+      // 이미지가 없는 아이템들도 포함
+      const itemsWithoutImages = allCrawledItems.filter((item) => !item.image);
+      const allFinalItems = [...finalProcessedItems, ...itemsWithoutImages];
+
+      console.log(`Total value items processed: ${allFinalItems.length}`);
+
+      const endTime = Date.now();
+      const executionTime = endTime - startTime;
+      console.log(
+        `Value crawl operation completed in ${this.formatExecutionTime(
+          executionTime
+        )}`
+      );
+
+      return allFinalItems;
+    } catch (error) {
+      console.error("Value crawl failed:", error.message);
+      return [];
+    }
+  }
+
+  // 특정 이벤트의 아이템 크롤링
+  async crawlEvent(
+    event,
+    existingIds = new Set(),
+    skipImageProcessing = false
+  ) {
+    try {
+      const eventId = event.id;
+      const clientInfo = this.getClient();
+
+      // 첫 페이지로 전체 페이지 수 확인
+      const firstPageResponse = await clientInfo.client.get(
+        `${this.config.itemsUrl}/${eventId}/items`,
+        {
+          params: {
+            sort: 8,
+            per_page: PER_PAGE,
+            page: 1,
+            "kind[]": [1, 2],
+            "statuses[]": [1, 5, 6, 7, 8, 9, 10, 11],
+            group_flag: false,
+            user_id: this.userId,
+          },
+          headers: {
+            Accept: "application/json",
+          },
+        }
+      );
+      await this.sleep(API_DELAY);
+
+      const totalPages = firstPageResponse.data.meta?.pages || 1;
+      const totalItems = firstPageResponse.data.meta?.total || 0;
+
+      console.log(
+        `Event ${eventId}: Found ${totalItems} items across ${totalPages} pages`
+      );
+
+      // 첫 페이지 아이템 처리
+      const allItems = [];
+      const firstPageItems = await this.processItemsPage(
+        firstPageResponse.data.collection || [],
+        existingIds,
+        event
+      );
+      allItems.push(...firstPageItems);
+
+      // 나머지 페이지 병렬 처리
+      if (totalPages > 1) {
+        const limit = pLimit(LIMIT2);
+        const pagePromises = [];
+
+        for (let page = 2; page <= totalPages; page++) {
+          pagePromises.push(
+            limit(async () => {
+              console.log(
+                `Crawling event ${eventId}, page ${page} of ${totalPages}`
+              );
+
+              const pageClientInfo = this.getClient();
+              const response = await pageClientInfo.client.get(
+                `${this.config.itemsUrl}/${eventId}/items`,
+                {
+                  params: {
+                    sort: 8,
+                    per_page: PER_PAGE,
+                    page: page,
+                    "kind[]": [1, 2],
+                    "statuses[]": [1, 5, 6, 7, 8, 9, 10, 11],
+                    group_flag: false,
+                    user_id: this.userId,
+                  },
+                  headers: {
+                    Accept: "application/json",
+                  },
+                }
+              );
+
+              await this.sleep(API_DELAY);
+
+              const pageItems = await this.processItemsPage(
+                response.data.collection || [],
+                existingIds,
+                event
+              );
+
+              console.log(
+                `Processed ${pageItems.length} items from page ${page}`
+              );
+
+              return pageItems;
+            })
+          );
+        }
+
+        const pageResults = await Promise.all(pagePromises);
+        pageResults.forEach((pageItems) => {
+          if (pageItems && pageItems.length > 0) {
+            allItems.push(...pageItems);
+          }
+        });
+      }
+
+      let finalItems;
+      if (skipImageProcessing) {
+        finalItems = allItems;
+      } else {
+        finalItems = await processImagesInChunks(allItems, "values", 3);
+      }
+
+      return finalItems;
+    } catch (error) {
+      console.error(`Error crawling event ${event.id}:`, error.message);
+      return [];
+    }
+  }
+
+  // 페이지 아이템 처리
+  async processItemsPage(items, existingIds, event) {
+    const processedItems = [];
+
+    for (const item of items) {
+      // 이미 처리된 아이템 제외
+      if (existingIds.has(item.id.toString())) {
+        processedItems.push({
+          item_id: item.id.toString(),
+          isExisting: true,
+        });
+        continue;
+      }
+
+      const processedItem = await this.extractItemInfo(item, event);
+      if (processedItem) {
+        processedItems.push(processedItem);
+      }
+    }
+
+    return processedItems;
+  }
+
+  // 아이템 정보 추출
+  async extractItemInfo(item, event) {
+    try {
+      // 카테고리에 없으면 제외
+      if (!this.config.categoryTable[item.category?.id]) {
+        return null;
+      }
+
+      const itemId = item.id.toString();
+      const boxId = item.box_id || "";
+      const boxNo = item.box_no || "";
+      const brandName = await translator.translate(item.brand?.name || "");
+      item.brandTrans = brandName;
+
+      const title = brandName;
+      const originalTitle = `${boxId}-${boxNo} ${brandName}`;
+      const scheduledDate = this.extractDate(event.end_datetime);
+      const category = this.config.categoryTable[item.category?.id] || "기타";
+      const rank = item.grade || "N";
+      const finalPrice = item.current_price || 0; // 종료된 경매의 최종 가격
+      const image = item.thumbnails?.[0] || item.images?.[0] || null;
+      const additionalImages = item.images || [];
+      const description = await this.buildDescription(item);
+      const accessoryCode = item.subcategory?.name?.en || "";
+
+      return {
+        item_id: itemId,
+        title: title,
+        original_title: originalTitle,
+        scheduled_date: scheduledDate,
+        auc_num: "4",
+        category: category,
+        brand: brandName,
+        rank: rank,
+        final_price: finalPrice,
+        image: image,
+        additional_images: JSON.stringify(additionalImages),
+        description: description,
+        accessory_code: accessoryCode,
+        additional_info: { event_id: event.id },
+      };
+    } catch (error) {
+      console.error(`Error extracting item info for item ${item.id}:`, error);
+      return null;
+    }
+  }
+
+  // Description 생성
+  async buildDescription(item) {
+    const getValue = (val) => val || "-";
+    const model = await translator.translate(item.model1 || "-");
+    const line = await translator.translate(item.line || "-");
+    const material = await translator.translate(item.material || "-");
+    const color = await translator.translate(item.color || "-");
+    const serialNumber = await translator.translate(item.serial_number || "-");
+    const accessoryNote = await translator.translate(
+      item.accessory_note || "-"
+    );
+    const detail = await translator.translate(item.detail || "-");
+
+    const parts = [
+      `Category: ${getValue(item.category?.name?.en)}`,
+      `Subcategory: ${getValue(item.subcategory?.name?.en)}`,
+      `Brand: ${getValue(item.brandTrans)}`,
+      `Grade: ${getValue(item.grade)}`,
+      `Outer Grade: ${getValue(item.grade_outside)}`,
+      `Inner Grade: ${getValue(item.grade_inside)}`,
+      `Retail Price: ${getValue(item.retail_price)}`,
+      `Model: ${model}`,
+      `Model Number: ${getValue(item.model_number)}`,
+      `Line: ${line}`,
+      `Material: ${material}`,
+      `Color: ${color}`,
+      `Serial Number: ${serialNumber}`,
+      `Accessory Note: ${accessoryNote}`,
+      `Size: ${getValue(item.size)}`,
+      `Quantity: ${getValue(item.quantity)}`,
+      `Detail: ${detail}`,
+    ];
+
+    return parts.join(", ");
+  }
+
+  // 상세 정보 크롤링 (fallback용)
+  async crawlItemDetails(itemId, item) {
+    // API 응답에 이미 모든 정보가 포함되어 있으므로
+    // 별도의 상세 API 호출 불필요
+    console.log(
+      `Item ${itemId} details already included in list response (fallback not needed)`
+    );
+    return {
+      additional_images: item.additional_images || null,
+      description: item.description || "-",
+      accessory_code: item.accessory_code || "",
+    };
+  }
 }
 
-module.exports = { mekikiAucCrawler };
+const mekikiAucCrawler = new MekikiAucCrawler(mekikiAucConfig);
+const mekikiAucValueCrawler = new MekikiAucValueCrawler(mekikiAucValueConfig);
+
+module.exports = { mekikiAucCrawler, mekikiAucValueCrawler };

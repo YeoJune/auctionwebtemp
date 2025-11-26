@@ -103,6 +103,8 @@ function getMonthsInputId(aucId) {
       return "brandAucMonths";
     case "3":
       return "starAucMonths";
+    case "4":
+      return "mekikiAucMonths";
     default:
       return "";
   }

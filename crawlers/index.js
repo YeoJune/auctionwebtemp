@@ -2,7 +2,7 @@
 const { ecoAucCrawler, ecoAucValueCrawler } = require("./ecoAuc");
 const { brandAucCrawler, brandAucValueCrawler } = require("./brandAuc");
 const { starAucCrawler, starAucValueCrawler } = require("./starAuc");
-const { mekikiAucCrawler } = require("./mekikiAuc");
+const { mekikiAucCrawler, mekikiAucValueCrawler } = require("./mekikiAuc");
 
 module.exports = {
   ecoAucCrawler,
@@ -12,4 +12,5 @@ module.exports = {
   starAucCrawler,
   starAucValueCrawler,
   mekikiAucCrawler,
+  mekikiAucValueCrawler,
 };
