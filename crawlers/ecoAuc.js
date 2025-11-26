@@ -1424,10 +1424,10 @@ class EcoAucValueCrawler extends AxiosCrawler {
     try {
       return await this.retryOperation(
         async () => {
+          const clientInfo = this.getClient();
           console.log(
             `Crawling page ${page} in category ${categoryId} with ${clientInfo.name}...`
           );
-          const clientInfo = this.getClient();
           const url =
             this.config.searchUrl +
             this.config.searchParams(categoryId, page, months);
