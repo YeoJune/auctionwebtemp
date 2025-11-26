@@ -1352,8 +1352,8 @@ class EcoAucValueCrawler extends AxiosCrawler {
 
         for (let page = 1; page <= totalPages; page++) {
           pagePromises.push(
-            limit(() =>
-              this.crawlPage(categoryId, page, existingIds, months, true)
+            limit(
+              () => this.crawlPage(categoryId, page, existingIds, months, true) // skipImageProcessing = true
             )
           );
         }
@@ -1362,8 +1362,7 @@ class EcoAucValueCrawler extends AxiosCrawler {
 
         pageResults.forEach((pageItems) => {
           if (pageItems && pageItems.length > 0) {
-            // 기존 아이템 제외하고 추가
-            categoryItems.push(...pageItems.filter((item) => !item.isExisting));
+            categoryItems.push(...pageItems);
           }
         });
 
@@ -1437,7 +1436,6 @@ class EcoAucValueCrawler extends AxiosCrawler {
 
           // 아이템 컨테이너 선택
           const itemElements = $(this.config.crawlSelectors.itemContainer);
-          console.log(`Found ${itemElements.length} items on page ${page}`);
 
           if (itemElements.length === 0) {
             return [];
@@ -1447,8 +1445,11 @@ class EcoAucValueCrawler extends AxiosCrawler {
           const pageItems = [];
           itemElements.each((index, element) => {
             const item = this.extractItemInfo($, $(element), existingIds);
-            if (item && this.isCollectionDay(item.scheduled_date)) {
-              // null이 아닌 유효한 항목만 추가
+            if (
+              item &&
+              !item.isExisting &&
+              this.isCollectionDay(item.scheduled_date)
+            ) {
               pageItems.push(item);
             }
           });
@@ -1460,7 +1461,9 @@ class EcoAucValueCrawler extends AxiosCrawler {
             finalItems = await processImagesInChunks(pageItems, "values", 3);
           }
 
-          console.log(`Crawled ${finalItems.length} items from page ${page}`);
+          console.log(
+            `Crawled ${finalItems.length} items from page ${page} (${clientInfo.name})`
+          );
           return finalItems;
         },
         3,
