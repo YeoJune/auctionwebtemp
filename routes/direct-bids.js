@@ -1207,4 +1207,45 @@ router.put("/:id", isAdmin, async (req, res) => {
   }
 });
 
+// 자동 입찰 제출 스케줄러
+let autoSubmitInterval = null;
+const AUTO_SUBMIT_INTERVAL = 30 * 1000; // 30초 간격
+
+const startAutoSubmitScheduler = () => {
+  if (autoSubmitInterval) return;
+
+  autoSubmitInterval = setInterval(async () => {
+    const connection = await pool.getConnection();
+    try {
+      const [unsubmittedBids] = await connection.query(
+        `SELECT d.*, i.* FROM direct_bids d 
+         JOIN crawled_items i ON d.item_id = i.item_id 
+         WHERE d.status = 'active' AND d.submitted_to_platform = FALSE`
+      );
+
+      for (const bid of unsubmittedBids) {
+        try {
+          await submitBid(
+            {
+              bid_id: bid.id,
+              price: bid.current_price,
+            },
+            bid
+          );
+          console.log(`Auto-submitted bid ${bid.id}`);
+        } catch (error) {
+          console.error(`Failed to auto-submit bid ${bid.id}:`, error);
+        }
+      }
+    } catch (error) {
+      console.error("Auto-submit scheduler error:", error);
+    } finally {
+      connection.release();
+    }
+  }, AUTO_SUBMIT_INTERVAL);
+};
+
+// 라우터 초기화 시 스케줄러 시작
+startAutoSubmitScheduler();
+
 module.exports = router;
