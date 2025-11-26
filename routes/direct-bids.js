@@ -598,17 +598,21 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // 2. 아이템에 대한 현재 사용자의 입찰 찾기
-    const [userBids] = await connection.query(
-      "SELECT * FROM direct_bids WHERE item_id = ? AND user_id = ?",
-      [itemId, userId]
+    // 2. UPSERT로 입찰 생성/업데이트 (먼저 실행)
+    const [result] = await connection.query(
+      `INSERT INTO direct_bids (user_id, item_id, current_price, status) 
+      VALUES (?, ?, ?, 'active')
+      ON DUPLICATE KEY UPDATE 
+        current_price = VALUES(current_price),
+        status = 'active',
+        id = LAST_INSERT_ID(id)`,
+      [userId, itemId, currentPrice]
     );
 
-    // 2-1. 첫 입찰 여부 확인
-    const isFirstBid = userBids.length === 0;
+    const bidId = result.insertId;
+    const isFirstBid = result.affectedRows === 1; // INSERT면 1, UPDATE면 2
 
-    // 2-2. 경매장별 입찰가 검증
-    // 스타옥션의 경우 starting_price가 실시간 최고가를 의미함
+    // 2-1. 경매장별 입찰가 검증
     const currentHighestPrice = item.starting_price;
     const validation = validateBidByAuction(
       item.auc_num,
@@ -618,32 +622,14 @@ router.post("/", async (req, res) => {
     );
 
     if (!validation.valid) {
+      // 검증 실패 시 방금 생성/업데이트한 입찰 롤백
       await connection.rollback();
       return res.status(400).json({
         message: validation.message,
       });
     }
 
-    let bidId;
-
-    // 3. 사용자의 기존 입찰이 있으면 업데이트, 없으면 생성
-    if (userBids.length > 0) {
-      // 5a. 기존 입찰 업데이트
-      await connection.query(
-        "UPDATE direct_bids SET current_price = ?, status = 'active' WHERE id = ?",
-        [currentPrice, userBids[0].id]
-      );
-      bidId = userBids[0].id;
-    } else {
-      // 5b. 새 입찰 생성
-      const [result] = await connection.query(
-        "INSERT INTO direct_bids (user_id, item_id, current_price, status) VALUES (?, ?, ?, 'active')",
-        [userId, itemId, currentPrice]
-      );
-      bidId = result.insertId;
-    }
-
-    // 6. 가격이 낮은 다른 입찰들을 취소 (비동기)
+    // 3. 가격이 낮은 다른 입찰들을 취소 (비동기)
     pool.query(
       "UPDATE direct_bids SET status = 'cancelled' WHERE item_id = ? AND current_price < ? AND status = 'active'",
       [itemId, currentPrice]
