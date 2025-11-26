@@ -222,24 +222,85 @@ class DatabaseManager {
 
       conn = await this.pool.getConnection();
 
-      // 데이터베이스 쿼리 병렬 실행
-      // 폴더명에 따라 쿼리 선택
-      let activeImagesPromise, activeValueImagesPromise;
+      // values 폴더의 경우 S3 URL도 고려
+      if (folderName === "values") {
+        // values_items 테이블에서 사용 중인 이미지 경로 수집
+        const [activeImages] = await conn.query(`
+        SELECT image, additional_images
+        FROM values_items
+      `);
 
-      if (folderName === "products") {
-        activeImagesPromise = conn.query(`
-          SELECT image, additional_images
-          FROM crawled_items`);
+        // 사용 중인 이미지 경로 수집 (로컬 경로만 추출)
+        const localFilesInUse = new Set();
 
-        // 입찰이 있는 아이템 이미지 (products 폴더에만 해당)
+        activeImages.forEach((item) => {
+          // 메인 이미지
+          if (item.image) {
+            if (item.image.startsWith("/images/values/")) {
+              // 로컬 경로 → 파일명 추출
+              localFilesInUse.add(path.basename(item.image));
+            }
+            // S3 URL은 무시 (로컬 파일 삭제 대상에서 제외)
+          }
+
+          // 추가 이미지
+          if (item.additional_images) {
+            try {
+              const additionalImages = JSON.parse(item.additional_images);
+              additionalImages.forEach((img) => {
+                if (img.startsWith("/images/values/")) {
+                  localFilesInUse.add(path.basename(img));
+                }
+              });
+            } catch (error) {
+              console.error(`Error parsing additional_images:`, error);
+            }
+          }
+        });
+
+        // 파일 시스템에서 이미지 정리
+        const files = await fs.readdir(IMAGE_DIR);
+
+        // 배치 처리
+        for (let i = 0; i < files.length; i += batchSize) {
+          const batch = files.slice(i, i + batchSize);
+          await Promise.all(
+            batch.map(async (file) => {
+              const filePath = path.join(IMAGE_DIR, file);
+
+              // DB에 없는 파일만 삭제
+              if (!localFilesInUse.has(file)) {
+                try {
+                  await fs.unlink(filePath);
+                } catch (unlinkError) {
+                  console.error(
+                    `Error deleting file ${filePath}:`,
+                    unlinkError
+                  );
+                }
+              }
+            })
+          );
+        }
+
+        console.log(
+          `Complete cleaning up unused images in 'values' folder (S3-aware)`
+        );
+      } else {
+        // products 폴더는 기존 로직 유지
+        const activeImagesPromise = conn.query(`
+        SELECT image, additional_images
+        FROM crawled_items`);
+
+        // 입찰이 있는 아이템 이미지
         const bidItemsPromise = conn.query(`
-          SELECT ci.image, ci.additional_images 
-          FROM crawled_items ci
-          JOIN (
-            SELECT DISTINCT item_id FROM direct_bids
-            UNION
-            SELECT DISTINCT item_id FROM live_bids
-          ) b ON ci.item_id = b.item_id`);
+        SELECT ci.image, ci.additional_images 
+        FROM crawled_items ci
+        JOIN (
+          SELECT DISTINCT item_id FROM direct_bids
+          UNION
+          SELECT DISTINCT item_id FROM live_bids
+        ) b ON ci.item_id = b.item_id`);
 
         const [activeImages] = await activeImagesPromise;
         const [bidItemImages] = await bidItemsPromise;
@@ -270,58 +331,35 @@ class DatabaseManager {
             }
           }
         });
-      } else if (folderName === "values") {
-        activeValueImagesPromise = conn.query(`
-          SELECT image, additional_images
-          FROM values_items`);
 
-        const [activeValueImages] = await activeValueImagesPromise;
+        // 파일 시스템에서 이미지 정리
+        const files = await fs.readdir(IMAGE_DIR);
 
-        // 활성 이미지 경로 처리
-        activeValueImages.forEach((item) => {
-          if (item.image) activeImagePaths.add(item.image);
-          if (item.additional_images) {
-            try {
-              JSON.parse(item.additional_images).forEach((img) =>
-                activeImagePaths.add(img)
-              );
-            } catch (error) {
-              console.error(`Error parsing additional_images:`, error);
-            }
-          }
-        });
-      }
-
-      // 파일 시스템에서 이미지 정리
-      const files = await fs.readdir(IMAGE_DIR);
-
-      // 배치 처리 함수
-      const processBatch = async (batch) => {
-        await Promise.all(
-          batch.map(async (file) => {
-            const filePath = path.join(IMAGE_DIR, file);
-            const relativePath = `/images/${folderName}/${file}`;
-            if (!activeImagePaths.has(relativePath)) {
-              try {
-                await fs.unlink(filePath);
-                //console.log(`Deleted unused image: ${filePath}`);
-              } catch (unlinkError) {
-                console.error(`Error deleting file ${filePath}:`, unlinkError);
+        // 배치 처리
+        for (let i = 0; i < files.length; i += batchSize) {
+          const batch = files.slice(i, i + batchSize);
+          await Promise.all(
+            batch.map(async (file) => {
+              const filePath = path.join(IMAGE_DIR, file);
+              const relativePath = `/images/${folderName}/${file}`;
+              if (!activeImagePaths.has(relativePath)) {
+                try {
+                  await fs.unlink(filePath);
+                } catch (unlinkError) {
+                  console.error(
+                    `Error deleting file ${filePath}:`,
+                    unlinkError
+                  );
+                }
               }
-            }
-          })
+            })
+          );
+        }
+
+        console.log(
+          `Complete cleaning up unused images in '${folderName}' folder`
         );
-      };
-
-      // 배치 단위로 파일 처리
-      for (let i = 0; i < files.length; i += batchSize) {
-        const batch = files.slice(i, i + batchSize);
-        await processBatch(batch);
       }
-
-      console.log(
-        `Complete to cleaning up unused images in '${folderName}' folder`
-      );
     } catch (error) {
       console.error(
         `Error cleaning up unused images in '${folderName}' folder:`,

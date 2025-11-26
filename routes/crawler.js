@@ -18,6 +18,7 @@ const { syncAllData } = require("../utils/dataUtils");
 const dotenv = require("dotenv");
 const socketIO = require("socket.io");
 const { sendHigherBidAlerts } = require("../utils/message");
+const { ValuesImageMigration } = require("../utils/s3Migration");
 
 dotenv.config();
 
@@ -839,6 +840,42 @@ router.get("/crawl-invoices", isAdmin, async (req, res) => {
   }
 });
 
+router.post("/migrate-to-s3", isAdmin, async (req, res) => {
+  try {
+    const migration = new ValuesImageMigration();
+    const stats = await migration.migrate();
+
+    res.json({
+      message: "Migration completed",
+      stats,
+    });
+  } catch (error) {
+    console.error("Migration error:", error);
+    res.status(500).json({
+      message: "Migration failed",
+      error: error.message,
+    });
+  }
+});
+
+router.get("/migration-status", isAdmin, async (req, res) => {
+  try {
+    const migration = new ValuesImageMigration();
+    const remainingCount = await migration.getRemainingCount();
+
+    res.json({
+      remainingCount,
+      estimatedBatches: Math.ceil(remainingCount / 50),
+    });
+  } catch (error) {
+    console.error("Status check error:", error);
+    res.status(500).json({
+      message: "Status check failed",
+      error: error.message,
+    });
+  }
+});
+
 const scheduleCrawling = async () => {
   const settings = await getAdminSettings();
 
@@ -1040,6 +1077,34 @@ const scheduleUpdateCrawlingWithId = () => {
   };
 };
 
+const scheduleS3Migration = () => {
+  // 매 10분마다 실행
+  cron.schedule(
+    "*/10 * * * *",
+    async () => {
+      console.log("[S3 Migration] Starting scheduled migration");
+      try {
+        const migration = new ValuesImageMigration();
+        const stats = await migration.migrate();
+
+        if (stats.successCount > 0) {
+          console.log(
+            `[S3 Migration] Completed: ${stats.successCount} items migrated, ${stats.filesDeleted} files deleted`
+          );
+        }
+      } catch (error) {
+        console.error("[S3 Migration] Scheduled migration failed:", error);
+      }
+    },
+    {
+      scheduled: true,
+      timezone: "Asia/Seoul",
+    }
+  );
+
+  console.log("[S3 Migration] Scheduler initialized (every 10 minutes)");
+};
+
 // Socket.IO 초기화 (server.js에서 불러옴)
 function initializeSocket(server) {
   const io = socketIO(server);
@@ -1077,7 +1142,8 @@ if (process.env.ENV === "development") {
   console.log("product env");
   scheduleCrawling();
   scheduleUpdateCrawling();
-  scheduleUpdateCrawlingWithId(); // 추가
+  scheduleUpdateCrawlingWithId();
+  scheduleS3Migration();
   // scheduleExpiredBidsProcessing();
   loginAll();
 }
