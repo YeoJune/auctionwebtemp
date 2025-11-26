@@ -423,11 +423,19 @@ async function syncRecommendSettingsToItems() {
 // 3. EXPIRED STATUS (is_expired)
 // ==========================================
 
+let syncDirectRunning = false;
+
 /**
  * Direct 입찰의 만료 상태 업데이트 (실시간)
  * 자동 실행: 1분마다
  */
 async function syncDirectExpiredStatus() {
+  if (syncDirectRunning) {
+    console.log("⏭️  Previous sync still running, skipping...");
+    return { success: false, skipped: true };
+  }
+
+  syncDirectRunning = true;
   const conn = await pool.getConnection();
   try {
     // 1. 만료되어야 하는데 아직 is_expired = 0인 것들
@@ -464,6 +472,7 @@ async function syncDirectExpiredStatus() {
     throw error;
   } finally {
     conn.release();
+    syncDirectRunning = false;
   }
 }
 
