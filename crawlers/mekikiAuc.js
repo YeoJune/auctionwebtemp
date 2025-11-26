@@ -34,7 +34,6 @@ const mekikiAucConfig = {
     3: "시계",
     4: "귀금속",
     6: "의류",
-    7: "기타",
     8: "귀금속",
     19: "기타",
   },
@@ -344,6 +343,10 @@ class MekikiAucCrawler extends AxiosCrawler {
   // 아이템 정보 추출
   async extractItemInfo(item, eventId) {
     try {
+      // 카테고리에 없으면 제외
+      if (!this.config.categoryTable[item.category?.id]) {
+        return null;
+      }
       const itemId = item.id.toString();
       const boxId = item.box_id || "";
       const boxNo = item.box_no || "";
