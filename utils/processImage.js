@@ -19,6 +19,7 @@ const MAX_RETRIES = 5;
 const INITIAL_DELAY = 100;
 const MAX_DELAY = 5 * 60 * 1000; // 5분
 const PRIORITY_LEVELS = 3; // 우선순위 레벨 수 (1: 높음, 2: 중간, 3: 낮음)
+const PROCESSING_BATCH_SIZE = 1000; // 한 번에 1000개씩만 처리
 
 // Crop 설정 format:
 // - width/height: 최종 크기 (null이면 원본 크기 유지)
@@ -333,7 +334,7 @@ async function processImagesInChunks(
     console.error(
       `Invalid folderName: ${folderName}, aborting image processing`
     );
-    return items; // 이미지 처리 없이 원본 반환
+    return items;
   }
 
   console.log(
@@ -358,7 +359,7 @@ async function processImagesInChunks(
     }
   });
 
-  // 큐 기반 처리
+  // 개별 아이템 처리 함수
   const processItem = async (item) => {
     const tasks = [];
 
@@ -383,11 +384,6 @@ async function processImagesInChunks(
               (savedPath) => {
                 if (savedPath) {
                   savedImages.push(savedPath);
-                  // console.log(`✅ Additional image saved: ${savedPath}`);
-                } else {
-                  // console.warn(
-                  //   `❌ Failed to save additional image: ${imgUrl} to ${folderName}`
-                  // );
                 }
               }
             )
@@ -427,22 +423,43 @@ async function processImagesInChunks(
     }, 5000);
   }
 
-  // 모든 항목 처리
-  const results = await Promise.allSettled(
-    itemsWithImages.map(async (item) => {
-      const result = await processItem(item);
-      completed++;
-      return result;
-    })
-  );
+  // ✅ 배치 처리: 한 번에 PROCESSING_BATCH_SIZE개씩만 처리
+  const processedItems = [];
+
+  for (let i = 0; i < itemsWithImages.length; i += PROCESSING_BATCH_SIZE) {
+    const batch = itemsWithImages.slice(i, i + PROCESSING_BATCH_SIZE);
+
+    console.log(
+      `Processing batch ${
+        Math.floor(i / PROCESSING_BATCH_SIZE) + 1
+      }/${Math.ceil(itemsWithImages.length / PROCESSING_BATCH_SIZE)} (${
+        batch.length
+      } items)`
+    );
+
+    const results = await Promise.allSettled(
+      batch.map(async (item) => {
+        const result = await processItem(item);
+        completed++;
+        return result;
+      })
+    );
+
+    const batchProcessed = results
+      .filter((r) => r.status === "fulfilled")
+      .map((r) => r.value);
+
+    processedItems.push(...batchProcessed);
+
+    // 배치 간 짧은 대기 (메모리 정리 시간)
+    if (i + PROCESSING_BATCH_SIZE < itemsWithImages.length) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  }
 
   if (logInterval) {
     clearInterval(logInterval);
   }
-
-  const processedItems = results
-    .filter((r) => r.status === "fulfilled")
-    .map((r) => r.value);
 
   console.log(
     `✅ 이미지 처리 완료: ${
