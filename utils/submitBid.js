@@ -84,7 +84,9 @@ function validateBidByAuction(auctionNum, bidPrice, currentPrice, isFirstBid) {
  * @returns {Promise<Object>} The result of the bid submission
  */
 async function submitBid(bidData, item) {
-  const { bid_id, price } = bidData;
+  let { bid_id, price } = bidData;
+
+  price = parseInt(price);
 
   console.log(
     `Preparing bid submission for bid ID ${bid_id} with price ${price}...`
