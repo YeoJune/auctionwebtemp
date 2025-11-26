@@ -430,9 +430,6 @@ class MekikiAucCrawler extends AxiosCrawler {
           `Placing live bid for item ${item_id} with price ${price}...`
         );
 
-        // 로그인 확인
-        await this.login();
-
         // 직접 연결 클라이언트 사용
         const clientInfo = this.getClient();
 
@@ -465,7 +462,7 @@ class MekikiAucCrawler extends AxiosCrawler {
         }
       },
       3,
-      1000
+      10 * 1000
     ).catch((error) => {
       console.error(`Error placing bid for item ${item_id}:`, error.message);
       return {
@@ -480,9 +477,6 @@ class MekikiAucCrawler extends AxiosCrawler {
   async addWishlist(item_id, event_id) {
     try {
       console.log(`Adding item ${item_id} to wishlist (like)...`);
-
-      // 로그인 확인
-      await this.login();
 
       // 직접 연결 클라이언트 사용
       const clientInfo = this.getClient();

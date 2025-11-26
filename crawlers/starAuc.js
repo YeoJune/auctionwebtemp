@@ -198,117 +198,101 @@ class StarAucCrawler extends AxiosCrawler {
 
   // Direct bid 메서드 구현 (직접 연결만 사용)
   async directBid(item_id, price) {
-    return await this.retryOperation(
-      async () => {
-        console.log(
-          `Placing direct bid for item ${item_id} with price ${price}...`
-        );
+    try {
+      console.log(
+        `Placing direct bid for item ${item_id} with price ${price}...`
+      );
 
-        // 로그인 확인
-        await this.login();
+      // 로그인 확인
+      await this.login();
 
-        // 직접 연결 클라이언트 사용
-        const clientInfo = this.getClient();
+      // 직접 연결 클라이언트 사용
+      const clientInfo = this.getClient();
 
-        // 쿠키에서 XSRF 토큰 추출
-        const cookies = await clientInfo.cookieJar.getCookies(
-          "https://www.starbuyers-global-auction.com"
-        );
-        const xsrfCookie = cookies.find(
-          (cookie) => cookie.key === "XSRF-TOKEN"
-        );
+      // 쿠키에서 XSRF 토큰 추출
+      const cookies = await clientInfo.cookieJar.getCookies(
+        "https://www.starbuyers-global-auction.com"
+      );
+      const xsrfCookie = cookies.find((cookie) => cookie.key === "XSRF-TOKEN");
 
-        if (!xsrfCookie) {
-          throw new Error("XSRF token not found in cookies");
+      if (!xsrfCookie) {
+        throw new Error("XSRF token not found in cookies");
+      }
+
+      // URL 디코드된 토큰 값 사용
+      const xsrfToken = decodeURIComponent(xsrfCookie.value);
+
+      // FormData 생성
+      const formData = new FormData();
+      formData.append(`bids[${item_id}]`, price.toString());
+
+      // 입찰 요청 (직접 연결 클라이언트 사용)
+      const bidResponse = await clientInfo.client.post(
+        "https://www.starbuyers-global-auction.com/front_api/item/bid",
+        formData,
+        {
+          timeout: 5000,
+          headers: {
+            ...formData.getHeaders(),
+            "X-XSRF-TOKEN": xsrfToken,
+            Accept: "application/json, text/plain, */*",
+            Origin: "https://www.starbuyers-global-auction.com",
+            Referer: `https://www.starbuyers-global-auction.com/item/${item_id}`,
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+          },
+          validateStatus: function (status) {
+            return status >= 200 && status < 400;
+          },
         }
+      );
 
-        // URL 디코드된 토큰 값 사용
-        const xsrfToken = decodeURIComponent(xsrfCookie.value);
+      // 응답 처리
+      if (bidResponse.status === 200) {
+        const responseData = bidResponse.data;
 
-        // FormData 생성
-        const formData = new FormData();
-        formData.append(`bids[${item_id}]`, price.toString());
+        // 응답 구조 확인
+        if (responseData && responseData.status) {
+          const result = responseData.results?.find((r) => r.itemId == item_id);
 
-        // 입찰 요청 (직접 연결 클라이언트 사용)
-        const bidResponse = await clientInfo.client.post(
-          "https://www.starbuyers-global-auction.com/front_api/item/bid",
-          formData,
-          {
-            timeout: 5000,
-            headers: {
-              ...formData.getHeaders(),
-              "X-XSRF-TOKEN": xsrfToken,
-              Accept: "application/json, text/plain, */*",
-              Origin: "https://www.starbuyers-global-auction.com",
-              Referer: `https://www.starbuyers-global-auction.com/item/${item_id}`,
-              "User-Agent":
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
-            },
-            validateStatus: function (status) {
-              return status >= 200 && status < 400;
-            },
-          }
-        );
-
-        // 응답 처리
-        if (bidResponse.status === 200) {
-          const responseData = bidResponse.data;
-
-          // 응답 구조 확인
-          if (responseData && responseData.status) {
-            const result = responseData.results?.find(
-              (r) => r.itemId == item_id
-            );
-
-            if (result && !result.isFailed) {
-              return {
-                success: true,
-                message: result.message,
-                data: {
-                  currentBid: result.currentBid,
-                  highestBid: result.highestBid,
-                  becameHighestBidder: result.becameHighestBidder,
-                  endAt: result.endAt,
-                  timeRemaining: result.timeRemaining,
-                },
-              };
-            } else {
-              return {
-                success: false,
-                message: result?.message || "Bid failed",
-                error: result,
-              };
-            }
+          if (result && !result.isFailed) {
+            return {
+              success: true,
+              message: result.message,
+              data: {
+                currentBid: result.currentBid,
+                highestBid: result.highestBid,
+                becameHighestBidder: result.becameHighestBidder,
+                endAt: result.endAt,
+                timeRemaining: result.timeRemaining,
+              },
+            };
           } else {
-            console.log("Unexpected response structure:", responseData);
             return {
               success: false,
-              message: "Unexpected response format",
-              error: responseData,
+              message: result?.message || "Bid failed",
+              error: result,
             };
           }
         } else {
-          throw new Error(
-            `Bid request failed with status ${bidResponse.status}`
-          );
+          console.log("Unexpected response structure:", responseData);
+          return {
+            success: false,
+            message: "Unexpected response format",
+            error: responseData,
+          };
         }
-      },
-      3,
-      1000
-    ).catch((error) => {
-      console.error(`Error placing bid for item ${item_id}:`, error.message);
-
-      if (error.response) {
-        console.error("Response status:", error.response.status);
-        console.error("Response data:", error.response.data);
+      } else {
+        throw new Error(`Bid request failed with status ${bidResponse.status}`);
       }
-
+    } catch (error) {
+      console.error("Error in direct bid:", error.message);
       return {
         success: false,
         message: "Bid failed",
         error: error.message,
       };
-    });
+    }
   }
 
   // 배치 입찰 메서드 (직접 연결 사용)

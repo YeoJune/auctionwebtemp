@@ -815,84 +815,77 @@ class EcoAucCrawler extends AxiosCrawler {
   }
 
   async directBid(item_id, price) {
-    return await this.retryOperation(
-      async () => {
-        console.log(
-          `Placing direct bid for item ${item_id} with price ${price}...`
+    try {
+      console.log(
+        `Placing direct bid for item ${item_id} with price ${price}...`
+      );
+
+      // 직접 연결 클라이언트 사용
+      const clientInfo = this.getClient();
+
+      // CSRF 토큰 가져오기 - 메인 페이지에서
+      const mainPageResponse = await clientInfo.client.get(
+        ecoAucConfig.searchUrl,
+        { timeout: 5000 }
+      );
+      const $ = cheerio.load(mainPageResponse.data, { xmlMode: true });
+      const csrfToken = $('[name="_csrfToken"]').attr("value");
+
+      if (!csrfToken) {
+        console.warn(
+          "CSRF token not found on main page. Continuing without it..."
         );
+      } else {
+        console.log("CSRF token retrieved successfully");
+      }
 
-        // 로그인 확인
-        await this.login();
+      // POST 요청 데이터 준비
+      const userId = process.env.ECO_BID_USER_ID;
+      console.log(`Using user ID: ${userId}`);
 
-        // 직접 연결 클라이언트 사용
-        const clientInfo = this.getClient();
+      const bidData = new URLSearchParams();
+      bidData.append("user_id", userId);
+      bidData.append("auction_item_id", item_id.toString());
+      bidData.append("bid_price", price.toString());
 
-        // CSRF 토큰 가져오기 - 메인 페이지에서
-        const mainPageResponse = await clientInfo.client.get(
-          ecoAucConfig.searchUrl,
-          { timeout: 5000 }
+      console.log(`Bid data prepared: ${bidData.toString()}`);
+
+      // 입찰 요청 전송 - 완전한 URL 사용
+      const bidUrl = "https://www.ecoauc.com/client/timelimit-auctions/bid";
+      console.log(`Sending bid request to: ${bidUrl}`);
+
+      const bidResponse = await clientInfo.client.post(bidUrl, bidData, {
+        timeout: 5000,
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+          Referer: "https://www.ecoauc.com/client/timelimit-auctions",
+          Origin: "https://www.ecoauc.com",
+          ...(csrfToken && { "X-CSRF-Token": csrfToken }),
+          "X-Requested-With": "XMLHttpRequest",
+        },
+      });
+
+      // 응답 확인
+      if (bidResponse.status === 200 && bidResponse.data.success) {
+        console.log(`Bid successful for item ${item_id} with price ${price}`);
+        return {
+          success: true,
+          message: "Bid placed successfully",
+          data: bidResponse.data,
+        };
+      } else {
+        throw new Error(
+          `Bid failed for item ${item_id}. with price ${price}.)`
         );
-        const $ = cheerio.load(mainPageResponse.data, { xmlMode: true });
-        const csrfToken = $('[name="_csrfToken"]').attr("value");
-
-        if (!csrfToken) {
-          console.warn(
-            "CSRF token not found on main page. Continuing without it..."
-          );
-        } else {
-          console.log("CSRF token retrieved successfully");
-        }
-
-        // POST 요청 데이터 준비
-        const userId = process.env.ECO_BID_USER_ID;
-        console.log(`Using user ID: ${userId}`);
-
-        const bidData = new URLSearchParams();
-        bidData.append("user_id", userId);
-        bidData.append("auction_item_id", item_id.toString());
-        bidData.append("bid_price", price.toString());
-
-        console.log(`Bid data prepared: ${bidData.toString()}`);
-
-        // 입찰 요청 전송 - 완전한 URL 사용
-        const bidUrl = "https://www.ecoauc.com/client/timelimit-auctions/bid";
-        console.log(`Sending bid request to: ${bidUrl}`);
-
-        const bidResponse = await clientInfo.client.post(bidUrl, bidData, {
-          timeout: 5000,
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-            Referer: "https://www.ecoauc.com/client/timelimit-auctions",
-            Origin: "https://www.ecoauc.com",
-            ...(csrfToken && { "X-CSRF-Token": csrfToken }),
-            "X-Requested-With": "XMLHttpRequest",
-          },
-        });
-
-        // 응답 확인
-        if (bidResponse.status === 200 && bidResponse.data.success) {
-          console.log(`Bid successful for item ${item_id} with price ${price}`);
-          return {
-            success: true,
-            message: "Bid placed successfully",
-            data: bidResponse.data,
-          };
-        } else {
-          throw new Error(
-            `Bid failed for item ${item_id}. with price ${price}.)`
-          );
-        }
-      },
-      3,
-      1000
-    ).catch((err) => {
+      }
+    } catch (err) {
       console.error("Error placing bid:", err.message);
       return {
         success: false,
         message: "Bid failed",
         error: err.message,
       };
-    });
+    }
   }
 
   async liveBid(item_id, price) {
@@ -901,9 +894,6 @@ class EcoAucCrawler extends AxiosCrawler {
         console.log(
           `Placing live bid for item ${item_id} with price ${price}...`
         );
-
-        // 로그인 확인
-        await this.login();
 
         // 직접 연결 클라이언트 사용
         const clientInfo = this.getClient();
@@ -965,7 +955,7 @@ class EcoAucCrawler extends AxiosCrawler {
         }
       },
       3,
-      1000
+      10 * 1000
     ).catch((err) => {
       console.error("Error placing bid:", err.message);
       return {
@@ -979,9 +969,6 @@ class EcoAucCrawler extends AxiosCrawler {
   async addWishlist(item_id, favorite_number = 1) {
     try {
       console.log(`Adding item ${item_id} to wishlist`);
-
-      // 로그인 확인
-      await this.login();
 
       // 직접 연결 클라이언트 사용
       const clientInfo = this.getClient();
@@ -1054,9 +1041,6 @@ class EcoAucCrawler extends AxiosCrawler {
   async crawlInvoices() {
     try {
       console.log(`Starting to crawl invoices...`);
-
-      // 로그인 확인
-      await this.login();
 
       // 직접 연결 클라이언트 사용
       const directClient = this.getDirectClient();

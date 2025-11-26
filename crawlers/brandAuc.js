@@ -869,102 +869,98 @@ class BrandAucCrawler extends AxiosCrawler {
   }
 
   async directBid(item_id, price) {
-    return await this.retryOperation(
-      async () => {
-        // 로그인 상태 확인
-        await this.login();
+    try {
+      // 직접 연결 클라이언트 사용
+      const clientInfo = this.getClient();
 
-        // 직접 연결 클라이언트 사용
-        const clientInfo = this.getClient();
+      // XSRF 토큰 추출 (쿠키에서)
+      const cookies = await clientInfo.cookieJar.getCookies(
+        "https://bid.brand-auc.com"
+      );
+      const xsrfToken = cookies.find(
+        (cookie) => cookie.key === "XSRF-TOKEN"
+      )?.value;
 
-        // XSRF 토큰 추출 (쿠키에서)
-        const cookies = await clientInfo.cookieJar.getCookies(
-          "https://bid.brand-auc.com"
+      if (!xsrfToken) {
+        throw new Error("XSRF token not found in cookies");
+      }
+
+      try {
+        // 첫 번째 API 호출 시도 (기존 방식)
+        const response = await clientInfo.client.post(
+          "https://bid.brand-auc.com/api/v1/brand-bid/jizen-nyusatsu/",
+          {
+            uketsukeBng: item_id,
+            kaijoKbn: 1,
+            nyusatsuKng: price,
+          },
+          {
+            timeout: 5000,
+            headers: {
+              "Content-Type": "application/json",
+              Referer: "https://bid.brand-auc.com/",
+              "X-Requested-With": "XMLHttpRequest",
+              "X-XSRF-TOKEN": xsrfToken,
+            },
+          }
         );
-        const xsrfToken = cookies.find(
-          (cookie) => cookie.key === "XSRF-TOKEN"
-        )?.value;
 
-        if (!xsrfToken) {
-          throw new Error("XSRF token not found in cookies");
+        // 첫 번째 API 성공
+        if (response.status === 201) {
+          return {
+            success: true,
+            message: "Bid successful",
+            data: response.data,
+          };
         }
 
-        try {
-          // 첫 번째 API 호출 시도 (기존 방식)
-          const response = await clientInfo.client.post(
-            "https://bid.brand-auc.com/api/v1/brand-bid/jizen-nyusatsu/",
-            {
-              uketsukeBng: item_id,
-              kaijoKbn: 1,
-              nyusatsuKng: price,
+        // 첫 번째 API 실패 (201이 아닌 응답)
+        throw new Error("First API endpoint failed");
+      } catch (firstApiError) {
+        console.log("First API failed, trying alternative endpoint...");
+
+        // 두 번째 API 호출 시도 (대체 API)
+        const altResponse = await clientInfo.client.post(
+          "https://bid.brand-auc.com/api/v1/brand-bid/com/bid?gamenId=B201-01&viewType=1",
+          {
+            uketsukeBng: item_id,
+            nyusatsuKng: price,
+            startKng: 0,
+            kaijoKbn: 1,
+          },
+          {
+            timeout: 5000,
+            headers: {
+              "Content-Type": "application/json",
+              Referer: "https://bid.brand-auc.com/",
+              "X-Requested-With": "XMLHttpRequest",
+              "X-XSRF-TOKEN": xsrfToken,
             },
-            {
-              timeout: 5000,
-              headers: {
-                "Content-Type": "application/json",
-                Referer: "https://bid.brand-auc.com/",
-                "X-Requested-With": "XMLHttpRequest",
-                "X-XSRF-TOKEN": xsrfToken,
-              },
-            }
-          );
-
-          // 첫 번째 API 성공
-          if (response.status === 201) {
-            return {
-              success: true,
-              message: "Bid successful",
-              data: response.data,
-            };
           }
+        );
 
-          // 첫 번째 API 실패 (201이 아닌 응답)
-          throw new Error("First API endpoint failed");
-        } catch (firstApiError) {
-          console.log("First API failed, trying alternative endpoint...");
-
-          // 두 번째 API 호출 시도 (대체 API)
-          const altResponse = await clientInfo.client.post(
-            "https://bid.brand-auc.com/api/v1/brand-bid/com/bid?gamenId=B201-01&viewType=1",
-            {
-              uketsukeBng: item_id,
-              nyusatsuKng: price,
-              startKng: 0,
-              kaijoKbn: 1,
-            },
-            {
-              timeout: 5000,
-              headers: {
-                "Content-Type": "application/json",
-                Referer: "https://bid.brand-auc.com/",
-                "X-Requested-With": "XMLHttpRequest",
-                "X-XSRF-TOKEN": xsrfToken,
-              },
-            }
-          );
-
-          // 두 번째 API 응답 확인
-          if (altResponse.status === 200 || altResponse.status === 201) {
-            return {
-              success: true,
-              message: "Bid successful (alternative method)",
-              data: altResponse.data,
-            };
-          } else {
-            throw new Error("Bid failed with alternative endpoint");
-          }
+        // 두 번째 API 응답 확인
+        if (altResponse.status === 200 || altResponse.status === 201) {
+          return {
+            success: true,
+            message: "Bid successful (alternative method)",
+            data: altResponse.data,
+          };
+        } else {
+          throw new Error("Bid failed with alternative endpoint");
         }
-      },
-      3,
-      1000
-    ).catch((error) => {
-      console.error(`Error placing bid for item ${item_id}:`, error.message);
+      }
+    } catch (error) {
+      console.error(
+        `Error placing direct bid for item ${item_id}:`,
+        error.message
+      );
       return {
         success: false,
         message: "Bid failed",
         error: error.message,
       };
-    });
+    }
   }
 
   async liveBid(item_id, price) {
@@ -1021,7 +1017,7 @@ class BrandAucCrawler extends AxiosCrawler {
         }
       },
       3,
-      1000
+      10 * 1000
     ).catch((error) => {
       console.error(`Error placing bid for item ${item_id}:`, error.message);
       return {
