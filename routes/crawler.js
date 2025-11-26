@@ -1077,34 +1077,6 @@ const scheduleUpdateCrawlingWithId = () => {
   };
 };
 
-const scheduleS3Migration = () => {
-  // 매 10분마다 실행
-  cron.schedule(
-    "*/10 * * * *",
-    async () => {
-      console.log("[S3 Migration] Starting scheduled migration");
-      try {
-        const migration = new ValuesImageMigration();
-        const stats = await migration.migrate();
-
-        if (stats.successCount > 0) {
-          console.log(
-            `[S3 Migration] Completed: ${stats.successCount} items migrated, ${stats.filesDeleted} files deleted`
-          );
-        }
-      } catch (error) {
-        console.error("[S3 Migration] Scheduled migration failed:", error);
-      }
-    },
-    {
-      scheduled: true,
-      timezone: "Asia/Seoul",
-    }
-  );
-
-  console.log("[S3 Migration] Scheduler initialized (every 10 minutes)");
-};
-
 // Socket.IO 초기화 (server.js에서 불러옴)
 function initializeSocket(server) {
   const io = socketIO(server);
@@ -1143,7 +1115,6 @@ if (process.env.ENV === "development") {
   scheduleCrawling();
   scheduleUpdateCrawling();
   scheduleUpdateCrawlingWithId();
-  scheduleS3Migration();
   // scheduleExpiredBidsProcessing();
   loginAll();
 }
