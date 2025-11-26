@@ -208,7 +208,6 @@ class DatabaseManager {
 
   async cleanupUnusedImages(folderName = "products", batchSize = 100) {
     let conn;
-    const activeImagePaths = new Set();
 
     try {
       // 이미지 디렉토리 경로 동적 설정
@@ -222,49 +221,80 @@ class DatabaseManager {
 
       conn = await this.pool.getConnection();
 
-      // values 폴더의 경우 S3 URL도 고려
+      const QUERY_BATCH_SIZE = 10000; // DB 조회 배치 크기
+
       if (folderName === "values") {
-        // values_items 테이블에서 사용 중인 이미지 경로 수집
-        const [activeImages] = await conn.query(`
-        SELECT image, additional_images
-        FROM values_items
-      `);
+        // ===== VALUES 폴더 처리 (S3-aware) =====
 
-        // 사용 중인 이미지 경로 수집 (로컬 경로만 추출)
         const localFilesInUse = new Set();
+        let offset = 0;
+        let hasMore = true;
 
-        activeImages.forEach((item) => {
-          // 메인 이미지
-          if (item.image) {
-            if (item.image.startsWith("/images/values/")) {
-              // 로컬 경로 → 파일명 추출
+        console.log(
+          `[Cleanup] Collecting image paths from 'values_items' table...`
+        );
+
+        // 배치 단위로 DB 조회
+        while (hasMore) {
+          const [batch] = await conn.query(
+            `SELECT image, additional_images
+           FROM values_items
+           LIMIT ? OFFSET ?`,
+            [QUERY_BATCH_SIZE, offset]
+          );
+
+          if (batch.length === 0) {
+            hasMore = false;
+            break;
+          }
+
+          // 로컬 경로만 추출
+          batch.forEach((item) => {
+            // 메인 이미지
+            if (item.image && item.image.startsWith("/images/values/")) {
               localFilesInUse.add(path.basename(item.image));
             }
-            // S3 URL은 무시 (로컬 파일 삭제 대상에서 제외)
-          }
 
-          // 추가 이미지
-          if (item.additional_images) {
-            try {
-              const additionalImages = JSON.parse(item.additional_images);
-              additionalImages.forEach((img) => {
-                if (img.startsWith("/images/values/")) {
-                  localFilesInUse.add(path.basename(img));
-                }
-              });
-            } catch (error) {
-              console.error(`Error parsing additional_images:`, error);
+            // 추가 이미지
+            if (item.additional_images) {
+              try {
+                const additionalImages = JSON.parse(item.additional_images);
+                additionalImages.forEach((img) => {
+                  if (img.startsWith("/images/values/")) {
+                    localFilesInUse.add(path.basename(img));
+                  }
+                });
+              } catch (error) {
+                console.error(`Error parsing additional_images:`, error);
+              }
             }
+          });
+
+          offset += QUERY_BATCH_SIZE;
+
+          // 진행률 표시
+          if (offset % 50000 === 0) {
+            console.log(`[Cleanup] Processed ${offset} items...`);
           }
-        });
+        }
+
+        console.log(
+          `[Cleanup] Processed ${offset} items total, ` +
+            `${localFilesInUse.size} unique local images in use`
+        );
 
         // 파일 시스템에서 이미지 정리
         const files = await fs.readdir(IMAGE_DIR);
+        console.log(
+          `[Cleanup] Scanning ${files.length} files in filesystem...`
+        );
 
-        // 배치 처리
+        let deletedCount = 0;
+
         for (let i = 0; i < files.length; i += batchSize) {
           const batch = files.slice(i, i + batchSize);
-          await Promise.all(
+
+          const results = await Promise.all(
             batch.map(async (file) => {
               const filePath = path.join(IMAGE_DIR, file);
 
@@ -272,92 +302,182 @@ class DatabaseManager {
               if (!localFilesInUse.has(file)) {
                 try {
                   await fs.unlink(filePath);
+                  return true;
                 } catch (unlinkError) {
                   console.error(
                     `Error deleting file ${filePath}:`,
                     unlinkError
                   );
+                  return false;
                 }
               }
+              return false;
             })
           );
+
+          deletedCount += results.filter((r) => r).length;
+
+          // 진행률 표시
+          if ((i + batchSize) % 1000 === 0 || i + batchSize >= files.length) {
+            console.log(
+              `[Cleanup] File cleanup progress: ${Math.min(
+                i + batchSize,
+                files.length
+              )}/${files.length}, ` + `deleted: ${deletedCount}`
+            );
+          }
         }
 
         console.log(
-          `Complete cleaning up unused images in 'values' folder (S3-aware)`
+          `Complete cleaning up unused images in 'values' folder (S3-aware)\n` +
+            `Deleted ${deletedCount} unused local files`
         );
       } else {
-        // products 폴더는 기존 로직 유지
-        const activeImagesPromise = conn.query(`
-        SELECT image, additional_images
-        FROM crawled_items`);
+        // ===== PRODUCTS 폴더 처리 (배치 처리) =====
 
-        // 입찰이 있는 아이템 이미지
-        const bidItemsPromise = conn.query(`
-        SELECT ci.image, ci.additional_images 
-        FROM crawled_items ci
-        JOIN (
-          SELECT DISTINCT item_id FROM direct_bids
-          UNION
-          SELECT DISTINCT item_id FROM live_bids
-        ) b ON ci.item_id = b.item_id`);
+        const activeImagePaths = new Set();
 
-        const [activeImages] = await activeImagesPromise;
-        const [bidItemImages] = await bidItemsPromise;
+        console.log(
+          `[Cleanup] Collecting image paths from 'crawled_items' table...`
+        );
 
-        // 활성 이미지 경로 처리
-        activeImages.forEach((item) => {
-          if (item.image) activeImagePaths.add(item.image);
-          if (item.additional_images) {
-            try {
-              JSON.parse(item.additional_images).forEach((img) =>
-                activeImagePaths.add(img)
-              );
-            } catch (error) {
-              console.error(`Error parsing additional_images:`, error);
-            }
+        // 1. crawled_items 배치 조회
+        let offset = 0;
+        let hasMore = true;
+
+        while (hasMore) {
+          const [batch] = await conn.query(
+            `SELECT image, additional_images
+           FROM crawled_items
+           LIMIT ? OFFSET ?`,
+            [QUERY_BATCH_SIZE, offset]
+          );
+
+          if (batch.length === 0) {
+            hasMore = false;
+            break;
           }
-        });
 
-        bidItemImages.forEach((item) => {
-          if (item.image) activeImagePaths.add(item.image);
-          if (item.additional_images) {
-            try {
-              JSON.parse(item.additional_images).forEach((img) =>
-                activeImagePaths.add(img)
-              );
-            } catch (error) {
-              console.error(`Error parsing additional_images:`, error);
+          // 이미지 경로 수집
+          batch.forEach((item) => {
+            if (item.image) activeImagePaths.add(item.image);
+            if (item.additional_images) {
+              try {
+                JSON.parse(item.additional_images).forEach((img) =>
+                  activeImagePaths.add(img)
+                );
+              } catch (error) {
+                console.error(`Error parsing additional_images:`, error);
+              }
             }
+          });
+
+          offset += QUERY_BATCH_SIZE;
+
+          if (offset % 50000 === 0) {
+            console.log(`[Cleanup] Processed ${offset} crawled_items...`);
           }
-        });
+        }
+
+        console.log(`[Cleanup] Total ${offset} crawled_items processed`);
+
+        // 2. 입찰이 있는 아이템 이미지 조회 (배치)
+        console.log(`[Cleanup] Collecting images from items with bids...`);
+
+        offset = 0;
+        hasMore = true;
+
+        while (hasMore) {
+          const [batch] = await conn.query(
+            `SELECT ci.image, ci.additional_images 
+           FROM crawled_items ci
+           JOIN (
+             SELECT DISTINCT item_id FROM direct_bids
+             UNION
+             SELECT DISTINCT item_id FROM live_bids
+           ) b ON ci.item_id = b.item_id
+           LIMIT ? OFFSET ?`,
+            [QUERY_BATCH_SIZE, offset]
+          );
+
+          if (batch.length === 0) {
+            hasMore = false;
+            break;
+          }
+
+          // 이미지 경로 수집
+          batch.forEach((item) => {
+            if (item.image) activeImagePaths.add(item.image);
+            if (item.additional_images) {
+              try {
+                JSON.parse(item.additional_images).forEach((img) =>
+                  activeImagePaths.add(img)
+                );
+              } catch (error) {
+                console.error(`Error parsing additional_images:`, error);
+              }
+            }
+          });
+
+          offset += QUERY_BATCH_SIZE;
+
+          if (offset % 50000 === 0) {
+            console.log(`[Cleanup] Processed ${offset} bid items...`);
+          }
+        }
+
+        console.log(
+          `[Cleanup] Total ${activeImagePaths.size} unique images in use`
+        );
 
         // 파일 시스템에서 이미지 정리
         const files = await fs.readdir(IMAGE_DIR);
+        console.log(
+          `[Cleanup] Scanning ${files.length} files in filesystem...`
+        );
 
-        // 배치 처리
+        let deletedCount = 0;
+
         for (let i = 0; i < files.length; i += batchSize) {
           const batch = files.slice(i, i + batchSize);
-          await Promise.all(
+
+          const results = await Promise.all(
             batch.map(async (file) => {
               const filePath = path.join(IMAGE_DIR, file);
               const relativePath = `/images/${folderName}/${file}`;
+
               if (!activeImagePaths.has(relativePath)) {
                 try {
                   await fs.unlink(filePath);
+                  return true;
                 } catch (unlinkError) {
                   console.error(
                     `Error deleting file ${filePath}:`,
                     unlinkError
                   );
+                  return false;
                 }
               }
+              return false;
             })
           );
+
+          deletedCount += results.filter((r) => r).length;
+
+          // 진행률 표시
+          if ((i + batchSize) % 1000 === 0 || i + batchSize >= files.length) {
+            console.log(
+              `[Cleanup] File cleanup progress: ${Math.min(
+                i + batchSize,
+                files.length
+              )}/${files.length}, ` + `deleted: ${deletedCount}`
+            );
+          }
         }
 
         console.log(
-          `Complete cleaning up unused images in '${folderName}' folder`
+          `Complete cleaning up unused images in '${folderName}' folder\n` +
+            `Deleted ${deletedCount} unused files`
         );
       }
     } catch (error) {
@@ -373,7 +493,6 @@ class DatabaseManager {
           console.error("Error releasing database connection:", releaseError);
         }
       }
-      activeImagePaths.clear();
     }
   }
 
