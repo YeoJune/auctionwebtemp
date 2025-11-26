@@ -136,7 +136,7 @@ class MissingImageCleaner {
   /**
    * 모든 아이템 검사
    */
-  async findMissingImages(batchSize = 100) {
+  async findMissingImages(batchSize = 1000) {
     console.log("[Cleanup] Fetching items from database...\n");
 
     const [items] = await pool.query(`
