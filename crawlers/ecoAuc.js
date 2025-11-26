@@ -304,58 +304,59 @@ class EcoAucCrawler extends AxiosCrawler {
   ) {
     const clientInfo = this.getClient();
 
-    return this.retryOperation(async () => {
-      console.log(
-        `Crawling page ${page} in category ${categoryId} with ${clientInfo.name}...`
-      );
-      const url =
-        this.config.searchUrl + this.config.searchParams(categoryId, page);
-
-      const response = await clientInfo.client.get(url);
-      const $ = cheerio.load(response.data, { xmlMode: true });
-
-      // 아이템 컨테이너 선택
-      const itemElements = $(this.config.crawlSelectors.itemContainer);
-
-      // 원본 로직과 동일하게 필터링 처리
-      const [filteredElements, filteredItems, remainItems] = this.filterHandles(
-        $,
-        itemElements,
-        existingIds
-      );
-
-      console.log(
-        `Filtered to ${filteredElements.length} items for detailed extraction`
-      );
-
-      // 필터링된 아이템이 없으면 종료
-      if (filteredElements.length === 0) {
-        console.log("No items to extract after filtering");
-        return remainItems;
-      }
-
-      const pageItems = [];
-      for (let i = 0; i < filteredItems.length; i++) {
-        const item = this.extractItemInfo(
-          $,
-          $(filteredElements[i]),
-          filteredItems[i]
+    return this.retryOperation(
+      async () => {
+        console.log(
+          `Crawling page ${page} in category ${categoryId} with ${clientInfo.name}...`
         );
-        if (item) pageItems.push(item);
-      }
+        const url =
+          this.config.searchUrl + this.config.searchParams(categoryId, page);
 
-      let finalItems;
-      if (skipImageProcessing) {
-        finalItems = pageItems;
-      } else {
-        finalItems = await processImagesInChunks(pageItems, "products", 3);
-      }
+        const response = await clientInfo.client.get(url);
+        const $ = cheerio.load(response.data, { xmlMode: true });
 
-      console.log(
-        `Crawled ${finalItems.length} items from page ${page} (${clientInfo.name})`
-      );
-      return [...finalItems, ...remainItems];
-    });
+        // 아이템 컨테이너 선택
+        const itemElements = $(this.config.crawlSelectors.itemContainer);
+
+        // 원본 로직과 동일하게 필터링 처리
+        const [filteredElements, filteredItems, remainItems] =
+          this.filterHandles($, itemElements, existingIds);
+
+        console.log(
+          `Filtered to ${filteredElements.length} items for detailed extraction`
+        );
+
+        // 필터링된 아이템이 없으면 종료
+        if (filteredElements.length === 0) {
+          console.log("No items to extract after filtering");
+          return remainItems;
+        }
+
+        const pageItems = [];
+        for (let i = 0; i < filteredItems.length; i++) {
+          const item = this.extractItemInfo(
+            $,
+            $(filteredElements[i]),
+            filteredItems[i]
+          );
+          if (item) pageItems.push(item);
+        }
+
+        let finalItems;
+        if (skipImageProcessing) {
+          finalItems = pageItems;
+        } else {
+          finalItems = await processImagesInChunks(pageItems, "products", 3);
+        }
+
+        console.log(
+          `Crawled ${finalItems.length} items from page ${page} (${clientInfo.name})`
+        );
+        return [...finalItems, ...remainItems];
+      },
+      3,
+      10 * 1000
+    );
   }
 
   async crawlItemDetails(itemId, item0) {
@@ -727,37 +728,47 @@ class EcoAucCrawler extends AxiosCrawler {
   async crawlUpdatePage(page) {
     const clientInfo = this.getClient();
 
-    return this.retryOperation(async () => {
-      console.log(
-        `Crawling update page ${page} for all categories with ${clientInfo.name}...`
-      );
-      const url =
-        this.config.searchUrl + this.config.searchParamsAllCategories(page);
+    return this.retryOperation(
+      async () => {
+        console.log(
+          `Crawling update page ${page} for all categories with ${clientInfo.name}...`
+        );
+        const url =
+          this.config.searchUrl + this.config.searchParamsAllCategories(page);
 
-      const response = await clientInfo.client.get(url, { timeout: 5 * 1000 });
-      const $ = cheerio.load(response.data, { xmlMode: true });
+        const response = await clientInfo.client.get(url, {
+          timeout: 5 * 1000,
+        });
+        const $ = cheerio.load(response.data, { xmlMode: true });
 
-      // 아이템 컨테이너 선택
-      const itemElements = $(this.config.crawlSelectors.itemContainer);
-      console.log(`Found ${itemElements.length} items on update page ${page}`);
+        // 아이템 컨테이너 선택
+        const itemElements = $(this.config.crawlSelectors.itemContainer);
+        console.log(
+          `Found ${itemElements.length} items on update page ${page}`
+        );
 
-      if (itemElements.length === 0) {
-        return [];
-      }
-
-      // 배열로 변환하여 처리
-      const pageItems = [];
-      itemElements.each((index, element) => {
-        const item = this.extractUpdateItemInfo($, $(element));
-        if (item) {
-          // null이 아닌 유효한 항목만 추가
-          pageItems.push(item);
+        if (itemElements.length === 0) {
+          return [];
         }
-      });
 
-      console.log(`Crawled ${pageItems.length} update items from page ${page}`);
-      return pageItems;
-    });
+        // 배열로 변환하여 처리
+        const pageItems = [];
+        itemElements.each((index, element) => {
+          const item = this.extractUpdateItemInfo($, $(element));
+          if (item) {
+            // null이 아닌 유효한 항목만 추가
+            pageItems.push(item);
+          }
+        });
+
+        console.log(
+          `Crawled ${pageItems.length} update items from page ${page}`
+        );
+        return pageItems;
+      },
+      3,
+      5 * 1000
+    );
   }
 
   extractUpdateItemInfo($, element) {
@@ -1125,43 +1136,49 @@ class EcoAucCrawler extends AxiosCrawler {
   async crawlUpdateWithId(itemId) {
     const clientInfo = this.getClient();
 
-    return this.retryOperation(async () => {
-      console.log(
-        `Crawling update info for item ${itemId} with ${clientInfo.name}...`
-      );
+    return this.retryOperation(
+      async () => {
+        console.log(
+          `Crawling update info for item ${itemId} with ${clientInfo.name}...`
+        );
 
-      const bidType = "direct";
-      const url = this.config.detailUrl(itemId, bidType);
+        const bidType = "direct";
+        const url = this.config.detailUrl(itemId, bidType);
 
-      const response = await clientInfo.client.get(url, { timeout: 5 * 1000 });
-      const $ = cheerio.load(response.data, { xmlMode: true });
+        const response = await clientInfo.client.get(url, {
+          timeout: 5 * 1000,
+        });
+        const $ = cheerio.load(response.data, { xmlMode: true });
 
-      const startingPriceText = $(
-        "dt:contains('Starting price') + dd big.canopy-large-value"
-      )
-        .text()
-        .trim();
-      const startingPrice = this.currencyToInt(startingPriceText);
+        const startingPriceText = $(
+          "dt:contains('Starting price') + dd big.canopy-large-value"
+        )
+          .text()
+          .trim();
+        const startingPrice = this.currencyToInt(startingPriceText);
 
-      // Price 추출
-      const priceText = $("dt:contains('Price') + dd big.canopy-large-value")
-        .text()
-        .trim();
-      const price = this.currencyToInt(priceText);
+        // Price 추출
+        const priceText = $("dt:contains('Price') + dd big.canopy-large-value")
+          .text()
+          .trim();
+        const price = this.currencyToInt(priceText);
 
-      // End scheduled date 추출
-      const scheduledDateText = $("dt:contains('End scheduled date') + dd")
-        .text()
-        .trim();
-      let scheduledDate = this.extractDate(scheduledDateText);
+        // End scheduled date 추출
+        const scheduledDateText = $("dt:contains('End scheduled date') + dd")
+          .text()
+          .trim();
+        let scheduledDate = this.extractDate(scheduledDateText);
 
-      return {
-        item_id: itemId,
-        starting_price: price || startingPrice,
-        scheduled_date: scheduledDate,
-        original_scheduled_date: scheduledDate,
-      };
-    });
+        return {
+          item_id: itemId,
+          starting_price: price || startingPrice,
+          scheduled_date: scheduledDate,
+          original_scheduled_date: scheduledDate,
+        };
+      },
+      3,
+      5 * 1000
+    );
   }
 
   async crawlUpdateWithIds(itemIds) {
@@ -1393,45 +1410,49 @@ class EcoAucValueCrawler extends AxiosCrawler {
   ) {
     const clientInfo = this.getClient();
 
-    return this.retryOperation(async () => {
-      console.log(
-        `Crawling page ${page} in category ${categoryId} with ${clientInfo.name}...`
-      );
-      const url =
-        this.config.searchUrl +
-        this.config.searchParams(categoryId, page, months);
+    return this.retryOperation(
+      async () => {
+        console.log(
+          `Crawling page ${page} in category ${categoryId} with ${clientInfo.name}...`
+        );
+        const url =
+          this.config.searchUrl +
+          this.config.searchParams(categoryId, page, months);
 
-      const response = await clientInfo.client.get(url);
-      const $ = cheerio.load(response.data, { xmlMode: true });
+        const response = await clientInfo.client.get(url);
+        const $ = cheerio.load(response.data, { xmlMode: true });
 
-      // 아이템 컨테이너 선택
-      const itemElements = $(this.config.crawlSelectors.itemContainer);
-      console.log(`Found ${itemElements.length} items on page ${page}`);
+        // 아이템 컨테이너 선택
+        const itemElements = $(this.config.crawlSelectors.itemContainer);
+        console.log(`Found ${itemElements.length} items on page ${page}`);
 
-      if (itemElements.length === 0) {
-        return [];
-      }
-
-      // 배열로 변환하여 처리
-      const pageItems = [];
-      itemElements.each((index, element) => {
-        const item = this.extractItemInfo($, $(element), existingIds);
-        if (item && this.isCollectionDay(item.scheduled_date)) {
-          // null이 아닌 유효한 항목만 추가
-          pageItems.push(item);
+        if (itemElements.length === 0) {
+          return [];
         }
-      });
 
-      let finalItems;
-      if (skipImageProcessing) {
-        finalItems = pageItems;
-      } else {
-        finalItems = await processImagesInChunks(pageItems, "values", 3);
-      }
+        // 배열로 변환하여 처리
+        const pageItems = [];
+        itemElements.each((index, element) => {
+          const item = this.extractItemInfo($, $(element), existingIds);
+          if (item && this.isCollectionDay(item.scheduled_date)) {
+            // null이 아닌 유효한 항목만 추가
+            pageItems.push(item);
+          }
+        });
 
-      console.log(`Crawled ${finalItems.length} items from page ${page}`);
-      return finalItems;
-    });
+        let finalItems;
+        if (skipImageProcessing) {
+          finalItems = pageItems;
+        } else {
+          finalItems = await processImagesInChunks(pageItems, "values", 3);
+        }
+
+        console.log(`Crawled ${finalItems.length} items from page ${page}`);
+        return finalItems;
+      },
+      3,
+      10 * 1000
+    );
   }
 
   extractItemInfo($, element, existingIds) {
