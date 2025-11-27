@@ -14,12 +14,12 @@ let pLimit;
 // 설정
 const MAX_WIDTH = 800;
 const MAX_HEIGHT = 800;
-const CONCURRENT_DOWNLOADS = 20;
+const CONCURRENT_DOWNLOADS = 100;
 const MAX_RETRIES = 5;
 const INITIAL_DELAY = 100;
 const MAX_DELAY = 5 * 60 * 1000; // 5분
 const PRIORITY_LEVELS = 3; // 우선순위 레벨 수 (1: 높음, 2: 중간, 3: 낮음)
-const PROCESSING_BATCH_SIZE = 1000; // 한 번에 1000개씩만 처리
+const PROCESSING_BATCH_SIZE = 5000; // 한 번에 5000개씩만 처리
 
 // Crop 설정 format:
 // - width/height: 최종 크기 (null이면 원본 크기 유지)
