@@ -55,25 +55,17 @@ class ValuesImageMigration {
     return rows[0].count;
   }
 
-  /**
-   * 남은 개수에 따라 동적으로 배치 크기 결정
-   * 10만개 이상: 100개씩
-   * 5만-10만: 70개씩
-   * 1만-5만: 50개씩
-   * 5천-1만: 30개씩
-   * 5천 미만: 10개씩
-   */
   calculateBatchSize(remainingCount) {
     if (remainingCount >= 100000) {
-      return this.maxBatchSize;
+      return 5000;
     } else if (remainingCount >= 50000) {
-      return 70;
+      return 3000;
     } else if (remainingCount >= 10000) {
-      return this.baseBatchSize;
+      return 2000;
     } else if (remainingCount >= 5000) {
-      return 30;
+      return 1000;
     } else {
-      return this.minBatchSize;
+      return 500;
     }
   }
 
