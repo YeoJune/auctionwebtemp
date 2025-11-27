@@ -17,7 +17,7 @@ class ValuesImageMigration {
     this.bucketName = process.env.S3_BUCKET_NAME || "casa-images";
     this.cloudFrontDomain = process.env.CLOUDFRONT_DOMAIN;
     this.s3Folder = "values/";
-    this.localDir = path.join(__dirname, "public", "images", "values");
+    this.localDir = path.join(__dirname, "..", "public", "images", "values");
 
     // 동적 배치 크기 설정
     this.minBatchSize = 500; // 최소 배치 크기
