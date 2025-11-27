@@ -200,7 +200,7 @@ class MissingImageCleaner {
 
     if (dryRun) {
       console.log("Items that would be deleted:");
-      items.forEach((item, index) => {
+      items.slice(0, 10).forEach((item, index) => {
         console.log(
           `  ${index + 1}. item_id: ${item.item_id}, ` +
             `auc_num: ${item.auc_num}, ` +
