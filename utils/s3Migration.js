@@ -20,12 +20,12 @@ class ValuesImageMigration {
     this.localDir = path.join(__dirname, "public", "images", "values");
 
     // 동적 배치 크기 설정
-    this.minBatchSize = 10; // 최소 배치 크기
-    this.maxBatchSize = 100; // 최대 배치 크기
-    this.baseBatchSize = 50; // 기본 배치 크기
+    this.minBatchSize = 500; // 최소 배치 크기
+    this.maxBatchSize = 5000; // 최대 배치 크기
+    this.baseBatchSize = 2000; // 기본 배치 크기
 
     // 동시 업로드 수
-    this.concurrentUploads = 5;
+    this.concurrentUploads = 20;
 
     // 통계
     this.stats = {
