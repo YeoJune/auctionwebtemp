@@ -7,7 +7,7 @@ const axios = require("axios");
 
 class MissingImageCleaner {
   constructor() {
-    this.localDir = path.join(__dirname, "..", "public", "images", "values");
+    this.localDir = path.join(__dirname, "public", "images", "values");
     this.cloudFrontDomain = process.env.CLOUDFRONT_DOMAIN;
 
     this.stats = {
