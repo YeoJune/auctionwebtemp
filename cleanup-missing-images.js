@@ -159,6 +159,8 @@ class MissingImageCleaner {
 
         const missingImages = await this.checkItem(item);
 
+        await new Promise((resolve) => setTimeout(resolve, 10));
+
         if (missingImages.length > 0) {
           itemsWithMissingImages.push({
             item_id: item.item_id,
