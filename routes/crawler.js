@@ -20,6 +20,7 @@ const dotenv = require("dotenv");
 const socketIO = require("socket.io");
 const { sendHigherBidAlerts } = require("../utils/message");
 const { ValuesImageMigration } = require("../utils/s3Migration");
+const { processImagesInChunks } = require("../utils/processImage");
 
 dotenv.config();
 
@@ -243,128 +244,271 @@ async function crawlAllValues(options = {}) {
 
   if (isValueCrawling) {
     throw new Error("Value crawling already in progress");
-  } else {
-    try {
-      const [existingItems] = await pool.query(
-        "SELECT item_id, auc_num FROM values_items"
-      );
+  }
 
-      const existingEcoAucIds = new Set(
+  try {
+    isValueCrawling = true;
+    const startTime = Date.now();
+
+    console.log("Starting value crawling with options:", {
+      aucNums: aucNums.length > 0 ? aucNums : "all",
+      months: monthsMap,
+      runEcoAuc,
+      runBrandAuc,
+      runStarAuc,
+      runMekikiAuc,
+    });
+
+    // DB에서 기존 아이템 ID 조회
+    const [existingItems] = await pool.query(
+      "SELECT item_id, auc_num FROM values_items"
+    );
+
+    // auc_num별로 기존 아이템 ID 그룹화
+    const existingIdsByAuction = {
+      1: new Set(
         existingItems
           .filter((item) => item.auc_num == 1)
           .map((item) => item.item_id)
-      );
-      const existingBrandAuctionIds = new Set(
+      ),
+      2: new Set(
         existingItems
           .filter((item) => item.auc_num == 2)
           .map((item) => item.item_id)
-      );
-      const existingStarAucIds = new Set(
+      ),
+      3: new Set(
         existingItems
           .filter((item) => item.auc_num == 3)
           .map((item) => item.item_id)
-      );
-      const existingMekikiAucIds = new Set(
+      ),
+      4: new Set(
         existingItems
           .filter((item) => item.auc_num == 4)
           .map((item) => item.item_id)
-      );
+      ),
+    };
 
-      isValueCrawling = true;
-      console.log("Starting value crawling with options:", {
-        aucNums: aucNums.length > 0 ? aucNums : "all",
-        months: monthsMap,
-        runEcoAuc,
-        runBrandAuc,
-        runStarAuc,
-        runMekikiAuc,
-      });
+    // 크롤러별 설정
+    const crawlerConfigs = [
+      {
+        enabled: runEcoAuc,
+        aucNum: 1,
+        name: "EcoAuc",
+        crawler: ecoAucValueCrawler,
+        months: monthsMap[1],
+        folderName: "values",
+        priority: 3,
+        cropType: null,
+        existingIds: existingIdsByAuction[1],
+      },
+      {
+        enabled: runBrandAuc,
+        aucNum: 2,
+        name: "BrandAuc",
+        crawler: brandAucValueCrawler,
+        months: monthsMap[2],
+        folderName: "values",
+        priority: 3,
+        cropType: "brand",
+        existingIds: existingIdsByAuction[2],
+      },
+      {
+        enabled: runStarAuc,
+        aucNum: 3,
+        name: "StarAuc",
+        crawler: starAucValueCrawler,
+        months: monthsMap[3],
+        folderName: "values",
+        priority: 3,
+        cropType: null,
+        existingIds: existingIdsByAuction[3],
+      },
+      {
+        enabled: runMekikiAuc,
+        aucNum: 4,
+        name: "MekikiAuc",
+        crawler: mekikiAucValueCrawler,
+        months: monthsMap[4],
+        folderName: "values",
+        priority: 3,
+        cropType: null,
+        existingIds: existingIdsByAuction[4],
+      },
+    ];
 
-      // 직렬 처리를 위한 결과 객체
-      const crawlResults = {
-        ecoAucItems: [],
-        brandAucItems: [],
-        starAucItems: [],
-        mekikiAucItems: [],
-      };
+    const results = {};
 
-      // 각 크롤러 순차적 실행
-      if (runEcoAuc) {
-        console.log(`Running EcoAuc value crawler for ${monthsMap[1]} months`);
-        crawlResults.ecoAucItems =
-          (await ecoAucValueCrawler.crawlAllItems(
-            existingEcoAucIds,
-            monthsMap[1]
-          )) || [];
+    // 각 크롤러 순차 실행
+    for (const config of crawlerConfigs) {
+      if (!config.enabled) {
+        results[config.name] = 0;
+        continue;
       }
 
-      if (runBrandAuc) {
-        console.log(
-          `Running BrandAuc value crawler for ${monthsMap[2]} months`
-        );
-        crawlResults.brandAucItems =
-          (await brandAucValueCrawler.crawlAllItems(
-            existingBrandAuctionIds,
-            monthsMap[2]
-          )) || [];
-      }
-
-      if (runStarAuc) {
-        console.log(`Running StarAuc value crawler for ${monthsMap[3]} months`);
-        crawlResults.starAucItems = [];
-        // (await starAucValueCrawler.crawlAllItems(
-        //   existingStarAucIds,
-        //   monthsMap[3]
-        // )) || [];
-      }
-
-      if (runMekikiAuc) {
-        console.log(
-          `Running MekikiAuc value crawler for ${monthsMap[4]} months`
-        );
-        crawlResults.mekikiAucItems =
-          (await mekikiAucValueCrawler.crawlAllItems(
-            existingMekikiAucIds,
-            monthsMap[4]
-          )) || [];
-      }
-
-      // 결과 집계
-      const allItems = [
-        ...crawlResults.ecoAucItems,
-        ...crawlResults.brandAucItems,
-        ...crawlResults.starAucItems,
-        ...crawlResults.mekikiAucItems,
-      ];
-
+      console.log(`\n${"=".repeat(60)}`);
       console.log(
-        `Value crawling completed. Total items found: ${allItems.length}`
+        `Starting ${config.name} value crawler for ${config.months} months`
       );
+      console.log("=".repeat(60));
 
-      // DB에 저장
-      await DBManager.saveItems(allItems, "values_items");
-      await DBManager.cleanupOldValueItems(999);
-      processBidsAfterCrawl();
+      try {
+        // 1. 메타데이터 수집
+        const metadata = await config.crawler.getStreamingMetadata(
+          config.months
+        );
+        console.log(`Total chunks to process: ${metadata.totalChunks}`);
 
-      return {
-        settings: {
-          aucNums: aucNums.length > 0 ? aucNums : [1, 2, 3, 4],
-          months: monthsMap,
-        },
-        results: {
-          ecoAucCount: crawlResults.ecoAucItems.length,
-          brandAucCount: crawlResults.brandAucItems.length,
-          starAucCount: crawlResults.starAucItems.length,
-          mekikiAucCount: crawlResults.mekikiAucItems.length,
-          totalCount: allItems.length,
-        },
-      };
-    } catch (error) {
-      console.error("Value crawling failed:", error);
-      throw error;
-    } finally {
-      isValueCrawling = false;
+        let processedChunks = 0;
+        let totalItems = 0;
+
+        // 2. 청크별 스트리밍 처리
+        for (const chunk of metadata.chunks) {
+          processedChunks++;
+          console.log(
+            `\n[${processedChunks}/${metadata.totalChunks}] Processing chunk...`
+          );
+
+          const chunkItems = await processChunk(
+            config.crawler,
+            chunk,
+            config.existingIds,
+            {
+              folderName: config.folderName,
+              priority: config.priority,
+              cropType: config.cropType,
+              tableName: "values_items",
+            }
+          );
+
+          totalItems += chunkItems;
+        }
+
+        results[config.name] = totalItems;
+        console.log(
+          `\n${config.name} completed: ${totalItems} items processed`
+        );
+      } catch (error) {
+        console.error(`${config.name} crawling failed:`, error.message);
+        results[config.name] = 0;
+      }
     }
+
+    // 3. 최종 정리
+    console.log("\n=== Finalizing value crawling ===");
+    await DBManager.cleanupOldValueItems(999);
+    await processBidsAfterCrawl();
+    console.log("Cleanup completed");
+
+    const endTime = Date.now();
+    const totalCount = Object.values(results).reduce(
+      (sum, count) => sum + count,
+      0
+    );
+
+    console.log(
+      `\nValue crawling completed in ${formatExecutionTime(
+        endTime - startTime
+      )}`
+    );
+
+    return {
+      settings: {
+        aucNums: aucNums.length > 0 ? aucNums : [1, 2, 3, 4],
+        months: monthsMap,
+      },
+      results: {
+        ecoAucCount: results.EcoAuc || 0,
+        brandAucCount: results.BrandAuc || 0,
+        starAucCount: results.StarAuc || 0,
+        mekikiAucCount: results.MekikiAuc || 0,
+        totalCount: totalCount,
+      },
+    };
+  } catch (error) {
+    console.error("Value crawling failed:", error);
+    throw error;
+  } finally {
+    isValueCrawling = false;
+  }
+}
+
+/**
+ * 단일 청크 처리: 크롤링 → 이미지 → DB → S3
+ */
+async function processChunk(crawler, chunk, existingIds, options) {
+  const { folderName, priority, cropType, tableName } = options;
+
+  console.log(`\n=== Processing chunk ${chunk.startPage}-${chunk.endPage} ===`);
+  if (chunk.categoryId) {
+    console.log(`Category: ${chunk.categoryId}`);
+  } else if (chunk.eventId) {
+    console.log(`Event: ${chunk.eventId} (${chunk.eventTitle})`);
+  } else if (chunk.bidType) {
+    console.log(`Bid Type: ${chunk.bidType}`);
+  }
+
+  try {
+    // Step 1: 크롤링 (병렬)
+    const items = await crawler.crawlChunkPages(chunk, existingIds);
+
+    if (items.length === 0) {
+      console.log("No items in chunk, skipping");
+      return 0;
+    }
+
+    console.log(`Crawled ${items.length} items`);
+
+    // Step 2: 로컬 이미지 저장
+    const itemsWithLocalImages = await processImagesInChunks(
+      items,
+      folderName,
+      priority,
+      cropType
+    );
+
+    console.log(`Processed images for ${itemsWithLocalImages.length} items`);
+
+    // Step 3: DB 저장
+    await DBManager.saveItems(itemsWithLocalImages, tableName);
+    console.log("Saved to DB");
+
+    // Step 4: S3 마이그레이션 (values만)
+    if (folderName === "values") {
+      await migrateChunkToS3(itemsWithLocalImages);
+      console.log("Migrated to S3 and cleaned local files");
+    }
+
+    // 메모리 정리
+    const itemCount = itemsWithLocalImages.length;
+    items.length = 0;
+    itemsWithLocalImages.length = 0;
+
+    return itemCount;
+  } catch (error) {
+    console.error(`Chunk processing failed:`, error.message);
+    // 실패해도 계속 진행
+    return 0;
+  }
+}
+
+/**
+ * 청크 단위 S3 마이그레이션
+ */
+async function migrateChunkToS3(items) {
+  const { ValuesImageMigration } = require("../utils/s3Migration");
+  const migration = new ValuesImageMigration();
+
+  try {
+    const result = await migration.processItemsBatch(items);
+
+    // 로컬 파일 즉시 삭제
+    await migration.cleanupLocalFiles(result.success);
+
+    return result;
+  } catch (error) {
+    console.error("S3 migration failed:", error.message);
+    // 마이그레이션 실패해도 계속 진행
+    return { success: [], failed: items };
   }
 }
 

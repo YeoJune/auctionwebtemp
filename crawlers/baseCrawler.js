@@ -717,6 +717,22 @@ class AxiosCrawler {
     const now = new Date();
     return auctionDate > now;
   }
+
+  /**
+   * 스트리밍 크롤링을 위한 메타데이터 수집
+   * 각 크롤러에서 오버라이드해야 함
+   */
+  async getStreamingMetadata(months = 3) {
+    throw new Error("getStreamingMetadata must be implemented by child class");
+  }
+
+  /**
+   * 청크 내 페이지들을 병렬로 크롤링
+   * 각 크롤러에서 오버라이드해야 함
+   */
+  async crawlChunkPages(chunk, existingIds) {
+    throw new Error("crawlChunkPages must be implemented by child class");
+  }
 }
 
 module.exports = { AxiosCrawler };

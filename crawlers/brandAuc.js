@@ -1317,6 +1317,108 @@ class BrandAucValueCrawler extends AxiosCrawler {
     return await this.performLoginWithClient(directClient);
   }
 
+  async getStreamingMetadata(months = 3) {
+    const chunks = [];
+
+    // 최근 경매 회차 정보 가져오기
+    const clientInfo = this.getClient();
+
+    const auctionInfoResponse = await clientInfo.client.get(
+      "https://e-auc.brand-auc.com/api/v1/marketprice/marketpriceItems/searchHeaders/kakoKaisaiInfo",
+      {
+        headers: {
+          Accept: "application/json, text/plain, */*",
+          Referer: "https://e-auc.brand-auc.com/",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+      }
+    );
+
+    const auctionInfoList = auctionInfoResponse.data || [];
+
+    if (auctionInfoList.length === 0) {
+      throw new Error("Failed to get auction info");
+    }
+
+    // 최신 회차
+    const latestAuction = auctionInfoList[0];
+    const latestKaisaiKaisu = latestAuction.kaisaiKaisu;
+
+    // months를 회차로 변환 (1달 = 약 4회차)
+    const kaisaiCountForMonths = Math.ceil(months * 4);
+
+    // months 개월 전의 회차 계산
+    const kaisaiKaisuFrom = Math.max(
+      latestKaisaiKaisu - kaisaiCountForMonths,
+      0
+    );
+    const kaisaiKaisuTo = latestKaisaiKaisu;
+
+    console.log(
+      `Crawling auction rounds from ${kaisaiKaisuFrom} to ${kaisaiKaisuTo}`
+    );
+
+    // 첫 페이지로 총 페이지 수 확인
+    const firstPageResponse = await clientInfo.client.get(
+      this.config.marketPriceApiUrl,
+      {
+        params: {
+          kaisaiKaisuFrom: kaisaiKaisuFrom,
+          kaisaiKaisuTo: kaisaiKaisuTo,
+          pageNumber: 0,
+          page: 0,
+          size: 1000,
+          getKbn: 3,
+          kaijoKbn: 0,
+        },
+      }
+    );
+
+    const totalPages = firstPageResponse.data.totalPages;
+
+    // 10페이지씩 청크 생성
+    for (let start = 0; start < totalPages; start += 10) {
+      chunks.push({
+        type: "api",
+        startPage: start,
+        endPage: Math.min(start + 9, totalPages - 1),
+        kaisaiKaisuFrom: kaisaiKaisuFrom,
+        kaisaiKaisuTo: kaisaiKaisuTo,
+        size: 1000,
+      });
+    }
+
+    return {
+      chunks,
+      totalChunks: chunks.length,
+    };
+  }
+
+  async crawlChunkPages(chunk, existingIds) {
+    const limit = pLimit(LIMIT2);
+    const pagePromises = [];
+
+    for (let page = chunk.startPage; page <= chunk.endPage; page++) {
+      pagePromises.push(
+        limit(() =>
+          this.crawlPage(
+            page,
+            existingIds,
+            chunk.kaisaiKaisuFrom,
+            chunk.kaisaiKaisuTo,
+            chunk.size,
+            true // skipImageProcessing
+          )
+        )
+      );
+    }
+
+    const results = await Promise.all(pagePromises);
+
+    // 결과 병합 및 existing 아이템 필터링
+    return results.flat().filter((item) => !item.isExisting);
+  }
+
   async crawlAllItems(existingIds = new Set(), months = 3) {
     try {
       const startTime = Date.now();

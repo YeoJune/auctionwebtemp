@@ -1325,6 +1325,58 @@ class EcoAucValueCrawler extends AxiosCrawler {
     });
   }
 
+  async getStreamingMetadata(months = 3) {
+    const chunks = [];
+
+    for (const categoryId of this.config.categoryIds) {
+      const totalPages = await this.getTotalPages(categoryId, months);
+
+      // 10페이지씩 청크 생성
+      for (let start = 1; start <= totalPages; start += 10) {
+        chunks.push({
+          type: "category",
+          categoryId: categoryId,
+          startPage: start,
+          endPage: Math.min(start + 9, totalPages),
+          totalPages: Math.min(10, totalPages - start + 1),
+          months: months,
+        });
+      }
+    }
+
+    return {
+      chunks,
+      totalChunks: chunks.length,
+    };
+  }
+
+  async crawlChunkPages(chunk, existingIds) {
+    const limit = pLimit(LIMIT2);
+    const pagePromises = [];
+
+    // 현재 카테고리 ID 설정
+    this.config.currentCategoryId = chunk.categoryId;
+
+    for (let page = chunk.startPage; page <= chunk.endPage; page++) {
+      pagePromises.push(
+        limit(() =>
+          this.crawlPage(
+            chunk.categoryId,
+            page,
+            existingIds,
+            chunk.months,
+            true // skipImageProcessing
+          )
+        )
+      );
+    }
+
+    const results = await Promise.all(pagePromises);
+
+    // 결과 병합 및 existing 아이템 필터링
+    return results.flat().filter((item) => !item.isExisting);
+  }
+
   async crawlAllItems(existingIds = new Set(), months = 3) {
     try {
       const startTime = Date.now();

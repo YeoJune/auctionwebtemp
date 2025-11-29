@@ -678,6 +678,111 @@ class MekikiAucValueCrawler extends AxiosCrawler {
     });
   }
 
+  async getStreamingMetadata(months = 3) {
+    const chunks = [];
+
+    // 종료된 이벤트 가져오기
+    const finishedEvents = await this.getFinishedEvents(months);
+
+    if (finishedEvents.length === 0) {
+      console.log("No finished events found");
+      return { chunks: [], totalChunks: 0 };
+    }
+
+    // 각 이벤트별로 청크 생성
+    for (const event of finishedEvents) {
+      const clientInfo = this.getClient();
+
+      // 첫 페이지로 총 페이지 수 확인
+      const firstPageResponse = await clientInfo.client.get(
+        `${this.config.itemsUrl}/${event.id}/items`,
+        {
+          params: {
+            sort: 8,
+            per_page: PER_PAGE,
+            page: 1,
+            "kind[]": [1, 2],
+            group_flag: false,
+            user_id: this.userId,
+          },
+          headers: {
+            Accept: "application/json",
+          },
+        }
+      );
+      await this.sleep(API_DELAY);
+
+      const totalPages = firstPageResponse.data.meta?.pages || 1;
+
+      // 10페이지씩 청크 생성
+      for (let start = 1; start <= totalPages; start += 10) {
+        chunks.push({
+          type: "event",
+          eventId: event.id,
+          eventTitle: event.title,
+          eventEndDate: event.end_datetime,
+          startPage: start,
+          endPage: Math.min(start + 9, totalPages),
+        });
+      }
+    }
+
+    return {
+      chunks,
+      totalChunks: chunks.length,
+    };
+  }
+
+  async crawlChunkPages(chunk, existingIds) {
+    const limit = pLimit(LIMIT2);
+    const pagePromises = [];
+
+    // 이벤트 객체 재구성
+    const event = {
+      id: chunk.eventId,
+      title: chunk.eventTitle,
+      end_datetime: chunk.eventEndDate,
+    };
+
+    for (let page = chunk.startPage; page <= chunk.endPage; page++) {
+      pagePromises.push(
+        limit(async () => {
+          const clientInfo = this.getClient();
+
+          const response = await clientInfo.client.get(
+            `${this.config.itemsUrl}/${event.id}/items`,
+            {
+              params: {
+                sort: 8,
+                per_page: PER_PAGE,
+                page: page,
+                "kind[]": [1, 2],
+                group_flag: false,
+                user_id: this.userId,
+              },
+              headers: {
+                Accept: "application/json",
+              },
+            }
+          );
+
+          await this.sleep(API_DELAY);
+
+          return await this.processItemsPage(
+            response.data.collection || [],
+            existingIds,
+            event
+          );
+        })
+      );
+    }
+
+    const results = await Promise.all(pagePromises);
+
+    // 결과 병합 및 existing 아이템 필터링
+    return results.flat().filter((item) => !item.isExisting);
+  }
+
   // 전체 아이템 크롤링
   async crawlAllItems(existingIds = new Set(), months = 3) {
     try {
@@ -773,7 +878,6 @@ class MekikiAucValueCrawler extends AxiosCrawler {
             per_page: PER_PAGE,
             page: 1,
             "kind[]": [1, 2],
-            "statuses[]": [1, 5, 6, 7, 8, 9, 10, 11],
             group_flag: false,
             user_id: this.userId,
           },
@@ -821,7 +925,6 @@ class MekikiAucValueCrawler extends AxiosCrawler {
                     per_page: PER_PAGE,
                     page: page,
                     "kind[]": [1, 2],
-                    "statuses[]": [1, 5, 6, 7, 8, 9, 10, 11],
                     group_flag: false,
                     user_id: this.userId,
                   },
