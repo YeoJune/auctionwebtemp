@@ -1048,40 +1048,40 @@ class MyPageManager {
   // 계정 정보 업데이트
   async handleAccountUpdate(formType) {
     try {
-      const formData = new FormData();
-
-      if (formType === "basic") {
-        formData.append("phone", document.getElementById("user-phone").value);
-      } else if (formType === "company") {
-        formData.append(
-          "company_name",
-          document.getElementById("company-name").value
-        );
-        formData.append(
-          "business_number",
-          document.getElementById("business-number").value
-        );
-        formData.append(
-          "address",
-          document.getElementById("company-address").value
-        );
+      if (!this.userData || !this.userData.id) {
+        alert("사용자 정보를 불러올 수 없습니다.");
+        return;
       }
 
-      const result = await window.API.fetchAPI("/users/current", {
+      const requestData = {};
+
+      if (formType === "basic") {
+        requestData.email = document.getElementById("user-email").value;
+        requestData.phone = document.getElementById("user-phone").value;
+      } else if (formType === "company") {
+        requestData.company_name =
+          document.getElementById("company-name").value;
+        requestData.business_number =
+          document.getElementById("business-number").value;
+        requestData.address = document.getElementById("company-address").value;
+      }
+
+      // 기존 백엔드 API 사용: PUT /users/:id
+      const result = await window.API.fetchAPI(`/users/${this.userData.id}`, {
         method: "PUT",
-        body: formData,
+        body: JSON.stringify(requestData),
       });
 
-      if (result.success) {
-        this.userData = result.user;
+      // 백엔드는 { message: "..." } 형식으로 응답
+      if (result.message) {
+        // 성공 후 최신 정보 다시 가져오기
+        await this.loadUserData();
         this.populateAccountForm();
-        alert("정보가 성공적으로 업데이트되었습니다.");
-      } else {
-        alert(result.message || "업데이트에 실패했습니다.");
+        alert(result.message);
       }
     } catch (error) {
       console.error("계정 정보 업데이트 실패:", error);
-      alert("업데이트 중 오류가 발생했습니다.");
+      alert(error.message || "업데이트 중 오류가 발생했습니다.");
     }
   }
 
