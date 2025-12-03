@@ -495,6 +495,12 @@ class BrandAucCrawler extends AxiosCrawler {
     const category =
       this.config.categoryTable[item[genreField]] || item[genreField];
 
+    // lighter 포함된 아이템 필터링
+    const title = item[titleField] || "";
+    if (title.toLowerCase().includes("lighter")) {
+      return null;
+    }
+
     // 날짜 처리 개선
     let original_scheduled_date;
     let scheduled_date;
@@ -1662,6 +1668,11 @@ class BrandAucValueCrawler extends AxiosCrawler {
       this.extractDate(this.convertToKST(item.kaisaiYmd)) || null;
 
     const original_title = this.convertFullWidthToAscii(item.shohinEn || "");
+
+    // lighter 포함된 아이템 필터링
+    if (original_title.toLowerCase().includes("lighter")) {
+      return null;
+    }
 
     let image =
       item?.photoUrl || item?.photoAlbumUrl || item?.photoZoomUrl || null;

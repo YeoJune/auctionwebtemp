@@ -597,6 +597,11 @@ class StarAucCrawler extends AxiosCrawler {
     const original_scheduled_date = item.scheduled_date;
     const scheduled_date = original_scheduled_date;
 
+    // lighter 포함된 아이템 필터링
+    if (scriptData.name && scriptData.name.toLowerCase().includes("lighter")) {
+      return null;
+    }
+
     const result = {
       item_id: item.item_id,
       original_scheduled_date: original_scheduled_date,
@@ -1445,6 +1450,11 @@ class StarAucValueCrawler extends AxiosCrawler {
 
       // 제목 추출
       const title = $id.text().trim();
+
+      // lighter 포함된 아이템 필터링
+      if (title.toLowerCase().includes("lighter")) {
+        return null;
+      }
 
       // 브랜드 추출 (제목의 첫 번째 단어로 추정)
       const brand = title.split(" ")[0];

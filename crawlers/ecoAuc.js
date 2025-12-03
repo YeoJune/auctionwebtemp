@@ -517,6 +517,7 @@ class EcoAucCrawler extends AxiosCrawler {
     // 원본 로직과 일치하게 필터링
     if (!this.isCollectionDay(scheduledDate)) return null;
     if (title.includes("▼")) return null;
+    if (title.toLowerCase().includes("lighter")) return null;
     if (existingIds.has(itemId)) return { item_id: itemId };
 
     return {
