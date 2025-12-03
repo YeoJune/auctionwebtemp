@@ -153,7 +153,7 @@
     }
 
     if (amountKRW <= 2000000) {
-      return Math.round(amountKRW * 0.08);
+      return Math.round(amountKRW * 0.013);
     } else if (amountKRW < 1000000000) {
       return calculateComplexCustomsDuty(amountKRW, 2000000);
     }
