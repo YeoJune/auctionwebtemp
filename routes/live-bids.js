@@ -285,7 +285,7 @@ router.post("/", async (req, res) => {
     if (firstPrice <= item.starting_price) {
       await connection.rollback();
       return res.status(400).json({
-        message: `입찰 금액은 시작가(${item.starting_price}엔)보다 높아야 합니다.`,
+        message: `입찰 금액은 시작가보다 높아야 합니다.`,
         starting_price: item.starting_price,
       });
     }
@@ -459,7 +459,7 @@ router.put("/:id/final", async (req, res) => {
     if (finalPrice <= bid.starting_price) {
       await connection.rollback();
       return res.status(400).json({
-        message: `입찰 금액은 시작가(${bid.starting_price}엔)보다 높아야 합니다.`,
+        message: `입찰 금액은 시작가보다 높아야 합니다.`,
         starting_price: bid.starting_price,
       });
     }
