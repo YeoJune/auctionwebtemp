@@ -281,6 +281,15 @@ router.post("/", async (req, res) => {
       });
     }
 
+    // 1차 입찰 금액 검증: starting price보다 높아야 함
+    if (firstPrice <= item.starting_price) {
+      await connection.rollback();
+      return res.status(400).json({
+        message: `입찰 금액은 시작가(${item.starting_price}엔)보다 높아야 합니다.`,
+        starting_price: item.starting_price,
+      });
+    }
+
     // 이미 입찰한 내역이 있는지 체크 (FOR UPDATE로 락 걸기)
     const [existingBids] = await connection.query(
       "SELECT * FROM live_bids WHERE item_id = ? AND user_id = ? FOR UPDATE",
@@ -443,6 +452,15 @@ router.put("/:id/final", async (req, res) => {
           "최종 입찰 시간이 종료되었습니다. (경매일 저녁 12시까지만 가능)",
         deadline: deadline.toISOString(),
         scheduled_date: bid.scheduled_date,
+      });
+    }
+
+    // 최종 입찰 금액 검증: starting price보다 높아야 함
+    if (finalPrice <= bid.starting_price) {
+      await connection.rollback();
+      return res.status(400).json({
+        message: `입찰 금액은 시작가(${bid.starting_price}엔)보다 높아야 합니다.`,
+        starting_price: bid.starting_price,
       });
     }
 
