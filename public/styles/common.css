@@ -92,7 +92,7 @@ button,
   transition: all var(--transition-fast);
   font-size: var(--font-size-sm);
   font-weight: 500;
-  min-height: 40px;
+  min-height: 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -275,7 +275,7 @@ input[type="time"] {
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-sm);
   font-size: var(--font-size-md);
-  min-height: 40px;
+  min-height: 32px;
   width: 100%;
 }
 
@@ -631,16 +631,34 @@ input[type="time"]:focus {
   transform: none;
 }
 
-/* 브랜드옥션, 스타옥션 quick-bid-buttons 정렬 */
-.quick-bid-buttons.brand-auction,
-.quick-bid-buttons.star-auction {
+/* ================================================
+   BID COMPONENT - 전역 공통 스타일
+   ================================================ */
+
+/* Bid Input Group - Container */
+.bid-input-group {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-xs);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+  height: 40px;
 }
 
-/* readonly 입력창 스타일 */
+/* Bid Input - 입력 필드 */
+.bid-input {
+  flex: 1;
+  border: none;
+  padding: 0 var(--spacing-sm);
+  text-align: right;
+  font-size: var(--font-size-sm);
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.bid-input:focus {
+  outline: none;
+}
+
 .bid-input[readonly] {
   background-color: #f5f5f5;
   border: 2px solid #ddd;
@@ -652,6 +670,93 @@ input[type="time"]:focus {
   outline: none;
   border-color: #007bff;
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* Bid Value Display - 표시용 */
+.bid-value-display {
+  padding: 0 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  color: #666;
+  background-color: white;
+}
+
+/* Bid Currency - 통화 표시 */
+.bid-currency {
+  display: flex;
+  align-items: center;
+  background-color: #f5f5f5;
+  padding: 0 var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  color: #666;
+}
+
+/* Bid Button - 입찰 버튼 */
+.bid-button {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  cursor: pointer;
+  height: 100%;
+  min-width: 60px;
+  padding: 0 var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  box-sizing: border-box;
+}
+
+.bid-button:hover:not(:disabled) {
+  background-color: var(--primary-hover);
+}
+
+.bid-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Quick Bid Buttons - 빠른 입찰 */
+.quick-bid-buttons {
+  display: flex;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-sm);
+}
+
+.quick-bid-btn {
+  flex: 1;
+  padding: 6px 10px;
+  background-color: #e9ecef;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.quick-bid-btn:hover:not(:disabled) {
+  background-color: #dee2e6;
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.quick-bid-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* 브랜드옥션, 스타옥션 quick-bid-buttons 정렬 */
+.quick-bid-buttons.brand-auction,
+.quick-bid-buttons.star-auction {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
 }
 
 /* 최소금액 설정 버튼 스타일 */
@@ -685,5 +790,62 @@ input[type="time"]:focus {
   }
   100% {
     transform: scale(1);
+  }
+}
+
+/* ================================================
+   END BID COMPONENT
+   ================================================ */
+
+/* ================================================
+   RESPONSIVE - BID COMPONENT
+   ================================================ */
+
+/* 768px: 태블릿 */
+@media (max-width: 768px) {
+  .bid-input-group {
+    height: 32px;
+  }
+}
+
+/* 576px: 모바일 가로 */
+@media (max-width: 576px) {
+  .bid-input,
+  .bid-currency,
+  .bid-button {
+    font-size: 10px;
+  }
+
+  .bid-currency {
+    padding: 0 5px;
+  }
+
+  .bid-button {
+    padding: 0 6px;
+  }
+
+  .quick-bid-buttons {
+    gap: 2px;
+  }
+
+  .quick-bid-btn {
+    padding: 3px;
+    font-size: 10px;
+  }
+}
+
+/* 480px: 모바일 세로 */
+@media (max-width: 480px) {
+  .bid-input-group {
+    height: 32px;
+  }
+
+  .bid-input,
+  .bid-button {
+    font-size: 12px;
+  }
+
+  .bid-button {
+    font-size: 11px;
   }
 }

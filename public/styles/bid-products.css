@@ -384,7 +384,7 @@
 /* 입찰 액션 영역 */
 .bid-action {
   margin: 0;
-  padding: 8px;
+  padding: 6px;
   background-color: #f8f9fa;
   border-radius: 6px;
   border: 1px solid #e9ecef;
@@ -393,7 +393,7 @@
 .bid-action.expanded {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   background: none;
   padding: 0;
   border: none;
@@ -403,7 +403,7 @@
   flex: none;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .bid-action .bid-input-container {
@@ -412,7 +412,7 @@
 
 /* 입찰 정보 영역 */
 .bid-info {
-  padding: 8px;
+  padding: 6px;
   background-color: #f8f9fa;
   border-radius: 6px;
   border: 1px solid #e9ecef;
@@ -422,7 +422,7 @@
 .price-stages {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .price-row {
@@ -742,42 +742,8 @@
   padding: 2px 6px;
 }
 
-.bid-result-item .bid-input-group {
-  height: 32px;
-}
-
-.bid-result-item .bid-input {
-  padding: 0 6px;
-  font-size: 13px;
-  min-height: 32px;
-}
-
-.bid-result-item .bid-value-display {
-  font-size: 13px;
-}
-
-.bid-result-item .bid-currency {
-  padding: 0 6px;
-  font-size: 13px;
-}
-
-.bid-result-item .bid-button {
-  padding: 0 12px;
-  height: 32px;
-  min-width: 50px;
-  font-size: 12px;
-}
-
-.bid-result-item .quick-bid-buttons {
-  gap: 4px;
-  margin-top: 6px;
-}
-
-.bid-result-item .quick-bid-btn {
-  padding: 4px 8px;
-  font-size: 11px;
-  height: 28px;
-}
+/* Bid 컴포넌트는 common.css에서 관리 */
+/* .bid-result-item 컴텍스트는 필요시 오버라이드 */
 
 .bid-result-item .price-details-container {
   font-size: 10px;
@@ -810,20 +776,7 @@
     gap: 1px;
   }
 
-  .bid-result-item .bid-input-group {
-    height: 30px;
-  }
-
-  .bid-result-item .bid-input {
-    font-size: 12px;
-    min-height: 30px;
-  }
-
-  .bid-result-item .bid-button {
-    height: 30px;
-    font-size: 11px;
-    padding: 0 8px;
-  }
+  /* Bid 컴포넌트 반응형은 common.css에서 관리 */
 
   .bid-result-item .quick-bid-btn {
     height: 26px;

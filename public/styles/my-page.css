@@ -3,10 +3,10 @@
 /* 검색 및 필터 툴바 - bid-products.css와 동일한 구조 */
 .search-toolbar {
   background-color: white;
-  padding: 20px;
+  padding: var(--spacing-md);
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
+  margin-bottom: var(--spacing-md);
 }
 
 .filter-row {
@@ -109,11 +109,6 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: white;
-  padding: 15px 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
 }
 
 .sort-options {
@@ -142,6 +137,33 @@
   background-color: var(--primary-color);
   color: white;
   border-color: var(--primary-color);
+}
+
+/* 기간 필터 */
+.date-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.date-filter label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.date-filter select {
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 14px;
+  background-color: white;
+}
+
+.small-button {
+  padding: 8px 12px;
+  font-size: 13px;
 }
 
 /* 마이페이지 메인 레이아웃 */
@@ -197,22 +219,15 @@
   font-weight: 500;
 }
 
-/* 메인 컨텐츠 영역 */
-.my-page-main {
-  flex: 1;
-  padding: 20px;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* 페이지 섹션 */
+/* 페이지 섹션 - 직접 my-page-content 하위에 배치 */
 .page-section {
   display: none;
   background-color: white;
   border-radius: 8px;
-  padding: 20px;
+  padding: var(--spacing-lg);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   min-height: 500px;
+  margin-top: var(--spacing-md);
 }
 
 .page-section.active {
@@ -562,7 +577,7 @@
 .bid-result-item .bid-action,
 .bid-result-item .bid-info {
   grid-area: bid-section;
-  padding: 8px;
+  padding: 2px;
   background-color: #f8f9fa;
   border-radius: 6px;
   border: 1px solid #e9ecef;
@@ -572,7 +587,7 @@
 .bid-result-item .bid-action.expanded {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 2px;
   background: none;
   padding: 0;
   border: none;
@@ -889,27 +904,75 @@
   color: var(--text-secondary);
   border-bottom: 1px solid #eee;
   background-color: #f5f5f5;
+  height: 40px;
 }
 
-/* 2번째 column (브랜드) 너비 줄이기 */
+/* 열 너비 - % 사용 */
+.details-table th:nth-child(1),
+.details-table td:nth-child(1) {
+  width: 8%;
+  min-width: 60px;
+}
+
 .details-table th:nth-child(2),
 .details-table td:nth-child(2) {
-  max-width: 100px;
+  width: 10%;
+  min-width: 80px;
+}
+
+.details-table th:nth-child(3),
+.details-table td:nth-child(3) {
+  width: 25%;
+  min-width: 200px;
+  max-width: 400px;
+}
+
+.details-table th:nth-child(4),
+.details-table td:nth-child(4) {
+  width: 13%;
+  min-width: 100px;
+}
+
+.details-table th:nth-child(5),
+.details-table td:nth-child(5) {
+  width: 13%;
+  min-width: 100px;
+}
+
+.details-table th:nth-child(6),
+.details-table td:nth-child(6) {
+  width: 14%;
+  min-width: 110px;
+}
+
+.details-table th:nth-child(7),
+.details-table td:nth-child(7) {
+  width: 10%;
+  min-width: 90px;
+}
+
+.details-table th:nth-child(8),
+.details-table td:nth-child(8) {
+  width: 7%;
+  min-width: 70px;
+}
+
+/* 2번째 column (브랜드) */
+.details-table th:nth-child(2),
+.details-table td:nth-child(2) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 /* 3번째 column (상품명) 2줄로 표시 */
-.details-table th:nth-child(3),
 .details-table td:nth-child(3) {
-  max-width: 250px;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: normal;
-  line-clamp: 2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   line-height: 1.4;
-  max-height: 2.8em; /* 2줄 높이 */
+  word-break: break-word;
 }
 
 .details-table td {
@@ -917,6 +980,7 @@
   font-size: 14px;
   border-bottom: 1px solid #eee;
   vertical-align: middle;
+  height: 70px;
 }
 
 .details-table tr:last-child td {
@@ -969,10 +1033,12 @@
 
 /* 출고 상태 */
 .shipping-status {
+  display: inline-block;
   font-size: 12px;
-  padding: 2px 6px;
+  padding: 4px 8px;
   border-radius: 3px;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .shipping-status.status-shipped {
@@ -1247,78 +1313,7 @@
   text-align: center;
 }
 
-.bid-input-group {
-  display: flex;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  overflow: hidden;
-  height: 32px;
-  margin-bottom: 8px;
-}
-
-.bid-input {
-  flex: 1;
-  border: none;
-  padding: 6px;
-  text-align: right;
-  font-size: 14px;
-}
-
-.bid-input:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(0, 48, 135, 0.1);
-}
-
-.bid-currency {
-  padding: 0 8px;
-  display: flex;
-  align-items: center;
-  background-color: #f5f5f5;
-  font-size: 14px;
-  color: var(--text-secondary);
-}
-
-.bid-button {
-  padding: 6px 12px;
-  background-color: var(--primary-color);
-  color: white;
-  border: none;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
-  min-width: 50px;
-}
-
-.bid-button:hover:not(:disabled) {
-  background-color: var(--primary-hover);
-}
-
-.bid-button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
-.quick-bid-buttons {
-  display: flex;
-  gap: 6px;
-  margin-top: 6px;
-}
-
-.quick-bid-btn {
-  flex: 1;
-  padding: 6px;
-  font-size: 11px;
-  background-color: #f0f0f0;
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.quick-bid-btn:hover:not(:disabled) {
-  background-color: #e0e0e0;
-}
+/* Bid 컴포넌트는 common.css에서 관리 */
 
 /* 공통 유틸리티 */
 .no-results {
@@ -1441,7 +1436,8 @@
   }
 
   .date-summary {
-    grid-template-columns: repeat(2, 1fr);
+    padding: 12px;
+    gap: 10px;
   }
 }
 
@@ -1449,10 +1445,11 @@
   .my-page-tabs {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    justify-content: space-between;
   }
 
   .tab-button {
-    flex: none;
+    flex: 1;
     min-width: 80px;
     padding: 12px;
     min-height: 60px;
@@ -1515,7 +1512,18 @@
   }
 
   .view-controls {
-    padding: 12px 15px;
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .sort-options {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .date-filter {
+    justify-content: center;
   }
 
   .sort-btn {
@@ -1552,33 +1560,75 @@
   }
 
   .date-summary {
-    grid-template-columns: 1fr;
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .summary-item {
+    min-width: 140px;
+  }
+
+  .summary-label {
+    font-size: 12px;
+  }
+
+  .summary-value {
+    font-size: 14px;
+  }
+
+  /* 테이블 가로 스크롤 */
+  .date-details {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .details-table {
+    min-width: 700px;
     font-size: 12px;
-    display: block;
-    overflow-x: auto;
-    white-space: nowrap;
+  }
+
+  .details-table th,
+  .details-table td {
+    padding: 8px 6px;
   }
 }
 
 @media (max-width: 480px) {
-  .my-page-main {
-    padding: 12px;
-  }
-
   .page-section {
-    padding: 15px;
+    padding: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
   }
 
   .section-header h2 {
     font-size: 20px;
   }
 
+  /* date-summary 최소 간격 */
+  .date-summary {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .summary-item {
+    min-width: 120px;
+  }
+
+  .summary-label {
+    font-size: 11px;
+  }
+
+  .summary-value {
+    font-size: 13px;
+  }
+
+  .details-table {
+    min-width: 600px;
+    font-size: 11px;
+  }
+
   /* 필터 작은 화면 개선 */
   .search-toolbar {
-    padding: 12px;
+    padding: var(--spacing-sm);
   }
 
   .filter-section h4 {
@@ -1602,7 +1652,32 @@
   }
 
   .view-controls {
-    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .sort-options {
+    gap: 4px;
+  }
+
+  .date-filter {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .date-filter label {
+    font-size: 13px;
+  }
+
+  .date-filter select {
+    width: 100%;
+    font-size: 13px;
+  }
+
+  .small-button {
+    width: 100%;
+    padding: 8px;
+    font-size: 12px;
   }
 
   .sort-btn {
@@ -1657,34 +1732,23 @@
     padding: 12px;
   }
 
-  .bid-input-group {
-    height: 28px;
+  /* Bid 컴포넌트 반응형은 common.css에서 관리 */
+
+  /* 페이지네이션 크기 축소 */
+  .pagination {
+    gap: 4px;
+    margin-top: 15px;
+    padding: 10px 0;
   }
 
-  .bid-button {
-    font-size: 11px;
-    padding: 6px;
-
-    /* 페이지네이션 크기 축소 */
-    .pagination {
-      gap: 4px;
-      margin-top: 15px;
-      padding: 10px 0;
-    }
-
-    .pagination button {
-      min-width: 28px;
-      min-height: 28px;
-      padding: 4px;
-      font-size: 12px;
-    }
-    min-width: 40px;
-  }
-
-  .quick-bid-btn {
+  .pagination button {
+    min-width: 28px;
+    min-height: 28px;
     padding: 4px;
-    font-size: 10px;
+    font-size: 12px;
   }
+
+  /* Bid 컴포넌트 반응형은 common.css에서 관리 */
 }
 
 /* vat-note 스타일 - bid-results.css와 동일하게 */

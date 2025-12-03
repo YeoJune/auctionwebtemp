@@ -13,15 +13,17 @@
 
 /* Filter Section */
 .filters-container {
-  padding: 15px;
-  background-color: #fff;
-  border-radius: 4px;
-  margin-bottom: 20px;
   background-color: var(--background-light);
-  padding: var(--spacing-md);
   border-radius: var(--border-radius-md);
   margin-bottom: var(--spacing-lg);
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Filter content - 실제 필터 내용만 패딩 */
+.filters-content {
+  padding: var(--spacing-md);
 }
 
 .search-filter-section {
@@ -295,32 +297,27 @@ select {
 }
 
 .product-brand {
-  font-size: 12px;
-  font-weight: 400;
-  margin-bottom: 4px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
-  font-size: var(--font-size-md);
+  margin-bottom: 4px;
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
 }
 
 .product-title {
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   font-weight: 500;
   line-height: 1.3;
   overflow: hidden;
   display: -webkit-box;
-  -line-clamp: 2;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  max-height: none;
+  height: calc(1.3em * 2); /* 2줄 고정 높이 */
+  min-height: calc(1.3em * 2);
   margin-right: 50px;
   margin-bottom: 0;
   word-break: break-word;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0;
 }
 
 .product-name {
@@ -345,13 +342,13 @@ select {
 
 /* Additional info labels */
 .info-label {
-  font-size: 12px;
-  color: #666;
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
   margin-bottom: 2px;
 }
 
 .info-value {
-  font-size: 16px;
+  font-size: var(--font-size-md);
   font-weight: 600;
 }
 
@@ -364,30 +361,19 @@ select {
 }
 
 .auction-number {
-  width: 36px;
-  height: 36px;
-  background-color: white;
-  color: var(--blue-dark);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 16px;
-  margin-bottom: 5px;
-  position: relative;
-  padding-bottom: 8px;
+  width: 28px;
+  height: 28px;
   background-color: white;
   color: var(--blue-dark);
   border-radius: var(--border-radius-circle);
-  width: 28px;
-  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: var(--font-size-xs);
   font-weight: 600;
   margin-left: var(--spacing-xs);
+  position: relative;
+  padding-bottom: 8px;
 }
 
 .product-card[data-bid-type="direct"] .auction-number {
@@ -507,11 +493,9 @@ select {
   justify-content: space-between;
   padding: 4px 8px;
   background-color: #e6f7ff;
-  font-size: 12px;
-  background-color: #e6f7ff;
+  font-size: 11px;
   color: var(--primary-color);
   text-align: center;
-  font-size: var(--font-size-sm);
   font-weight: 500;
 }
 
@@ -658,17 +642,15 @@ select {
 
 .wishlist-btn {
   flex: 1;
-  padding: 8px 0;
-  font-size: 12px;
-  background-color: #f9f9f9;
-  color: #666;
-  border: none;
-  border-right: 1px solid #eee;
   padding: var(--spacing-xs) var(--spacing-sm);
   font-size: var(--font-size-xs);
   background-color: var(--background-light);
   color: var(--text-secondary);
+  border: none;
+  border-right: 1px solid #eee;
   border-radius: 0;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
 .wishlist-btn:last-child {
@@ -699,8 +681,7 @@ select {
 .my-bid-price,
 .bid-price-info,
 .final-price {
-  margin-bottom: 8px;
-  margin-bottom: var(--spacing-sm);
+  margin-bottom: var(--spacing-xs);
 }
 
 .real-time-price p,
@@ -770,88 +751,7 @@ select {
   white-space: nowrap;
 }
 
-.bid-input-group {
-  display: flex;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  overflow: hidden;
-  height: 40px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius-sm);
-}
-
-.bid-input {
-  flex: 1;
-  border: none;
-  padding: 0 8px;
-  text-align: right;
-  font-size: 14px;
-  padding: var(--spacing-sm);
-  min-height: 40px;
-  text-align: right;
-}
-
-.bid-input:focus {
-  outline: none;
-}
-
-.bid-value-display {
-  padding: 0 2px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  color: #666;
-  background-color: white;
-}
-
-.bid-currency {
-  padding: 0 8px;
-  display: flex;
-  align-items: center;
-  background-color: #f5f5f5;
-  font-size: 14px;
-  color: #666;
-  padding: 0 var(--spacing-sm);
-  font-size: var(--font-size-sm);
-}
-
-.bid-button {
-  padding: 0 15px;
-  background-color: var(--primary-color);
-  color: white;
-  border-radius: 0;
-  height: 38px;
-  min-width: 60px;
-  padding: var(--spacing-sm);
-}
-
-/* Quick Bid Buttons */
-.quick-bid-buttons {
-  display: flex;
-  gap: 5px;
-  margin-top: 8px;
-  gap: var(--spacing-xs);
-  margin-top: var(--spacing-sm);
-}
-
-.quick-bid-btn {
-  flex: 1;
-  padding: 6px 0;
-  font-size: 12px;
-  background-color: #f0f0f0;
-  color: #333;
-  border: 1px solid #ddd;
-  padding: var(--spacing-xs) var(--spacing-sm);
-  font-size: var(--font-size-xs);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius-sm);
-}
-
-.quick-bid-btn:hover {
-  background-color: #e5e5e5;
-}
+/* Bid 컴포넌트는 common.css에서 관리 */
 
 /* Pagination */
 .pagination {
@@ -1269,59 +1169,49 @@ select {
 .filters-header {
   position: sticky;
   top: 0;
-  left: 0;
-  width: 100%;
   background-color: var(--primary-color);
   color: white;
-  padding: 15px;
-  font-size: 18px;
+  padding: var(--spacing-md) var(--spacing-lg);
+  font-size: var(--font-size-lg);
   font-weight: 600;
-  text-align: center;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   z-index: var(--z-header);
   display: none;
   min-height: 60px;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
 }
 
 .filter-close-btn {
-  position: absolute;
-  top: 27px; /* filters-header의 중앙 위치: padding(15px) + (60px-36px)/2 = 27px */
-  right: 15px;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   color: white;
-  border-radius: 50%;
-  display: flex !important; /* Ensure display with !important */
+  background-color: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--border-radius-sm);
+  display: flex !important;
   align-items: center;
   justify-content: center;
-  font-size: 24px; /* Larger font size */
-  font-weight: bold;
-  z-index: calc(var(--z-header) + 1); /* filters-header보다 위에 */
+  font-size: 20px;
+  font-weight: normal;
   cursor: pointer;
-  border: 2px solid white; /* Add border */
   padding: 0;
-  min-height: 36px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  pointer-events: auto !important; /* Ensure click events */
-  opacity: 1 !important; /* Ensure visibility */
-  background: rgba(255, 255, 255, 0.1);
-  transition: all 0.2s ease;
+  min-height: 40px;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
 }
 
 /* Hover effect enhancement */
 .filter-close-btn:hover {
-  transform: scale(1.05);
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.9);
+  background-color: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 /* Focus style for close button */
 .filter-close-btn:focus {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.7),
-    0 0 0 5px rgba(255, 59, 48, 0.5);
+  background-color: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.6);
 }
 
 /* Filter backdrop style */
@@ -1343,20 +1233,6 @@ select {
 }
 
 /* Only show button when filter container is active */
-.filters-container:not(.filter-active) .filter-close-btn {
-  display: none !important;
-}
-
-.filters-container.filter-active .filter-close-btn {
-  display: flex !important;
-}
-
-/* Add padding to top of filter content when header is visible */
-.filters-container.filter-active .search-filter-section {
-  margin-top: 60px; /* Add margin for header height */
-}
-
-/* Responsive Styles */
 @media (max-width: 1200px) {
   .product-grid {
     grid-template-columns: repeat(3, 1fr);
@@ -1395,7 +1271,7 @@ select {
     transform: translateX(-100%);
     transition: transform 0.3s ease;
     overflow-y: auto;
-    padding-bottom: 0;
+    padding: 0;
     display: flex;
     flex-direction: column;
     -webkit-overflow-scrolling: touch;
@@ -1467,16 +1343,7 @@ select {
     /* 모바일 헤더 내에서 스타일 적용됨 */
   }
 
-  .bid-input-group {
-    flex-wrap: wrap;
-  }
-
-  .bid-input-label {
-    width: 100%;
-    padding: var(--spacing-xs);
-    justify-content: center;
-    border-bottom: 1px solid var(--border-color);
-  }
+  /* Bid 컴포넌트 반응형은 common.css에서 관리 */
 
   /* 즐겨찾기와 출품사 라벨 포지셔닝 수정 */
   #favoriteFilters .filter-item label,
@@ -1530,9 +1397,9 @@ select {
 
   /* 모바일에서 auction-type-indicator 위치 조정 */
   .auction-type-indicator {
-    font-size: 6px; /* 80% of 8px */
+    font-size: 8px;
     bottom: -2px;
-    padding: 1px 2px; /* 80% of 1px 3px */
+    padding: 1px 2px;
   }
 
   .modal-body {
@@ -1622,7 +1489,7 @@ select {
   }
 
   .product-grid.list-view .product-title {
-    font-size: 14px;
+    font-size: 13px;
     -webkit-line-clamp: 2;
     line-clamp: 2;
   }
@@ -1656,7 +1523,7 @@ select {
   .product-grid.list-view .bid-timer {
     grid-area: timer;
     padding: 6px 12px;
-    font-size: 12px;
+    font-size: 11px;
     margin-top: 4px;
     width: 100%;
     text-align: center;
@@ -1690,18 +1557,15 @@ select {
     padding: 6px; /* 80% of var(--spacing-xs) 8px */
   }
 
-  .quick-bid-buttons {
-    flex-direction: column;
-    gap: 6px; /* 80% of var(--spacing-xs) 8px */
-  }
+  /* Bid 컴포넌트 반응형은 common.css에서 관리 */
 
   .product-title {
-    font-size: 10px; /* 80% of 12px */
-    margin-right: 32px; /* 80% of 40px */
+    font-size: 12px;
+    margin-right: 32px;
   }
 
   .product-brand {
-    font-size: 8px; /* 80% of 10px */
+    font-size: 12px;
   }
 
   .auction-number {
@@ -1715,8 +1579,8 @@ select {
   }
 
   .bid-timer {
-    padding: 2px 5px; /* 80% of 2px 6px */
-    font-size: 8px; /* 80% of 10px */
+    padding: 2px 5px;
+    font-size: 10px;
   }
 
   .info-cell {
@@ -1724,57 +1588,33 @@ select {
   }
 
   .info-label {
-    font-size: 8px; /* 80% of 10px */
+    font-size: 10px;
   }
 
   .info-value {
-    font-size: 11px; /* 80% of 14px */
+    font-size: 13px;
   }
 
   .info-price-detail {
-    font-size: 7px; /* 80% of 9px */
+    font-size: 10px;
   }
 
   .wishlist-btn {
-    font-size: 8px; /* 80% of 10px */
-    padding: 4px 2px; /* 80% of 5px 2px */
+    font-size: 10px;
+    padding: 4px 2px;
   }
+
+  /* Bid 컴포넌트 반응형은 common.css에서 관리 */
 
   /* Compact bid section */
   .bid-section {
     padding: 5px; /* 80% of 6px */
   }
 
-  .bid-input {
-    font-size: 10px; /* 80% of 12px */
-  }
-
-  .bid-currency {
-    font-size: 10px; /* 80% of 12px */
-    padding: 0 5px; /* 80% of 0 6px */
-  }
-
-  .bid-button {
-    padding: 0 6px; /* 80% of 0 8px */
-    font-size: 10px; /* 80% of 12px */
-    height: 26px; /* 80% of 32px */
-  }
-
-  .quick-bid-buttons {
-    display: flex;
-    flex-direction: row;
-    gap: 2px; /* 80% of 3px */
-  }
-
-  .quick-bid-btn {
-    padding: 3px; /* 80% of 4px */
-    font-size: 8px; /* 80% of 10px */
-  }
-
   /* 필터 레이블과 컨텐츠 간격 조정 */
   .filter-label {
-    font-size: 11px; /* 80% of 14px */
-    padding: 2px 0; /* 80% of 3px 0 */
+    font-size: 12px;
+    padding: 2px 0;
   }
 
   /* 브랜드, 카테고리 옵션 크기 조정 */
@@ -1799,8 +1639,8 @@ select {
 
   .reset-filters,
   .apply-filters {
-    padding: 6px 0; /* 80% of 8px 0 */
-    font-size: 11px; /* 80% of 14px */
+    padding: 6px 0;
+    font-size: 12px;
   }
 
   /* List View Mobile Optimizations */
@@ -1822,54 +1662,54 @@ select {
   }
 
   .product-grid.list-view .product-brand {
-    font-size: 9px; /* 80% of 11px */
+    font-size: 11px;
   }
 
   .product-grid.list-view .product-title {
-    font-size: 10px; /* 80% of 12px */
+    font-size: 11px;
     line-height: 1.3;
     -webkit-line-clamp: 2;
     line-clamp: 2;
   }
 
   .product-grid.list-view .info-cell {
-    padding: 3px 2px; /* 80% of 4px 2px */
-    font-size: 8px; /* 80% of 10px */
+    padding: 3px 2px;
+    font-size: 10px;
   }
 
   .product-grid.list-view .info-label {
-    font-size: 6px; /* 80% of 8px */
+    font-size: 10px;
   }
 
   .product-grid.list-view .info-value {
-    font-size: 9px; /* 80% of 11px */
+    font-size: 11px;
   }
 
   .product-grid.list-view .auction-number {
-    width: 18px; /* 80% of 22px */
-    height: 18px; /* 80% of 22px */
-    font-size: 6px; /* 80% of 8px */
-    top: 3px; /* 80% of 4px */
-    right: 3px; /* 80% of 4px */
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
+    top: 3px;
+    right: 3px;
   }
 
   .product-grid.list-view .product-rank {
-    width: 18px; /* 80% of 22px */
-    height: 18px; /* 80% of 22px */
-    font-size: 6px; /* 80% of 8px */
-    top: 3px; /* 80% of 4px */
-    left: 3px; /* 80% of 4px */
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
+    top: 3px;
+    left: 3px;
   }
 
   .product-grid.list-view .wishlist-btn {
-    padding: 3px 2px; /* 80% of 4px 2px */
-    font-size: 7px; /* 80% of 9px */
+    padding: 3px 2px;
+    font-size: 10px;
   }
 
   .product-grid.list-view .bid-timer {
     grid-area: timer;
-    padding: 4px 6px; /* 80% of 5px 8px */
-    font-size: 9px; /* 80% of 11px */
+    padding: 4px 6px;
+    font-size: 10px;
     width: 100%;
     text-align: center;
     display: flex;
@@ -1909,11 +1749,9 @@ select {
   }
 
   .filter-close-btn {
-    width: 32px; /* 80% of 40px */
-    height: 32px; /* 80% of 40px */
-    font-size: 22px; /* 80% of 28px */
-    top: 22px; /* 모바일에서 헤더 중앙 위치 조정 */
-    right: 8px; /* 80% of 10px */
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
   }
 
   /* 페이지네이션 크기 축소 */
@@ -1966,7 +1804,7 @@ select {
   }
 
   .product-card {
-    font-size: 0.85em;
+    font-size: 0.9em;
   }
 
   .auction-number {
@@ -1976,7 +1814,7 @@ select {
   }
 }
 
-/* 경매장별 특화 스타일 */
+/* 경매장별 특화 스타일 - common.css에서 관리 */
 
 /* 브랜드옥션 스타일 */
 .quick-bid-buttons.brand-auction .increment-500:disabled {
@@ -2058,40 +1896,6 @@ select {
   color: #495057;
   font-size: 14px;
   line-height: 1.4;
-}
-
-/* 최소금액 설정 버튼 스타일 */
-.quick-bid-btn.star-minimum-btn {
-  background: linear-gradient(135deg, #17a2b8, #138496);
-  border: none;
-  color: white;
-  font-weight: 600;
-  padding: 8px 16px;
-  border-radius: 6px;
-  transition: all 0.3s ease;
-}
-
-.quick-bid-btn.star-minimum-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #138496, #117a8b);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(23, 162, 184, 0.3);
-}
-
-.quick-bid-btn.star-minimum-btn.success {
-  background: linear-gradient(135deg, #28a745, #20c997);
-  animation: pulse 0.6s ease-in-out;
-}
-
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
-  100% {
-    transform: scale(1);
-  }
 }
 
 /* 모바일 툴팁 스타일 */

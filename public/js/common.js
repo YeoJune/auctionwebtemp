@@ -112,6 +112,7 @@ function renderHeader(currentPage = "") {
         icon: "fas fa-search",
         text: "필터",
         class: "mobile-filter-toggle",
+        pages: ["product", "values", "recommend"], // product, values, recommend 페이지에서만 표시
       },
       {
         type: "button",
@@ -234,6 +235,14 @@ function renderHeader(currentPage = "") {
   } else {
     // 모바일 헤더 생성
     const topNavItems = menuConfig.mobileTop
+      .filter((item) => {
+        // pages 속성이 있으면 현재 페이지가 포함되어 있는지 확인
+        if (item.pages && Array.isArray(item.pages)) {
+          return item.pages.includes(currentPage);
+        }
+        // pages 속성이 없으면 모든 페이지에서 표시
+        return true;
+      })
       .map((item) => {
         const onclick = item.href
           ? `onclick="window.location.href = '${item.href}'"`
@@ -948,36 +957,45 @@ function setupMobileFilters() {
     console.log("필터 닫기 함수 실행됨");
   };
 
-  // 이미 추가된 요소 확인 및 중복 방지
+  // 표준 구조: header + content 분리
   let filtersHeader = filtersContainer.querySelector(".filters-header");
+  let filtersContent = filtersContainer.querySelector(".filters-content");
+
+  // 기존 필터 요소들 저장
+  const existingElements = Array.from(filtersContainer.children).filter(
+    (child) =>
+      !child.classList.contains("filters-header") &&
+      !child.classList.contains("filters-content")
+  );
+
   if (!filtersHeader) {
-    // 필터 헤더 추가
     filtersHeader = document.createElement("div");
     filtersHeader.className = "filters-header";
-    filtersHeader.textContent = "필터";
+    filtersHeader.innerHTML = `
+      <span>필터</span>
+      <button class="filter-close-btn" aria-label="필터 닫기">&times;</button>
+    `;
     filtersContainer.prepend(filtersHeader);
   }
 
-  // 닫기 버튼이 이미 있는지 확인
-  let closeBtn = filtersContainer.querySelector(".filter-close-btn");
-  if (closeBtn) {
-    closeBtn.remove(); // 기존 버튼 제거
+  if (!filtersContent) {
+    filtersContent = document.createElement("div");
+    filtersContent.className = "filters-content";
+    filtersContainer.appendChild(filtersContent);
+
+    // 기존 요소들을 content로 이동
+    existingElements.forEach((el) => filtersContent.appendChild(el));
   }
 
-  // 필터 닫기 버튼 새로 추가
-  closeBtn = document.createElement("button");
-  closeBtn.className = "filter-close-btn";
-  closeBtn.innerHTML = "&times;";
-  closeBtn.setAttribute("aria-label", "필터 닫기");
-
-  // 기존 이벤트 리스너 제거를 위해 버튼 복제 후 다시 추가
-  closeBtn.addEventListener("click", function (e) {
-    e.preventDefault();
-    e.stopPropagation();
-    window.mobileFilterFunctions.closeFilter();
-  });
-
-  filtersContainer.prepend(closeBtn);
+  // 닫기 버튼 이벤트
+  const closeBtn = filtersHeader.querySelector(".filter-close-btn");
+  if (closeBtn) {
+    closeBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      window.mobileFilterFunctions.closeFilter();
+    });
+  }
 
   // 기존 버튼 이벤트 제거를 위해 복제
   const filterBtnClone = filterBtn.cloneNode(true);

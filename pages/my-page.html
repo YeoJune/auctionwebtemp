@@ -65,401 +65,398 @@
           </button>
         </div>
 
-        <!-- 메인 컨텐츠 영역 -->
-        <div class="my-page-main">
-          <!-- 대시보드 섹션 -->
-          <section id="dashboard-section" class="page-section active">
-            <div class="section-header">
-              <h2>대시보드</h2>
-              <p>입찰 활동을 한눈에 확인하세요</p>
-            </div>
+        <!-- 대시보드 섹션 -->
+        <section id="dashboard-section" class="page-section active">
+          <div class="section-header">
+            <h2>대시보드</h2>
+            <p>입찰 활동을 한눈에 확인하세요</p>
+          </div>
 
-            <!-- 요약 통계 -->
-            <div class="dashboard-stats">
-              <div class="stat-card" style="cursor: pointer">
-                <div class="stat-icon">
-                  <i class="fas fa-clock"></i>
-                </div>
-                <div class="stat-content">
-                  <h3>진행중 입찰</h3>
-                  <span class="stat-value" id="active-count">-</span>
-                  <span class="stat-unit">건</span>
-                </div>
+          <!-- 요약 통계 -->
+          <div class="dashboard-stats">
+            <div class="stat-card" style="cursor: pointer">
+              <div class="stat-icon">
+                <i class="fas fa-clock"></i>
               </div>
-              <div class="stat-card" style="cursor: pointer">
-                <div class="stat-icon">
-                  <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                <div class="stat-content">
-                  <h3>더 높은 입찰 발생</h3>
-                  <span class="stat-value" id="higher-bid-count">-</span>
-                  <span class="stat-unit">건</span>
-                </div>
-              </div>
-              <div class="stat-card" style="cursor: pointer">
-                <div class="stat-icon">
-                  <i class="fas fa-crown"></i>
-                </div>
-                <div class="stat-content">
-                  <h3>현재 최고가</h3>
-                  <span class="stat-value" id="current-highest-count">-</span>
-                  <span class="stat-unit">건</span>
-                </div>
-              </div>
-              <div class="stat-card" style="cursor: pointer">
-                <div class="stat-icon">
-                  <i class="fas fa-trophy"></i>
-                </div>
-                <div class="stat-content">
-                  <h3>낙찰 건수</h3>
-                  <span class="stat-value" id="completed-count">-</span>
-                  <span class="stat-unit">건</span>
-                </div>
+              <div class="stat-content">
+                <h3>진행중 입찰</h3>
+                <span class="stat-value" id="active-count">-</span>
+                <span class="stat-unit">건</span>
               </div>
             </div>
+            <div class="stat-card" style="cursor: pointer">
+              <div class="stat-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+              </div>
+              <div class="stat-content">
+                <h3>더 높은 입찰 발생</h3>
+                <span class="stat-value" id="higher-bid-count">-</span>
+                <span class="stat-unit">건</span>
+              </div>
+            </div>
+            <div class="stat-card" style="cursor: pointer">
+              <div class="stat-icon">
+                <i class="fas fa-crown"></i>
+              </div>
+              <div class="stat-content">
+                <h3>현재 최고가</h3>
+                <span class="stat-value" id="current-highest-count">-</span>
+                <span class="stat-unit">건</span>
+              </div>
+            </div>
+            <div class="stat-card" style="cursor: pointer">
+              <div class="stat-icon">
+                <i class="fas fa-trophy"></i>
+              </div>
+              <div class="stat-content">
+                <h3>낙찰 건수</h3>
+                <span class="stat-value" id="completed-count">-</span>
+                <span class="stat-unit">건</span>
+              </div>
+            </div>
+          </div>
 
-            <!-- 최근 활동 -->
-            <div class="recent-activities">
-              <div class="recent-section">
-                <h3>최근 입찰 활동</h3>
-                <div id="recent-bids-list" class="activity-list">
-                  <div class="loading-msg">로딩 중...</div>
+          <!-- 최근 활동 -->
+          <div class="recent-activities">
+            <div class="recent-section">
+              <h3>최근 입찰 활동</h3>
+              <div id="recent-bids-list" class="activity-list">
+                <div class="loading-msg">로딩 중...</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 입찰 항목 섹션 -->
+        <section id="bid-items-section" class="page-section">
+          <div class="section-header">
+            <h2>입찰 항목</h2>
+            <p>진행중인 입찰 내역을 확인하세요</p>
+          </div>
+
+          <!-- 검색 툴바 (섹션별 고유 ID) -->
+          <section class="search-toolbar">
+            <div class="filter-row">
+              <!-- Auction Type Filter -->
+              <div class="filter-section inline-filter">
+                <h4>경매 타입</h4>
+                <div class="radio-buttons horizontal">
+                  <div class="radio-item">
+                    <input
+                      type="radio"
+                      name="bidItems-bidType"
+                      id="bidItems-bidType-live"
+                      value="live" />
+                    <label for="bidItems-bidType-live">현장 경매</label>
+                  </div>
+                  <div class="radio-item">
+                    <input
+                      type="radio"
+                      name="bidItems-bidType"
+                      id="bidItems-bidType-direct"
+                      value="direct" />
+                    <label for="bidItems-bidType-direct">직접 경매</label>
+                  </div>
                 </div>
+              </div>
+
+              <!-- Status Filter -->
+              <div class="filter-section inline-filter">
+                <h4>상태</h4>
+                <div class="radio-buttons horizontal">
+                  <div class="radio-item">
+                    <input
+                      type="radio"
+                      name="bidItems-status"
+                      id="bidItems-status-all"
+                      value="all"
+                      checked />
+                    <label for="bidItems-status-all">전체</label>
+                  </div>
+                  <div class="radio-item">
+                    <input
+                      type="radio"
+                      name="bidItems-status"
+                      id="bidItems-status-active"
+                      value="active" />
+                    <label for="bidItems-status-active">입찰 진행중</label>
+                  </div>
+                  <!-- 새로 추가: 직접경매 전용 -->
+                  <div
+                    class="radio-item"
+                    id="bidItems-status-higher-bid-wrapper"
+                    style="display: none">
+                    <input
+                      type="radio"
+                      name="bidItems-status"
+                      id="bidItems-status-higher-bid"
+                      value="higher-bid" />
+                    <label for="bidItems-status-higher-bid"
+                      >더 높은 입찰 존재</label
+                    >
+                  </div>
+                  <div class="radio-item">
+                    <input
+                      type="radio"
+                      name="bidItems-status"
+                      id="bidItems-status-completed"
+                      value="completed" />
+                    <label for="bidItems-status-completed">낙찰 완료</label>
+                  </div>
+                  <div class="radio-item">
+                    <input
+                      type="radio"
+                      name="bidItems-status"
+                      id="bidItems-status-cancelled"
+                      value="cancelled" />
+                    <label for="bidItems-status-cancelled">취소됨</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="filter-row">
+              <!-- Date Range Filter -->
+              <div class="filter-section">
+                <h4>기간</h4>
+                <select id="bidItems-dateRange">
+                  <option value="7">최근 1주일</option>
+                  <option value="30" selected>최근 1개월</option>
+                  <option value="90">최근 3개월</option>
+                  <option value="180">최근 6개월</option>
+                  <option value="365">최근 1년</option>
+                </select>
+              </div>
+
+              <!-- Filter Buttons -->
+              <div class="filter-buttons">
+                <button id="bidItems-applyFilters" class="primary-button">
+                  상품 검색
+                </button>
+                <button id="bidItems-resetFilters" class="secondary-button">
+                  초기화
+                </button>
               </div>
             </div>
           </section>
 
-          <!-- 입찰 항목 섹션 -->
-          <section id="bid-items-section" class="page-section">
-            <div class="section-header">
-              <h2>입찰 항목</h2>
-              <p>진행중인 입찰 내역을 확인하세요</p>
+          <!-- 뷰 컨트롤 섹션 -->
+          <div class="view-controls">
+            <div class="sort-options">
+              <button
+                class="sort-btn active"
+                data-sort="updated_at"
+                data-section="bid-items">
+                최신순 <i class="fas fa-sort"></i>
+              </button>
+              <button
+                class="sort-btn"
+                data-sort="starting_price"
+                data-section="bid-items">
+                가격순 <i class="fas fa-sort"></i>
+              </button>
+              <button
+                class="sort-btn"
+                data-sort="brand"
+                data-section="bid-items">
+                브랜드순 <i class="fas fa-sort"></i>
+              </button>
             </div>
+          </div>
 
-            <!-- 검색 툴바 (섹션별 고유 ID) -->
-            <section class="search-toolbar">
-              <div class="filter-row">
-                <!-- Auction Type Filter -->
-                <div class="filter-section inline-filter">
-                  <h4>경매 타입</h4>
-                  <div class="radio-buttons horizontal">
-                    <div class="radio-item">
-                      <input
-                        type="radio"
-                        name="bidItems-bidType"
-                        id="bidItems-bidType-live"
-                        value="live" />
-                      <label for="bidItems-bidType-live">현장 경매</label>
-                    </div>
-                    <div class="radio-item">
-                      <input
-                        type="radio"
-                        name="bidItems-bidType"
-                        id="bidItems-bidType-direct"
-                        value="direct" />
-                      <label for="bidItems-bidType-direct">직접 경매</label>
-                    </div>
-                  </div>
-                </div>
+          <!-- 결과 카운트 -->
+          <div class="results-header">
+            <div class="results-count">
+              총 <span id="bidItems-totalResults">0</span>개 상품
+            </div>
+          </div>
 
-                <!-- Status Filter -->
-                <div class="filter-section inline-filter">
-                  <h4>상태</h4>
-                  <div class="radio-buttons horizontal">
-                    <div class="radio-item">
-                      <input
-                        type="radio"
-                        name="bidItems-status"
-                        id="bidItems-status-all"
-                        value="all"
-                        checked />
-                      <label for="bidItems-status-all">전체</label>
-                    </div>
-                    <div class="radio-item">
-                      <input
-                        type="radio"
-                        name="bidItems-status"
-                        id="bidItems-status-active"
-                        value="active" />
-                      <label for="bidItems-status-active">입찰 진행중</label>
-                    </div>
-                    <!-- 새로 추가: 직접경매 전용 -->
-                    <div
-                      class="radio-item"
-                      id="bidItems-status-higher-bid-wrapper"
-                      style="display: none">
-                      <input
-                        type="radio"
-                        name="bidItems-status"
-                        id="bidItems-status-higher-bid"
-                        value="higher-bid" />
-                      <label for="bidItems-status-higher-bid"
-                        >더 높은 입찰 존재</label
-                      >
-                    </div>
-                    <div class="radio-item">
-                      <input
-                        type="radio"
-                        name="bidItems-status"
-                        id="bidItems-status-completed"
-                        value="completed" />
-                      <label for="bidItems-status-completed">낙찰 완료</label>
-                    </div>
-                    <div class="radio-item">
-                      <input
-                        type="radio"
-                        name="bidItems-status"
-                        id="bidItems-status-cancelled"
-                        value="cancelled" />
-                      <label for="bidItems-status-cancelled">취소됨</label>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          <!-- 로딩 메시지 -->
+          <div class="loading-msg" id="bidItems-loadingMsg">로딩 중...</div>
 
-              <div class="filter-row">
-                <!-- Date Range Filter -->
-                <div class="filter-section">
-                  <h4>기간</h4>
-                  <select id="bidItems-dateRange">
-                    <option value="7">최근 1주일</option>
-                    <option value="30" selected>최근 1개월</option>
-                    <option value="90">최근 3개월</option>
-                    <option value="180">최근 6개월</option>
-                    <option value="365">최근 1년</option>
-                  </select>
-                </div>
+          <!-- 입찰 목록 -->
+          <div id="bidItems-productList" class="bid-results-list">
+            <!-- 동적으로 생성됨 -->
+          </div>
 
-                <!-- Filter Buttons -->
-                <div class="filter-buttons">
-                  <button id="bidItems-applyFilters" class="primary-button">
-                    상품 검색
-                  </button>
-                  <button id="bidItems-resetFilters" class="secondary-button">
-                    초기화
-                  </button>
-                </div>
-              </div>
-            </section>
+          <!-- 페이지네이션 -->
+          <div class="pagination" id="bidItems-pagination"></div>
+        </section>
 
-            <!-- 뷰 컨트롤 섹션 -->
+        <!-- 입찰 결과 섹션 -->
+        <section id="bid-results-section" class="page-section">
+          <div class="section-header">
+            <h2>입찰 결과</h2>
+            <p>낙찰된 입찰 결과를 확인하세요</p>
+          </div>
+
+          <!-- 검색 툴바 -->
+          <section class="search-toolbar">
             <div class="view-controls">
               <div class="sort-options">
                 <button
                   class="sort-btn active"
-                  data-sort="updated_at"
-                  data-section="bid-items">
-                  최신순 <i class="fas fa-sort"></i>
+                  data-sort="date"
+                  data-section="bid-results">
+                  날짜순 <i class="fas fa-sort"></i>
                 </button>
                 <button
                   class="sort-btn"
-                  data-sort="starting_price"
-                  data-section="bid-items">
-                  가격순 <i class="fas fa-sort"></i>
+                  data-sort="total_price"
+                  data-section="bid-results">
+                  금액순 <i class="fas fa-sort"></i>
                 </button>
                 <button
                   class="sort-btn"
-                  data-sort="brand"
-                  data-section="bid-items">
-                  브랜드순 <i class="fas fa-sort"></i>
+                  data-sort="item_count"
+                  data-section="bid-results">
+                  상품수 <i class="fas fa-sort"></i>
+                </button>
+              </div>
+
+              <!-- 기간 필터 -->
+              <div class="date-filter">
+                <label for="bidResults-dateRange">기간:</label>
+                <select id="bidResults-dateRange">
+                  <option value="7">최근 1주일</option>
+                  <option value="30" selected>최근 1개월</option>
+                  <option value="90">최근 3개월</option>
+                  <option value="180">최근 6개월</option>
+                  <option value="365">최근 1년</option>
+                </select>
+                <button
+                  id="bidResults-applyFilters"
+                  class="primary-button small-button">
+                  적용
+                </button>
+                <button
+                  id="bidResults-resetFilters"
+                  class="secondary-button small-button">
+                  초기화
                 </button>
               </div>
             </div>
-
-            <!-- 결과 카운트 -->
-            <div class="results-header">
-              <div class="results-count">
-                총 <span id="bidItems-totalResults">0</span>개 상품
-              </div>
-            </div>
-
-            <!-- 로딩 메시지 -->
-            <div class="loading-msg" id="bidItems-loadingMsg">로딩 중...</div>
-
-            <!-- 입찰 목록 -->
-            <div id="bidItems-productList" class="bid-results-list">
-              <!-- 동적으로 생성됨 -->
-            </div>
-
-            <!-- 페이지네이션 -->
-            <div class="pagination" id="bidItems-pagination"></div>
           </section>
 
-          <!-- 입찰 결과 섹션 -->
-          <section id="bid-results-section" class="page-section">
-            <div class="section-header">
-              <h2>입찰 결과</h2>
-              <p>낙찰된 입찰 결과를 확인하세요</p>
+          <!-- 결과 카운트 -->
+          <div class="results-header">
+            <div class="results-count">
+              총 <span id="bidResults-totalResults">0</span>개 날짜
             </div>
+          </div>
 
-            <!-- 검색 툴바 -->
-            <section class="search-toolbar">
-              <div class="view-controls">
-                <div class="sort-options">
-                  <button
-                    class="sort-btn active"
-                    data-sort="date"
-                    data-section="bid-results">
-                    날짜순 <i class="fas fa-sort"></i>
-                  </button>
-                  <button
-                    class="sort-btn"
-                    data-sort="total_price"
-                    data-section="bid-results">
-                    금액순 <i class="fas fa-sort"></i>
-                  </button>
-                  <button
-                    class="sort-btn"
-                    data-sort="item_count"
-                    data-section="bid-results">
-                    상품수 <i class="fas fa-sort"></i>
-                  </button>
-                </div>
+          <!-- 로딩 메시지 -->
+          <div class="loading-msg" id="bidResults-loadingMsg">로딩 중...</div>
 
-                <!-- 기간 필터 -->
-                <div class="date-filter">
-                  <label for="bidResults-dateRange">기간:</label>
-                  <select id="bidResults-dateRange">
-                    <option value="7">최근 1주일</option>
-                    <option value="30" selected>최근 1개월</option>
-                    <option value="90">최근 3개월</option>
-                    <option value="180">최근 6개월</option>
-                    <option value="365">최근 1년</option>
-                  </select>
-                  <button
-                    id="bidResults-applyFilters"
-                    class="primary-button small-button">
-                    적용
-                  </button>
-                  <button
-                    id="bidResults-resetFilters"
-                    class="secondary-button small-button">
-                    초기화
-                  </button>
-                </div>
-              </div>
-            </section>
+          <!-- 입찰 목록 -->
+          <div id="bidResults-resultsList" class="daily-results-list">
+            <!-- 동적으로 생성됨 -->
+          </div>
 
-            <!-- 결과 카운트 -->
-            <div class="results-header">
-              <div class="results-count">
-                총 <span id="bidResults-totalResults">0</span>개 날짜
-              </div>
-            </div>
+          <!-- 페이지네이션 -->
+          <div class="pagination" id="bidResults-pagination"></div>
+        </section>
 
-            <!-- 로딩 메시지 -->
-            <div class="loading-msg" id="bidResults-loadingMsg">로딩 중...</div>
+        <!-- 계정 관리 섹션 -->
+        <section id="account-section" class="page-section">
+          <div class="section-header">
+            <h2>계정 관리</h2>
+            <p>개인정보 및 계정 설정을 관리하세요</p>
+          </div>
 
-            <!-- 입찰 목록 -->
-            <div id="bidResults-resultsList" class="daily-results-list">
-              <!-- 동적으로 생성됨 -->
-            </div>
+          <!-- 로딩 메시지 -->
+          <div class="loading-msg" id="account-loading">
+            사용자 정보를 불러오는 중...
+          </div>
 
-            <!-- 페이지네이션 -->
-            <div class="pagination" id="bidResults-pagination"></div>
-          </section>
-
-          <!-- 계정 관리 섹션 -->
-          <section id="account-section" class="page-section">
-            <div class="section-header">
-              <h2>계정 관리</h2>
-              <p>개인정보 및 계정 설정을 관리하세요</p>
-            </div>
-
-            <!-- 로딩 메시지 -->
-            <div class="loading-msg" id="account-loading">
-              사용자 정보를 불러오는 중...
-            </div>
-
-            <!-- 계정 정보 폼 -->
-            <div id="account-content" class="account-content hidden">
-              <div class="account-sections">
-                <!-- 기본 정보 -->
-                <div class="account-section">
-                  <h3>기본 정보</h3>
-                  <form id="basic-info-form" class="account-form">
-                    <div class="form-row">
-                      <div class="form-group">
-                        <label for="user-id">아이디</label>
-                        <input type="text" id="user-id" readonly />
-                      </div>
-                      <div class="form-group">
-                        <label for="user-email">이메일</label>
-                        <input type="email" id="user-email" />
-                      </div>
-                    </div>
-                    <div class="form-row">
-                      <div class="form-group">
-                        <label for="user-phone">전화번호</label>
-                        <input
-                          type="tel"
-                          id="user-phone"
-                          placeholder="010-0000-0000" />
-                      </div>
-                      <div class="form-group">
-                        <label for="registration-date">가입일</label>
-                        <input type="date" id="registration-date" />
-                      </div>
-                    </div>
-                    <div class="form-actions">
-                      <button type="submit" class="primary-button">
-                        기본 정보 수정
-                      </button>
-                    </div>
-                  </form>
-                </div>
-
-                <!-- 업체 정보 -->
-                <div class="account-section">
-                  <h3>업체 정보</h3>
-                  <form id="company-info-form" class="account-form">
-                    <div class="form-row">
-                      <div class="form-group">
-                        <label for="company-name">업체명</label>
-                        <input type="text" id="company-name" />
-                      </div>
-                      <div class="form-group">
-                        <label for="business-number">사업자번호</label>
-                        <input
-                          type="text"
-                          id="business-number"
-                          placeholder="000-00-00000" />
-                      </div>
+          <!-- 계정 정보 폼 -->
+          <div id="account-content" class="account-content hidden">
+            <div class="account-sections">
+              <!-- 기본 정보 -->
+              <div class="account-section">
+                <h3>기본 정보</h3>
+                <form id="basic-info-form" class="account-form">
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="user-id">아이디</label>
+                      <input type="text" id="user-id" readonly />
                     </div>
                     <div class="form-group">
-                      <label for="company-address">수취주소</label>
-                      <textarea id="company-address" rows="3"></textarea>
+                      <label for="user-email">이메일</label>
+                      <input type="email" id="user-email" />
                     </div>
-                    <div class="form-actions">
-                      <button type="submit" class="primary-button">
-                        업체 정보 수정
-                      </button>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="user-phone">전화번호</label>
+                      <input
+                        type="tel"
+                        id="user-phone"
+                        placeholder="010-0000-0000" />
                     </div>
-                  </form>
-                </div>
+                    <div class="form-group">
+                      <label for="registration-date">가입일</label>
+                      <input type="date" id="registration-date" />
+                    </div>
+                  </div>
+                  <div class="form-actions">
+                    <button type="submit" class="primary-button">
+                      기본 정보 수정
+                    </button>
+                  </div>
+                </form>
+              </div>
 
-                <!-- 수수료 정보 (읽기 전용) -->
-                <div class="account-section">
-                  <h3>수수료 정보</h3>
-                  <div class="info-display">
-                    <div class="info-item">
-                      <label>개인 수수료율</label>
-                      <span id="commission-rate">-</span>
+              <!-- 업체 정보 -->
+              <div class="account-section">
+                <h3>업체 정보</h3>
+                <form id="company-info-form" class="account-form">
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label for="company-name">업체명</label>
+                      <input type="text" id="company-name" />
                     </div>
-                    <div class="info-item">
-                      <label>계정 상태</label>
-                      <span id="account-status" class="status-badge">-</span>
+                    <div class="form-group">
+                      <label for="business-number">사업자번호</label>
+                      <input
+                        type="text"
+                        id="business-number"
+                        placeholder="000-00-00000" />
                     </div>
-                    <div class="info-item">
-                      <label>가입일</label>
-                      <span id="created-date">-</span>
-                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="company-address">수취주소</label>
+                    <textarea id="company-address" rows="3"></textarea>
+                  </div>
+                  <div class="form-actions">
+                    <button type="submit" class="primary-button">
+                      업체 정보 수정
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <!-- 수수료 정보 (읽기 전용) -->
+              <div class="account-section">
+                <h3>수수료 정보</h3>
+                <div class="info-display">
+                  <div class="info-item">
+                    <label>개인 수수료율</label>
+                    <span id="commission-rate">-</span>
+                  </div>
+                  <div class="info-item">
+                    <label>계정 상태</label>
+                    <span id="account-status" class="status-badge">-</span>
+                  </div>
+                  <div class="info-item">
+                    <label>가입일</label>
+                    <span id="created-date">-</span>
                   </div>
                 </div>
               </div>
             </div>
-          </section>
-        </div>
+          </div>
+        </section>
       </main>
 
       <footer class="main-footer">
