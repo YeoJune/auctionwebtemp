@@ -372,6 +372,13 @@ class MekikiAucCrawler extends AxiosCrawler {
       if (!this.config.categoryTable[item.category?.id]) {
         return null;
       }
+
+      // subcategory에 lighter 포함 시 제외
+      const subcategoryName = item.subcategory?.name?.en || "";
+      if (subcategoryName.toLowerCase().includes("lighter")) {
+        return null;
+      }
+
       const itemId = item.id.toString();
       const boxId = item.box_id || "";
       const boxNo = item.box_no || "";
@@ -388,7 +395,7 @@ class MekikiAucCrawler extends AxiosCrawler {
       const image = item.thumbnails?.[0] || item.images?.[0] || null;
       const additionalImages = item.images || [];
       const description = await this.buildDescription(item);
-      const accessoryCode = item.subcategory?.name?.en || "";
+      const accessoryCode = subcategoryName;
 
       return {
         item_id: itemId,
@@ -1004,6 +1011,12 @@ class MekikiAucValueCrawler extends AxiosCrawler {
         return null;
       }
 
+      // subcategory에 lighter 포함 시 제외
+      const subcategoryName = item.subcategory?.name?.en || "";
+      if (subcategoryName.toLowerCase().includes("lighter")) {
+        return null;
+      }
+
       const itemId = item.id.toString();
       const boxId = item.box_id || "";
       const boxNo = item.box_no || "";
@@ -1019,7 +1032,7 @@ class MekikiAucValueCrawler extends AxiosCrawler {
       const image = item.thumbnails?.[0] || item.images?.[0] || null;
       const additionalImages = item.images || [];
       const description = await this.buildDescription(item);
-      const accessoryCode = item.subcategory?.name?.en || "";
+      const accessoryCode = subcategoryName;
 
       return {
         item_id: itemId,
