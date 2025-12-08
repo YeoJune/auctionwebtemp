@@ -638,6 +638,17 @@ class MyPageManager {
 
   // 상태 텍스트 반환
   getStatusText(bid) {
+    // cancelled 상태일 때는 마감 여부만 고려 (live/direct 구분 없음)
+    if (bid.status === "cancelled" && bid.item?.scheduled_date) {
+      const now = new Date();
+      const scheduled = new Date(bid.item.scheduled_date);
+      if (now > scheduled) {
+        return "낙찰 실패";
+      } else {
+        return "더 높은 입찰 존재";
+      }
+    }
+
     const statusMap = {
       active: "입찰 가능",
       first: "1차 입찰",
@@ -645,7 +656,6 @@ class MyPageManager {
       final: "최종 입찰",
       completed: "낙찰 완료",
       shipped: "출고됨",
-      cancelled: "더 높은 입찰 존재",
     };
     return statusMap[bid.status] || "알 수 없음";
   }

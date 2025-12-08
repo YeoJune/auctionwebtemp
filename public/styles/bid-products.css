@@ -360,6 +360,12 @@
   color: #d32f2f;
 }
 
+/* 입찰 실패 (직접경매 마감 후 cancelled) */
+.status-failed {
+  background-color: #f5f5f5;
+  color: #616161;
+}
+
 .status-expired {
   background-color: #f5f5f5;
   color: #757575;

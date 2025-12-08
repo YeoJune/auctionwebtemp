@@ -109,7 +109,7 @@ window.BidProductsCore = (function () {
           return ["first", "second"].includes(product.status) && !isExpired;
 
         case "cancelled":
-          // 취소됨:
+          // 낙찰 실패 (live/direct 공통):
           // - cancelled 상태
           // - 1차/2차 중 마감된 것
           return (
@@ -197,16 +197,11 @@ window.BidProductsCore = (function () {
 
     // cancelled 상태 처리
     if (status === STATUS_TYPES.CANCELLED) {
-      if (bidInfo === null) {
-        // direct 경매
-        if (now > scheduled) {
-          return "취소됨";
-        } else {
-          return "더 높은 입찰 존재";
-        }
+      // live/direct 모두 마감 여부로 판단
+      if (now > scheduled) {
+        return "낙찰 실패";
       } else {
-        // live 경매는 항상 "취소됨"
-        return "취소됨";
+        return "더 높은 입찰 존재";
       }
     }
 

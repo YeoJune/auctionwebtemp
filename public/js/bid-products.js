@@ -3,7 +3,7 @@
 // 상태 관리
 window.state = {
   bidType: "live", // 경매 타입: live, direct
-  status: "all", // 상태: all, active(진행 중), completed, cancelled, higher-bid(직접경매용)
+  status: "all", // 상태: all, active(진행 중), completed, cancelled(낙찰 실패), higher-bid(직접경매용)
   dateRange: 30, // 날짜 범위(일)
   currentPage: 1, // 현재 페이지
   itemsPerPage: 10, // 페이지당 아이템 수
@@ -157,7 +157,7 @@ async function fetchProducts() {
         statusParam = core.STATUS_GROUPS.COMPLETED.join(",");
         break;
       case "cancelled":
-        // 취소됨: cancelled + active/first/second/final (마감된 것 포함)
+        // 낙찰 실패: cancelled + active/first/second/final (마감된 것 포함)
         statusParam = core.STATUS_GROUPS.ALL.join(",");
         break;
       case "all":
