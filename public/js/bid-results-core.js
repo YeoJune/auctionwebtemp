@@ -210,6 +210,9 @@ window.BidResultsCore = (function () {
    * 상세 테이블 생성
    */
   function createDetailsTable(dayResult) {
+    const container = createElement("div", "details-container");
+
+    // 데스크톱용 테이블
     const detailsTable = createElement("table", "details-table");
 
     const tableHeader = createElement("thead");
@@ -268,7 +271,156 @@ window.BidResultsCore = (function () {
     }
 
     detailsTable.appendChild(tableBody);
-    return detailsTable;
+    container.appendChild(detailsTable);
+
+    // 모바일용 카드 리스트
+    const mobileList = createElement("div", "details-mobile-list");
+
+    [...successItems, ...failedItems, ...pendingItems].forEach((item) => {
+      const status = successItems.includes(item)
+        ? "success"
+        : failedItems.includes(item)
+        ? "failed"
+        : "pending";
+      const card = createMobileItemCard(item, status);
+      mobileList.appendChild(card);
+    });
+
+    if (mobileList.children.length === 0) {
+      mobileList.innerHTML =
+        '<div class="no-results">표시할 아이템이 없습니다.</div>';
+    }
+
+    container.appendChild(mobileList);
+    return container;
+  }
+
+  /**
+   * 모바일 카드 아이템 생성
+   */
+  function createMobileItemCard(item, status) {
+    const card = createElement("div", "mobile-item-card");
+    card.classList.add(`bid-${status}`);
+
+    // 상단: 이미지 + 기본정보
+    const header = createElement("div", "mobile-card-header");
+
+    // 이미지
+    const imageWrapper = createElement("div", "mobile-card-image");
+    const itemImage = item.item?.image || item.image;
+    if (itemImage && itemImage !== "/images/placeholder.png") {
+      const img = createElement("img");
+      img.src = window.API?.validateImageUrl
+        ? window.API.validateImageUrl(itemImage)
+        : itemImage;
+      img.alt = item.item?.title || "상품 이미지";
+      img.onerror = function () {
+        this.parentNode.innerHTML =
+          '<div class="mobile-image-placeholder">No Image</div>';
+      };
+      imageWrapper.appendChild(img);
+    } else {
+      imageWrapper.innerHTML =
+        '<div class="mobile-image-placeholder">No Image</div>';
+    }
+
+    // 기본 정보
+    const info = createElement("div", "mobile-card-info");
+    const brand = createElement(
+      "div",
+      "mobile-brand",
+      item.item?.brand || item.brand || "-"
+    );
+    const title = createElement(
+      "div",
+      "mobile-title",
+      item.item?.title || item.title || "제목 없음"
+    );
+    info.appendChild(brand);
+    info.appendChild(title);
+
+    header.appendChild(imageWrapper);
+    header.appendChild(info);
+
+    // 가격 정보
+    const priceGrid = createElement("div", "mobile-price-grid");
+
+    const finalPrice = item.final_price || item.finalPrice || 0;
+    const winningPrice = item.winning_price || item.winningPrice || 0;
+    const koreanPrice = item.korean_price || item.koreanPrice || 0;
+
+    // 최종입찰금액
+    const finalPriceItem = createElement("div", "mobile-price-item");
+    finalPriceItem.innerHTML = `
+      <span class="price-label">최종입찰금액 (¥)</span>
+      <span class="price-value">¥${formatNumber(finalPrice)}</span>
+    `;
+
+    // 실제낙찰금액
+    const winningPriceItem = createElement("div", "mobile-price-item");
+    if (status === "pending") {
+      winningPriceItem.innerHTML = `
+        <span class="price-label">실제낙찰금액 (¥)</span>
+        <span class="price-value pending-text">집계중</span>
+      `;
+    } else {
+      winningPriceItem.innerHTML = `
+        <span class="price-label">실제낙찰금액 (¥)</span>
+        <span class="price-value">¥${formatNumber(winningPrice)}</span>
+      `;
+    }
+
+    // 관부가세 포함
+    const koreanPriceItem = createElement(
+      "div",
+      "mobile-price-item mobile-price-highlight"
+    );
+    if (status === "pending") {
+      koreanPriceItem.innerHTML = `
+        <span class="price-label">관부가세 포함 (₩)</span>
+        <span class="price-value">-</span>
+      `;
+    } else {
+      koreanPriceItem.innerHTML = `
+        <span class="price-label">관부가세 포함 (₩)</span>
+        <span class="price-value price-krw">₩${formatNumber(koreanPrice)}</span>
+      `;
+    }
+
+    priceGrid.appendChild(finalPriceItem);
+    priceGrid.appendChild(winningPriceItem);
+    priceGrid.appendChild(koreanPriceItem);
+
+    // 하단: 출고 상태 + 감정서 버튼
+    const footer = createElement("div", "mobile-card-footer");
+
+    if (status === "success") {
+      const shippingStatus = createShippingStatus(item);
+      footer.appendChild(shippingStatus);
+
+      const appraisalBtn = createAppraisalButton(item);
+      footer.appendChild(appraisalBtn);
+    } else if (status === "failed") {
+      const failedBadge = createElement(
+        "span",
+        "mobile-status-badge status-failed",
+        "낙찰 실패"
+      );
+      footer.appendChild(failedBadge);
+    } else {
+      const pendingBadge = createElement(
+        "span",
+        "mobile-status-badge status-pending",
+        "집계중"
+      );
+      footer.appendChild(pendingBadge);
+    }
+
+    card.appendChild(header);
+    card.appendChild(priceGrid);
+    card.appendChild(footer);
+
+    return card;
   }
 
   /**
