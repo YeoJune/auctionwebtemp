@@ -107,10 +107,16 @@ router.get("/", async (req, res) => {
     if (search && req.session.user.id === "admin") {
       const searchTerm = `%${search}%`;
       countQuery +=
-        " AND (d.item_id LIKE ? OR i.original_title LIKE ? OR i.brand LIKE ? OR d.user_id LIKE ?)";
+        " AND (d.item_id LIKE ? OR i.original_title LIKE ? OR i.brand LIKE ? OR d.user_id LIKE ? OR i.additional_info LIKE ?)";
       mainQuery +=
-        " AND (d.item_id LIKE ? OR i.original_title LIKE ? OR i.brand LIKE ? OR d.user_id LIKE ?)";
-      queryParams.push(searchTerm, searchTerm, searchTerm, searchTerm);
+        " AND (d.item_id LIKE ? OR i.original_title LIKE ? OR i.brand LIKE ? OR d.user_id LIKE ? OR i.additional_info LIKE ?)";
+      queryParams.push(
+        searchTerm,
+        searchTerm,
+        searchTerm,
+        searchTerm,
+        searchTerm
+      );
     }
 
     // 상태 필터 추가
