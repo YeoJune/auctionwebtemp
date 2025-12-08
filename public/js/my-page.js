@@ -182,6 +182,7 @@ class MyPageManager {
             `/direct-bids?${queryString}`
           );
           this.bidProductsState.directBids = directResults.bids || [];
+          this.bidProductsState.liveBids = []; // 다른 타입 데이터 초기화
         } else {
           this.bidProductsState.bidType = "live";
           const liveRadio = document.getElementById("bidItems-bidType-live");
@@ -191,6 +192,7 @@ class MyPageManager {
             `/live-bids?${queryString}`
           );
           this.bidProductsState.liveBids = liveResults.bids || [];
+          this.bidProductsState.directBids = []; // 다른 타입 데이터 초기화
         }
       }
 
