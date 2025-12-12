@@ -7,6 +7,7 @@ const {
   ListObjectsV2Command,
 } = require("@aws-sdk/client-s3");
 const { pool } = require("./utils/DB");
+const fs = require("fs").promises;
 
 class S3StructureMigration {
   constructor() {
@@ -23,15 +24,72 @@ class S3StructureMigration {
     this.oldPrefix = "values/";
     this.newPrefix = "values/";
 
+    // DB 쿼리 결과 캐시 (파일명 → 날짜)
+    this.dateCache = new Map();
+
+    // URL 매핑 파일 (DB 업데이트용)
+    this.urlMappingFile = "./s3-migration-mappings.json";
+    this.urlMappings = [];
+
     this.stats = {
       totalFiles: 0,
       processed: 0,
       success: 0,
       failed: 0,
       skipped: 0,
+      dbCacheHits: 0,
       dbUpdated: 0,
       startTime: null,
     };
+  }
+
+  /**
+   * DB에서 모든 이미지 날짜 정보 사전 로딩 (메모리 캐싱)
+   */
+  async preloadDateCache() {
+    console.log("[Migration] Preloading date cache from DB...");
+    const startTime = Date.now();
+
+    try {
+      const [rows] = await pool.query(
+        `SELECT image, additional_images, scheduled_date 
+         FROM values_items 
+         WHERE scheduled_date IS NOT NULL`
+      );
+
+      for (const row of rows) {
+        // image 컬럼
+        if (row.image) {
+          const fileName = row.image.split("/").pop();
+          if (!this.dateCache.has(fileName)) {
+            this.dateCache.set(fileName, row.scheduled_date);
+          }
+        }
+
+        // additional_images JSON 배열
+        if (row.additional_images) {
+          try {
+            const additionalImages = JSON.parse(row.additional_images);
+            for (const imgUrl of additionalImages) {
+              const fileName = imgUrl.split("/").pop();
+              if (!this.dateCache.has(fileName)) {
+                this.dateCache.set(fileName, row.scheduled_date);
+              }
+            }
+          } catch (e) {
+            // JSON 파싱 실패 무시
+          }
+        }
+      }
+
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+      console.log(
+        `[Migration] Cached ${this.dateCache.size} file dates in ${elapsed}s`
+      );
+    } catch (error) {
+      console.error("[Migration] Failed to preload date cache:", error.message);
+      throw error;
+    }
   }
 
   /**
@@ -101,26 +159,14 @@ class S3StructureMigration {
   }
 
   /**
-   * DB에서 scheduled_date 조회 (파일명 기반)
+   * 캐시에서 scheduled_date 조회 (DB 쿼리 제거)
    */
-  async getItemDateFromDB(fileName) {
-    try {
-      // CloudFront URL에서 파일명 추출
-      const cleanFileName = fileName.replace(this.oldPrefix, "");
+  getItemDateFromCache(fileName) {
+    const cleanFileName = fileName.replace(this.oldPrefix, "");
 
-      const [rows] = await pool.query(
-        `SELECT scheduled_date 
-         FROM values_items 
-         WHERE image LIKE ? OR additional_images LIKE ?
-         LIMIT 1`,
-        [`%${cleanFileName}%`, `%${cleanFileName}%`]
-      );
-
-      if (rows.length > 0 && rows[0].scheduled_date) {
-        return rows[0].scheduled_date;
-      }
-    } catch (error) {
-      console.error(`Error fetching date for ${fileName}:`, error.message);
+    if (this.dateCache.has(cleanFileName)) {
+      this.stats.dbCacheHits++;
+      return this.dateCache.get(cleanFileName);
     }
 
     return null; // legacy 폴더로 이동
@@ -158,10 +204,39 @@ class S3StructureMigration {
   }
 
   /**
-   * DB 경로 배치 업데이트 (트랜잭션 최소화)
+   * URL 매핑 파일에 저장 (DB 업데이트는 나중에 별도 실행)
    */
-  async updateDBPathsBatch(urlMappings) {
-    if (urlMappings.length === 0) return 0;
+  async saveUrlMapping(oldUrl, newUrl) {
+    this.urlMappings.push({ oldUrl, newUrl });
+
+    // 10000개마다 파일에 저장 (메모리 오버플로우 방지)
+    if (this.urlMappings.length >= 10000) {
+      await this.flushUrlMappings();
+    }
+  }
+
+  /**
+   * 메모리의 URL 매핑을 파일에 기록
+   */
+  async flushUrlMappings() {
+    if (this.urlMappings.length === 0) return;
+
+    try {
+      const jsonData = this.urlMappings
+        .map((m) => JSON.stringify(m))
+        .join("\n");
+      await fs.appendFile(this.urlMappingFile, jsonData + "\n");
+      this.urlMappings = [];
+    } catch (error) {
+      console.error("Failed to flush URL mappings:", error.message);
+    }
+  }
+
+  /**
+   * DB 배치 업데이트 (트랜잭션)
+   */
+  async updateDBBatch(mappings) {
+    if (mappings.length === 0) return 0;
 
     const conn = await pool.getConnection();
     let updatedCount = 0;
@@ -169,8 +244,7 @@ class S3StructureMigration {
     try {
       await conn.beginTransaction();
 
-      // 각 URL 쌍에 대해 업데이트 (하나의 트랜잭션에서)
-      for (const { oldUrl, newUrl } of urlMappings) {
+      for (const { oldUrl, newUrl } of mappings) {
         try {
           // image 컬럼 업데이트
           const [imageResult] = await conn.query(
@@ -211,7 +285,7 @@ class S3StructureMigration {
   }
 
   /**
-   * 단일 파일 마이그레이션 (DB 업데이트 제외)
+   * 단일 파일 마이그레이션 (S3만 처리)
    */
   async migrateFile(s3Key) {
     const fileName = s3Key.replace(this.oldPrefix, "");
@@ -222,8 +296,8 @@ class S3StructureMigration {
       return null;
     }
 
-    // DB에서 scheduled_date 조회
-    const scheduledDate = await this.getItemDateFromDB(fileName);
+    // 캐시에서 scheduled_date 조회 (DB 쿼리 없음)
+    const scheduledDate = this.getItemDateFromCache(fileName);
 
     // 새 S3 키 생성
     const subFolder = this.getImageSubFolder(scheduledDate, fileName);
@@ -235,11 +309,13 @@ class S3StructureMigration {
     if (moveSuccess) {
       this.stats.success++;
 
-      // DB 업데이트 정보 반환 (나중에 배치 처리)
-      return {
-        oldUrl: `https://${this.cloudFrontDomain}/${s3Key}`,
-        newUrl: `https://${this.cloudFrontDomain}/${newKey}`,
-      };
+      // URL 매핑 저장 (파일로)
+      await this.saveUrlMapping(
+        `https://${this.cloudFrontDomain}/${s3Key}`,
+        `https://${this.cloudFrontDomain}/${newKey}`
+      );
+
+      return true;
     } else {
       this.stats.failed++;
       return null;
@@ -247,47 +323,102 @@ class S3StructureMigration {
   }
 
   /**
-   * 배치 처리
+   * 배치 처리 (순수 S3 작업만 - 최대 병렬)
    */
-  async migrateBatch(files, batchSize = 100) {
+  async migrateBatch(files, batchSize = 500) {
     for (let i = 0; i < files.length; i += batchSize) {
       const batch = files.slice(i, i + batchSize);
 
-      // 1. S3 파일 이동 (병렬)
-      const results = await Promise.all(
-        batch.map((file) => this.migrateFile(file))
-      );
-
-      // 2. DB 업데이트할 URL 매핑 수집
-      const urlMappings = results.filter((r) => r !== null);
-
-      // 3. DB 배치 업데이트 (단일 트랜잭션)
-      if (urlMappings.length > 0) {
-        const dbUpdated = await this.updateDBPathsBatch(urlMappings);
-        this.stats.dbUpdated += dbUpdated;
-      }
+      // S3 파일 이동만 병렬 실행 (DB 작업 없음)
+      await Promise.all(batch.map((file) => this.migrateFile(file)));
 
       this.stats.processed += batch.length;
 
-      // 진행률 출력 (1000개마다)
+      // 진행률 출력 (5000개마다)
       if (
-        this.stats.processed % 1000 === 0 ||
+        this.stats.processed % 5000 === 0 ||
         this.stats.processed === files.length
       ) {
         this.logProgress();
       }
 
-      // 서버 부하 방지 (1000개마다 대기)
-      if (i % 1000 === 0 && i > 0) {
-        await this.sleep(50);
+      // S3 API rate limit 고려 (10000개마다 짧은 대기)
+      if (i % 10000 === 0 && i > 0) {
+        await this.sleep(100);
       }
+    }
+
+    // 남은 URL 매핑 플러시
+    await this.flushUrlMappings();
+  }
+
+  /**
+   * 매핑 파일에서 DB 업데이트
+   */
+  async updateDBFromMappings() {
+    const readline = require("readline");
+    const { createReadStream } = require("fs");
+
+    try {
+      // 파일 존재 확인
+      await fs.access(this.urlMappingFile);
+
+      const batchSize = 100;
+      let batch = [];
+      let lineCount = 0;
+
+      const stream = createReadStream(this.urlMappingFile);
+      const rl = readline.createInterface({ input: stream });
+
+      for await (const line of rl) {
+        if (!line.trim()) continue;
+
+        try {
+          const mapping = JSON.parse(line);
+          batch.push(mapping);
+          lineCount++;
+
+          if (batch.length >= batchSize) {
+            const updated = await this.updateDBBatch(batch);
+            this.stats.dbUpdated += updated;
+            batch = [];
+
+            // 진행률 출력 (1000개마다)
+            if (lineCount % 1000 === 0) {
+              console.log(
+                `[DB Update] Processed ${lineCount} mappings, updated ${this.stats.dbUpdated} rows`
+              );
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to parse line: ${line}`, error.message);
+        }
+      }
+
+      // 남은 배치 처리
+      if (batch.length > 0) {
+        const updated = await this.updateDBBatch(batch);
+        this.stats.dbUpdated += updated;
+      }
+
+      console.log(`[DB Update] Complete: ${this.stats.dbUpdated} rows updated`);
+    } catch (error) {
+      if (error.code === "ENOENT") {
+        console.error(`\n❌ Mapping file not found: ${this.urlMappingFile}`);
+        console.error("   Run S3 migration first without --update-db flag");
+      } else {
+        console.error("[DB Update] Fatal error:", error);
+      }
+      throw error;
     }
   }
 
   /**
    * 메인 마이그레이션 실행
    */
-  async migrate() {
+  async migrate(options = {}) {
+    const { updateDB = false } = options;
+
     this.stats.startTime = Date.now();
     console.log(
       `\n[S3 Structure Migration] Starting at ${new Date().toISOString()}`
@@ -295,7 +426,17 @@ class S3StructureMigration {
     console.log("=".repeat(60));
 
     try {
-      // 1. S3 파일 리스트
+      // 0. 기존 매핑 파일 삭제
+      try {
+        await fs.unlink(this.urlMappingFile);
+      } catch (e) {
+        // 파일 없으면 무시
+      }
+
+      // 1. DB 날짜 캐시 사전 로딩 (한 번만)
+      await this.preloadDateCache();
+
+      // 2. S3 파일 리스트
       const files = await this.listAllS3Files();
       this.stats.totalFiles = files.length;
 
@@ -304,11 +445,27 @@ class S3StructureMigration {
         return this.getFinalStats();
       }
 
-      // 2. 배치 처리
+      // 3. S3 배치 처리 (병렬 최대화)
+      console.log("[Migration] Starting S3 file migration (parallel)...");
       await this.migrateBatch(files);
 
-      // 3. 최종 통계
-      return this.getFinalStats();
+      // 4. DB 업데이트 (옵션)
+      if (updateDB) {
+        console.log("\n[Migration] Starting DB update...");
+        await this.updateDBFromMappings();
+      }
+
+      // 5. 최종 통계
+      const stats = this.getFinalStats();
+
+      if (!updateDB) {
+        console.log(`\n📝 URL mappings saved to: ${this.urlMappingFile}`);
+        console.log(
+          `   To update DB, run: node migrate-s3-structure.js --update-db`
+        );
+      }
+
+      return stats;
     } catch (error) {
       console.error("[Migration] Fatal error:", error);
       throw error;
@@ -323,12 +480,15 @@ class S3StructureMigration {
     const rate = this.stats.processed / (elapsed / 1000);
     const remaining = this.stats.totalFiles - this.stats.processed;
     const eta = rate > 0 ? Math.round(remaining / rate / 60) : 0;
+    const cacheHitRate =
+      this.stats.processed > 0
+        ? ((this.stats.dbCacheHits / this.stats.processed) * 100).toFixed(1)
+        : 0;
 
     console.log(
-      `[Migration] Progress: ${this.stats.processed}/${this.stats.totalFiles} | ` +
-        `Success: ${this.stats.success} | Failed: ${this.stats.failed} | Skipped: ${this.stats.skipped} | ` +
-        `DB Updated: ${this.stats.dbUpdated} | ` +
-        `Rate: ${rate.toFixed(1)}/s | ETA: ${eta}min`
+      `[S3 Migration] ${this.stats.processed}/${this.stats.totalFiles} | ` +
+        `✓${this.stats.success} ✗${this.stats.failed} ⊘${this.stats.skipped} | ` +
+        `Cache: ${cacheHitRate}% | ${rate.toFixed(1)}/s | ETA: ${eta}min`
     );
   }
 
@@ -337,6 +497,10 @@ class S3StructureMigration {
    */
   getFinalStats() {
     const duration = Date.now() - this.stats.startTime;
+    const cacheHitRate =
+      this.stats.processed > 0
+        ? ((this.stats.dbCacheHits / this.stats.processed) * 100).toFixed(1)
+        : 0;
 
     return {
       totalFiles: this.stats.totalFiles,
@@ -345,6 +509,7 @@ class S3StructureMigration {
       failed: this.stats.failed,
       skipped: this.stats.skipped,
       dbUpdated: this.stats.dbUpdated,
+      cacheHitRate: `${cacheHitRate}%`,
       duration: this.formatDuration(duration),
       avgRate:
         this.stats.processed > 0
@@ -387,6 +552,10 @@ class S3StructureMigration {
 async function main() {
   const migration = new S3StructureMigration();
 
+  // 커맨드라인 옵션 파싱
+  const args = process.argv.slice(2);
+  const updateDB = args.includes("--update-db");
+
   try {
     console.log("\n" + "=".repeat(60));
     console.log("S3 Structure Migration Tool");
@@ -395,9 +564,18 @@ async function main() {
       "This will reorganize values/ images into date-based subfolders"
     );
     console.log("Example: values/xxx.webp → values/2025-01/x/xxx.webp");
+    if (updateDB) {
+      console.log(
+        "\n🔄 DB UPDATE MODE: Will update database after S3 migration"
+      );
+    } else {
+      console.log(
+        "\n📦 S3 ONLY MODE: DB update can be done later with --update-db"
+      );
+    }
     console.log("=".repeat(60) + "\n");
 
-    const stats = await migration.migrate();
+    const stats = await migration.migrate({ updateDB });
 
     console.log("\n" + "=".repeat(60));
     console.log("[Migration] Final Statistics");
@@ -407,7 +585,10 @@ async function main() {
     console.log(`Successfully Migrated: ${stats.success}`);
     console.log(`Failed: ${stats.failed}`);
     console.log(`Skipped (already structured): ${stats.skipped}`);
-    console.log(`DB Updated: ${stats.dbUpdated}`);
+    if (updateDB) {
+      console.log(`DB Updated: ${stats.dbUpdated} rows`);
+    }
+    console.log(`DB Cache Hit Rate: ${stats.cacheHitRate}`);
     console.log(`Duration: ${stats.duration}`);
     console.log(`Average Rate: ${stats.avgRate} files/sec`);
     console.log("=".repeat(60));
