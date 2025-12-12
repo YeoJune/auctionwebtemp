@@ -430,7 +430,7 @@ class S3StructureMigration {
    * 메인 마이그레이션 실행
    */
   async migrate(options = {}) {
-    const { updateDB = false } = options;
+    const { updateDB = false, dbOnly = false } = options;
 
     this.stats.startTime = Date.now();
     console.log(
@@ -439,7 +439,17 @@ class S3StructureMigration {
     console.log("=".repeat(60));
 
     try {
-      // 0. 기존 매핑 파일 삭제
+      // DB만 업데이트 모드 (S3 스킵)
+      if (dbOnly) {
+        console.log("[Migration] DB-ONLY MODE: Skipping S3 migration");
+        console.log(
+          "[Migration] Starting DB update from existing mapping file..."
+        );
+        await this.updateDBFromMappings();
+        return this.getFinalStats();
+      }
+
+      // 0. 기존 매핑 파일 삭제 (S3 재마이그레이션 시)
       try {
         await fs.unlink(this.urlMappingFile);
       } catch (e) {
@@ -454,7 +464,24 @@ class S3StructureMigration {
       this.stats.totalFiles = files.length;
 
       if (files.length === 0) {
-        console.log("[Migration] No files to migrate");
+        console.log(
+          "[Migration] No flat files to migrate (already structured)"
+        );
+
+        // S3는 완료됐지만 DB 업데이트 필요한 경우
+        if (updateDB) {
+          console.log("[Migration] Checking for existing mapping file...");
+          try {
+            await fs.access(this.urlMappingFile);
+            console.log("[Migration] Found mapping file, updating DB...");
+            await this.updateDBFromMappings();
+          } catch (e) {
+            console.log(
+              "[Migration] No mapping file found. S3 migration already complete."
+            );
+          }
+        }
+
         return this.getFinalStats();
       }
 
@@ -474,7 +501,7 @@ class S3StructureMigration {
       if (!updateDB) {
         console.log(`\n📝 URL mappings saved to: ${this.urlMappingFile}`);
         console.log(
-          `   To update DB, run: node migrate-s3-structure.js --update-db`
+          `   To update DB, run: node migrate-s3-structure.js --db-only`
         );
       }
 
@@ -568,6 +595,7 @@ async function main() {
   // 커맨드라인 옵션 파싱
   const args = process.argv.slice(2);
   const updateDB = args.includes("--update-db");
+  const dbOnly = args.includes("--db-only");
 
   try {
     console.log("\n" + "=".repeat(60));
@@ -577,18 +605,19 @@ async function main() {
       "This will reorganize values/ images into date-based subfolders"
     );
     console.log("Example: values/xxx.webp → values/2025-01/x/xxx.webp");
-    if (updateDB) {
+
+    if (dbOnly) {
       console.log(
-        "\n🔄 DB UPDATE MODE: Will update database after S3 migration"
+        "\n💾 DB-ONLY MODE: Will only update database from mapping file"
       );
+    } else if (updateDB) {
+      console.log("\n🔄 FULL MODE: S3 migration + DB update");
     } else {
-      console.log(
-        "\n📦 S3 ONLY MODE: DB update can be done later with --update-db"
-      );
+      console.log("\n📦 S3 ONLY MODE: DB update with --db-only later");
     }
     console.log("=".repeat(60) + "\n");
 
-    const stats = await migration.migrate({ updateDB });
+    const stats = await migration.migrate({ updateDB, dbOnly });
 
     console.log("\n" + "=".repeat(60));
     console.log("[Migration] Final Statistics");
@@ -598,7 +627,7 @@ async function main() {
     console.log(`Successfully Migrated: ${stats.success}`);
     console.log(`Failed: ${stats.failed}`);
     console.log(`Skipped (already structured): ${stats.skipped}`);
-    if (updateDB) {
+    if (updateDB || dbOnly) {
       console.log(`DB Updated: ${stats.dbUpdated} rows`);
     }
     console.log(`DB Cache Hit Rate: ${stats.cacheHitRate}`);
