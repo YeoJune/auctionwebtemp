@@ -362,7 +362,7 @@ class S3StructureMigration {
   }
 
   /**
-   * 매핑 파일에서 DB 업데이트
+   * 매핑 파일에서 DB 업데이트 (프로그래밍 방식 - 초고속)
    */
   async updateDBFromMappings() {
     const readline = require("readline");
@@ -372,49 +372,112 @@ class S3StructureMigration {
       // 파일 존재 확인
       await fs.access(this.urlMappingFile);
 
-      const batchSize = 500; // 100 → 500으로 증가 (더 빠름)
-      let batch = [];
-      let lineCount = 0;
+      console.log("[DB Update] Loading all items from DB...");
+      const [items] = await pool.query(
+        `SELECT id, image, additional_images FROM values_items`
+      );
+      console.log(`[DB Update] Loaded ${items.length} items`);
 
+      // URL → 새 URL 맵 생성
+      console.log("[DB Update] Loading mappings...");
+      const urlMap = new Map();
       const stream = createReadStream(this.urlMappingFile);
       const rl = readline.createInterface({ input: stream });
 
-      console.log("[DB Update] Starting batch updates...");
-
       for await (const line of rl) {
         if (!line.trim()) continue;
-
         try {
-          const mapping = JSON.parse(line);
-          batch.push(mapping);
-          lineCount++;
+          const { oldUrl, newUrl } = JSON.parse(line);
+          urlMap.set(oldUrl, newUrl);
+        } catch (e) {}
+      }
+      console.log(`[DB Update] Loaded ${urlMap.size} mappings`);
 
-          if (batch.length >= batchSize) {
-            const updated = await this.updateDBBatch(batch);
-            this.stats.dbUpdated += updated;
-            batch = [];
+      // 메모리에서 매칭
+      console.log("[DB Update] Matching in memory...");
+      const updates = [];
+      let processedCount = 0;
 
-            // 진행률 출력 (5000개마다)
-            if (lineCount % 5000 === 0) {
-              console.log(
-                `[DB Update] ${lineCount} mappings, ${this.stats.dbUpdated} rows updated`
-              );
+      for (const item of items) {
+        let changed = false;
+        let newImage = item.image;
+        let newAdditional = item.additional_images;
+
+        // image 컬럼 매칭
+        if (item.image && urlMap.has(item.image)) {
+          newImage = urlMap.get(item.image);
+          changed = true;
+        }
+
+        // additional_images 매칭
+        if (item.additional_images) {
+          try {
+            const additionalImages = JSON.parse(item.additional_images);
+            const updatedImages = additionalImages.map((url) =>
+              urlMap.has(url) ? urlMap.get(url) : url
+            );
+
+            if (
+              JSON.stringify(additionalImages) !== JSON.stringify(updatedImages)
+            ) {
+              newAdditional = JSON.stringify(updatedImages);
+              changed = true;
             }
-          }
-        } catch (error) {
-          console.error(`Failed to parse line: ${line}`, error.message);
+          } catch (e) {}
+        }
+
+        if (changed) {
+          updates.push({
+            id: item.id,
+            image: newImage,
+            additional_images: newAdditional,
+          });
+        }
+
+        processedCount++;
+        if (processedCount % 10000 === 0) {
+          console.log(
+            `[DB Update] Processed ${processedCount}/${items.length} items, ${updates.length} changes found`
+          );
         }
       }
 
-      // 남은 배치 처리
-      if (batch.length > 0) {
-        const updated = await this.updateDBBatch(batch);
-        this.stats.dbUpdated += updated;
+      console.log(`[DB Update] Found ${updates.length} items to update`);
+
+      // 배치 업데이트
+      console.log("[DB Update] Writing to DB...");
+      const batchSize = 500;
+      for (let i = 0; i < updates.length; i += batchSize) {
+        const batch = updates.slice(i, i + batchSize);
+
+        const conn = await pool.getConnection();
+        try {
+          await conn.beginTransaction();
+
+          for (const { id, image, additional_images } of batch) {
+            await conn.query(
+              `UPDATE values_items SET image = ?, additional_images = ? WHERE id = ?`,
+              [image, additional_images, id]
+            );
+          }
+
+          await conn.commit();
+          this.stats.dbUpdated += batch.length;
+        } catch (error) {
+          await conn.rollback();
+          console.error(`Batch update failed:`, error.message);
+        } finally {
+          conn.release();
+        }
+
+        if ((i + batchSize) % 5000 === 0) {
+          console.log(
+            `[DB Update] ${this.stats.dbUpdated}/${updates.length} rows updated`
+          );
+        }
       }
 
-      console.log(
-        `[DB Update] Complete: ${this.stats.dbUpdated} rows updated from ${lineCount} mappings`
-      );
+      console.log(`[DB Update] Complete: ${this.stats.dbUpdated} rows updated`);
     } catch (error) {
       if (error.code === "ENOENT") {
         console.error(`\n❌ Mapping file not found: ${this.urlMappingFile}`);
