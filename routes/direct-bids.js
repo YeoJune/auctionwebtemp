@@ -65,6 +65,7 @@ router.get("/", async (req, res) => {
           GROUP BY item_id
         ) m ON d.item_id = m.item_id AND d.current_price = m.max_price
         LEFT JOIN crawled_items i ON d.item_id = i.item_id
+        LEFT JOIN users u ON d.user_id = u.id
         WHERE 1=1
       `;
 
@@ -72,7 +73,8 @@ router.get("/", async (req, res) => {
         SELECT 
           d.*,
           i.item_id, i.original_title, i.auc_num, i.category, i.brand, i.rank,
-          i.starting_price, i.scheduled_date, i.image, i.original_scheduled_date, i.title, i.additional_info
+          i.starting_price, i.scheduled_date, i.image, i.original_scheduled_date, i.title, i.additional_info,
+          u.company_name
         FROM direct_bids d
         INNER JOIN (
           SELECT item_id, MAX(current_price) as max_price
@@ -81,6 +83,7 @@ router.get("/", async (req, res) => {
           GROUP BY item_id
         ) m ON d.item_id = m.item_id AND d.current_price = m.max_price
         LEFT JOIN crawled_items i ON d.item_id = i.item_id
+        LEFT JOIN users u ON d.user_id = u.id
         WHERE 1=1
       `;
     } else {
@@ -96,9 +99,11 @@ router.get("/", async (req, res) => {
         SELECT 
           d.*,
           i.item_id, i.original_title, i.auc_num, i.category, i.brand, i.rank,
-          i.starting_price, i.scheduled_date, i.image, i.original_scheduled_date, i.title, i.additional_info
+          i.starting_price, i.scheduled_date, i.image, i.original_scheduled_date, i.title, i.additional_info,
+          u.company_name
         FROM direct_bids d
         LEFT JOIN crawled_items i ON d.item_id = i.item_id
+        LEFT JOIN users u ON d.user_id = u.id
         WHERE 1=1
       `;
     }
@@ -220,6 +225,7 @@ router.get("/", async (req, res) => {
         id: row.id,
         item_id: row.item_id,
         user_id: row.user_id,
+        company_name: row.company_name,
         current_price: row.current_price,
         status: row.status,
         submitted_to_platform: row.submitted_to_platform,

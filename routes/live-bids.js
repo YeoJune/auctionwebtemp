@@ -127,9 +127,11 @@ router.get("/", async (req, res) => {
     SELECT 
       b.*,
       i.item_id, i.original_title, i.auc_num, i.category, i.brand, i.rank,
-      i.starting_price, i.scheduled_date, i.image, i.original_scheduled_date, i.title, i.additional_info
+      i.starting_price, i.scheduled_date, i.image, i.original_scheduled_date, i.title, i.additional_info,
+      u.company_name
     FROM live_bids b
     LEFT JOIN crawled_items i ON b.item_id = i.item_id
+    LEFT JOIN users u ON b.user_id = u.id
     WHERE ${whereClause}
   `;
 
@@ -185,6 +187,7 @@ router.get("/", async (req, res) => {
         id: row.id,
         item_id: row.item_id,
         user_id: row.user_id,
+        company_name: row.company_name,
         first_price: row.first_price,
         second_price: row.second_price,
         final_price: row.final_price,

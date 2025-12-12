@@ -591,7 +591,7 @@ class UnifiedAuctionManager {
       <tr class="live-bid-row" data-bid-type="live" data-bid-id="${bid.id}">
         <td><span class="badge badge-info">현장</span></td>
         <td>${this.renderItemInfo(bid)}</td>
-        <td>${bid.user_id}</td>
+        <td>${bid.user_id}<br>(${bid.company_name || "-"})</td>
         <td>${this.renderLiveBidPrices(bid)}</td>
         <td>${this.renderLiveStatus(bid)}</td>
         <td>
