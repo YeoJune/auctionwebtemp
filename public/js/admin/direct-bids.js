@@ -692,7 +692,7 @@ function renderDirectBidsTable(directBids) {
       </div>
     </td>
     <td>
-     <div>${bid.user_id}</div>
+     <div>${bid.user_id}<br>(${bid.company_name || "-"})</div>
    </td>
    <td>
      <div>현지가: ${formatCurrency(bid.current_price, "JPY")}</div>

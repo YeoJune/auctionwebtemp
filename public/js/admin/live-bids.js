@@ -597,7 +597,7 @@ function renderLiveBidsTable(liveBids) {
       </div>
     </td>
     <td>
-      <div>${bid.user_id}</div>
+      <div>${bid.user_id}<br>(${bid.company_name || "-"})</div>
     </td>
     <td>
       <div>현지가: ${formatCurrency(bid.first_price, "JPY")}</div>
