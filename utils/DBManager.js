@@ -283,23 +283,23 @@ class DatabaseManager {
             `${localFilesInUse.size} unique local images in use`
         );
 
-        // 파일 시스템에서 이미지 정리
-        const files = await fs.readdir(IMAGE_DIR);
+        // 파일 시스템에서 이미지 정리 (재귀적으로 하위 폴더 포함)
+        const allFiles = await this.getAllFilesRecursive(IMAGE_DIR);
         console.log(
-          `[Cleanup] Scanning ${files.length} files in filesystem...`
+          `[Cleanup] Scanning ${allFiles.length} files in filesystem (including subfolders)...`
         );
 
         let deletedCount = 0;
 
-        for (let i = 0; i < files.length; i += batchSize) {
-          const batch = files.slice(i, i + batchSize);
+        for (let i = 0; i < allFiles.length; i += batchSize) {
+          const batch = allFiles.slice(i, i + batchSize);
 
           const results = await Promise.all(
-            batch.map(async (file) => {
-              const filePath = path.join(IMAGE_DIR, file);
+            batch.map(async (filePath) => {
+              const fileName = path.basename(filePath);
 
               // DB에 없는 파일만 삭제
-              if (!localFilesInUse.has(file)) {
+              if (!localFilesInUse.has(fileName)) {
                 try {
                   await fs.unlink(filePath);
                   return true;
@@ -318,12 +318,15 @@ class DatabaseManager {
           deletedCount += results.filter((r) => r).length;
 
           // 진행률 표시
-          if ((i + batchSize) % 1000 === 0 || i + batchSize >= files.length) {
+          if (
+            (i + batchSize) % 1000 === 0 ||
+            i + batchSize >= allFiles.length
+          ) {
             console.log(
               `[Cleanup] File cleanup progress: ${Math.min(
                 i + batchSize,
-                files.length
-              )}/${files.length}, ` + `deleted: ${deletedCount}`
+                allFiles.length
+              )}/${allFiles.length}, ` + `deleted: ${deletedCount}`
             );
           }
         }
@@ -494,6 +497,32 @@ class DatabaseManager {
         }
       }
     }
+  }
+
+  /**
+   * 재귀적으로 모든 파일 경로 가져오기 (하위 폴더 포함)
+   */
+  async getAllFilesRecursive(dir) {
+    const files = [];
+
+    try {
+      const entries = await fs.readdir(dir, { withFileTypes: true });
+
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+
+        if (entry.isDirectory()) {
+          const subFiles = await this.getAllFilesRecursive(fullPath);
+          files.push(...subFiles);
+        } else {
+          files.push(fullPath);
+        }
+      }
+    } catch (error) {
+      console.error(`Error reading directory ${dir}:`, error);
+    }
+
+    return files;
   }
 
   async cleanupOldValueItems(daysThreshold = 90, batchSize = 500) {

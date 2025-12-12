@@ -29,6 +29,34 @@ const CROP_SETTINGS = {
   brand: { cropTop: 12, cropBottom: 12, cropLeft: 0, cropRight: 0 },
 };
 
+/**
+ * 이미지 하위 폴더 경로 생성
+ * @param {string} scheduledDate - 아이템의 scheduled_date
+ * @param {string} fileName - 파일명
+ * @returns {string} 하위 폴더 경로 (예: "2025-01/a")
+ */
+function getImageSubFolder(scheduledDate, fileName) {
+  let yearMonth;
+
+  if (scheduledDate) {
+    try {
+      const date = new Date(scheduledDate);
+      if (!isNaN(date.getTime())) {
+        yearMonth = date.toISOString().slice(0, 7); // "2025-01"
+      }
+    } catch (e) {
+      yearMonth = "legacy";
+    }
+  }
+
+  if (!yearMonth) {
+    yearMonth = "legacy";
+  }
+
+  const firstChar = fileName.charAt(0).toLowerCase();
+  return `${yearMonth}/${firstChar}`;
+}
+
 // 우선순위별 이미지 처리 큐 및 상태
 const queues = Array(PRIORITY_LEVELS)
   .fill()
@@ -53,7 +81,12 @@ function initializeProxy() {
 }
 
 // 이미지 다운로드 및 저장 (프록시 로테이션 적용)
-async function downloadAndSaveImage(url, folderName, cropType = null) {
+async function downloadAndSaveImage(
+  url,
+  folderName,
+  cropType = null,
+  scheduledDate = null
+) {
   // folderName 검증 및 기본값 설정
   if (!folderName || typeof folderName !== "string") {
     console.warn(`Invalid folderName: ${folderName}, using default 'products'`);
@@ -62,17 +95,34 @@ async function downloadAndSaveImage(url, folderName, cropType = null) {
 
   initializeProxy();
 
-  const IMAGE_DIR = path.join(__dirname, "..", "public", "images", folderName);
-
-  // 폴더가 없으면 생성
-  if (!fs.existsSync(IMAGE_DIR)) {
-    fs.mkdirSync(IMAGE_DIR, { recursive: true });
-  }
-
   const dateString = new Date()
     .toISOString()
     .replaceAll(":", "-")
     .split(".")[0];
+
+  const fileName = `${dateString}_${uuidv4()}${
+    cropType ? `_${cropType}` : ""
+  }.webp`;
+
+  // 하위 폴더 구조 생성 (values 폴더만)
+  let subFolder = "";
+  if (folderName === "values") {
+    subFolder = getImageSubFolder(scheduledDate, fileName);
+  }
+
+  const IMAGE_DIR = path.join(
+    __dirname,
+    "..",
+    "public",
+    "images",
+    folderName,
+    subFolder
+  );
+
+  // 폴더가 없으면 생성 (하위 폴더 포함)
+  if (!fs.existsSync(IMAGE_DIR)) {
+    fs.mkdirSync(IMAGE_DIR, { recursive: true });
+  }
 
   // 모든 클라이언트 시도
   for (let attempt = 0; attempt < clients.length; attempt++) {
@@ -87,9 +137,6 @@ async function downloadAndSaveImage(url, folderName, cropType = null) {
         responseType: "arraybuffer",
       });
 
-      const fileName = `${dateString}_${uuidv4()}${
-        cropType ? `_${cropType}` : ""
-      }.webp`;
       const filePath = path.join(IMAGE_DIR, fileName);
 
       const metadata = await sharp(response.data).metadata();
@@ -144,7 +191,11 @@ async function downloadAndSaveImage(url, folderName, cropType = null) {
         currentDelay = Math.max(INITIAL_DELAY, currentDelay * 0.9); // 10%씩 감소
       }
 
-      return `/images/${folderName}/${fileName}`;
+      // 반환 경로 (하위 폴더 포함)
+      const relativePath = subFolder
+        ? `${folderName}/${subFolder}/${fileName}`
+        : `${folderName}/${fileName}`;
+      return `/images/${relativePath}`;
     } catch (error) {
       console.error(
         `${client.name} 이미지 다운로드 실패: ${url}`,
@@ -237,7 +288,14 @@ async function processQueue() {
 
 // 개별 큐 항목 처리 (folderName을 task에서 가져옴)
 async function processQueueItem(task, priority) {
-  const { url, resolve, attempt = 0, cropType, folderName } = task;
+  const {
+    url,
+    resolve,
+    attempt = 0,
+    cropType,
+    folderName,
+    scheduledDate,
+  } = task;
 
   // folderName 검증
   if (!folderName) {
@@ -254,7 +312,12 @@ async function processQueueItem(task, priority) {
   }
 
   // 이미지 다운로드 시도
-  const result = await downloadAndSaveImage(url, folderName, cropType);
+  const result = await downloadAndSaveImage(
+    url,
+    folderName,
+    cropType,
+    scheduledDate
+  );
 
   // 결과 처리
   if (typeof result === "string") {
@@ -263,7 +326,14 @@ async function processQueueItem(task, priority) {
   } else if (result === 404) {
     // 404 오류는 딱 한 번만 재시도
     if (attempt === 0) {
-      queues[priority].push({ url, resolve, attempt: 1, cropType, folderName });
+      queues[priority].push({
+        url,
+        resolve,
+        attempt: 1,
+        cropType,
+        folderName,
+        scheduledDate,
+      });
     } else {
       console.warn(`404 error after retry for ${url} in folder ${folderName}`);
       resolve(null);
@@ -277,6 +347,7 @@ async function processQueueItem(task, priority) {
         attempt: attempt + 1,
         cropType,
         folderName,
+        scheduledDate,
       });
     } else {
       console.error(
@@ -288,7 +359,13 @@ async function processQueueItem(task, priority) {
 }
 
 // 큐에 항목 추가 (folderName을 task에 포함)
-function enqueueImage(url, folderName, priority = 2, cropType = null) {
+function enqueueImage(
+  url,
+  folderName,
+  priority = 2,
+  cropType = null,
+  scheduledDate = null
+) {
   // 파라미터 검증
   if (!url || typeof url !== "string") {
     console.error(`Invalid url: ${url}`);
@@ -308,11 +385,12 @@ function enqueueImage(url, folderName, priority = 2, cropType = null) {
       url,
       resolve,
       cropType,
-      folderName, // ← folderName을 task에 포함
+      folderName,
+      scheduledDate, // ← scheduledDate 추가
     });
 
     if (!isProcessing && !processingPaused) {
-      processQueue(); // ← folderName 파라미터 제거
+      processQueue();
     }
   });
 }
@@ -362,14 +440,19 @@ async function processImagesInChunks(
   // 개별 아이템 처리 함수
   const processItem = async (item) => {
     const tasks = [];
+    const scheduledDate = item.scheduled_date || null; // ← scheduled_date 추출
 
     if (item.image) {
       tasks.push(
-        enqueueImage(item.image, folderName, priority, cropType).then(
-          (savedPath) => {
-            item.image = savedPath;
-          }
-        )
+        enqueueImage(
+          item.image,
+          folderName,
+          priority,
+          cropType,
+          scheduledDate
+        ).then((savedPath) => {
+          item.image = savedPath;
+        })
       );
     }
 
@@ -380,13 +463,17 @@ async function processImagesInChunks(
 
         additionalImages.forEach((imgUrl) => {
           tasks.push(
-            enqueueImage(imgUrl, folderName, priority, cropType).then(
-              (savedPath) => {
-                if (savedPath) {
-                  savedImages.push(savedPath);
-                }
+            enqueueImage(
+              imgUrl,
+              folderName,
+              priority,
+              cropType,
+              scheduledDate
+            ).then((savedPath) => {
+              if (savedPath) {
+                savedImages.push(savedPath);
               }
-            )
+            })
           );
         });
 

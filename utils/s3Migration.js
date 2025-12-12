@@ -16,7 +16,7 @@ class ValuesImageMigration {
 
     this.bucketName = process.env.S3_BUCKET_NAME || "casa-images";
     this.cloudFrontDomain = process.env.CLOUDFRONT_DOMAIN;
-    this.s3Folder = "values/";
+    this.s3FolderPrefix = "values/"; // 프리픽스만 저장
     this.localDir = path.join(__dirname, "..", "public", "images", "values");
 
     // 동적 배치 크기 설정
@@ -36,6 +36,39 @@ class ValuesImageMigration {
       startTime: null,
       lastBatchTime: null,
     };
+  }
+
+  /**
+   * 이미지 하위 폴더 경로 생성
+   */
+  getImageSubFolder(scheduledDate, fileName) {
+    let yearMonth;
+
+    if (scheduledDate) {
+      try {
+        const date = new Date(scheduledDate);
+        if (!isNaN(date.getTime())) {
+          yearMonth = date.toISOString().slice(0, 7);
+        }
+      } catch (e) {
+        yearMonth = "legacy";
+      }
+    }
+
+    if (!yearMonth) {
+      yearMonth = "legacy";
+    }
+
+    const firstChar = fileName.charAt(0).toLowerCase();
+    return `${yearMonth}/${firstChar}`;
+  }
+
+  /**
+   * S3 키 생성
+   */
+  getS3Key(scheduledDate, fileName) {
+    const subFolder = this.getImageSubFolder(scheduledDate, fileName);
+    return `${this.s3FolderPrefix}${subFolder}/${fileName}`;
   }
 
   /**
@@ -213,12 +246,13 @@ class ValuesImageMigration {
 
       const updates = {};
       const uploadedFiles = [];
+      const scheduledDate = item.scheduled_date || null; // ← scheduled_date 추출
 
       // 메인 이미지 처리
       if (item.image && this.isLocalPath(item.image)) {
-        const s3Url = await this.uploadImageToS3(item.image);
+        const s3Url = await this.uploadImageToS3(item.image, scheduledDate);
         updates.image = s3Url;
-        uploadedFiles.push(path.basename(item.image));
+        uploadedFiles.push(this.getFileNameFromPath(item.image));
       }
 
       // 추가 이미지 처리
@@ -232,14 +266,14 @@ class ValuesImageMigration {
           if (localImages.length > 0) {
             // 병렬 업로드
             const s3Urls = await Promise.all(
-              localImages.map((img) => this.uploadImageToS3(img))
+              localImages.map((img) => this.uploadImageToS3(img, scheduledDate))
             );
 
             // 로컬 경로를 S3 URL로 교체
             const updatedImages = additionalImages.map((img) => {
               if (this.isLocalPath(img)) {
                 const index = localImages.indexOf(img);
-                uploadedFiles.push(path.basename(img));
+                uploadedFiles.push(this.getFileNameFromPath(img));
                 return s3Urls[index];
               }
               return img;
@@ -279,9 +313,9 @@ class ValuesImageMigration {
   /**
    * 이미지를 S3에 업로드
    */
-  async uploadImageToS3(localPath) {
-    const fileName = path.basename(localPath);
-    const filePath = path.join(this.localDir, fileName);
+  async uploadImageToS3(localPath, scheduledDate = null) {
+    const fileName = this.getFileNameFromPath(localPath);
+    const filePath = this.getLocalFilePath(localPath);
 
     // 파일 존재 확인
     try {
@@ -293,10 +327,13 @@ class ValuesImageMigration {
     // 파일 읽기
     const fileContent = await fs.readFile(filePath);
 
+    // S3 키 생성 (하위 폴더 구조 포함)
+    const s3Key = this.getS3Key(scheduledDate, fileName);
+
     // S3 업로드
     const command = new PutObjectCommand({
       Bucket: this.bucketName,
-      Key: `${this.s3Folder}${fileName}`,
+      Key: s3Key,
       Body: fileContent,
       ContentType: "image/webp",
       CacheControl: "max-age=31536000, immutable",
@@ -305,7 +342,25 @@ class ValuesImageMigration {
     await this.s3Client.send(command);
 
     // CloudFront URL 반환
-    return `https://${this.cloudFrontDomain}/${this.s3Folder}${fileName}`;
+    return `https://${this.cloudFrontDomain}/${s3Key}`;
+  }
+
+  /**
+   * 로컬 경로에서 파일명만 추출 (하위 폴더 구조 고려)
+   */
+  getFileNameFromPath(localPath) {
+    // /images/values/2025-01/a/xxx.webp → xxx.webp
+    // /images/values/xxx.webp → xxx.webp
+    return path.basename(localPath);
+  }
+
+  /**
+   * 로컬 파일 경로 생성 (하위 폴더 구조 고려)
+   */
+  getLocalFilePath(localPath) {
+    // /images/values/2025-01/a/xxx.webp 형태 처리
+    const relativePath = localPath.replace("/images/values/", "");
+    return path.join(this.localDir, relativePath);
   }
 
   /**
@@ -342,7 +397,7 @@ class ValuesImageMigration {
   async cleanupLocalFiles(successResults) {
     const filesToDelete = new Set();
 
-    // 삭제할 파일 목록 수집
+    // 삭제할 파일 경로 수집 (상대 경로)
     successResults.forEach((result) => {
       result.uploadedFiles.forEach((fileName) => {
         filesToDelete.add(fileName);
@@ -351,12 +406,15 @@ class ValuesImageMigration {
 
     let deletedCount = 0;
 
-    // 파일 삭제
+    // 파일 삭제 (하위 폴더 구조 고려)
     for (const fileName of filesToDelete) {
       try {
-        const filePath = path.join(this.localDir, fileName);
-        await fs.unlink(filePath);
-        deletedCount++;
+        // 파일 시스템에서 재귀적으로 검색
+        const filePath = await this.findLocalFile(fileName);
+        if (filePath) {
+          await fs.unlink(filePath);
+          deletedCount++;
+        }
       } catch (error) {
         // 파일이 이미 없는 경우는 무시
         if (error.code !== "ENOENT") {
@@ -372,10 +430,39 @@ class ValuesImageMigration {
   }
 
   /**
+   * 로컬 파일 시스템에서 파일 찾기 (재귀)
+   */
+  async findLocalFile(fileName) {
+    const fsPromises = require("fs").promises;
+
+    async function searchDir(dir) {
+      try {
+        const entries = await fsPromises.readdir(dir, { withFileTypes: true });
+
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry.name);
+
+          if (entry.isDirectory()) {
+            const found = await searchDir(fullPath);
+            if (found) return found;
+          } else if (entry.name === fileName) {
+            return fullPath;
+          }
+        }
+      } catch (error) {
+        // 디렉토리 접근 오류는 무시
+      }
+      return null;
+    }
+
+    return await searchDir(this.localDir);
+  }
+
+  /**
    * 로컬 경로 판별
    */
-  isLocalPath(path) {
-    return path && path.startsWith("/images/values/");
+  isLocalPath(imagePath) {
+    return imagePath && /^\/images\/values\//.test(imagePath);
   }
 
   /**
