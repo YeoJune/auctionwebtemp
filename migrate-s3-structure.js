@@ -233,7 +233,7 @@ class S3StructureMigration {
   }
 
   /**
-   * DB 배치 업데이트 (트랜잭션)
+   * DB 배치 업데이트 (트랜잭션) - 최적화
    */
   async updateDBBatch(mappings) {
     if (mappings.length === 0) return 0;
@@ -244,17 +244,31 @@ class S3StructureMigration {
     try {
       await conn.beginTransaction();
 
-      for (const { oldUrl, newUrl } of mappings) {
-        try {
-          // image 컬럼 업데이트
-          const [imageResult] = await conn.query(
-            `UPDATE values_items 
-             SET image = ? 
-             WHERE image = ?`,
-            [newUrl, oldUrl]
-          );
+      // URL 맵 생성 (old → new)
+      const urlMap = new Map(mappings.map((m) => [m.oldUrl, m.newUrl]));
+      const oldUrls = Array.from(urlMap.keys());
 
-          // additional_images JSON 업데이트
+      // CASE WHEN으로 한 번에 업데이트 (훨씬 빠름)
+      if (oldUrls.length > 0) {
+        // image 컬럼 일괄 업데이트
+        const imageCases = oldUrls.map((oldUrl) => `WHEN ? THEN ?`).join(" ");
+        const imagePlaceholders = oldUrls.flatMap((oldUrl) => [
+          oldUrl,
+          urlMap.get(oldUrl),
+        ]);
+        const imageWhereIn = oldUrls.map(() => "?").join(",");
+
+        const [imageResult] = await conn.query(
+          `UPDATE values_items 
+           SET image = CASE image ${imageCases} END
+           WHERE image IN (${imageWhereIn})`,
+          [...imagePlaceholders, ...oldUrls]
+        );
+
+        updatedCount += imageResult.affectedRows;
+
+        // additional_images 일괄 업데이트 (REPLACE)
+        for (const { oldUrl, newUrl } of mappings) {
           const [additionalResult] = await conn.query(
             `UPDATE values_items 
              SET additional_images = REPLACE(additional_images, ?, ?)
@@ -262,14 +276,9 @@ class S3StructureMigration {
             [oldUrl, newUrl, `%${oldUrl}%`]
           );
 
-          if (
-            imageResult.affectedRows > 0 ||
-            additionalResult.affectedRows > 0
-          ) {
-            updatedCount++;
+          if (additionalResult.affectedRows > 0) {
+            updatedCount += additionalResult.affectedRows;
           }
-        } catch (error) {
-          console.error(`Failed to update ${oldUrl}:`, error.message);
         }
       }
 
@@ -363,12 +372,14 @@ class S3StructureMigration {
       // 파일 존재 확인
       await fs.access(this.urlMappingFile);
 
-      const batchSize = 100;
+      const batchSize = 500; // 100 → 500으로 증가 (더 빠름)
       let batch = [];
       let lineCount = 0;
 
       const stream = createReadStream(this.urlMappingFile);
       const rl = readline.createInterface({ input: stream });
+
+      console.log("[DB Update] Starting batch updates...");
 
       for await (const line of rl) {
         if (!line.trim()) continue;
@@ -383,10 +394,10 @@ class S3StructureMigration {
             this.stats.dbUpdated += updated;
             batch = [];
 
-            // 진행률 출력 (1000개마다)
-            if (lineCount % 1000 === 0) {
+            // 진행률 출력 (5000개마다)
+            if (lineCount % 5000 === 0) {
               console.log(
-                `[DB Update] Processed ${lineCount} mappings, updated ${this.stats.dbUpdated} rows`
+                `[DB Update] ${lineCount} mappings, ${this.stats.dbUpdated} rows updated`
               );
             }
           }
@@ -401,7 +412,9 @@ class S3StructureMigration {
         this.stats.dbUpdated += updated;
       }
 
-      console.log(`[DB Update] Complete: ${this.stats.dbUpdated} rows updated`);
+      console.log(
+        `[DB Update] Complete: ${this.stats.dbUpdated} rows updated from ${lineCount} mappings`
+      );
     } catch (error) {
       if (error.code === "ENOENT") {
         console.error(`\n❌ Mapping file not found: ${this.urlMappingFile}`);
