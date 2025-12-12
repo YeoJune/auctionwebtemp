@@ -91,7 +91,7 @@ class S3StructureMigration {
 
       continuationToken = response.NextContinuationToken;
 
-      if (files.length % 10000 === 0 && files.length > 0) {
+      if (files.length % 50000 === 0 && files.length > 0) {
         console.log(`[Migration] Found ${files.length} files so far...`);
       }
     } while (continuationToken);
@@ -158,43 +158,60 @@ class S3StructureMigration {
   }
 
   /**
-   * DB 경로 업데이트
+   * DB 경로 배치 업데이트 (트랜잭션 최소화)
    */
-  async updateDBPath(oldUrl, newUrl) {
+  async updateDBPathsBatch(urlMappings) {
+    if (urlMappings.length === 0) return 0;
+
     const conn = await pool.getConnection();
+    let updatedCount = 0;
 
     try {
       await conn.beginTransaction();
 
-      // image 컬럼 업데이트
-      await conn.query(
-        `UPDATE values_items 
-         SET image = ? 
-         WHERE image = ?`,
-        [newUrl, oldUrl]
-      );
+      // 각 URL 쌍에 대해 업데이트 (하나의 트랜잭션에서)
+      for (const { oldUrl, newUrl } of urlMappings) {
+        try {
+          // image 컬럼 업데이트
+          const [imageResult] = await conn.query(
+            `UPDATE values_items 
+             SET image = ? 
+             WHERE image = ?`,
+            [newUrl, oldUrl]
+          );
 
-      // additional_images JSON 업데이트
-      await conn.query(
-        `UPDATE values_items 
-         SET additional_images = REPLACE(additional_images, ?, ?)
-         WHERE additional_images LIKE ?`,
-        [oldUrl, newUrl, `%${oldUrl}%`]
-      );
+          // additional_images JSON 업데이트
+          const [additionalResult] = await conn.query(
+            `UPDATE values_items 
+             SET additional_images = REPLACE(additional_images, ?, ?)
+             WHERE additional_images LIKE ?`,
+            [oldUrl, newUrl, `%${oldUrl}%`]
+          );
+
+          if (
+            imageResult.affectedRows > 0 ||
+            additionalResult.affectedRows > 0
+          ) {
+            updatedCount++;
+          }
+        } catch (error) {
+          console.error(`Failed to update ${oldUrl}:`, error.message);
+        }
+      }
 
       await conn.commit();
-      return true;
+      return updatedCount;
     } catch (error) {
       await conn.rollback();
-      console.error(`Failed to update DB for ${oldUrl}:`, error.message);
-      return false;
+      console.error(`Batch DB update failed:`, error.message);
+      return 0;
     } finally {
       conn.release();
     }
   }
 
   /**
-   * 단일 파일 마이그레이션
+   * 단일 파일 마이그레이션 (DB 업데이트 제외)
    */
   async migrateFile(s3Key) {
     const fileName = s3Key.replace(this.oldPrefix, "");
@@ -202,7 +219,7 @@ class S3StructureMigration {
     // 이미 하위 폴더 구조면 스킵
     if (fileName.includes("/")) {
       this.stats.skipped++;
-      return;
+      return null;
     }
 
     // DB에서 scheduled_date 조회
@@ -218,41 +235,51 @@ class S3StructureMigration {
     if (moveSuccess) {
       this.stats.success++;
 
-      // DB 경로 업데이트
-      const oldUrl = `https://${this.cloudFrontDomain}/${s3Key}`;
-      const newUrl = `https://${this.cloudFrontDomain}/${newKey}`;
-
-      const dbSuccess = await this.updateDBPath(oldUrl, newUrl);
-      if (dbSuccess) {
-        this.stats.dbUpdated++;
-      }
+      // DB 업데이트 정보 반환 (나중에 배치 처리)
+      return {
+        oldUrl: `https://${this.cloudFrontDomain}/${s3Key}`,
+        newUrl: `https://${this.cloudFrontDomain}/${newKey}`,
+      };
     } else {
       this.stats.failed++;
+      return null;
     }
   }
 
   /**
    * 배치 처리
    */
-  async migrateBatch(files, batchSize = 20) {
+  async migrateBatch(files, batchSize = 100) {
     for (let i = 0; i < files.length; i += batchSize) {
       const batch = files.slice(i, i + batchSize);
 
-      await Promise.all(batch.map((file) => this.migrateFile(file)));
+      // 1. S3 파일 이동 (병렬)
+      const results = await Promise.all(
+        batch.map((file) => this.migrateFile(file))
+      );
+
+      // 2. DB 업데이트할 URL 매핑 수집
+      const urlMappings = results.filter((r) => r !== null);
+
+      // 3. DB 배치 업데이트 (단일 트랜잭션)
+      if (urlMappings.length > 0) {
+        const dbUpdated = await this.updateDBPathsBatch(urlMappings);
+        this.stats.dbUpdated += dbUpdated;
+      }
 
       this.stats.processed += batch.length;
 
-      // 진행률 출력
+      // 진행률 출력 (1000개마다)
       if (
-        this.stats.processed % 100 === 0 ||
+        this.stats.processed % 1000 === 0 ||
         this.stats.processed === files.length
       ) {
         this.logProgress();
       }
 
-      // 서버 부하 방지 (100개마다 짧은 대기)
-      if (i % 100 === 0 && i > 0) {
-        await this.sleep(100);
+      // 서버 부하 방지 (1000개마다 대기)
+      if (i % 1000 === 0 && i > 0) {
+        await this.sleep(50);
       }
     }
   }
