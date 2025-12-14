@@ -1215,10 +1215,29 @@ const startAutoSubmitScheduler = () => {
   autoSubmitInterval = setInterval(async () => {
     const connection = await pool.getConnection();
     try {
+      // 1. starting_price와 current_price가 같은 입찰은 이미 제출된 것으로 간주하고 submitted_to_platform을 TRUE로 업데이트
+      const [updateResult] = await connection.query(
+        `UPDATE direct_bids d
+         JOIN crawled_items i ON d.item_id = i.item_id 
+         SET d.submitted_to_platform = TRUE
+         WHERE d.status = 'active' 
+         AND d.submitted_to_platform = FALSE
+         AND i.starting_price = d.current_price`
+      );
+
+      if (updateResult.affectedRows > 0) {
+        console.log(
+          `Auto-marked ${updateResult.affectedRows} bid(s) as submitted (price matched)`
+        );
+      }
+
+      // 2. starting_price와 current_price가 다른 입찰만 조회하여 재입찰
       const [unsubmittedBids] = await connection.query(
         `SELECT d.*, i.* FROM direct_bids d 
          JOIN crawled_items i ON d.item_id = i.item_id 
-         WHERE d.status = 'active' AND d.submitted_to_platform = FALSE`
+         WHERE d.status = 'active' 
+         AND d.submitted_to_platform = FALSE
+         AND i.starting_price != d.current_price`
       );
 
       for (const bid of unsubmittedBids) {
