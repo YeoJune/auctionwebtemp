@@ -1236,7 +1236,8 @@ const startAutoSubmitScheduler = () => {
         `SELECT d.*, i.* FROM direct_bids d 
          JOIN crawled_items i ON d.item_id = i.item_id 
          WHERE d.status = 'active' 
-         AND d.submitted_to_platform = FALSE`
+         AND d.submitted_to_platform = FALSE
+         AND i.starting_price != d.current_price`
       );
 
       for (const bid of unsubmittedBids) {
