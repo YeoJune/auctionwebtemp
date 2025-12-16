@@ -143,6 +143,10 @@ router.get("/", async (req, res) => {
     const conditions = ["ci.is_enabled = 1", "ci.auc_num != 3"]; // 기본 조건: 활성화된 아이템만
     const queryParams = [];
 
+    if (!userId) {
+      conditions.push("ci.auc_num != 1"); // 비로그인 시 1번 경매 제외
+    }
+
     // 4. 추천 점수 필터
     if (minRecommend && parseInt(minRecommend) > 0) {
       conditions.push("ci.recommend >= ?");
