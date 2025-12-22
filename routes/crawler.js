@@ -171,9 +171,6 @@ async function crawlAll() {
         );
       });
 
-      // TEMP: MekikiAuc는 기존 아이템 무시
-      existingIdsByAuction[4] = new Set();
-
       isCrawling = true;
 
       // 활성화된 모든 경매사 크롤링 (직렬)
