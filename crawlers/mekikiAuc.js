@@ -384,8 +384,6 @@ class MekikiAucCrawler extends AxiosCrawler {
       const boxNo = item.box_no || "";
       const brandName = await translator.translate(item.brand?.name || "");
       item.brandTrans = brandName; // 번역된 브랜드명 저장
-
-      const title = brandName;
       const originalTitle = `${boxId}-${boxNo} ${brandName}`;
       const original_scheduled_date = this.extractDate(item.end_datetime);
       const scheduled_date = this.getPreviousDayAt18(original_scheduled_date);
@@ -394,7 +392,7 @@ class MekikiAucCrawler extends AxiosCrawler {
       const startingPrice = item.current_price || 0;
       const image = item.thumbnails?.[0] || item.images?.[0] || null;
       const additionalImages = item.images || [];
-      const description = await this.buildDescription(item);
+      const { description, title } = await this.buildDescriptionTitle(item);
       const accessoryCode = subcategoryName;
 
       return {
@@ -422,9 +420,11 @@ class MekikiAucCrawler extends AxiosCrawler {
   }
 
   // Description 생성
-  async buildDescription(item) {
+  async buildDescriptionTitle(item) {
     const getValue = (val) => val || "-";
+    const comment = await translator.translate(item.comment || "-");
     const model = await translator.translate(item.model1 || "-");
+    const model2 = await translator.translate(item.model2 || "-");
     const line = await translator.translate(item.line || "-");
     const material = await translator.translate(item.material || "-");
     const color = await translator.translate(item.color || "-");
@@ -432,9 +432,15 @@ class MekikiAucCrawler extends AxiosCrawler {
     const accessoryNote = await translator.translate(
       item.accessory_note || "-"
     );
+    const size = await translator.translate(item.size || "-");
     const detail = await translator.translate(item.detail || "-");
 
+    const title = `${getValue(item.category?.name?.en)} ${getValue(
+      item.brandTrans
+    )} ${model} ${model2} ${serialNumber} ${size}`;
+
     const parts = [
+      `Comment: ${comment}`,
       `Category: ${getValue(item.category?.name?.en)}`,
       `Subcategory: ${getValue(item.subcategory?.name?.en)}`,
       `Brand: ${getValue(item.brandTrans)}`,
@@ -449,12 +455,12 @@ class MekikiAucCrawler extends AxiosCrawler {
       `Color: ${color}`,
       `Serial Number: ${serialNumber}`,
       `Accessory Note: ${accessoryNote}`,
-      `Size: ${getValue(item.size)}`,
+      `Size: ${size}`,
       `Quantity: ${getValue(item.quantity)}`,
       `Detail: ${detail}`,
     ];
 
-    return parts.join(", ");
+    return { description: parts.join(", "), title: title };
   }
 
   // Live Bid
@@ -1023,7 +1029,6 @@ class MekikiAucValueCrawler extends AxiosCrawler {
       const brandName = await translator.translate(item.brand?.name || "");
       item.brandTrans = brandName;
 
-      const title = brandName;
       const originalTitle = `${boxId}-${boxNo} ${brandName}`;
       const scheduledDate = this.extractDate(event.end_datetime);
       const category = this.config.categoryTable[item.category?.id] || "기타";
@@ -1031,7 +1036,7 @@ class MekikiAucValueCrawler extends AxiosCrawler {
       const finalPrice = item.current_price || 0; // 종료된 경매의 최종 가격
       const image = item.thumbnails?.[0] || item.images?.[0] || null;
       const additionalImages = item.images || [];
-      const description = await this.buildDescription(item);
+      const { description, title } = await this.buildDescriptionTitle(item);
       const accessoryCode = subcategoryName;
 
       return {
@@ -1057,9 +1062,11 @@ class MekikiAucValueCrawler extends AxiosCrawler {
   }
 
   // Description 생성
-  async buildDescription(item) {
+  async buildDescriptionTitle(item) {
     const getValue = (val) => val || "-";
+    const comment = await translator.translate(item.comment || "-");
     const model = await translator.translate(item.model1 || "-");
+    const model2 = await translator.translate(item.model2 || "-");
     const line = await translator.translate(item.line || "-");
     const material = await translator.translate(item.material || "-");
     const color = await translator.translate(item.color || "-");
@@ -1067,9 +1074,15 @@ class MekikiAucValueCrawler extends AxiosCrawler {
     const accessoryNote = await translator.translate(
       item.accessory_note || "-"
     );
+    const size = await translator.translate(item.size || "-");
     const detail = await translator.translate(item.detail || "-");
 
+    const title = `${getValue(item.category?.name?.en)} ${getValue(
+      item.brandTrans
+    )} ${model} ${model2} ${serialNumber} ${size}`;
+
     const parts = [
+      `Comment: ${comment}`,
       `Category: ${getValue(item.category?.name?.en)}`,
       `Subcategory: ${getValue(item.subcategory?.name?.en)}`,
       `Brand: ${getValue(item.brandTrans)}`,
@@ -1084,12 +1097,12 @@ class MekikiAucValueCrawler extends AxiosCrawler {
       `Color: ${color}`,
       `Serial Number: ${serialNumber}`,
       `Accessory Note: ${accessoryNote}`,
-      `Size: ${getValue(item.size)}`,
+      `Size: ${size}`,
       `Quantity: ${getValue(item.quantity)}`,
       `Detail: ${detail}`,
     ];
 
-    return parts.join(", ");
+    return { description: parts.join(", "), title: title };
   }
 
   // 상세 정보 크롤링 (fallback용)
