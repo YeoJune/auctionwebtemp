@@ -143,7 +143,7 @@ router.get("/", async (req, res) => {
     const conditions = ["ci.is_enabled = 1", "ci.auc_num != 3"]; // 기본 조건: 활성화된 아이템만
     const queryParams = [];
 
-    if (userId != "admin") {
+    if (userId) {
       conditions.push("ci.auc_num != 1"); // 비로그인 시 1번 경매 제외
     }
 
@@ -291,7 +291,7 @@ router.get("/", async (req, res) => {
     }
 
     const sortDirection = sortOrder.toLowerCase() === "desc" ? "DESC" : "ASC";
-    finalQuery += ` ORDER BY ${orderByClause} ${sortDirection}, ci.auc_num DESC`;
+    finalQuery += ` ORDER BY ${orderByClause} ${sortDirection}`;
 
     // 11. 카운트 쿼리 (LIMIT 전에)
     const countQuery = `SELECT COUNT(*) as total FROM (${finalQuery}) as subquery`;
