@@ -11,6 +11,7 @@ const { pool, sessionPool } = require("./utils/DB");
 const fs = require("fs");
 const { isAuthenticated } = require("./utils/middleware");
 const { startExpiredSchedulers } = require("./utils/dataUtils");
+const esManager = require("./utils/elasticsearch");
 
 // --- 사이트맵 라우트 ---
 const sitemapRoutes = require("./routes/sitemap");
@@ -441,12 +442,122 @@ app.use((err, req, res, next) => {
   }
 });
 
+// ===== Elasticsearch 초기화 함수 =====
+async function initializeElasticsearch() {
+  try {
+    console.log("🔍 Initializing Elasticsearch...");
+
+    // 1. ES 연결
+    const connected = await esManager.connect();
+
+    if (!connected) {
+      console.log(
+        "⚠️  Elasticsearch unavailable - search will use DB LIKE fallback"
+      );
+      return;
+    }
+
+    // 2. crawled_items 인덱스 설정
+    esManager.registerIndex("crawled_items", {
+      settings: {
+        number_of_shards: 1,
+        number_of_replicas: 0,
+        analysis: {
+          analyzer: {
+            autocomplete: {
+              type: "custom",
+              tokenizer: "standard",
+              filter: ["lowercase", "asciifolding"],
+            },
+          },
+        },
+      },
+      mappings: {
+        properties: {
+          item_id: { type: "keyword" },
+          title: {
+            type: "text",
+            analyzer: "autocomplete",
+            fields: {
+              keyword: { type: "keyword" },
+            },
+          },
+          brand: {
+            type: "text",
+            fields: {
+              keyword: { type: "keyword" },
+            },
+          },
+          category: { type: "keyword" },
+          auc_num: { type: "keyword" },
+          scheduled_date: { type: "date" },
+        },
+      },
+    });
+
+    // 3. values_items 인덱스 설정
+    esManager.registerIndex("values_items", {
+      settings: {
+        number_of_shards: 1,
+        number_of_replicas: 0,
+        analysis: {
+          analyzer: {
+            autocomplete: {
+              type: "custom",
+              tokenizer: "standard",
+              filter: ["lowercase", "asciifolding"],
+            },
+          },
+        },
+      },
+      mappings: {
+        properties: {
+          item_id: { type: "keyword" },
+          title: {
+            type: "text",
+            analyzer: "autocomplete",
+            fields: {
+              keyword: { type: "keyword" },
+            },
+          },
+          brand: {
+            type: "text",
+            fields: {
+              keyword: { type: "keyword" },
+            },
+          },
+          category: { type: "keyword" },
+          auc_num: { type: "keyword" },
+          scheduled_date: { type: "date" },
+        },
+      },
+    });
+
+    // 4. 인덱스 생성 (이미 있으면 스킵)
+    await esManager.createIndex("crawled_items");
+    await esManager.createIndex("values_items");
+
+    console.log("✓ Elasticsearch initialization complete");
+  } catch (error) {
+    console.error("✗ Elasticsearch initialization failed:", error.message);
+    console.log("→ Server will continue with DB LIKE search fallback");
+  }
+}
+
 metricsModule.setupMetricsJobs();
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server is running on port ${PORT}`);
-  console.log(`Frontend URL for QR/Links: ${process.env.FRONTEND_URL}`);
 
-  // 만료 상태 자동 동기화 시작 (Direct: 1분, Live: 1시간)
-  startExpiredSchedulers();
-});
+// 비동기 초기화 후 서버 시작
+(async () => {
+  // ES 초기화 (병렬로 실행, 실패해도 서버는 시작)
+  await initializeElasticsearch();
+
+  // 서버 시작
+  server.listen(PORT, "0.0.0.0", () => {
+    console.log(`✓ Server is running on port ${PORT}`);
+    console.log(`✓ Frontend URL for QR/Links: ${process.env.FRONTEND_URL}`);
+
+    // 만료 상태 자동 동기화 시작
+    startExpiredSchedulers();
+  });
+})();

@@ -553,7 +553,7 @@ class BrandAucCrawler extends AxiosCrawler {
 
     let image =
       item?.photoUrl || item?.photoAlbumUrl || item?.photoZoomUrl || null;
-    image = image ? image.replace(/(brand_img\/)(\d+)/, "$16") : null;
+    image = image ? image.replace(/(brand_img\/)(\d+)/, "$17") : null;
 
     return {
       item_id: item.uketsukeBng,
@@ -618,7 +618,7 @@ class BrandAucCrawler extends AxiosCrawler {
       // 이미지 URL 목록 처리
       const images = [...detail.fileList, ...detail.fileListAdmin] || [];
       const formattedImages = images.map((url) =>
-        url.replace(/(brand_img\/)(\d+)/, "$16")
+        url.replace(/(brand_img\/)(\d+)/, "$17")
       );
 
       // 상품 상태 메모 처리
@@ -1676,7 +1676,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
 
     let image =
       item?.photoUrl || item?.photoAlbumUrl || item?.photoZoomUrl || null;
-    image = image ? image.replace(/(brand_img\/)(\d+)/, "$16") : null;
+    image = image ? image.replace(/(brand_img\/)(\d+)/, "$17") : null;
 
     return {
       item_id: item.uketsukeBng,
@@ -1733,7 +1733,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
       // 이미지 URL 목록 처리
       const images = [...detail.fileList, ...detail.fileListAdmin] || [];
       const formattedImages = images.map((url) =>
-        url.replace(/(brand_img\/)(\d+)/, "$16")
+        url.replace(/(brand_img\/)(\d+)/, "$17")
       );
 
       // 상품 상태 메모 처리

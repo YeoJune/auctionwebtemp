@@ -39,15 +39,15 @@ function renderHeader(currentPage = "") {
         items: [
           {
             text: "즐겨찾기 ①",
-            href: "/productPage?selectedFavoriteNumbers=1",
+            href: "/productPage?selectedFavoriteNumbers=1&excludeExpired=false",
           },
           {
             text: "즐겨찾기 ②",
-            href: "/productPage?selectedFavoriteNumbers=2",
+            href: "/productPage?selectedFavoriteNumbers=2&excludeExpired=false",
           },
           {
             text: "즐겨찾기 ③",
-            href: "/productPage?selectedFavoriteNumbers=3",
+            href: "/productPage?selectedFavoriteNumbers=3&excludeExpired=false",
           },
         ],
       },
@@ -143,7 +143,7 @@ function renderHeader(currentPage = "") {
         icon: "fas fa-star",
         text: "즐겨찾기",
         page: "favorites",
-        href: "/productPage?selectedFavoriteNumbers=1,2,3",
+        href: "/productPage?selectedFavoriteNumbers=1,2,3&excludeExpired=false",
       },
       {
         type: "button",
