@@ -97,46 +97,52 @@ router.get("/", async (req, res) => {
 
     // 검색 조건 - Elasticsearch 사용
     if (search && search.trim()) {
-      try {
-        // Elasticsearch로 검색
-        const filters = {};
+      // ES가 활성화되어 있으면 ES 사용, 아니면 LIKE 사용
+      if (esManager.isHealthy()) {
+        try {
+          const filters = {};
+          if (brands) filters.brand = brands.split(",");
+          if (categories) filters.category = categories.split(",");
+          if (aucNums) filters.auc_num = aucNums.split(",");
 
-        // 기존 필터들을 ES 필터로 변환
-        if (brands) filters.brand = brands.split(",");
-        if (categories) filters.category = categories.split(",");
-        if (aucNums) filters.auc_num = aucNums.split(",");
+          const itemIds = await esManager.search(
+            "values_items",
+            search.trim(),
+            filters,
+            {
+              fields: ["title^2", "brand"],
+              fuzziness: "AUTO",
+              operator: "and",
+              size: 5000,
+            }
+          );
 
-        const itemIds = await esManager.search(
-          "values_items", // 인덱스 이름
-          search.trim(),
-          filters,
-          {
-            fields: ["title^2", "brand"],
-            fuzziness: "AUTO",
-            operator: "and",
-            size: 5000,
+          if (itemIds.length > 0) {
+            conditions.push(`item_id IN (${itemIds.map(() => "?").join(",")})`);
+            queryParams.push(...itemIds);
+          } else {
+            return res.json({
+              data: [],
+              page: parseInt(page),
+              limit: parseInt(limit),
+              totalItems: 0,
+              totalPages: 0,
+            });
           }
-        );
-
-        if (itemIds.length > 0) {
-          conditions.push(`item_id IN (${itemIds.map(() => "?").join(",")})`);
-          queryParams.push(...itemIds);
-        } else {
-          // 검색 결과 없음
-          return res.json({
-            data: [],
-            page: parseInt(page),
-            limit: parseInt(limit),
-            totalItems: 0,
-            totalPages: 0,
+        } catch (esError) {
+          console.error(
+            "ES search failed, using DB LIKE fallback:",
+            esError.message
+          );
+          const searchTerms = search.trim().split(/\s+/);
+          const searchConditions = searchTerms.map(() => "title LIKE ?");
+          conditions.push(`(${searchConditions.join(" AND ")})`);
+          searchTerms.forEach((term) => {
+            queryParams.push(`%${term}%`);
           });
         }
-      } catch (esError) {
-        // ES 실패 시 기존 LIKE 검색으로 폴백
-        console.error(
-          "ES search failed, using DB LIKE fallback:",
-          esError.message
-        );
+      } else {
+        // ES 비활성화 시 LIKE 검색 사용
         const searchTerms = search.trim().split(/\s+/);
         const searchConditions = searchTerms.map(() => "title LIKE ?");
         conditions.push(`(${searchConditions.join(" AND ")})`);
@@ -146,15 +152,15 @@ router.get("/", async (req, res) => {
       }
     }
 
-    // 등급 필터 - 검색이 없을 때만 적용
-    if ((!search || !search.trim()) && ranks) {
+    // 등급 필터 (검색 여부와 무관하게 적용)
+    if (ranks) {
       const rankList = ranks.split(",");
       conditions.push(`rank IN (${rankList.map(() => "?").join(",")})`);
       queryParams.push(...rankList);
     }
 
-    // 브랜드 필터 - 검색이 없을 때만 적용
-    if ((!search || !search.trim()) && brands) {
+    // 브랜드 필터 (검색 여부와 무관하게 적용)
+    if (brands) {
       const brandList = brands.split(",");
       if (brandList.length > 0) {
         conditions.push(`brand IN (${brandList.map(() => "?").join(",")})`);
