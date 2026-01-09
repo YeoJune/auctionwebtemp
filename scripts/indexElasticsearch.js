@@ -4,7 +4,7 @@ const { pool } = require("../utils/DB");
 const esManager = require("../utils/elasticsearch");
 
 // 배치 크기 설정
-const BATCH_SIZE = 1000;
+const BATCH_SIZE = 10000;
 
 async function indexInBatches(tableName, items) {
   let totalIndexed = 0;
