@@ -3,6 +3,35 @@ require("dotenv").config();
 const { pool } = require("../utils/DB");
 const esManager = require("../utils/elasticsearch");
 
+// 배치 크기 설정
+const BATCH_SIZE = 1000;
+
+async function indexInBatches(tableName, items) {
+  let totalIndexed = 0;
+  let totalErrors = 0;
+
+  for (let i = 0; i < items.length; i += BATCH_SIZE) {
+    const batch = items.slice(i, i + BATCH_SIZE);
+    const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+    const totalBatches = Math.ceil(items.length / BATCH_SIZE);
+
+    console.log(
+      `  Processing batch ${batchNum}/${totalBatches} (${batch.length} items)...`
+    );
+
+    const result = await esManager.bulkIndex(tableName, batch);
+    totalIndexed += result.indexed;
+    totalErrors += result.errors;
+
+    // 배치 간 짧은 대기 (ES 부하 방지)
+    if (i + BATCH_SIZE < items.length) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  }
+
+  return { indexed: totalIndexed, errors: totalErrors };
+}
+
 async function indexAllData() {
   try {
     console.log("Starting initial indexing...");
@@ -15,7 +44,7 @@ async function indexAllData() {
     }
 
     // crawled_items 인덱싱
-    console.log("Indexing crawled_items...");
+    console.log("\n📦 Indexing crawled_items...");
     const [crawledItems] = await pool.query(`
       SELECT 
         item_id, title, brand, category, 
@@ -25,7 +54,8 @@ async function indexAllData() {
     `);
 
     if (crawledItems.length > 0) {
-      const result = await esManager.bulkIndex("crawled_items", crawledItems);
+      console.log(`Found ${crawledItems.length} items to index`);
+      const result = await indexInBatches("crawled_items", crawledItems);
       console.log(
         `✓ Indexed ${result.indexed} crawled_items (errors: ${result.errors})`
       );
@@ -34,7 +64,7 @@ async function indexAllData() {
     }
 
     // values_items 인덱싱
-    console.log("Indexing values_items...");
+    console.log("\n📦 Indexing values_items...");
     const [valuesItems] = await pool.query(`
       SELECT 
         item_id, title, brand, category, 
@@ -44,7 +74,8 @@ async function indexAllData() {
     `);
 
     if (valuesItems.length > 0) {
-      const result = await esManager.bulkIndex("values_items", valuesItems);
+      console.log(`Found ${valuesItems.length} items to index`);
+      const result = await indexInBatches("values_items", valuesItems);
       console.log(
         `✓ Indexed ${result.indexed} values_items (errors: ${result.errors})`
       );
@@ -52,7 +83,7 @@ async function indexAllData() {
       console.log("No values_items to index");
     }
 
-    console.log("✓ Initial indexing complete!");
+    console.log("\n✓ Initial indexing complete!");
     process.exit(0);
   } catch (error) {
     console.error("✗ Indexing failed:", error);
