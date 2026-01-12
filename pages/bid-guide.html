@@ -1039,6 +1039,12 @@
           gap: 8px !important;
         }
 
+        /* 이모지 간격 유지 - 모바일에서도 gap: 16px 유지 */
+        .mobile-auction-item-content div[style*="gap: 16px"] {
+          gap: 16px !important;
+          flex-wrap: nowrap !important;
+        }
+
         .mobile-auction-item-content div[style*="justify-content: center"] {
           flex-wrap: wrap !important;
         }
@@ -1330,6 +1336,14 @@
           flex-wrap: wrap !important;
           gap: 8px !important;
         }
+
+        /* 이모지 간격 유지 - gap: 16px 유지 */
+        .comparison-table td div[style*="gap: 16px"],
+        .modal-body div[style*="gap: 16px"],
+        .mobile-auction-item-content div[style*="gap: 16px"] {
+          gap: 16px !important;
+          flex-wrap: nowrap !important;
+        }
       }
 
       @media (max-width: 480px) {
@@ -1361,7 +1375,8 @@
       <div class="section-container">
         <h1 class="section-title">두 가지 경매 방식의 핵심 차이</h1>
         <p class="section-subtitle">
-          경매는 보증금 한도 내에서 입찰 가능합니다
+          경매 참여는 보증금 한도 내에서 가능합니다<br />현장경매는 3차입찰
+          아이템만 한도에 적용됩니다.
         </p>
 
         <!-- 핵심 차이점 비교 -->
@@ -1466,12 +1481,13 @@
                   <div style="color: var(--text)">3단계 협상 과정</div>
                   <div
                     style="
-                      color: var(--text);
-                      opacity: 0.7;
+                      color: #e11d48;
+                      font-weight: 600;
                       font-size: 13px;
                       margin-top: 4px;
                     ">
-                    1차 신청 → 2차 제안 → 3차 최종입찰
+                    1차 신청 → 2차 제안(데이터 기반 참고가) → 3차 최종입찰(회원
+                    판단)
                   </div>
                   <!-- 현장경매 예시 이미지 -->
                   <div
@@ -1503,12 +1519,11 @@
                         ">
                         <div
                           style="
-                            font-size: 15px;
-                            color: #64748b;
-                            font-weight: 500;
-                            margin-bottom: 6px;
+                            font-size: 20px;
+                            color: #09090b;
+                            font-weight: 700;
                           ">
-                          고객님의 최종 3차입찰
+                          3차입찰 50,000¥
                         </div>
                       </div>
 
@@ -1524,9 +1539,10 @@
                         <div
                           style="
                             display: flex;
-                            justify-content: space-between;
+                            justify-content: center;
                             align-items: center;
                             width: 100%;
+                            gap: 16px;
                             position: relative;
                           ">
                           <div
@@ -1534,6 +1550,7 @@
                               display: flex;
                               flex-direction: column;
                               align-items: center;
+                              flex: 0 0 auto;
                             ">
                             <div
                               style="
@@ -1599,10 +1616,6 @@
 
                           <div
                             style="
-                              position: absolute;
-                              top: 50%;
-                              left: 50%;
-                              transform: translate(-50%, -50%);
                               background: #059669;
                               color: white;
                               font-size: 15px;
@@ -1610,7 +1623,8 @@
                               padding: 6px 10px;
                               border-radius: 18px;
                               box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
-                              z-index: 10;
+                              flex-shrink: 0;
+                              white-space: nowrap;
                             ">
                             +1,000¥
                           </div>
@@ -1620,6 +1634,7 @@
                               display: flex;
                               flex-direction: column;
                               align-items: center;
+                              flex: 0 0 auto;
                             ">
                             <div
                               style="
@@ -1713,18 +1728,19 @@
                           ">
                           41,000¥
                         </div>
-                      </div>
-                      <div
-                        style="
-                          margin-top: 12px;
-                          text-align: center;
-                          color: var(--text);
-                          font-size: 13px;
-                          line-height: 1.5;
-                          padding: 0 8px;
-                        ">
-                        50,000¥으로 3차 입찰을 넣으셔도 실시간으로 진행되는
-                        경매이다보니 더 낮은 금액에 낙찰될 수 있습니다
+                        <div
+                          style="
+                            margin-top: 12px;
+                            text-align: center;
+                            color: white;
+                            font-size: 13px;
+                            line-height: 1.5;
+                            padding: 0 8px;
+                            opacity: 0.95;
+                          ">
+                          50,000¥으로 3차 입찰을 넣으셔도 실시간으로 진행되는
+                          경매이다보니 더 낮은 금액에 낙찰될 수 있습니다
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1906,12 +1922,12 @@
                   <div style="color: var(--text)">3단계 협상 과정</div>
                   <div
                     style="
-                      color: var(--text);
-                      opacity: 0.7;
+                      color: #e11d48;
+                      font-weight: 600;
                       font-size: 13px;
                       margin-top: 4px;
                     ">
-                    1차 신청 → 2차 제안 → 3차 최종입찰
+                    1차 신청 → 2차 제안(참고용) → 3차 최종결정
                   </div>
                   <!-- 현장경매 예시 이미지 -->
                   <div
@@ -1945,12 +1961,11 @@
                         ">
                         <div
                           style="
-                            font-size: 15px;
-                            color: #64748b;
-                            font-weight: 500;
-                            margin-bottom: 6px;
+                            font-size: 20px;
+                            color: #09090b;
+                            font-weight: 700;
                           ">
-                          고객님의 최종 3차입찰
+                          3차입찰 50,000¥
                         </div>
                       </div>
 
@@ -1966,9 +1981,10 @@
                         <div
                           style="
                             display: flex;
-                            justify-content: space-between;
+                            justify-content: center;
                             align-items: center;
                             width: 100%;
+                            gap: 16px;
                             position: relative;
                           ">
                           <div
@@ -1976,6 +1992,7 @@
                               display: flex;
                               flex-direction: column;
                               align-items: center;
+                              flex: 0 0 auto;
                             ">
                             <div
                               style="
@@ -2041,10 +2058,6 @@
 
                           <div
                             style="
-                              position: absolute;
-                              top: 50%;
-                              left: 50%;
-                              transform: translate(-50%, -50%);
                               background: #059669;
                               color: white;
                               font-size: 15px;
@@ -2052,7 +2065,8 @@
                               padding: 6px 10px;
                               border-radius: 18px;
                               box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
-                              z-index: 10;
+                              flex-shrink: 0;
+                              white-space: nowrap;
                             ">
                             +1,000¥
                           </div>
@@ -2062,6 +2076,7 @@
                               display: flex;
                               flex-direction: column;
                               align-items: center;
+                              flex: 0 0 auto;
                             ">
                             <div
                               style="
@@ -2155,18 +2170,19 @@
                           ">
                           41,000¥
                         </div>
-                      </div>
-                      <div
-                        style="
-                          margin-top: 12px;
-                          text-align: center;
-                          color: var(--text);
-                          font-size: 13px;
-                          line-height: 1.5;
-                          padding: 0 8px;
-                        ">
-                        50,000¥으로 3차 입찰을 넣으셔도 실시간으로 진행되는
-                        경매이다보니 더 낮은 금액에 낙찰될 수 있습니다
+                        <div
+                          style="
+                            margin-top: 12px;
+                            text-align: center;
+                            color: white;
+                            font-size: 13px;
+                            line-height: 1.5;
+                            padding: 0 8px;
+                            opacity: 0.95;
+                          ">
+                          50,000¥으로 3차 입찰을 넣으셔도 실시간으로 진행되는
+                          경매이다보니 더 낮은 금액에 낙찰될 수 있습니다
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -2236,11 +2252,29 @@
                     <span class="negotiation-step-number">2</span>
                     <span class="negotiation-step-label">제안</span>
                   </div>
-                  <div class="negotiation-step-content">
-                    경매 담당자가 예측 낙찰금액 제안
+                  <div
+                    class="negotiation-step-content"
+                    style="color: #e11d48; font-weight: 700">
+                    2차 제안금액 (필독!)
                   </div>
-                  <div class="negotiation-step-detail">
-                    (낙찰 데이터·상태·구성품·경쟁도 기반)
+                  <div
+                    class="negotiation-step-detail"
+                    style="
+                      opacity: 1;
+                      color: var(--text);
+                      margin-top: 12px;
+                      padding: 12px;
+                      background: #fff1f2;
+                      border-radius: 8px;
+                      text-align: left;
+                    ">
+                    담당자들이
+                    <strong
+                      >하루 2,000개 이상의 아이템을 시세분석 후 제안</strong
+                    >해 드립니다. 시장 조사 및 이력을 참고하지만 상황에 따라
+                    높게 책정될 수 있으므로, 반드시
+                    <strong>회원님 본인도 시세 파악 후 참고용</strong>으로만
+                    활용하시기 바랍니다.
                   </div>
                 </div>
                 <div class="negotiation-step">
@@ -2249,7 +2283,13 @@
                     <span class="negotiation-step-label">최종입찰</span>
                   </div>
                   <div class="negotiation-step-content">
-                    제안금액 참고 후 지불 가능한 최대금액 입력
+                    <strong>2차 제안금액을 참고</strong>하여 지불 가능한
+                    최대금액 입력
+                  </div>
+                  <div class="negotiation-step-detail" style="margin-top: 10px">
+                    회원님은 제안받은 금액을 <strong>'단순 참고'</strong>만 하여
+                    최종 입찰 여부를 결정합니다. 시세와 비교하여 본인이 판단한
+                    적정가로 입찰하시기 바랍니다.
                   </div>
                   <div class="negotiation-step-note">
                     ※ 입력한 최대금액보다 낮은 금액에 낙찰받을수도 있습니다
@@ -2282,13 +2322,8 @@
                       text-align: center;
                     ">
                     <div
-                      style="
-                        font-size: 15px;
-                        color: #64748b;
-                        font-weight: 500;
-                        margin-bottom: 6px;
-                      ">
-                      고객님의 최종 3차입찰
+                      style="font-size: 20px; color: #09090b; font-weight: 700">
+                      3차입찰 50,000¥
                     </div>
                   </div>
 
@@ -2304,9 +2339,10 @@
                     <div
                       style="
                         display: flex;
-                        justify-content: space-between;
+                        justify-content: center;
                         align-items: center;
                         width: 100%;
+                        gap: 16px;
                         position: relative;
                       ">
                       <div
@@ -2314,6 +2350,7 @@
                           display: flex;
                           flex-direction: column;
                           align-items: center;
+                          flex: 0 0 auto;
                         ">
                         <div
                           style="
@@ -2336,29 +2373,33 @@
                             border-radius: 50%;
                             margin: 6px 0;
                             position: relative;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
                           ">
                           <div
                             style="
-                              position: absolute;
-                              top: 11px;
-                              left: 50%;
-                              transform: translateX(-50%);
-                              width: 12px;
-                              height: 12px;
-                              background: #94a3b8;
-                              border-radius: 50%;
-                            "></div>
-                          <div
-                            style="
-                              position: absolute;
-                              top: 23px;
-                              left: 50%;
-                              transform: translateX(-50%);
-                              width: 20px;
-                              height: 16px;
-                              background: #94a3b8;
-                              border-radius: 10px 10px 20px 20px;
-                            "></div>
+                              display: flex;
+                              flex-direction: column;
+                              align-items: center;
+                              justify-content: center;
+                            ">
+                            <div
+                              style="
+                                width: 12px;
+                                height: 12px;
+                                background: #94a3b8;
+                                border-radius: 50%;
+                                margin-bottom: 2px;
+                              "></div>
+                            <div
+                              style="
+                                width: 20px;
+                                height: 16px;
+                                background: #94a3b8;
+                                border-radius: 10px 10px 20px 20px;
+                              "></div>
+                          </div>
                         </div>
                         <div
                           style="
@@ -2375,10 +2416,6 @@
 
                       <div
                         style="
-                          position: absolute;
-                          top: 50%;
-                          left: 50%;
-                          transform: translate(-50%, -50%);
                           background: #059669;
                           color: white;
                           font-size: 15px;
@@ -2386,7 +2423,8 @@
                           padding: 6px 10px;
                           border-radius: 18px;
                           box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
-                          z-index: 10;
+                          flex-shrink: 0;
+                          white-space: nowrap;
                         ">
                         +1,000¥
                       </div>
@@ -2396,6 +2434,7 @@
                           display: flex;
                           flex-direction: column;
                           align-items: center;
+                          flex: 0 0 auto;
                         ">
                         <div
                           style="
@@ -2408,7 +2447,7 @@
                             font-weight: 600;
                             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
                           ">
-                          41,000¥
+                          50,000¥
                         </div>
                         <div
                           style="
@@ -2418,29 +2457,33 @@
                             border-radius: 50%;
                             margin: 6px 0;
                             position: relative;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
                           ">
                           <div
                             style="
-                              position: absolute;
-                              top: 13px;
-                              left: 50%;
-                              transform: translateX(-50%);
-                              width: 16px;
-                              height: 16px;
-                              background: white;
-                              border-radius: 50%;
-                            "></div>
-                          <div
-                            style="
-                              position: absolute;
-                              top: 30px;
-                              left: 50%;
-                              transform: translateX(-50%);
-                              width: 24px;
-                              height: 18px;
-                              background: white;
-                              border-radius: 12px 12px 24px 24px;
-                            "></div>
+                              display: flex;
+                              flex-direction: column;
+                              align-items: center;
+                              justify-content: center;
+                            ">
+                            <div
+                              style="
+                                width: 16px;
+                                height: 16px;
+                                background: white;
+                                border-radius: 50%;
+                                margin-bottom: 2px;
+                              "></div>
+                            <div
+                              style="
+                                width: 24px;
+                                height: 18px;
+                                background: white;
+                                border-radius: 12px 12px 24px 24px;
+                              "></div>
+                          </div>
                         </div>
                         <div
                           style="
@@ -2485,18 +2528,19 @@
                       ">
                       41,000¥
                     </div>
-                  </div>
-                  <div
-                    style="
-                      margin-top: 12px;
-                      text-align: center;
-                      color: var(--text);
-                      font-size: 13px;
-                      line-height: 1.5;
-                      padding: 0 8px;
-                    ">
-                    50,000¥으로 3차 입찰을 넣으셔도 실시간으로 진행되는
-                    경매이다보니 41,000¥에 낙찰될 수 있습니다
+                    <div
+                      style="
+                        margin-top: 12px;
+                        text-align: center;
+                        color: white;
+                        font-size: 13px;
+                        line-height: 1.5;
+                        padding: 0 8px;
+                        opacity: 0.95;
+                      ">
+                      50,000¥으로 3차 입찰을 넣으셔도 실시간으로 진행되는
+                      경매이다보니 더 낮은 금액에 낙찰될 수 있습니다
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2532,6 +2576,44 @@
             </div>
           </div>
 
+          <!-- 현장경매 2차 제안금액 관련 FAQ -->
+          <div class="faq-item">
+            <button class="faq-question">
+              <span style="color: #e11d48; font-weight: 700"
+                >현장경매 2차 제안금액은 꼭 따라야 하나요? (필독)</span
+              >
+              <span class="faq-toggle">+</span>
+            </button>
+            <div class="faq-answer">
+              <p>
+                <strong
+                  >아닙니다. 2차 제안금액은 말 그대로 '중요 참고용'
+                  가이드입니다.</strong
+                >
+              </p>
+              <ul>
+                <li>
+                  담당자들이
+                  <strong>하루에 2,000개가 넘는 아이템을 시세 분석 후</strong>
+                  제안해 드리고 있습니다.
+                </li>
+                <li>
+                  많은 물량을 분석하다 보니 상황에 따라
+                  <strong>금액이 낮게 또는 높게 제안될 수도 있습니다.</strong>
+                </li>
+                <li>
+                  따라서 3차 최종 입찰 시에는 반드시
+                  <strong>회원님 본인도 시세를 직접 파악</strong>하신 후, 본인이
+                  지불 가능한 적정 금액을 입력하셔야 합니다.
+                </li>
+                <li>
+                  제안금액은 낙찰 확률을 높이기 위한 참고치일 뿐이며, 최종
+                  입찰가 결정에 대한 책임은 회원님께 있습니다.
+                </li>
+              </ul>
+            </div>
+          </div>
+
           <!-- 입찰 전 확인사항 -->
           <div class="faq-item">
             <button class="faq-question">
@@ -2541,7 +2623,7 @@
             <div class="faq-answer">
               <ul>
                 <li>PC 사용을 권장합니다 (모바일은 렉 발생 가능)</li>
-                <li>하루 최대 입찰은 보증금 한도 내에서만 가능합니다</li>
+                <li>하루 최대 입찰은 보증금 한도만큼 입찰 가능합니다</li>
                 <li>
                   입찰 전 상품 상태와 구성품을 상세히 확인하세요 (확인 하지 않고
                   입찰시 취소,환불 불가)
@@ -2582,8 +2664,12 @@
             <div class="faq-answer">
               <ul>
                 <li>
-                  상품 실시간 표시 금액: 상품가 + 관부가세 + 배송비 +
-                  출품사수수료 (모든 부대비용 포함)
+                  실시간 표시 금액: 출품사 수수료, 해외 배송비, 국내 배송비,
+                  관부가세 모두 포함된 금액입니다
+                </li>
+                <li>
+                  까사트레이드 수수료: 입찰결과 페이지에서 그 날 경매 총합 가격
+                  기준으로 수수료 안내됩니다
                 </li>
                 <li>
                   최종 결제: 실시간 표시 금액 + 까사트레이드 수수료 + 감정서
