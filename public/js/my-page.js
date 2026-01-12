@@ -131,8 +131,21 @@ class MyPageManager {
     try {
       let statusParam;
       switch (this.bidProductsState.status) {
+        case "first":
+          // 현장경매: 1차 입찰
+          statusParam = "first";
+          break;
+        case "second":
+          // 현장경매: 2차 입찰
+          statusParam = "second";
+          break;
+        case "final":
+          // 현장경매: 최종 입찰
+          statusParam = "final";
+          break;
         case "active":
-          statusParam = this.bidProductsCore.STATUS_GROUPS.ACTIVE.join(",");
+          // 직접경매: 입찰 진행중
+          statusParam = "active";
           break;
         case "higher-bid":
           statusParam = "cancelled";
@@ -1099,6 +1112,9 @@ class MyPageManager {
 
   // 상태 필터 UI 업데이트
   updateBidItemsStatusFilterUI() {
+    const activeWrapper = document.getElementById(
+      "bidItems-status-active-wrapper"
+    );
     const higherBidWrapper = document.getElementById(
       "bidItems-status-higher-bid-wrapper"
     );
@@ -1113,7 +1129,8 @@ class MyPageManager {
     );
 
     if (this.bidProductsState.bidType === "direct") {
-      // 직접 경매: 더 높은 입찰 존재 표시
+      // 직접 경매: 입찰 진행중, 더 높은 입찰 존재 표시
+      if (activeWrapper) activeWrapper.style.display = "block";
       if (higherBidWrapper) higherBidWrapper.style.display = "block";
       if (firstWrapper) firstWrapper.style.display = "none";
       if (secondWrapper) secondWrapper.style.display = "none";
@@ -1127,13 +1144,14 @@ class MyPageManager {
       }
     } else {
       // 현장 경매: 1차/2차/최종 입찰 표시
+      if (activeWrapper) activeWrapper.style.display = "none";
       if (higherBidWrapper) higherBidWrapper.style.display = "none";
       if (firstWrapper) firstWrapper.style.display = "block";
       if (secondWrapper) secondWrapper.style.display = "block";
       if (finalWrapper) finalWrapper.style.display = "block";
 
-      // 현재 선택이 higher-bid면 all로 변경
-      if (this.bidProductsState.status === "higher-bid") {
+      // 현재 선택이 active/higher-bid면 all로 변경
+      if (["active", "higher-bid"].includes(this.bidProductsState.status)) {
         this.bidProductsState.status = "all";
         const allRadio = document.getElementById("bidItems-status-all");
         if (allRadio) allRadio.checked = true;

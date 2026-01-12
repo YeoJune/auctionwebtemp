@@ -146,18 +146,31 @@ async function fetchProducts() {
     // 상태 파라미터 준비
     let statusParam;
     switch (window.state.status) {
+      case "first":
+        // 현장경매: 1차 입찰
+        statusParam = "first";
+        break;
+      case "second":
+        // 현장경매: 2차 입찰
+        statusParam = "second";
+        break;
+      case "final":
+        // 현장경매: 최종 입찰
+        statusParam = "final";
+        break;
       case "active":
-        statusParam = core.STATUS_GROUPS.ACTIVE.join(",");
+        // 직접경매: 입찰 진행중
+        statusParam = "active";
         break;
       case "higher-bid":
-        // 직접경매 전용: cancelled만
+        // 직접경매: cancelled만
         statusParam = "cancelled";
         break;
       case "completed":
         statusParam = core.STATUS_GROUPS.COMPLETED.join(",");
         break;
       case "cancelled":
-        // 낙찰 실패: cancelled + active/first/second/final (마감된 것 포함)
+        // 낙찰 실패: 모든 상태 (클라이언트에서 마감 여부로 필터링)
         statusParam = core.STATUS_GROUPS.ALL.join(",");
         break;
       case "all":
@@ -386,13 +399,15 @@ function handleSortChange(sortKey) {
 
 // 상태 필터 UI 업데이트 함수
 function updateStatusFilterUI() {
+  const activeWrapper = document.getElementById("status-active-wrapper");
   const higherBidWrapper = document.getElementById("status-higher-bid-wrapper");
   const firstWrapper = document.getElementById("status-first-wrapper");
   const secondWrapper = document.getElementById("status-second-wrapper");
   const finalWrapper = document.getElementById("status-final-wrapper");
 
   if (window.state.bidType === "direct") {
-    // 직접 경매: 더 높은 입찰 존재 표시
+    // 직접 경매: 입찰 진행중, 더 높은 입찰 존재 표시
+    if (activeWrapper) activeWrapper.style.display = "block";
     if (higherBidWrapper) higherBidWrapper.style.display = "block";
     if (firstWrapper) firstWrapper.style.display = "none";
     if (secondWrapper) secondWrapper.style.display = "none";
@@ -406,13 +421,14 @@ function updateStatusFilterUI() {
     }
   } else {
     // 현장 경매: 1차/2차/최종 입찰 표시
+    if (activeWrapper) activeWrapper.style.display = "none";
     if (higherBidWrapper) higherBidWrapper.style.display = "none";
     if (firstWrapper) firstWrapper.style.display = "block";
     if (secondWrapper) secondWrapper.style.display = "block";
     if (finalWrapper) finalWrapper.style.display = "block";
 
-    // 현재 선택이 higher-bid면 all로 변경
-    if (window.state.status === "higher-bid") {
+    // 현재 선택이 active/higher-bid면 all로 변경
+    if (["active", "higher-bid"].includes(window.state.status)) {
       window.state.status = "all";
       const allRadio = document.getElementById("status-all");
       if (allRadio) allRadio.checked = true;

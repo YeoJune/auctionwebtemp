@@ -99,26 +99,20 @@ window.BidProductsCore = (function () {
 
     if (product.type === "live") {
       switch (statusFilter) {
-        case "active":
-          // 입찰 진행중 (전체): 1차, 2차, 최종 중 마감되지 않은 것
-          return (
-            ["first", "second", "final"].includes(product.status) && !isExpired
-          );
-
         case "first":
-          // 1차 입찰만
+          // 1차 입찰만 (마감 안된 것)
           return product.status === "first" && !isExpired;
 
         case "second":
-          // 2차 입찰만
+          // 2차 입찰만 (마감 안된 것)
           return product.status === "second" && !isExpired;
 
         case "final":
-          // 최종 입찰만
+          // 최종 입찰만 (마감 안된 것)
           return product.status === "final" && !isExpired;
 
         case "cancelled":
-          // 낙찰 실패 (live/direct 공통):
+          // 낙찰 실패:
           // - cancelled 상태
           // - 1차/2차/최종 중 마감된 것
           return (
@@ -137,7 +131,7 @@ window.BidProductsCore = (function () {
           return true;
       }
     } else {
-      // direct - 기존 로직 유지
+      // direct
       switch (statusFilter) {
         case "active":
           return product.status === "active" && !isExpired;
