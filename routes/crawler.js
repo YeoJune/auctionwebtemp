@@ -179,7 +179,10 @@ async function reindexElasticsearch(tableName) {
     console.log(`✓ Created index: ${tableName}`);
 
     // 3. 데이터 조회
-    const whereClause = tableName === "crawled_items" ? "WHERE is_enabled = 1 AND title IS NOT NULL" : "WHERE title IS NOT NULL";
+    const whereClause =
+      tableName === "crawled_items"
+        ? "WHERE is_enabled = 1 AND title IS NOT NULL"
+        : "WHERE title IS NOT NULL";
     const [items] = await pool.query(`
       SELECT 
         item_id, title, brand, category, 
@@ -208,17 +211,24 @@ async function reindexElasticsearch(tableName) {
       totalIndexed += result.indexed;
       totalErrors += result.errors;
 
-      console.log(`  Batch ${batchNum}/${totalBatches}: indexed ${result.indexed}, errors ${result.errors}`);
+      console.log(
+        `  Batch ${batchNum}/${totalBatches}: indexed ${result.indexed}, errors ${result.errors}`
+      );
 
       // 배치 간 짧은 대기
       if (i + ES_REINDEX_BATCH_SIZE < items.length) {
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise((resolve) => setTimeout(resolve, 300));
       }
     }
 
-    console.log(`✓ Elasticsearch reindexing complete: ${totalIndexed} indexed, ${totalErrors} errors\n`);
+    console.log(
+      `✓ Elasticsearch reindexing complete: ${totalIndexed} indexed, ${totalErrors} errors\n`
+    );
   } catch (error) {
-    console.error(`✗ Elasticsearch reindexing failed for ${tableName}:`, error.message);
+    console.error(
+      `✗ Elasticsearch reindexing failed for ${tableName}:`,
+      error.message
+    );
     // 실패해도 크롤링은 계속 진행
   }
 }
@@ -277,7 +287,7 @@ async function crawlAll() {
       );
       await DBManager.cleanupUnusedImages("products");
       await syncAllData();
-      
+
       // Elasticsearch 전체 재인덱싱
       await reindexElasticsearch("crawled_items");
     } catch (error) {
@@ -486,7 +496,7 @@ async function crawlAllValues(options = {}) {
     );
 
     // Elasticsearch 전체 재인덱싱
-    await reindexElasticsearch(\"values_items\");
+    await reindexElasticsearch("values_items");
 
     return {
       settings: {
