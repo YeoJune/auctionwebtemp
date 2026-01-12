@@ -136,6 +136,26 @@
 
           <!-- 검색 툴바 (섹션별 고유 ID) -->
           <section class="search-toolbar">
+            <!-- 검색 폼 -->
+            <form id="bidItems-searchForm" class="search-form">
+              <div class="search-input-group">
+                <input
+                  type="text"
+                  id="bidItems-searchInput"
+                  placeholder="상품 ID, 제목, 추가 정보로 검색..."
+                  class="search-input" />
+                <button type="submit" class="search-button">
+                  <i class="fas fa-search"></i> 검색
+                </button>
+                <button
+                  type="button"
+                  id="bidItems-clearSearch"
+                  class="clear-button">
+                  <i class="fas fa-times"></i> 초기화
+                </button>
+              </div>
+            </form>
+
             <div class="filter-row">
               <!-- Auction Type Filter -->
               <div class="filter-section inline-filter">

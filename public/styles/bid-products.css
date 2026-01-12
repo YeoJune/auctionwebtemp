@@ -9,6 +9,63 @@
   margin-bottom: 20px;
 }
 
+/* 검색 폼 */
+.search-form {
+  margin-bottom: 20px;
+}
+
+.search-input-group {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  max-width: 800px;
+}
+
+.search-input {
+  flex: 1;
+  padding: 10px 15px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.2s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(255, 87, 34, 0.1);
+}
+
+.search-button,
+.clear-button {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  border: none;
+}
+
+.search-button {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.search-button:hover {
+  background-color: var(--primary-hover);
+}
+
+.clear-button {
+  background-color: #f5f5f5;
+  color: var(--text-primary);
+}
+
+.clear-button:hover {
+  background-color: #e0e0e0;
+}
+
 .filter-row {
   display: flex;
   align-items: center;

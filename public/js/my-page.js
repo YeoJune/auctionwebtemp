@@ -615,6 +615,10 @@ class MyPageManager {
     const dateRange = document.getElementById("bidItems-dateRange");
     if (dateRange) dateRange.value = this.bidProductsState.dateRange;
 
+    // 검색어 입력 필드
+    const searchInput = document.getElementById("bidItems-searchInput");
+    if (searchInput) searchInput.value = this.bidProductsState.keyword || "";
+
     const sortButtons = document.querySelectorAll(
       "#bid-items-section .sort-btn"
     );
@@ -834,6 +838,48 @@ class MyPageManager {
 
   // 입찰 항목 이벤트 설정
   setupBidItemsEvents() {
+    // 검색 폼
+    const searchForm = document.getElementById("bidItems-searchForm");
+    if (searchForm) {
+      searchForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (this.isTransitioning) return;
+        this.isTransitioning = true;
+
+        try {
+          const searchInput = document.getElementById("bidItems-searchInput");
+          this.bidProductsState.keyword = searchInput.value.trim();
+          this.bidProductsState.currentPage = 1;
+
+          await this.loadBidItemsData();
+          this._renderBidItemsUI();
+        } finally {
+          this.isTransitioning = false;
+        }
+      });
+    }
+
+    // 검색 초기화 버튼
+    const clearSearchBtn = document.getElementById("bidItems-clearSearch");
+    if (clearSearchBtn) {
+      clearSearchBtn.addEventListener("click", async () => {
+        if (this.isTransitioning) return;
+        this.isTransitioning = true;
+
+        try {
+          const searchInput = document.getElementById("bidItems-searchInput");
+          searchInput.value = "";
+          this.bidProductsState.keyword = "";
+          this.bidProductsState.currentPage = 1;
+
+          await this.loadBidItemsData();
+          this._renderBidItemsUI();
+        } finally {
+          this.isTransitioning = false;
+        }
+      });
+    }
+
     document
       .querySelectorAll('input[name="bidItems-bidType"]')
       .forEach((radio) => {
