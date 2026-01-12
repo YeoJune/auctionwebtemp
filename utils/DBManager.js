@@ -2,7 +2,6 @@
 const { pool } = require("./DB");
 const fs = require("fs").promises;
 const path = require("path");
-const esManager = require("./elasticsearch");
 
 class DatabaseManager {
   constructor(pool) {
@@ -730,35 +729,6 @@ class DatabaseManager {
         }
         await conn.commit();
         console.log("Items saved to database");
-
-        // Elasticsearch 인덱싱 (crawled_items와 values_items만)
-        if (tableName === "crawled_items" || tableName === "values_items") {
-          try {
-            // ES 연결 확인
-            if (!esManager.isHealthy()) {
-              console.log("ES not available, skipping indexing");
-              return;
-            }
-
-            // 인덱싱할 필드만 선택
-            const docsToIndex = validItems.map((item) => ({
-              item_id: item.item_id,
-              title: item.title,
-              brand: item.brand,
-              category: item.category,
-              auc_num: item.auc_num,
-              scheduled_date: item.scheduled_date,
-            }));
-
-            const result = await esManager.bulkIndex(tableName, docsToIndex);
-            console.log(
-              `ES indexed: ${result.indexed} items (errors: ${result.errors})`
-            );
-          } catch (esError) {
-            console.error("ES indexing failed:", esError.message);
-            // ES 실패해도 계속 진행
-          }
-        }
       });
     } catch (error) {
       if (conn) await conn.rollback();

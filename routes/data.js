@@ -193,50 +193,60 @@ router.get("/", async (req, res) => {
 
     // 7. 검색 조건 - Elasticsearch 사용
     if (search && search.trim()) {
-      try {
-        // Elasticsearch로 검색
-        const filters = {};
+      // ES가 활성화되어 있으면 ES 사용, 아니면 LIKE 사용
+      if (esManager.isHealthy()) {
+        try {
+          // Elasticsearch로 검색
+          const filters = {};
 
-        // 기존 필터들을 ES 필터로 변환
-        if (brands) filters.brand = brands.split(",");
-        if (categories) filters.category = categories.split(",");
-        if (aucNums) filters.auc_num = aucNums.split(",");
+          // 기존 필터들을 ES 필터로 변환
+          if (brands) filters.brand = brands.split(",");
+          if (categories) filters.category = categories.split(",");
+          if (aucNums) filters.auc_num = aucNums.split(",");
 
-        const itemIds = await esManager.search(
-          "crawled_items", // 인덱스 이름
-          search.trim(),
-          filters,
-          {
-            fields: ["title^2", "brand"], // title에 가중치 2배
-            fuzziness: "AUTO",
-            operator: "and",
-            size: 5000,
-          }
-        );
-
-        if (itemIds.length > 0) {
-          // ES 결과를 SQL IN 절로 변환
-          conditions.push(
-            `ci.item_id IN (${itemIds.map(() => "?").join(",")})`
+          const itemIds = await esManager.search(
+            "crawled_items",
+            search.trim(),
+            filters,
+            {
+              fields: ["title^2", "brand"],
+              fuzziness: "AUTO",
+              operator: "and",
+              size: 5000,
+            }
           );
-          queryParams.push(...itemIds);
-        } else {
-          // 검색 결과 없음
-          return res.json({
-            data: [],
-            wishlist: [],
-            page: parseInt(page),
-            limit: parseInt(limit),
-            totalItems: 0,
-            totalPages: 0,
+
+          if (itemIds.length > 0) {
+            conditions.push(
+              `ci.item_id IN (${itemIds.map(() => "?").join(",")})`
+            );
+            queryParams.push(...itemIds);
+          } else {
+            return res.json({
+              data: [],
+              wishlist: [],
+              page: parseInt(page),
+              limit: parseInt(limit),
+              totalItems: 0,
+              totalPages: 0,
+            });
+          }
+        } catch (esError) {
+          console.error(
+            "ES search failed, using DB LIKE fallback:",
+            esError.message
+          );
+          const searchTerms = search.trim().split(/\s+/);
+          const searchConditions = searchTerms
+            .map(() => "ci.title LIKE ?")
+            .join(" AND ");
+          conditions.push(`(${searchConditions})`);
+          searchTerms.forEach((term) => {
+            queryParams.push(`%${term}%`);
           });
         }
-      } catch (esError) {
-        // ES 실패 시 기존 LIKE 검색으로 폴백
-        console.error(
-          "ES search failed, using DB LIKE fallback:",
-          esError.message
-        );
+      } else {
+        // ES 비활성화 시 LIKE 검색 사용
         const searchTerms = search.trim().split(/\s+/);
         const searchConditions = searchTerms
           .map(() => "ci.title LIKE ?")
@@ -248,61 +258,53 @@ router.get("/", async (req, res) => {
       }
     }
 
-    // 8. 사용자 선택 필터들 - 검색이 없을 때만 적용
-    if (!search || !search.trim()) {
-      if (brands) {
-        const brandList = brands.split(",");
-        conditions.push(`ci.brand IN (${brandList.map(() => "?").join(",")})`);
-        queryParams.push(...brandList);
-      }
-
-      if (categories) {
-        const categoryList = categories.split(",");
-        conditions.push(
-          `ci.category IN (${categoryList.map(() => "?").join(",")})`
-        );
-        queryParams.push(...categoryList);
-      }
-    } else {
-      // 검색 시에는 이미 ES에서 필터링했으므로 스킵
+    // 8. 사용자 선택 필터들 (검색 여부와 무관하게 적용)
+    if (brands) {
+      const brandList = brands.split(",");
+      conditions.push(`ci.brand IN (${brandList.map(() => "?").join(",")})`);
+      queryParams.push(...brandList);
     }
 
-    if (!search || !search.trim()) {
-      if (scheduledDates) {
-        const dateList = scheduledDates.split(",");
-        const dateConds = [];
-        dateList.forEach((date) => {
-          if (date === "null") {
-            dateConds.push("ci.scheduled_date IS NULL");
-          } else {
-            dateConds.push(`DATE(ci.scheduled_date) = ?`);
-            queryParams.push(date);
-          }
-        });
-        conditions.push(`(${dateConds.join(" OR ")})`);
-      }
+    if (categories) {
+      const categoryList = categories.split(",");
+      conditions.push(
+        `ci.category IN (${categoryList.map(() => "?").join(",")})`
+      );
+      queryParams.push(...categoryList);
+    }
 
-      if (ranks) {
-        const rankList = ranks.split(",");
-        conditions.push(`ci.rank IN (${rankList.map(() => "?").join(",")})`);
-        queryParams.push(...rankList);
-      }
+    if (scheduledDates) {
+      const dateList = scheduledDates.split(",");
+      const dateConds = [];
+      dateList.forEach((date) => {
+        if (date === "null") {
+          dateConds.push("ci.scheduled_date IS NULL");
+        } else {
+          dateConds.push(`DATE(ci.scheduled_date) = ?`);
+          queryParams.push(date);
+        }
+      });
+      conditions.push(`(${dateConds.join(" OR ")})`);
+    }
 
-      if (auctionTypes) {
-        const auctionTypeList = auctionTypes.split(",");
-        conditions.push(
-          `ci.bid_type IN (${auctionTypeList.map(() => "?").join(",")})`
-        );
-        queryParams.push(...auctionTypeList);
-      }
+    if (ranks) {
+      const rankList = ranks.split(",");
+      conditions.push(`ci.rank IN (${rankList.map(() => "?").join(",")})`);
+      queryParams.push(...rankList);
+    }
 
-      if (aucNums) {
-        const aucNumList = aucNums.split(",");
-        conditions.push(
-          `ci.auc_num IN (${aucNumList.map(() => "?").join(",")})`
-        );
-        queryParams.push(...aucNumList);
-      }
+    if (auctionTypes) {
+      const auctionTypeList = auctionTypes.split(",");
+      conditions.push(
+        `ci.bid_type IN (${auctionTypeList.map(() => "?").join(",")})`
+      );
+      queryParams.push(...auctionTypeList);
+    }
+
+    if (aucNums) {
+      const aucNumList = aucNums.split(",");
+      conditions.push(`ci.auc_num IN (${aucNumList.map(() => "?").join(",")})`);
+      queryParams.push(...aucNumList);
     }
 
     // 9. 최종 쿼리 조립

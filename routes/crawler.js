@@ -21,8 +21,12 @@ const socketIO = require("socket.io");
 const { sendHigherBidAlerts } = require("../utils/message");
 const { ValuesImageMigration } = require("../utils/s3Migration");
 const { processImagesInChunks } = require("../utils/processImage");
+const esManager = require("../utils/elasticsearch");
 
 dotenv.config();
+
+// Elasticsearch 재인덱싱 배치 크기
+const ES_REINDEX_BATCH_SIZE = 10000;
 
 let isCrawling = false;
 let isValueCrawling = false;
@@ -152,6 +156,73 @@ async function loginAll() {
   await Promise.all(crawlers.map((crawler) => crawler.login()));
 }
 
+// Elasticsearch 전체 재인덱싱 함수
+async function reindexElasticsearch(tableName) {
+  try {
+    if (!esManager.isHealthy()) {
+      console.log("ES not available, skipping reindexing");
+      return;
+    }
+
+    console.log(`\n🔄 Starting Elasticsearch reindexing for ${tableName}...`);
+
+    // 1. 인덱스 삭제
+    try {
+      await esManager.deleteIndex(tableName);
+      console.log(`✓ Deleted index: ${tableName}`);
+    } catch (error) {
+      console.log(`→ Index ${tableName} does not exist or already deleted`);
+    }
+
+    // 2. 인덱스 재생성
+    await esManager.createIndex(tableName);
+    console.log(`✓ Created index: ${tableName}`);
+
+    // 3. 데이터 조회
+    const whereClause = tableName === "crawled_items" ? "WHERE is_enabled = 1 AND title IS NOT NULL" : "WHERE title IS NOT NULL";
+    const [items] = await pool.query(`
+      SELECT 
+        item_id, title, brand, category, 
+        auc_num, scheduled_date
+      FROM ${tableName}
+      ${whereClause}
+    `);
+
+    if (items.length === 0) {
+      console.log(`No items to index in ${tableName}`);
+      return;
+    }
+
+    console.log(`Found ${items.length} items to reindex`);
+
+    // 4. 배치로 인덱싱
+    let totalIndexed = 0;
+    let totalErrors = 0;
+
+    for (let i = 0; i < items.length; i += ES_REINDEX_BATCH_SIZE) {
+      const batch = items.slice(i, i + ES_REINDEX_BATCH_SIZE);
+      const batchNum = Math.floor(i / ES_REINDEX_BATCH_SIZE) + 1;
+      const totalBatches = Math.ceil(items.length / ES_REINDEX_BATCH_SIZE);
+
+      const result = await esManager.bulkIndex(tableName, batch);
+      totalIndexed += result.indexed;
+      totalErrors += result.errors;
+
+      console.log(`  Batch ${batchNum}/${totalBatches}: indexed ${result.indexed}, errors ${result.errors}`);
+
+      // 배치 간 짧은 대기
+      if (i + ES_REINDEX_BATCH_SIZE < items.length) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+    }
+
+    console.log(`✓ Elasticsearch reindexing complete: ${totalIndexed} indexed, ${totalErrors} errors\n`);
+  } catch (error) {
+    console.error(`✗ Elasticsearch reindexing failed for ${tableName}:`, error.message);
+    // 실패해도 크롤링은 계속 진행
+  }
+}
+
 async function crawlAll() {
   if (isCrawling) {
     throw new Error("already crawling");
@@ -206,6 +277,9 @@ async function crawlAll() {
       );
       await DBManager.cleanupUnusedImages("products");
       await syncAllData();
+      
+      // Elasticsearch 전체 재인덱싱
+      await reindexElasticsearch("crawled_items");
     } catch (error) {
       throw error;
     } finally {
@@ -410,6 +484,9 @@ async function crawlAllValues(options = {}) {
         endTime - startTime
       )}`
     );
+
+    // Elasticsearch 전체 재인덱싱
+    await reindexElasticsearch(\"values_items\");
 
     return {
       settings: {
