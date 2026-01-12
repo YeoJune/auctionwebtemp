@@ -387,11 +387,30 @@ function handleSortChange(sortKey) {
 // 상태 필터 UI 업데이트 함수
 function updateStatusFilterUI() {
   const higherBidWrapper = document.getElementById("status-higher-bid-wrapper");
+  const firstWrapper = document.getElementById("status-first-wrapper");
+  const secondWrapper = document.getElementById("status-second-wrapper");
+  const finalWrapper = document.getElementById("status-final-wrapper");
 
   if (window.state.bidType === "direct") {
+    // 직접 경매: 더 높은 입찰 존재 표시
     if (higherBidWrapper) higherBidWrapper.style.display = "block";
+    if (firstWrapper) firstWrapper.style.display = "none";
+    if (secondWrapper) secondWrapper.style.display = "none";
+    if (finalWrapper) finalWrapper.style.display = "none";
+
+    // 현재 선택이 first/second/final이면 all로 변경
+    if (["first", "second", "final"].includes(window.state.status)) {
+      window.state.status = "all";
+      const allRadio = document.getElementById("status-all");
+      if (allRadio) allRadio.checked = true;
+    }
   } else {
+    // 현장 경매: 1차/2차/최종 입찰 표시
     if (higherBidWrapper) higherBidWrapper.style.display = "none";
+    if (firstWrapper) firstWrapper.style.display = "block";
+    if (secondWrapper) secondWrapper.style.display = "block";
+    if (finalWrapper) finalWrapper.style.display = "block";
+
     // 현재 선택이 higher-bid면 all로 변경
     if (window.state.status === "higher-bid") {
       window.state.status = "all";

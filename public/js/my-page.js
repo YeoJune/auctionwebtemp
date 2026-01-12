@@ -1102,11 +1102,37 @@ class MyPageManager {
     const higherBidWrapper = document.getElementById(
       "bidItems-status-higher-bid-wrapper"
     );
+    const firstWrapper = document.getElementById(
+      "bidItems-status-first-wrapper"
+    );
+    const secondWrapper = document.getElementById(
+      "bidItems-status-second-wrapper"
+    );
+    const finalWrapper = document.getElementById(
+      "bidItems-status-final-wrapper"
+    );
 
     if (this.bidProductsState.bidType === "direct") {
+      // 직접 경매: 더 높은 입찰 존재 표시
       if (higherBidWrapper) higherBidWrapper.style.display = "block";
+      if (firstWrapper) firstWrapper.style.display = "none";
+      if (secondWrapper) secondWrapper.style.display = "none";
+      if (finalWrapper) finalWrapper.style.display = "none";
+
+      // 현재 선택이 first/second/final이면 all로 변경
+      if (["first", "second", "final"].includes(this.bidProductsState.status)) {
+        this.bidProductsState.status = "all";
+        const allRadio = document.getElementById("bidItems-status-all");
+        if (allRadio) allRadio.checked = true;
+      }
     } else {
+      // 현장 경매: 1차/2차/최종 입찰 표시
       if (higherBidWrapper) higherBidWrapper.style.display = "none";
+      if (firstWrapper) firstWrapper.style.display = "block";
+      if (secondWrapper) secondWrapper.style.display = "block";
+      if (finalWrapper) finalWrapper.style.display = "block";
+
+      // 현재 선택이 higher-bid면 all로 변경
       if (this.bidProductsState.status === "higher-bid") {
         this.bidProductsState.status = "all";
         const allRadio = document.getElementById("bidItems-status-all");
