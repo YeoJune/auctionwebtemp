@@ -108,8 +108,8 @@ window.BidProductsCore = (function () {
           return product.status === "second" && !isExpired;
 
         case "final":
-          // 최종 입찰만 (마감 안된 것)
-          return product.status === "final" && !isExpired;
+          // 최종 입찰만
+          return product.status === "final";
 
         case "cancelled":
           // 낙찰 실패:
