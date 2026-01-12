@@ -136,7 +136,7 @@ class MyPageManager {
           statusParam = "first";
           break;
         case "second":
-          // 현장경매: 2차 입찰
+          // 현장경매: 2차 제안
           statusParam = "second";
           break;
         case "final":

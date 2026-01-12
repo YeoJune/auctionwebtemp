@@ -104,7 +104,7 @@ window.BidProductsCore = (function () {
           return product.status === "first" && !isExpired;
 
         case "second":
-          // 2차 입찰만 (마감 안된 것)
+          // 2차 제안만 (마감 안된 것)
           return product.status === "second" && !isExpired;
 
         case "final":
