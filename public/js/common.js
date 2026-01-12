@@ -513,28 +513,41 @@ function setupModal(modalId) {
 
   const closeBtn = modal.querySelector(".close, .close-modal");
 
-  if (closeBtn) {
-    closeBtn.onclick = () => {
-      modal.classList.remove("modal-show");
-      modal.classList.add("modal-hide");
+  const closeModalHandler = (event) => {
+    if (event) event.stopPropagation();
 
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.has("item_id")) {
-        urlParams.delete("item_id");
-        const newUrl =
-          window.location.pathname +
-          (urlParams.toString() ? `?${urlParams}` : "");
-        window.history.replaceState({}, document.title, newUrl);
-      }
-    };
+    modal.classList.remove("modal-show");
+    modal.classList.add("modal-hide");
+
+    // ModalHistoryManager를 통해 닫기 (URL 업데이트 포함)
+    if (window.ModalHistoryManager) {
+      window.ModalHistoryManager.closeModal();
+    }
+
+    // 이미지 갤러리 정리
+    if (window.ModalImageGallery) {
+      window.ModalImageGallery.cleanup();
+    }
+  };
+
+  if (closeBtn) {
+    closeBtn.onclick = closeModalHandler;
   }
 
   window.onclick = (event) => {
     if (event.target === modal) {
-      modal.classList.remove("modal-show");
-      modal.classList.add("modal-hide");
+      closeModalHandler();
     }
   };
+
+  // ESC 키로 모달 닫기
+  const escapeHandler = (event) => {
+    if (event.key === "Escape" && modal.classList.contains("modal-show")) {
+      closeModalHandler();
+    }
+  };
+
+  document.addEventListener("keydown", escapeHandler);
 
   return {
     show: () => {
@@ -542,8 +555,7 @@ function setupModal(modalId) {
       modal.classList.add("modal-show");
     },
     hide: () => {
-      modal.classList.remove("modal-show");
-      modal.classList.add("modal-hide");
+      closeModalHandler();
     },
     element: modal,
   };
@@ -2014,6 +2026,137 @@ window.ModalImageGallery = (function () {
   };
 })();
 
+// 모달 히스토리 매니저 (URL 연동)
+window.ModalHistoryManager = (function () {
+  let isModalOpen = false;
+  let currentModalId = null;
+  let currentItemId = null;
+  let isProcessingPopState = false;
+
+  /**
+   * 모달 열기 (URL 업데이트 포함)
+   */
+  function openModal(modalId, itemId) {
+    if (isModalOpen && currentItemId === itemId) {
+      return; // 이미 같은 아이템으로 모달이 열려있으면 중복 처리 방지
+    }
+
+    const previousItemId = currentItemId;
+    isModalOpen = true;
+    currentModalId = modalId;
+    currentItemId = itemId;
+
+    // URL 업데이트
+    const url = new URL(window.location);
+    url.searchParams.set("detail", itemId);
+
+    // 모달이 이미 열려있었으면 replaceState, 아니면 pushState
+    if (previousItemId) {
+      history.replaceState({ modalOpen: true, itemId: itemId }, "", url);
+    } else {
+      history.pushState({ modalOpen: true, itemId: itemId }, "", url);
+    }
+  }
+
+  /**
+   * 모달 닫기 (URL 업데이트 포함)
+   */
+  function closeModal(skipHistoryUpdate = false) {
+    if (!isModalOpen) return;
+
+    isModalOpen = false;
+    const previousModalId = currentModalId;
+    const previousItemId = currentItemId;
+    currentModalId = null;
+    currentItemId = null;
+
+    // 모달 DOM 닫기
+    const modal = document.getElementById(previousModalId || "detailModal");
+    if (modal) {
+      modal.classList.remove("modal-show");
+      modal.classList.add("modal-hide");
+    }
+
+    // URL 업데이트 (popstate 이벤트 중에는 스킵)
+    if (!skipHistoryUpdate && !isProcessingPopState) {
+      const url = new URL(window.location);
+      if (url.searchParams.has("detail")) {
+        url.searchParams.delete("detail");
+        history.replaceState({}, "", url);
+      }
+    }
+  }
+
+  /**
+   * popstate 이벤트 핸들러
+   */
+  function handlePopState(event) {
+    isProcessingPopState = true;
+
+    const url = new URL(window.location);
+    const detailId = url.searchParams.get("detail");
+
+    if (detailId && detailId !== currentItemId) {
+      // URL에 detail 파라미터가 있으면 모달 열기
+      if (
+        window.ProductListController &&
+        window.ProductListController.showDetails
+      ) {
+        window.ProductListController.showDetails(detailId);
+      }
+    } else if (!detailId && isModalOpen) {
+      // URL에 detail 파라미터가 없으면 모달 닫기
+      closeModal(true);
+    }
+
+    setTimeout(() => {
+      isProcessingPopState = false;
+    }, 100);
+  }
+
+  /**
+   * 초기화 (페이지 로드 시 URL 확인)
+   */
+  function initialize() {
+    // popstate 이벤트 리스너 등록
+    window.addEventListener("popstate", handlePopState);
+
+    // 페이지 로드 시 URL 확인
+    const url = new URL(window.location);
+    const detailId = url.searchParams.get("detail");
+
+    if (detailId) {
+      // URL에 detail 파라미터가 있으면 모달 열기
+      setTimeout(() => {
+        if (
+          window.ProductListController &&
+          window.ProductListController.showDetails
+        ) {
+          window.ProductListController.showDetails(detailId);
+        }
+      }, 500); // 페이지 초기화를 위한 약간의 딜레이
+    }
+  }
+
+  /**
+   * 현재 상태 반환
+   */
+  function getState() {
+    return {
+      isModalOpen,
+      currentModalId,
+      currentItemId,
+    };
+  }
+
+  return {
+    openModal,
+    closeModal,
+    initialize,
+    getState,
+  };
+})();
+
 // 페이지 로드 시 초기화
 document.addEventListener("DOMContentLoaded", function () {
   // 헤더 렌더링 (페이지 정보는 main-header의 data-page 속성에서 가져옴)
@@ -2034,6 +2177,11 @@ document.addEventListener("DOMContentLoaded", function () {
   // 툴팁 시스템 초기화
   if (window.TooltipManager) {
     window.TooltipManager.init();
+  }
+
+  // 모달 히스토리 매니저 초기화
+  if (window.ModalHistoryManager) {
+    window.ModalHistoryManager.initialize();
   }
 
   console.log("Common.js 초기화 완료");

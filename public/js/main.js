@@ -867,6 +867,12 @@ window.ProductListController = (function () {
 
     initializeModal(item);
     modalManager.show();
+
+    // ModalHistoryManager를 통해 URL 업데이트
+    if (window.ModalHistoryManager) {
+      window.ModalHistoryManager.openModal("detailModal", itemId);
+    }
+
     window.ModalImageGallery.showLoading();
 
     try {
