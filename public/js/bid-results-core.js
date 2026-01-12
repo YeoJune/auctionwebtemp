@@ -314,6 +314,7 @@ window.BidResultsCore = (function () {
         ? window.API.validateImageUrl(itemImage)
         : itemImage;
       img.alt = item.item?.title || "상품 이미지";
+      img.loading = "lazy";
       img.onerror = function () {
         this.parentNode.innerHTML =
           '<div class="mobile-image-placeholder">No Image</div>';
@@ -446,6 +447,7 @@ window.BidResultsCore = (function () {
         ? window.API.validateImageUrl(itemImage)
         : itemImage;
       imageElement.alt = item.item?.title || "상품 이미지";
+      imageElement.loading = "lazy";
       imageElement.classList.add("product-thumbnail");
       imageElement.onerror = function () {
         const placeholder = createElement(
