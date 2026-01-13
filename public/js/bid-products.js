@@ -319,25 +319,40 @@ function setupEventListeners() {
 
   // 검색 폼
   const searchForm = document.getElementById("searchForm");
+  const searchInput = document.getElementById("searchInput");
+  const clearSearchBtn = document.getElementById("clearSearch");
+
+  // 검색 입력 필드 값 변화 감지
+  if (searchInput) {
+    searchInput.addEventListener("input", () => {
+      if (clearSearchBtn) {
+        clearSearchBtn.style.display = searchInput.value ? "flex" : "none";
+      }
+    });
+  }
+
+  // 검색 폼 제출
   if (searchForm) {
     searchForm.addEventListener("submit", (e) => {
       e.preventDefault();
-      const searchInput = document.getElementById("searchInput");
-      window.state.keyword = searchInput.value.trim();
-      window.state.currentPage = 1;
-      fetchProducts();
+      if (searchInput) {
+        window.state.keyword = searchInput.value.trim();
+        window.state.currentPage = 1;
+        fetchProducts();
+      }
     });
   }
 
   // 검색 초기화 버튼
-  const clearSearchBtn = document.getElementById("clearSearch");
   if (clearSearchBtn) {
     clearSearchBtn.addEventListener("click", () => {
-      const searchInput = document.getElementById("searchInput");
-      searchInput.value = "";
-      window.state.keyword = "";
-      window.state.currentPage = 1;
-      fetchProducts();
+      if (searchInput) {
+        searchInput.value = "";
+        clearSearchBtn.style.display = "none";
+        window.state.keyword = "";
+        window.state.currentPage = 1;
+        fetchProducts();
+      }
     });
   }
 

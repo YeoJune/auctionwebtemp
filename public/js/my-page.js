@@ -838,8 +838,21 @@ class MyPageManager {
 
   // 입찰 항목 이벤트 설정
   setupBidItemsEvents() {
-    // 검색 폼
+    // 검색 폼 요소들
     const searchForm = document.getElementById("bidItems-searchForm");
+    const searchInput = document.getElementById("bidItems-searchInput");
+    const clearSearchBtn = document.getElementById("bidItems-clearSearch");
+
+    // 검색 입력 필드 값 변화 감지
+    if (searchInput) {
+      searchInput.addEventListener("input", () => {
+        if (clearSearchBtn) {
+          clearSearchBtn.style.display = searchInput.value ? "flex" : "none";
+        }
+      });
+    }
+
+    // 검색 폼 제출
     if (searchForm) {
       searchForm.addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -847,12 +860,13 @@ class MyPageManager {
         this.isTransitioning = true;
 
         try {
-          const searchInput = document.getElementById("bidItems-searchInput");
-          this.bidProductsState.keyword = searchInput.value.trim();
-          this.bidProductsState.currentPage = 1;
+          if (searchInput) {
+            this.bidProductsState.keyword = searchInput.value.trim();
+            this.bidProductsState.currentPage = 1;
 
-          await this.loadBidItemsData();
-          this._renderBidItemsUI();
+            await this.loadBidItemsData();
+            this._renderBidItemsUI();
+          }
         } finally {
           this.isTransitioning = false;
         }
@@ -860,20 +874,21 @@ class MyPageManager {
     }
 
     // 검색 초기화 버튼
-    const clearSearchBtn = document.getElementById("bidItems-clearSearch");
     if (clearSearchBtn) {
       clearSearchBtn.addEventListener("click", async () => {
         if (this.isTransitioning) return;
         this.isTransitioning = true;
 
         try {
-          const searchInput = document.getElementById("bidItems-searchInput");
-          searchInput.value = "";
-          this.bidProductsState.keyword = "";
-          this.bidProductsState.currentPage = 1;
+          if (searchInput) {
+            searchInput.value = "";
+            clearSearchBtn.style.display = "none";
+            this.bidProductsState.keyword = "";
+            this.bidProductsState.currentPage = 1;
 
-          await this.loadBidItemsData();
-          this._renderBidItemsUI();
+            await this.loadBidItemsData();
+            this._renderBidItemsUI();
+          }
         } finally {
           this.isTransitioning = false;
         }

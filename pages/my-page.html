@@ -138,20 +138,19 @@
           <section class="search-toolbar">
             <!-- 검색 폼 -->
             <form id="bidItems-searchForm" class="search-form">
-              <div class="search-input-group">
+              <div class="search-input-wrapper">
+                <i class="fas fa-search search-icon"></i>
                 <input
                   type="text"
                   id="bidItems-searchInput"
-                  placeholder="제목, 상품 ID, 추가 정보로 검색..."
+                  placeholder="제목, 상품 ID, 추가 정보로 검색 (Enter)..."
                   class="search-input" />
-                <button type="submit" class="search-button">
-                  <i class="fas fa-search"></i> 검색
-                </button>
                 <button
                   type="button"
                   id="bidItems-clearSearch"
-                  class="clear-button">
-                  <i class="fas fa-times"></i> 초기화
+                  class="clear-icon-button"
+                  style="display: none">
+                  <i class="fas fa-times"></i>
                 </button>
               </div>
             </form>
