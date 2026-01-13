@@ -20,19 +20,9 @@
   width: 100%;
 }
 
-.search-icon {
-  position: absolute;
-  left: 15px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #999;
-  font-size: 16px;
-  pointer-events: none;
-}
-
 .search-input {
   width: 100%;
-  padding: 12px 45px 12px 45px;
+  padding: 12px 45px 12px 20px;
   border: 2px solid var(--border-color);
   border-radius: 25px;
   font-size: 14px;
