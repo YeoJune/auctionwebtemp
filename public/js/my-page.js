@@ -176,7 +176,7 @@ class MyPageManager {
       };
 
       if (this.bidProductsState.keyword?.trim()) {
-        params.keyword = this.bidProductsState.keyword.trim();
+        params.search = this.bidProductsState.keyword.trim();
       }
 
       const queryString = window.API.createURLParams(params);

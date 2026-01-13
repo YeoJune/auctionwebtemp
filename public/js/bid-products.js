@@ -194,7 +194,7 @@ async function fetchProducts() {
     };
 
     if (window.state.keyword?.trim()) {
-      params.keyword = window.state.keyword.trim();
+      params.search = window.state.keyword.trim();
     }
 
     const queryString = window.API.createURLParams(params);
