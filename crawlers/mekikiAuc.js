@@ -384,7 +384,6 @@ class MekikiAucCrawler extends AxiosCrawler {
       const boxNo = item.box_no || "";
       const brandName = await translator.translate(item.brand?.name || "");
       item.brandTrans = brandName; // 번역된 브랜드명 저장
-      const originalTitle = `${boxId}-${boxNo} ${brandName}`;
       const original_scheduled_date = this.extractDate(item.end_datetime);
       const scheduled_date = this.getPreviousDayAt18(original_scheduled_date);
       const category = this.config.categoryTable[item.category?.id] || "기타";
@@ -393,6 +392,7 @@ class MekikiAucCrawler extends AxiosCrawler {
       const image = item.thumbnails?.[0] || item.images?.[0] || null;
       const additionalImages = item.images || [];
       const { description, title } = await this.buildDescriptionTitle(item);
+      const originalTitle = `${boxId}-${boxNo} ${title}`;
       const accessoryCode = subcategoryName;
 
       return {
@@ -437,7 +437,9 @@ class MekikiAucCrawler extends AxiosCrawler {
 
     const title = `${getValue(item.category?.name?.en)} ${getValue(
       item.brandTrans
-    )} ${model} ${model2} ${serialNumber} ${size}`;
+    )} ${model} ${model2} ${serialNumber} ${size}`
+      .replace(" -", "")
+      .trim();
 
     const parts = [
       `Comment: ${comment}`,
@@ -1029,7 +1031,6 @@ class MekikiAucValueCrawler extends AxiosCrawler {
       const brandName = await translator.translate(item.brand?.name || "");
       item.brandTrans = brandName;
 
-      const originalTitle = `${boxId}-${boxNo} ${brandName}`;
       const scheduledDate = this.extractDate(event.end_datetime);
       const category = this.config.categoryTable[item.category?.id] || "기타";
       const rank = item.grade || "N";
@@ -1037,6 +1038,7 @@ class MekikiAucValueCrawler extends AxiosCrawler {
       const image = item.thumbnails?.[0] || item.images?.[0] || null;
       const additionalImages = item.images || [];
       const { description, title } = await this.buildDescriptionTitle(item);
+      const originalTitle = `${boxId}-${boxNo} ${title}`;
       const accessoryCode = subcategoryName;
 
       return {
@@ -1079,7 +1081,9 @@ class MekikiAucValueCrawler extends AxiosCrawler {
 
     const title = `${getValue(item.category?.name?.en)} ${getValue(
       item.brandTrans
-    )} ${model} ${model2} ${serialNumber} ${size}`;
+    )} ${model} ${model2} ${serialNumber} ${size}`
+      .replace(" -", "")
+      .trim();
 
     const parts = [
       `Comment: ${comment}`,
