@@ -84,14 +84,6 @@ function renderHeader(currentPage = "") {
       },
       {
         type: "button",
-        icon: "fas fa-comments",
-        text: "실시간 문의",
-        page: "inquiry-chat",
-        href: "http://pf.kakao.com/_xcCxoqn/chat",
-        target: "_blank",
-      },
-      {
-        type: "button",
         icon: "fas fa-user-plus",
         text: "회원가입",
         page: "inquiry",
@@ -151,14 +143,6 @@ function renderHeader(currentPage = "") {
         text: "시세표",
         page: "values",
         href: "/valuesPage",
-      },
-      {
-        type: "button",
-        icon: "fas fa-comments",
-        text: "문의",
-        page: "inquiry-chat",
-        href: "http://pf.kakao.com/_xcCxoqn/chat",
-        target: "_blank",
       },
       {
         type: "button",
@@ -231,6 +215,9 @@ function renderHeader(currentPage = "") {
           <button id="signoutBtn" class="auth-button auth-signout">로그아웃</button>
         </div>
       </div>
+      <a href="http://pf.kakao.com/_xcCxoqn/chat" target="_blank" class="fab-button" title="실시간 문의">
+        <i class="fas fa-comments"></i>
+      </a>
     `;
   } else {
     // 모바일 헤더 생성
@@ -293,6 +280,9 @@ function renderHeader(currentPage = "") {
       <div class="header-bottom">
         ${bottomNavItems}
       </div>
+      <a href="http://pf.kakao.com/_xcCxoqn/chat" target="_blank" class="fab-button" title="실시간 문의">
+        <i class="fas fa-comments"></i>
+      </a>
     `;
   }
 }

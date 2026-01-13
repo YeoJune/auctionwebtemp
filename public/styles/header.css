@@ -581,3 +581,57 @@ button.auth-button:hover {
     color: white;
   }
 }
+
+/* ===== FAB (Floating Action Button) ===== */
+.fab-button {
+  position: fixed;
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #ffcd00 0%, #ffb800 100%);
+  color: #333;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: calc(var(--z-header) + 50);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  right: 24px;
+  bottom: 24px;
+}
+
+.fab-button i {
+  font-size: 24px;
+  transition: transform 0.3s ease;
+}
+
+.fab-button:hover {
+  background: linear-gradient(135deg, #ffb800 0%, #ff9500 100%);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2), 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px) scale(1.05);
+}
+
+.fab-button:hover i {
+  transform: scale(1.1);
+}
+
+.fab-button:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 모바일: 하단바 위에 배치 */
+@media (max-width: 768px) {
+  .fab-button {
+    width: 52px;
+    height: 52px;
+    right: 16px;
+    bottom: 72px; /* 하단바(56px) + 여백(16px) */
+  }
+
+  .fab-button i {
+    font-size: 22px;
+  }
+}
