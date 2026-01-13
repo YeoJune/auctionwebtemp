@@ -217,6 +217,7 @@ function renderHeader(currentPage = "") {
       </div>
       <a href="http://pf.kakao.com/_xcCxoqn/chat" target="_blank" class="fab-button" title="실시간 문의">
         <i class="fas fa-comments"></i>
+        <span>실시간 문의</span>
       </a>
     `;
   } else {
@@ -282,6 +283,7 @@ function renderHeader(currentPage = "") {
       </div>
       <a href="http://pf.kakao.com/_xcCxoqn/chat" target="_blank" class="fab-button" title="실시간 문의">
         <i class="fas fa-comments"></i>
+        <span>실시간 문의</span>
       </a>
     `;
   }

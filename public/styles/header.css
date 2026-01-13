@@ -585,31 +585,42 @@ button.auth-button:hover {
 /* ===== FAB (Floating Action Button) ===== */
 .fab-button {
   position: fixed;
-  width: 56px;
-  height: 56px;
-  background: linear-gradient(135deg, #ffcd00 0%, #ffb800 100%);
-  color: #333;
-  border-radius: 50%;
+  width: 64px;
+  height: 64px;
+  background: var(--primary-color);
+  color: white;
+  border-radius: 32px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 48, 135, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
   z-index: calc(var(--z-header) + 50);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
-  right: 24px;
-  bottom: 24px;
+  right: 20px;
+  bottom: 20px;
+  gap: 2px;
+  padding: 8px 6px;
 }
 
 .fab-button i {
-  font-size: 24px;
+  font-size: 20px;
   transition: transform 0.3s ease;
 }
 
+.fab-button span {
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  letter-spacing: -0.3px;
+}
+
 .fab-button:hover {
-  background: linear-gradient(135deg, #ffb800 0%, #ff9500 100%);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2), 0 4px 8px rgba(0, 0, 0, 0.15);
+  background: var(--primary-hover);
+  box-shadow: 0 4px 12px rgba(0, 48, 135, 0.4), 0 2px 6px rgba(0, 0, 0, 0.25);
   transform: translateY(-2px) scale(1.05);
 }
 
@@ -619,19 +630,27 @@ button.auth-button:hover {
 
 .fab-button:active {
   transform: translateY(0) scale(0.98);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 6px rgba(0, 48, 135, 0.3);
 }
 
 /* 모바일: 하단바 위에 배치 */
 @media (max-width: 768px) {
   .fab-button {
-    width: 52px;
-    height: 52px;
+    width: 60px;
+    height: 60px;
     right: 16px;
     bottom: 72px; /* 하단바(56px) + 여백(16px) */
+    padding: 7px 5px;
   }
 
   .fab-button i {
-    font-size: 22px;
+    font-size: 18px;
+  }
+
+  .fab-button span {
+    font-size: 8.5px;
+  }
+}
+    font-size: 8.5px;
   }
 }
