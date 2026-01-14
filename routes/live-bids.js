@@ -53,9 +53,15 @@ router.get("/", async (req, res) => {
   if (search) {
     const searchTerm = `%${search}%`;
     queryConditions.push(
-      "(b.item_id LIKE ? OR i.original_title LIKE ? OR i.brand LIKE ? OR i.additional_info LIKE ?)"
+      "(b.item_id LIKE ? OR i.original_title LIKE ? OR i.brand LIKE ? OR i.additional_info LIKE ? OR b.user_id LIKE ?)"
     );
-    queryParams.push(searchTerm, searchTerm, searchTerm, searchTerm);
+    queryParams.push(
+      searchTerm,
+      searchTerm,
+      searchTerm,
+      searchTerm,
+      searchTerm
+    );
   }
 
   // Add status filter if provided
