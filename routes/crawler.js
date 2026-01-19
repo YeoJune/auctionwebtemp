@@ -45,7 +45,7 @@ class AdaptiveScheduler {
   constructor(baseInterval) {
     this.base = baseInterval;
     this.min = baseInterval;
-    this.max = baseInterval * 10;
+    this.max = baseInterval * 4;
     this.current = baseInterval * 2;
     this.noChangeCount = 0;
   }
@@ -135,7 +135,7 @@ Object.entries(AUCTION_CONFIG).forEach(([aucNum, config]) => {
     // updateWithIdInterval이 0이 아닐 때만 스케줄러 생성
     if (config.updateWithIdInterval > 0) {
       updateWithIdSchedulers[aucNum] = new AdaptiveScheduler(
-        config.updateWithIdInterval
+        config.updateWithIdInterval,
       );
       crawlingStatus.updateWithId[aucNum] = false;
     }
@@ -212,7 +212,7 @@ async function reindexElasticsearch(tableName) {
       totalErrors += result.errors;
 
       console.log(
-        `  Batch ${batchNum}/${totalBatches}: indexed ${result.indexed}, errors ${result.errors}`
+        `  Batch ${batchNum}/${totalBatches}: indexed ${result.indexed}, errors ${result.errors}`,
       );
 
       // 배치 간 짧은 대기
@@ -222,12 +222,12 @@ async function reindexElasticsearch(tableName) {
     }
 
     console.log(
-      `✓ Elasticsearch reindexing complete: ${totalIndexed} indexed, ${totalErrors} errors\n`
+      `✓ Elasticsearch reindexing complete: ${totalIndexed} indexed, ${totalErrors} errors\n`,
     );
   } catch (error) {
     console.error(
       `✗ Elasticsearch reindexing failed for ${tableName}:`,
-      error.message
+      error.message,
     );
     // 실패해도 크롤링은 계속 진행
   }
@@ -239,7 +239,7 @@ async function crawlAll() {
   } else {
     try {
       const [existingItems] = await pool.query(
-        "SELECT item_id, auc_num FROM crawled_items"
+        "SELECT item_id, auc_num FROM crawled_items",
       );
 
       // Config 기반으로 기존 아이템 ID 그룹화
@@ -248,7 +248,7 @@ async function crawlAll() {
         existingIdsByAuction[aucNum] = new Set(
           existingItems
             .filter((item) => item.auc_num == aucNum)
-            .map((item) => item.item_id)
+            .map((item) => item.item_id),
         );
       });
 
@@ -260,7 +260,7 @@ async function crawlAll() {
         if (config.enabled && config.crawler) {
           try {
             const items = await config.crawler.crawlAllItems(
-              existingIdsByAuction[aucNum]
+              existingIdsByAuction[aucNum],
             );
             if (items && items.length > 0) {
               allItems.push(...items);
@@ -275,7 +275,7 @@ async function crawlAll() {
 
       // existing 아이템 업데이트 (title 없는 아이템)
       const itemsToUpdate = allItems.filter(
-        (item) => !item.title && item.item_id
+        (item) => !item.title && item.item_id,
       );
       if (itemsToUpdate.length > 0) {
         await DBManager.updateItems(itemsToUpdate, "crawled_items");
@@ -283,7 +283,7 @@ async function crawlAll() {
 
       await DBManager.deleteItemsWithout(
         allItems.map((item) => item.item_id),
-        "crawled_items"
+        "crawled_items",
       );
       await DBManager.cleanupUnusedImages("products");
       await syncAllData();
@@ -345,7 +345,7 @@ async function crawlAllValues(options = {}) {
 
     // DB에서 기존 아이템 ID 조회
     const [existingItems] = await pool.query(
-      "SELECT item_id, auc_num FROM values_items"
+      "SELECT item_id, auc_num FROM values_items",
     );
 
     // auc_num별로 기존 아이템 ID 그룹화
@@ -353,22 +353,22 @@ async function crawlAllValues(options = {}) {
       1: new Set(
         existingItems
           .filter((item) => item.auc_num == 1)
-          .map((item) => item.item_id)
+          .map((item) => item.item_id),
       ),
       2: new Set(
         existingItems
           .filter((item) => item.auc_num == 2)
-          .map((item) => item.item_id)
+          .map((item) => item.item_id),
       ),
       3: new Set(
         existingItems
           .filter((item) => item.auc_num == 3)
-          .map((item) => item.item_id)
+          .map((item) => item.item_id),
       ),
       4: new Set(
         existingItems
           .filter((item) => item.auc_num == 4)
-          .map((item) => item.item_id)
+          .map((item) => item.item_id),
       ),
     };
 
@@ -431,14 +431,14 @@ async function crawlAllValues(options = {}) {
 
       console.log(`\n${"=".repeat(60)}`);
       console.log(
-        `Starting ${config.name} value crawler for ${config.months} months`
+        `Starting ${config.name} value crawler for ${config.months} months`,
       );
       console.log("=".repeat(60));
 
       try {
         // 1. 메타데이터 수집
         const metadata = await config.crawler.getStreamingMetadata(
-          config.months
+          config.months,
         );
         console.log(`Total chunks to process: ${metadata.totalChunks}`);
 
@@ -449,7 +449,7 @@ async function crawlAllValues(options = {}) {
         for (const chunk of metadata.chunks) {
           processedChunks++;
           console.log(
-            `\n[${processedChunks}/${metadata.totalChunks}] Processing chunk...`
+            `\n[${processedChunks}/${metadata.totalChunks}] Processing chunk...`,
           );
 
           const chunkItems = await processChunk(
@@ -461,7 +461,7 @@ async function crawlAllValues(options = {}) {
               priority: config.priority,
               cropType: config.cropType,
               tableName: "values_items",
-            }
+            },
           );
 
           totalItems += chunkItems;
@@ -469,7 +469,7 @@ async function crawlAllValues(options = {}) {
 
         results[config.name] = totalItems;
         console.log(
-          `\n${config.name} completed: ${totalItems} items processed`
+          `\n${config.name} completed: ${totalItems} items processed`,
         );
       } catch (error) {
         console.error(`${config.name} crawling failed:`, error.message);
@@ -486,13 +486,13 @@ async function crawlAllValues(options = {}) {
     const endTime = Date.now();
     const totalCount = Object.values(results).reduce(
       (sum, count) => sum + count,
-      0
+      0,
     );
 
     console.log(
       `\nValue crawling completed in ${formatExecutionTime(
-        endTime - startTime
-      )}`
+        endTime - startTime,
+      )}`,
     );
 
     // Elasticsearch 전체 재인덱싱
@@ -550,7 +550,7 @@ async function processChunk(crawler, chunk, existingIds, options) {
       items,
       folderName,
       priority,
-      cropType
+      cropType,
     );
 
     console.log(`Processed images for ${itemsWithLocalImages.length} items`);
@@ -621,7 +621,7 @@ async function crawlUpdateForAuction(aucNum) {
   crawlingStatus.update[aucNum] = true;
   const startTime = Date.now();
   console.log(
-    `[${config.name}] Starting update crawl at ${new Date().toISOString()}`
+    `[${config.name}] Starting update crawl at ${new Date().toISOString()}`,
   );
 
   try {
@@ -644,13 +644,13 @@ async function crawlUpdateForAuction(aucNum) {
     const itemIds = updates.map((item) => item.item_id);
     const [existingItems] = await pool.query(
       "SELECT item_id, scheduled_date, starting_price FROM crawled_items WHERE item_id IN (?) AND bid_type = 'direct' AND auc_num = ?",
-      [itemIds, aucNum]
+      [itemIds, aucNum],
     );
 
     // 변경된 아이템 필터링
     const changedItems = updates.filter((newItem) => {
       const existingItem = existingItems.find(
-        (item) => item.item_id === newItem.item_id
+        (item) => item.item_id === newItem.item_id,
       );
 
       if (!existingItem) {
@@ -677,7 +677,7 @@ async function crawlUpdateForAuction(aucNum) {
     // 변경된 아이템이 있으면 DB 업데이트 비동기로 실행
     if (changedItems.length > 0) {
       console.log(
-        `[${config.name}] Found ${changedItems.length} changed items`
+        `[${config.name}] Found ${changedItems.length} changed items`,
       );
       DBManager.updateItems(changedItems, "crawled_items").then(() => {
         processChangedBids(changedItems).then(() => {
@@ -689,8 +689,8 @@ async function crawlUpdateForAuction(aucNum) {
     const executionTime = Date.now() - startTime;
     console.log(
       `[${config.name}] Update crawl completed in ${formatExecutionTime(
-        executionTime
-      )}`
+        executionTime,
+      )}`,
     );
 
     return {
@@ -739,7 +739,7 @@ async function crawlUpdateWithIdForAuction(aucNum, itemIds, originalItems) {
   crawlingStatus.updateWithId[aucNum] = true;
   const startTime = Date.now();
   console.log(
-    `[${config.name}] Starting updateWithId for ${itemIds.length} items`
+    `[${config.name}] Starting updateWithId for ${itemIds.length} items`,
   );
 
   try {
@@ -776,7 +776,7 @@ async function crawlUpdateWithIdForAuction(aucNum, itemIds, originalItems) {
     // 변경된 아이템이 있으면 DB 업데이트 비동기로 실행
     if (changedItems.length > 0) {
       console.log(
-        `[${config.name}] Found ${changedItems.length} changed items`
+        `[${config.name}] Found ${changedItems.length} changed items`,
       );
       DBManager.updateItems(changedItems, "crawled_items").then(() => {
         processChangedBids(changedItems).then(() => {
@@ -788,8 +788,8 @@ async function crawlUpdateWithIdForAuction(aucNum, itemIds, originalItems) {
     const executionTime = Date.now() - startTime;
     console.log(
       `[${config.name}] UpdateWithId completed in ${formatExecutionTime(
-        executionTime
-      )}`
+        executionTime,
+      )}`,
     );
 
     return {
@@ -818,7 +818,7 @@ async function processBidsAfterCrawl() {
       `UPDATE live_bids lb
        JOIN values_items vi ON lb.item_id = vi.item_id
        SET lb.winning_price = vi.final_price
-       WHERE lb.status = 'cancelled' AND (lb.winning_price IS NULL OR lb.winning_price < vi.final_price)`
+       WHERE lb.status = 'cancelled' AND (lb.winning_price IS NULL OR lb.winning_price < vi.final_price)`,
     );
 
     // 우선 final_price로 업데이트
@@ -826,7 +826,7 @@ async function processBidsAfterCrawl() {
       `UPDATE direct_bids db
        JOIN values_items vi ON db.item_id = vi.item_id
        SET db.winning_price = vi.final_price
-       WHERE db.status = 'cancelled' AND (db.winning_price IS NULL OR db.winning_price < vi.final_price)`
+       WHERE db.status = 'cancelled' AND (db.winning_price IS NULL OR db.winning_price < vi.final_price)`,
     );
 
     // 2. final 상태이면서 final_price < vi.final_price인 입찰들 조회
@@ -834,7 +834,7 @@ async function processBidsAfterCrawl() {
       `SELECT lb.id, vi.final_price
        FROM live_bids lb
        JOIN values_items vi ON lb.item_id = vi.item_id
-       WHERE lb.status = 'final' AND lb.final_price < vi.final_price`
+       WHERE lb.status = 'final' AND lb.final_price < vi.final_price`,
     );
 
     if (bidsToCancel.length > 0) {
@@ -847,7 +847,7 @@ async function processBidsAfterCrawl() {
          JOIN values_items vi ON lb.item_id = vi.item_id
          SET lb.status = 'cancelled', lb.winning_price = vi.final_price
          WHERE lb.id IN (${placeholders})`,
-        bidIds
+        bidIds,
       );
     }
 
@@ -879,7 +879,7 @@ async function processChangedBids(changedItems) {
       "SELECT db.id, db.item_id, db.current_price, ci.starting_price " +
         "FROM direct_bids db " +
         "JOIN crawled_items ci ON db.item_id = ci.item_id " +
-        "WHERE db.current_price < ci.starting_price AND db.status = 'active'"
+        "WHERE db.current_price < ci.starting_price AND db.status = 'active'",
     );
 
     // 취소해야 할 입찰 ID 찾기
@@ -892,7 +892,7 @@ async function processChangedBids(changedItems) {
         FROM direct_bids db 
         JOIN crawled_items i ON db.item_id = i.item_id 
         WHERE db.id IN (${bidsToCancel.map(() => "?").join(",")})`,
-        bidsToCancel
+        bidsToCancel,
       );
     }
 
@@ -902,13 +902,13 @@ async function processChangedBids(changedItems) {
       if (batch.length > 0) {
         await conn.query(
           "UPDATE direct_bids SET status = 'cancelled' WHERE id IN (?) AND status = 'active'",
-          [batch]
+          [batch],
         );
 
         console.log(
           `Cancelled batch ${Math.floor(i / 100) + 1}: ${
             batch.length
-          } bids due to price changes`
+          } bids due to price changes`,
         );
       }
     }
@@ -921,7 +921,7 @@ async function processChangedBids(changedItems) {
     }
 
     console.log(
-      `Total cancelled due to price changes: ${bidsToCancel.length} bids`
+      `Total cancelled due to price changes: ${bidsToCancel.length} bids`,
     );
   } catch (error) {
     await conn.rollback();
@@ -954,7 +954,7 @@ async function crawlAllInvoices() {
               console.error(`[${config.name}] Invoice crawl failed:`, error);
               resultsByAucNum[aucNum] = [];
               return [];
-            })
+            }),
         );
       }
     });
@@ -969,7 +969,7 @@ async function crawlAllInvoices() {
     const executionTime = endTime - startTime;
 
     console.log(
-      `Invoice crawl completed in ${formatExecutionTime(executionTime)}`
+      `Invoice crawl completed in ${formatExecutionTime(executionTime)}`,
     );
 
     return {
@@ -1161,7 +1161,7 @@ const scheduleCrawling = async () => {
       {
         scheduled: true,
         timezone: "Asia/Seoul",
-      }
+      },
     );
   }
 };
@@ -1182,7 +1182,7 @@ const scheduleUpdateCrawlingForAuction = (aucNum) => {
     console.log(
       `[${config.name}] Running update crawl (interval: ${
         scheduler.getStatus().current
-      }s)`
+      }s)`,
     );
 
     try {
@@ -1192,7 +1192,7 @@ const scheduleUpdateCrawlingForAuction = (aucNum) => {
         if (result) {
           const nextInterval = scheduler.next(result.changedItemsCount);
           console.log(
-            `[${config.name}] Completed - changed: ${result.changedItemsCount}, next: ${nextInterval}s`
+            `[${config.name}] Completed - changed: ${result.changedItemsCount}, next: ${nextInterval}s`,
           );
           timeoutId = setTimeout(runUpdateCrawl, nextInterval * 1000);
         } else {
@@ -1249,7 +1249,7 @@ const scheduleUpdateCrawlingWithIdForAuction = (aucNum) => {
     console.log(
       `[${config.name}] Running updateWithId (interval: ${
         scheduler.getStatus().current
-      }s)`
+      }s)`,
     );
 
     try {
@@ -1263,7 +1263,7 @@ const scheduleUpdateCrawlingWithIdForAuction = (aucNum) => {
              AND ci.auc_num = ?
              AND db.status = 'active'
              AND ci.scheduled_date >= DATE_SUB(NOW(), INTERVAL 10 HOUR)`,
-          [aucNum]
+          [aucNum],
         );
 
         if (activeBids.length > 0) {
@@ -1280,13 +1280,13 @@ const scheduleUpdateCrawlingWithIdForAuction = (aucNum) => {
           const result = await crawlUpdateWithIdForAuction(
             aucNum,
             itemIds,
-            originalItems
+            originalItems,
           );
 
           if (result) {
             const nextInterval = scheduler.next(result.changedItemsCount);
             console.log(
-              `[${config.name}] Completed - changed: ${result.changedItemsCount}, next: ${nextInterval}s`
+              `[${config.name}] Completed - changed: ${result.changedItemsCount}, next: ${nextInterval}s`,
             );
             timeoutId = setTimeout(runUpdateCrawlWithId, nextInterval * 1000);
           } else {
