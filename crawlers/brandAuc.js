@@ -135,7 +135,7 @@ class BrandAucCrawler extends AxiosCrawler {
           validateStatus: function (status) {
             return status >= 200 && status < 400;
           },
-        }
+        },
       );
 
       // bid 로그인 페이지 가져오기
@@ -198,14 +198,14 @@ class BrandAucCrawler extends AxiosCrawler {
                 headers: {
                   Accept: "application/json",
                 },
-              }
+              },
             );
 
             const totalPages = firstPageResponse.data.totalPages;
             const totalItems = firstPageResponse.data.totalElements;
 
             console.log(
-              `Found ${totalItems} items across ${totalPages} pages for bid type: ${bidConfig.type}`
+              `Found ${totalItems} items across ${totalPages} pages for bid type: ${bidConfig.type}`,
             );
 
             // 첫 페이지 아이템 처리
@@ -213,7 +213,7 @@ class BrandAucCrawler extends AxiosCrawler {
               firstPageResponse.data.content,
               existingIds,
               bidConfig.type,
-              true
+              true,
             );
             allCrawledItems.push(...firstPageItems);
             // 나머지 페이지 병렬 처리
@@ -226,7 +226,7 @@ class BrandAucCrawler extends AxiosCrawler {
                   console.log(
                     `Crawling page ${page + 1} of ${totalPages} for bid type: ${
                       bidConfig.type
-                    }`
+                    }`,
                   );
 
                   const pageClientInfo = this.getClient();
@@ -243,7 +243,7 @@ class BrandAucCrawler extends AxiosCrawler {
                       headers: {
                         Accept: "application/json",
                       },
-                    }
+                    },
                   );
 
                   if (response.data && response.data.content) {
@@ -251,19 +251,19 @@ class BrandAucCrawler extends AxiosCrawler {
                       response.data.content,
                       existingIds,
                       bidConfig.type,
-                      true // skipImageProcessing = true
+                      true, // skipImageProcessing = true
                     );
 
                     console.log(
                       `Processed ${pageItems.length} items from page ${
                         page + 1
-                      } with ${pageClientInfo.name}`
+                      } with ${pageClientInfo.name}`,
                     );
 
                     return pageItems;
                   }
                   return [];
-                })
+                }),
               );
             }
 
@@ -279,7 +279,7 @@ class BrandAucCrawler extends AxiosCrawler {
 
             await clientInfo.cookieJar.setCookie(
               "brand_language=en",
-              "https://bid.brand-auc.com"
+              "https://bid.brand-auc.com",
             );
 
             // 경매 정보 가져오기
@@ -291,7 +291,7 @@ class BrandAucCrawler extends AxiosCrawler {
                   Referer: "https://bid.brand-auc.com/",
                   "X-Requested-With": "XMLHttpRequest",
                 },
-              }
+              },
             );
 
             // 경매 날짜 정보 저장
@@ -320,14 +320,14 @@ class BrandAucCrawler extends AxiosCrawler {
                   Referer: "https://bid.brand-auc.com/",
                   "X-Requested-With": "XMLHttpRequest",
                 },
-              }
+              },
             );
 
             const totalPages = firstPageResponse.data.totalPages;
             const totalItems = firstPageResponse.data.totalElements;
 
             console.log(
-              `Found ${totalItems} items across ${totalPages} pages for bid type: ${bidConfig.type}`
+              `Found ${totalItems} items across ${totalPages} pages for bid type: ${bidConfig.type}`,
             );
 
             // 첫 페이지 아이템 처리
@@ -335,7 +335,7 @@ class BrandAucCrawler extends AxiosCrawler {
               firstPageResponse.data.content,
               existingIds,
               bidConfig.type,
-              true
+              true,
             );
             allCrawledItems.push(...firstPageItems);
 
@@ -347,7 +347,7 @@ class BrandAucCrawler extends AxiosCrawler {
               directPagePromises.push(
                 directLimit(async () => {
                   console.log(
-                    `Crawling direct page ${page + 1} of ${totalPages}`
+                    `Crawling direct page ${page + 1} of ${totalPages}`,
                   );
 
                   const pageClientInfo = this.getClient();
@@ -367,7 +367,7 @@ class BrandAucCrawler extends AxiosCrawler {
                         Referer: "https://bid.brand-auc.com/",
                         "X-Requested-With": "XMLHttpRequest",
                       },
-                    }
+                    },
                   );
 
                   if (response.data && response.data.content) {
@@ -375,19 +375,19 @@ class BrandAucCrawler extends AxiosCrawler {
                       response.data.content,
                       existingIds,
                       bidConfig.type,
-                      true // skipImageProcessing = true
+                      true, // skipImageProcessing = true
                     );
 
                     console.log(
                       `Processed ${pageItems.length} direct items from page ${
                         page + 1
-                      } with ${pageClientInfo.name}`
+                      } with ${pageClientInfo.name}`,
                     );
 
                     return pageItems;
                   }
                   return [];
-                })
+                }),
               );
             }
 
@@ -401,7 +401,7 @@ class BrandAucCrawler extends AxiosCrawler {
         } catch (error) {
           console.error(
             `Failed to crawl bid type ${bidConfig.type}:`,
-            error.message
+            error.message,
           );
           // 해당 bid type 실패해도 다음 bid type 계속 진행
           continue;
@@ -410,14 +410,14 @@ class BrandAucCrawler extends AxiosCrawler {
 
       // 전체 이미지 일괄 처리
       console.log(
-        `Starting image processing for ${allCrawledItems.length} items...`
+        `Starting image processing for ${allCrawledItems.length} items...`,
       );
       const itemsWithImages = allCrawledItems.filter((item) => item.image);
       const finalProcessedItems = await processImagesInChunks(
         itemsWithImages,
         "products",
         3,
-        "brand"
+        "brand",
       );
 
       // 이미지가 없는 아이템들도 포함
@@ -430,8 +430,8 @@ class BrandAucCrawler extends AxiosCrawler {
       const executionTime = endTime - startTime;
       console.log(
         `Crawl operation completed in ${this.formatExecutionTime(
-          executionTime
-        )}`
+          executionTime,
+        )}`,
       );
 
       return allFinalItems;
@@ -445,7 +445,7 @@ class BrandAucCrawler extends AxiosCrawler {
     items,
     existingIds,
     bidType = "live",
-    skipImageProcessing = false
+    skipImageProcessing = false,
   ) {
     // 아이템 필터링
     const filteredItems = [];
@@ -463,7 +463,10 @@ class BrandAucCrawler extends AxiosCrawler {
       if (item.kekkaKbn && item.kekkaKbn == 5) {
         continue;
       } else if (existingIds.has(item.uketsukeBng)) {
-        filteredItems.push({ item_id: item.uketsukeBng });
+        filteredItems.push({
+          item_id: item.uketsukeBng,
+          starting_price: item.genzaiKng || item.startKng || 0,
+        });
         continue;
       }
 
@@ -481,7 +484,7 @@ class BrandAucCrawler extends AxiosCrawler {
         filteredItems,
         "products",
         3,
-        "brand"
+        "brand",
       );
     }
 
@@ -522,24 +525,24 @@ class BrandAucCrawler extends AxiosCrawler {
         } catch (error) {
           console.warn(
             `Error creating scheduled_date with seriEndHm for item ${item.uketsukeBng}:`,
-            error.message
+            error.message,
           );
           // seriEndHm 처리 실패시 기존 방식 사용
           original_scheduled_date = this.extractDate(
-            this.convertToKST(this.auctionDate)
+            this.convertToKST(this.auctionDate),
           );
         }
       } else {
         // seriEndHm이 없는 경우: 기존 방식 그대로
         original_scheduled_date = this.extractDate(
-          this.convertToKST(this.auctionDate)
+          this.convertToKST(this.auctionDate),
         );
       }
       scheduled_date = original_scheduled_date;
     } else {
       // live 타입은 아이템별 값 사용
       original_scheduled_date = this.extractDate(
-        this.convertToKST(item.kaisaiYmd)
+        this.convertToKST(item.kaisaiYmd),
       );
       scheduled_date = this.getPreviousDayAt18(original_scheduled_date);
 
@@ -618,7 +621,7 @@ class BrandAucCrawler extends AxiosCrawler {
       // 이미지 URL 목록 처리
       const images = [...detail.fileList, ...detail.fileListAdmin] || [];
       const formattedImages = images.map((url) =>
-        url.replace(/(brand_img\/)(\d+)/, "$17")
+        url.replace(/(brand_img\/)(\d+)/, "$17"),
       );
 
       // 상품 상태 메모 처리
@@ -653,7 +656,7 @@ class BrandAucCrawler extends AxiosCrawler {
     } catch (error) {
       console.error(
         `Error fetching details for item ${itemId}:`,
-        error.message
+        error.message,
       );
       return {
         additional_images: null,
@@ -677,7 +680,7 @@ class BrandAucCrawler extends AxiosCrawler {
 
       await clientInfo.cookieJar.setCookie(
         "brand_language=en",
-        "https://bid.brand-auc.com"
+        "https://bid.brand-auc.com",
       );
 
       // 경매 정보 가져오기
@@ -689,7 +692,7 @@ class BrandAucCrawler extends AxiosCrawler {
             Referer: "https://bid.brand-auc.com/",
             "X-Requested-With": "XMLHttpRequest",
           },
-        }
+        },
       );
 
       // 경매 날짜 정보 저장
@@ -723,14 +726,14 @@ class BrandAucCrawler extends AxiosCrawler {
             Referer: "https://bid.brand-auc.com/",
             "X-Requested-With": "XMLHttpRequest",
           },
-        }
+        },
       );
 
       const totalPages = firstPageResponse.data.totalPages;
       const totalItems = firstPageResponse.data.totalElements;
 
       console.log(
-        `Found ${totalItems} items across ${totalPages} pages for update crawl`
+        `Found ${totalItems} items across ${totalPages} pages for update crawl`,
       );
 
       // 현재 bid_type 설정
@@ -739,7 +742,7 @@ class BrandAucCrawler extends AxiosCrawler {
       // 첫 페이지 아이템 처리
       const firstPageItems = await this.processUpdateItemsPage(
         firstPageResponse.data.content,
-        "direct"
+        "direct",
       );
       allCrawledItems.push(...firstPageItems);
 
@@ -770,26 +773,26 @@ class BrandAucCrawler extends AxiosCrawler {
                   Referer: "https://bid.brand-auc.com/",
                   "X-Requested-With": "XMLHttpRequest",
                 },
-              }
+              },
             );
 
             if (response.data && response.data.content) {
               const pageItems = await this.processUpdateItemsPage(
                 response.data.content,
-                "direct"
+                "direct",
               );
 
               console.log(
                 `Processed ${pageItems.length} update items from page ${
                   page + 1
-                } with ${pageClientInfo.name}`
+                } with ${pageClientInfo.name}`,
               );
 
               return pageItems;
             }
             return [];
-          })
-        )
+          }),
+        ),
       );
 
       // 결과를 모두 allCrawledItems에 추가
@@ -803,8 +806,8 @@ class BrandAucCrawler extends AxiosCrawler {
       const executionTime = endTime - startTime;
       console.log(
         `Update crawl operation completed in ${this.formatExecutionTime(
-          executionTime
-        )}`
+          executionTime,
+        )}`,
       );
 
       return allCrawledItems;
@@ -854,14 +857,14 @@ class BrandAucCrawler extends AxiosCrawler {
         } else {
           // seriEndHm이 없는 경우: 기존 방식 그대로
           scheduled_date = this.extractDate(
-            this.convertToKST(this.auctionDate)
+            this.convertToKST(this.auctionDate),
           );
         }
       }
     } catch (error) {
       console.warn(
         `Error creating scheduled_date for item ${item.uketsukeBng}:`,
-        error.message
+        error.message,
       );
       scheduled_date = null;
     }
@@ -881,10 +884,10 @@ class BrandAucCrawler extends AxiosCrawler {
 
       // XSRF 토큰 추출 (쿠키에서)
       const cookies = await clientInfo.cookieJar.getCookies(
-        "https://bid.brand-auc.com"
+        "https://bid.brand-auc.com",
       );
       const xsrfToken = cookies.find(
-        (cookie) => cookie.key === "XSRF-TOKEN"
+        (cookie) => cookie.key === "XSRF-TOKEN",
       )?.value;
 
       if (!xsrfToken) {
@@ -908,7 +911,7 @@ class BrandAucCrawler extends AxiosCrawler {
               "X-Requested-With": "XMLHttpRequest",
               "X-XSRF-TOKEN": xsrfToken,
             },
-          }
+          },
         );
 
         // 첫 번째 API 성공
@@ -942,7 +945,7 @@ class BrandAucCrawler extends AxiosCrawler {
               "X-Requested-With": "XMLHttpRequest",
               "X-XSRF-TOKEN": xsrfToken,
             },
-          }
+          },
         );
 
         // 두 번째 API 응답 확인
@@ -959,7 +962,7 @@ class BrandAucCrawler extends AxiosCrawler {
     } catch (error) {
       console.error(
         `Error placing direct bid for item ${item_id}:`,
-        error.message
+        error.message,
       );
       return {
         success: false,
@@ -980,10 +983,10 @@ class BrandAucCrawler extends AxiosCrawler {
 
         // XSRF 토큰 추출 (쿠키에서)
         const cookies = await clientInfo.cookieJar.getCookies(
-          "https://u.brand-auc.com/"
+          "https://u.brand-auc.com/",
         );
         const xsrfToken = cookies.find(
-          (cookie) => cookie.key === "XSRF-TOKEN"
+          (cookie) => cookie.key === "XSRF-TOKEN",
         )?.value;
 
         if (!xsrfToken) {
@@ -1008,7 +1011,7 @@ class BrandAucCrawler extends AxiosCrawler {
               Referer: "hhttps://u.brand-auc.com/",
               "X-XSRF-TOKEN": xsrfToken,
             },
-          }
+          },
         );
 
         // 첫 번째 API 성공
@@ -1023,7 +1026,7 @@ class BrandAucCrawler extends AxiosCrawler {
         }
       },
       3,
-      10 * 1000
+      10 * 1000,
     ).catch((error) => {
       console.error(`Error placing bid for item ${item_id}:`, error.message);
       return {
@@ -1044,10 +1047,10 @@ class BrandAucCrawler extends AxiosCrawler {
 
       // XSRF 토큰 추출 (쿠키에서)
       const cookies = await clientInfo.cookieJar.getCookies(
-        "https://u.brand-auc.com/"
+        "https://u.brand-auc.com/",
       );
       const xsrfToken = cookies.find(
-        (cookie) => cookie.key === "XSRF-TOKEN"
+        (cookie) => cookie.key === "XSRF-TOKEN",
       )?.value;
 
       if (!xsrfToken) {
@@ -1074,7 +1077,7 @@ class BrandAucCrawler extends AxiosCrawler {
             Referer: "hhttps://u.brand-auc.com/",
             "X-XSRF-TOKEN": xsrfToken,
           },
-        }
+        },
       );
 
       // 첫 번째 API 성공
@@ -1090,7 +1093,7 @@ class BrandAucCrawler extends AxiosCrawler {
     } catch (error) {
       console.error(
         `Error adding wishlist for item ${item_id}:`,
-        error.message
+        error.message,
       );
       return {
         success: false,
@@ -1162,7 +1165,7 @@ class BrandAucCrawler extends AxiosCrawler {
         let auctionRound = null;
         if (item.fileName) {
           const roundMatch = item.fileName.match(
-            /(\d+)(?:st|nd|rd|th)_Invoice/
+            /(\d+)(?:st|nd|rd|th)_Invoice/,
           );
           if (roundMatch) {
             auctionRound = roundMatch[1];
@@ -1245,11 +1248,11 @@ class BrandAucCrawler extends AxiosCrawler {
           } catch (error) {
             console.error(
               `Error crawling update for item ${itemId}:`,
-              error.message
+              error.message,
             );
             return [];
           }
-        })
+        }),
       );
 
       // 모든 결과 기다리기
@@ -1337,7 +1340,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
           Referer: "https://e-auc.brand-auc.com/",
           "X-Requested-With": "XMLHttpRequest",
         },
-      }
+      },
     );
 
     const auctionInfoList = auctionInfoResponse.data || [];
@@ -1356,12 +1359,12 @@ class BrandAucValueCrawler extends AxiosCrawler {
     // months 개월 전의 회차 계산
     const kaisaiKaisuFrom = Math.max(
       latestKaisaiKaisu - kaisaiCountForMonths,
-      0
+      0,
     );
     const kaisaiKaisuTo = latestKaisaiKaisu;
 
     console.log(
-      `Crawling auction rounds from ${kaisaiKaisuFrom} to ${kaisaiKaisuTo}`
+      `Crawling auction rounds from ${kaisaiKaisuFrom} to ${kaisaiKaisuTo}`,
     );
 
     // 첫 페이지로 총 페이지 수 확인
@@ -1377,7 +1380,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
           getKbn: 3,
           kaijoKbn: 0,
         },
-      }
+      },
     );
 
     const totalPages = firstPageResponse.data.totalPages;
@@ -1413,9 +1416,9 @@ class BrandAucValueCrawler extends AxiosCrawler {
             chunk.kaisaiKaisuFrom,
             chunk.kaisaiKaisuTo,
             chunk.size,
-            true // skipImageProcessing
-          )
-        )
+            true, // skipImageProcessing
+          ),
+        ),
       );
     }
 
@@ -1448,7 +1451,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
             Referer: "https://e-auc.brand-auc.com/",
             "X-Requested-With": "XMLHttpRequest",
           },
-        }
+        },
       );
 
       const auctionInfoList = auctionInfoResponse.data || [];
@@ -1467,12 +1470,12 @@ class BrandAucValueCrawler extends AxiosCrawler {
       // months 개월 전의 회차 계산
       const kaisaiKaisuFrom = Math.max(
         latestKaisaiKaisu - kaisaiCountForMonths,
-        0
+        0,
       );
       const kaisaiKaisuTo = latestKaisaiKaisu;
 
       console.log(
-        `Crawling auction rounds from ${kaisaiKaisuFrom} to ${kaisaiKaisuTo}`
+        `Crawling auction rounds from ${kaisaiKaisuFrom} to ${kaisaiKaisuTo}`,
       );
 
       // 첫 페이지 요청으로 총 페이지 수 확인
@@ -1488,14 +1491,14 @@ class BrandAucValueCrawler extends AxiosCrawler {
             getKbn: 3, // 완료된 경매 결과
             kaijoKbn: 0, // 모든 경매장
           },
-        }
+        },
       );
 
       const totalPages = firstPageResponse.data.totalPages;
       const totalItems = firstPageResponse.data.totalElements;
 
       console.log(
-        `Found ${totalItems} market price items across ${totalPages} pages`
+        `Found ${totalItems} market price items across ${totalPages} pages`,
       );
 
       // 페이지 병렬 처리 (이미지 없이)
@@ -1511,9 +1514,9 @@ class BrandAucValueCrawler extends AxiosCrawler {
               kaisaiKaisuFrom,
               kaisaiKaisuTo,
               size,
-              true
-            )
-          )
+              true,
+            ),
+          ),
         );
       }
 
@@ -1533,14 +1536,14 @@ class BrandAucValueCrawler extends AxiosCrawler {
 
       // 전체 이미지 일괄 처리
       console.log(
-        `Starting image processing for ${allCrawledItems.length} items...`
+        `Starting image processing for ${allCrawledItems.length} items...`,
       );
       const itemsWithImages = allCrawledItems.filter((item) => item.image);
       const finalProcessedItems = await processImagesInChunks(
         itemsWithImages,
         "values",
         3,
-        "brand"
+        "brand",
       );
 
       // 이미지가 없는 아이템들도 포함
@@ -1553,8 +1556,8 @@ class BrandAucValueCrawler extends AxiosCrawler {
       const executionTime = endTime - startTime;
       console.log(
         `Value crawl operation completed in ${this.formatExecutionTime(
-          executionTime
-        )}`
+          executionTime,
+        )}`,
       );
 
       return allFinalItems;
@@ -1570,7 +1573,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
     kaisaiKaisuFrom,
     kaisaiKaisuTo,
     size,
-    skipImageProcessing = false
+    skipImageProcessing = false,
   ) {
     const clientInfo = this.getClient();
 
@@ -1594,7 +1597,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
             Referer: "https://e-auc.brand-auc.com/",
             "X-Requested-With": "XMLHttpRequest",
           },
-        }
+        },
       );
 
       if (!response.data || !response.data.content) {
@@ -1622,14 +1625,14 @@ class BrandAucValueCrawler extends AxiosCrawler {
           pageItems,
           "values",
           3,
-          "brand"
+          "brand",
         );
       }
 
       console.log(
         `Processed ${finalItems.length} value items from page ${
           page + 1
-        } with ${clientInfo.name}`
+        } with ${clientInfo.name}`,
       );
       return finalItems;
     });
@@ -1655,7 +1658,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
       filteredItems,
       "values",
       3,
-      "brand"
+      "brand",
     );
 
     return processedItems;
@@ -1733,7 +1736,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
       // 이미지 URL 목록 처리
       const images = [...detail.fileList, ...detail.fileListAdmin] || [];
       const formattedImages = images.map((url) =>
-        url.replace(/(brand_img\/)(\d+)/, "$17")
+        url.replace(/(brand_img\/)(\d+)/, "$17"),
       );
 
       // 상품 상태 메모 처리
@@ -1768,7 +1771,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
     } catch (error) {
       console.error(
         `Error fetching value details for item ${itemId}:`,
-        error.message
+        error.message,
       );
       return {
         additional_images: null,
