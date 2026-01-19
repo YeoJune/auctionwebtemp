@@ -290,7 +290,7 @@ router.get("/bid-options/:itemId", async (req, res) => {
     // 1. 아이템 정보 조회
     const [items] = await connection.query(
       "SELECT * FROM crawled_items WHERE item_id = ? AND auc_num = ?",
-      [itemId, aucNum]
+      [itemId, aucNum],
     );
 
     if (items.length === 0) {
@@ -306,7 +306,7 @@ router.get("/bid-options/:itemId", async (req, res) => {
 
         if (crawler && crawler.crawlUpdateWithId) {
           console.log(
-            `Checking latest price for item ${itemId} (auc_num=${item.auc_num})`
+            `Checking latest price for item ${itemId} (auc_num=${item.auc_num})`,
           );
           const latestItemInfo = await crawler.crawlUpdateWithId(itemId, item);
 
@@ -323,7 +323,7 @@ router.get("/bid-options/:itemId", async (req, res) => {
                 parseFloat(item.starting_price)
             ) {
               console.log(
-                `Price changed for item ${itemId}: ${item.starting_price} -> ${latestItemInfo.starting_price}`
+                `Price changed for item ${itemId}: ${item.starting_price} -> ${latestItemInfo.starting_price}`,
               );
               updates.push("starting_price = ?");
               updateValues.push(latestItemInfo.starting_price);
@@ -342,7 +342,7 @@ router.get("/bid-options/:itemId", async (req, res) => {
               // 시간 값(timestamp)으로 비교
               if (latestDate.getTime() !== currentDate.getTime()) {
                 console.log(
-                  `Scheduled date changed for item ${itemId}: ${item.scheduled_date} -> ${latestItemInfo.scheduled_date}`
+                  `Scheduled date changed for item ${itemId}: ${item.scheduled_date} -> ${latestItemInfo.scheduled_date}`,
                 );
                 updates.push("scheduled_date = ?");
                 updateValues.push(latestItemInfo.scheduled_date);
@@ -359,12 +359,12 @@ router.get("/bid-options/:itemId", async (req, res) => {
               updateValues.push(item.auc_num);
               pool.query(
                 `UPDATE crawled_items SET ${updates.join(
-                  ", "
+                  ", ",
                 )} WHERE item_id = ? AND auc_num = ?`,
-                updateValues
+                updateValues,
               );
               console.log(
-                `Updated item ${itemId} (auc_num=${item.auc_num}) in database with latest info`
+                `Updated item ${itemId} (auc_num=${item.auc_num}) in database with latest info`,
               );
               notifyClientsOfChanges([{ item_id: itemId }]);
             }
@@ -379,7 +379,7 @@ router.get("/bid-options/:itemId", async (req, res) => {
     // 2. 사용자의 현재 입찰 확인
     const [userBids] = await connection.query(
       "SELECT * FROM direct_bids WHERE item_id = ? AND user_id = ? AND status = 'active'",
-      [itemId, userId]
+      [itemId, userId],
     );
 
     const isFirstBid = userBids.length === 0;
@@ -487,10 +487,10 @@ router.post("/", async (req, res) => {
   try {
     await connection.beginTransaction();
 
-    // 1. 아이템 정보 확인
+    // 1. 아이템 정보 확인 (DB에서만)
     const [items] = await connection.query(
       "SELECT * FROM crawled_items WHERE item_id = ? AND auc_num = ?",
-      [itemId, aucNum]
+      [itemId, aucNum],
     );
 
     if (items.length === 0) {
@@ -500,216 +500,79 @@ router.post("/", async (req, res) => {
 
     const item = items[0];
 
-    // 1-1. crawlUpdateWithId로 최신 가격 확인
-    // 아이템의 auc_num에 따라 적절한 크롤러 선택
-    let latestItemInfo;
-    try {
-      const crawler = {
-        1: ecoAucCrawler,
-        2: brandAucCrawler,
-        3: starAucCrawler,
-        4: mekikiAucCrawler,
-      }[item.auc_num];
-
-      if (crawler && crawler.crawlUpdateWithId) {
-        console.log(
-          `Checking latest price for item ${itemId} (auc_num=${item.auc_num})`
-        );
-        latestItemInfo = await crawler.crawlUpdateWithId(itemId, item);
-
-        // 최신 정보가 있고 가격이나 날짜가 다르면 DB 업데이트
-        if (latestItemInfo) {
-          let needsUpdate = false;
-          const updates = [];
-          const updateValues = [];
-
-          // 가격 업데이트 확인
-          if (
-            latestItemInfo.starting_price !== undefined &&
-            parseFloat(latestItemInfo.starting_price) !==
-              parseFloat(item.starting_price)
-          ) {
-            console.log(
-              `Price changed for item ${itemId}: ${item.starting_price} -> ${latestItemInfo.starting_price}`
-            );
-            updates.push("starting_price = ?");
-            updateValues.push(latestItemInfo.starting_price);
-            needsUpdate = true;
-
-            // item 객체 업데이트
-            item.starting_price = latestItemInfo.starting_price;
-          }
-
-          // 날짜 업데이트 확인
-          if (latestItemInfo.scheduled_date) {
-            // 날짜를 Date 객체로 변환하여 비교
-            const latestDate = new Date(latestItemInfo.scheduled_date);
-            const currentDate = new Date(item.scheduled_date);
-
-            // 시간 값(timestamp)으로 비교
-            if (latestDate.getTime() !== currentDate.getTime()) {
-              console.log(
-                `Scheduled date changed for item ${itemId}: ${item.scheduled_date} -> ${latestItemInfo.scheduled_date}`
-              );
-              updates.push("scheduled_date = ?");
-              updateValues.push(latestItemInfo.scheduled_date);
-              needsUpdate = true;
-
-              // item 객체 업데이트
-              item.scheduled_date = latestItemInfo.scheduled_date;
-            }
-          }
-
-          // DB 업데이트가 필요하면 실행
-          if (needsUpdate) {
-            updateValues.push(itemId);
-            updateValues.push(item.auc_num);
-            pool.query(
-              `UPDATE crawled_items SET ${updates.join(
-                ", "
-              )} WHERE item_id = ? AND auc_num = ?`,
-              updateValues
-            );
-            console.log(
-              `Updated item ${itemId} (auc_num=${item.auc_num}) in database with latest info`
-            );
-            notifyClientsOfChanges([{ item_id: itemId }]);
-          }
-        }
-      }
-    } catch (error) {
-      // 크롤링에 실패해도 기존 가격으로 진행
-      console.error(`Error checking latest price for item ${itemId}:`, error);
-    }
-
-    // 1-2. 정보 업데이트 후 경매가 종료되었는지 확인 (scheduled_date가 지났는지)
+    // 2. 경매 종료 확인 (DB 데이터로만)
     const now = new Date();
     const scheduledDate = new Date(item.scheduled_date);
 
     if (scheduledDate < now) {
       await connection.rollback();
       return res.status(400).json({
-        message: "Auction has already ended. The scheduled date has passed.",
+        message: "Auction has already ended",
         scheduled_date: item.scheduled_date,
-        current_time: now.toISOString(),
       });
     }
 
-    // 1-3. 현재 가격이 최신 가격보다 낮은 경우
-    if (parseFloat(currentPrice) <= parseFloat(item.starting_price)) {
+    // 3. 단위 검증만 수행
+    const unitValidation = validateBidUnit(
+      item.auc_num,
+      currentPrice,
+      item.starting_price,
+    );
+
+    if (!unitValidation.valid) {
       await connection.rollback();
       return res.status(400).json({
-        message: `Your bid (${currentPrice}) must be higher than the current item price (${item.starting_price})`,
-        latestPrice: item.starting_price,
+        message: unitValidation.message,
       });
     }
 
-    // 2. UPSERT로 입찰 생성/업데이트 (먼저 실행)
+    // 4. UPSERT로 입찰 생성/업데이트 (아직 커밋 안 함)
     const [result] = await connection.query(
       `INSERT INTO direct_bids (user_id, item_id, current_price, status) 
-      VALUES (?, ?, ?, 'active')
-      ON DUPLICATE KEY UPDATE 
-        current_price = VALUES(current_price),
-        status = 'active',
-        id = LAST_INSERT_ID(id)`,
-      [userId, itemId, currentPrice]
+       VALUES (?, ?, ?, 'active')
+       ON DUPLICATE KEY UPDATE 
+         current_price = VALUES(current_price),
+         status = 'active',
+         id = LAST_INSERT_ID(id)`,
+      [userId, itemId, currentPrice],
     );
 
     const bidId = result.insertId;
-    const isFirstBid = result.affectedRows === 1; // INSERT면 1, UPDATE면 2
 
-    // 2-1. 경매장별 입찰가 검증
-    const currentHighestPrice = item.starting_price;
-    const validation = validateBidByAuction(
-      item.auc_num,
-      currentPrice,
-      currentHighestPrice,
-      isFirstBid
-    );
-
-    if (!validation.valid) {
-      // 검증 실패 시 방금 생성/업데이트한 입찰 롤백
-      await connection.rollback();
-      return res.status(400).json({
-        message: validation.message,
-      });
-    }
-
-    // 3. 가격이 낮은 다른 입찰들을 취소 (비동기)
-    pool.query(
-      "UPDATE direct_bids SET status = 'cancelled' WHERE item_id = ? AND current_price < ? AND status = 'active'",
-      [itemId, currentPrice]
-    );
-
-    // 7. scheduled_date 연장 (auc_num=1이고 마감 시간이 5분 미만일 때만)
-    if (item.scheduled_date && (item.auc_num == 1 || item.auc_num == 3)) {
-      // 현재 시간
-      const now = new Date();
-
-      // 아이템의 scheduled_date
-      const scheduledDate = new Date(item.scheduled_date);
-
-      // 현재부터 마감까지 남은 시간(분)
-      const minutesRemaining = (scheduledDate - now) / (1000 * 60);
-
-      // 남은 시간이 5분 미만이면 연장
-      if (minutesRemaining < 5 && minutesRemaining > 0) {
-        // 새로운 마감시간 (현재 시간 + 5분)
-        const newScheduledDate = new Date(now);
-        newScheduledDate.setMinutes(now.getMinutes() + 5);
-
-        // 업데이트
-        await connection.query(
-          "UPDATE crawled_items SET scheduled_date = ? WHERE item_id = ? AND auc_num = ?",
-          [
-            newScheduledDate.toISOString().slice(0, 19).replace("T", " "),
-            itemId,
-            item.auc_num,
-          ]
-        );
-
-        console.log(
-          `Extended scheduled_date to 5 minutes from now for item ${itemId} (auc_num=${item.auc_num})`
-        );
-      }
-    }
-
-    await connection.commit();
-
-    // 8. autoSubmit이 true인 경우 자동으로 입찰 제출
-    let submissionResult = null;
+    // 5. autoSubmit이 true인 경우 API 호출
     if (autoSubmit) {
-      submissionResult = await submitBid(
-        {
-          bid_id: bidId,
-          price: currentPrice,
-        },
-        item
+      const submissionResult = await submitBid(
+        { bid_id: bidId, price: currentPrice },
+        item,
       );
 
-      if (submissionResult && !submissionResult.success) {
-        // 입찰 제출 실패해도 입찰 생성/업데이트는 성공적으로 이루어짐
-        return res.status(201).json({
-          message:
-            "Bid placed successfully but could not be submitted to platform automatically",
-          bidId: bidId,
-          status: "active",
-          currentPrice,
-          submitted: false,
-          submissionError: submissionResult.message,
+      if (!submissionResult || !submissionResult.success) {
+        // API 실패 시 롤백 후 에러 반환
+        await connection.rollback();
+        return res.status(409).json({
+          message: "입찰 중 새로운 입찰이 발생했습니다",
+          error: submissionResult?.error || "Unknown error",
         });
       }
+
+      // API 성공 → submitted_to_platform은 submitBid 내부에서 이미 처리됨
     }
 
+    // 6. 가격이 낮은 다른 입찰들을 취소
+    await connection.query(
+      "UPDATE direct_bids SET status = 'cancelled' WHERE item_id = ? AND current_price < ? AND status = 'active' AND id != ?",
+      [itemId, currentPrice, bidId],
+    );
+
+    // 7. 모든 작업 성공 → 커밋
+    await connection.commit();
+
     res.status(201).json({
-      message: autoSubmit
-        ? "Bid placed and submitted to platform successfully"
-        : "Bid placed successfully",
+      message: "입찰이 성공적으로 제출되었습니다",
       bidId: bidId,
       status: "active",
       currentPrice,
-      submitted: autoSubmit ? true : false,
-      submissionResult: submissionResult,
+      submitted: true,
     });
   } catch (err) {
     await connection.rollback();
@@ -749,14 +612,14 @@ router.put("/complete", isAdmin, async (req, res) => {
       // 취소 처리: winningPrice > current_price
       const [cancelResult] = await connection.query(
         `UPDATE direct_bids SET status = 'cancelled', winning_price = ? WHERE id IN (${placeholders}) AND status = 'active' AND current_price < ?`,
-        [winningPrice, ...bidIds, winningPrice]
+        [winningPrice, ...bidIds, winningPrice],
       );
       cancelledCount = cancelResult.affectedRows;
 
       // 완료 처리: winningPrice <= current_price
       const [completeResult] = await connection.query(
         `UPDATE direct_bids SET status = 'completed', winning_price = ?, completed_at = NOW() WHERE id IN (${placeholders}) AND status = 'active' AND current_price >= ?`,
-        [winningPrice, ...bidIds, winningPrice]
+        [winningPrice, ...bidIds, winningPrice],
       );
       completedCount = completeResult.affectedRows;
 
@@ -767,7 +630,7 @@ router.put("/complete", isAdmin, async (req, res) => {
       // 낙찰 금액이 없을 경우 기존 current_price를 winning_price로 설정하여 완료 처리
       [updateResult] = await connection.query(
         `UPDATE direct_bids SET status = 'completed', winning_price = current_price, completed_at = NOW() WHERE id IN (${placeholders}) AND status = 'active'`,
-        bidIds
+        bidIds,
       );
       completedCount = updateResult.affectedRows;
     }
@@ -775,14 +638,14 @@ router.put("/complete", isAdmin, async (req, res) => {
     // 완료된 항목의 item_id 조회
     const [completedBids] = await connection.query(
       `SELECT item_id FROM direct_bids WHERE id IN (${placeholders}) AND status = 'completed'`,
-      bidIds
+      bidIds,
     );
 
     // 완료된 항목과 관련된 다른 입찰 취소 (동일 item_id)
     for (const bid of completedBids) {
       await connection.query(
         "UPDATE direct_bids SET status = 'cancelled' WHERE item_id = ? AND id NOT IN (?) AND status = 'active'",
-        [bid.item_id, bidIds]
+        [bid.item_id, bidIds],
       );
     }
 
@@ -794,7 +657,7 @@ router.put("/complete", isAdmin, async (req, res) => {
         FROM direct_bids d 
         JOIN crawled_items i ON d.item_id = i.item_id 
         WHERE d.id IN (${placeholders}) AND d.status = 'completed'`,
-        bidIds
+        bidIds,
       );
     }
 
@@ -826,7 +689,7 @@ router.put("/complete", isAdmin, async (req, res) => {
       }
       if (cancelledCount > 0) {
         messages.push(
-          `${cancelledCount} bid(s) cancelled (winning price exceeds current price)`
+          `${cancelledCount} bid(s) cancelled (winning price exceeds current price)`,
         );
       }
       message =
@@ -874,7 +737,7 @@ router.put("/cancel", isAdmin, async (req, res) => {
     // 완료 상태가 아닌 입찰만 취소 처리
     const [updateResult] = await connection.query(
       `UPDATE direct_bids SET status = 'cancelled' WHERE id IN (${placeholders}) AND status != 'completed'`,
-      bidIds
+      bidIds,
     );
 
     await connection.commit();
@@ -905,7 +768,7 @@ router.post("/:id/submit", isAdmin, async (req, res) => {
     try {
       const [bids] = await connection.query(
         "SELECT * FROM direct_bids WHERE id = ?",
-        [id]
+        [id],
       );
 
       if (bids.length === 0) {
@@ -931,7 +794,7 @@ router.post("/:id/submit", isAdmin, async (req, res) => {
       // JOIN을 사용하여 item 정보 가져오기
       const [itemResults] = await connection.query(
         "SELECT i.* FROM crawled_items i JOIN direct_bids b ON i.item_id = b.item_id AND i.auc_num = (SELECT auc_num FROM crawled_items WHERE item_id = b.item_id LIMIT 1) WHERE b.id = ?",
-        [id]
+        [id],
       );
 
       if (itemResults.length === 0) {
@@ -946,7 +809,7 @@ router.post("/:id/submit", isAdmin, async (req, res) => {
           bid_id: id,
           price: bid.current_price,
         },
-        item
+        item,
       );
 
       if (result.success) {
@@ -997,7 +860,7 @@ router.put("/mark-submitted", isAdmin, async (req, res) => {
 
     const [updateResult] = await connection.query(
       `UPDATE direct_bids SET submitted_to_platform = TRUE WHERE id IN (${placeholders}) AND submitted_to_platform = FALSE`,
-      bidIds
+      bidIds,
     );
 
     await connection.commit();
@@ -1033,7 +896,7 @@ router.get("/:id", async (req, res) => {
     // 입찰 정보 가져오기
     const [bids] = await connection.query(
       "SELECT * FROM direct_bids WHERE id = ?",
-      [id]
+      [id],
     );
 
     if (bids.length === 0) {
@@ -1052,7 +915,7 @@ router.get("/:id", async (req, res) => {
     // 아이템 정보 가져오기 (JOIN 사용)
     const [items] = await connection.query(
       "SELECT i.* FROM crawled_items i JOIN direct_bids b ON i.item_id = b.item_id WHERE b.id = ? LIMIT 1",
-      [id]
+      [id],
     );
 
     const bidWithItem = {
@@ -1087,7 +950,7 @@ router.put("/:id", isAdmin, async (req, res) => {
     // 입찰 정보 확인
     const [bids] = await connection.query(
       "SELECT * FROM direct_bids WHERE id = ?",
-      [id]
+      [id],
     );
 
     if (bids.length === 0) {
@@ -1146,7 +1009,7 @@ router.put("/:id", isAdmin, async (req, res) => {
     params.push(id);
 
     const updateQuery = `UPDATE direct_bids SET ${updates.join(
-      ", "
+      ", ",
     )} WHERE id = ?`;
 
     const [updateResult] = await connection.query(updateQuery, params);
@@ -1163,7 +1026,7 @@ router.put("/:id", isAdmin, async (req, res) => {
     // 업데이트된 bid 정보 반환
     const [updatedBids] = await connection.query(
       "SELECT * FROM direct_bids WHERE id = ?",
-      [id]
+      [id],
     );
 
     // status나 winning_price가 변경된 경우 정산 업데이트
@@ -1173,7 +1036,7 @@ router.put("/:id", isAdmin, async (req, res) => {
          FROM direct_bids d 
          JOIN crawled_items i ON d.item_id = i.item_id 
          WHERE d.id = ?`,
-        [id]
+        [id],
       );
 
       if (bidWithItem.length > 0 && bidWithItem[0].scheduled_date) {
@@ -1181,7 +1044,7 @@ router.put("/:id", isAdmin, async (req, res) => {
           .toISOString()
           .split("T")[0];
         createOrUpdateSettlement(bidWithItem[0].user_id, settlementDate).catch(
-          console.error
+          console.error,
         );
       }
     }
@@ -1198,68 +1061,5 @@ router.put("/:id", isAdmin, async (req, res) => {
     connection.release();
   }
 });
-
-// 자동 입찰 제출 스케줄러
-let autoSubmitInterval = null;
-const AUTO_SUBMIT_INTERVAL = 30 * 1000; // 30초 간격
-
-const startAutoSubmitScheduler = () => {
-  if (autoSubmitInterval) return;
-
-  autoSubmitInterval = setInterval(async () => {
-    const connection = await pool.getConnection();
-    try {
-      // 1. starting_price와 current_price가 같은 입찰은 이미 제출된 것으로 간주하고 submitted_to_platform을 TRUE로 업데이트
-      const [updateResult] = await connection.query(
-        `UPDATE direct_bids d
-         JOIN crawled_items i ON d.item_id = i.item_id 
-         SET d.submitted_to_platform = TRUE
-         WHERE d.status = 'active' 
-         AND d.submitted_to_platform = FALSE
-         AND i.starting_price = d.current_price`
-      );
-
-      if (updateResult.affectedRows > 0) {
-        console.log(
-          `Auto-marked ${updateResult.affectedRows} bid(s) as submitted (price matched)`
-        );
-      }
-
-      // 2. starting_price와 current_price가 다른 입찰만 조회하여 재입찰
-      const [unsubmittedBids] = await connection.query(
-        `SELECT d.*, i.* FROM direct_bids d 
-         JOIN crawled_items i ON d.item_id = i.item_id 
-         WHERE d.status = 'active' 
-         AND d.submitted_to_platform = FALSE
-         AND i.starting_price != d.current_price`
-      );
-
-      for (const bid of unsubmittedBids) {
-        try {
-          await submitBid(
-            {
-              bid_id: bid.id,
-              price: bid.current_price,
-            },
-            bid
-          );
-          console.log(`Auto-submitted bid ${bid.id}`);
-        } catch (error) {
-          console.error(`Failed to auto-submit bid ${bid.id}:`, error);
-        }
-      }
-    } catch (error) {
-      console.error("Auto-submit scheduler error:", error);
-    } finally {
-      connection.release();
-    }
-  }, AUTO_SUBMIT_INTERVAL);
-};
-
-if (process.env.ENV === "development") {
-} else {
-  // 라우터 초기화 시 스케줄러 시작
-  startAutoSubmitScheduler();
-}
 
 module.exports = router;

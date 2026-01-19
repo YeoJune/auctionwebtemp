@@ -79,6 +79,70 @@ function validateBidByAuction(auctionNum, bidPrice, currentPrice, isFirstBid) {
 }
 
 /**
+ * 단위 검증만 수행 (간단하고 빠르게)
+ * @param {string} auctionNum - 경매장 번호
+ * @param {number} bidPrice - 입찰 가격
+ * @param {number} currentPrice - 현재가 (3번 스타옥션용, 옵션)
+ * @returns {Object} - { valid: boolean, message: string }
+ */
+function validateBidUnit(auctionNum, bidPrice, currentPrice = 0) {
+  bidPrice = parseFloat(bidPrice);
+  currentPrice = parseFloat(currentPrice);
+
+  switch (String(auctionNum)) {
+    case "1": // 에코옥션 - 1000엔 단위
+    case "4": // 메키키옥션 - 1000엔 단위
+      if (bidPrice % 1000 !== 0) {
+        return {
+          valid: false,
+          message: "가격을 1,000엔 단위로 입력해야 합니다",
+        };
+      }
+      break;
+
+    case "2": // 브랜드옥션 - 500엔 단위
+      if (bidPrice % 500 !== 0) {
+        return {
+          valid: false,
+          message: "가격을 500엔 단위로 입력해야 합니다",
+        };
+      }
+      break;
+
+    case "3": // 스타옥션 - 예전 가격 기반 검증 (부정확하지만 빠름)
+      const getIncrement = (price) => {
+        if (price >= 0 && price <= 999) return 100;
+        if (price >= 1000 && price <= 9999) return 500;
+        if (price >= 10000 && price <= 29999) return 1000;
+        if (price >= 30000 && price <= 49999) return 2000;
+        if (price >= 50000 && price <= 99999) return 3000;
+        if (price >= 100000 && price <= 299999) return 5000;
+        if (price >= 300000 && price <= 999999) return 10000;
+        return 30000;
+      };
+
+      const increment = getIncrement(currentPrice);
+      const expectedPrice = currentPrice + increment;
+
+      if (bidPrice !== expectedPrice) {
+        return {
+          valid: false,
+          message: `입찰가는 ${expectedPrice}엔이어야 합니다`,
+        };
+      }
+      break;
+
+    default:
+      return {
+        valid: false,
+        message: "지원하지 않는 경매장입니다",
+      };
+  }
+
+  return { valid: true };
+}
+
+/**
  * Submit a bid to the appropriate auction platform
  * @param {Object} bidData - The bid data containing bid_id and price
  * @returns {Promise<Object>} The result of the bid submission
@@ -89,7 +153,7 @@ async function submitBid(bidData, item) {
   price = parseInt(price);
 
   console.log(
-    `Preparing bid submission for bid ID ${bid_id} with price ${price}...`
+    `Preparing bid submission for bid ID ${bid_id} with price ${price}...`,
   );
 
   if (!bid_id || !price) {
@@ -108,7 +172,7 @@ async function submitBid(bidData, item) {
       item.auc_num,
       price,
       item.starting_price,
-      false
+      false,
     );
 
     if (!validation.valid) {
@@ -130,25 +194,25 @@ async function submitBid(bidData, item) {
   if (item.auc_num == 1) {
     // EcoAuc 경매
     console.log(
-      `Submitting bid to EcoAuc platform for item ${item.item_id} with price ${price}`
+      `Submitting bid to EcoAuc platform for item ${item.item_id} with price ${price}`,
     );
     bidResult = await ecoAucCrawler.directBid(item.item_id, price);
   } else if (item.auc_num == 2) {
     // BrandAuc 경매
     console.log(
-      `Submitting bid to BrandAuc platform for item ${item.item_id} with price ${price}`
+      `Submitting bid to BrandAuc platform for item ${item.item_id} with price ${price}`,
     );
     bidResult = await brandAucCrawler.directBid(item.item_id, price);
   } else if (item.auc_num == 3) {
     // StarAuc 경매
     console.log(
-      `Submitting bid to StarAuc platform for item ${item.item_id} with price ${price}`
+      `Submitting bid to StarAuc platform for item ${item.item_id} with price ${price}`,
     );
     bidResult = await starAucCrawler.directBid(item.item_id, price);
   } else if (item.auc_num == 4) {
     // MekikiAuc 경매
     console.log(
-      `Submitting bid to MekikiAuc platform for item ${item.item_id} with price ${price}`
+      `Submitting bid to MekikiAuc platform for item ${item.item_id} with price ${price}`,
     );
     bidResult = await mekikiAucCrawler.directBid(item.item_id, price);
   } else {
@@ -168,10 +232,10 @@ async function submitBid(bidData, item) {
     console.log(`Bid successful for item ${item.item_id} with price ${price}`);
     await connection.query(
       "UPDATE direct_bids SET submitted_to_platform = TRUE WHERE id = ?",
-      [bid_id]
+      [bid_id],
     );
     console.log(
-      `Updated bid ID ${bid_id} status to submitted_to_platform = TRUE`
+      `Updated bid ID ${bid_id} status to submitted_to_platform = TRUE`,
     );
 
     await connection.commit();
@@ -190,7 +254,7 @@ async function submitBid(bidData, item) {
     console.error(
       `Bid failed for item ${item.item_id} with price ${price}: ${
         bidResult ? bidResult.message : "Unknown error"
-      }`
+      }`,
     );
     await connection.rollback();
     connection.release();
@@ -206,3 +270,4 @@ async function submitBid(bidData, item) {
 
 module.exports = submitBid;
 module.exports.validateBidByAuction = validateBidByAuction;
+module.exports.validateBidUnit = validateBidUnit;
