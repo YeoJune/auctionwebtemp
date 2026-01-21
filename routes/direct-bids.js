@@ -537,6 +537,8 @@ router.post("/", async (req, res) => {
       [userId, itemId, currentPrice],
     );
 
+    await connection.commit();
+
     const bidId = result.insertId;
 
     // 5. autoSubmit이 true인 경우 API 호출
