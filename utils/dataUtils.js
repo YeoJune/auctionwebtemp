@@ -37,7 +37,7 @@ async function getEnabledFilters(filterType) {
       FROM filter_settings 
       WHERE filter_type = ? AND is_enabled = TRUE
     `,
-      [filterType]
+      [filterType],
     );
     return enabled.map((item) => item.filter_value);
   } catch (error) {
@@ -57,7 +57,7 @@ async function updateFilterSetting(filterType, filterValue, isEnabled) {
       VALUES (?, ?, ?)
       ON DUPLICATE KEY UPDATE is_enabled = ?
     `,
-      [filterType, filterValue, isEnabled, isEnabled]
+      [filterType, filterValue, isEnabled, isEnabled],
     );
 
     return { filterType, filterValue, isEnabled };
@@ -103,7 +103,7 @@ async function initializeFilterSettings() {
     currentSettings.forEach((setting) => {
       currentSettingsMap.set(
         `${setting.filter_type}:${setting.filter_value}`,
-        setting.is_enabled
+        setting.is_enabled,
       );
     });
 
@@ -116,7 +116,7 @@ async function initializeFilterSettings() {
 
     // 5. 더 이상 DB에 없는 값들을 필터 설정에서 제거
     const outdatedSettings = Array.from(currentSettingsMap.keys()).filter(
-      (key) => !newValuesSet.has(key)
+      (key) => !newValuesSet.has(key),
     );
 
     if (outdatedSettings.length > 0) {
@@ -124,7 +124,7 @@ async function initializeFilterSettings() {
         const [type, value] = key.split(":");
         return conn.query(
           "DELETE FROM filter_settings WHERE filter_type = ? AND filter_value = ?",
-          [type, value]
+          [type, value],
         );
       });
       await Promise.all(deletePromises);
@@ -141,8 +141,8 @@ async function initializeFilterSettings() {
             INSERT IGNORE INTO filter_settings (filter_type, filter_value, is_enabled)
             VALUES (?, ?, TRUE)
           `,
-            [type, value]
-          )
+            [type, value],
+          ),
         );
       }
     };
@@ -247,7 +247,7 @@ async function addRecommendSetting(ruleName, conditions, recommendScore) {
     await conn.query(
       `INSERT INTO recommend_settings (rule_name, conditions, recommend_score, is_enabled)
        VALUES (?, ?, ?, 1)`,
-      [ruleName, JSON.stringify(conditions), recommendScore]
+      [ruleName, JSON.stringify(conditions), recommendScore],
     );
     return { ruleName, conditions, recommendScore };
   } catch (error) {
@@ -263,7 +263,7 @@ async function updateRecommendSetting(
   ruleName,
   conditions,
   recommendScore,
-  isEnabled
+  isEnabled,
 ) {
   const conn = await pool.getConnection();
   try {
@@ -271,7 +271,7 @@ async function updateRecommendSetting(
       `UPDATE recommend_settings 
        SET rule_name = ?, conditions = ?, recommend_score = ?, is_enabled = ?
        WHERE id = ?`,
-      [ruleName, JSON.stringify(conditions), recommendScore, isEnabled, id]
+      [ruleName, JSON.stringify(conditions), recommendScore, isEnabled, id],
     );
     return { id, ruleName, conditions, recommendScore, isEnabled };
   } catch (error) {
@@ -287,7 +287,7 @@ async function deleteRecommendSetting(id) {
   try {
     const [result] = await conn.query(
       `DELETE FROM recommend_settings WHERE id = ?`,
-      [id]
+      [id],
     );
     return result.affectedRows > 0;
   } catch (error) {
@@ -311,7 +311,7 @@ async function updateRecommendSettingsBatch(settings) {
         `UPDATE recommend_settings 
          SET rule_name = ?, conditions = ?, recommend_score = ?, is_enabled = ?
          WHERE id = ?`,
-        [ruleName, JSON.stringify(conditions), recommendScore, isEnabled, id]
+        [ruleName, JSON.stringify(conditions), recommendScore, isEnabled, id],
       );
 
       if (result.affectedRows > 0) {
@@ -341,7 +341,7 @@ function buildRecommendWhereClause(conditions) {
       case "IN":
         if (condition.values && condition.values.length > 0) {
           whereClauses.push(
-            `ci.${field} IN (${condition.values.map(() => "?").join(",")})`
+            `ci.${field} IN (${condition.values.map(() => "?").join(",")})`,
           );
           params.push(...condition.values);
         }
@@ -360,7 +360,7 @@ function buildRecommendWhereClause(conditions) {
       case "CONTAINS":
         if (condition.keywords && condition.keywords.length > 0) {
           const keywordClauses = condition.keywords.map(
-            () => `ci.${field} LIKE ?`
+            () => `ci.${field} LIKE ?`,
           );
           whereClauses.push(`(${keywordClauses.join(" OR ")})`);
           condition.keywords.forEach((keyword) => {
@@ -404,7 +404,7 @@ async function syncRecommendSettingsToItems() {
           SET recommend = ?
           WHERE (${whereClause}) AND recommend < ?
         `,
-          [setting.recommend_score, ...params, setting.recommend_score]
+          [setting.recommend_score, ...params, setting.recommend_score],
         );
       }
     }
@@ -459,7 +459,7 @@ async function syncDirectExpiredStatus() {
     const totalUpdated = expireResult.changedRows + unexpireResult.changedRows;
     if (totalUpdated > 0) {
       console.log(
-        `✅ Direct expired sync: ${totalUpdated} rows updated (expired: ${expireResult.changedRows}, unexpired: ${unexpireResult.changedRows})`
+        `✅ Direct expired sync: ${totalUpdated} rows updated (expired: ${expireResult.changedRows}, unexpired: ${unexpireResult.changedRows})`,
       );
     }
     return {
@@ -491,9 +491,6 @@ async function syncLiveExpiredStatus() {
       WHERE bid_type = 'live'
         AND is_expired = 0
         AND scheduled_date <= NOW()
-        AND NOT EXISTS (
-          SELECT 1 FROM live_bids lb WHERE lb.item_id = ci.item_id
-        )
     `);
 
     // 2. 만료 해제되어야 하는데 아직 is_expired = 1인 것들
@@ -503,18 +500,13 @@ async function syncLiveExpiredStatus() {
       SET is_expired = 0
       WHERE bid_type = 'live'
         AND is_expired = 1
-        AND (
-          DATE(ci.scheduled_date) >= CURDATE()
-          OR EXISTS (
-            SELECT 1 FROM live_bids lb WHERE lb.item_id = ci.item_id
-          )
-        )
+        AND scheduled_date > NOW()
     `);
 
     const totalUpdated = expireResult.changedRows + unexpireResult.changedRows;
     if (totalUpdated > 0) {
       console.log(
-        `✅ Live expired sync: ${totalUpdated} rows updated (expired: ${expireResult.changedRows}, unexpired: ${unexpireResult.changedRows})`
+        `✅ Live expired sync: ${totalUpdated} rows updated (expired: ${expireResult.changedRows}, unexpired: ${unexpireResult.changedRows})`,
       );
     }
     return {
@@ -586,9 +578,12 @@ function startLiveExpiredSync() {
   syncLiveExpiredStatus().catch(console.error);
 
   // 5분마다 실행
-  liveInterval = setInterval(() => {
-    syncLiveExpiredStatus().catch(console.error);
-  }, 5 * 60 * 1000);
+  liveInterval = setInterval(
+    () => {
+      syncLiveExpiredStatus().catch(console.error);
+    },
+    5 * 60 * 1000,
+  );
 }
 
 /**
