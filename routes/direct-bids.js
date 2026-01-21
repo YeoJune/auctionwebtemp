@@ -3,7 +3,7 @@ const express = require("express");
 const router = express.Router();
 const { pool } = require("../utils/DB");
 const submitBid = require("../utils/submitBid");
-const { validateBidByAuction } = require("../utils/submitBid");
+const { validateBidByAuction, validateBidUnit } = require("../utils/submitBid");
 const {
   ecoAucCrawler,
   brandAucCrawler,
