@@ -154,7 +154,7 @@ class UnifiedAuctionManager {
           "original_scheduled_date",
           "asc",
           today,
-          today
+          today,
         ),
         fetchDirectBids(
           "active",
@@ -164,7 +164,7 @@ class UnifiedAuctionManager {
           "original_scheduled_date",
           "asc",
           today,
-          today
+          today,
         ),
       ]);
 
@@ -176,7 +176,7 @@ class UnifiedAuctionManager {
       this.renderUrgentList(
         "todayDeadlineList",
         [...(liveToday.bids || []), ...(directToday.bids || [])],
-        "deadline"
+        "deadline",
       );
     } catch (error) {
       console.error("오늘 마감 데이터 로드 실패:", error);
@@ -194,7 +194,7 @@ class UnifiedAuctionManager {
         1,
         50,
         "updated_at",
-        "desc"
+        "desc",
       );
       const unsubmitted =
         directCompleted.bids?.filter((bid) => !bid.submitted_to_platform) || [];
@@ -207,7 +207,7 @@ class UnifiedAuctionManager {
       this.renderUrgentList(
         "unsubmittedList",
         unsubmitted.slice(0, 5),
-        "unsubmitted"
+        "unsubmitted",
       );
     } catch (error) {
       console.error("미반영 데이터 로드 실패:", error);
@@ -242,8 +242,8 @@ class UnifiedAuctionManager {
             }</span>
           </div>
           <div class="urgent-item-time ${timeInfo.className}">${
-          timeInfo.text
-        }</div>
+            timeInfo.text
+          }</div>
         </div>
       `;
       })
@@ -375,7 +375,7 @@ class UnifiedAuctionManager {
           "desc",
           "",
           "",
-          searchTerm
+          searchTerm,
         ),
       ]);
 
@@ -410,7 +410,7 @@ class UnifiedAuctionManager {
           "original_scheduled_date",
           "asc",
           today,
-          today
+          today,
         ),
         fetchDirectBids(
           "active",
@@ -420,7 +420,7 @@ class UnifiedAuctionManager {
           "original_scheduled_date",
           "asc",
           today,
-          today
+          today,
         ),
       ]);
 
@@ -444,7 +444,7 @@ class UnifiedAuctionManager {
         1,
         100,
         "original_scheduled_date",
-        "asc"
+        "asc",
       );
       const unsubmitted =
         directCompleted.bids?.filter((bid) => !bid.submitted_to_platform) || [];
@@ -468,7 +468,7 @@ class UnifiedAuctionManager {
         1,
         100,
         "updated_at",
-        "desc"
+        "desc",
       );
 
       this.liveData = liveSecond.bids || [];
@@ -584,7 +584,7 @@ class UnifiedAuctionManager {
   // 현장 경매 행 렌더링
   renderLiveBidRow(bid) {
     const timeInfo = this.calculateTimeRemaining(
-      bid.item?.original_scheduled_date
+      bid.item?.original_scheduled_date,
     );
 
     return `
@@ -597,11 +597,11 @@ class UnifiedAuctionManager {
         <td>
           <div class="date-info">
             <div>${this.formatScheduledDate(
-              bid.item?.original_scheduled_date
+              bid.item?.original_scheduled_date,
             )}</div>
             <div class="time-remaining ${timeInfo.className}">${
-      timeInfo.text
-    }</div>
+              timeInfo.text
+            }</div>
           </div>
         </td>
         <td>${this.renderLiveActions(bid)}</td>
@@ -615,7 +615,7 @@ class UnifiedAuctionManager {
       <tr class="direct-bid-row" data-bid-type="direct" data-bid-id="${bid.id}">
         <td><span class="badge badge-success">직접</span></td>
         <td>${this.renderItemInfo(bid)}</td>
-        <td>${bid.user_id}</td>
+        <td>${bid.user_id}<br>(${bid.company_name || "-"})</td>
         <td>${this.renderDirectBidPrices(bid)}</td>
         <td>${this.renderDirectStatus(bid)}</td>
         <td>
@@ -636,8 +636,8 @@ class UnifiedAuctionManager {
     return `
       <div class="item-info">
         <img src="${imageUrl}" alt="${
-      bid.item?.original_title || ""
-    }" class="item-thumbnail" />
+          bid.item?.original_title || ""
+        }" class="item-thumbnail" />
         <div class="item-details">
           <div class="item-id">
             <a href="${itemUrl}" target="_blank">${bid.item_id}</a>
@@ -675,25 +675,25 @@ class UnifiedAuctionManager {
     if (bid.first_price) {
       html += `<div class="price-item">1차: ${formatCurrency(
         bid.first_price,
-        "JPY"
+        "JPY",
       )}</div>`;
     }
     if (bid.second_price) {
       html += `<div class="price-item">2차: ${formatCurrency(
         bid.second_price,
-        "JPY"
+        "JPY",
       )}</div>`;
     }
     if (bid.final_price) {
       html += `<div class="price-item">최종: ${formatCurrency(
         bid.final_price,
-        "JPY"
+        "JPY",
       )}</div>`;
     }
     if (bid.winning_price) {
       html += `<div class="price-item winning">낙찰: ${formatCurrency(
         bid.winning_price,
-        "JPY"
+        "JPY",
       )}</div>`;
     }
 
@@ -708,7 +708,7 @@ class UnifiedAuctionManager {
     if (bid.current_price) {
       html += `<div class="price-item">입찰: ${formatCurrency(
         bid.current_price,
-        "JPY"
+        "JPY",
       )}</div>`;
 
       // 수수료 포함 가격 계산
@@ -716,11 +716,11 @@ class UnifiedAuctionManager {
         const totalPrice = calculateTotalPrice(
           bid.current_price,
           bid.item.auc_num,
-          bid.item.category
+          bid.item.category,
         );
         html += `<div class="price-item total">총액: ${formatCurrency(
           totalPrice,
-          "KRW"
+          "KRW",
         )}</div>`;
       }
     }
@@ -728,7 +728,7 @@ class UnifiedAuctionManager {
     if (bid.winning_price) {
       html += `<div class="price-item winning">낙찰: ${formatCurrency(
         bid.winning_price,
-        "JPY"
+        "JPY",
       )}</div>`;
     }
 
@@ -832,9 +832,8 @@ class UnifiedAuctionManager {
 
     document.getElementById("quickActionTitle").textContent =
       actionNames[action] || "작업 확인";
-    document.getElementById(
-      "quickActionMessage"
-    ).textContent = `${actionNames[action]}을 위해 상세 관리 페이지로 이동하시겠습니까?`;
+    document.getElementById("quickActionMessage").textContent =
+      `${actionNames[action]}을 위해 상세 관리 페이지로 이동하시겠습니까?`;
 
     document.getElementById("confirmQuickAction").onclick = () => {
       this.closeModal();
@@ -892,9 +891,8 @@ class UnifiedAuctionManager {
         filterText = "전체 결과";
     }
 
-    document.getElementById(
-      "resultsCount"
-    ).textContent = `${filterText}: 총 ${totalCount}건 (현장 ${liveCount}건, 직접 ${directCount}건)`;
+    document.getElementById("resultsCount").textContent =
+      `${filterText}: 총 ${totalCount}건 (현장 ${liveCount}건, 직접 ${directCount}건)`;
   }
 
   // 날짜 포맷팅 - 공통 함수 활용
@@ -917,9 +915,8 @@ class UnifiedAuctionManager {
 
   // 에러 표시
   showError(message) {
-    document.getElementById(
-      "unifiedResults"
-    ).innerHTML = `<tr><td colspan="7" class="text-center error">${message}</td></tr>`;
+    document.getElementById("unifiedResults").innerHTML =
+      `<tr><td colspan="7" class="text-center error">${message}</td></tr>`;
   }
 
   // 모달 열기 - 공통 함수 활용
