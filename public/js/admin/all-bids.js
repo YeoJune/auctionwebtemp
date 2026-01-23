@@ -574,7 +574,7 @@ class UnifiedAuctionManager {
 
     if (html === "") {
       html =
-        '<tr><td colspan="7" class="text-center">결과가 없습니다.</td></tr>';
+        '<tr><td colspan="8" class="text-center">결과가 없습니다.</td></tr>';
     }
 
     tbody.innerHTML = html;
@@ -594,6 +594,7 @@ class UnifiedAuctionManager {
         <td>${bid.user_id}<br>(${bid.company_name || "-"})</td>
         <td>${this.renderLiveBidPrices(bid)}</td>
         <td>${this.renderLiveStatus(bid)}</td>
+        <td>${this.renderAppraisalBadge(bid)}</td>
         <td>
           <div class="date-info">
             <div>${this.formatScheduledDate(
@@ -618,6 +619,7 @@ class UnifiedAuctionManager {
         <td>${bid.user_id}<br>(${bid.company_name || "-"})</td>
         <td>${this.renderDirectBidPrices(bid)}</td>
         <td>${this.renderDirectStatus(bid)}</td>
+        <td>${this.renderAppraisalBadge(bid)}</td>
         <td>
           <div class="date-info">
             <div>${formatDate(bid.updated_at)}</div>
@@ -772,6 +774,15 @@ class UnifiedAuctionManager {
       className: "badge",
     };
     return `<span class="badge ${status.className}">${status.text}</span>`;
+  }
+
+  // 감정서 발급 여부 렌더링
+  renderAppraisalBadge(bid) {
+    if (bid.appr_id) {
+      return '<span class="badge badge-success">발급됨</span>';
+    } else {
+      return '<span class="badge badge-secondary">미발급</span>';
+    }
   }
 
   // 현장 경매 작업 버튼 렌더링
