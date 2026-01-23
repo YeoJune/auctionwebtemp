@@ -553,7 +553,7 @@ router.post("/", async (req, res) => {
         // API 실패 시 입찰 데이터 삭제로 롤백
         await connection.query("DELETE FROM direct_bids WHERE id = ?", [bidId]);
         return res.status(409).json({
-          message: "입찰 중 오류가 발생했습니다",
+          message: "지금은 입찰할 수 없는 상태입니다.",
           error: submissionResult?.error || "Unknown error",
         });
       }
