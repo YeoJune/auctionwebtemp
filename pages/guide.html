@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
@@ -2730,7 +2730,7 @@
             </div>
             <div class="comparison-row total">
               <span style="font-weight: 700">총액</span>
-              <span style="font-weight: 900; font-family: 'Archivo'"
+              <span style="font-weight: 900; font-family: &quot;Archivo&quot;"
                 >7,418,340 원</span
               >
             </div>
@@ -2814,7 +2814,7 @@
                 style="
                   font-weight: 900;
                   font-size: 32px;
-                  font-family: 'Archivo';
+                  font-family: &quot;Archivo&quot;;
                   color: var(--accent-blue);
                 "
                 >6,705,369 원</span
@@ -2838,7 +2838,7 @@
                   font-size: 28px;
                   font-weight: 900;
                   color: var(--accent-blue);
-                  font-family: 'Archivo';
+                  font-family: &quot;Archivo&quot;;
                 ">
                 - 712,971 원
               </p>
@@ -3116,7 +3116,12 @@
           <img
             src="https://i.ibb.co/cBTqTSY/2025-11-10-11-28-12.png"
             alt="CAS 감정 소견서"
-            onclick="window.open('https://i.ibb.co/cBTqTSY/2025-11-10-11-28-12.png', '_blank');" />
+            onclick="
+              window.open(
+                'https://i.ibb.co/cBTqTSY/2025-11-10-11-28-12.png',
+                '_blank',
+              )
+            " />
         </div>
       </div>
     </section>
@@ -3244,26 +3249,8 @@
 
         <div class="pricing-grid">
           <div class="pricing-card featured">
-            <div class="pricing-badge">1개월 무료</div>
             <h3 class="pricing-title">월 이용료</h3>
-            <div class="pricing-price">
-              <span style="text-decoration: line-through; opacity: 0.5"
-                >99,000원</span
-              >
-            </div>
-            <p
-              style="
-                margin: 16px 0;
-                padding: 12px;
-                background: var(--bg-alt);
-                border-radius: 8px;
-                font-size: 14px;
-                color: var(--text);
-                opacity: 0.8;
-                text-align: center;
-              ">
-              1개월 무료 이용, 사용해보고 결정하세요
-            </p>
+            <div class="pricing-price">99,000원</div>
             <ul class="pricing-features">
               <li>모든 경매 접근 권한</li>
               <li>담당 경매사 배정</li>
@@ -3273,7 +3260,10 @@
               <a
                 href="#"
                 class="pricing-detail-btn"
-                onclick="openMonthlyFeeFaqModal(); return false;"
+                onclick="
+                  openMonthlyFeeFaqModal();
+                  return false;
+                "
                 >자세히보기 <i class="fas fa-chevron-right"></i
               ></a>
             </div>
@@ -3579,7 +3569,7 @@
       document.addEventListener("DOMContentLoaded", () => {
         document
           .querySelectorAll(
-            ".fade-in, .stat-card, .savings-badge, .trust-stats, .comparison-container > div"
+            ".fade-in, .stat-card, .savings-badge, .trust-stats, .comparison-container > div",
           )
           .forEach((el) => {
             observer.observe(el);
@@ -3602,14 +3592,14 @@
                 }
               });
             },
-            { threshold: 0.1 }
+            { threshold: 0.1 },
           );
 
           btnObserver.observe(viewMoreBtn);
         }
 
         const priceGalleryExpanded = document.getElementById(
-          "priceGalleryExpanded"
+          "priceGalleryExpanded",
         );
 
         if (viewMoreBtn && priceGalleryExpanded) {
