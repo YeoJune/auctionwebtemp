@@ -11,7 +11,7 @@ class MyPageManager {
 
     // bid-products.js와 완전히 동일한 상태 구조
     this.bidProductsState = {
-      bidType: "live",
+      bidType: "all",
       status: "all",
       dateRange: 30,
       currentPage: 1,
@@ -96,7 +96,7 @@ class MyPageManager {
       if (window.BidManager) {
         window.BidManager.initialize(
           true,
-          this.bidProductsState.filteredResults.map((item) => item.item)
+          this.bidProductsState.filteredResults.map((item) => item.item),
         );
       }
 
@@ -181,7 +181,7 @@ class MyPageManager {
 
       const queryString = window.API.createURLParams(params);
 
-      if (forceLoadBoth) {
+      if (forceLoadBoth || this.bidProductsState.bidType === "all") {
         const [liveResults, directResults] = await Promise.all([
           window.API.fetchAPI(`/live-bids?${queryString}`),
           window.API.fetchAPI(`/direct-bids?${queryString}`),
@@ -192,17 +192,13 @@ class MyPageManager {
       } else {
         if (this.bidProductsState.bidType === "direct") {
           const directResults = await window.API.fetchAPI(
-            `/direct-bids?${queryString}`
+            `/direct-bids?${queryString}`,
           );
           this.bidProductsState.directBids = directResults.bids || [];
           this.bidProductsState.liveBids = []; // 다른 타입 데이터 초기화
-        } else {
-          this.bidProductsState.bidType = "live";
-          const liveRadio = document.getElementById("bidItems-bidType-live");
-          if (liveRadio) liveRadio.checked = true;
-
+        } else if (this.bidProductsState.bidType === "live") {
           const liveResults = await window.API.fetchAPI(
-            `/live-bids?${queryString}`
+            `/live-bids?${queryString}`,
           );
           this.bidProductsState.liveBids = liveResults.bids || [];
           this.bidProductsState.directBids = []; // 다른 타입 데이터 초기화
@@ -235,7 +231,7 @@ class MyPageManager {
       if (window.BidManager) {
         window.BidManager.updateBidData(
           this.bidProductsState.liveBids,
-          this.bidProductsState.directBids
+          this.bidProductsState.directBids,
         );
       }
     } catch (error) {
@@ -270,7 +266,7 @@ class MyPageManager {
       this.bidResultsCore.setPageState(this.bidResultsState);
 
       console.log(
-        `입찰 결과 데이터 로드 완료: 총 ${this.bidResultsState.totalItems}건`
+        `입찰 결과 데이터 로드 완료: 총 ${this.bidResultsState.totalItems}건`,
       );
     } catch (error) {
       console.error("입찰 결과 데이터 로드 실패:", error);
@@ -372,7 +368,7 @@ class MyPageManager {
   async renderDashboard() {
     console.log("대시보드 렌더링 시작");
 
-    this.bidProductsState.bidType = "live";
+    this.bidProductsState.bidType = "all";
     this.bidProductsState.status = "all";
     this.bidProductsState.currentPage = 1;
 
@@ -381,16 +377,16 @@ class MyPageManager {
     const stats = await this.calculateDashboardStats();
 
     document.getElementById("active-count").textContent = formatNumber(
-      stats.activeCount
+      stats.activeCount,
     );
     document.getElementById("higher-bid-count").textContent = formatNumber(
-      stats.higherBidCount
+      stats.higherBidCount,
     );
     document.getElementById("current-highest-count").textContent = formatNumber(
-      stats.currentHighestCount
+      stats.currentHighestCount,
     );
     document.getElementById("completed-count").textContent = formatNumber(
-      stats.completedCount
+      stats.completedCount,
     );
 
     this.bidProductsCore.setPageState(this.bidProductsState);
@@ -414,13 +410,13 @@ class MyPageManager {
     const allBids = this.bidProductsState.combinedResults;
 
     const activeCount = allBids.filter((bid) =>
-      this.bidProductsCore.filterByStatusAndDeadline(bid, "active")
+      this.bidProductsCore.filterByStatusAndDeadline(bid, "active"),
     ).length;
 
     const higherBidCount = allBids.filter(
       (bid) =>
         bid.type === "direct" &&
-        this.bidProductsCore.filterByStatusAndDeadline(bid, "higher-bid")
+        this.bidProductsCore.filterByStatusAndDeadline(bid, "higher-bid"),
     ).length;
 
     const currentHighestCount = allBids.filter(
@@ -428,13 +424,13 @@ class MyPageManager {
         bid.type === "direct" &&
         bid.status === "active" &&
         !this.bidProductsCore.checkIfExpired(bid) &&
-        bid.current_price > 0
+        bid.current_price > 0,
     ).length;
 
     // ✨ dailyResults에서 성공 아이템 카운트
     const completedCount = this.bidResultsState.dailyResults.reduce(
       (total, day) => total + (day.itemCount || 0),
-      0
+      0,
     );
 
     return { activeCount, higherBidCount, currentHighestCount, completedCount };
@@ -449,7 +445,7 @@ class MyPageManager {
       (bid) => ({
         ...bid,
         source: "products",
-      })
+      }),
     );
 
     const bidResultsRecent = this.bidResultsState.dailyResults
@@ -478,21 +474,21 @@ class MyPageManager {
         <div class="activity-item" style="cursor: pointer;" 
              onclick="myPageManager.showProductDetails('${bid.item?.item_id}')">
           <img src="${window.API.validateImageUrl(
-            bid.item?.image
+            bid.item?.image,
           )}" alt="상품 이미지" class="activity-image">
           <div class="activity-content">
             <div class="activity-title">${bid.item?.brand || "-"} - ${
-          bid.item?.title || "제목 없음"
-        }</div>
+              bid.item?.title || "제목 없음"
+            }</div>
             <div class="activity-details">
               <span class="activity-type">${
                 bid.type === "live" ? "현장경매" : "직접경매"
               }</span>
               <span class="activity-price">￥${formatNumber(
-                displayPrice
+                displayPrice,
               )}</span>
               <span class="activity-status ${this.getDashboardStatusClass(
-                bid
+                bid,
               )}">${statusText}</span>
             </div>
             <div class="activity-date">${formatDateTime(bid.updated_at)}</div>
@@ -519,7 +515,7 @@ class MyPageManager {
     this.bidProductsCore.displayProducts("bidItems-productList");
     this.bidProductsCore.updatePagination(
       (page) => this.handleBidItemsPageChange(page),
-      "bidItems-pagination"
+      "bidItems-pagination",
     );
     this.bidProductsCore.updateSortButtonsUI();
 
@@ -558,7 +554,7 @@ class MyPageManager {
         this.bidResultsState.currentPage,
         this.bidResultsState.totalPages,
         (page) => this.handleBidResultsPageChange(page),
-        "bidResults-pagination"
+        "bidResults-pagination",
       );
 
       // 결과 카운트 업데이트
@@ -620,7 +616,7 @@ class MyPageManager {
     if (searchInput) searchInput.value = this.bidProductsState.keyword || "";
 
     const sortButtons = document.querySelectorAll(
-      "#bid-items-section .sort-btn"
+      "#bid-items-section .sort-btn",
     );
     sortButtons.forEach((btn) => {
       btn.classList.remove("active", "asc", "desc");
@@ -636,7 +632,7 @@ class MyPageManager {
     if (dateRange) dateRange.value = this.bidResultsState.dateRange;
 
     const sortButtons = document.querySelectorAll(
-      "#bid-results-section .sort-btn"
+      "#bid-results-section .sort-btn",
     );
     sortButtons.forEach((btn) => {
       btn.classList.remove("active", "asc", "desc");
@@ -713,7 +709,7 @@ class MyPageManager {
     this.bidProductsCore.displayProducts("bidItems-productList");
     this.bidProductsCore.updatePagination(
       (page) => this.handleBidItemsPageChange(page),
-      "bidItems-pagination"
+      "bidItems-pagination",
     );
 
     window.scrollTo(0, 0);
@@ -953,7 +949,7 @@ class MyPageManager {
       });
 
     const sortButtons = document.querySelectorAll(
-      "#bid-items-section .sort-btn"
+      "#bid-items-section .sort-btn",
     );
     sortButtons.forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -994,7 +990,7 @@ class MyPageManager {
       });
 
     const sortButtons = document.querySelectorAll(
-      "#bid-results-section .sort-btn"
+      "#bid-results-section .sort-btn",
     );
     sortButtons.forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -1174,22 +1170,29 @@ class MyPageManager {
   // 상태 필터 UI 업데이트
   updateBidItemsStatusFilterUI() {
     const activeWrapper = document.getElementById(
-      "bidItems-status-active-wrapper"
+      "bidItems-status-active-wrapper",
     );
     const higherBidWrapper = document.getElementById(
-      "bidItems-status-higher-bid-wrapper"
+      "bidItems-status-higher-bid-wrapper",
     );
     const firstWrapper = document.getElementById(
-      "bidItems-status-first-wrapper"
+      "bidItems-status-first-wrapper",
     );
     const secondWrapper = document.getElementById(
-      "bidItems-status-second-wrapper"
+      "bidItems-status-second-wrapper",
     );
     const finalWrapper = document.getElementById(
-      "bidItems-status-final-wrapper"
+      "bidItems-status-final-wrapper",
     );
 
-    if (this.bidProductsState.bidType === "direct") {
+    if (this.bidProductsState.bidType === "all") {
+      // 전체: 모든 상태 필터 표시
+      if (activeWrapper) activeWrapper.style.display = "block";
+      if (higherBidWrapper) higherBidWrapper.style.display = "block";
+      if (firstWrapper) firstWrapper.style.display = "block";
+      if (secondWrapper) secondWrapper.style.display = "block";
+      if (finalWrapper) finalWrapper.style.display = "block";
+    } else if (this.bidProductsState.bidType === "direct") {
       // 직접 경매: 입찰 진행중, 더 높은 입찰 존재 표시
       if (activeWrapper) activeWrapper.style.display = "block";
       if (higherBidWrapper) higherBidWrapper.style.display = "block";
@@ -1228,7 +1231,7 @@ let myPageManager;
 window.requestAppraisal = async function (item) {
   if (
     confirm(
-      "감정서를 신청하시겠습니까?\n수수료 16,500원(VAT포함)이 추가됩니다."
+      "감정서를 신청하시겠습니까?\n수수료 16,500원(VAT포함)이 추가됩니다.",
     )
   ) {
     try {

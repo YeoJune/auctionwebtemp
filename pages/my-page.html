@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
@@ -163,6 +163,15 @@
                     <input
                       type="radio"
                       name="bidItems-bidType"
+                      id="bidItems-bidType-all"
+                      value="all"
+                      checked />
+                    <label for="bidItems-bidType-all">전체</label>
+                  </div>
+                  <div class="radio-item">
+                    <input
+                      type="radio"
+                      name="bidItems-bidType"
                       id="bidItems-bidType-live"
                       value="live" />
                     <label for="bidItems-bidType-live">현장 경매</label>
@@ -201,7 +210,10 @@
                       name="bidItems-status"
                       id="bidItems-status-active"
                       value="active" />
-                    <label for="bidItems-status-active">입찰 진행중</label>
+                    <label for="bidItems-status-active"
+                      >입찰 진행중
+                      <span class="filter-type-hint">(직접경매)</span></label
+                    >
                   </div>
                   <!-- 현장경매 전용 -->
                   <div
@@ -213,7 +225,10 @@
                       name="bidItems-status"
                       id="bidItems-status-first"
                       value="first" />
-                    <label for="bidItems-status-first">1차 입찰</label>
+                    <label for="bidItems-status-first"
+                      >1차 입찰
+                      <span class="filter-type-hint">(현장경매)</span></label
+                    >
                   </div>
                   <div
                     class="radio-item"
@@ -224,7 +239,10 @@
                       name="bidItems-status"
                       id="bidItems-status-second"
                       value="second" />
-                    <label for="bidItems-status-second">2차 제안</label>
+                    <label for="bidItems-status-second"
+                      >2차 제안
+                      <span class="filter-type-hint">(현장경매)</span></label
+                    >
                   </div>
                   <div
                     class="radio-item"
@@ -235,7 +253,10 @@
                       name="bidItems-status"
                       id="bidItems-status-final"
                       value="final" />
-                    <label for="bidItems-status-final">최종 입찰</label>
+                    <label for="bidItems-status-final"
+                      >최종 입찰
+                      <span class="filter-type-hint">(현장경매)</span></label
+                    >
                   </div>
                   <!-- 직접경매 전용 -->
                   <div
@@ -248,7 +269,8 @@
                       id="bidItems-status-higher-bid"
                       value="higher-bid" />
                     <label for="bidItems-status-higher-bid"
-                      >더 높은 입찰 존재</label
+                      >더 높은 입찰 존재
+                      <span class="filter-type-hint">(직접경매)</span></label
                     >
                   </div>
                   <div class="radio-item">
@@ -659,7 +681,7 @@
         window,
         document,
         "script",
-        "https://connect.facebook.net/en_US/fbevents.js"
+        "https://connect.facebook.net/en_US/fbevents.js",
       );
       fbq("init", "3072535019552512");
       fbq("track", "PageView");
