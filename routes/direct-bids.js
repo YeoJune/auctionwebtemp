@@ -526,7 +526,7 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // 4. UPSERT로 입찰 생성/업데이트 (아직 커밋 안 함)
+    // 4. UPSERT로 입찰 생성/업데이트
     const [result] = await connection.query(
       `INSERT INTO direct_bids (user_id, item_id, current_price, status) 
        VALUES (?, ?, ?, 'active')
@@ -537,11 +537,12 @@ router.post("/", async (req, res) => {
       [userId, itemId, currentPrice],
     );
 
-    await connection.commit();
-
     const bidId = result.insertId;
 
-    // 5. autoSubmit이 true인 경우 API 호출
+    // 5. 먼저 commit (데드락 방지 - submitBid 내부에서 같은 row 접근 가능하도록)
+    await connection.commit();
+
+    // 6. autoSubmit이 true인 경우 API 호출
     if (autoSubmit) {
       const submissionResult = await submitBid(
         { bid_id: bidId, price: currentPrice },
@@ -549,10 +550,10 @@ router.post("/", async (req, res) => {
       );
 
       if (!submissionResult || !submissionResult.success) {
-        // API 실패 시 롤백 후 에러 반환
-        await connection.rollback();
+        // API 실패 시 입찰 데이터 삭제로 롤백
+        await connection.query("DELETE FROM direct_bids WHERE id = ?", [bidId]);
         return res.status(409).json({
-          message: "입찰 중 새로운 입찰이 발생했습니다",
+          message: "입찰 중 오류가 발생했습니다",
           error: submissionResult?.error || "Unknown error",
         });
       }
@@ -560,14 +561,11 @@ router.post("/", async (req, res) => {
       // API 성공 → submitted_to_platform은 submitBid 내부에서 이미 처리됨
     }
 
-    // 6. 가격이 낮은 다른 입찰들을 취소
+    // 7. 성공 시에만 가격이 낮은 다른 입찰들을 취소
     await connection.query(
       "UPDATE direct_bids SET status = 'cancelled' WHERE item_id = ? AND current_price < ? AND status = 'active' AND id != ?",
       [itemId, currentPrice, bidId],
     );
-
-    // 7. 모든 작업 성공 → 커밋
-    await connection.commit();
 
     res.status(201).json({
       message: "입찰이 성공적으로 제출되었습니다",
