@@ -250,6 +250,25 @@ async function submitBid(bidData, item) {
       statusCode: 200,
     };
   } else {
+    // ===== TEMP: 2번 경매(브랜드옥션)는 API 실패해도 성공 처리 =====
+    if (item.auc_num == 2) {
+      console.warn(
+        `[TEMP] BrandAuc bid API failed but treating as success (not submitted to platform) for item ${item.item_id}`,
+      );
+      await connection.commit();
+      connection.release();
+
+      return {
+        success: true,
+        message: "Bid saved but not submitted to platform (BrandAuc temporary)",
+        bid_id: bid_id,
+        item_id: item.item_id,
+        submitted_to_platform: false,
+        statusCode: 200,
+      };
+    }
+    // ===== END TEMP =====
+
     // 실패 시 오류 반환 및 명시적으로 submitted_to_platform = false 유지
     console.error(
       `Bid failed for item ${item.item_id} with price ${price}: ${
