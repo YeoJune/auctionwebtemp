@@ -48,6 +48,46 @@ class MyPageManager {
     this.bidResultsCore = window.BidResultsCore;
   }
 
+  // combinedResults 재정렬
+  sortCombinedResults() {
+    const { sortBy, sortOrder } = this.bidProductsState;
+
+    this.bidProductsState.combinedResults.sort((a, b) => {
+      let aValue, bValue;
+
+      switch (sortBy) {
+        case "updated_at":
+          aValue = new Date(a.updated_at).getTime();
+          bValue = new Date(b.updated_at).getTime();
+          break;
+
+        case "starting_price":
+          aValue = a.item?.starting_price || 0;
+          bValue = b.item?.starting_price || 0;
+          break;
+
+        case "brand":
+          aValue = (a.item?.brand || "").toLowerCase();
+          bValue = (b.item?.brand || "").toLowerCase();
+          break;
+
+        default:
+          return 0;
+      }
+
+      // 정렬 순서 처리
+      if (sortBy === "brand") {
+        // 문자열 비교
+        if (aValue < bValue) return sortOrder === "asc" ? -1 : 1;
+        if (aValue > bValue) return sortOrder === "asc" ? 1 : -1;
+        return 0;
+      } else {
+        // 숫자 비교
+        return sortOrder === "asc" ? aValue - bValue : bValue - aValue;
+      }
+    });
+  }
+
   // 초기화
   async initialize() {
     try {
@@ -225,6 +265,11 @@ class MyPageManager {
         ...liveBidsWithType,
         ...directBidsWithType,
       ];
+
+      // bidType이 "all"일 때는 클라이언트에서 재정렬
+      if (this.bidProductsState.bidType === "all") {
+        this.sortCombinedResults();
+      }
 
       this.bidProductsCore.setPageState(this.bidProductsState);
 
@@ -1027,7 +1072,15 @@ class MyPageManager {
       }
 
       this.bidProductsState.currentPage = 1;
-      await this.loadBidItemsData();
+
+      // bidType이 "all"이면 데이터를 새로 불러온 후 재정렬
+      if (this.bidProductsState.bidType === "all") {
+        await this.loadBidItemsData();
+      } else {
+        // 단일 타입은 API에서 정렬되어 오므로 다시 로드만
+        await this.loadBidItemsData();
+      }
+
       this._renderBidItemsUI();
     } finally {
       this.isTransitioning = false;
@@ -1054,7 +1107,7 @@ class MyPageManager {
     this.isTransitioning = true;
 
     try {
-      this.bidProductsState.bidType = "live";
+      this.bidProductsState.bidType = "all";
       this.bidProductsState.status = "all";
       this.bidProductsState.dateRange = 30;
       this.bidProductsState.keyword = "";
