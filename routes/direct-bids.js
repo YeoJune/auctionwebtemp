@@ -1119,10 +1119,6 @@ const startAutoSubmitScheduler = () => {
   }, AUTO_SUBMIT_INTERVAL);
 };
 
-if (process.env.ENV !== "development") {
-} else {
-  // 라우터 초기화 시 스케줄러 시작
-  startAutoSubmitScheduler();
-}
+startAutoSubmitScheduler();
 
 module.exports = router;
