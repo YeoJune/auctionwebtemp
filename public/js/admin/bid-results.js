@@ -26,14 +26,6 @@ async function initialize() {
 
   await window.API.initialize();
 
-  // 관리자 인증 확인
-  const isAdmin = window.AuthManager?.isAdmin();
-  if (!isAdmin) {
-    alert("관리자 권한이 필요합니다.");
-    window.location.href = "/signin.html";
-    return;
-  }
-
   setupEventListeners();
   await loadResults();
 

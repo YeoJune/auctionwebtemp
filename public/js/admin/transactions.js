@@ -40,13 +40,6 @@ async function initialize() {
 
   await window.API.initialize();
 
-  const isAdmin = window.AuthManager?.isAdmin();
-  if (!isAdmin) {
-    alert("관리자 권한이 필요합니다.");
-    window.location.href = "/signin.html";
-    return;
-  }
-
   setupEventListeners();
   await loadDeposits(); // 기본 탭 로드
 
