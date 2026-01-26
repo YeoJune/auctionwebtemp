@@ -142,7 +142,7 @@ router.post(
     } else {
       res.status(400).json({ message: "guide.html 업로드에 실패했습니다." });
     }
-  }
+  },
 );
 
 // inquiry.html 업로드 라우트 추가
@@ -156,7 +156,7 @@ router.post(
     } else {
       res.status(400).json({ message: "inquiry.html 업로드에 실패했습니다." });
     }
-  }
+  },
 );
 
 // bid-guide.html 업로드 라우트
@@ -172,7 +172,7 @@ router.post(
         .status(400)
         .json({ message: "bid-guide.html 업로드에 실패했습니다." });
     }
-  }
+  },
 );
 
 // 클라이언트 측 공지사항 조회 API (접근 제한 없음)
@@ -291,7 +291,7 @@ router.post(
       const outputPath = path.join(
         __dirname,
         "../public/images/notices",
-        filename
+        filename,
       );
 
       await sharp(req.file.buffer).webp({ quality: 100 }).toFile(outputPath);
@@ -305,7 +305,7 @@ router.post(
       console.error("Error adding notice:", error);
       res.status(500).json({ message: "Error adding notice" });
     }
-  }
+  },
 );
 
 router.put(
@@ -331,7 +331,7 @@ router.put(
         const outputPath = path.join(
           __dirname,
           "../public/images/notices",
-          filename
+          filename,
         );
 
         await sharp(req.file.buffer).webp({ quality: 100 }).toFile(outputPath);
@@ -356,7 +356,7 @@ router.put(
         id,
         title,
         imageUrl,
-        targetUrl || null
+        targetUrl || null,
       );
       if (!updatedNotice) {
         return res.status(404).json({ message: "Notice not found" });
@@ -366,7 +366,7 @@ router.put(
       console.error("Error updating notice:", error);
       res.status(500).json({ message: "Error updating notice" });
     }
-  }
+  },
 );
 
 router.delete("/notices/:id", isAdmin, async (req, res) => {
@@ -409,7 +409,7 @@ router.put("/filter-settings", isAdmin, async (req, res) => {
     const result = await updateFilterSetting(
       filterType,
       filterValue,
-      isEnabled
+      isEnabled,
     );
     res.json(result);
   } catch (error) {
@@ -456,7 +456,7 @@ router.put("/filter-settings/batch", isAdmin, async (req, res) => {
       const result = await updateFilterSetting(
         filterType,
         filterValue,
-        isEnabled
+        isEnabled,
       );
       results.push(result);
     }
@@ -504,7 +504,7 @@ router.post("/recommend-settings", isAdmin, async (req, res) => {
     const newSetting = await addRecommendSetting(
       ruleName,
       conditions,
-      recommendScore
+      recommendScore,
     );
 
     // 새 규칙 추가 후 즉시 동기화
@@ -534,7 +534,7 @@ router.put("/recommend-settings/batch", isAdmin, async (req, res) => {
   } catch (error) {
     console.error(
       "Error performing batch update of recommend settings:",
-      error
+      error,
     );
     res.status(500).json({ message: "Error updating recommend settings" });
   }
@@ -560,7 +560,7 @@ router.put("/recommend-settings/:id", isAdmin, async (req, res) => {
       ruleName,
       conditions,
       recommendScore,
-      isEnabled
+      isEnabled,
     );
 
     // 규칙 수정 후 즉시 동기화
@@ -611,7 +611,7 @@ router.put("/values/:itemId/price", isAdmin, async (req, res) => {
       {
         final_price: parseFloat(final_price).toFixed(2), // 소수점 2자리까지 저장
       },
-      "values_items"
+      "values_items",
     );
 
     res.json({
@@ -625,6 +625,11 @@ router.put("/values/:itemId/price", isAdmin, async (req, res) => {
       message: "가격 업데이트 중 오류가 발생했습니다",
     });
   }
+});
+
+// 관리자 거래 내역 페이지 렌더링
+router.get("/transactions", isAdmin, (req, res) => {
+  res.sendFile(path.join(__dirname, "../pages/admin/transactions.html"));
 });
 
 // 인보이스 목록 조회

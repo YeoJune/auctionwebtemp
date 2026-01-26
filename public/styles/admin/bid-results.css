@@ -1,0 +1,150 @@
+/* public/styles/admin/bid-results-admin.css */
+
+/* ========================================
+   관리자 입찰 결과 페이지 전용 스타일
+======================================== */
+
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 12px 0;
+}
+
+.results-count {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.data-table .text-right {
+  text-align: right;
+}
+
+.data-table .text-danger {
+  color: #dc3545;
+  font-weight: 600;
+}
+
+.data-table .text-muted {
+  color: #6c757d;
+}
+
+/* 상세 모달 */
+.modal-lg {
+  max-width: 900px;
+}
+
+.detail-section {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.detail-section:last-child {
+  border-bottom: none;
+}
+
+.detail-section h4 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #333;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 14px;
+}
+
+.detail-row .label {
+  color: #666;
+}
+
+.detail-row .value {
+  font-weight: 600;
+  color: #333;
+}
+
+.detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+.detail-table th,
+.detail-table td {
+  padding: 10px;
+  border: 1px solid #dee2e6;
+  font-size: 13px;
+}
+
+.detail-table th {
+  background: #f8f9fa;
+  font-weight: 600;
+  text-align: left;
+}
+
+/* 정산 승인 모달 */
+.settlement-info {
+  margin-bottom: 20px;
+}
+
+.settlement-info .info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.settlement-info .info-row.highlight {
+  padding: 16px;
+  background: #e7f3ff;
+  border-radius: 6px;
+  border: 2px solid #2c5aa0;
+  margin-top: 12px;
+  border-bottom: none;
+}
+
+.settlement-info .label {
+  font-size: 14px;
+  color: #666;
+}
+
+.settlement-info .value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.settlement-info .value.primary {
+  font-size: 20px;
+  color: #2c5aa0;
+}
+
+/* 버튼 */
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.btn-info {
+  background: #17a2b8;
+  color: white;
+}
+
+.btn-info:hover {
+  background: #138496;
+}
+
+.btn-success {
+  background: #28a745;
+  color: white;
+}
+
+.btn-success:hover {
+  background: #218838;
+}

@@ -62,6 +62,9 @@ async function initialize() {
     // 관리자 통계 표시 여부 설정
     core.updateSummaryStatsVisibility();
 
+    // 정산 결제 요청 모달 이벤트 설정
+    setupPaymentModalEvents();
+
     console.log("입찰 결과 페이지 초기화 완료");
   } catch (error) {
     console.error("초기화 중 오류 발생:", error);
@@ -189,7 +192,7 @@ async function fetchCompletedBids() {
       window.state.currentPage,
       window.state.totalPages,
       handlePageChange,
-      "pagination"
+      "pagination",
     );
 
     // 정렬 버튼 UI 업데이트
@@ -337,7 +340,7 @@ function handlePageChange(page) {
 window.requestAppraisal = async function (item) {
   if (
     !confirm(
-      "감정서를 신청하시겠습니까?\n수수료 16,500원(VAT포함)이 추가됩니다."
+      "감정서를 신청하시겠습니까?\n수수료 16,500원(VAT포함)이 추가됩니다.",
     )
   ) {
     return;
@@ -369,3 +372,122 @@ window.requestAppraisal = async function (item) {
 
 // DOM 완료 시 실행
 document.addEventListener("DOMContentLoaded", initialize);
+
+// =====================================================
+// 정산 결제 요청 모달 관련 함수
+// =====================================================
+
+let currentSettlement = null;
+
+// 결제 모달 열기 (전역 함수로 선언)
+window.openPaymentModal = function (settlementData) {
+  currentSettlement = settlementData;
+
+  const modal = document.getElementById("paymentRequestModal");
+
+  // 모달 데이터 바인딩
+  document.getElementById("paymentDate").textContent = settlementData.date;
+  document.getElementById("paymentTotalAmount").textContent =
+    `₩${settlementData.grandTotal.toLocaleString()}`;
+  document.getElementById("paymentCompletedAmount").textContent =
+    `₩${settlementData.completedAmount.toLocaleString()}`;
+  document.getElementById("paymentRemainingAmount").textContent =
+    `₩${settlementData.remainingAmount.toLocaleString()}`;
+
+  modal.style.display = "flex";
+};
+
+// 결제 모달 닫기
+function closePaymentModal() {
+  const modal = document.getElementById("paymentRequestModal");
+  modal.style.display = "none";
+  currentSettlement = null;
+}
+
+// 결제 완료 처리
+async function submitPaymentRequest() {
+  if (!currentSettlement) {
+    alert("정산 정보를 불러올 수 없습니다.");
+    return;
+  }
+
+  const { settlementId, remainingAmount } = currentSettlement;
+
+  if (
+    !confirm(
+      `${remainingAmount.toLocaleString()}원을 입금하셨습니까?\n\n입금 후 관리자가 확인하면 정산이 완료됩니다.`,
+    )
+  ) {
+    return;
+  }
+
+  try {
+    const response = await window.API.fetchAPI(
+      `/bid-results/settlements/${settlementId}/pay`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+
+    alert("결제 요청이 접수되었습니다.\n관리자 확인 후 정산이 완료됩니다.");
+    closePaymentModal();
+
+    // 화면 즉시 갱신 (해당 카드의 상태만 변경)
+    updateSettlementStatusInUI(settlementId, "pending");
+  } catch (error) {
+    console.error("결제 요청 실패:", error);
+    alert(
+      "결제 요청 중 오류가 발생했습니다.\n" +
+        (error.message || "다시 시도해주세요."),
+    );
+  }
+}
+
+// UI 상태 업데이트 (새로고침 없이 즉시 반영)
+function updateSettlementStatusInUI(settlementId, newStatus) {
+  const btn = document.querySelector(`[data-settlement-id="${settlementId}"]`);
+  if (!btn) return;
+
+  const settlementSection = btn.closest(".settlement-section");
+  if (!settlementSection) return;
+
+  // 상태 배지 업데이트
+  const statusBadge = settlementSection.querySelector(".status-badge");
+  if (statusBadge) {
+    statusBadge.className = "status-badge status-pending";
+    statusBadge.textContent = "입금 확인 중";
+  }
+
+  // 버튼 비활성화
+  btn.disabled = true;
+  btn.className = "btn btn-disabled";
+  btn.innerHTML = '<i class="fas fa-clock"></i> 입금 확인 중';
+}
+
+// 모달 이벤트 리스너 설정
+function setupPaymentModalEvents() {
+  const modal = document.getElementById("paymentRequestModal");
+  const closeBtn = document.getElementById("paymentModalClose");
+  const cancelBtn = document.getElementById("paymentCancelBtn");
+  const confirmBtn = document.getElementById("paymentConfirmBtn");
+
+  if (closeBtn) {
+    closeBtn.addEventListener("click", closePaymentModal);
+  }
+
+  if (cancelBtn) {
+    cancelBtn.addEventListener("click", closePaymentModal);
+  }
+
+  if (confirmBtn) {
+    confirmBtn.addEventListener("click", submitPaymentRequest);
+  }
+
+  // 모달 외부 클릭 시 닫기
+  if (modal) {
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) closePaymentModal();
+    });
+  }
+}

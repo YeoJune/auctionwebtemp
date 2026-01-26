@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/styles/common.css" />
     <link rel="stylesheet" href="/styles/admin/common.css" />
     <link rel="stylesheet" href="/styles/admin/admin.css" />
+    <link rel="stylesheet" href="/styles/admin/users.css" />
   </head>
   <body>
     <div class="admin-layout">
@@ -59,11 +60,11 @@
             <thead>
               <tr>
                 <th>아이디</th>
+                <th>회원 구분</th>
+                <th>예치금/한도</th>
                 <th>가입일</th>
                 <th>업체명</th>
                 <th>연락처</th>
-                <th>이메일</th>
-                <th>주소</th>
                 <th>수수료율</th>
                 <th>상태</th>
                 <th>작업</th>
@@ -71,7 +72,7 @@
             </thead>
             <tbody id="usersTableBody">
               <tr>
-                <td colspan="8" class="text-center">
+                <td colspan="9" class="text-center">
                   데이터를 불러오는 중입니다...
                 </td>
               </tr>
@@ -150,6 +151,84 @@
                 max="100"
                 placeholder="예: 5.00" />
             </div>
+
+            <!-- 회원 구분 -->
+            <div class="form-group">
+              <label class="form-label">
+                <i class="fas fa-user-tag"></i> 회원 구분 *
+              </label>
+              <div class="radio-group">
+                <label class="radio-label">
+                  <input
+                    type="radio"
+                    name="accountType"
+                    value="individual"
+                    checked />
+                  <span>개인 회원 (선불제)</span>
+                </label>
+                <label class="radio-label">
+                  <input type="radio" name="accountType" value="corporate" />
+                  <span>기업 회원 (후불제)</span>
+                </label>
+              </div>
+              <small class="form-text text-muted">
+                개인 회원은 예치금 충전 후 입찰, 기업 회원은 한도 내 입찰 후
+                정산
+              </small>
+            </div>
+
+            <!-- 예치금 (개인 회원용) -->
+            <div class="form-group" id="depositBalanceGroup">
+              <label class="form-label" for="depositBalance">
+                <i class="fas fa-wallet"></i> 현재 예치금 (원)
+              </label>
+              <input
+                type="number"
+                id="depositBalance"
+                class="form-control"
+                placeholder="0"
+                min="0"
+                step="1000"
+                readonly />
+              <small class="form-text text-muted">
+                예치금은 직접 수정할 수 없습니다. 거래 내역 관리 페이지에서
+                조정하세요.
+              </small>
+            </div>
+
+            <!-- 일일 한도 (기업 회원용) -->
+            <div class="form-group" id="dailyLimitGroup" style="display: none">
+              <label class="form-label" for="dailyLimit">
+                <i class="fas fa-chart-line"></i> 일일 한도 (원) *
+              </label>
+              <input
+                type="number"
+                id="dailyLimit"
+                class="form-control"
+                placeholder="예: 10000000"
+                min="0"
+                step="1000000" />
+              <small class="form-text text-muted">
+                기업 회원이 하루에 사용 가능한 최대 금액
+              </small>
+            </div>
+
+            <!-- 오늘 사용액 (기업 회원용) -->
+            <div class="form-group" id="dailyUsedGroup" style="display: none">
+              <label class="form-label" for="dailyUsed">
+                <i class="fas fa-receipt"></i> 오늘 사용액 (원)
+              </label>
+              <input
+                type="number"
+                id="dailyUsed"
+                class="form-control"
+                placeholder="0"
+                readonly />
+              <small class="form-text text-muted">
+                오늘 사용한 금액 (읽기 전용)
+              </small>
+            </div>
+
             <div class="form-group">
               <label class="form-label">상태</label>
               <div class="radio-group">

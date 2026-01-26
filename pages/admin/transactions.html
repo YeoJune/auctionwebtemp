@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>거래 내역 관리</title>
+    <link rel="stylesheet" href="/styles/common.css" />
+    <link rel="stylesheet" href="/styles/admin/common.css" />
+    <link rel="stylesheet" href="/styles/admin/bids.css" />
+    <link rel="stylesheet" href="/styles/admin/transactions.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+  </head>
+  <body>
+    <div class="admin-layout">
+      <!-- 사이드바 -->
+      <div class="sidebar">
+        <div class="sidebar-logo">
+          <h2>경매 관리자</h2>
+        </div>
+        <div class="sidebar-menu">
+          <a href="/admin">대시보드</a>
+          <a href="/admin/live-bids">현장 경매 관리</a>
+          <a href="/admin/direct-bids">직접 경매 관리</a>
+          <a href="/admin/all-bids">통합 경매 관리</a>
+          <a href="/admin/bid-results">입찰 결과 & 정산</a>
+          <a href="/admin/transactions" class="active">거래 내역 관리</a>
+          <a href="/admin/invoices">인보이스 관리</a>
+          <a href="/admin/users">회원 관리</a>
+          <a href="/admin/recommend-filters">추천 및 필터</a>
+          <a href="/admin/settings">관리자 설정</a>
+        </div>
+      </div>
+
+      <!-- 메인 콘텐츠 -->
+      <div class="main-content">
+        <div class="main-header">
+          <h1>거래 내역 관리</h1>
+          <div class="user-info" style="display: flex; align-items: center">
+            <div class="admin-switch">
+              <a href="#" class="active">경매 관리</a>
+              <a href="https://cassystem.com/admin" class="inactive"
+                >명품감정</a
+              >
+            </div>
+            관리자
+            <button id="logoutBtn" class="btn btn-secondary">로그아웃</button>
+          </div>
+        </div>
+
+        <!-- 탭 네비게이션 -->
+        <div class="tab-navigation">
+          <button class="tab-btn active" data-tab="deposits">
+            <i class="fas fa-wallet"></i> 예치금 거래
+          </button>
+          <button class="tab-btn" data-tab="settlements">
+            <i class="fas fa-file-invoice-dollar"></i> 정산 내역
+          </button>
+        </div>
+
+        <!-- ==================== 예치금 거래 탭 ==================== -->
+        <div class="tab-content active" id="depositsTab">
+          <!-- 검색 및 필터 -->
+          <div class="search-section">
+            <div class="search-input-group">
+              <input
+                type="text"
+                id="depositSearchInput"
+                placeholder="유저ID 검색..." />
+              <button id="depositSearchBtn" class="btn">검색</button>
+              <button id="depositClearBtn" class="btn btn-secondary">
+                초기화
+              </button>
+            </div>
+          </div>
+
+          <!-- 필터 탭 -->
+          <div class="filter-tabs">
+            <div class="filter-tab active" data-status="">전체</div>
+            <div class="filter-tab" data-status="pending">대기 중</div>
+            <div class="filter-tab" data-status="confirmed">승인 완료</div>
+            <div class="filter-tab" data-status="rejected">거절됨</div>
+          </div>
+
+          <!-- 결과 -->
+          <div class="card">
+            <div class="results-header">
+              <div class="results-count">
+                총 <span id="depositTotalCount">0</span>건
+                <span
+                  class="pending-badge"
+                  id="depositPendingBadge"
+                  style="display: none">
+                  대기 <span id="depositPendingCount">0</span>건
+                </span>
+              </div>
+            </div>
+
+            <div
+              class="loading-msg"
+              id="depositLoadingMsg"
+              style="display: none">
+              로딩 중...
+            </div>
+
+            <div class="table-responsive">
+              <table class="data-table" id="depositTable">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>유저ID</th>
+                    <th>구분</th>
+                    <th>금액</th>
+                    <th>상태</th>
+                    <th>신청 일시</th>
+                    <th>비고</th>
+                    <th>관리</th>
+                  </tr>
+                </thead>
+                <tbody id="depositTableBody">
+                  <tr>
+                    <td colspan="8" class="text-center">
+                      데이터를 불러오는 중입니다...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="pagination" id="depositPagination"></div>
+          </div>
+        </div>
+
+        <!-- ==================== 정산 내역 탭 ==================== -->
+        <div class="tab-content" id="settlementsTab">
+          <!-- 검색 및 필터 -->
+          <div class="search-section">
+            <div class="search-input-group">
+              <input
+                type="text"
+                id="settlementSearchInput"
+                placeholder="유저ID, 날짜 검색..." />
+              <button id="settlementSearchBtn" class="btn">검색</button>
+              <button id="settlementClearBtn" class="btn btn-secondary">
+                초기화
+              </button>
+            </div>
+          </div>
+
+          <!-- 필터 탭 -->
+          <div class="filter-tabs">
+            <div class="filter-tab active" data-status="">전체</div>
+            <div class="filter-tab" data-status="unpaid">미결제</div>
+            <div class="filter-tab" data-status="pending">확인 중</div>
+            <div class="filter-tab" data-status="paid">결제 완료</div>
+          </div>
+
+          <!-- 결과 -->
+          <div class="card">
+            <div class="results-header">
+              <div class="results-count">
+                총 <span id="settlementTotalCount">0</span>건
+                <span
+                  class="pending-badge"
+                  id="settlementPendingBadge"
+                  style="display: none">
+                  확인 중 <span id="settlementPendingCount">0</span>건
+                </span>
+              </div>
+            </div>
+
+            <div
+              class="loading-msg"
+              id="settlementLoadingMsg"
+              style="display: none">
+              로딩 중...
+            </div>
+
+            <div class="table-responsive">
+              <table class="data-table" id="settlementTable">
+                <thead>
+                  <tr>
+                    <th>정산ID</th>
+                    <th>유저ID</th>
+                    <th>정산 날짜</th>
+                    <th>총 청구액</th>
+                    <th>기 결제액</th>
+                    <th>미수금</th>
+                    <th>상태</th>
+                    <th>관리</th>
+                  </tr>
+                </thead>
+                <tbody id="settlementTableBody">
+                  <tr>
+                    <td colspan="8" class="text-center">
+                      데이터를 불러오는 중입니다...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="pagination" id="settlementPagination"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 예치금 승인/거절 모달 -->
+    <div class="modal-overlay" id="depositActionModal" style="display: none">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3 id="depositActionTitle">거래 처리</h3>
+          <button class="modal-close" id="depositModalClose">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="transaction-info">
+            <div class="info-row">
+              <span class="label">유저ID</span>
+              <span class="value" id="txUserId">-</span>
+            </div>
+            <div class="info-row">
+              <span class="label">구분</span>
+              <span class="value" id="txType">-</span>
+            </div>
+            <div class="info-row">
+              <span class="label">금액</span>
+              <span class="value" id="txAmount">0원</span>
+            </div>
+          </div>
+
+          <div class="form-group" id="rejectReasonGroup" style="display: none">
+            <label for="rejectReason">거절 사유 (선택)</label>
+            <textarea
+              id="rejectReason"
+              class="form-control"
+              rows="3"
+              placeholder="거절 사유를 입력하세요..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="depositActionCancel">
+            취소
+          </button>
+          <button
+            class="btn btn-success"
+            id="depositApproveBtn"
+            style="display: none">
+            승인
+          </button>
+          <button
+            class="btn btn-danger"
+            id="depositRejectBtn"
+            style="display: none">
+            거절
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 정산 승인 모달 -->
+    <div
+      class="modal-overlay"
+      id="settlementApprovalModal"
+      style="display: none">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>정산 승인</h3>
+          <button class="modal-close" id="settlementModalClose">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="settlement-info">
+            <div class="info-row">
+              <span class="label">유저ID</span>
+              <span class="value" id="stUserId">-</span>
+            </div>
+            <div class="info-row">
+              <span class="label">정산 날짜</span>
+              <span class="value" id="stDate">-</span>
+            </div>
+            <div class="info-row">
+              <span class="label">총 청구액</span>
+              <span class="value" id="stTotal">0원</span>
+            </div>
+            <div class="info-row highlight">
+              <span class="label">입금 확인할 금액</span>
+              <span class="value primary" id="stRemaining">0원</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="stAdminMemo">관리자 메모</label>
+            <textarea
+              id="stAdminMemo"
+              class="form-control"
+              rows="2"
+              placeholder="입금 확인 완료 등..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="settlementActionCancel">
+            취소
+          </button>
+          <button class="btn btn-success" id="settlementApproveBtn">
+            승인
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/admin/transactions.js"></script>
+  </body>
+</html>

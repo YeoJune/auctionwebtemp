@@ -3,9 +3,18 @@ const express = require("express");
 const router = express.Router();
 const { pool } = require("../utils/DB");
 const { createAppraisalFromAuction } = require("../utils/appr");
-const { createOrUpdateSettlement } = require("../utils/settlement");
+const {
+  createOrUpdateSettlement,
+  adjustDepositBalance,
+} = require("../utils/settlement");
 const { calculateTotalPrice, calculateFee } = require("../utils/calculate-fee");
 const { getExchangeRate } = require("../utils/exchange-rate");
+const {
+  deductDeposit,
+  refundDeposit,
+  deductLimit,
+  refundLimit,
+} = require("../utils/deposit");
 
 // 미들웨어
 const isAdmin = (req, res, next) => {
@@ -92,7 +101,7 @@ router.get("/", async (req, res) => {
     const paginatedDates = allDates.slice(offset, offset + parseInt(limit));
 
     console.log(
-      `총 ${totalDates}개 날짜 중 ${paginatedDates.length}개 날짜 조회`
+      `총 ${totalDates}개 날짜 중 ${paginatedDates.length}개 날짜 조회`,
     );
 
     // ✅ 2단계: 각 날짜별 데이터 수집
@@ -121,7 +130,7 @@ router.get("/", async (req, res) => {
 
       const [settlements] = await connection.query(
         settlementQuery,
-        settlementParams
+        settlementParams,
       );
 
       let settlementInfo = null;
@@ -197,7 +206,7 @@ router.get("/", async (req, res) => {
 
       const [directBids] = await connection.query(
         directBidsQuery,
-        directBidsParams
+        directBidsParams,
       );
 
       const allItems = [...liveBids, ...directBids];
@@ -233,7 +242,7 @@ router.get("/", async (req, res) => {
                 price,
                 item.auc_num,
                 item.category,
-                exchangeRate
+                exchangeRate,
               );
             } catch (error) {
               console.error("관부가세 계산 오류:", error);
@@ -299,7 +308,7 @@ router.get("/", async (req, res) => {
         if (!isAdminUser) {
           const [userRows] = await connection.query(
             "SELECT commission_rate FROM users WHERE id = ?",
-            [userId]
+            [userId],
           );
           if (userRows.length > 0) {
             userCommissionRate = userRows[0].commission_rate;
@@ -308,7 +317,7 @@ router.get("/", async (req, res) => {
 
         feeAmount = Math.max(
           calculateFee(totalKoreanPrice, userCommissionRate),
-          10000
+          10000,
         );
         vatAmount = Math.round((feeAmount / 1.1) * 0.1);
         appraisalFee = appraisalCount * 16500;
@@ -333,7 +342,8 @@ router.get("/", async (req, res) => {
         grandTotal,
         exchangeRate,
         settlementId: settlementInfo?.id || null,
-        paymentStatus: settlementInfo?.status || null,
+        paymentStatus: settlementInfo?.payment_status || null,
+        completedAmount: settlementInfo?.completed_amount || 0,
       });
     }
 
@@ -351,7 +361,7 @@ router.get("/", async (req, res) => {
           SUM(final_amount) as grandTotalAmount
          FROM daily_settlements
          WHERE settlement_date >= ?`,
-        [fromDate]
+        [fromDate],
       );
 
       totalStats = statsResult[0];
@@ -396,7 +406,7 @@ router.post("/live/:id/request-appraisal", async (req, res) => {
        FROM live_bids l 
        JOIN crawled_items i ON l.item_id = i.item_id 
        WHERE l.id = ? AND l.status IN ('completed', 'shipped') AND l.winning_price > 0`,
-      [bidId]
+      [bidId],
     );
 
     if (
@@ -419,6 +429,65 @@ router.post("/live/:id/request-appraisal", async (req, res) => {
       });
     }
 
+    // 계정 정보 조회
+    const [accounts] = await connection.query(
+      `SELECT account_type, deposit_balance, daily_limit, daily_used 
+      FROM user_accounts 
+      WHERE user_id = ?`,
+      [bid.user_id],
+    );
+
+    const account = accounts[0];
+    const isIndividual = account?.account_type === "individual";
+
+    // 환율 조회 및 원화 환산
+    const settlementDate = new Date(bid.scheduled_date)
+      .toISOString()
+      .split("T")[0];
+    const exchangeRate = await getExchangeRate(settlementDate);
+    const krwAmount = Math.round(bid.winning_price * exchangeRate);
+    const appraisalFee = 16500; // 감정비 (정산 시 appraisalCount * 16500과 동일)
+
+    // 예치금/한도 차감 (별도 트랜잭션)
+    const deductConnection = await pool.getConnection();
+    try {
+      await deductConnection.beginTransaction();
+
+      if (isIndividual) {
+        await deductDeposit(
+          deductConnection,
+          bid.user_id,
+          appraisalFee,
+          "appraisal",
+          bidId,
+          `Live auction appraisal fee for ${bid.title}`,
+        );
+      } else {
+        await deductLimit(
+          deductConnection,
+          bid.user_id,
+          appraisalFee,
+          "appraisal",
+          bidId,
+          `Live auction appraisal fee for ${bid.title}`,
+        );
+      }
+
+      await deductConnection.commit();
+      console.log(
+        `[Live Appraisal] ${isIndividual ? "Deposit" : "Limit"} deducted: ₩${appraisalFee.toLocaleString()} for bid ${bidId}`,
+      );
+    } catch (err) {
+      await deductConnection.rollback();
+      console.error(
+        `[Live Appraisal] Failed to deduct ${isIndividual ? "deposit" : "limit"}:`,
+        err,
+      );
+      throw err;
+    } finally {
+      deductConnection.release();
+    }
+
     const { appraisal_id, certificate_number } =
       await createAppraisalFromAuction(
         connection,
@@ -430,7 +499,7 @@ router.post("/live/:id/request-appraisal", async (req, res) => {
           image: bid.image,
           additional_images: bid.additional_images,
         },
-        userId
+        userId,
       );
 
     await connection.query("UPDATE live_bids SET appr_id = ? WHERE id = ?", [
@@ -440,17 +509,47 @@ router.post("/live/:id/request-appraisal", async (req, res) => {
 
     await connection.commit();
 
-    // 정산 업데이트
-    const settlementDate = new Date(bid.scheduled_date)
-      .toISOString()
-      .split("T")[0];
-    createOrUpdateSettlement(bid.user_id, settlementDate).catch(console.error);
+    // 정산 업데이트 및 조정
+    try {
+      await createOrUpdateSettlement(bid.user_id, settlementDate);
+      await adjustDepositBalance(
+        bid.user_id,
+        bid.winning_price,
+        settlementDate,
+        bid.title,
+      );
+    } catch (err) {
+      console.error(`Error updating settlement for live appraisal:`, err);
+    }
+
+    // 잔액 확인 및 경고
+    const [updatedAccounts] = await pool.query(
+      `SELECT account_type, deposit_balance, daily_limit, daily_used 
+      FROM user_accounts 
+      WHERE user_id = ?`,
+      [bid.user_id],
+    );
+
+    let balanceWarning = null;
+    if (updatedAccounts[0]) {
+      const acc = updatedAccounts[0];
+      if (acc.account_type === "individual" && acc.deposit_balance < 0) {
+        balanceWarning = `예치금 잔액이 부족합니다. 현재 잔액: ¥${acc.deposit_balance.toLocaleString()}`;
+      } else if (
+        acc.account_type === "corporate" &&
+        acc.daily_used >= acc.daily_limit
+      ) {
+        balanceWarning = `일일 한도가 초과되었습니다. 사용액: ¥${acc.daily_used.toLocaleString()} / 한도: ¥${acc.daily_limit.toLocaleString()}`;
+      }
+    }
 
     res.status(201).json({
       message: "감정서 신청이 완료되었습니다.",
       appraisal_id,
       certificate_number,
       status: "pending",
+      appraisal_fee: appraisalFee,
+      balanceWarning,
     });
   } catch (err) {
     await connection.rollback();
@@ -485,7 +584,7 @@ router.post("/direct/:id/request-appraisal", async (req, res) => {
        FROM direct_bids d 
        JOIN crawled_items i ON d.item_id = i.item_id 
        WHERE d.id = ? AND d.status IN ('completed', 'shipped') AND d.winning_price > 0`,
-      [bidId]
+      [bidId],
     );
 
     if (
@@ -508,6 +607,65 @@ router.post("/direct/:id/request-appraisal", async (req, res) => {
       });
     }
 
+    // 계정 정보 조회
+    const [accounts] = await connection.query(
+      `SELECT account_type, deposit_balance, daily_limit, daily_used 
+      FROM user_accounts 
+      WHERE user_id = ?`,
+      [bid.user_id],
+    );
+
+    const account = accounts[0];
+    const isIndividual = account?.account_type === "individual";
+
+    // 환율 조회 및 원화 환산
+    const settlementDate = new Date(bid.scheduled_date)
+      .toISOString()
+      .split("T")[0];
+    const exchangeRate = await getExchangeRate(settlementDate);
+    const krwAmount = Math.round(bid.winning_price * exchangeRate);
+    const appraisalFee = 16500; // 감정비 (정산 시 appraisalCount * 16500과 동일)
+
+    // 예치금/한도 차감 (별도 트랜잭션)
+    const deductConnection = await pool.getConnection();
+    try {
+      await deductConnection.beginTransaction();
+
+      if (isIndividual) {
+        await deductDeposit(
+          deductConnection,
+          bid.user_id,
+          appraisalFee,
+          "appraisal",
+          bidId,
+          `Direct auction appraisal fee for ${bid.title}`,
+        );
+      } else {
+        await deductLimit(
+          deductConnection,
+          bid.user_id,
+          appraisalFee,
+          "appraisal",
+          bidId,
+          `Direct auction appraisal fee for ${bid.title}`,
+        );
+      }
+
+      await deductConnection.commit();
+      console.log(
+        `[Direct Appraisal] ${isIndividual ? "Deposit" : "Limit"} deducted: ₩${appraisalFee.toLocaleString()} for bid ${bidId}`,
+      );
+    } catch (err) {
+      await deductConnection.rollback();
+      console.error(
+        `[Direct Appraisal] Failed to deduct ${isIndividual ? "deposit" : "limit"}:`,
+        err,
+      );
+      throw err;
+    } finally {
+      deductConnection.release();
+    }
+
     const { appraisal_id, certificate_number } =
       await createAppraisalFromAuction(
         connection,
@@ -519,7 +677,7 @@ router.post("/direct/:id/request-appraisal", async (req, res) => {
           image: bid.image,
           additional_images: bid.additional_images,
         },
-        userId
+        userId,
       );
 
     await connection.query("UPDATE direct_bids SET appr_id = ? WHERE id = ?", [
@@ -529,17 +687,47 @@ router.post("/direct/:id/request-appraisal", async (req, res) => {
 
     await connection.commit();
 
-    // 정산 업데이트
-    const settlementDate = new Date(bid.scheduled_date)
-      .toISOString()
-      .split("T")[0];
-    createOrUpdateSettlement(bid.user_id, settlementDate).catch(console.error);
+    // 정산 업데이트 및 조정
+    try {
+      await createOrUpdateSettlement(bid.user_id, settlementDate);
+      await adjustDepositBalance(
+        bid.user_id,
+        bid.winning_price,
+        settlementDate,
+        bid.title,
+      );
+    } catch (err) {
+      console.error(`Error updating settlement for direct appraisal:`, err);
+    }
+
+    // 잔액 확인 및 경고
+    const [updatedAccounts] = await pool.query(
+      `SELECT account_type, deposit_balance, daily_limit, daily_used 
+      FROM user_accounts 
+      WHERE user_id = ?`,
+      [bid.user_id],
+    );
+
+    let balanceWarning = null;
+    if (updatedAccounts[0]) {
+      const acc = updatedAccounts[0];
+      if (acc.account_type === "individual" && acc.deposit_balance < 0) {
+        balanceWarning = `예치금 잔액이 부족합니다. 현재 잔액: ¥${acc.deposit_balance.toLocaleString()}`;
+      } else if (
+        acc.account_type === "corporate" &&
+        acc.daily_used >= acc.daily_limit
+      ) {
+        balanceWarning = `일일 한도가 초과되었습니다. 사용액: ¥${acc.daily_used.toLocaleString()} / 한도: ¥${acc.daily_limit.toLocaleString()}`;
+      }
+    }
 
     res.status(201).json({
       message: "감정서 신청이 완료되었습니다.",
       appraisal_id,
       certificate_number,
       status: "pending",
+      appraisal_fee: appraisalFee,
+      balanceWarning,
     });
   } catch (err) {
     await connection.rollback();
@@ -583,7 +771,7 @@ router.post("/live/:id/request-repair", async (req, res) => {
        FROM live_bids l 
        JOIN crawled_items i ON l.item_id = i.item_id 
        WHERE l.id = ? AND l.status IN ('completed', 'shipped') AND l.winning_price > 0`,
-      [bidId]
+      [bidId],
     );
 
     if (bids.length === 0) {
@@ -596,6 +784,66 @@ router.post("/live/:id/request-repair", async (req, res) => {
     const bid = bids[0];
     const isUpdate = !!bid.repair_requested_at;
 
+    // 계정 정보 조회
+    const [accounts] = await connection.query(
+      `SELECT account_type, deposit_balance, daily_limit, daily_used 
+      FROM user_accounts 
+      WHERE user_id = ?`,
+      [bid.user_id],
+    );
+
+    const account = accounts[0];
+    const isIndividual = account?.account_type === "individual";
+
+    // 환율 조회 및 원화 환산
+    const settlementDate = new Date(bid.scheduled_date)
+      .toISOString()
+      .split("T")[0];
+    const exchangeRate = await getExchangeRate(settlementDate);
+    const repairFee = repair_fee || 0;
+
+    // 신규 접수이고 수선비가 있는 경우 예치금/한도 차감
+    if (!isUpdate && repairFee > 0) {
+      const deductConnection = await pool.getConnection();
+      try {
+        await deductConnection.beginTransaction();
+
+        if (isIndividual) {
+          await deductDeposit(
+            deductConnection,
+            bid.user_id,
+            repairFee,
+            "repair",
+            bidId,
+            `Live auction repair fee for ${bid.title}`,
+          );
+        } else {
+          await deductLimit(
+            deductConnection,
+            bid.user_id,
+            repairFee,
+            "repair",
+            bidId,
+            `Live auction repair fee for ${bid.title}`,
+          );
+        }
+
+        await deductConnection.commit();
+        console.log(
+          `[Live Repair] ${isIndividual ? "Deposit" : "Limit"} deducted: ₩${repairFee.toLocaleString()} for bid ${bidId}`,
+        );
+      } catch (err) {
+        await deductConnection.rollback();
+        console.error(
+          `[Live Repair] Failed to deduct ${isIndividual ? "deposit" : "limit"}:`,
+          err,
+        );
+        throw err;
+      } finally {
+        deductConnection.release();
+      }
+    }
+
     // 수선 내용과 금액 업데이트 (신규 또는 수정)
     if (isUpdate) {
       // 수정
@@ -604,7 +852,7 @@ router.post("/live/:id/request-repair", async (req, res) => {
          SET repair_details = ?, 
              repair_fee = ? 
          WHERE id = ?`,
-        [repair_details || null, repair_fee || null, bidId]
+        [repair_details || null, repair_fee || null, bidId],
       );
     } else {
       // 신규 접수
@@ -614,20 +862,46 @@ router.post("/live/:id/request-repair", async (req, res) => {
              repair_details = ?, 
              repair_fee = ? 
          WHERE id = ?`,
-        [repair_details || null, repair_fee || null, bidId]
+        [repair_details || null, repair_fee || null, bidId],
       );
     }
 
     await connection.commit();
 
-    // 정산 업데이트
+    // 정산 업데이트 및 조정
     if (bid.scheduled_date) {
-      const settlementDate = new Date(bid.scheduled_date)
-        .toISOString()
-        .split("T")[0];
-      createOrUpdateSettlement(bid.user_id, settlementDate).catch(
-        console.error
-      );
+      try {
+        await createOrUpdateSettlement(bid.user_id, settlementDate);
+        await adjustDepositBalance(
+          bid.user_id,
+          bid.winning_price,
+          settlementDate,
+          bid.title,
+        );
+      } catch (err) {
+        console.error(`Error updating settlement for live repair:`, err);
+      }
+    }
+
+    // 잔액 확인 및 경고
+    const [updatedAccounts] = await pool.query(
+      `SELECT account_type, deposit_balance, daily_limit, daily_used 
+      FROM user_accounts 
+      WHERE user_id = ?`,
+      [bid.user_id],
+    );
+
+    let balanceWarning = null;
+    if (updatedAccounts[0]) {
+      const acc = updatedAccounts[0];
+      if (acc.account_type === "individual" && acc.deposit_balance < 0) {
+        balanceWarning = `예치금 잔액이 부족합니다. 현재 잔액: ¥${acc.deposit_balance.toLocaleString()}`;
+      } else if (
+        acc.account_type === "corporate" &&
+        acc.daily_used >= acc.daily_limit
+      ) {
+        balanceWarning = `일일 한도가 초과되었습니다. 사용액: ¥${acc.daily_used.toLocaleString()} / 한도: ¥${acc.daily_limit.toLocaleString()}`;
+      }
     }
 
     res.status(isUpdate ? 200 : 201).json({
@@ -637,6 +911,8 @@ router.post("/live/:id/request-repair", async (req, res) => {
       requested_at: bid.repair_requested_at || new Date(),
       repair_details,
       repair_fee,
+      repair_fee_krw: repairFee,
+      balanceWarning,
     });
   } catch (err) {
     await connection.rollback();
@@ -680,7 +956,7 @@ router.post("/direct/:id/request-repair", async (req, res) => {
        FROM direct_bids d 
        JOIN crawled_items i ON d.item_id = i.item_id 
        WHERE d.id = ? AND d.status IN ('completed', 'shipped') AND d.winning_price > 0`,
-      [bidId]
+      [bidId],
     );
 
     if (bids.length === 0) {
@@ -693,6 +969,66 @@ router.post("/direct/:id/request-repair", async (req, res) => {
     const bid = bids[0];
     const isUpdate = !!bid.repair_requested_at;
 
+    // 계정 정보 조회
+    const [accounts] = await connection.query(
+      `SELECT account_type, deposit_balance, daily_limit, daily_used 
+      FROM user_accounts 
+      WHERE user_id = ?`,
+      [bid.user_id],
+    );
+
+    const account = accounts[0];
+    const isIndividual = account?.account_type === "individual";
+
+    // 환율 조회 및 원화 환산
+    const settlementDate = new Date(bid.scheduled_date)
+      .toISOString()
+      .split("T")[0];
+    const exchangeRate = await getExchangeRate(settlementDate);
+    const repairFee = repair_fee || 0;
+
+    // 신규 접수이고 수선비가 있는 경우 예치금/한도 차감
+    if (!isUpdate && repairFee > 0) {
+      const deductConnection = await pool.getConnection();
+      try {
+        await deductConnection.beginTransaction();
+
+        if (isIndividual) {
+          await deductDeposit(
+            deductConnection,
+            bid.user_id,
+            repairFee,
+            "repair",
+            bidId,
+            `Direct auction repair fee for ${bid.title}`,
+          );
+        } else {
+          await deductLimit(
+            deductConnection,
+            bid.user_id,
+            repairFee,
+            "repair",
+            bidId,
+            `Direct auction repair fee for ${bid.title}`,
+          );
+        }
+
+        await deductConnection.commit();
+        console.log(
+          `[Direct Repair] ${isIndividual ? "Deposit" : "Limit"} deducted: ₩${repairFee.toLocaleString()} for bid ${bidId}`,
+        );
+      } catch (err) {
+        await deductConnection.rollback();
+        console.error(
+          `[Direct Repair] Failed to deduct ${isIndividual ? "deposit" : "limit"}:`,
+          err,
+        );
+        throw err;
+      } finally {
+        deductConnection.release();
+      }
+    }
+
     // 수선 내용과 금액 업데이트 (신규 또는 수정)
     if (isUpdate) {
       // 수정
@@ -701,7 +1037,7 @@ router.post("/direct/:id/request-repair", async (req, res) => {
          SET repair_details = ?, 
              repair_fee = ? 
          WHERE id = ?`,
-        [repair_details || null, repair_fee || null, bidId]
+        [repair_details || null, repair_fee || null, bidId],
       );
     } else {
       // 신규 접수
@@ -711,20 +1047,46 @@ router.post("/direct/:id/request-repair", async (req, res) => {
              repair_details = ?, 
              repair_fee = ? 
          WHERE id = ?`,
-        [repair_details || null, repair_fee || null, bidId]
+        [repair_details || null, repair_fee || null, bidId],
       );
     }
 
     await connection.commit();
 
-    // 정산 업데이트
+    // 정산 업데이트 및 조정
     if (bid.scheduled_date) {
-      const settlementDate = new Date(bid.scheduled_date)
-        .toISOString()
-        .split("T")[0];
-      createOrUpdateSettlement(bid.user_id, settlementDate).catch(
-        console.error
-      );
+      try {
+        await createOrUpdateSettlement(bid.user_id, settlementDate);
+        await adjustDepositBalance(
+          bid.user_id,
+          bid.winning_price,
+          settlementDate,
+          bid.title,
+        );
+      } catch (err) {
+        console.error(`Error updating settlement for direct repair:`, err);
+      }
+    }
+
+    // 잔액 확인 및 경고
+    const [updatedAccounts] = await pool.query(
+      `SELECT account_type, deposit_balance, daily_limit, daily_used 
+      FROM user_accounts 
+      WHERE user_id = ?`,
+      [bid.user_id],
+    );
+
+    let balanceWarning = null;
+    if (updatedAccounts[0]) {
+      const acc = updatedAccounts[0];
+      if (acc.account_type === "individual" && acc.deposit_balance < 0) {
+        balanceWarning = `예치금 잔액이 부족합니다. 현재 잔액: ¥${acc.deposit_balance.toLocaleString()}`;
+      } else if (
+        acc.account_type === "corporate" &&
+        acc.daily_used >= acc.daily_limit
+      ) {
+        balanceWarning = `일일 한도가 초과되었습니다. 사용액: ¥${acc.daily_used.toLocaleString()} / 한도: ¥${acc.daily_limit.toLocaleString()}`;
+      }
     }
 
     res.status(isUpdate ? 200 : 201).json({
@@ -734,6 +1096,8 @@ router.post("/direct/:id/request-repair", async (req, res) => {
       requested_at: bid.repair_requested_at || new Date(),
       repair_details,
       repair_fee,
+      repair_fee_krw: repairFee,
+      balanceWarning,
     });
   } catch (err) {
     await connection.rollback();
@@ -776,7 +1140,7 @@ router.delete("/live/:id/repair", async (req, res) => {
        FROM live_bids l 
        JOIN crawled_items i ON l.item_id = i.item_id 
        WHERE l.id = ?`,
-      [bidId]
+      [bidId],
     );
 
     if (bids.length === 0) {
@@ -802,7 +1166,7 @@ router.delete("/live/:id/repair", async (req, res) => {
            repair_details = NULL, 
            repair_fee = NULL 
        WHERE id = ?`,
-      [bidId]
+      [bidId],
     );
 
     await connection.commit();
@@ -813,7 +1177,7 @@ router.delete("/live/:id/repair", async (req, res) => {
         .toISOString()
         .split("T")[0];
       createOrUpdateSettlement(bid.user_id, settlementDate).catch(
-        console.error
+        console.error,
       );
     }
 
@@ -861,7 +1225,7 @@ router.delete("/direct/:id/repair", async (req, res) => {
        FROM direct_bids d 
        JOIN crawled_items i ON d.item_id = i.item_id 
        WHERE d.id = ?`,
-      [bidId]
+      [bidId],
     );
 
     if (bids.length === 0) {
@@ -887,7 +1251,7 @@ router.delete("/direct/:id/repair", async (req, res) => {
            repair_details = NULL, 
            repair_fee = NULL 
        WHERE id = ?`,
-      [bidId]
+      [bidId],
     );
 
     await connection.commit();
@@ -898,7 +1262,7 @@ router.delete("/direct/:id/repair", async (req, res) => {
         .toISOString()
         .split("T")[0];
       createOrUpdateSettlement(bid.user_id, settlementDate).catch(
-        console.error
+        console.error,
       );
     }
 
@@ -919,6 +1283,65 @@ router.delete("/direct/:id/repair", async (req, res) => {
 // =====================================================
 // 관리자 전용 API
 // =====================================================
+
+/**
+ * POST /api/bid-results/settlements/:id/pay
+ * [기업 회원 전용] 정산 결제 요청 (입금 완료 통보)
+ * 상태 변경: unpaid -> pending
+ */
+router.post("/settlements/:id/pay", async (req, res) => {
+  const settlementId = req.params.id;
+
+  if (!req.session.user) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const userId = req.session.user.id;
+  const connection = await pool.getConnection();
+
+  try {
+    // 1. 본인의 정산 내역인지, 기업 회원인지, 미결제 상태인지 확인
+    const [settlements] = await connection.query(
+      `SELECT s.*, ua.account_type 
+       FROM daily_settlements s
+       JOIN user_accounts ua ON s.user_id = ua.user_id
+       WHERE s.id = ? AND s.user_id = ?`,
+      [settlementId, userId],
+    );
+
+    if (settlements.length === 0) {
+      return res.status(404).json({ message: "Settlement not found" });
+    }
+
+    const settlement = settlements[0];
+
+    // 기업 회원이 아니거나, 이미 결제된 경우 체크
+    if (settlement.payment_status !== "unpaid") {
+      return res.status(400).json({
+        message: "Invalid status for payment request",
+        current_status: settlement.payment_status,
+      });
+    }
+
+    // 2. 상태 업데이트 (unpaid -> pending)
+    await connection.query(
+      `UPDATE daily_settlements 
+       SET payment_status = 'pending', payment_method = 'manual' 
+       WHERE id = ?`,
+      [settlementId],
+    );
+
+    res.json({
+      message: "Payment request submitted successfully",
+      status: "pending",
+    });
+  } catch (err) {
+    console.error("Payment request error:", err);
+    res.status(500).json({ message: "Error processing payment request" });
+  } finally {
+    connection.release();
+  }
+});
 
 /**
  * GET /api/bid-results/admin/settlements
@@ -975,7 +1398,7 @@ router.get("/admin/settlements", isAdmin, async (req, res) => {
         SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) as paid_count
        FROM daily_settlements 
        WHERE ${whereClause}`,
-      params
+      params,
     );
 
     // 정렬
@@ -998,7 +1421,7 @@ router.get("/admin/settlements", isAdmin, async (req, res) => {
        WHERE ${whereClause}
        ORDER BY ${orderByClause}
        LIMIT ? OFFSET ?`,
-      [...params, parseInt(limit), offset]
+      [...params, parseInt(limit), offset],
     );
 
     res.json({
@@ -1043,20 +1466,22 @@ router.put("/admin/settlements/:id", isAdmin, async (req, res) => {
       params.push(admin_memo);
     }
 
+    // [수정] Paid(승인) 처리 시, 현재의 final_amount를 completed_amount로 복사
     if (status === "paid") {
       updates.push("paid_at = NOW()");
+      updates.push("completed_amount = final_amount");
     }
 
     params.push(settlementId);
 
     await connection.query(
       `UPDATE daily_settlements SET ${updates.join(", ")} WHERE id = ?`,
-      params
+      params,
     );
 
     const [updated] = await connection.query(
       "SELECT * FROM daily_settlements WHERE id = ?",
-      [settlementId]
+      [settlementId],
     );
 
     res.json({
@@ -1136,7 +1561,7 @@ router.get("/debug/settlement-mismatch", isAdmin, async (req, res) => {
   try {
     // 1. 모든 정산 데이터 조회
     const [settlements] = await connection.query(
-      `SELECT * FROM daily_settlements ORDER BY user_id, settlement_date`
+      `SELECT * FROM daily_settlements ORDER BY user_id, settlement_date`,
     );
 
     const mismatches = [];
@@ -1152,7 +1577,7 @@ router.get("/debug/settlement-mismatch", isAdmin, async (req, res) => {
            AND l.status IN ('completed', 'shipped')
            AND l.winning_price > 0
            AND l.final_price >= l.winning_price`,
-        [settlement.user_id, settlement.settlement_date]
+        [settlement.user_id, settlement.settlement_date],
       );
 
       const [directBids] = await connection.query(
@@ -1164,7 +1589,7 @@ router.get("/debug/settlement-mismatch", isAdmin, async (req, res) => {
            AND d.status IN ('completed', 'shipped')
            AND d.winning_price > 0
            AND d.current_price >= d.winning_price`,
-        [settlement.user_id, settlement.settlement_date]
+        [settlement.user_id, settlement.settlement_date],
       );
 
       const actualItems = [...liveBids, ...directBids];
@@ -1260,7 +1685,7 @@ router.get("/debug/settlement-mismatch", isAdmin, async (req, res) => {
            AND DATE(i.scheduled_date) = s.settlement_date
            AND d.status IN ('completed', 'shipped')
            AND d.winning_price > 0
-       )`
+       )`,
     );
 
     // 5. 입찰은 있는데 정산이 없는 경우 체크
@@ -1291,7 +1716,7 @@ router.get("/debug/settlement-mismatch", isAdmin, async (req, res) => {
            WHERE s.user_id = d.user_id 
              AND s.settlement_date = DATE(i.scheduled_date)
          )
-       GROUP BY d.user_id, DATE(i.scheduled_date)`
+       GROUP BY d.user_id, DATE(i.scheduled_date)`,
     );
 
     res.json({
@@ -1356,14 +1781,14 @@ router.post("/debug/fix-settlement-mismatch", isAdmin, async (req, res) => {
            SELECT 1 FROM daily_settlements s
            WHERE s.user_id = d.user_id 
              AND s.settlement_date = DATE(i.scheduled_date)
-         )`
+         )`,
     );
 
     for (const missing of missingSettlements) {
       try {
         await createOrUpdateSettlement(
           missing.user_id,
-          missing.settlement_date
+          missing.settlement_date,
         );
         results.created.push({
           user_id: missing.user_id,
@@ -1397,7 +1822,7 @@ router.post("/debug/fix-settlement-mismatch", isAdmin, async (req, res) => {
            AND DATE(i.scheduled_date) = s.settlement_date
            AND d.status IN ('completed', 'shipped')
            AND d.winning_price > 0
-       )`
+       )`,
     );
 
     for (const orphan of orphanSettlements) {
@@ -1413,7 +1838,7 @@ router.post("/debug/fix-settlement-mismatch", isAdmin, async (req, res) => {
 
     // 3. 정산과 입찰이 모두 있지만 데이터가 맞지 않는 경우 → createOrUpdateSettlement 호출
     const [allSettlements] = await connection.query(
-      `SELECT DISTINCT user_id, settlement_date FROM daily_settlements`
+      `SELECT DISTINCT user_id, settlement_date FROM daily_settlements`,
     );
 
     for (const settlement of allSettlements) {
@@ -1422,12 +1847,12 @@ router.post("/debug/fix-settlement-mismatch", isAdmin, async (req, res) => {
         results.created.some(
           (c) =>
             c.user_id === settlement.user_id &&
-            c.settlement_date === settlement.settlement_date
+            c.settlement_date === settlement.settlement_date,
         ) ||
         results.deleted.some(
           (d) =>
             d.user_id === settlement.user_id &&
-            d.settlement_date === settlement.settlement_date
+            d.settlement_date === settlement.settlement_date,
         );
 
       if (alreadyProcessed) {
@@ -1445,7 +1870,7 @@ router.post("/debug/fix-settlement-mismatch", isAdmin, async (req, res) => {
              AND l.status IN ('completed', 'shipped')
              AND l.winning_price > 0
              AND l.final_price >= l.winning_price`,
-          [settlement.user_id, settlement.settlement_date]
+          [settlement.user_id, settlement.settlement_date],
         );
 
         const [directBids] = await connection.query(
@@ -1457,7 +1882,7 @@ router.post("/debug/fix-settlement-mismatch", isAdmin, async (req, res) => {
              AND d.status IN ('completed', 'shipped')
              AND d.winning_price > 0
              AND d.current_price >= d.winning_price`,
-          [settlement.user_id, settlement.settlement_date]
+          [settlement.user_id, settlement.settlement_date],
         );
 
         const actualItems = [...liveBids, ...directBids];
@@ -1465,7 +1890,7 @@ router.post("/debug/fix-settlement-mismatch", isAdmin, async (req, res) => {
         // 정산 데이터 조회
         const [settlementData] = await connection.query(
           `SELECT * FROM daily_settlements WHERE user_id = ? AND settlement_date = ?`,
-          [settlement.user_id, settlement.settlement_date]
+          [settlement.user_id, settlement.settlement_date],
         );
 
         if (settlementData.length === 0) continue;
@@ -1498,7 +1923,7 @@ router.post("/debug/fix-settlement-mismatch", isAdmin, async (req, res) => {
         if (hasMismatch) {
           await createOrUpdateSettlement(
             settlement.user_id,
-            settlement.settlement_date
+            settlement.settlement_date,
           );
           results.created.push({
             user_id: settlement.user_id,
@@ -1563,5 +1988,194 @@ function classifyBidStatus(item) {
 
   return "failed";
 }
+
+// =====================================================
+// 관리자 전용 API - 입찰 결과 페이지용
+// =====================================================
+
+/**
+ * GET /api/admin/bid-results
+ * 관리자용 입찰 결과 목록 조회 (모든 유저의 일별 정산 정보)
+ */
+router.get("/admin/bid-results", isAdmin, async (req, res) => {
+  const {
+    dateRange = 365,
+    page = 1,
+    limit = 20,
+    sortBy = "date",
+    sortOrder = "desc",
+    status = "",
+    keyword = "",
+  } = req.query;
+
+  const connection = await pool.getConnection();
+
+  try {
+    const dateLimit = new Date();
+    dateLimit.setDate(dateLimit.getDate() - parseInt(dateRange));
+    const fromDate = dateLimit.toISOString().split("T")[0];
+
+    // 쿼리 조건 구성
+    let whereConditions = ["ds.settlement_date >= ?"];
+    const queryParams = [fromDate];
+
+    // 정산 상태 필터
+    if (status) {
+      whereConditions.push("ds.payment_status = ?");
+      queryParams.push(status);
+    }
+
+    // 키워드 검색 (유저ID 또는 날짜)
+    if (keyword) {
+      whereConditions.push("(ds.user_id LIKE ? OR ds.settlement_date LIKE ?)");
+      queryParams.push(`%${keyword}%`, `%${keyword}%`);
+    }
+
+    const whereClause = whereConditions.join(" AND ");
+
+    // 정렬 필드 매핑
+    let orderByField = "ds.settlement_date";
+    if (sortBy === "total_price") {
+      orderByField = "ds.final_amount";
+    } else if (sortBy === "item_count") {
+      orderByField = "ds.item_count";
+    }
+
+    // 전체 개수 조회
+    const [countResult] = await connection.query(
+      `SELECT COUNT(*) as total 
+       FROM daily_settlements ds 
+       WHERE ${whereClause}`,
+      queryParams,
+    );
+
+    const totalItems = countResult[0].total;
+    const totalPages = Math.ceil(totalItems / parseInt(limit));
+
+    // 페이지네이션 적용
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    queryParams.push(parseInt(limit), offset);
+
+    // 데이터 조회
+    const [rows] = await connection.query(
+      `SELECT 
+         ds.id as settlementId,
+         ds.user_id as userId,
+         ds.settlement_date as date,
+         ds.item_count as itemCount,
+         ds.final_amount as grandTotal,
+         ds.completed_amount as completedAmount,
+         ds.payment_status as paymentStatus
+       FROM daily_settlements ds
+       WHERE ${whereClause}
+       ORDER BY ${orderByField} ${sortOrder.toUpperCase()}
+       LIMIT ? OFFSET ?`,
+      queryParams,
+    );
+
+    res.json({
+      dailyResults: rows,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalItems,
+      },
+    });
+  } catch (err) {
+    console.error("Error fetching admin bid results:", err);
+    res.status(500).json({ message: "Error fetching bid results" });
+  } finally {
+    connection.release();
+  }
+});
+
+/**
+ * GET /api/admin/bid-results/detail
+ * 특정 유저/날짜의 입찰 결과 상세 조회
+ */
+router.get("/admin/bid-results/detail", isAdmin, async (req, res) => {
+  const { userId, date } = req.query;
+
+  if (!userId || !date) {
+    return res.status(400).json({ message: "userId and date are required" });
+  }
+
+  const connection = await pool.getConnection();
+
+  try {
+    // 해당 날짜의 모든 입찰 조회
+    const [liveBids] = await connection.query(
+      `SELECT 
+         lb.id,
+         lb.item_id as itemId,
+         lb.bid_amount as bidAmount,
+         lb.status,
+         i.title,
+         i.start_price as startPrice,
+         i.current_price as currentPrice
+       FROM live_bids lb
+       JOIN crawled_items i ON lb.item_id = i.item_id
+       WHERE lb.user_id = ? AND DATE(i.scheduled_date) = ?`,
+      [userId, date],
+    );
+
+    const [directBids] = await connection.query(
+      `SELECT 
+         db.id,
+         db.item_id as itemId,
+         db.bid_amount as bidAmount,
+         db.status,
+         i.title,
+         i.start_price as startPrice,
+         i.current_price as currentPrice
+       FROM direct_bids db
+       JOIN crawled_items i ON db.item_id = i.item_id
+       WHERE db.user_id = ? AND DATE(i.scheduled_date) = ?`,
+      [userId, date],
+    );
+
+    const allItems = [...liveBids, ...directBids];
+
+    // 정산 정보 조회
+    const [settlementRows] = await connection.query(
+      `SELECT 
+         id,
+         final_amount as grandTotal,
+         completed_amount as completedAmount,
+         payment_status as paymentStatus,
+         fee_amount,
+         vat_amount,
+         appraisal_fee,
+         appraisal_vat
+       FROM daily_settlements 
+       WHERE user_id = ? AND settlement_date = ?`,
+      [userId, date],
+    );
+
+    const settlement = settlementRows[0] || {
+      grandTotal: 0,
+      completedAmount: 0,
+      paymentStatus: "unpaid",
+    };
+
+    res.json({
+      userId,
+      date,
+      items: allItems,
+      grandTotal: settlement.grandTotal || 0,
+      completedAmount: settlement.completedAmount || 0,
+      paymentStatus: settlement.paymentStatus || "unpaid",
+      feeAmount: settlement.fee_amount || 0,
+      vatAmount: settlement.vat_amount || 0,
+      appraisalFee: settlement.appraisal_fee || 0,
+      appraisalVat: settlement.appraisal_vat || 0,
+    });
+  } catch (err) {
+    console.error("Error fetching bid result detail:", err);
+    res.status(500).json({ message: "Error fetching detail" });
+  } finally {
+    connection.release();
+  }
+});
 
 module.exports = router;

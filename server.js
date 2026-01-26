@@ -30,6 +30,7 @@ const directBidsRoutes = require("./routes/direct-bids");
 const userRoutes = require("./routes/users");
 const dashboardRoutes = require("./routes/dashboard");
 const bidResultsRouter = require("./routes/bid-results");
+const depositsRoutes = require("./routes/deposits");
 
 // --- 감정 시스템 관련 라우트 ---
 const appraisalsApprRoutes = require("./routes/appr/appraisals");
@@ -53,7 +54,7 @@ app.use(
       ? process.env.ALLOWED_ORIGINS.split(",")
       : true,
     credentials: true,
-  })
+  }),
 );
 app.use(bodyParser.json({ limit: "50mb" }));
 app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
@@ -67,14 +68,14 @@ app.use("/favicon.ico", (req, res) => {
       __dirname,
       "public",
       "images",
-      "favicon-cassystem.png"
+      "favicon-cassystem.png",
     );
   } else {
     faviconPath = path.join(
       __dirname,
       "public",
       "images",
-      "favicon-casastrade.png"
+      "favicon-casastrade.png",
     );
   }
 
@@ -109,7 +110,7 @@ const sessionStore = new MySQLStore(
       },
     },
   },
-  sessionPool // 수정: 별도 세션 풀 사용
+  sessionPool, // 수정: 별도 세션 풀 사용
 );
 
 const sessionMiddleware = session({
@@ -146,6 +147,7 @@ app.use("/api/dashboard", dashboardRoutes);
 app.get("/api/metrics", metricsModule.getMetrics);
 app.post("/api/metrics/reset", metricsModule.resetMetrics);
 app.use("/api/bid-results", bidResultsRouter);
+app.use("/api/deposits", depositsRoutes);
 
 app.use("/api/appr/appraisals", appraisalsApprRoutes);
 app.use("/api/appr/restorations", restorationsApprRoutes);
@@ -180,7 +182,11 @@ app.use(sitemapRoutes);
 
 app.get("/naver113e5904aa2153fc24ab52f90746a797.html", (req, res) => {
   res.sendFile(
-    path.join(__dirname, "public", "naver113e5904aa2153fc24ab52f90746a797.html")
+    path.join(
+      __dirname,
+      "public",
+      "naver113e5904aa2153fc24ab52f90746a797.html",
+    ),
   );
 });
 
@@ -193,10 +199,10 @@ if (process.env.NODE_ENV !== "production") {
   app.get("/api/debug/connections", async (req, res) => {
     try {
       const [maxConn] = await pool.query(
-        "SHOW VARIABLES LIKE 'max_connections'"
+        "SHOW VARIABLES LIKE 'max_connections'",
       );
       const [currentConn] = await pool.query(
-        "SHOW STATUS LIKE 'Threads_connected'"
+        "SHOW STATUS LIKE 'Threads_connected'",
       );
       const [processList] = await pool.query("SHOW PROCESSLIST");
 
@@ -295,6 +301,13 @@ app.get("/admin/all-bids", (req, res) => {
     res.redirect("/signinPage");
   }
 });
+app.get("/admin/bid-results", (req, res) => {
+  if (req.session.user && req.session.user.id === "admin") {
+    res.sendFile(path.join(mainPagesPath, "admin", "bid-results.html"));
+  } else {
+    res.redirect("/signinPage");
+  }
+});
 app.get("/admin/invoices", (req, res) => {
   if (req.session.user && req.session.user.id === "admin") {
     res.sendFile(path.join(mainPagesPath, "admin", "invoices.html"));
@@ -364,7 +377,7 @@ app.get("/appr/result/:certificateNumber", async (req, res) => {
       // 먼저 감정서 번호로 조회
       const [appraisal] = await conn.query(
         `SELECT appraisal_type, certificate_number FROM appraisals WHERE certificate_number = ?`,
-        [certificateNumber]
+        [certificateNumber],
       );
 
       if (appraisal.length > 0) {
@@ -378,20 +391,20 @@ app.get("/appr/result/:certificateNumber", async (req, res) => {
         // 감정서 번호로 찾을 수 없는 경우, 감정 ID로 시도
         const [appraisalById] = await conn.query(
           `SELECT appraisal_type, certificate_number FROM appraisals WHERE id = ?`,
-          [certificateNumber]
+          [certificateNumber],
         );
 
         if (appraisalById.length > 0) {
           // 감정번호로 리다이렉션
           return res.redirect(
-            `/appr/result/${appraisalById[0].certificate_number}`
+            `/appr/result/${appraisalById[0].certificate_number}`,
           );
         } else {
           // 찾을 수 없는 경우 감정번호 조회 페이지로 리다이렉션
           return res.redirect(
             `/appr/result?error=not_found&id=${encodeURIComponent(
-              certificateNumber
-            )}`
+              certificateNumber,
+            )}`,
           );
         }
       }
@@ -452,7 +465,7 @@ async function initializeElasticsearch() {
 
     if (!connected) {
       console.log(
-        "⚠️  Elasticsearch unavailable - search will use DB LIKE fallback"
+        "⚠️  Elasticsearch unavailable - search will use DB LIKE fallback",
       );
       return;
     }

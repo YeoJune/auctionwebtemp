@@ -79,7 +79,7 @@ window.BidResultsCore = (function () {
     }
 
     console.log(
-      `총 ${_pageState.dailyResults.length}개의 일별 결과를 표시합니다.`
+      `총 ${_pageState.dailyResults.length}개의 일별 결과를 표시합니다.`,
     );
 
     // 각 일별 결과 표시
@@ -91,6 +91,29 @@ window.BidResultsCore = (function () {
       } catch (error) {
         console.error(`일별 결과 ${index + 1} 렌더링 실패:`, error, dayResult);
       }
+    });
+
+    // 정산 결제 요청 버튼 이벤트 바인딩
+    const paymentBtns = container.querySelectorAll(".btn-payment");
+    paymentBtns.forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const settlementId = btn.getAttribute("data-settlement-id");
+        const date = btn.getAttribute("data-date");
+        const total = parseInt(btn.getAttribute("data-total"));
+        const completed = parseInt(btn.getAttribute("data-completed"));
+        const remaining = parseInt(btn.getAttribute("data-remaining"));
+
+        // 전역 함수 호출 (bid-results.js 또는 my-page.js에 구현)
+        if (window.openPaymentModal) {
+          window.openPaymentModal({
+            settlementId,
+            date,
+            grandTotal: total,
+            completedAmount: completed,
+            remainingAmount: remaining,
+          });
+        }
+      });
     });
 
     console.log("BidResultsCore: displayResults 완료");
@@ -112,7 +135,7 @@ window.BidResultsCore = (function () {
     const dateLabel = createElement(
       "h3",
       "",
-      formatDisplayDate(dayResult.date || new Date())
+      formatDisplayDate(dayResult.date || new Date()),
     );
     const toggleButton = createElement("button", "toggle-details");
     toggleButton.innerHTML = '<i class="fas fa-chevron-down"></i>';
@@ -147,6 +170,12 @@ window.BidResultsCore = (function () {
     dateRow.appendChild(summary);
     dateRow.appendChild(details);
 
+    // 정산 정보 추가
+    if (dayResult.settlementId && dayResult.grandTotal > 0) {
+      const settlementSection = createSettlementSection(dayResult);
+      dateRow.appendChild(settlementSection);
+    }
+
     return dateRow;
   }
 
@@ -160,7 +189,7 @@ window.BidResultsCore = (function () {
       {
         label: "상품 수",
         value: `${formatNumber(dayResult.itemCount || 0)}/${formatNumber(
-          dayResult.totalItemCount || 0
+          dayResult.totalItemCount || 0,
         )}개`,
       },
       {
@@ -204,6 +233,122 @@ window.BidResultsCore = (function () {
     });
 
     return summary;
+  }
+
+  /**
+   * 정산 섹션 생성
+   */
+  function createSettlementSection(dayResult) {
+    const settlementSection = createElement("div", "settlement-section");
+
+    const paymentStatus = dayResult.paymentStatus || "unpaid";
+    const grandTotal = dayResult.grandTotal || 0;
+    const completedAmount = dayResult.completedAmount || 0;
+    const remainingAmount = grandTotal - completedAmount;
+
+    // 정산 헤더
+    const settlementHeader = createElement("div", "settlement-header");
+    const headerTitle = createElement("h4", "", "정산 정보");
+
+    // 상태 배지 생성
+    let statusBadgeClass = "status-badge ";
+    let statusText = "";
+
+    if (paymentStatus === "unpaid") {
+      statusBadgeClass += "status-unpaid";
+      statusText = "결제 필요";
+    } else if (paymentStatus === "pending") {
+      statusBadgeClass += "status-pending";
+      statusText = "입금 확인 중";
+    } else if (paymentStatus === "paid") {
+      statusBadgeClass += "status-paid";
+      statusText = "정산 완료";
+    }
+
+    const statusBadge = createElement("span", statusBadgeClass, statusText);
+
+    settlementHeader.appendChild(headerTitle);
+    settlementHeader.appendChild(statusBadge);
+
+    // 정산 본문
+    const settlementBody = createElement("div", "settlement-body");
+
+    // 총 청구액
+    const totalRow = createElement("div", "settlement-row");
+    const totalLabel = createElement("span", "label", "총 청구액");
+    const totalValue = createElement(
+      "span",
+      "value",
+      `₩${grandTotal.toLocaleString()}`,
+    );
+    totalRow.appendChild(totalLabel);
+    totalRow.appendChild(totalValue);
+    settlementBody.appendChild(totalRow);
+
+    // 기 결제액 및 남은 결제액 (completedAmount가 0보다 큰 경우만)
+    if (completedAmount > 0) {
+      const completedRow = createElement("div", "settlement-row");
+      const completedLabel = createElement("span", "label", "기 결제액");
+      const completedValue = createElement(
+        "span",
+        "value completed",
+        `₩${completedAmount.toLocaleString()}`,
+      );
+      completedRow.appendChild(completedLabel);
+      completedRow.appendChild(completedValue);
+      settlementBody.appendChild(completedRow);
+
+      const remainingRow = createElement("div", "settlement-row highlight");
+      const remainingLabel = createElement("span", "label", "남은 결제액");
+      const remainingValue = createElement(
+        "span",
+        "value remaining",
+        `₩${remainingAmount.toLocaleString()}`,
+      );
+      remainingRow.appendChild(remainingLabel);
+      remainingRow.appendChild(remainingValue);
+      settlementBody.appendChild(remainingRow);
+    }
+
+    settlementSection.appendChild(settlementHeader);
+    settlementSection.appendChild(settlementBody);
+
+    // 액션 버튼 (unpaid 상태일 때만)
+    if (paymentStatus === "unpaid") {
+      const settlementActions = createElement("div", "settlement-actions");
+      const paymentBtn = createElement("button", "btn btn-payment");
+
+      const btnIcon = document.createElement("i");
+      btnIcon.className = "fas fa-credit-card";
+      const btnText = document.createTextNode(
+        remainingAmount < grandTotal ? " 추가 결제 요청" : " 결제 요청",
+      );
+
+      paymentBtn.appendChild(btnIcon);
+      paymentBtn.appendChild(btnText);
+
+      // 데이터 속성 설정
+      paymentBtn.setAttribute("data-settlement-id", dayResult.settlementId);
+      paymentBtn.setAttribute("data-date", dayResult.date);
+      paymentBtn.setAttribute("data-total", grandTotal);
+      paymentBtn.setAttribute("data-completed", completedAmount);
+      paymentBtn.setAttribute("data-remaining", remainingAmount);
+
+      settlementActions.appendChild(paymentBtn);
+      settlementSection.appendChild(settlementActions);
+    } else if (paymentStatus === "pending") {
+      const settlementActions = createElement("div", "settlement-actions");
+      const disabledBtn = createElement(
+        "button",
+        "btn btn-disabled",
+        "입금 확인 중",
+      );
+      disabledBtn.disabled = true;
+      settlementActions.appendChild(disabledBtn);
+      settlementSection.appendChild(settlementActions);
+    }
+
+    return settlementSection;
   }
 
   /**
@@ -280,8 +425,8 @@ window.BidResultsCore = (function () {
       const status = successItems.includes(item)
         ? "success"
         : failedItems.includes(item)
-        ? "failed"
-        : "pending";
+          ? "failed"
+          : "pending";
       const card = createMobileItemCard(item, status);
       mobileList.appendChild(card);
     });
@@ -330,12 +475,12 @@ window.BidResultsCore = (function () {
     const brand = createElement(
       "div",
       "mobile-brand",
-      item.item?.brand || item.brand || "-"
+      item.item?.brand || item.brand || "-",
     );
     const title = createElement(
       "div",
       "mobile-title",
-      item.item?.title || item.title || "제목 없음"
+      item.item?.title || item.title || "제목 없음",
     );
     info.appendChild(brand);
     info.appendChild(title);
@@ -374,7 +519,7 @@ window.BidResultsCore = (function () {
     // 관부가세 포함
     const koreanPriceItem = createElement(
       "div",
-      "mobile-price-item mobile-price-highlight"
+      "mobile-price-item mobile-price-highlight",
     );
     if (status === "pending") {
       koreanPriceItem.innerHTML = `
@@ -405,14 +550,14 @@ window.BidResultsCore = (function () {
       const failedBadge = createElement(
         "span",
         "mobile-status-badge status-failed",
-        "낙찰 실패"
+        "낙찰 실패",
       );
       footer.appendChild(failedBadge);
     } else {
       const pendingBadge = createElement(
         "span",
         "mobile-status-badge status-pending",
-        "집계중"
+        "집계중",
       );
       footer.appendChild(pendingBadge);
     }
@@ -453,7 +598,7 @@ window.BidResultsCore = (function () {
         const placeholder = createElement(
           "div",
           "product-thumbnail-placeholder",
-          "No Image"
+          "No Image",
         );
         this.parentNode.replaceChild(placeholder, this);
       };
@@ -462,7 +607,7 @@ window.BidResultsCore = (function () {
       const placeholder = createElement(
         "div",
         "product-thumbnail-placeholder",
-        "No Image"
+        "No Image",
       );
       imageCell.appendChild(placeholder);
     }
@@ -471,19 +616,19 @@ window.BidResultsCore = (function () {
     const brandCell = createElement(
       "td",
       "",
-      item.item?.brand || item.brand || "-"
+      item.item?.brand || item.brand || "-",
     );
     const titleCell = createElement(
       "td",
       "",
-      item.item?.title || item.title || "제목 없음"
+      item.item?.title || item.title || "제목 없음",
     );
 
     const finalPrice = item.final_price || item.finalPrice || 0;
     const finalPriceCell = createElement(
       "td",
       "",
-      `${formatNumber(finalPrice)} ¥`
+      `${formatNumber(finalPrice)} ¥`,
     );
 
     const winningPriceCell = createElement("td");

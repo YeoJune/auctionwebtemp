@@ -1,0 +1,96 @@
+/* public/styles/admin/users.css */
+
+/* ========================================
+   회원 구분 라디오 버튼
+======================================== */
+.radio-group {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.radio-label input[type="radio"] {
+  cursor: pointer;
+}
+
+.radio-label span {
+  font-weight: 500;
+}
+
+/* ========================================
+   배지
+======================================== */
+.badge {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge-individual {
+  background: #d4edda;
+  color: #155724;
+}
+
+.badge-corporate {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+/* ========================================
+   예치금/한도 정보
+======================================== */
+.balance-info {
+  font-weight: 600;
+  color: #2c5aa0;
+}
+
+.limit-info {
+  font-size: 13px;
+}
+
+.limit-info small {
+  color: #6c757d;
+}
+
+/* ========================================
+   상태
+======================================== */
+.status-active {
+  color: #28a745;
+  font-weight: 600;
+}
+
+.status-inactive {
+  color: #dc3545;
+  font-weight: 600;
+}
+
+/* ========================================
+   폼 텍스트
+======================================== */
+.form-text {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.text-muted {
+  color: #6c757d;
+}
+
+/* ========================================
+   모달 내 아이콘
+======================================== */
+.form-label i {
+  margin-right: 6px;
+  color: #2c5aa0;
+}

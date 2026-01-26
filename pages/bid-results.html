@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
@@ -208,7 +208,7 @@
         window,
         document,
         "script",
-        "https://connect.facebook.net/en_US/fbevents.js"
+        "https://connect.facebook.net/en_US/fbevents.js",
       );
       fbq("init", "3072535019552512");
       fbq("track", "PageView");
@@ -221,6 +221,60 @@
         src="https://www.facebook.com/tr?id=3072535019552512&ev=PageView&noscript=1"
     /></noscript>
     <!-- End Meta Pixel Code -->
+    <!-- 정산 결제 요청 모달 -->
+    <div class="modal-overlay" id="paymentRequestModal" style="display: none">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>정산 결제 요청</h3>
+          <button class="modal-close" id="paymentModalClose">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="payment-info">
+            <div class="info-row">
+              <span class="label">정산 날짜</span>
+              <span class="value" id="paymentDate">-</span>
+            </div>
+            <div class="info-row">
+              <span class="label">총 청구액</span>
+              <span class="value" id="paymentTotalAmount">0원</span>
+            </div>
+            <div class="info-row">
+              <span class="label">기 결제액</span>
+              <span class="value" id="paymentCompletedAmount">0원</span>
+            </div>
+            <div class="info-row highlight">
+              <span class="label">입금하실 금액</span>
+              <span class="value primary" id="paymentRemainingAmount">0원</span>
+            </div>
+          </div>
+
+          <div class="account-info-box">
+            <i class="fas fa-university"></i>
+            <div>
+              <strong>입금 계좌</strong><br />
+              국민은행 024801-04-544857<br />
+              예금주: 황승하 (까사플랫폼)
+            </div>
+          </div>
+
+          <div class="warning-box">
+            <i class="fas fa-info-circle"></i>
+            <p>
+              위 금액을 입금하신 후 <strong>[입금 완료]</strong> 버튼을
+              눌러주세요.<br />
+              관리자가 입금을 확인하면 정산이 완료됩니다.
+            </p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="paymentCancelBtn">취소</button>
+          <button class="btn btn-primary" id="paymentConfirmBtn">
+            입금 완료
+          </button>
+        </div>
+      </div>
+    </div>
+
     <script src="/js/common.js"></script>
     <script src="/js/api.js"></script>
     <script src="/js/calculate-fee.js"></script>

@@ -43,6 +43,15 @@ class MyPageManager {
       totalStats: null,
     };
 
+    // 예치금/한도 상태
+    this.depositData = {
+      account_type: null, // 'individual' or 'corporate'
+      deposit_balance: 0, // 개인 회원 잔액
+      daily_limit: 0, // 기업 회원 일일 한도
+      daily_used: 0, // 기업 회원 오늘 사용액
+      remaining_limit: 0, // 기업 회원 남은 한도
+    };
+
     // Core 모듈 참조
     this.bidProductsCore = window.BidProductsCore;
     this.bidResultsCore = window.BidResultsCore;
@@ -113,6 +122,7 @@ class MyPageManager {
       // 기본 데이터 로드
       await Promise.all([
         this.loadUserData(),
+        this.loadDepositData(),
         this.loadBidItemsData(true),
         this.loadBidResultsData(),
       ]);
@@ -148,6 +158,9 @@ class MyPageManager {
         window.BidManager.startTimerUpdates();
       }
 
+      // 정산 결제 요청 모달 이벤트 설정
+      setupPaymentModalEvents();
+
       console.log("마이페이지 초기화 완료");
     } catch (error) {
       console.error("마이페이지 초기화 중 오류 발생:", error);
@@ -163,6 +176,74 @@ class MyPageManager {
     } catch (error) {
       console.error("사용자 데이터 로드 실패:", error);
       throw error;
+    }
+  }
+
+  // 예치금/한도 정보 로드
+  async loadDepositData() {
+    try {
+      const response = await window.API.fetchAPI("/deposits/balance");
+      this.depositData = response;
+      this.updateDepositUI();
+      console.log("예치금 데이터 로드 완료:", this.depositData);
+    } catch (error) {
+      console.error("예치금 데이터 로드 실패:", error);
+      // 에러 시 기본값 유지
+    }
+  }
+
+  // 예치금 UI 업데이트
+  updateDepositUI() {
+    const {
+      account_type,
+      deposit_balance,
+      daily_limit,
+      daily_used,
+      remaining_limit,
+    } = this.depositData;
+
+    const cardTitle = document.getElementById("depositCardTitle");
+    const individualSection = document.getElementById("individualDepositInfo");
+    const corporateSection = document.getElementById("corporateDepositInfo");
+
+    if (account_type === "individual") {
+      // 개인 회원 UI 표시
+      cardTitle.textContent = "예치금 정보";
+      individualSection.style.display = "block";
+      corporateSection.style.display = "none";
+
+      const balanceElement = document.getElementById("currentDepositBalance");
+      balanceElement.textContent = `${deposit_balance.toLocaleString()}원`;
+
+      // 마이너스 잔액 강조 (빨간색)
+      if (deposit_balance < 0) {
+        balanceElement.classList.add("negative");
+        const cardBody = balanceElement.closest(".card-body");
+        if (cardBody && !cardBody.querySelector(".warning-message")) {
+          cardBody.insertAdjacentHTML(
+            "beforeend",
+            '<div class="warning-message"><i class="fas fa-exclamation-circle"></i> 예치금이 부족합니다. 충전해주세요.</div>',
+          );
+        }
+      } else {
+        balanceElement.classList.remove("negative");
+        const warning = balanceElement
+          .closest(".card-body")
+          ?.querySelector(".warning-message");
+        if (warning) warning.remove();
+      }
+    } else if (account_type === "corporate") {
+      // 기업 회원 UI 표시
+      cardTitle.textContent = "한도 정보";
+      individualSection.style.display = "none";
+      corporateSection.style.display = "block";
+
+      document.getElementById("dailyLimitAmount").textContent =
+        `${daily_limit.toLocaleString()}원`;
+      document.getElementById("dailyUsedAmount").textContent =
+        `${daily_used.toLocaleString()}원`;
+      document.getElementById("remainingLimitAmount").textContent =
+        `${remaining_limit.toLocaleString()}원`;
     }
   }
 
@@ -848,6 +929,7 @@ class MyPageManager {
     this.setupBidItemsEvents();
     this.setupBidResultsEvents();
     this.setupAccountForms();
+    this.setupDepositEvents();
 
     console.log("이벤트 리스너 설정 완료");
   }
@@ -1180,6 +1262,57 @@ class MyPageManager {
       });
   }
 
+  // 예치금/환불 이벤트 설정
+  setupDepositEvents() {
+    // 예치금 충전/환불 버튼
+    const chargeBtn = document.getElementById("chargeDepositBtn");
+    const refundBtn = document.getElementById("refundDepositBtn");
+
+    if (chargeBtn) {
+      chargeBtn.addEventListener("click", () => this.openChargeModal());
+    }
+
+    if (refundBtn) {
+      refundBtn.addEventListener("click", () => this.openRefundModal());
+    }
+
+    // 충전 모달 이벤트
+    const chargeModal = document.getElementById("chargeModal");
+    const chargeClose = document.getElementById("chargeModalClose");
+    const chargeCancel = document.getElementById("chargeCancelBtn");
+    const chargeSubmit = document.getElementById("chargeSubmitBtn");
+
+    chargeClose?.addEventListener("click", () =>
+      this.closeModal("chargeModal"),
+    );
+    chargeCancel?.addEventListener("click", () =>
+      this.closeModal("chargeModal"),
+    );
+    chargeSubmit?.addEventListener("click", () => this.submitChargeRequest());
+
+    // 환불 모달 이벤트
+    const refundModal = document.getElementById("refundModal");
+    const refundClose = document.getElementById("refundModalClose");
+    const refundCancel = document.getElementById("refundCancelBtn");
+    const refundSubmit = document.getElementById("refundSubmitBtn");
+
+    refundClose?.addEventListener("click", () =>
+      this.closeModal("refundModal"),
+    );
+    refundCancel?.addEventListener("click", () =>
+      this.closeModal("refundModal"),
+    );
+    refundSubmit?.addEventListener("click", () => this.submitRefundRequest());
+
+    // 모달 외부 클릭 시 닫기
+    chargeModal?.addEventListener("click", (e) => {
+      if (e.target === chargeModal) this.closeModal("chargeModal");
+    });
+    refundModal?.addEventListener("click", (e) => {
+      if (e.target === refundModal) this.closeModal("refundModal");
+    });
+  }
+
   // 계정 정보 업데이트
   async handleAccountUpdate(formType) {
     try {
@@ -1275,6 +1408,112 @@ class MyPageManager {
       }
     }
   }
+
+  // 충전 모달 열기
+  openChargeModal() {
+    const modal = document.getElementById("chargeModal");
+    const amountInput = document.getElementById("chargeAmount");
+
+    amountInput.value = "";
+    modal.style.display = "flex";
+  }
+
+  // 환불 모달 열기
+  openRefundModal() {
+    const modal = document.getElementById("refundModal");
+    const amountInput = document.getElementById("refundAmount");
+    const currentBalance = document.getElementById("currentBalanceForRefund");
+
+    amountInput.value = "";
+    amountInput.max = this.depositData.deposit_balance;
+    currentBalance.textContent = `${this.depositData.deposit_balance.toLocaleString()}원`;
+
+    modal.style.display = "flex";
+  }
+
+  // 모달 닫기
+  closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    modal.style.display = "none";
+  }
+
+  // 충전 신청 제출
+  async submitChargeRequest() {
+    const amountInput = document.getElementById("chargeAmount");
+    const amount = parseInt(amountInput.value);
+
+    if (!amount || amount < 1000) {
+      alert("충전 금액은 1,000원 이상이어야 합니다.");
+      return;
+    }
+
+    try {
+      const response = await window.API.fetchAPI("/deposits/charge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount }),
+      });
+
+      alert("충전 신청이 접수되었습니다.\n관리자 확인 후 예치금이 반영됩니다.");
+      this.closeModal("chargeModal");
+
+      // 거래 내역 갱신 (향후 구현 시)
+      // await this.loadTransactionHistory();
+    } catch (error) {
+      console.error("충전 신청 실패:", error);
+      alert(
+        "충전 신청 중 오류가 발생했습니다.\n" +
+          (error.message || "다시 시도해주세요."),
+      );
+    }
+  }
+
+  // 환불 신청 제출
+  async submitRefundRequest() {
+    const amountInput = document.getElementById("refundAmount");
+    const amount = parseInt(amountInput.value);
+
+    if (!amount || amount < 1000) {
+      alert("환불 금액은 1,000원 이상이어야 합니다.");
+      return;
+    }
+
+    if (amount > this.depositData.deposit_balance) {
+      alert(
+        `환불 가능 금액을 초과했습니다.\n현재 잔액: ${this.depositData.deposit_balance.toLocaleString()}원`,
+      );
+      return;
+    }
+
+    if (
+      !confirm(
+        `${amount.toLocaleString()}원을 환불 신청하시겠습니까?\n\n신청 즉시 예치금에서 차감됩니다.`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await window.API.fetchAPI("/deposits/refund", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount }),
+      });
+
+      alert("환불 신청이 완료되었습니다.\n관리자 확인 후 계좌로 입금됩니다.");
+      this.closeModal("refundModal");
+
+      // 즉시 잔액 업데이트
+      this.depositData.deposit_balance = response.balanceAfter;
+      this.updateDepositUI();
+    } catch (error) {
+      console.error("환불 신청 실패:", error);
+      alert(
+        "환불 신청 중 오류가 발생했습니다.\n" +
+          (error.message || "다시 시도해주세요."),
+      );
+    }
+  }
 }
 
 // 전역 변수
@@ -1352,3 +1591,90 @@ window.addEventListener("hashchange", () => {
     myPageManager.showSection(section);
   }
 });
+
+// =====================================================
+// 정산 결제 요청 모달 (마이페이지용)
+// =====================================================
+
+let currentSettlement = null;
+
+window.openPaymentModal = function (settlementData) {
+  currentSettlement = settlementData;
+
+  const modal = document.getElementById("paymentRequestModal");
+  if (!modal) {
+    console.warn("Payment modal not found in my-page");
+    return;
+  }
+
+  document.getElementById("paymentDate").textContent = settlementData.date;
+  document.getElementById("paymentTotalAmount").textContent =
+    `₩${settlementData.grandTotal.toLocaleString()}`;
+  document.getElementById("paymentCompletedAmount").textContent =
+    `₩${settlementData.completedAmount.toLocaleString()}`;
+  document.getElementById("paymentRemainingAmount").textContent =
+    `₩${settlementData.remainingAmount.toLocaleString()}`;
+
+  modal.style.display = "flex";
+};
+
+function closePaymentModal() {
+  const modal = document.getElementById("paymentRequestModal");
+  if (modal) modal.style.display = "none";
+  currentSettlement = null;
+}
+
+async function submitPaymentRequest() {
+  if (!currentSettlement) {
+    alert("정산 정보를 불러올 수 없습니다.");
+    return;
+  }
+
+  const { settlementId, remainingAmount } = currentSettlement;
+
+  if (
+    !confirm(
+      `${remainingAmount.toLocaleString()}원을 입금하셨습니까?\n\n입금 후 관리자가 확인하면 정산이 완료됩니다.`,
+    )
+  ) {
+    return;
+  }
+
+  try {
+    await window.API.fetchAPI(`/bid-results/settlements/${settlementId}/pay`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    alert("결제 요청이 접수되었습니다.\n관리자 확인 후 정산이 완료됩니다.");
+    closePaymentModal();
+
+    // 마이페이지 입찰 결과 재로드
+    if (window.myPageManager) {
+      await window.myPageManager.loadBidResultsData();
+    }
+  } catch (error) {
+    console.error("결제 요청 실패:", error);
+    alert(
+      "결제 요청 중 오류가 발생했습니다.\n" +
+        (error.message || "다시 시도해주세요."),
+    );
+  }
+}
+
+function setupPaymentModalEvents() {
+  const modal = document.getElementById("paymentRequestModal");
+  if (!modal) return;
+
+  const closeBtn = document.getElementById("paymentModalClose");
+  const cancelBtn = document.getElementById("paymentCancelBtn");
+  const confirmBtn = document.getElementById("paymentConfirmBtn");
+
+  closeBtn?.addEventListener("click", closePaymentModal);
+  cancelBtn?.addEventListener("click", closePaymentModal);
+  confirmBtn?.addEventListener("click", submitPaymentRequest);
+
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) closePaymentModal();
+  });
+}

@@ -35,7 +35,7 @@ router.get("/current", requireAuth, async (req, res) => {
       `SELECT id, registration_date, email, business_number, company_name, 
        phone, address, is_active, created_at, commission_rate 
        FROM users WHERE id = ? AND role = 'normal'`,
-      [userId]
+      [userId],
     );
 
     if (users.length === 0) {
@@ -59,11 +59,15 @@ router.get("/", requireAuth, async (req, res) => {
   try {
     conn = await pool.getConnection();
 
-    // 회원 목록 조회 - normal 사용자만
+    // 회원 목록 조회 - normal 사용자만, 예치금/한도 정보 포함
     const [users] = await conn.query(
-      `SELECT id, registration_date, email, business_number, company_name, 
-       phone, address, created_at, is_active, commission_rate 
-       FROM users WHERE role = 'normal' ORDER BY created_at DESC`
+      `SELECT u.id, u.registration_date, u.email, u.business_number, u.company_name, 
+       u.phone, u.address, u.created_at, u.is_active, u.commission_rate,
+       ua.account_type, ua.deposit_balance, ua.daily_limit, ua.daily_used
+       FROM users u
+       LEFT JOIN user_accounts ua ON u.id = ua.user_id
+       WHERE u.role = 'normal' 
+       ORDER BY u.created_at DESC`,
     );
 
     res.json(users);
@@ -89,7 +93,7 @@ router.get("/:id", requireAuth, async (req, res) => {
       `SELECT id, registration_date, email, business_number, company_name, 
        phone, address, is_active, created_at, commission_rate 
        FROM users WHERE id = ? AND role = 'normal'`,
-      [id]
+      [id],
     );
 
     if (users.length === 0) {
@@ -184,7 +188,7 @@ router.post("/", requireAuth, async (req, res) => {
         is_active === false ? 0 : 1,
         commission_rate || null,
         "normal", // normal role로 설정
-      ]
+      ],
     );
 
     res.status(201).json({ message: "회원이 등록되었습니다." });
@@ -217,7 +221,7 @@ router.put("/:id", requireAuth, async (req, res) => {
     // 회원 존재 확인 - normal 사용자만
     const [existing] = await conn.query(
       "SELECT id FROM users WHERE id = ? AND role = 'normal'",
-      [id]
+      [id],
     );
     if (existing.length === 0) {
       return res.status(404).json({ message: "회원을 찾을 수 없습니다." });
@@ -293,9 +297,9 @@ router.put("/:id", requireAuth, async (req, res) => {
     // 회원 정보 업데이트 - normal 사용자만
     await conn.query(
       `UPDATE users SET ${updateFields.join(
-        ", "
+        ", ",
       )} WHERE id = ? AND role = 'normal'`,
-      [...updateValues, id]
+      [...updateValues, id],
     );
 
     res.json({ message: "회원 정보가 수정되었습니다." });
@@ -317,7 +321,7 @@ router.delete("/:id", requireAuth, async (req, res) => {
     // 회원 존재 확인 - normal 사용자만
     const [existing] = await conn.query(
       "SELECT id FROM users WHERE id = ? AND role = 'normal'",
-      [id]
+      [id],
     );
     if (existing.length === 0) {
       return res.status(404).json({ message: "회원을 찾을 수 없습니다." });

@@ -1,0 +1,146 @@
+/* public/styles/admin/transactions.css */
+
+/* ========================================
+   탭 네비게이션
+======================================== */
+.tab-navigation {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid #e9ecef;
+  padding-bottom: 0;
+}
+
+.tab-btn {
+  padding: 12px 24px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-size: 15px;
+  font-weight: 600;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tab-btn:hover {
+  color: #2c5aa0;
+}
+
+.tab-btn.active {
+  color: #2c5aa0;
+  border-bottom-color: #2c5aa0;
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* ========================================
+   대기 건수 배지
+======================================== */
+.pending-badge {
+  background: #fff3cd;
+  color: #856404;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-left: 12px;
+}
+
+/* ========================================
+   테이블
+======================================== */
+.admin-memo {
+  color: #dc3545;
+  font-weight: 600;
+}
+
+/* ========================================
+   모달 - 정보 행
+======================================== */
+.transaction-info,
+.settlement-info {
+  margin-bottom: 20px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.info-row.highlight {
+  padding: 16px;
+  background: #e7f3ff;
+  border-radius: 6px;
+  border: 2px solid #2c5aa0;
+  margin-top: 12px;
+  border-bottom: none;
+}
+
+.info-row .label {
+  font-size: 14px;
+  color: #666;
+}
+
+.info-row .value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.info-row .value.primary {
+  font-size: 20px;
+  color: #2c5aa0;
+}
+
+/* ========================================
+   상태 배지
+======================================== */
+.status-badge {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-badge.status-pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-badge.status-confirmed,
+.status-badge.status-paid {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-badge.status-rejected,
+.status-badge.status-unpaid {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+/* ========================================
+   반응형
+======================================== */
+@media (max-width: 768px) {
+  .tab-navigation {
+    flex-direction: column;
+  }
+
+  .tab-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

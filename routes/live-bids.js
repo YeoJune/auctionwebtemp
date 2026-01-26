@@ -9,7 +9,20 @@ const {
   mekikiAucCrawler,
 } = require("../crawlers/index");
 const { validateBidByAuction } = require("../utils/submitBid");
-const { createOrUpdateSettlement } = require("../utils/settlement");
+const {
+  createOrUpdateSettlement,
+  getUserCommissionRate,
+  adjustDepositBalance,
+} = require("../utils/settlement");
+const { calculateFee, calculateTotalPrice } = require("../utils/calculate-fee");
+const { getExchangeRate } = require("../utils/exchange-rate");
+const {
+  deductDeposit,
+  refundDeposit,
+  deductLimit,
+  refundLimit,
+  getBidDeductAmount,
+} = require("../utils/deposit");
 
 const isAdmin = (req, res, next) => {
   if (req.session.user && req.session.user.id === "admin") {
@@ -53,14 +66,14 @@ router.get("/", async (req, res) => {
   if (search) {
     const searchTerm = `%${search}%`;
     queryConditions.push(
-      "(b.item_id LIKE ? OR i.original_title LIKE ? OR i.brand LIKE ? OR i.additional_info LIKE ? OR b.user_id LIKE ?)"
+      "(b.item_id LIKE ? OR i.original_title LIKE ? OR i.brand LIKE ? OR i.additional_info LIKE ? OR b.user_id LIKE ?)",
     );
     queryParams.push(
       searchTerm,
       searchTerm,
       searchTerm,
       searchTerm,
-      searchTerm
+      searchTerm,
     );
   }
 
@@ -268,7 +281,7 @@ router.post("/", async (req, res) => {
     // 상품 정보 체크 (scheduled_date 포함)
     const [items] = await connection.query(
       "SELECT * FROM crawled_items WHERE item_id = ? AND auc_num = ?",
-      [itemId, aucNum]
+      [itemId, aucNum],
     );
 
     if (items.length === 0) {
@@ -302,7 +315,7 @@ router.post("/", async (req, res) => {
     // 이미 입찰한 내역이 있는지 체크 (FOR UPDATE로 락 걸기)
     const [existingBids] = await connection.query(
       "SELECT * FROM live_bids WHERE item_id = ? AND user_id = ? FOR UPDATE",
-      [itemId, userId]
+      [itemId, userId],
     );
 
     if (existingBids.length > 0) {
@@ -315,7 +328,7 @@ router.post("/", async (req, res) => {
     // 새 입찰 생성
     const [result] = await connection.query(
       'INSERT INTO live_bids (item_id, user_id, first_price, status) VALUES (?, ?, ?, "first")',
-      [itemId, userId, firstPrice]
+      [itemId, userId, firstPrice],
     );
 
     await connection.commit();
@@ -360,7 +373,7 @@ router.put("/:id/second", isAdmin, async (req, res) => {
     // 입찰 정보 확인
     const [bids] = await connection.query(
       "SELECT * FROM live_bids WHERE id = ?",
-      [id]
+      [id],
     );
 
     if (bids.length === 0) {
@@ -378,7 +391,7 @@ router.put("/:id/second", isAdmin, async (req, res) => {
     // 2차 입찰가 업데이트
     await connection.query(
       'UPDATE live_bids SET second_price = ?, status = "second" WHERE id = ?',
-      [secondPrice, id]
+      [secondPrice, id],
     );
 
     await connection.commit();
@@ -418,13 +431,13 @@ router.put("/:id/final", async (req, res) => {
   try {
     await connection.beginTransaction();
 
-    // 입찰 정보와 상품 정보 함께 확인
+    // 1. 입찰 정보와 상품 정보 확인
     const [bids] = await connection.query(
-      `SELECT l.*, i.scheduled_date, i.auc_num, i.additional_info, i.starting_price
+      `SELECT l.*, i.scheduled_date, i.auc_num, i.additional_info, i.starting_price, i.category
        FROM live_bids l 
        JOIN crawled_items i ON l.item_id = i.item_id 
        WHERE l.id = ?`,
-      [id]
+      [id],
     );
 
     if (bids.length === 0) {
@@ -446,13 +459,11 @@ router.put("/:id/final", async (req, res) => {
       return res.status(400).json({ message: "Bid is not in second stage" });
     }
 
-    // 2차 입찰 시간 제한 체크: scheduled_date가 포함된 날의 저녁 10시까지
+    // 2. 시간 제한 체크
     const now = new Date();
     const scheduledDate = new Date(bid.scheduled_date);
-
-    // scheduled_date의 날짜 부분만 가져와서 23:59:59 (저녁 12시)로 설정
     const deadline = new Date(scheduledDate);
-    deadline.setHours(23, 59, 59, 999); // 23:59:59.999
+    deadline.setHours(23, 59, 59, 999);
 
     if (now > deadline) {
       await connection.rollback();
@@ -464,7 +475,7 @@ router.put("/:id/final", async (req, res) => {
       });
     }
 
-    // 최종 입찰 금액 검증: starting price보다 높아야 함
+    // 3. 금액 검증
     if (finalPrice <= bid.starting_price) {
       await connection.rollback();
       return res.status(400).json({
@@ -473,14 +484,12 @@ router.put("/:id/final", async (req, res) => {
       });
     }
 
-    // 경매장별 입찰가 검증
-    // 스타옥션의 경우 starting_price가 실시간 최고가를 의미함
     const currentHighestPrice = bid.starting_price;
     const validation = validateBidByAuction(
       bid.auc_num,
       finalPrice,
       currentHighestPrice,
-      true
+      true,
     );
 
     if (!validation.valid) {
@@ -490,21 +499,82 @@ router.put("/:id/final", async (req, res) => {
       });
     }
 
-    // 최종 입찰가 업데이트
-    await connection.query(
-      'UPDATE live_bids SET final_price = ?, status = "final" WHERE id = ?',
-      [finalPrice, id]
+    // 4. 환율 조회
+    const exchangeRate = await getExchangeRate();
+
+    // 5. 차감액 계산
+    const totalPrice = calculateTotalPrice(
+      finalPrice,
+      bid.auc_num,
+      bid.category,
+      exchangeRate,
+    );
+    const userCommissionRate = await getUserCommissionRate(userId);
+    const platformFee = calculateFee(totalPrice, userCommissionRate);
+    const deductAmount = totalPrice + platformFee;
+
+    // 6. 계정 정보 조회
+    const [accounts] = await connection.query(
+      "SELECT account_type, deposit_balance, daily_limit, daily_used FROM user_accounts WHERE user_id = ?",
+      [userId],
     );
 
+    let account = accounts[0];
+
+    if (!account) {
+      await connection.query(
+        'INSERT INTO user_accounts (user_id, account_type, deposit_balance) VALUES (?, "individual", 0)',
+        [userId],
+      );
+      account = {
+        account_type: "individual",
+        deposit_balance: 0,
+        daily_limit: 0,
+        daily_used: 0,
+      };
+    }
+
+    // 7. 예치금/한도 체크 (경고만, 마이너스 허용)
+    let balanceWarning = null;
+    if (account.account_type === "individual") {
+      if (account.deposit_balance < deductAmount) {
+        balanceWarning = {
+          message: "예치금 부족 (마이너스 발생 예정)",
+          required: deductAmount,
+          current: account.deposit_balance,
+          deficit: deductAmount - account.deposit_balance,
+        };
+        console.warn(
+          `[BALANCE WARNING] User ${userId}: ${balanceWarning.message}`,
+        );
+      }
+    } else {
+      const available = account.daily_limit - account.daily_used;
+      if (available < deductAmount) {
+        await connection.rollback();
+        return res.status(400).json({
+          message: "일일 한도 초과",
+          required: deductAmount,
+          available: available,
+        });
+      }
+    }
+
+    // 8. 입찰 상태 변경
+    await connection.query(
+      'UPDATE live_bids SET final_price = ?, status = "final" WHERE id = ?',
+      [finalPrice, id],
+    );
+
+    // 9. Commit (크롤러가 DB 조회하므로 데드락 방지)
     await connection.commit();
 
-    // 크롤러에 처리
+    // 10. 크롤러 처리 (주 로직)
     if (bid.auc_num == 1 && ecoAucCrawler) {
       ecoAucCrawler.liveBid(bid.item_id, finalPrice);
       ecoAucCrawler.addWishlist(bid.item_id, 1);
     } else if (bid.auc_num == 2 && brandAucCrawler) {
       brandAucCrawler.liveBid(bid.item_id, finalPrice);
-      // additional_info에서 kaisaiKaisu 추출
       const additionalInfo =
         typeof bid.additional_info === "string"
           ? JSON.parse(bid.additional_info)
@@ -512,10 +582,9 @@ router.put("/:id/final", async (req, res) => {
       brandAucCrawler.addWishlist(
         bid.item_id,
         "A",
-        additionalInfo.kaisaiKaisu || 0
+        additionalInfo.kaisaiKaisu || 0,
       );
     } else if (bid.auc_num == 4 && mekikiAucCrawler) {
-      // additional_info에서 event_id 추출
       const additionalInfo =
         typeof bid.additional_info === "string"
           ? JSON.parse(bid.additional_info)
@@ -523,9 +592,36 @@ router.put("/:id/final", async (req, res) => {
       mekikiAucCrawler.liveBid(
         bid.item_id,
         finalPrice,
-        additionalInfo.event_id
+        additionalInfo.event_id,
       );
       mekikiAucCrawler.addWishlist(bid.item_id, additionalInfo.event_id);
+    }
+
+    // 11. 예치금/한도 차감 (별도 트랜잭션)
+    const newConnection = await pool.getConnection();
+    try {
+      await newConnection.beginTransaction();
+
+      if (account.account_type === "individual") {
+        await deductDeposit(
+          newConnection,
+          userId,
+          deductAmount,
+          "live_bid",
+          id,
+          `현장경매 최종입찰 차감 (환율: ${exchangeRate.toFixed(2)})`,
+        );
+      } else {
+        await deductLimit(newConnection, userId, deductAmount);
+      }
+
+      await newConnection.commit();
+    } catch (err) {
+      await newConnection.rollback();
+      console.error("예치금 차감 실패 (마이너스 허용):", err);
+      // 차감 실패해도 입찰은 유지 (마이너스 허용)
+    } finally {
+      newConnection.release();
     }
 
     res.status(200).json({
@@ -533,6 +629,8 @@ router.put("/:id/final", async (req, res) => {
       bidId: id,
       status: "final",
       finalPrice,
+      deductAmount,
+      balanceWarning, // 잔액 부족 경고 (프론트엔드 표시용)
     });
   } catch (err) {
     await connection.rollback();
@@ -572,14 +670,14 @@ router.put("/complete", isAdmin, async (req, res) => {
       // 취소 처리: winningPrice > final_price
       const [cancelResult] = await connection.query(
         `UPDATE live_bids SET status = 'cancelled', winning_price = ? WHERE id IN (${placeholders}) AND status = 'final' AND final_price < ?`,
-        [winningPrice, ...bidIds, winningPrice]
+        [winningPrice, ...bidIds, winningPrice],
       );
       cancelledCount = cancelResult.affectedRows;
 
       // 완료 처리: winningPrice <= final_price
       const [completeResult] = await connection.query(
         `UPDATE live_bids SET status = 'completed', winning_price = ?, completed_at = NOW() WHERE id IN (${placeholders}) AND status = 'final' AND final_price >= ?`,
-        [winningPrice, ...bidIds, winningPrice]
+        [winningPrice, ...bidIds, winningPrice],
       );
       completedCount = completeResult.affectedRows;
 
@@ -590,7 +688,7 @@ router.put("/complete", isAdmin, async (req, res) => {
       // 낙찰 금액이 없을 경우 기존 최종 입찰가를 winning_price로 설정하여 완료 처리
       [updateResult] = await connection.query(
         `UPDATE live_bids SET status = 'completed', winning_price = final_price, completed_at = NOW() WHERE id IN (${placeholders}) AND status = 'final'`,
-        bidIds
+        bidIds,
       );
       completedCount = updateResult.affectedRows;
     }
@@ -603,15 +701,46 @@ router.put("/complete", isAdmin, async (req, res) => {
         FROM live_bids l 
         JOIN crawled_items i ON l.item_id = i.item_id 
         WHERE l.id IN (${placeholders}) AND l.status = 'completed'`,
-        bidIds
+        bidIds,
       );
     }
 
     await connection.commit();
 
+    // 완료된 입찰에 대해 정산 생성 및 조정 처리
     for (const bid of completedBidsData) {
-      const date = new Date(bid.scheduled_date).toISOString().split("T")[0];
-      createOrUpdateSettlement(bid.user_id, date).catch(console.error);
+      try {
+        const date = new Date(bid.scheduled_date).toISOString().split("T")[0];
+
+        // 정산 생성
+        await createOrUpdateSettlement(bid.user_id, date);
+
+        // 예치금 조정 (환율 변동 대응)
+        await adjustDepositBalance(
+          bid.user_id,
+          bid.winning_price,
+          date,
+          bid.title,
+        );
+
+        // payment_status 업데이트
+        const conn = await pool.getConnection();
+        try {
+          await conn.query(
+            `UPDATE daily_settlements 
+            SET payment_status = '결제완료' 
+            WHERE user_id = ? AND settlement_date = ?`,
+            [bid.user_id, date],
+          );
+        } finally {
+          conn.release();
+        }
+      } catch (err) {
+        console.error(
+          `Error processing settlement for user ${bid.user_id}:`,
+          err,
+        );
+      }
     }
 
     // 응답 메시지 구성
@@ -635,7 +764,7 @@ router.put("/complete", isAdmin, async (req, res) => {
       }
       if (cancelledCount > 0) {
         messages.push(
-          `${cancelledCount} bid(s) cancelled (winning price exceeds final price)`
+          `${cancelledCount} bid(s) cancelled (winning price exceeds final price)`,
         );
       }
       message =
@@ -682,7 +811,7 @@ router.put("/cancel", isAdmin, async (req, res) => {
     // 완료 상태가 아닌 입찰만 취소 처리
     const [updateResult] = await connection.query(
       `UPDATE live_bids SET status = 'cancelled' WHERE id IN (${placeholders}) AND status != 'completed'`,
-      bidIds
+      bidIds,
     );
 
     await connection.commit();
@@ -718,7 +847,7 @@ router.get("/:id", async (req, res) => {
     // Get bid
     const [bids] = await connection.query(
       "SELECT * FROM live_bids WHERE id = ?",
-      [id]
+      [id],
     );
 
     if (bids.length === 0) {
@@ -737,7 +866,7 @@ router.get("/:id", async (req, res) => {
     // Get item details (JOIN 사용)
     const [items] = await connection.query(
       "SELECT i.* FROM crawled_items i JOIN live_bids b ON i.item_id = b.item_id WHERE b.id = ? LIMIT 1",
-      [id]
+      [id],
     );
 
     const bidWithItem = {
@@ -772,7 +901,7 @@ router.put("/:id", isAdmin, async (req, res) => {
     // 입찰 정보 확인
     const [bids] = await connection.query(
       "SELECT * FROM live_bids WHERE id = ?",
-      [id]
+      [id],
     );
 
     if (bids.length === 0) {
@@ -835,7 +964,7 @@ router.put("/:id", isAdmin, async (req, res) => {
     params.push(id);
 
     const updateQuery = `UPDATE live_bids SET ${updates.join(
-      ", "
+      ", ",
     )} WHERE id = ?`;
 
     const [updateResult] = await connection.query(updateQuery, params);
@@ -852,7 +981,7 @@ router.put("/:id", isAdmin, async (req, res) => {
     // 업데이트된 bid 정보 반환
     const [updatedBids] = await connection.query(
       "SELECT * FROM live_bids WHERE id = ?",
-      [id]
+      [id],
     );
 
     // status나 winning_price가 변경된 경우 정산 업데이트
@@ -862,7 +991,7 @@ router.put("/:id", isAdmin, async (req, res) => {
          FROM live_bids l 
          JOIN crawled_items i ON l.item_id = i.item_id 
          WHERE l.id = ?`,
-        [id]
+        [id],
       );
 
       if (bidWithItem.length > 0 && bidWithItem[0].scheduled_date) {
@@ -870,7 +999,7 @@ router.put("/:id", isAdmin, async (req, res) => {
           .toISOString()
           .split("T")[0];
         createOrUpdateSettlement(bidWithItem[0].user_id, settlementDate).catch(
-          console.error
+          console.error,
         );
       }
     }

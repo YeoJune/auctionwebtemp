@@ -330,7 +330,9 @@
   display: flex;
   align-items: center;
   gap: 15px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .stat-card:hover {
@@ -2004,4 +2006,317 @@
   display: block;
   margin-top: 2px;
   text-align: center;
+}
+
+/* ========================================
+   예치금 정보 카드
+======================================== */
+.deposit-info-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 24px;
+  margin-top: 24px;
+}
+
+.deposit-info-card .card-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #333;
+}
+
+.deposit-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 개인 회원: 잔액 표시 */
+.deposit-balance {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.deposit-balance .label {
+  font-size: 14px;
+  color: #666;
+}
+
+.deposit-balance .value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2c5aa0;
+}
+
+.deposit-balance .value.negative {
+  color: #dc3545;
+}
+
+.warning-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: #fff3cd;
+  border-left: 4px solid #ffc107;
+  color: #856404;
+  font-size: 14px;
+  margin-top: 12px;
+}
+
+/* 액션 버튼 */
+.deposit-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.deposit-actions .btn {
+  flex: 1;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.deposit-actions .btn-primary {
+  background: #2c5aa0;
+  color: white;
+}
+
+.deposit-actions .btn-primary:hover {
+  background: #234a87;
+}
+
+.deposit-actions .btn-secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.deposit-actions .btn-secondary:hover {
+  background: #5a6268;
+}
+
+/* 기업 회원: 한도 표시 */
+.limit-info-row {
+  display: flex;
+  gap: 16px;
+}
+
+.limit-item {
+  flex: 1;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.limit-item .label {
+  display: block;
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.limit-item .value {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+  color: #333;
+}
+
+.limit-item .value.highlight {
+  color: #28a745;
+}
+
+/* ========================================
+   모달 스타일
+======================================== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.modal-dialog {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.modal-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #999;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover {
+  color: #333;
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.modal-body .form-group {
+  margin-bottom: 16px;
+}
+
+.modal-body label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.modal-body .form-control {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.modal-body .form-text {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #6c757d;
+}
+
+.info-box,
+.warning-box {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 6px;
+  margin-top: 16px;
+}
+
+.info-box {
+  background: #d1ecf1;
+  border-left: 4px solid #17a2b8;
+  color: #0c5460;
+}
+
+.warning-box {
+  background: #fff3cd;
+  border-left: 4px solid #ffc107;
+  color: #856404;
+}
+
+.info-box i,
+.warning-box i {
+  font-size: 18px;
+  margin-top: 2px;
+}
+
+.info-box p,
+.warning-box p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid #e9ecef;
+}
+
+.modal-footer .btn {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.modal-footer .btn-primary {
+  background: #2c5aa0;
+  color: white;
+}
+
+.modal-footer .btn-primary:hover {
+  background: #234a87;
+}
+
+.modal-footer .btn-secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.modal-footer .btn-secondary:hover {
+  background: #5a6268;
+}
+
+.modal-footer .btn-danger {
+  background: #dc3545;
+  color: white;
+}
+
+.modal-footer .btn-danger:hover {
+  background: #c82333;
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+  .limit-info-row {
+    flex-direction: column;
+  }
+
+  .deposit-actions {
+    flex-direction: column;
+  }
+
+  .modal-dialog {
+    width: 95%;
+  }
 }

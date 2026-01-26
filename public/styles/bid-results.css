@@ -865,3 +865,232 @@
   color: #757575;
   border: 1px solid #e0e0e0;
 }
+
+/* ========================================
+   정산 정보 섹션
+======================================== */
+.settlement-section {
+  margin-top: 24px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #2c5aa0;
+}
+
+.settlement-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.settlement-header h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+/* 상태 배지 */
+.status-badge {
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.status-badge.status-unpaid {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffc107;
+}
+
+.status-badge.status-pending {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffc107;
+}
+
+.status-badge.status-paid {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #28a745;
+}
+
+/* 정산 내역 행 */
+.settlement-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.settlement-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.settlement-row.highlight {
+  padding: 12px;
+  background: white;
+  border-radius: 6px;
+  border: 2px solid #2c5aa0;
+}
+
+.settlement-row .label {
+  font-size: 14px;
+  color: #666;
+}
+
+.settlement-row .value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.settlement-row .value.completed {
+  color: #28a745;
+}
+
+.settlement-row .value.remaining {
+  font-size: 18px;
+  color: #2c5aa0;
+}
+
+.settlement-row.highlight .value.remaining {
+  font-size: 20px;
+}
+
+/* 정산 액션 버튼 */
+.settlement-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.settlement-actions .btn {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.settlement-actions .btn-payment {
+  background: #2c5aa0;
+  color: white;
+}
+
+.settlement-actions .btn-payment:hover {
+  background: #234a87;
+}
+
+.settlement-actions .btn-disabled {
+  background: #6c757d;
+  color: white;
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+/* ========================================
+   결제 요청 모달
+======================================== */
+.payment-info {
+  margin-bottom: 20px;
+}
+
+.payment-info .info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.payment-info .info-row:last-child {
+  border-bottom: none;
+}
+
+.payment-info .info-row.highlight {
+  padding: 16px;
+  background: #e7f3ff;
+  border-radius: 6px;
+  border: 2px solid #2c5aa0;
+  margin-top: 8px;
+}
+
+.payment-info .label {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.payment-info .value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.payment-info .value.primary {
+  font-size: 20px;
+  color: #2c5aa0;
+}
+
+.account-info-box {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  background: #d1ecf1;
+  border-left: 4px solid #17a2b8;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.account-info-box i {
+  font-size: 24px;
+  color: #17a2b8;
+  margin-top: 2px;
+}
+
+.account-info-box strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #0c5460;
+}
+
+.account-info-box div {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #0c5460;
+}
+
+/* 반응형 - 정산 섹션 */
+@media (max-width: 768px) {
+  .settlement-section {
+    padding: 16px;
+  }
+
+  .settlement-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .settlement-row .value {
+    font-size: 14px;
+  }
+
+  .settlement-row.highlight .value.remaining {
+    font-size: 16px;
+  }
+
+  .payment-info .info-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+}
