@@ -148,3 +148,125 @@
 .btn-success:hover {
   background: #218838;
 }
+
+/* ========================================
+   아코디언 스타일 상세 보기
+======================================== */
+.main-row {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.main-row:hover {
+  background-color: #f8f9fa;
+}
+
+.detail-row {
+  background-color: #f8f9fa;
+}
+
+.detail-container {
+  padding: 20px;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  margin: 10px;
+}
+
+.detail-content {
+  max-width: 100%;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-item .label {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+}
+
+.detail-item .value {
+  font-size: 15px;
+  color: #333;
+  font-weight: 600;
+}
+
+.settlement-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.settlement-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.settlement-detail-item.highlight {
+  background: #e7f3ff;
+  border: 2px solid #2c5aa0;
+}
+
+.settlement-detail-item .label {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+}
+
+.settlement-detail-item .value {
+  font-size: 16px;
+  color: #333;
+  font-weight: 600;
+}
+
+.approval-section {
+  margin-top: 24px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.btn-approve-settlement {
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.approval-note {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #666;
+}
+
+.toggle-detail-btn {
+  white-space: nowrap;
+}
+
+.loading-msg {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+}
+
+.error-msg {
+  text-align: center;
+  padding: 20px;
+  color: #dc3545;
+}

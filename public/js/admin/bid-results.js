@@ -83,25 +83,6 @@ function setupEventListeners() {
     await window.API.fetchAPI("/auth/signout", { method: "POST" });
     window.location.href = "/signin.html";
   });
-
-  // 상세 모달
-  document
-    .getElementById("detailModalClose")
-    ?.addEventListener("click", closeDetailModal);
-  document
-    .getElementById("detailCloseBtn")
-    ?.addEventListener("click", closeDetailModal);
-
-  // 정산 승인 모달
-  document
-    .getElementById("settlementModalClose")
-    ?.addEventListener("click", closeApprovalModal);
-  document
-    .getElementById("approvalCancelBtn")
-    ?.addEventListener("click", closeApprovalModal);
-  document
-    .getElementById("approvalConfirmBtn")
-    ?.addEventListener("click", approveSettlement);
 }
 
 // =====================================================
@@ -174,8 +155,10 @@ function renderResults() {
   }
 
   tbody.innerHTML = state.results
-    .map((result) => {
+    .map((result, index) => {
       const remaining = result.grandTotal - (result.completedAmount || 0);
+      const rowId = `row-${index}`;
+      const detailId = `detail-${index}`;
 
       // 정산 상태 배지
       let statusBadge = "";
@@ -185,23 +168,11 @@ function renderResults() {
         statusBadge = '<span class="status-badge status-paid">완료</span>';
       }
 
-      // 정산 관리 버튼
-      let settlementAction = "";
-      if (result.settlementId && result.paymentStatus === "pending") {
-        settlementAction = `
-        <button 
-          class="btn btn-sm btn-success" 
-          onclick="openApprovalModal(${result.settlementId}, '${result.userId}', '${result.date}', ${result.grandTotal}, ${result.completedAmount || 0})"
-        >
-          <i class="fas fa-check"></i> 승인
-        </button>
-      `;
-      } else {
-        settlementAction = '<span class="text-muted">-</span>';
-      }
+      // 입금자명 표시
+      const depositorName = result.depositorName || "-";
 
       return `
-      <tr>
+      <tr id="${rowId}" class="main-row">
         <td>${result.date}</td>
         <td>${result.userId}</td>
         <td>${result.itemCount}건</td>
@@ -210,159 +181,238 @@ function renderResults() {
         <td class="text-right ${remaining > 0 ? "text-danger" : ""}">
           ₩${remaining.toLocaleString()}
         </td>
+        <td>${depositorName}</td>
         <td>${statusBadge}</td>
         <td>
           <button 
-            class="btn btn-sm btn-info" 
-            onclick="openDetailModal('${result.userId}', '${result.date}')"
+            class="btn btn-sm btn-info toggle-detail-btn" 
+            data-target="${detailId}"
+            data-user-id="${result.userId}"
+            data-date="${result.date}"
+            data-settlement-id="${result.settlementId}"
           >
-            <i class="fas fa-eye"></i> 상세
+            <i class="fas fa-chevron-down"></i> 상세
           </button>
         </td>
-        <td>${settlementAction}</td>
+      </tr>
+      <tr id="${detailId}" class="detail-row" style="display: none;">
+        <td colspan="9">
+          <div class="detail-container">
+            <div class="loading-msg">로딩 중...</div>
+          </div>
+        </td>
       </tr>
     `;
     })
     .join("");
+
+  // 토글 버튼 이벤트 바인딩
+  document.querySelectorAll(".toggle-detail-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const targetId = btn.getAttribute("data-target");
+      const userId = btn.getAttribute("data-user-id");
+      const date = btn.getAttribute("data-date");
+      const settlementId = btn.getAttribute("data-settlement-id");
+      toggleDetailRow(targetId, userId, date, settlementId, btn);
+    });
+  });
 }
 
 // =====================================================
-// 상세 보기 모달
+// 상세 보기 토글 (아코디언 스타일)
 // =====================================================
-async function openDetailModal(userId, date) {
+let currentOpenDetail = null;
+
+async function toggleDetailRow(detailId, userId, date, settlementId, btn) {
+  const detailRow = document.getElementById(detailId);
+  const isCurrentlyOpen = detailRow.style.display !== "none";
+
+  // 다른 열려있는 상세 닫기
+  if (currentOpenDetail && currentOpenDetail !== detailId) {
+    const prevRow = document.getElementById(currentOpenDetail);
+    if (prevRow) {
+      prevRow.style.display = "none";
+    }
+    // 이전 버튼 아이콘 복원
+    const prevBtns = document.querySelectorAll(
+      `.toggle-detail-btn[data-target="${currentOpenDetail}"]`,
+    );
+    prevBtns.forEach((b) => {
+      b.innerHTML = '<i class="fas fa-chevron-down"></i> 상세';
+    });
+  }
+
+  if (isCurrentlyOpen) {
+    // 현재 열린 것을 닫기
+    detailRow.style.display = "none";
+    btn.innerHTML = '<i class="fas fa-chevron-down"></i> 상세';
+    currentOpenDetail = null;
+  } else {
+    // 열기
+    detailRow.style.display = "";
+    btn.innerHTML = '<i class="fas fa-chevron-up"></i> 접기';
+    currentOpenDetail = detailId;
+
+    // 데이터 로드
+    await loadDetailData(detailId, userId, date, settlementId);
+  }
+}
+
+async function loadDetailData(detailId, userId, date, settlementId) {
+  const detailRow = document.getElementById(detailId);
+  const container = detailRow.querySelector(".detail-container");
+
   try {
+    container.innerHTML = '<div class="loading-msg">로딩 중...</div>';
+
     const response = await window.API.fetchAPI(
       `/bid-results/admin/bid-results/detail?userId=${userId}&date=${date}`,
     );
 
-    const content = document.getElementById("detailContent");
-    content.innerHTML = `
+    // 상세 내용 렌더링
+    container.innerHTML = createDetailContent(response, settlementId);
+
+    // 승인 버튼 이벤트
+    const approveBtn = container.querySelector(".btn-approve-settlement");
+    if (approveBtn) {
+      approveBtn.addEventListener("click", () => {
+        approveSettlement(
+          settlementId,
+          userId,
+          date,
+          response.grandTotal,
+          response.completedAmount,
+        );
+      });
+    }
+  } catch (error) {
+    console.error("상세 정보 로드 실패:", error);
+    container.innerHTML =
+      '<div class="error-msg">상세 정보를 불러오는 중 오류가 발생했습니다.</div>';
+  }
+}
+
+function createDetailContent(response, settlementId) {
+  const remaining = response.grandTotal - (response.completedAmount || 0);
+
+  // 승인 버튼 (미결제 상태이고 settlementId가 있을 때만)
+  let approvalSection = "";
+  if (response.paymentStatus === "pending" && settlementId) {
+    approvalSection = `
+      <div class="approval-section">
+        <button class="btn btn-success btn-approve-settlement">
+          <i class="fas fa-check"></i> 입금 확인 및 승인
+        </button>
+        <p class="approval-note">입금 확인 후 승인하면 정산이 완료됩니다.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="detail-content">
       <div class="detail-section">
         <h4>기본 정보</h4>
-        <div class="detail-row">
-          <span class="label">유저ID</span>
-          <span class="value">${response.userId}</span>
-        </div>
-        <div class="detail-row">
-          <span class="label">날짜</span>
-          <span class="value">${response.date}</span>
-        </div>
-        <div class="detail-row">
-          <span class="label">상품 수</span>
-          <span class="value">${response.items.length}건</span>
+        <div class="detail-grid">
+          <div class="detail-item">
+            <span class="label">유저ID</span>
+            <span class="value">${response.userId}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">날짜</span>
+            <span class="value">${response.date}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">상품 수</span>
+            <span class="value">${response.items.length}건</span>
+          </div>
         </div>
       </div>
 
       <div class="detail-section">
         <h4>낙찰 상품 목록</h4>
-        <table class="detail-table">
-          <thead>
-            <tr>
-              <th>상품ID</th>
-              <th>제목</th>
-              <th>낙찰가</th>
-              <th>상태</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${response.items
-              .map(
-                (item) => `
+        <div class="table-responsive">
+          <table class="detail-table">
+            <thead>
               <tr>
-                <td>${item.itemId}</td>
-                <td>${item.title}</td>
-                <td>¥${item.bidAmount?.toLocaleString() || "-"}</td>
-                <td>${getStatusText(item.status)}</td>
+                <th>상품ID</th>
+                <th>제목</th>
+                <th>입찰금액</th>
+                <th>상태</th>
               </tr>
-            `,
-              )
-              .join("")}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              ${
+                response.items.length > 0
+                  ? response.items
+                      .map(
+                        (item) => `
+                <tr>
+                  <td>${item.itemId}</td>
+                  <td>${item.title}</td>
+                  <td>¥${item.bidAmount?.toLocaleString() || "-"}</td>
+                  <td>${getStatusText(item.status)}</td>
+                </tr>
+              `,
+                      )
+                      .join("")
+                  : '<tr><td colspan="4" class="text-center">상품이 없습니다.</td></tr>'
+              }
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div class="detail-section">
         <h4>정산 정보</h4>
-        <div class="detail-row">
-          <span class="label">총 청구액</span>
-          <span class="value">₩${response.grandTotal.toLocaleString()}</span>
-        </div>
-        <div class="detail-row">
-          <span class="label">기 결제액</span>
-          <span class="value">₩${(response.completedAmount || 0).toLocaleString()}</span>
-        </div>
-        <div class="detail-row">
-          <span class="label">미수금</span>
-          <span class="value">₩${(response.grandTotal - (response.completedAmount || 0)).toLocaleString()}</span>
-        </div>
-        <div class="detail-row">
-          <span class="label">정산 상태</span>
-          <span class="value">${getPaymentStatusText(response.paymentStatus)}</span>
+        <div class="settlement-detail-grid">
+          <div class="settlement-detail-item">
+            <span class="label">총 청구액</span>
+            <span class="value">₩${response.grandTotal.toLocaleString()}</span>
+          </div>
+          <div class="settlement-detail-item">
+            <span class="label">기 결제액</span>
+            <span class="value">₩${(response.completedAmount || 0).toLocaleString()}</span>
+          </div>
+          <div class="settlement-detail-item highlight">
+            <span class="label">미수금</span>
+            <span class="value ${remaining > 0 ? "text-danger" : ""}">₩${remaining.toLocaleString()}</span>
+          </div>
+          <div class="settlement-detail-item">
+            <span class="label">정산 상태</span>
+            <span class="value">${getPaymentStatusText(response.paymentStatus)}</span>
+          </div>
         </div>
       </div>
-    `;
 
-    document.getElementById("detailModal").style.display = "flex";
-  } catch (error) {
-    console.error("상세 정보 로드 실패:", error);
-    alert("상세 정보를 불러오는 중 오류가 발생했습니다.");
-  }
-}
-
-function closeDetailModal() {
-  document.getElementById("detailModal").style.display = "none";
+      ${approvalSection}
+    </div>
+  `;
 }
 
 // =====================================================
-// 정산 승인 모달
+// 정산 승인
 // =====================================================
-function openApprovalModal(settlementId, userId, date, total, completed) {
-  currentSettlement = {
-    settlementId,
-    userId,
-    date,
-    grandTotal: total,
-    completedAmount: completed,
-    remainingAmount: total - completed,
-  };
+async function approveSettlement(settlementId, userId, date, total, completed) {
+  const remaining = total - completed;
 
-  document.getElementById("approvalUserId").textContent = userId;
-  document.getElementById("approvalDate").textContent = date;
-  document.getElementById("approvalTotal").textContent =
-    `₩${total.toLocaleString()}`;
-  document.getElementById("approvalCompleted").textContent =
-    `₩${completed.toLocaleString()}`;
-  document.getElementById("approvalRemaining").textContent =
-    `₩${(total - completed).toLocaleString()}`;
-  document.getElementById("adminMemo").value = "";
+  const memo = prompt(
+    `${userId}의 정산을 승인하시겠습니까?\n\n` +
+      `날짜: ${date}\n` +
+      `총 청구액: ₩${total.toLocaleString()}\n` +
+      `기 결제액: ₩${completed.toLocaleString()}\n` +
+      `입금 확인 금액: ₩${remaining.toLocaleString()}\n\n` +
+      `관리자 메모를 입력하세요 (선택사항):`,
+    "입금 확인 완료",
+  );
 
-  document.getElementById("settlementApprovalModal").style.display = "flex";
-}
-
-function closeApprovalModal() {
-  document.getElementById("settlementApprovalModal").style.display = "none";
-  currentSettlement = null;
-}
-
-async function approveSettlement() {
-  if (!currentSettlement) {
-    alert("정산 정보를 불러올 수 없습니다.");
-    return;
-  }
-
-  const memo = document.getElementById("adminMemo").value.trim();
-
-  if (
-    !confirm(
-      `${currentSettlement.userId}의 정산을 승인하시겠습니까?\n\n입금 확인 금액: ₩${currentSettlement.remainingAmount.toLocaleString()}`,
-    )
-  ) {
+  if (memo === null) {
+    // 취소
     return;
   }
 
   try {
     await window.API.fetchAPI(
-      `/bid-results/admin/settlements/${currentSettlement.settlementId}`,
+      `/bid-results/admin/settlements/${settlementId}`,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -374,7 +424,6 @@ async function approveSettlement() {
     );
 
     alert("정산이 승인되었습니다.");
-    closeApprovalModal();
     await loadResults();
   } catch (error) {
     console.error("정산 승인 실패:", error);
@@ -456,8 +505,6 @@ function getPaymentStatusText(status) {
 // =====================================================
 // 전역 함수 등록 (HTML onclick에서 사용)
 // =====================================================
-window.openDetailModal = openDetailModal;
-window.openApprovalModal = openApprovalModal;
 window.goToPage = goToPage;
 
 // =====================================================

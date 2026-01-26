@@ -2070,7 +2070,8 @@ router.get("/admin/bid-results", isAdmin, async (req, res) => {
          ds.item_count as itemCount,
          ds.final_amount as grandTotal,
          ds.completed_amount as completedAmount,
-         ds.payment_status as paymentStatus
+         ds.payment_status as paymentStatus,
+         ds.depositor_name as depositorName
        FROM daily_settlements ds
        WHERE ${whereClause}
        ORDER BY ${orderByField} ${sortOrder.toUpperCase()}
