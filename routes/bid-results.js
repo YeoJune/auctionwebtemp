@@ -1291,9 +1291,14 @@ router.delete("/direct/:id/repair", async (req, res) => {
  */
 router.post("/settlements/:id/pay", async (req, res) => {
   const settlementId = req.params.id;
+  const { depositorName } = req.body;
 
   if (!req.session.user) {
     return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  if (!depositorName || depositorName.trim() === "") {
+    return res.status(400).json({ message: "입금자명을 입력해주세요." });
   }
 
   const userId = req.session.user.id;
@@ -1326,9 +1331,9 @@ router.post("/settlements/:id/pay", async (req, res) => {
     // 2. 상태 업데이트 (unpaid -> pending)
     await connection.query(
       `UPDATE daily_settlements 
-       SET payment_status = 'pending', payment_method = 'manual' 
+       SET payment_status = 'pending', payment_method = 'manual', depositor_name = ? 
        WHERE id = ?`,
-      [settlementId],
+      [depositorName.trim(), settlementId],
     );
 
     res.json({

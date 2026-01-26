@@ -385,6 +385,10 @@ window.openPaymentModal = function (settlementData) {
 
   const modal = document.getElementById("paymentRequestModal");
 
+  // 입금자명 초기화
+  const depositorNameInput = document.getElementById("paymentDepositorName");
+  if (depositorNameInput) depositorNameInput.value = "";
+
   // 모달 데이터 바인딩
   document.getElementById("paymentDate").textContent = settlementData.date;
   document.getElementById("paymentTotalAmount").textContent =
@@ -411,11 +415,20 @@ async function submitPaymentRequest() {
     return;
   }
 
+  const depositorNameInput = document.getElementById("paymentDepositorName");
+  const depositorName = depositorNameInput?.value.trim();
+
+  if (!depositorName) {
+    alert("입금자명을 입력해주세요.");
+    depositorNameInput?.focus();
+    return;
+  }
+
   const { settlementId, remainingAmount } = currentSettlement;
 
   if (
     !confirm(
-      `${remainingAmount.toLocaleString()}원을 입금하셨습니까?\n\n입금 후 관리자가 확인하면 정산이 완료됩니다.`,
+      `${remainingAmount.toLocaleString()}원을 입금하셨습니까?\n\n입금자명: ${depositorName}\n입금 후 관리자가 확인하면 정산이 완료됩니다.`,
     )
   ) {
     return;
@@ -427,6 +440,7 @@ async function submitPaymentRequest() {
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ depositorName }),
       },
     );
 

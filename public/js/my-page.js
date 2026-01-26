@@ -1412,8 +1412,10 @@ class MyPageManager {
   // 충전 모달 열기
   openChargeModal() {
     const modal = document.getElementById("chargeModal");
+    const depositorNameInput = document.getElementById("chargeDepositorName");
     const amountInput = document.getElementById("chargeAmount");
 
+    depositorNameInput.value = "";
     amountInput.value = "";
     modal.style.display = "flex";
   }
@@ -1421,9 +1423,11 @@ class MyPageManager {
   // 환불 모달 열기
   openRefundModal() {
     const modal = document.getElementById("refundModal");
+    const depositorNameInput = document.getElementById("refundDepositorName");
     const amountInput = document.getElementById("refundAmount");
     const currentBalance = document.getElementById("currentBalanceForRefund");
 
+    depositorNameInput.value = "";
     amountInput.value = "";
     amountInput.max = this.depositData.deposit_balance;
     currentBalance.textContent = `${this.depositData.deposit_balance.toLocaleString()}원`;
@@ -1439,8 +1443,16 @@ class MyPageManager {
 
   // 충전 신청 제출
   async submitChargeRequest() {
+    const depositorNameInput = document.getElementById("chargeDepositorName");
     const amountInput = document.getElementById("chargeAmount");
+    const depositorName = depositorNameInput.value.trim();
     const amount = parseInt(amountInput.value);
+
+    if (!depositorName) {
+      alert("입금자명을 입력해주세요.");
+      depositorNameInput.focus();
+      return;
+    }
 
     if (!amount || amount < 1000) {
       alert("충전 금액은 1,000원 이상이어야 합니다.");
@@ -1451,7 +1463,7 @@ class MyPageManager {
       const response = await window.API.fetchAPI("/deposits/charge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount }),
+        body: JSON.stringify({ amount, depositorName }),
       });
 
       alert("충전 신청이 접수되었습니다.\n관리자 확인 후 예치금이 반영됩니다.");
@@ -1470,8 +1482,16 @@ class MyPageManager {
 
   // 환불 신청 제출
   async submitRefundRequest() {
+    const depositorNameInput = document.getElementById("refundDepositorName");
     const amountInput = document.getElementById("refundAmount");
+    const depositorName = depositorNameInput.value.trim();
     const amount = parseInt(amountInput.value);
+
+    if (!depositorName) {
+      alert("입금자명(예금주명)을 입력해주세요.");
+      depositorNameInput.focus();
+      return;
+    }
 
     if (!amount || amount < 1000) {
       alert("환불 금액은 1,000원 이상이어야 합니다.");
@@ -1487,7 +1507,7 @@ class MyPageManager {
 
     if (
       !confirm(
-        `${amount.toLocaleString()}원을 환불 신청하시겠습니까?\n\n신청 즉시 예치금에서 차감됩니다.`,
+        `${amount.toLocaleString()}원을 환불 신청하시겠습니까?\n\n예금주: ${depositorName}\n신청 즉시 예치금에서 차감됩니다.`,
       )
     ) {
       return;
@@ -1497,7 +1517,7 @@ class MyPageManager {
       const response = await window.API.fetchAPI("/deposits/refund", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount }),
+        body: JSON.stringify({ amount, depositorName }),
       });
 
       alert("환불 신청이 완료되었습니다.\n관리자 확인 후 계좌로 입금됩니다.");
@@ -1607,6 +1627,10 @@ window.openPaymentModal = function (settlementData) {
     return;
   }
 
+  // 입금자명 초기화
+  const depositorNameInput = document.getElementById("paymentDepositorName");
+  if (depositorNameInput) depositorNameInput.value = "";
+
   document.getElementById("paymentDate").textContent = settlementData.date;
   document.getElementById("paymentTotalAmount").textContent =
     `₩${settlementData.grandTotal.toLocaleString()}`;
@@ -1630,11 +1654,20 @@ async function submitPaymentRequest() {
     return;
   }
 
+  const depositorNameInput = document.getElementById("paymentDepositorName");
+  const depositorName = depositorNameInput?.value.trim();
+
+  if (!depositorName) {
+    alert("입금자명을 입력해주세요.");
+    depositorNameInput?.focus();
+    return;
+  }
+
   const { settlementId, remainingAmount } = currentSettlement;
 
   if (
     !confirm(
-      `${remainingAmount.toLocaleString()}원을 입금하셨습니까?\n\n입금 후 관리자가 확인하면 정산이 완료됩니다.`,
+      `${remainingAmount.toLocaleString()}원을 입금하셨습니까?\n\n입금자명: ${depositorName}\n입금 후 관리자가 확인하면 정산이 완료됩니다.`,
     )
   ) {
     return;
@@ -1644,6 +1677,7 @@ async function submitPaymentRequest() {
     await window.API.fetchAPI(`/bid-results/settlements/${settlementId}/pay`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ depositorName }),
     });
 
     alert("결제 요청이 접수되었습니다.\n관리자 확인 후 정산이 완료됩니다.");

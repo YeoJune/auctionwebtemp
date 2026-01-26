@@ -26,10 +26,14 @@ const isAdmin = (req, res, next) => {
  */
 router.post("/charge", isAuthenticated, async (req, res) => {
   const userId = req.session.user.id;
-  const { amount } = req.body;
+  const { amount, depositorName } = req.body;
 
   if (!amount || amount <= 0) {
     return res.status(400).json({ message: "Invalid amount" });
+  }
+
+  if (!depositorName || depositorName.trim() === "") {
+    return res.status(400).json({ message: "입금자명을 입력해주세요." });
   }
 
   const connection = await pool.getConnection();
@@ -53,9 +57,14 @@ router.post("/charge", isAuthenticated, async (req, res) => {
     // 2. 거래 내역에 'pending' 상태로 기록 (잔액 변경 없음)
     const [result] = await connection.query(
       `INSERT INTO deposit_transactions 
-      (user_id, type, amount, status, related_type, description, created_at)
-      VALUES (?, 'charge', ?, 'pending', 'charge_request', ?, NOW())`,
-      [userId, amount, `충전 요청: ₩${amount.toLocaleString()}`],
+      (user_id, type, amount, status, related_type, description, depositor_name, created_at)
+      VALUES (?, 'charge', ?, 'pending', 'charge_request', ?, ?, NOW())`,
+      [
+        userId,
+        amount,
+        `충전 요청: ₩${amount.toLocaleString()}`,
+        depositorName.trim(),
+      ],
     );
 
     await connection.commit();
@@ -80,10 +89,16 @@ router.post("/charge", isAuthenticated, async (req, res) => {
  */
 router.post("/refund", isAuthenticated, async (req, res) => {
   const userId = req.session.user.id;
-  const { amount } = req.body;
+  const { amount, depositorName } = req.body;
 
   if (!amount || amount <= 0) {
     return res.status(400).json({ message: "Invalid amount" });
+  }
+
+  if (!depositorName || depositorName.trim() === "") {
+    return res
+      .status(400)
+      .json({ message: "입금자명(예금주명)을 입력해주세요." });
   }
 
   const connection = await pool.getConnection();
@@ -123,13 +138,14 @@ router.post("/refund", isAuthenticated, async (req, res) => {
     // 4. 거래 내역에 'pending' 상태로 기록
     await connection.query(
       `INSERT INTO deposit_transactions 
-      (user_id, type, amount, balance_after, status, related_type, description, created_at)
-      VALUES (?, 'refund', ?, ?, 'pending', 'refund_request', ?, NOW())`,
+      (user_id, type, amount, balance_after, status, related_type, description, depositor_name, created_at)
+      VALUES (?, 'refund', ?, ?, 'pending', 'refund_request', ?, ?, NOW())`,
       [
         userId,
         amount,
         balanceAfter,
         `환불 요청(대기): ₩${amount.toLocaleString()}`,
+        depositorName.trim(),
       ],
     );
 
@@ -310,7 +326,7 @@ router.get("/admin/transactions", isAdmin, async (req, res) => {
     // 거래 내역 조회
     const [transactions] = await pool.query(
       `SELECT id, user_id, type, amount, balance_after, status, admin_memo, 
-              related_type, related_id, bank_tran_id, description, created_at, processed_at
+              related_type, related_id, bank_tran_id, description, depositor_name, created_at, processed_at
       FROM deposit_transactions 
       ${whereClause}
       ORDER BY created_at DESC

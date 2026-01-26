@@ -238,6 +238,7 @@ function renderDeposits() {
         <td>${tx.user_id}</td>
         <td>${typeText}</td>
         <td class="text-right">₩${tx.amount.toLocaleString()}</td>
+        <td>${tx.depositor_name || "-"}</td>
         <td>${statusBadge}</td>
         <td>${formatDateTime(tx.created_at)}</td>
         <td>
@@ -328,7 +329,7 @@ function renderSettlements() {
 
   if (state.settlements.results.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="8" class="text-center">결과가 없습니다.</td></tr>';
+      '<tr><td colspan="9" class="text-center">결과가 없습니다.</td></tr>';
     return;
   }
 
@@ -359,6 +360,7 @@ function renderSettlements() {
         <td class="text-right">₩${st.final_amount.toLocaleString()}</td>
         <td class="text-right">₩${(st.completed_amount || 0).toLocaleString()}</td>
         <td class="text-right ${remaining > 0 ? "text-danger" : ""}">₩${remaining.toLocaleString()}</td>
+        <td>${st.depositor_name || "-"}</td>
         <td>${statusBadge}</td>
         <td>${actionBtn}</td>
       </tr>
