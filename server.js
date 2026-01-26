@@ -308,6 +308,13 @@ app.get("/admin/bid-results", (req, res) => {
     res.redirect("/signinPage");
   }
 });
+app.get("/admin/transactions", (req, res) => {
+  if (req.session.user && req.session.user.id === "admin") {
+    res.sendFile(path.join(mainPagesPath, "admin", "transactions.html"));
+  } else {
+    res.redirect("/signinPage");
+  }
+});
 app.get("/admin/invoices", (req, res) => {
   if (req.session.user && req.session.user.id === "admin") {
     res.sendFile(path.join(mainPagesPath, "admin", "invoices.html"));
