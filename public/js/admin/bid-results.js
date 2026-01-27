@@ -265,8 +265,11 @@ async function loadDetailData(detailId, userId, date, settlementId) {
   try {
     container.innerHTML = '<div class="loading-msg">로딩 중...</div>';
 
+    // 날짜를 YYYY-MM-DD 형식으로 변환
+    const formattedDate = date.split("T")[0];
+
     const response = await window.API.fetchAPI(
-      `/bid-results/admin/bid-results/detail?userId=${userId}&date=${date}`,
+      `/bid-results/admin/bid-results/detail?userId=${userId}&date=${formattedDate}`,
     );
 
     // 상세 내용 렌더링
