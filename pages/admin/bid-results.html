@@ -4,13 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>입찰 결과 및 정산 관리</title>
-    <link rel="stylesheet" href="/styles/common.css" />
-    <link rel="stylesheet" href="/styles/admin/common.css" />
-    <link rel="stylesheet" href="/styles/admin/bids.css" />
-    <link rel="stylesheet" href="/styles/admin/bid-results.css" />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <link rel="stylesheet" href="/styles/common.css" />
+    <link rel="stylesheet" href="/styles/main.css" />
+    <link rel="stylesheet" href="/styles/bid-results.css" />
+    <link rel="stylesheet" href="/styles/admin/common.css" />
+    <link rel="stylesheet" href="/styles/admin/bid-results.css" />
   </head>
   <body>
     <div class="admin-layout">
@@ -34,7 +35,7 @@
       </div>
 
       <!-- 메인 콘텐츠 -->
-      <div class="main-content">
+      <div class="main-content admin-main-content">
         <div class="main-header">
           <h1>입찰 결과 & 정산 관리</h1>
           <div class="user-info" style="display: flex; align-items: center">
@@ -50,102 +51,216 @@
         </div>
 
         <!-- 검색 및 필터 영역 -->
-        <div class="search-section">
-          <div class="search-input-group">
-            <input
-              type="text"
-              id="searchInput"
-              placeholder="유저ID, 날짜(YYYY-MM-DD) 검색..." />
-            <button id="searchBtn" class="btn">검색</button>
-            <button id="clearSearchBtn" class="btn btn-secondary">
-              초기화
-            </button>
-          </div>
-        </div>
+        <section class="search-toolbar">
+          <div class="view-controls">
+            <!-- 정렬 옵션 -->
+            <div class="sort-options">
+              <button class="sort-btn active" data-sort="date">
+                날짜순 <i class="fas fa-sort"></i>
+              </button>
+              <button class="sort-btn" data-sort="total_price">
+                금액순 <i class="fas fa-sort"></i>
+              </button>
+              <button class="sort-btn" data-sort="item_count">
+                상품수 <i class="fas fa-sort"></i>
+              </button>
+            </div>
 
-        <!-- 필터 탭 -->
-        <div class="filter-tabs">
-          <div class="filter-tab active" data-status="">전체</div>
-          <div class="filter-tab" data-status="pending">미결제</div>
-          <div class="filter-tab" data-status="paid">결제 완료</div>
-        </div>
-
-        <!-- 정렬 및 페이지 크기 -->
-        <div class="filter-options">
-          <div class="sort-options">
-            <div class="sort-field">
-              <label for="sortBy">정렬 기준:</label>
-              <select id="sortBy" class="form-control form-control-sm">
-                <option value="date">날짜</option>
-                <option value="total_price">총 금액</option>
-                <option value="item_count">상품 수</option>
+            <!-- 기간 필터 -->
+            <div class="date-filter">
+              <label for="dateRange">기간:</label>
+              <select id="dateRange">
+                <option value="7">최근 1주일</option>
+                <option value="30" selected>최근 1개월</option>
+                <option value="90">최근 3개월</option>
+                <option value="180">최근 6개월</option>
+                <option value="365">최근 1년</option>
               </select>
             </div>
-            <div class="sort-order">
-              <label for="sortOrder">정렬 방향:</label>
-              <select id="sortOrder" class="form-control form-control-sm">
-                <option value="desc">내림차순</option>
-                <option value="asc">오름차순</option>
+
+            <!-- 정산 상태 필터 -->
+            <div class="status-filter">
+              <label for="settlementStatus">정산 상태:</label>
+              <select id="settlementStatus">
+                <option value="">전체</option>
+                <option value="unpaid">결제 필요</option>
+                <option value="pending">입금 확인 중</option>
+                <option value="paid">정산 완료</option>
               </select>
             </div>
-          </div>
 
-          <div class="page-size-selector">
-            <label for="pageSize">페이지당 항목:</label>
-            <select id="pageSize" class="form-control form-control-sm">
-              <option value="10">10</option>
-              <option value="20" selected>20</option>
-              <option value="50">50</option>
-            </select>
-          </div>
-        </div>
+            <!-- 유저 검색 -->
+            <div class="user-search">
+              <input
+                type="text"
+                id="userSearch"
+                placeholder="유저 ID 또는 이름 검색..."
+                class="search-input" />
+              <button
+                id="clearUserSearch"
+                class="clear-search"
+                style="display: none">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
 
-        <!-- 결과 목록 -->
-        <div class="card">
-          <div class="results-header">
-            <div class="results-count">
-              총 <span id="totalResults">0</span>건
+            <!-- 필터 적용 버튼 -->
+            <div class="filter-actions">
+              <button id="applyFilters" class="primary-button small-button">
+                적용
+              </button>
+              <button id="resetFilters" class="secondary-button small-button">
+                초기화
+              </button>
             </div>
           </div>
+        </section>
 
-          <!-- 로딩 -->
-          <div class="loading-msg" id="loadingMsg" style="display: none">
-            로딩 중...
-          </div>
+        <!-- 결과 섹션 -->
+        <div class="content-wrapper">
+          <section class="results-section full-width">
+            <!-- 요약 통계 -->
+            <div class="summary-stats show-flex">
+              <div class="stat-box">
+                <div class="stat-label">총 상품 수</div>
+                <div class="stat-value" id="totalItemCount">0</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">총 금액 (¥)</div>
+                <div class="stat-value" id="totalJapaneseAmount">0</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">총 금액 (₩)</div>
+                <div class="stat-value" id="totalKoreanAmount">0</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">총 수수료</div>
+                <div class="stat-value" id="totalFeeAmount">0</div>
+                <div class="vat-note">
+                  VAT <span id="totalVatAmount">0</span>
+                </div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">감정서 수수료</div>
+                <div class="stat-value" id="totalAppraisalFee">0</div>
+                <div class="vat-note">
+                  VAT <span id="totalAppraisalVat">0</span>
+                </div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-label">총액 (수수료 포함)</div>
+                <div class="stat-value" id="grandTotalAmount">0</div>
+              </div>
+            </div>
 
-          <!-- 테이블 -->
-          <div class="table-responsive">
-            <table class="data-table" id="resultsTable">
-              <thead>
-                <tr>
-                  <th>날짜</th>
-                  <th>유저ID</th>
-                  <th>상품 수</th>
-                  <th>총 청구액 (₩)</th>
-                  <th>기 결제액</th>
-                  <th>미수금</th>
-                  <th>입금자명</th>
-                  <th>정산 상태</th>
-                  <th>입찰 관리</th>
-                </tr>
-              </thead>
-              <tbody id="resultsTableBody">
-                <tr>
-                  <td colspan="9" class="text-center">
-                    데이터를 불러오는 중입니다...
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+            <!-- 결과 카운트 -->
+            <div class="results-header">
+              <div class="results-count">
+                총 <span id="totalResults">0</span>개 날짜
+              </div>
+            </div>
 
-          <!-- 페이지네이션 -->
-          <div class="pagination" id="pagination"></div>
+            <!-- 로딩 메시지 -->
+            <div class="loading-msg loading-hidden" id="loadingMsg">
+              로딩 중...
+            </div>
+
+            <!-- 일별 결과 목록 -->
+            <div class="daily-results-list" id="resultsList">
+              <!-- 여기에 일별 결과가 동적으로 추가됨 -->
+            </div>
+
+            <!-- 페이지네이션 -->
+            <div class="pagination" id="pagination"></div>
+          </section>
         </div>
       </div>
     </div>
 
+    <!-- 정산 승인 모달 (관리자용) -->
+    <div
+      class="modal-overlay"
+      id="settlementApprovalModal"
+      style="display: none">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>정산 입금 확인 및 승인</h3>
+          <button class="modal-close" id="approvalModalClose">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="payment-info">
+            <div class="info-row">
+              <span class="label">유저 ID</span>
+              <span class="value" id="approvalUserId">-</span>
+            </div>
+            <div class="info-row">
+              <span class="label">정산 날짜</span>
+              <span class="value" id="approvalDate">-</span>
+            </div>
+            <div class="info-row">
+              <span class="label">입금자명</span>
+              <span class="value" id="approvalDepositorName">-</span>
+            </div>
+            <div class="info-row">
+              <span class="label">총 청구액</span>
+              <span class="value" id="approvalTotalAmount">0원</span>
+            </div>
+            <div class="info-row">
+              <span class="label">기 결제액</span>
+              <span class="value" id="approvalCompletedAmount">0원</span>
+            </div>
+            <div class="info-row highlight">
+              <span class="label">입금 확인할 금액</span>
+              <span class="value primary" id="approvalRemainingAmount"
+                >0원</span
+              >
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="approvalPaymentAmount"
+              >입금 확인 금액 (원) <span style="color: red">*</span></label
+            >
+            <input
+              type="number"
+              id="approvalPaymentAmount"
+              class="form-control"
+              placeholder="입금 확인된 금액을 입력하세요"
+              min="0"
+              step="1000"
+              required />
+          </div>
+
+          <div class="form-group">
+            <label for="approvalNote">관리자 메모 (선택)</label>
+            <textarea
+              id="approvalNote"
+              class="form-control"
+              rows="3"
+              placeholder="입금 확인 관련 메모를 입력하세요"></textarea>
+          </div>
+
+          <div class="warning-box">
+            <i class="fas fa-exclamation-triangle"></i>
+            <p>
+              입금을 확인한 후 <strong>[승인]</strong> 버튼을 눌러주세요.<br />
+              승인 시 해당 금액만큼 결제 완료로 처리됩니다.
+            </p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="approvalCancelBtn">취소</button>
+          <button class="btn btn-primary" id="approvalConfirmBtn">
+            <i class="fas fa-check"></i> 승인
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="/js/common.js"></script>
     <script src="/js/api.js"></script>
+    <script src="/js/calculate-fee.js"></script>
+    <script src="/js/bid-results-core.js"></script>
     <script src="/js/admin/bid-results.js"></script>
   </body>
 </html>
