@@ -104,7 +104,7 @@ async function loadResults() {
 
     const queryString = window.API.createURLParams(params);
     const response = await window.API.fetchAPI(
-      `/api/bid-results/admin/bid-results?${queryString}`,
+      `/bid-results/admin/bid-results?${queryString}`,
     );
 
     state.results = response.dailyResults || [];
@@ -266,7 +266,7 @@ async function loadDetailData(detailId, userId, date, settlementId) {
     container.innerHTML = '<div class="loading-msg">로딩 중...</div>';
 
     const response = await window.API.fetchAPI(
-      `/api/bid-results/admin/bid-results/detail?userId=${userId}&date=${date}`,
+      `/bid-results/admin/bid-results/detail?userId=${userId}&date=${date}`,
     );
 
     // 상세 내용 렌더링
@@ -412,7 +412,7 @@ async function approveSettlement(settlementId, userId, date, total, completed) {
 
   try {
     await window.API.fetchAPI(
-      `/api/bid-results/admin/settlements/${settlementId}`,
+      `/bid-results/admin/settlements/${settlementId}`,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
