@@ -266,7 +266,7 @@ async function loadDetailData(detailId, userId, date, settlementId) {
     container.innerHTML = '<div class="loading-msg">로딩 중...</div>';
 
     const response = await window.API.fetchAPI(
-      `/bid-results/admin/bid-results/detail?userId=${userId}&date=${date}`,
+      `/api/bid-results/admin/bid-results/detail?userId=${userId}&date=${date}`,
     );
 
     // 상세 내용 렌더링
