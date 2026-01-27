@@ -104,7 +104,7 @@ async function loadResults() {
 
     const queryString = window.API.createURLParams(params);
     const response = await window.API.fetchAPI(
-      `/bid-results/admin/bid-results?${queryString}`,
+      `/api/bid-results/admin/bid-results?${queryString}`,
     );
 
     state.results = response.dailyResults || [];
@@ -412,7 +412,7 @@ async function approveSettlement(settlementId, userId, date, total, completed) {
 
   try {
     await window.API.fetchAPI(
-      `/bid-results/admin/settlements/${settlementId}`,
+      `/api/bid-results/admin/settlements/${settlementId}`,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
