@@ -381,8 +381,11 @@ async function loadDetailData(settlement, detailElement) {
   try {
     detailElement.innerHTML = '<div class="loading-msg">로딩 중...</div>';
 
+    // 날짜를 YYYY-MM-DD 형식으로 변환
+    const dateOnly = formatDateForAPI(settlement.date);
+
     const response = await window.API.fetchAPI(
-      `/bid-results/admin/bid-results/detail?userId=${settlement.userId}&date=${settlement.date}`,
+      `/bid-results/admin/bid-results/detail?userId=${settlement.userId}&date=${dateOnly}`,
     );
 
     console.log("상세 데이터 응답:", response);
@@ -800,6 +803,16 @@ function formatCurrency(value) {
 }
 
 function formatDate(dateStr) {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatDateForAPI(dateStr) {
+  // API 호출용 날짜 형식: YYYY-MM-DD
   if (!dateStr) return "";
   const date = new Date(dateStr);
   const year = date.getFullYear();
