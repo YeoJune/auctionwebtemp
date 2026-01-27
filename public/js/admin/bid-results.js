@@ -1,29 +1,29 @@
 // public/js/admin/bid-results.js
+// 관리자 입찰 결과 페이지 - settlements 기반
 
+// =====================================================
 // 상태 관리
-window.state = {
+// =====================================================
+const state = {
   dateRange: 30,
   currentPage: 1,
-  itemsPerPage: 7,
+  itemsPerPage: 20,
   sortBy: "date",
   sortOrder: "desc",
   settlementStatus: "", // 정산 상태 필터
   userSearch: "", // 유저 검색
-  dailyResults: [],
+  settlements: [], // settlements 목록
   totalItems: 0,
   totalPages: 0,
-  isAuthenticated: false,
-  isAdmin: true, // 관리자 페이지
-  totalStats: null,
+  currentOpenDetail: null, // 현재 열린 아코디언
 };
-
-// Core 모듈 참조
-const core = window.BidResultsCore;
 
 // 현재 정산 정보 (모달용)
 let currentSettlement = null;
 
-// 초기화 함수
+// =====================================================
+// 초기화
+// =====================================================
 async function initialize() {
   try {
     console.log("관리자 입찰 결과 페이지 초기화 시작");
@@ -42,25 +42,13 @@ async function initialize() {
       return;
     }
 
-    window.state.isAuthenticated = window.AuthManager.isAuthenticated();
-    window.state.isAdmin = window.AuthManager.isAdmin();
-
     console.log("관리자 인증 완료");
-
-    // Core에 페이지 상태 전달
-    core.setPageState(window.state);
-
-    // URL 파라미터에서 초기 상태 로드
-    loadStateFromURL();
 
     // 이벤트 리스너 설정
     setupEventListeners();
 
     // 초기 데이터 로드
-    await fetchCompletedBids();
-
-    // 관리자 통계 표시
-    core.updateSummaryStatsVisibility();
+    await loadSettlements();
 
     // 정산 승인 모달 이벤트 설정
     setupSettlementApprovalModal();
@@ -76,66 +64,9 @@ async function initialize() {
   }
 }
 
-// URL에서 상태 로드
-function loadStateFromURL() {
-  const stateKeys = [
-    "dateRange",
-    "currentPage",
-    "sortBy",
-    "sortOrder",
-    "settlementStatus",
-    "userSearch",
-  ];
-  const defaultState = {
-    dateRange: 30,
-    currentPage: 1,
-    sortBy: "date",
-    sortOrder: "desc",
-    settlementStatus: "",
-    userSearch: "",
-  };
-
-  const urlState = window.URLStateManager.loadFromURL(defaultState, stateKeys);
-  Object.assign(window.state, urlState);
-
-  updateUIFromState();
-}
-
-// URL 업데이트
-function updateURL() {
-  const defaultValues = {
-    dateRange: 30,
-    currentPage: 1,
-    sortBy: "date",
-    sortOrder: "desc",
-    settlementStatus: "",
-    userSearch: "",
-  };
-
-  window.URLStateManager.updateURL(window.state, defaultValues);
-}
-
-// UI 요소 상태 업데이트
-function updateUIFromState() {
-  const dateRange = document.getElementById("dateRange");
-  if (dateRange) dateRange.value = window.state.dateRange;
-
-  const settlementStatus = document.getElementById("settlementStatus");
-  if (settlementStatus) settlementStatus.value = window.state.settlementStatus;
-
-  const userSearch = document.getElementById("userSearch");
-  if (userSearch) userSearch.value = window.state.userSearch;
-
-  // 유저 검색 clear 버튼 표시/숨김
-  const clearUserSearch = document.getElementById("clearUserSearch");
-  if (clearUserSearch && window.state.userSearch) {
-    clearUserSearch.style.display = "block";
-  }
-
-  core.updateSortButtonsUI();
-}
-
+// =====================================================
 // 환율 정보 가져오기
+// =====================================================
 async function fetchExchangeRate() {
   try {
     const response = await window.API.fetchAPI("/data/exchange-rate");
@@ -149,210 +80,9 @@ async function fetchExchangeRate() {
   }
 }
 
-// 완료된 입찰 데이터 가져오기 (관리자용)
-async function fetchCompletedBids() {
-  if (!window.state.isAuthenticated || !window.state.isAdmin) {
-    console.warn("관리자 권한이 필요합니다.");
-    return;
-  }
-
-  core.toggleLoading(true);
-
-  try {
-    console.log("관리자 입찰 결과 데이터 로드 시작:", {
-      dateRange: window.state.dateRange,
-      page: window.state.currentPage,
-      sortBy: window.state.sortBy,
-      sortOrder: window.state.sortOrder,
-      settlementStatus: window.state.settlementStatus,
-      userSearch: window.state.userSearch,
-    });
-
-    const params = {
-      dateRange: window.state.dateRange,
-      sortBy: window.state.sortBy,
-      sortOrder: window.state.sortOrder,
-      page: window.state.currentPage,
-      limit: window.state.itemsPerPage,
-    };
-
-    // 정산 상태 필터 (status로 전달)
-    if (window.state.settlementStatus) {
-      params.status = window.state.settlementStatus;
-    }
-
-    // 유저 검색 (keyword로 전달)
-    if (window.state.userSearch) {
-      params.keyword = window.state.userSearch;
-    }
-
-    const queryString = window.API.createURLParams(params);
-
-    // 관리자 API 호출 (실제 API 경로)
-    const response = await window.API.fetchAPI(
-      `/bid-results/admin/bid-results?${queryString}`,
-    );
-
-    console.log("백엔드 응답:", response);
-
-    // 응답 데이터 검증
-    if (!response || typeof response !== "object") {
-      throw new Error("잘못된 응답 형식");
-    }
-
-    // dailyResults가 배열인지 확인
-    if (!Array.isArray(response.dailyResults)) {
-      console.error("dailyResults가 배열이 아닙니다:", response.dailyResults);
-      response.dailyResults = [];
-    }
-
-    // pagination 객체 검증
-    if (!response.pagination || typeof response.pagination !== "object") {
-      console.error("pagination 정보가 없습니다:", response.pagination);
-      response.pagination = {
-        currentPage: 1,
-        totalPages: 0,
-        totalItems: 0,
-      };
-    }
-
-    // 상태 업데이트
-    window.state.dailyResults = response.dailyResults;
-    window.state.totalStats = response.totalStats || null;
-    window.state.totalItems = response.pagination.totalItems || 0;
-    window.state.totalPages = response.pagination.totalPages || 0;
-    window.state.currentPage = response.pagination.currentPage || 1;
-
-    console.log("상태 업데이트 완료:", {
-      dailyResultsCount: window.state.dailyResults.length,
-      totalItems: window.state.totalItems,
-      totalPages: window.state.totalPages,
-    });
-
-    // Core에 상태 전달
-    core.setPageState(window.state);
-
-    // URL 업데이트
-    updateURL();
-
-    // 결과 표시
-    displayAdminResults();
-
-    // 페이지네이션 생성
-    createPagination(
-      window.state.currentPage,
-      window.state.totalPages,
-      handlePageChange,
-      "pagination",
-    );
-
-    // 정렬 버튼 UI 업데이트
-    core.updateSortButtonsUI();
-
-    // 통계 표시
-    if (window.state.totalStats) {
-      updateTotalStats(window.state.totalStats);
-    }
-
-    console.log("데이터 로드 완료");
-  } catch (error) {
-    console.error("데이터 로드 실패:", error);
-    const container = document.getElementById("resultsList");
-    if (container) {
-      container.innerHTML =
-        '<div class="no-results">데이터를 불러오는 데 실패했습니다.</div>';
-    }
-  } finally {
-    core.toggleLoading(false);
-  }
-}
-
-// 관리자용 결과 표시 (정산 승인 버튼 포함)
-function displayAdminResults() {
-  console.log("관리자용 결과 표시 시작");
-
-  const container = document.getElementById("resultsList");
-  if (!container) {
-    console.error("Container not found: resultsList");
-    return;
-  }
-
-  // 기본 결과 표시
-  core.displayResults("resultsList");
-
-  // 정산 승인 버튼 이벤트 바인딩 (관리자 전용)
-  const settlementSections = container.querySelectorAll(".settlement-section");
-  settlementSections.forEach((section) => {
-    // 기존 버튼 제거하고 관리자용 버튼 추가
-    const settlementActions = section.querySelector(".settlement-actions");
-    if (settlementActions) {
-      // 유저용 버튼 제거
-      settlementActions.innerHTML = "";
-
-      // 정산 데이터 추출
-      const settlementId =
-        section
-          .querySelector("[data-settlement-id]")
-          ?.getAttribute("data-settlement-id") ||
-        section.getAttribute("data-settlement-id");
-      const paymentStatus = section
-        .querySelector(".status-badge")
-        ?.textContent.trim();
-
-      // 입금 확인 중 상태만 승인 버튼 표시
-      if (paymentStatus === "입금 확인 중") {
-        const approveBtn = document.createElement("button");
-        approveBtn.className = "btn btn-primary";
-        approveBtn.innerHTML =
-          '<i class="fas fa-check-circle"></i> 입금 확인 및 승인';
-        approveBtn.setAttribute("data-settlement-id", settlementId);
-
-        approveBtn.addEventListener("click", () => {
-          openSettlementApprovalModal(settlementId, section);
-        });
-
-        settlementActions.appendChild(approveBtn);
-      } else if (paymentStatus === "결제 필요") {
-        const waitingBtn = document.createElement("button");
-        waitingBtn.className = "btn btn-secondary";
-        waitingBtn.textContent = "입금 대기 중";
-        waitingBtn.disabled = true;
-        settlementActions.appendChild(waitingBtn);
-      } else if (paymentStatus === "정산 완료") {
-        const completedBtn = document.createElement("button");
-        completedBtn.className = "btn btn-success";
-        completedBtn.innerHTML = '<i class="fas fa-check"></i> 정산 완료';
-        completedBtn.disabled = true;
-        settlementActions.appendChild(completedBtn);
-      }
-    }
-  });
-
-  console.log("관리자용 결과 표시 완료");
-}
-
-// 통계 업데이트
-function updateTotalStats(stats) {
-  document.getElementById("totalItemCount").textContent = formatNumber(
-    stats.totalItemCount || 0,
-  );
-  document.getElementById("totalJapaneseAmount").textContent =
-    formatNumber(stats.totalJapaneseAmount || 0) + " ¥";
-  document.getElementById("totalKoreanAmount").textContent =
-    formatNumber(stats.totalKoreanAmount || 0) + " ₩";
-  document.getElementById("totalFeeAmount").textContent =
-    formatNumber(stats.totalFeeAmount || 0) + " ₩";
-  document.getElementById("totalVatAmount").textContent =
-    formatNumber(stats.totalVatAmount || 0) + " ₩";
-  document.getElementById("totalAppraisalFee").textContent =
-    formatNumber(stats.totalAppraisalFee || 0) + " ₩";
-  document.getElementById("totalAppraisalVat").textContent =
-    formatNumber(stats.totalAppraisalVat || 0) + " ₩";
-  document.getElementById("grandTotalAmount").textContent =
-    formatNumber(stats.grandTotalAmount || 0) + " ₩";
-}
-
+// =====================================================
 // 이벤트 리스너 설정
+// =====================================================
 function setupEventListeners() {
   // 정렬 버튼
   document.querySelectorAll(".sort-btn").forEach((btn) => {
@@ -395,9 +125,9 @@ function setupEventListeners() {
     if (userSearch) {
       userSearch.value = "";
       document.getElementById("clearUserSearch").style.display = "none";
-      window.state.userSearch = "";
-      window.state.currentPage = 1;
-      fetchCompletedBids();
+      state.userSearch = "";
+      state.currentPage = 1;
+      loadSettlements();
     }
   });
 
@@ -408,69 +138,396 @@ function setupEventListeners() {
   });
 }
 
-// 정렬 변경
-function handleSortChange(sortBy) {
-  if (window.state.sortBy === sortBy) {
-    window.state.sortOrder = window.state.sortOrder === "desc" ? "asc" : "desc";
-  } else {
-    window.state.sortBy = sortBy;
-    window.state.sortOrder = "desc";
+// =====================================================
+// 데이터 로드
+// =====================================================
+async function loadSettlements() {
+  toggleLoading(true);
+
+  try {
+    console.log("정산 데이터 로드 시작:", {
+      dateRange: state.dateRange,
+      page: state.currentPage,
+      sortBy: state.sortBy,
+      sortOrder: state.sortOrder,
+      status: state.settlementStatus,
+      keyword: state.userSearch,
+    });
+
+    const params = {
+      dateRange: state.dateRange,
+      page: state.currentPage,
+      limit: state.itemsPerPage,
+      sortBy: state.sortBy,
+      sortOrder: state.sortOrder,
+    };
+
+    // 정산 상태 필터
+    if (state.settlementStatus) {
+      params.status = state.settlementStatus;
+    }
+
+    // 유저 검색
+    if (state.userSearch) {
+      params.keyword = state.userSearch;
+    }
+
+    const queryString = window.API.createURLParams(params);
+
+    // 관리자 API 호출
+    const response = await window.API.fetchAPI(
+      `/bid-results/admin/bid-results?${queryString}`,
+    );
+
+    console.log("백엔드 응답:", response);
+
+    // 응답 데이터 검증
+    if (!response || typeof response !== "object") {
+      throw new Error("잘못된 응답 형식");
+    }
+
+    // dailyResults를 settlements로 사용
+    state.settlements = response.dailyResults || [];
+    state.totalItems = response.pagination?.totalItems || 0;
+    state.totalPages = response.pagination?.totalPages || 0;
+    state.currentPage = response.pagination?.currentPage || 1;
+
+    console.log("상태 업데이트 완료:", {
+      settlementsCount: state.settlements.length,
+      totalItems: state.totalItems,
+      totalPages: state.totalPages,
+    });
+
+    // 결과 표시
+    renderSettlements();
+
+    // 페이지네이션 생성
+    renderPagination();
+
+    // 정렬 버튼 UI 업데이트
+    updateSortButtonsUI();
+
+    console.log("데이터 로드 완료");
+  } catch (error) {
+    console.error("데이터 로드 실패:", error);
+    const container = document.getElementById("resultsList");
+    if (container) {
+      container.innerHTML =
+        '<div class="no-results">데이터를 불러오는 데 실패했습니다.</div>';
+    }
+  } finally {
+    toggleLoading(false);
+  }
+}
+
+// =====================================================
+// 정산 목록 렌더링
+// =====================================================
+function renderSettlements() {
+  const container = document.getElementById("resultsList");
+  const totalResultsSpan = document.getElementById("totalResults");
+
+  if (!container) {
+    console.error("Container not found: resultsList");
+    return;
   }
 
-  window.state.currentPage = 1;
-  fetchCompletedBids();
-}
+  // 총 결과 수 업데이트
+  if (totalResultsSpan) {
+    totalResultsSpan.textContent = state.totalItems;
+  }
 
-// 필터 적용
-function applyFilters() {
-  const dateRange = document.getElementById("dateRange")?.value;
-  const settlementStatus = document.getElementById("settlementStatus")?.value;
-  const userSearch = document.getElementById("userSearch")?.value.trim();
+  // 데이터가 없으면
+  if (state.settlements.length === 0) {
+    container.innerHTML =
+      '<div class="no-results">정산 데이터가 없습니다.</div>';
+    return;
+  }
 
-  window.state.dateRange = parseInt(dateRange) || 30;
-  window.state.settlementStatus = settlementStatus || "";
-  window.state.userSearch = userSearch || "";
-  window.state.currentPage = 1;
+  // 각 정산을 아코디언 형태로 렌더링
+  container.innerHTML = "";
 
-  fetchCompletedBids();
-}
+  state.settlements.forEach((settlement, index) => {
+    const settlementRow = createSettlementRow(settlement, index);
+    container.appendChild(settlementRow);
+  });
 
-// 필터 초기화
-function resetFilters() {
-  window.state.dateRange = 30;
-  window.state.sortBy = "date";
-  window.state.sortOrder = "desc";
-  window.state.settlementStatus = "";
-  window.state.userSearch = "";
-  window.state.currentPage = 1;
-
-  // UI 초기화
-  const dateRange = document.getElementById("dateRange");
-  if (dateRange) dateRange.value = "30";
-
-  const settlementStatus = document.getElementById("settlementStatus");
-  if (settlementStatus) settlementStatus.value = "";
-
-  const userSearch = document.getElementById("userSearch");
-  if (userSearch) userSearch.value = "";
-
-  const clearBtn = document.getElementById("clearUserSearch");
-  if (clearBtn) clearBtn.style.display = "none";
-
-  fetchCompletedBids();
-}
-
-// 페이지 변경
-function handlePageChange(page) {
-  window.state.currentPage = page;
-  fetchCompletedBids();
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  console.log(`${state.settlements.length}개의 정산 데이터 렌더링 완료`);
 }
 
 // =====================================================
-// 정산 승인 모달 관리
+// 정산 행 생성 (아코디언)
 // =====================================================
+function createSettlementRow(settlement, index) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "settlement-row-wrapper";
 
+  // 정산 상태 배지
+  let statusBadgeClass = "status-badge ";
+  let statusText = "";
+
+  if (settlement.paymentStatus === "unpaid") {
+    statusBadgeClass += "status-unpaid";
+    statusText = "결제 필요";
+  } else if (settlement.paymentStatus === "pending") {
+    statusBadgeClass += "status-pending";
+    statusText = "입금 확인 중";
+  } else if (settlement.paymentStatus === "paid") {
+    statusBadgeClass += "status-paid";
+    statusText = "정산 완료";
+  }
+
+  // 남은 금액 계산
+  const remainingAmount =
+    (settlement.grandTotal || 0) - (settlement.completedAmount || 0);
+
+  // 헤더 (클릭 가능)
+  const header = document.createElement("div");
+  header.className = "settlement-header";
+  header.innerHTML = `
+    <div class="settlement-summary">
+      <div class="summary-item">
+        <span class="label">날짜</span>
+        <span class="value">${formatDate(settlement.date)}</span>
+      </div>
+      <div class="summary-item">
+        <span class="label">유저 ID</span>
+        <span class="value">${settlement.userId}</span>
+      </div>
+      <div class="summary-item">
+        <span class="label">상품 수</span>
+        <span class="value">${settlement.itemCount || 0}건</span>
+      </div>
+      <div class="summary-item">
+        <span class="label">총 청구액</span>
+        <span class="value">${formatCurrency(settlement.grandTotal || 0)}</span>
+      </div>
+      <div class="summary-item">
+        <span class="label">기 결제액</span>
+        <span class="value">${formatCurrency(settlement.completedAmount || 0)}</span>
+      </div>
+      <div class="summary-item">
+        <span class="label">미수금</span>
+        <span class="value ${remainingAmount > 0 ? "text-danger" : ""}">${formatCurrency(remainingAmount)}</span>
+      </div>
+      <div class="summary-item">
+        <span class="label">입금자명</span>
+        <span class="value">${settlement.depositorName || "-"}</span>
+      </div>
+      <div class="summary-item">
+        <span class="label">정산 상태</span>
+        <span class="${statusBadgeClass}">${statusText}</span>
+      </div>
+    </div>
+    <button class="toggle-btn">
+      <i class="fas fa-chevron-down"></i>
+    </button>
+  `;
+
+  // 상세 정보 영역 (초기에는 숨김)
+  const detail = document.createElement("div");
+  detail.className = "settlement-detail hidden";
+  detail.innerHTML = '<div class="loading-msg">로딩 중...</div>';
+
+  // 토글 이벤트
+  header.addEventListener("click", () => {
+    toggleDetail(settlement, detail, header.querySelector(".toggle-btn"));
+  });
+
+  wrapper.appendChild(header);
+  wrapper.appendChild(detail);
+
+  return wrapper;
+}
+
+// =====================================================
+// 상세 정보 토글
+// =====================================================
+async function toggleDetail(settlement, detailElement, toggleBtn) {
+  const isCurrentlyOpen = !detailElement.classList.contains("hidden");
+
+  // 다른 열린 상세 정보 닫기
+  if (state.currentOpenDetail && state.currentOpenDetail !== detailElement) {
+    state.currentOpenDetail.classList.add("hidden");
+    const prevBtn = document.querySelector(".toggle-btn.open");
+    if (prevBtn) {
+      prevBtn.classList.remove("open");
+      prevBtn.querySelector("i").className = "fas fa-chevron-down";
+    }
+  }
+
+  if (isCurrentlyOpen) {
+    // 닫기
+    detailElement.classList.add("hidden");
+    toggleBtn.classList.remove("open");
+    toggleBtn.querySelector("i").className = "fas fa-chevron-down";
+    state.currentOpenDetail = null;
+  } else {
+    // 열기
+    detailElement.classList.remove("hidden");
+    toggleBtn.classList.add("open");
+    toggleBtn.querySelector("i").className = "fas fa-chevron-up";
+    state.currentOpenDetail = detailElement;
+
+    // 상세 데이터 로드
+    await loadDetailData(settlement, detailElement);
+  }
+}
+
+// =====================================================
+// 상세 데이터 로드
+// =====================================================
+async function loadDetailData(settlement, detailElement) {
+  try {
+    detailElement.innerHTML = '<div class="loading-msg">로딩 중...</div>';
+
+    const response = await window.API.fetchAPI(
+      `/bid-results/admin/bid-results/detail?userId=${settlement.userId}&date=${settlement.date}`,
+    );
+
+    console.log("상세 데이터 응답:", response);
+
+    // 상세 내용 렌더링
+    detailElement.innerHTML = createDetailContent(settlement, response);
+
+    // 승인 버튼 이벤트 바인딩
+    if (settlement.paymentStatus === "pending") {
+      const approveBtn = detailElement.querySelector(".btn-approve");
+      if (approveBtn) {
+        approveBtn.addEventListener("click", () => {
+          openSettlementApprovalModal(settlement);
+        });
+      }
+    }
+  } catch (error) {
+    console.error("상세 정보 로드 실패:", error);
+    detailElement.innerHTML =
+      '<div class="error-msg">상세 정보를 불러오는 데 실패했습니다.</div>';
+  }
+}
+
+// =====================================================
+// 상세 내용 HTML 생성
+// =====================================================
+function createDetailContent(settlement, detailData) {
+  const items = detailData.items || [];
+
+  // 상품 목록 HTML
+  let itemsHTML = "";
+  if (items.length > 0) {
+    itemsHTML = items
+      .map((item) => {
+        const bidPrice = item.final_price || item.current_price || 0;
+        const winPrice = item.winning_price || 0;
+        const statusText = getStatusText(item.status);
+
+        return `
+        <tr>
+          <td>${item.itemId}</td>
+          <td>${item.title || "-"}</td>
+          <td class="text-right">¥${formatNumber(bidPrice)}</td>
+          <td class="text-right">¥${winPrice > 0 ? formatNumber(winPrice) : "-"}</td>
+          <td>${statusText}</td>
+        </tr>
+      `;
+      })
+      .join("");
+  } else {
+    itemsHTML =
+      '<tr><td colspan="5" class="text-center">상품이 없습니다.</td></tr>';
+  }
+
+  // 승인 버튼 (입금 확인 중 상태만)
+  let actionHTML = "";
+  if (settlement.paymentStatus === "pending") {
+    actionHTML = `
+      <div class="detail-actions">
+        <button class="btn btn-primary btn-approve">
+          <i class="fas fa-check-circle"></i> 입금 확인 및 승인
+        </button>
+        <p class="action-note">입금 확인 후 승인하면 정산이 완료됩니다.</p>
+      </div>
+    `;
+  } else if (settlement.paymentStatus === "paid") {
+    actionHTML = `
+      <div class="detail-actions">
+        <div class="status-completed">
+          <i class="fas fa-check-circle"></i> 정산 완료됨
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="detail-content">
+      <div class="detail-section">
+        <h4>기본 정보</h4>
+        <div class="detail-grid">
+          <div class="detail-item">
+            <span class="label">유저 ID</span>
+            <span class="value">${settlement.userId}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">날짜</span>
+            <span class="value">${formatDate(settlement.date)}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">입금자명</span>
+            <span class="value">${settlement.depositorName || "-"}</span>
+          </div>
+          <div class="detail-item">
+            <span class="label">상품 수</span>
+            <span class="value">${settlement.itemCount || 0}건</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h4>낙찰 상품 목록</h4>
+        <div class="table-responsive">
+          <table class="detail-table">
+            <thead>
+              <tr>
+                <th>상품 ID</th>
+                <th>제목</th>
+                <th>입찰금액 (¥)</th>
+                <th>낙찰금액 (¥)</th>
+                <th>상태</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsHTML}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <h4>정산 정보</h4>
+        <div class="settlement-detail-grid">
+          <div class="settlement-detail-item">
+            <span class="label">총 청구액</span>
+            <span class="value">${formatCurrency(settlement.grandTotal || 0)}</span>
+          </div>
+          <div class="settlement-detail-item">
+            <span class="label">기 결제액</span>
+            <span class="value">${formatCurrency(settlement.completedAmount || 0)}</span>
+          </div>
+          <div class="settlement-detail-item highlight">
+            <span class="label">미수금</span>
+            <span class="value">${formatCurrency((settlement.grandTotal || 0) - (settlement.completedAmount || 0))}</span>
+          </div>
+        </div>
+      </div>
+
+      ${actionHTML}
+    </div>
+  `;
+}
+
+// =====================================================
+// 정산 승인 모달
+// =====================================================
 function setupSettlementApprovalModal() {
   const modal = document.getElementById("settlementApprovalModal");
   const closeBtn = document.getElementById("approvalModalClose");
@@ -499,59 +556,38 @@ function setupSettlementApprovalModal() {
   }
 }
 
-async function openSettlementApprovalModal(settlementId, sectionElement) {
-  try {
-    // 정산 정보 가져오기 (실제 API 사용)
-    const response = await window.API.fetchAPI(
-      `/bid-results/admin/settlements?user_id=&status=&fromDate=&toDate=`,
+function openSettlementApprovalModal(settlement) {
+  currentSettlement = settlement;
+
+  // 모달 데이터 채우기
+  document.getElementById("approvalUserId").textContent =
+    settlement.userId || "-";
+  document.getElementById("approvalDate").textContent =
+    formatDate(settlement.date) || "-";
+  document.getElementById("approvalDepositorName").textContent =
+    settlement.depositorName || "-";
+  document.getElementById("approvalTotalAmount").textContent = formatCurrency(
+    settlement.grandTotal || 0,
+  );
+  document.getElementById("approvalCompletedAmount").textContent =
+    formatCurrency(settlement.completedAmount || 0);
+  document.getElementById("approvalRemainingAmount").textContent =
+    formatCurrency(
+      (settlement.grandTotal || 0) - (settlement.completedAmount || 0),
     );
 
-    if (!response || !response.settlements) {
-      throw new Error("정산 정보를 가져올 수 없습니다.");
-    }
+  // 입금 확인 금액 기본값 설정
+  const remainingAmount =
+    (settlement.grandTotal || 0) - (settlement.completedAmount || 0);
+  document.getElementById("approvalPaymentAmount").value = remainingAmount;
 
-    // settlementId로 해당 정산 찾기
-    currentSettlement = response.settlements.find((s) => s.id == settlementId);
+  // 메모 초기화
+  document.getElementById("approvalNote").value = "";
 
-    if (!currentSettlement) {
-      throw new Error("정산 정보를 찾을 수 없습니다.");
-    }
-
-    // 모달 데이터 채우기 (실제 API 응답 구조)
-    document.getElementById("approvalUserId").textContent =
-      currentSettlement.user_id || "-";
-    document.getElementById("approvalDate").textContent =
-      formatDisplayDate(currentSettlement.settlement_date) || "-";
-    document.getElementById("approvalDepositorName").textContent =
-      currentSettlement.depositor_name || "-";
-    document.getElementById("approvalTotalAmount").textContent = formatCurrency(
-      currentSettlement.final_amount || 0,
-    );
-    document.getElementById("approvalCompletedAmount").textContent =
-      formatCurrency(currentSettlement.completed_amount || 0);
-    document.getElementById("approvalRemainingAmount").textContent =
-      formatCurrency(
-        (currentSettlement.final_amount || 0) -
-          (currentSettlement.completed_amount || 0),
-      );
-
-    // 입금 확인 금액 기본값 설정
-    const remainingAmount =
-      (currentSettlement.final_amount || 0) -
-      (currentSettlement.completed_amount || 0);
-    document.getElementById("approvalPaymentAmount").value = remainingAmount;
-
-    // 메모 초기화
-    document.getElementById("approvalNote").value = "";
-
-    // 모달 표시
-    const modal = document.getElementById("settlementApprovalModal");
-    if (modal) {
-      modal.style.display = "flex";
-    }
-  } catch (error) {
-    console.error("정산 정보 로드 실패:", error);
-    alert("정산 정보를 불러오는 데 실패했습니다.");
+  // 모달 표시
+  const modal = document.getElementById("settlementApprovalModal");
+  if (modal) {
+    modal.style.display = "flex";
   }
 }
 
@@ -580,8 +616,8 @@ async function handleSettlementApproval() {
   }
 
   const remainingAmount =
-    (currentSettlement.final_amount || 0) -
-    (currentSettlement.completed_amount || 0);
+    (currentSettlement.grandTotal || 0) -
+    (currentSettlement.completedAmount || 0);
 
   if (paymentAmount > remainingAmount) {
     alert("입금 확인 금액이 남은 결제액을 초과할 수 없습니다.");
@@ -593,9 +629,9 @@ async function handleSettlementApproval() {
   }
 
   try {
-    // 실제 API 사용: PUT /bid-results/admin/settlements/:id
+    // PUT /bid-results/admin/settlements/:id
     const response = await window.API.fetchAPI(
-      `/bid-results/admin/settlements/${currentSettlement.id}`,
+      `/bid-results/admin/settlements/${currentSettlement.settlementId}`,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -610,7 +646,7 @@ async function handleSettlementApproval() {
       alert("정산이 승인되었습니다.");
       closeSettlementApprovalModal();
       // 데이터 새로고침
-      await fetchCompletedBids();
+      await loadSettlements();
     } else {
       throw new Error(response.message || "정산 승인에 실패했습니다.");
     }
@@ -621,8 +657,137 @@ async function handleSettlementApproval() {
 }
 
 // =====================================================
+// 필터 및 정렬
+// =====================================================
+function handleSortChange(sortBy) {
+  if (state.sortBy === sortBy) {
+    state.sortOrder = state.sortOrder === "desc" ? "asc" : "desc";
+  } else {
+    state.sortBy = sortBy;
+    state.sortOrder = "desc";
+  }
+
+  state.currentPage = 1;
+  loadSettlements();
+}
+
+function applyFilters() {
+  const dateRange = document.getElementById("dateRange")?.value;
+  const settlementStatus = document.getElementById("settlementStatus")?.value;
+  const userSearch = document.getElementById("userSearch")?.value.trim();
+
+  state.dateRange = parseInt(dateRange) || 30;
+  state.settlementStatus = settlementStatus || "";
+  state.userSearch = userSearch || "";
+  state.currentPage = 1;
+
+  loadSettlements();
+}
+
+function resetFilters() {
+  state.dateRange = 30;
+  state.sortBy = "date";
+  state.sortOrder = "desc";
+  state.settlementStatus = "";
+  state.userSearch = "";
+  state.currentPage = 1;
+
+  // UI 초기화
+  const dateRange = document.getElementById("dateRange");
+  if (dateRange) dateRange.value = "30";
+
+  const settlementStatus = document.getElementById("settlementStatus");
+  if (settlementStatus) settlementStatus.value = "";
+
+  const userSearch = document.getElementById("userSearch");
+  if (userSearch) userSearch.value = "";
+
+  const clearBtn = document.getElementById("clearUserSearch");
+  if (clearBtn) clearBtn.style.display = "none";
+
+  loadSettlements();
+}
+
+// =====================================================
+// 페이지네이션
+// =====================================================
+function renderPagination() {
+  const container = document.getElementById("pagination");
+  if (!container) return;
+
+  if (state.totalPages <= 1) {
+    container.innerHTML = "";
+    return;
+  }
+
+  let html = "";
+
+  // 이전 버튼
+  if (state.currentPage > 1) {
+    html += `<button class="page-btn" onclick="goToPage(${state.currentPage - 1})">이전</button>`;
+  }
+
+  // 페이지 번호
+  const start = Math.max(1, state.currentPage - 2);
+  const end = Math.min(state.totalPages, state.currentPage + 2);
+
+  for (let i = start; i <= end; i++) {
+    html += `<button class="page-btn ${i === state.currentPage ? "active" : ""}" onclick="goToPage(${i})">${i}</button>`;
+  }
+
+  // 다음 버튼
+  if (state.currentPage < state.totalPages) {
+    html += `<button class="page-btn" onclick="goToPage(${state.currentPage + 1})">다음</button>`;
+  }
+
+  container.innerHTML = html;
+}
+
+function goToPage(page) {
+  state.currentPage = page;
+  loadSettlements();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+// 전역 함수 등록
+window.goToPage = goToPage;
+
+// =====================================================
+// 정렬 버튼 UI 업데이트
+// =====================================================
+function updateSortButtonsUI() {
+  document.querySelectorAll(".sort-btn").forEach((btn) => {
+    const sortBy = btn.getAttribute("data-sort");
+    if (sortBy === state.sortBy) {
+      btn.classList.add("active");
+      const icon = btn.querySelector("i");
+      if (icon) {
+        icon.className =
+          state.sortOrder === "asc" ? "fas fa-sort-up" : "fas fa-sort-down";
+      }
+    } else {
+      btn.classList.remove("active");
+      const icon = btn.querySelector("i");
+      if (icon) {
+        icon.className = "fas fa-sort";
+      }
+    }
+  });
+}
+
+// =====================================================
 // 유틸리티 함수
 // =====================================================
+function toggleLoading(show) {
+  const loading = document.getElementById("loadingMsg");
+  if (loading) {
+    if (show) {
+      loading.classList.remove("loading-hidden");
+    } else {
+      loading.classList.add("loading-hidden");
+    }
+  }
+}
 
 function formatNumber(value) {
   if (typeof value !== "number") return "0";
@@ -634,16 +799,26 @@ function formatCurrency(value) {
   return "₩" + value.toLocaleString("ko-KR");
 }
 
-function formatDisplayDate(dateStr) {
+function formatDate(dateStr) {
   if (!dateStr) return "";
   const date = new Date(dateStr);
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
-  const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
-  const weekday = weekdays[date.getDay()];
-  return `${year}년 ${month}월 ${day}일 (${weekday})`;
+  return `${year}-${month}-${day}`;
 }
 
-// 페이지 로드 시 초기화
+function getStatusText(status) {
+  const statusMap = {
+    completed: "낙찰 완료",
+    shipped: "출고됨",
+    cancelled: "낙찰 실패",
+    active: "진행 중",
+  };
+  return statusMap[status] || status;
+}
+
+// =====================================================
+// 초기화 실행
+// =====================================================
 document.addEventListener("DOMContentLoaded", initialize);
