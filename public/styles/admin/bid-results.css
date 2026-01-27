@@ -745,6 +745,23 @@
   color: #dc3545 !important;
 }
 
+/* 배지 스타일 */
+.badge {
+  display: inline-block;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+  background: #e9ecef;
+  color: #495057;
+  margin-right: 4px;
+}
+
+.badge-success {
+  background: #d4edda;
+  color: #155724;
+}
+
 /* 반응형 */
 @media (max-width: 768px) {
   .settlement-summary {

@@ -2097,7 +2097,7 @@ router.get("/admin/bid-results", isAdmin, async (req, res) => {
 
 /**
  * GET /api/admin/bid-results/detail
- * 특정 유저/날짜의 입찰 결과 상세 조회
+ * 특정 유저/날짜의 입찰 결과 상세 조회 (낙찰 완료된 것만)
  */
 router.get("/admin/bid-results/detail", isAdmin, async (req, res) => {
   const { userId, date } = req.query;
@@ -2109,42 +2109,7 @@ router.get("/admin/bid-results/detail", isAdmin, async (req, res) => {
   const connection = await pool.getConnection();
 
   try {
-    // 해당 날짜의 모든 입찰 조회
-    const [liveBids] = await connection.query(
-      `SELECT 
-         lb.id,
-         lb.item_id as itemId,
-         lb.first_price,
-         lb.second_price,
-         lb.final_price,
-         lb.winning_price,
-         lb.status,
-         i.title,
-         i.starting_price as startPrice
-       FROM live_bids lb
-       JOIN crawled_items i ON lb.item_id = i.item_id
-       WHERE lb.user_id = ? AND DATE(i.scheduled_date) = ?`,
-      [userId, date],
-    );
-
-    const [directBids] = await connection.query(
-      `SELECT 
-         db.id,
-         db.item_id as itemId,
-         db.current_price,
-         db.winning_price,
-         db.status,
-         i.title,
-         i.starting_price as startPrice
-       FROM direct_bids db
-       JOIN crawled_items i ON db.item_id = i.item_id
-       WHERE db.user_id = ? AND DATE(i.scheduled_date) = ?`,
-      [userId, date],
-    );
-
-    const allItems = [...liveBids, ...directBids];
-
-    // 정산 정보 조회
+    // 정산 정보 먼저 조회 (환율 포함)
     const [settlementRows] = await connection.query(
       `SELECT 
          id,
@@ -2154,29 +2119,114 @@ router.get("/admin/bid-results/detail", isAdmin, async (req, res) => {
          fee_amount,
          vat_amount,
          appraisal_fee,
-         appraisal_vat
+         appraisal_vat,
+         exchange_rate
        FROM daily_settlements 
        WHERE user_id = ? AND settlement_date = ?`,
       [userId, date],
     );
 
-    const settlement = settlementRows[0] || {
-      grandTotal: 0,
-      completedAmount: 0,
-      paymentStatus: "unpaid",
-    };
+    const settlement = settlementRows[0] || null;
+    const exchangeRate = settlement
+      ? settlement.exchange_rate
+      : await getExchangeRate();
+
+    // 낙찰 완료된 live_bids만 조회
+    const [liveBids] = await connection.query(
+      `SELECT 
+         lb.id,
+         'live' as type,
+         lb.item_id as itemId,
+         lb.first_price,
+         lb.second_price,
+         lb.final_price,
+         lb.winning_price,
+         lb.status,
+         lb.appr_id,
+         i.title,
+         i.brand,
+         i.category,
+         i.auc_num,
+         i.starting_price as startPrice,
+         i.image
+       FROM live_bids lb
+       JOIN crawled_items i ON lb.item_id = i.item_id
+       WHERE lb.user_id = ? AND DATE(i.scheduled_date) = ? AND lb.status = 'completed'`,
+      [userId, date],
+    );
+
+    // 낙찰 완료된 direct_bids만 조회
+    const [directBids] = await connection.query(
+      `SELECT 
+         db.id,
+         'direct' as type,
+         db.item_id as itemId,
+         db.current_price as final_price,
+         db.winning_price,
+         db.status,
+         db.appr_id,
+         i.title,
+         i.brand,
+         i.category,
+         i.auc_num,
+         i.starting_price as startPrice,
+         i.image
+       FROM direct_bids db
+       JOIN crawled_items i ON db.item_id = i.item_id
+       WHERE db.user_id = ? AND DATE(i.scheduled_date) = ? AND db.status = 'completed'`,
+      [userId, date],
+    );
+
+    const allItems = [...liveBids, ...directBids];
+
+    // 각 아이템에 관부가세 포함 가격 계산
+    const itemsWithKoreanPrice = allItems.map((item) => {
+      let koreanPrice = 0;
+      const price = parseInt(item.winning_price) || 0;
+
+      if (price > 0 && item.auc_num && item.category) {
+        try {
+          koreanPrice = calculateTotalPrice(
+            price,
+            item.auc_num,
+            item.category,
+            exchangeRate,
+          );
+        } catch (error) {
+          console.error("관부가세 계산 오류:", error);
+          koreanPrice = 0;
+        }
+      }
+
+      return {
+        id: item.id,
+        type: item.type,
+        itemId: item.itemId,
+        title: item.title,
+        brand: item.brand,
+        category: item.category,
+        image: item.image,
+        final_price: item.final_price,
+        winning_price: item.winning_price,
+        koreanPrice,
+        status: item.status,
+        appr_id: item.appr_id,
+        startPrice: item.startPrice,
+      };
+    });
 
     res.json({
       userId,
       date,
-      items: allItems,
-      grandTotal: settlement.grandTotal || 0,
-      completedAmount: settlement.completedAmount || 0,
-      paymentStatus: settlement.paymentStatus || "unpaid",
-      feeAmount: settlement.fee_amount || 0,
-      vatAmount: settlement.vat_amount || 0,
-      appraisalFee: settlement.appraisal_fee || 0,
-      appraisalVat: settlement.appraisal_vat || 0,
+      items: itemsWithKoreanPrice,
+      grandTotal: settlement?.grandTotal || 0,
+      completedAmount: settlement?.completedAmount || 0,
+      paymentStatus: settlement?.paymentStatus || "unpaid",
+      feeAmount: settlement?.fee_amount || 0,
+      vatAmount: settlement?.vat_amount || 0,
+      appraisalFee: settlement?.appraisal_fee || 0,
+      appraisalVat: settlement?.appraisal_vat || 0,
+      exchangeRate,
     });
   } catch (err) {
     console.error("Error fetching bid result detail:", err);

@@ -420,24 +420,28 @@ function createDetailContent(settlement, detailData) {
   if (items.length > 0) {
     itemsHTML = items
       .map((item) => {
-        const bidPrice = item.final_price || item.current_price || 0;
-        const winPrice = item.winning_price || 0;
+        const winPrice = parseInt(item.winning_price) || 0;
+        const koreanPrice = parseInt(item.koreanPrice) || 0;
         const statusText = getStatusText(item.status);
 
         return `
         <tr>
           <td>${item.itemId}</td>
-          <td>${item.title || "-"}</td>
-          <td class="text-right">¥${formatNumber(bidPrice)}</td>
-          <td class="text-right">¥${winPrice > 0 ? formatNumber(winPrice) : "-"}</td>
+          <td>
+            ${item.brand ? `<span class="badge">${item.brand}</span> ` : ""}
+            ${item.title || "-"}
+          </td>
+          <td class="text-right">¥${formatNumber(winPrice)}</td>
+          <td class="text-right">${formatCurrency(koreanPrice)}</td>
           <td>${statusText}</td>
+          <td>${item.appr_id ? '<span class="badge badge-success">감정서</span>' : "-"}</td>
         </tr>
       `;
       })
       .join("");
   } else {
     itemsHTML =
-      '<tr><td colspan="5" class="text-center">상품이 없습니다.</td></tr>';
+      '<tr><td colspan="6" class="text-center">낙찰 완료된 상품이 없습니다.</td></tr>';
   }
 
   // 승인 버튼 (입금 확인 중 상태만)
@@ -486,16 +490,17 @@ function createDetailContent(settlement, detailData) {
       </div>
 
       <div class="detail-section">
-        <h4>낙찰 상품 목록</h4>
+        <h4>낙찰 완료 상품 목록</h4>
         <div class="table-responsive">
           <table class="detail-table">
             <thead>
               <tr>
                 <th>상품 ID</th>
                 <th>제목</th>
-                <th>입찰금액 (¥)</th>
-                <th>낙찰금액 (¥)</th>
+                <th>낙찰가 (¥)</th>
+                <th>관부가세 포함 (₩)</th>
                 <th>상태</th>
+                <th>감정서</th>
               </tr>
             </thead>
             <tbody>
