@@ -1378,7 +1378,8 @@ router.get("/admin/settlements", isAdmin, async (req, res) => {
     if (status) {
       const statusArray = status.split(",");
       const placeholders = statusArray.map(() => "?").join(",");
-      whereClause += ` AND status IN (${placeholders})`;
+      // 🔧 payment_status로 변경
+      whereClause += ` AND payment_status IN (${placeholders})`;
       params.push(...statusArray);
     }
 
@@ -1392,17 +1393,17 @@ router.get("/admin/settlements", isAdmin, async (req, res) => {
       params.push(toDate);
     }
 
-    // 총 통계
+    // 🔧 payment_status 기준 통계
     const [statsResult] = await connection.query(
       `SELECT 
         COUNT(*) as total_settlements,
         SUM(item_count) as total_items,
         SUM(final_amount) as total_amount,
-        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_count,
-        SUM(CASE WHEN status = 'confirmed' THEN 1 ELSE 0 END) as confirmed_count,
-        SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) as paid_count
-       FROM daily_settlements 
-       WHERE ${whereClause}`,
+        SUM(CASE WHEN payment_status = 'pending' THEN 1 ELSE 0 END) as pending_count,
+        SUM(CASE WHEN payment_status = 'unpaid' THEN 1 ELSE 0 END) as unpaid_count,
+        SUM(CASE WHEN payment_status = 'paid' THEN 1 ELSE 0 END) as paid_count
+      FROM daily_settlements 
+      WHERE ${whereClause}`,
       params,
     );
 
@@ -1454,16 +1455,18 @@ router.put("/admin/settlements/:id", isAdmin, async (req, res) => {
   const settlementId = req.params.id;
   const { status, admin_memo } = req.body;
 
-  if (!status || !["pending", "confirmed", "paid"].includes(status)) {
+  // 🔧 unpaid, pending, paid로 변경
+  if (!status || !["unpaid", "pending", "paid"].includes(status)) {
     return res.status(400).json({
-      message: "Invalid status. Must be: pending, confirmed, or paid",
+      message: "Invalid status. Must be: unpaid, pending, or paid",
     });
   }
 
   const connection = await pool.getConnection();
 
   try {
-    const updates = ["status = ?"];
+    // 🔧 payment_status로 변경
+    const updates = ["payment_status = ?"];
     const params = [status];
 
     if (admin_memo !== undefined) {
@@ -1471,7 +1474,6 @@ router.put("/admin/settlements/:id", isAdmin, async (req, res) => {
       params.push(admin_memo);
     }
 
-    // [수정] Paid(승인) 처리 시, 현재의 final_amount를 completed_amount로 복사
     if (status === "paid") {
       updates.push("paid_at = NOW()");
       updates.push("completed_amount = final_amount");
@@ -1516,9 +1518,10 @@ router.put("/admin/settlements/bulk-update", isAdmin, async (req, res) => {
     return res.status(400).json({ message: "Settlement IDs are required" });
   }
 
-  if (!status || !["pending", "confirmed", "paid"].includes(status)) {
+  // 🔧 unpaid, pending, paid로 변경
+  if (!status || !["unpaid", "pending", "paid"].includes(status)) {
     return res.status(400).json({
-      message: "Invalid status. Must be: pending, confirmed, or paid",
+      message: "Invalid status. Must be: unpaid, pending, or paid",
     });
   }
 
@@ -1528,11 +1531,12 @@ router.put("/admin/settlements/bulk-update", isAdmin, async (req, res) => {
     await connection.beginTransaction();
 
     const placeholders = settlement_ids.map(() => "?").join(",");
-    let query = `UPDATE daily_settlements SET status = ? WHERE id IN (${placeholders})`;
+    // 🔧 payment_status로 변경
+    let query = `UPDATE daily_settlements SET payment_status = ? WHERE id IN (${placeholders})`;
     let params = [status, ...settlement_ids];
 
     if (status === "paid") {
-      query = `UPDATE daily_settlements SET status = ?, paid_at = NOW() WHERE id IN (${placeholders})`;
+      query = `UPDATE daily_settlements SET payment_status = ?, paid_at = NOW() WHERE id IN (${placeholders})`;
     }
 
     const [result] = await connection.query(query, params);

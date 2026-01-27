@@ -739,7 +739,7 @@ router.put("/complete", isAdmin, async (req, res) => {
         try {
           await conn.query(
             `UPDATE daily_settlements 
-            SET payment_status = '결제완료' 
+            SET payment_status = 'paid' 
             WHERE user_id = ? AND settlement_date = ?`,
             [bid.user_id, date],
           );
