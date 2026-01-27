@@ -2179,7 +2179,11 @@ router.get("/admin/bid-results/detail", isAdmin, async (req, res) => {
 
     const allItems = [...liveBids, ...directBids];
 
-    // 각 아이템에 관부가세 포함 가격 계산
+    // 각 아이템에 관부가세 포함 가격 계산 및 총액 집계
+    let totalJapanesePrice = 0;
+    let totalKoreanPrice = 0;
+    let appraisalCount = 0;
+
     const itemsWithKoreanPrice = allItems.map((item) => {
       let koreanPrice = 0;
       const price = parseInt(item.winning_price) || 0;
@@ -2196,6 +2200,13 @@ router.get("/admin/bid-results/detail", isAdmin, async (req, res) => {
           console.error("관부가세 계산 오류:", error);
           koreanPrice = 0;
         }
+      }
+
+      // 합계 계산 (낙찰 완료 아이템만)
+      totalJapanesePrice += price;
+      totalKoreanPrice += koreanPrice;
+      if (item.appr_id) {
+        appraisalCount++;
       }
 
       return {
@@ -2215,17 +2226,55 @@ router.get("/admin/bid-results/detail", isAdmin, async (req, res) => {
       };
     });
 
+    // 수수료 계산
+    let feeAmount = 0;
+    let vatAmount = 0;
+    let appraisalFee = 0;
+    let appraisalVat = 0;
+    let grandTotal = 0;
+
+    if (settlement) {
+      // 정산 정보가 있으면 DB 값 사용
+      feeAmount = settlement.fee_amount || 0;
+      vatAmount = settlement.vat_amount || 0;
+      appraisalFee = settlement.appraisal_fee || 0;
+      appraisalVat = settlement.appraisal_vat || 0;
+      grandTotal = settlement.grandTotal || 0;
+    } else if (allItems.length > 0) {
+      // 정산 정보가 없으면 계산
+      // 사용자 수수료율 조회
+      const [userRows] = await connection.query(
+        "SELECT commission_rate FROM users WHERE id = ?",
+        [userId],
+      );
+      const userCommissionRate =
+        userRows.length > 0 ? userRows[0].commission_rate : null;
+
+      feeAmount = Math.max(
+        calculateFee(totalKoreanPrice, userCommissionRate),
+        10000,
+      );
+      vatAmount = Math.round((feeAmount / 1.1) * 0.1);
+      appraisalFee = appraisalCount * 16500;
+      appraisalVat = Math.round(appraisalFee / 11);
+      grandTotal = totalKoreanPrice + feeAmount + appraisalFee;
+    }
+
     res.json({
       userId,
       date,
       items: itemsWithKoreanPrice,
-      grandTotal: settlement?.grandTotal || 0,
+      itemCount: allItems.length,
+      totalJapanesePrice,
+      totalKoreanPrice,
+      feeAmount,
+      vatAmount,
+      appraisalFee,
+      appraisalVat,
+      appraisalCount,
+      grandTotal,
       completedAmount: settlement?.completedAmount || 0,
       paymentStatus: settlement?.paymentStatus || "unpaid",
-      feeAmount: settlement?.fee_amount || 0,
-      vatAmount: settlement?.vat_amount || 0,
-      appraisalFee: settlement?.appraisal_fee || 0,
-      appraisalVat: settlement?.appraisal_vat || 0,
       exchangeRate,
     });
   } catch (err) {
