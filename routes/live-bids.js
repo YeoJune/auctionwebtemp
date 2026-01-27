@@ -534,19 +534,16 @@ router.put("/:id/final", async (req, res) => {
       };
     }
 
-    // 7. 예치금/한도 체크 (경고만, 마이너스 허용)
-    let balanceWarning = null;
+    // 7. 예치금/한도 체크 (부족 시 거부)
     if (account.account_type === "individual") {
       if (account.deposit_balance < deductAmount) {
-        balanceWarning = {
-          message: "예치금 부족 (마이너스 발생 예정)",
+        await connection.rollback();
+        return res.status(400).json({
+          message: "예치금 부족",
           required: deductAmount,
           current: account.deposit_balance,
           deficit: deductAmount - account.deposit_balance,
-        };
-        console.warn(
-          `[BALANCE WARNING] User ${userId}: ${balanceWarning.message}`,
-        );
+        });
       }
     } else {
       const available = account.daily_limit - account.daily_used;
@@ -618,8 +615,23 @@ router.put("/:id/final", async (req, res) => {
       await newConnection.commit();
     } catch (err) {
       await newConnection.rollback();
-      console.error("예치금 차감 실패 (마이너스 허용):", err);
-      // 차감 실패해도 입찰은 유지 (마이너스 허용)
+      console.error("예치금 차감 실패:", err);
+
+      // 차감 실패 시 입찰도 롤백
+      const rollbackConnection = await pool.getConnection();
+      try {
+        await rollbackConnection.query(
+          'UPDATE live_bids SET status = "cancelled" WHERE id = ?',
+          [id],
+        );
+      } finally {
+        rollbackConnection.release();
+      }
+
+      return res.status(500).json({
+        message: "예치금 차감 실패로 입찰이 취소되었습니다",
+        error: err.message,
+      });
     } finally {
       newConnection.release();
     }
@@ -630,7 +642,6 @@ router.put("/:id/final", async (req, res) => {
       status: "final",
       finalPrice,
       deductAmount,
-      balanceWarning, // 잔액 부족 경고 (프론트엔드 표시용)
     });
   } catch (err) {
     await connection.rollback();
