@@ -816,21 +816,72 @@ router.put("/cancel", isAdmin, async (req, res) => {
   try {
     await connection.beginTransaction();
 
-    // 한 번의 쿼리로 여러 입찰 상태를 업데이트
     const placeholders = bidIds.map(() => "?").join(",");
 
-    // 완료 상태가 아닌 입찰만 취소 처리
-    const [updateResult] = await connection.query(
+    // 1. 취소할 입찰 정보 조회 (관리자는 completed도 취소 가능)
+    const [bids] = await connection.query(
+      `SELECT l.id, l.user_id, l.status, i.scheduled_date
+       FROM live_bids l
+       JOIN crawled_items i ON l.item_id = i.item_id
+       WHERE l.id IN (${placeholders}) AND l.status != 'completed'`,
+      bidIds,
+    );
+
+    if (bids.length === 0) {
+      await connection.rollback();
+      return res.status(400).json({ message: "No bids to cancel" });
+    }
+
+    // 2. 입찰 취소 처리
+    await connection.query(
       `UPDATE live_bids SET status = 'cancelled' WHERE id IN (${placeholders}) AND status != 'completed'`,
       bidIds,
     );
+
+    // 3. 예치금/한도 복구 및 정산 재계산
+    for (const bid of bids) {
+      const [account] = await connection.query(
+        "SELECT account_type FROM user_accounts WHERE user_id = ?",
+        [bid.user_id],
+      );
+
+      // 차감액 조회
+      const deductAmount = await getBidDeductAmount(
+        connection,
+        bid.id,
+        "live_bid",
+      );
+
+      if (deductAmount > 0) {
+        if (account[0]?.account_type === "individual") {
+          // 예치금 복구
+          await refundDeposit(
+            connection,
+            bid.user_id,
+            deductAmount,
+            "live_bid",
+            bid.id,
+            "입찰 취소 환불",
+          );
+        } else {
+          // 한도 복구
+          await refundLimit(connection, bid.user_id, deductAmount);
+        }
+      }
+
+      // 정산 재계산
+      const settlementDate = new Date(bid.scheduled_date)
+        .toISOString()
+        .split("T")[0];
+      await createOrUpdateSettlement(bid.user_id, settlementDate);
+    }
 
     await connection.commit();
 
     res.status(200).json({
       message: id
         ? "Bid cancelled successfully"
-        : `${updateResult.affectedRows} bids cancelled successfully`,
+        : `${bids.length} bids cancelled successfully`,
       status: "cancelled",
     });
   } catch (err) {
