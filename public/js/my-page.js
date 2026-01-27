@@ -202,12 +202,14 @@ class MyPageManager {
       remaining_limit,
     } = this.depositData;
 
+    const depositInfoCard = document.getElementById("depositInfoCard");
     const cardTitle = document.getElementById("depositCardTitle");
     const individualSection = document.getElementById("individualDepositInfo");
     const corporateSection = document.getElementById("corporateDepositInfo");
 
     if (account_type === "individual") {
       // 개인 회원 UI 표시
+      depositInfoCard.style.display = "block";
       cardTitle.textContent = "예치금 정보";
       individualSection.style.display = "block";
       corporateSection.style.display = "none";
@@ -233,11 +235,12 @@ class MyPageManager {
         if (warning) warning.remove();
       }
     } else if (account_type === "corporate") {
-      // 기업 회원 UI 표시 (임시로 숨김 처리)
-      cardTitle.textContent = "한도 정보";
-      individualSection.style.display = "none";
-      corporateSection.style.display = "none"; // 임시로 숨김
+      // 기업 회원 - 카드 전체 숨김 (임시)
+      depositInfoCard.style.display = "none";
 
+      // cardTitle.textContent = "한도 정보";
+      // individualSection.style.display = "none";
+      // corporateSection.style.display = "block";
       // document.getElementById("dailyLimitAmount").textContent =
       //   `${daily_limit.toLocaleString()}원`;
       // document.getElementById("dailyUsedAmount").textContent =
