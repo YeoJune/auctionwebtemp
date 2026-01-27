@@ -233,17 +233,17 @@ class MyPageManager {
         if (warning) warning.remove();
       }
     } else if (account_type === "corporate") {
-      // 기업 회원 UI 표시
+      // 기업 회원 UI 표시 (임시로 숨김 처리)
       cardTitle.textContent = "한도 정보";
       individualSection.style.display = "none";
-      corporateSection.style.display = "block";
+      corporateSection.style.display = "none"; // 임시로 숨김
 
-      document.getElementById("dailyLimitAmount").textContent =
-        `${daily_limit.toLocaleString()}원`;
-      document.getElementById("dailyUsedAmount").textContent =
-        `${daily_used.toLocaleString()}원`;
-      document.getElementById("remainingLimitAmount").textContent =
-        `${remaining_limit.toLocaleString()}원`;
+      // document.getElementById("dailyLimitAmount").textContent =
+      //   `${daily_limit.toLocaleString()}원`;
+      // document.getElementById("dailyUsedAmount").textContent =
+      //   `${daily_used.toLocaleString()}원`;
+      // document.getElementById("remainingLimitAmount").textContent =
+      //   `${remaining_limit.toLocaleString()}원`;
     }
   }
 
