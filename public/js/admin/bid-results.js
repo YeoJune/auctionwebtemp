@@ -339,7 +339,8 @@ function createDetailContent(response, settlementId) {
               <tr>
                 <th>상품ID</th>
                 <th>제목</th>
-                <th>입찰금액</th>
+                <th>입찰금액 (¥)</th>
+                <th>낙찰금액 (¥)</th>
                 <th>상태</th>
               </tr>
             </thead>
@@ -347,16 +348,20 @@ function createDetailContent(response, settlementId) {
               ${
                 response.items.length > 0
                   ? response.items
-                      .map(
-                        (item) => `
+                      .map((item) => {
+                        const bidPrice =
+                          item.final_price || item.current_price || 0;
+                        const winPrice = item.winning_price || 0;
+                        return `
                 <tr>
                   <td>${item.itemId}</td>
                   <td>${item.title}</td>
-                  <td>¥${item.bidAmount?.toLocaleString() || "-"}</td>
+                  <td>¥${bidPrice.toLocaleString()}</td>
+                  <td>¥${winPrice > 0 ? winPrice.toLocaleString() : "-"}</td>
                   <td>${getStatusText(item.status)}</td>
                 </tr>
-              `,
-                      )
+              `;
+                      })
                       .join("")
                   : '<tr><td colspan="4" class="text-center">상품이 없습니다.</td></tr>'
               }

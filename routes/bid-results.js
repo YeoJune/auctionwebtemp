@@ -2114,12 +2114,13 @@ router.get("/admin/bid-results/detail", isAdmin, async (req, res) => {
       `SELECT 
          lb.id,
          lb.item_id as itemId,
-         lb.final_price as bidAmount,
-         lb.winning_price as winningPrice,
+         lb.first_price,
+         lb.second_price,
+         lb.final_price,
+         lb.winning_price,
          lb.status,
          i.title,
-         i.starting_price as startPrice,
-         i.current_price as currentPrice
+         i.starting_price as startPrice
        FROM live_bids lb
        JOIN crawled_items i ON lb.item_id = i.item_id
        WHERE lb.user_id = ? AND DATE(i.scheduled_date) = ?`,
@@ -2130,12 +2131,11 @@ router.get("/admin/bid-results/detail", isAdmin, async (req, res) => {
       `SELECT 
          db.id,
          db.item_id as itemId,
-         db.current_price as bidAmount,
-         db.winning_price as winningPrice,
+         db.current_price,
+         db.winning_price,
          db.status,
          i.title,
-         i.starting_price as startPrice,
-         i.current_price as currentPrice
+         i.starting_price as startPrice
        FROM direct_bids db
        JOIN crawled_items i ON db.item_id = i.item_id
        WHERE db.user_id = ? AND DATE(i.scheduled_date) = ?`,
