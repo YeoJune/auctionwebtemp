@@ -366,9 +366,9 @@ router.get("/admin/settlements", isAdmin, async (req, res) => {
     let whereConditions = [];
     let queryParams = [];
 
-    // 상태 필터
+    // 🔧 상태 필터 - payment_status로 변경
     if (status) {
-      whereConditions.push("status = ?");
+      whereConditions.push("payment_status = ?");
       queryParams.push(status);
     }
 
@@ -383,9 +383,9 @@ router.get("/admin/settlements", isAdmin, async (req, res) => {
         ? `WHERE ${whereConditions.join(" AND ")}`
         : "";
 
-    // 대기 중인 건수 조회
+    // 🔧 대기 중인 건수 조회 - payment_status로 변경
     const [pendingCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM daily_settlements WHERE status = 'pending'`,
+      `SELECT COUNT(*) as count FROM daily_settlements WHERE payment_status = 'pending'`,
     );
 
     // 총 개수 조회
@@ -396,14 +396,14 @@ router.get("/admin/settlements", isAdmin, async (req, res) => {
 
     const total = countResult[0].total;
 
-    // 정산 내역 조회
+    // 🔧 정산 내역 조회 - payment_status 추가
     const [settlements] = await pool.query(
       `SELECT id, user_id, settlement_date, final_amount, completed_amount, 
-              status, admin_memo, created_at, paid_at
-      FROM daily_settlements 
-      ${whereClause}
-      ORDER BY settlement_date DESC
-      LIMIT ? OFFSET ?`,
+              payment_status, admin_memo, created_at, paid_at
+       FROM daily_settlements 
+       ${whereClause}
+       ORDER BY settlement_date DESC
+       LIMIT ? OFFSET ?`,
       [...queryParams, parseInt(limit), offset],
     );
 
