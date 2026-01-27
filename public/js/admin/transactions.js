@@ -311,7 +311,6 @@ function handleSettlementClear() {
   state.settlements.currentPage = 1;
   loadSettlements();
 }
-
 function renderSettlements() {
   const tbody = document.getElementById("settlementTableBody");
   const totalElement = document.getElementById("settlementTotalCount");
@@ -336,10 +335,12 @@ function renderSettlements() {
   tbody.innerHTML = state.settlements.results
     .map((st) => {
       const remaining = st.final_amount - (st.completed_amount || 0);
-      const statusBadge = getPaymentStatusBadge(st.status);
+      // 🔧 수정: st.status → st.payment_status
+      const statusBadge = getPaymentStatusBadge(st.payment_status);
 
       let actionBtn = "";
-      if (st.status === "pending") {
+      // 🔧 수정: st.status → st.payment_status
+      if (st.payment_status === "pending") {
         actionBtn = `
         <button 
           class="btn btn-sm btn-success" 
