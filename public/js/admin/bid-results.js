@@ -803,8 +803,11 @@ function formatNumber(value) {
 }
 
 function formatCurrency(value) {
-  if (typeof value !== "number") return "₩0";
-  return "₩" + value.toLocaleString("ko-KR");
+  // 문자열을 숫자로 변환
+  const numValue = typeof value === "string" ? parseFloat(value) : value;
+
+  if (typeof numValue !== "number" || isNaN(numValue)) return "₩0";
+  return "₩" + Math.round(numValue).toLocaleString("ko-KR");
 }
 
 function formatDate(dateStr) {
