@@ -176,21 +176,21 @@ async function fetchCompletedBids() {
       limit: window.state.itemsPerPage,
     };
 
-    // 정산 상태 필터
+    // 정산 상태 필터 (status로 전달)
     if (window.state.settlementStatus) {
-      params.settlementStatus = window.state.settlementStatus;
+      params.status = window.state.settlementStatus;
     }
 
-    // 유저 검색
+    // 유저 검색 (keyword로 전달)
     if (window.state.userSearch) {
-      params.userId = window.state.userSearch;
+      params.keyword = window.state.userSearch;
     }
 
     const queryString = window.API.createURLParams(params);
 
-    // 관리자 API 호출
+    // 관리자 API 호출 (실제 API 경로)
     const response = await window.API.fetchAPI(
-      `/admin/bid-results?${queryString}`,
+      `/bid-results/admin/bid-results?${queryString}`,
     );
 
     console.log("백엔드 응답:", response);
@@ -501,39 +501,44 @@ function setupSettlementApprovalModal() {
 
 async function openSettlementApprovalModal(settlementId, sectionElement) {
   try {
-    // 정산 정보 가져오기
+    // 정산 정보 가져오기 (실제 API 사용)
     const response = await window.API.fetchAPI(
-      `/admin/settlements/${settlementId}`,
+      `/bid-results/admin/settlements?user_id=&status=&fromDate=&toDate=`,
     );
 
-    if (!response || !response.settlement) {
+    if (!response || !response.settlements) {
       throw new Error("정산 정보를 가져올 수 없습니다.");
     }
 
-    currentSettlement = response.settlement;
+    // settlementId로 해당 정산 찾기
+    currentSettlement = response.settlements.find((s) => s.id == settlementId);
 
-    // 모달 데이터 채우기
+    if (!currentSettlement) {
+      throw new Error("정산 정보를 찾을 수 없습니다.");
+    }
+
+    // 모달 데이터 채우기 (실제 API 응답 구조)
     document.getElementById("approvalUserId").textContent =
-      currentSettlement.userId || "-";
+      currentSettlement.user_id || "-";
     document.getElementById("approvalDate").textContent =
-      formatDisplayDate(currentSettlement.settlementDate) || "-";
+      formatDisplayDate(currentSettlement.settlement_date) || "-";
     document.getElementById("approvalDepositorName").textContent =
-      currentSettlement.depositorName || "-";
+      currentSettlement.depositor_name || "-";
     document.getElementById("approvalTotalAmount").textContent = formatCurrency(
-      currentSettlement.grandTotal || 0,
+      currentSettlement.final_amount || 0,
     );
     document.getElementById("approvalCompletedAmount").textContent =
-      formatCurrency(currentSettlement.completedAmount || 0);
+      formatCurrency(currentSettlement.completed_amount || 0);
     document.getElementById("approvalRemainingAmount").textContent =
       formatCurrency(
-        (currentSettlement.grandTotal || 0) -
-          (currentSettlement.completedAmount || 0),
+        (currentSettlement.final_amount || 0) -
+          (currentSettlement.completed_amount || 0),
       );
 
     // 입금 확인 금액 기본값 설정
     const remainingAmount =
-      (currentSettlement.grandTotal || 0) -
-      (currentSettlement.completedAmount || 0);
+      (currentSettlement.final_amount || 0) -
+      (currentSettlement.completed_amount || 0);
     document.getElementById("approvalPaymentAmount").value = remainingAmount;
 
     // 메모 초기화
@@ -575,8 +580,8 @@ async function handleSettlementApproval() {
   }
 
   const remainingAmount =
-    (currentSettlement.grandTotal || 0) -
-    (currentSettlement.completedAmount || 0);
+    (currentSettlement.final_amount || 0) -
+    (currentSettlement.completed_amount || 0);
 
   if (paymentAmount > remainingAmount) {
     alert("입금 확인 금액이 남은 결제액을 초과할 수 없습니다.");
@@ -588,19 +593,20 @@ async function handleSettlementApproval() {
   }
 
   try {
+    // 실제 API 사용: PUT /bid-results/admin/settlements/:id
     const response = await window.API.fetchAPI(
-      `/admin/settlements/${currentSettlement.id}/approve`,
+      `/bid-results/admin/settlements/${currentSettlement.id}`,
       {
-        method: "POST",
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          paymentAmount,
-          note,
+          status: "paid",
+          admin_memo: note || "입금 확인 완료",
         }),
       },
     );
 
-    if (response && response.success) {
+    if (response && response.settlement) {
       alert("정산이 승인되었습니다.");
       closeSettlementApprovalModal();
       // 데이터 새로고침
