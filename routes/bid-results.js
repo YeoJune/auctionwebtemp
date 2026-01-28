@@ -1988,10 +1988,7 @@ function classifyBidStatus(item) {
     return "pending";
   }
 
-  if (
-    finalPrice >= winningPrice &&
-    ["completed", "shipped"].includes(item.status)
-  ) {
+  if (["completed", "shipped"].includes(item.status)) {
     return "success";
   }
 
