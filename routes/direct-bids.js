@@ -518,7 +518,9 @@ router.post("/", async (req, res) => {
       console.log(
         `[Direct Bid] Triggering background detail fetch for ${itemId}`,
       );
-      processItem(itemId, aucNum);
+      processItem(itemId, aucNum).catch((err) => {
+        console.error(`[Background] Failed to process ${itemId}:`, err.message);
+      });
     }
 
     // 2. 경매 종료 확인

@@ -296,7 +296,9 @@ router.post("/", async (req, res) => {
       console.log(
         `[Live Bid] Triggering background detail fetch for ${itemId}`,
       );
-      processItem(itemId, aucNum);
+      processItem(itemId, aucNum).catch((err) => {
+        console.error(`[Background] Failed to process ${itemId}:`, err.message);
+      });
     }
 
     // 1차 입찰 시간 제한 체크: scheduled_date까지만 가능
