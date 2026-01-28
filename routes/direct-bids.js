@@ -25,7 +25,7 @@ const {
   refundLimit,
   getBidDeductAmount,
 } = require("../utils/deposit");
-const { processItem } = require("./processItem");
+const { processItem } = require("../utils/processItem");
 
 const isAdmin = (req, res, next) => {
   if (req.session.user && req.session.user.id === "admin") {
