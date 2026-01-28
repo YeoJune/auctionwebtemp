@@ -23,6 +23,7 @@ const {
   refundLimit,
   getBidDeductAmount,
 } = require("../utils/deposit");
+const { processItem } = require("./processItem");
 
 const isAdmin = (req, res, next) => {
   if (req.session.user && req.session.user.id === "admin") {
@@ -290,6 +291,13 @@ router.post("/", async (req, res) => {
     }
 
     const item = items[0];
+
+    if (!item.description) {
+      console.log(
+        `[Live Bid] Triggering background detail fetch for ${itemId}`,
+      );
+      processItem(itemId, aucNum);
+    }
 
     // 1차 입찰 시간 제한 체크: scheduled_date까지만 가능
     const now = new Date();

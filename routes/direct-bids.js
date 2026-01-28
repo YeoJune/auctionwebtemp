@@ -25,6 +25,7 @@ const {
   refundLimit,
   getBidDeductAmount,
 } = require("../utils/deposit");
+const { processItem } = require("./processItem");
 
 const isAdmin = (req, res, next) => {
   if (req.session.user && req.session.user.id === "admin") {
@@ -512,6 +513,13 @@ router.post("/", async (req, res) => {
     }
 
     const item = items[0];
+
+    if (!item.description) {
+      console.log(
+        `[Direct Bid] Triggering background detail fetch for ${itemId}`,
+      );
+      processItem(itemId, aucNum);
+    }
 
     // 2. 경매 종료 확인
     const now = new Date();
