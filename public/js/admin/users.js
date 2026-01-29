@@ -57,11 +57,13 @@ function renderUsers(users) {
     const row = createElement("tr");
 
     // 날짜 형식 변환 (YYYY-MM-DD 형식, 시간대 변환 없이 그대로 표시)
-    const registrationDate = user.registration_date
-      ? /^\d{4}-\d{2}-\d{2}$/.test(user.registration_date)
-        ? user.registration_date
-        : "-"
-      : "-";
+    let registrationDate = "-";
+    if (user.registration_date) {
+      const dateStr = String(user.registration_date);
+      if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+        registrationDate = dateStr.substring(0, 10); // YYYY-MM-DD만 추출
+      }
+    }
 
     // 회원 구분
     const accountType = user.account_type || "individual";
