@@ -2154,6 +2154,8 @@
   justify-content: center;
   align-items: center;
   z-index: 9999;
+  padding: 20px;
+  overflow-y: auto;
 }
 
 .modal-dialog {
@@ -2161,7 +2163,11 @@
   border-radius: 10px;
   width: 90%;
   max-width: 480px;
+  max-height: 90vh;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  margin: auto;
 }
 
 .modal-header {
@@ -2171,6 +2177,7 @@
   padding: 16px 20px;
   border-bottom: 1px solid #e9ecef;
   background: #f8f9fa;
+  flex-shrink: 0;
 }
 
 .modal-header h3 {
@@ -2200,6 +2207,9 @@
 
 .modal-body {
   padding: 18px 20px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .modal-body .form-group {
@@ -2245,7 +2255,7 @@
 }
 
 .modal-section {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .modal-section:last-child {
@@ -2388,6 +2398,7 @@
   padding: 12px 20px;
   border-top: 1px solid #e9ecef;
   background: #fafbfc;
+  flex-shrink: 0;
 }
 
 .modal-footer .btn {
@@ -2430,7 +2441,7 @@
 
 /* Payment Request Modal Specific Styles */
 #paymentRequestModal .modal-body {
-  padding: 24px;
+  padding: 20px;
 }
 
 #paymentRequestModal .payment-info {
@@ -2493,9 +2504,14 @@
     flex-direction: column;
   }
 
+  .modal-overlay {
+    padding: 10px;
+  }
+
   .modal-dialog {
     width: 95%;
     max-width: 420px;
+    max-height: 95vh;
   }
 
   .modal-header {
@@ -2528,7 +2544,7 @@
   }
 
   .modal-section {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
   }
 
   .payment-amount-highlight {
