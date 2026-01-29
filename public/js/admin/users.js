@@ -56,10 +56,10 @@ function renderUsers(users) {
   users.forEach((user) => {
     const row = createElement("tr");
 
-    // 날짜 형식 변환 (YYYY-MM-DD 형식)
+    // 날짜 형식 변환 (YYYY-MM-DD 형식, 시간대 변환 없이 그대로 표시)
     const registrationDate = user.registration_date
-      ? window.formatDate
-        ? formatDate(user.registration_date, false)
+      ? /^\d{4}-\d{2}-\d{2}$/.test(user.registration_date)
+        ? user.registration_date
         : "-"
       : "-";
 
@@ -183,10 +183,9 @@ function renderUsers(users) {
 // 날짜를 입력 필드용 형식으로 변환 (YYYY-MM-DD)
 function formatDateForInput(dateString) {
   if (!dateString) return "";
-  // formatDate에서 날짜 부분만 추출
-  if (window.formatDate) {
-    const formatted = formatDate(dateString, false);
-    return formatted.split(" ")[0];
+  // YYYY-MM-DD 형식이면 그대로 반환
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    return dateString;
   }
   // fallback for date input format
   return dateString.split("T")[0];

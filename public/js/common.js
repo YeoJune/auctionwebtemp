@@ -192,8 +192,8 @@ function renderHeader(currentPage = "") {
 
           return `
             <button class="nav-button ${isActive}" ${
-            item.id ? `id="${item.id}"` : ""
-          } ${onclick}>
+              item.id ? `id="${item.id}"` : ""
+            } ${onclick}>
               <i class="${item.icon}"></i>
               <span>${item.text}</span>
             </button>
@@ -239,8 +239,8 @@ function renderHeader(currentPage = "") {
           item.id === "signinBtn" ? item.text : `<i class="${item.icon}"></i>`;
         return `
           <button class="mobile-nav-button ${item.class || ""}" ${
-          item.id ? `id="${item.id}"` : ""
-        } ${onclick}>
+            item.id ? `id="${item.id}"` : ""
+          } ${onclick}>
             ${content}
           </button>
         `;
@@ -297,7 +297,7 @@ function formatDate(dateString, isUTC2KST = false) {
   let targetDate = date;
   if (isUTC2KST) {
     targetDate = new Date(
-      date.toLocaleString("en-US", { timeZone: "Asia/Seoul" })
+      date.toLocaleString("en-US", { timeZone: "Asia/Seoul" }),
     );
   }
 
@@ -312,7 +312,7 @@ function formatDateTime(dateString, isUTC2KST = false) {
   let targetDate = date;
   if (isUTC2KST) {
     targetDate = new Date(
-      date.toLocaleString("en-US", { timeZone: "Asia/Seoul" })
+      date.toLocaleString("en-US", { timeZone: "Asia/Seoul" }),
     );
   }
 
@@ -404,7 +404,7 @@ function createPagination(
   currentPage,
   totalPages,
   onPageChange,
-  containerId = "pagination"
+  containerId = "pagination",
 ) {
   const container = document.getElementById(containerId);
   if (!container) {
@@ -441,7 +441,7 @@ function createPagination(
     } else {
       const pageButton = createElement(
         "button",
-        pageNum === currentPage ? "active" : ""
+        pageNum === currentPage ? "active" : "",
       );
       pageButton.textContent = pageNum;
       pageButton.addEventListener("click", () => onPageChange(pageNum));
@@ -602,7 +602,7 @@ window.AuthManager = (function () {
       if (isAuthenticated) {
         try {
           const adminResponse = await window.API.fetchAPI(
-            "/admin/check-status"
+            "/admin/check-status",
           );
           isAdmin = adminResponse.isAdmin;
         } catch (error) {
@@ -632,10 +632,10 @@ window.AuthManager = (function () {
 
     // 인증 상태에 따라 표시할 요소들 찾기
     const authUnauthenticatedElements = document.querySelectorAll(
-      ".auth-unauthenticated:not(.auth-container)"
+      ".auth-unauthenticated:not(.auth-container)",
     );
     const authAuthenticatedElements = document.querySelectorAll(
-      ".auth-authenticated:not(.auth-container)"
+      ".auth-authenticated:not(.auth-container)",
     );
 
     if (signinBtns.length === 0 || signoutBtns.length === 0) return;
@@ -969,7 +969,7 @@ function setupMobileFilters() {
   const existingElements = Array.from(filtersContainer.children).filter(
     (child) =>
       !child.classList.contains("filters-header") &&
-      !child.classList.contains("filters-content")
+      !child.classList.contains("filters-content"),
   );
 
   if (!filtersHeader) {
@@ -1278,7 +1278,7 @@ window.TooltipManager = (function () {
     selector,
     conditionFn,
     messageFn,
-    position = "top"
+    position = "top",
   ) {
     conditionalTooltips.set(selector, {
       condition: conditionFn,
@@ -1400,7 +1400,7 @@ window.TooltipManager = (function () {
 window.TooltipManager.addIcon = function (element, tooltipType) {
   // 이미 같은 타입의 툴팁 아이콘이 있는지 확인
   const existingIcon = element.querySelector(
-    `.tooltip-icon[data-tooltip="${tooltipType}"]`
+    `.tooltip-icon[data-tooltip="${tooltipType}"]`,
   );
   if (existingIcon) return;
 
@@ -1425,7 +1425,7 @@ window.TooltipManager.processTooltips = function (
   container,
   item,
   tooltipConfigs,
-  bidInfo = null
+  bidInfo = null,
 ) {
   if (!tooltipConfigs || !Array.isArray(tooltipConfigs)) return;
 
@@ -1464,7 +1464,7 @@ window.TooltipManager.processTooltips = function (
       // 6. 추가된 아이콘에 대한 메시지 등록 (config에 message가 있는 경우)
       if (config.message) {
         const addedIcon = element.querySelector(
-          `.tooltip-icon[data-tooltip="${config.type}"]`
+          `.tooltip-icon[data-tooltip="${config.type}"]`,
         );
         if (addedIcon) {
           window.TooltipManager.registerConditionalTooltip(
@@ -1473,7 +1473,7 @@ window.TooltipManager.processTooltips = function (
             typeof config.message === "function"
               ? config.message
               : () => config.message,
-            "top"
+            "top",
           );
         }
       }
@@ -1486,7 +1486,7 @@ window.TooltipManager.clearDynamicTooltips = function (container) {
   if (!container) return;
 
   const dynamicIcons = container.querySelectorAll(
-    ".tooltip-icon[data-tooltip]"
+    ".tooltip-icon[data-tooltip]",
   );
   dynamicIcons.forEach((icon) => {
     // data-tooltip 속성이 있는 것들만 제거 (동적으로 추가된 것들)
@@ -1499,7 +1499,7 @@ window.TooltipManager.clearDynamicTooltips = function (container) {
 // 드롭다운 메뉴 설정 (범용) - 함수는 유지하되 내용 수정
 function setupDropdownMenus() {
   const dropdownButtons = document.querySelectorAll(
-    ".nav-item.dropdown-container > .nav-button"
+    ".nav-item.dropdown-container > .nav-button",
   );
 
   const closeAllDropdowns = (exceptDropdown = null) => {
@@ -1705,7 +1705,7 @@ window.URLStateManager = (function () {
 
     // URL에 허용된 키들만 처리
     const allowedKeys = stateKeys.filter((key) =>
-      URL_ALLOWED_KEYS.includes(key)
+      URL_ALLOWED_KEYS.includes(key),
     );
 
     allowedKeys.forEach((key) => {
