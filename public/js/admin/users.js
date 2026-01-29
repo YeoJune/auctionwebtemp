@@ -56,12 +56,14 @@ function renderUsers(users) {
   users.forEach((user) => {
     const row = createElement("tr");
 
-    // 날짜 형식 변환 (YYYY-MM-DD 형식, 시간대 변환 없이 그대로 표시)
+    // 날짜 형식 변환 (DATE 타입은 문자열로 오므로 그대로 사용)
     let registrationDate = "-";
     if (user.registration_date) {
       const dateStr = String(user.registration_date);
-      if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
-        registrationDate = dateStr.substring(0, 10); // YYYY-MM-DD만 추출
+      // YYYY-MM-DD 형식 추출 (T가 있든 없든)
+      const match = dateStr.match(/^(\d{4}-\d{2}-\d{2})/);
+      if (match) {
+        registrationDate = match[1];
       }
     }
 
