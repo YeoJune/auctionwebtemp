@@ -1104,11 +1104,14 @@
    ===================================================== */
 
 /* Payment Request Modal Specific Styles */
+#paymentRequestModal .modal-body {
+  padding: 24px;
+}
+
 #paymentRequestModal .payment-info {
-  margin: 16px 0;
-  padding: 14px;
   background: #f8f9fa;
   border-radius: 8px;
+  padding: 12px 14px;
   border: 1px solid #e9ecef;
 }
 
@@ -1117,24 +1120,17 @@
   justify-content: space-between;
   align-items: center;
   padding: 10px 0;
-  border-bottom: 1px solid #e9ecef;
+  border-bottom: 1px solid #dee2e6;
 }
 
 #paymentRequestModal .payment-info .info-row:last-child {
   border-bottom: none;
-}
-
-#paymentRequestModal .payment-info .info-row.highlight {
-  padding: 14px;
-  background: linear-gradient(135deg, #e7f3ff 0%, #f0f7ff 100%);
-  border-radius: 8px;
-  border: 1.5px solid #2c5aa0;
-  margin: 12px -14px 0 -14px;
+  padding-bottom: 0;
 }
 
 #paymentRequestModal .payment-info .label {
   font-size: 13px;
-  color: #495057;
+  color: #6c757d;
   font-weight: 500;
 }
 
@@ -1145,41 +1141,21 @@
   text-align: right;
 }
 
-#paymentRequestModal .payment-info .value.primary {
-  font-size: 20px;
-  font-weight: 700;
-  color: #2c5aa0;
-}
-
 #paymentRequestModal .account-info-box {
   display: flex;
-  gap: 12px;
-  padding: 14px;
+  gap: 14px;
+  padding: 16px;
   background: linear-gradient(135deg, #e8f4f8 0%, #f0f9fc 100%);
+  border: 1px solid #b8daff;
   border-left: 4px solid #17a2b8;
-  border-radius: 8px;
-  margin: 14px 0;
+  border-radius: 10px;
 }
 
 #paymentRequestModal .account-info-box i {
-  font-size: 22px;
+  font-size: 24px;
   color: #17a2b8;
-  margin-top: 2px;
+  margin-top: 3px;
   flex-shrink: 0;
-}
-
-#paymentRequestModal .account-info-box strong {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #0c5460;
-}
-
-#paymentRequestModal .account-info-box div {
-  font-size: 13px;
-  line-height: 1.6;
-  color: #0c5460;
 }
 
 .modal-overlay {
@@ -1286,6 +1262,108 @@
   font-weight: 500;
 }
 
+.modal-section {
+  margin-bottom: 24px;
+}
+
+.modal-section:last-child {
+  margin-bottom: 0;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #2c5aa0;
+  margin: 0 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e7f3ff;
+}
+
+.required-mark {
+  color: #dc3545;
+  font-weight: bold;
+}
+
+.payment-amount-highlight {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: linear-gradient(135deg, #e7f3ff 0%, #f0f7ff 100%);
+  border-radius: 10px;
+  border: 2px solid #2c5aa0;
+  margin-top: 12px;
+  box-shadow: 0 2px 8px rgba(44, 90, 160, 0.1);
+}
+
+.payment-amount-highlight .label {
+  font-size: 15px;
+  color: #2c5aa0;
+  font-weight: 600;
+}
+
+.payment-amount-highlight .value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2c5aa0;
+}
+
+.account-details {
+  flex: 1;
+}
+
+.account-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+}
+
+.account-label {
+  font-size: 13px;
+  color: #0c5460;
+  font-weight: 500;
+  min-width: 70px;
+}
+
+.account-value {
+  font-size: 13px;
+  color: #0c5460;
+  font-weight: 600;
+  text-align: right;
+}
+
+.info-notice {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  background: #fff8e6;
+  border-left: 4px solid #ffc107;
+  border-radius: 8px;
+  margin-top: 8px;
+}
+
+.info-notice i {
+  font-size: 18px;
+  color: #ffc107;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.info-notice div {
+  flex: 1;
+}
+
+.info-notice p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #856404;
+}
+
+.info-notice p:not(:last-child) {
+  margin-bottom: 6px;
+}
+
 .info-box,
 .warning-box {
   display: flex;
@@ -1388,6 +1466,10 @@
     padding: 16px;
   }
 
+  #paymentRequestModal .modal-body {
+    padding: 18px;
+  }
+
   .modal-footer {
     padding: 12px 16px;
   }
@@ -1397,12 +1479,28 @@
     min-width: unset;
   }
 
-  #paymentRequestModal .payment-info .info-row {
-    padding: 8px 0;
+  .section-title {
+    font-size: 13px;
   }
 
-  #paymentRequestModal .payment-info .info-row.highlight {
-    padding: 12px;
+  .modal-section {
+    margin-bottom: 20px;
+  }
+
+  .payment-amount-highlight {
+    padding: 14px;
+  }
+
+  .payment-amount-highlight .label {
+    font-size: 13px;
+  }
+
+  .payment-amount-highlight .value {
+    font-size: 20px;
+  }
+
+  #paymentRequestModal .payment-info .info-row {
+    padding: 8px 0;
   }
 
   #paymentRequestModal .payment-info .label {
@@ -1413,24 +1511,41 @@
     font-size: 13px;
   }
 
-  #paymentRequestModal .payment-info .value.primary {
-    font-size: 18px;
-  }
-
   #paymentRequestModal .account-info-box {
-    padding: 12px;
-    gap: 10px;
+    padding: 14px;
+    gap: 12px;
   }
 
   #paymentRequestModal .account-info-box i {
-    font-size: 20px;
+    font-size: 22px;
   }
 
-  #paymentRequestModal .account-info-box strong {
+  .account-row {
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px 0;
+  }
+
+  .account-label {
+    font-size: 11px;
+    min-width: auto;
+  }
+
+  .account-value {
     font-size: 13px;
+    text-align: left;
+    font-weight: 700;
   }
 
-  #paymentRequestModal .account-info-box div {
+  .info-notice {
+    padding: 12px;
+  }
+
+  .info-notice i {
+    font-size: 16px;
+  }
+
+  .info-notice p {
     font-size: 12px;
   }
 }
