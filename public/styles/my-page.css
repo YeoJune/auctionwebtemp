@@ -2162,7 +2162,7 @@
   background: white;
   border-radius: 10px;
   width: 90%;
-  max-width: 480px;
+  max-width: 560px;
   max-height: 90vh;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   display: flex;
@@ -2255,7 +2255,7 @@
 }
 
 .modal-section {
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .modal-section:last-child {
@@ -2266,16 +2266,50 @@
   font-size: 14px;
   font-weight: 700;
   color: #2c5aa0;
-  margin: 0 0 12px 0;
-  padding-bottom: 8px;
+  margin: 0 0 10px 0;
+  padding-bottom: 6px;
   border-bottom: 2px solid #e7f3ff;
 }
 
 .required-mark {
   color: #dc3545;
-  font-weight: bold;
 }
 
+/* Payment Info Styles */
+.payment-info {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 12px 14px;
+  border: 1px solid #e9ecef;
+}
+
+.payment-info .info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.payment-info .info-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.payment-info .label {
+  font-size: 13px;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.payment-info .value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #212529;
+  text-align: right;
+}
+
+/* Payment Amount Highlight */
 .payment-amount-highlight {
   display: flex;
   justify-content: space-between;
@@ -2284,8 +2318,7 @@
   background: linear-gradient(135deg, #e7f3ff 0%, #f0f7ff 100%);
   border-radius: 10px;
   border: 2px solid #2c5aa0;
-  margin-top: 12px;
-  box-shadow: 0 2px 8px rgba(44, 90, 160, 0.1);
+  margin-top: 10px;
 }
 
 .payment-amount-highlight .label {
@@ -2295,9 +2328,26 @@
 }
 
 .payment-amount-highlight .value {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
   color: #2c5aa0;
+}
+
+/* Account Info Box */
+.account-info-box {
+  display: flex;
+  gap: 14px;
+  padding: 16px;
+  background: linear-gradient(135deg, #e8f4f8 0%, #f0f9fc 100%);
+  border: 1px solid #b8daff;
+  border-left: 4px solid #17a2b8;
+  border-radius: 10px;
+}
+
+.account-info-box i {
+  font-size: 24px;
+  color: #17a2b8;
+  flex-shrink: 0;
 }
 
 .account-details {
@@ -2307,23 +2357,22 @@
 .account-row {
   display: flex;
   justify-content: space-between;
-  padding: 6px 0;
+  padding: 5px 0;
 }
 
 .account-label {
   font-size: 13px;
   color: #0c5460;
   font-weight: 500;
-  min-width: 70px;
 }
 
 .account-value {
   font-size: 13px;
   color: #0c5460;
   font-weight: 600;
-  text-align: right;
 }
 
+/* Info Notice */
 .info-notice {
   display: flex;
   gap: 12px;
@@ -2331,29 +2380,23 @@
   background: #fff8e6;
   border-left: 4px solid #ffc107;
   border-radius: 8px;
-  margin-top: 8px;
 }
 
 .info-notice i {
   font-size: 18px;
   color: #ffc107;
-  margin-top: 2px;
   flex-shrink: 0;
 }
 
-.info-notice div {
-  flex: 1;
-}
-
 .info-notice p {
-  margin: 0;
+  margin: 0 0 4px 0;
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.5;
   color: #856404;
 }
 
-.info-notice p:not(:last-child) {
-  margin-bottom: 6px;
+.info-notice p:last-child {
+  margin-bottom: 0;
 }
 
 .info-box,
@@ -2439,61 +2482,6 @@
   background: #c82333;
 }
 
-/* Payment Request Modal Specific Styles */
-#paymentRequestModal .modal-body {
-  padding: 20px;
-}
-
-#paymentRequestModal .payment-info {
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 12px 14px;
-  border: 1px solid #e9ecef;
-}
-
-#paymentRequestModal .payment-info .info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 0;
-  border-bottom: 1px solid #dee2e6;
-}
-
-#paymentRequestModal .payment-info .info-row:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-#paymentRequestModal .payment-info .label {
-  font-size: 13px;
-  color: #6c757d;
-  font-weight: 500;
-}
-
-#paymentRequestModal .payment-info .value {
-  font-size: 14px;
-  font-weight: 600;
-  color: #212529;
-  text-align: right;
-}
-
-#paymentRequestModal .account-info-box {
-  display: flex;
-  gap: 14px;
-  padding: 16px;
-  background: linear-gradient(135deg, #e8f4f8 0%, #f0f9fc 100%);
-  border: 1px solid #b8daff;
-  border-left: 4px solid #17a2b8;
-  border-radius: 10px;
-}
-
-#paymentRequestModal .account-info-box i {
-  font-size: 24px;
-  color: #17a2b8;
-  margin-top: 3px;
-  flex-shrink: 0;
-}
-
 /* 반응형 */
 @media (max-width: 768px) {
   .limit-info-row {
@@ -2510,7 +2498,7 @@
 
   .modal-dialog {
     width: 95%;
-    max-width: 420px;
+    max-width: none;
     max-height: 95vh;
   }
 
