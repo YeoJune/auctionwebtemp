@@ -371,9 +371,20 @@ async function saveUser() {
       }
     }
 
+    // 가입일 처리 - 임시로 하루 더하기
+    let adjustedRegistrationDate = null;
+    if (registrationDate) {
+      const date = new Date(registrationDate);
+      date.setDate(date.getDate() + 1);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      adjustedRegistrationDate = `${year}-${month}-${day}`;
+    }
+
     const userData = {
       id: id,
-      registration_date: registrationDate || null,
+      registration_date: adjustedRegistrationDate,
       email: email || null,
       business_number: businessNumber || null,
       company_name: companyName || null,
