@@ -56,18 +56,12 @@ function renderUsers(users) {
   users.forEach((user) => {
     const row = createElement("tr");
 
-    // 날짜 형식 변환 (임시: 하루 더하기)
+    // 날짜 형식 변환 (YYYY-MM-DD 형식, 시간대 변환 없이 그대로 표시)
     let registrationDate = "-";
     if (user.registration_date) {
-      try {
-        const date = new Date(user.registration_date);
-        date.setDate(date.getDate() + 1); // 하루 더하기
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, "0");
-        const day = String(date.getDate()).padStart(2, "0");
-        registrationDate = `${year}-${month}-${day}`;
-      } catch (e) {
-        registrationDate = "-";
+      const dateStr = String(user.registration_date);
+      if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+        registrationDate = dateStr.substring(0, 10); // YYYY-MM-DD만 추출
       }
     }
 
