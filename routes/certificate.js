@@ -21,20 +21,6 @@ const isAuthenticated = (req, res, next) => {
   }
 };
 
-// 미들웨어: 관리자 확인
-const isAdmin = (req, res, next) => {
-  // users 테이블에 role 컬럼이 있고, admin 역할이 있다고 가정
-  if (req.session.user && req.session.user.id === "admin") {
-    next();
-  } else {
-    res.status(403).json({
-      success: false,
-      message: "접근 권한이 없습니다.",
-      code: "FORBIDDEN",
-    });
-  }
-};
-
 // 감정서 번호 생성 로직
 async function generateCertificateNumber(conn, brand) {
   const brandInitial = brand ? brand.substring(0, 1).toUpperCase() : "X";
@@ -43,7 +29,7 @@ async function generateCertificateNumber(conn, brand) {
 
   const [countResult] = await conn.query(
     "SELECT COUNT(*) as count FROM certificates WHERE certificate_number LIKE ?",
-    [`${prefix}%`]
+    [`${prefix}%`],
   );
   const nextSerial = (countResult[0].count + 1).toString().padStart(4, "0");
   return `${prefix}${nextSerial}`;
@@ -76,7 +62,7 @@ router.post("/issue", isAuthenticated, async (req, res) => {
 
     const [appraisalRows] = await conn.query(
       "SELECT id, result, brand FROM appraisals WHERE id = ? AND status = 'completed'",
-      [appraisal_id]
+      [appraisal_id],
     );
     if (appraisalRows.length === 0) {
       await conn.rollback();
@@ -99,7 +85,7 @@ router.post("/issue", isAuthenticated, async (req, res) => {
 
     const [existingCert] = await conn.query(
       "SELECT id FROM certificates WHERE appraisal_id = ?",
-      [appraisal_id]
+      [appraisal_id],
     );
     if (existingCert.length > 0) {
       await conn.rollback();
@@ -113,7 +99,7 @@ router.post("/issue", isAuthenticated, async (req, res) => {
     const certificateId = uuidv4();
     const certificate_number = await generateCertificateNumber(
       conn,
-      appraisal.brand
+      appraisal.brand,
     );
     const verification_code = uuidv4().replace(/-/g, "").substring(0, 12); // 더 긴 유니크 코드로 변경
     const initialStatus = payment_info ? "pending_issuance" : "pending_payment";
@@ -251,7 +237,7 @@ router.get("/:certificateNumber", async (req, res) => {
        FROM certificates c
        JOIN appraisals a ON c.appraisal_id = a.id
        WHERE c.certificate_number = ?`,
-      [certificateNumber]
+      [certificateNumber],
     );
 
     if (rows.length === 0) {
@@ -317,7 +303,7 @@ router.put(
       conn = await pool.getConnection();
       const [certs] = await conn.query(
         "SELECT id, type, status, user_id, delivery_info as existing_delivery_info FROM certificates WHERE certificate_number = ?",
-        [certificateNumber]
+        [certificateNumber],
       );
 
       if (certs.length === 0) {
@@ -408,7 +394,7 @@ router.put(
     } finally {
       if (conn) conn.release();
     }
-  }
+  },
 );
 
 // 3.2.5 PDF 감정서 다운로드
@@ -428,7 +414,7 @@ router.get(
        FROM certificates c
        JOIN appraisals a ON c.appraisal_id = a.id
        WHERE c.certificate_number = ?`,
-        [certificateNumber]
+        [certificateNumber],
       );
 
       if (rows.length === 0) {
@@ -468,8 +454,8 @@ router.get(
         "Content-Disposition",
         `attachment; filename="CAS_Certificate_${certificateNumber.replace(
           /-/g,
-          "_"
-        )}.pdf"`
+          "_",
+        )}.pdf"`,
       );
       doc.pipe(res);
 
@@ -487,12 +473,12 @@ router.get(
           certData.issued_date
             ? new Date(certData.issued_date).toLocaleDateString("ko-KR")
             : "미발급"
-        }`
+        }`,
       );
       doc.text(
         `감정 유형: ${
           certData.type === "physical" ? "실물 감정서" : "디지털 감정서"
-        }`
+        }`,
       );
       doc.moveDown();
 
@@ -576,7 +562,7 @@ router.get(
           "본 감정서는 CAS 명품 감정 시스템에 의해 발급되었습니다.",
           50,
           pageHeight - 100,
-          { align: "center" }
+          { align: "center" },
         );
       doc.text(`고유 확인 코드: ${certData.verification_code || "N/A"}`, {
         align: "center",
@@ -587,7 +573,7 @@ router.get(
           align: "center",
           link: `${process.env.FRONTEND_URL}/appr/result-detail/${certificateNumber}`,
           underline: true,
-        }
+        },
       );
 
       doc.end();
@@ -604,7 +590,7 @@ router.get(
     } finally {
       if (conn) conn.release();
     }
-  }
+  },
 );
 
 // 3.2.6 감정서 QR코드 이미지 제공
@@ -628,7 +614,7 @@ router.get("/:certificateNumber/qrcode", async (req, res) => {
     res.setHeader("Content-Type", "image/png");
     res.setHeader(
       "Content-Disposition",
-      `inline; filename="qrcode_${certificateNumber}.png"`
+      `inline; filename="qrcode_${certificateNumber}.png"`,
     ); // 브라우저에서 바로 보거나, 다운로드 이름 제안
     res.send(qrCodeBuffer);
   } catch (error) {

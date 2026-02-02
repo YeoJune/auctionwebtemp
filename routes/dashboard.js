@@ -5,7 +5,7 @@ const { pool } = require("../utils/DB");
 
 // 관리자 권한 확인 미들웨어
 const isAdmin = (req, res, next) => {
-  if (req.session.user && req.session.user.id === "admin") {
+  if (req.session.user && req.session.user.login_id === "admin") {
     next();
   } else {
     res.status(403).json({ message: "Access denied. Admin only." });
@@ -97,7 +97,7 @@ router.get("/activities", isAdmin, async (req, res) => {
       ORDER BY updated_at DESC
       LIMIT ?
     `,
-      [parseInt(limit, 10)]
+      [parseInt(limit, 10)],
     );
 
     // 최근 직접 경매 활동
@@ -108,7 +108,7 @@ router.get("/activities", isAdmin, async (req, res) => {
       ORDER BY updated_at DESC
       LIMIT ?
     `,
-      [parseInt(limit, 10)]
+      [parseInt(limit, 10)],
     );
 
     // 자바스크립트에서 데이터 가공
@@ -184,7 +184,7 @@ router.get("/kpi", isAdmin, async (req, res) => {
       FROM live_bids
       WHERE DATE(created_at) = ?
     `,
-      [todayStr]
+      [todayStr],
     );
 
     const [todayDirectBids] = await connection.query(
@@ -193,7 +193,7 @@ router.get("/kpi", isAdmin, async (req, res) => {
       FROM direct_bids
       WHERE DATE(created_at) = ?
     `,
-      [todayStr]
+      [todayStr],
     );
 
     // 자바스크립트에서 데이터 가공

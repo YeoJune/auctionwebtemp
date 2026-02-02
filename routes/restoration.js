@@ -17,7 +17,7 @@ const isAuthenticated = (req, res, next) => {
   }
 };
 const isAdmin = (req, res, next) => {
-  if (req.session.user && req.session.user.id === "admin") {
+  if (req.session.user && req.session.user.login_id === "admin") {
     next();
   } else {
     res.status(403).json({
@@ -35,7 +35,7 @@ router.get("/services", async (req, res) => {
   try {
     conn = await pool.getConnection();
     const [services] = await conn.query(
-      "SELECT id, name, description, price, estimated_days, before_image, after_image, is_active FROM restoration_services WHERE is_active = TRUE ORDER BY price ASC"
+      "SELECT id, name, description, price, estimated_days, before_image, after_image, is_active FROM restoration_services WHERE is_active = TRUE ORDER BY price ASC",
     );
     res.json({ success: true, services });
   } catch (error) {
@@ -78,7 +78,7 @@ router.post("/requests", isAuthenticated, async (req, res) => {
     // 1. appraisal_id 유효성 검사
     const [appraisalRows] = await conn.query(
       "SELECT id FROM appraisals WHERE id = ?",
-      [appraisal_id]
+      [appraisal_id],
     );
     if (appraisalRows.length === 0) {
       await conn.rollback();
@@ -104,7 +104,7 @@ router.post("/requests", isAuthenticated, async (req, res) => {
       }
       const [serviceRows] = await conn.query(
         "SELECT name, price, estimated_days FROM restoration_services WHERE id = ? AND is_active = TRUE",
-        [item.service_id]
+        [item.service_id],
       );
       if (serviceRows.length === 0) {
         await conn.rollback();
@@ -139,7 +139,7 @@ router.post("/requests", isAuthenticated, async (req, res) => {
     const requestId = uuidv4();
     const estimated_completion_date = new Date();
     estimated_completion_date.setDate(
-      estimated_completion_date.getDate() + max_estimated_days
+      estimated_completion_date.getDate() + max_estimated_days,
     );
 
     const initialStatus = payment_info ? "pending" : "pending_payment"; // 결제 정보 있으면 바로 pending
@@ -276,7 +276,7 @@ router.get("/requests/:requestId", isAuthenticated, async (req, res) => {
        FROM restoration_requests rr
        JOIN appraisals a ON rr.appraisal_id = a.id
        WHERE rr.id = ?`, // user_id 조건은 필요시 추가 (본인 또는 관리자)
-      [requestId]
+      [requestId],
     );
 
     if (rows.length === 0) {
@@ -384,7 +384,7 @@ router.post("/services", isAuthenticated, isAdmin, async (req, res) => {
 
     const [newService] = await conn.query(
       "SELECT * FROM restoration_services WHERE id = ?",
-      [serviceId]
+      [serviceId],
     );
     res.status(201).json({
       success: true,
@@ -445,7 +445,7 @@ router.put(
       conn = await pool.getConnection();
       const [result] = await conn.query(
         "UPDATE restoration_services SET ? WHERE id = ?",
-        [fieldsToUpdate, serviceId]
+        [fieldsToUpdate, serviceId],
       );
 
       if (result.affectedRows === 0) {
@@ -458,7 +458,7 @@ router.put(
 
       const [updatedService] = await conn.query(
         "SELECT * FROM restoration_services WHERE id = ?",
-        [serviceId]
+        [serviceId],
       );
       res.json({
         success: true,
@@ -475,7 +475,7 @@ router.put(
     } finally {
       if (conn) conn.release();
     }
-  }
+  },
 );
 
 // 3.3.7 (관리자용) 복원 서비스 삭제
@@ -491,7 +491,7 @@ router.delete(
       // 소프트 삭제 권장: UPDATE restoration_services SET is_active = FALSE WHERE id = ?
       const [result] = await conn.query(
         "DELETE FROM restoration_services WHERE id = ?",
-        [serviceId]
+        [serviceId],
       );
       if (result.affectedRows === 0) {
         return res.status(404).json({
@@ -516,7 +516,7 @@ router.delete(
     } finally {
       if (conn) conn.release();
     }
-  }
+  },
 );
 
 module.exports = router;
