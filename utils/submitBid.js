@@ -5,6 +5,7 @@ const {
   brandAucCrawler,
   starAucCrawler,
   mekikiAucCrawler,
+  penguinAucCrawler,
 } = require("../crawlers/index");
 
 /**
@@ -20,7 +21,8 @@ function validateBidByAuction(auctionNum, bidPrice, currentPrice, isFirstBid) {
   bidPrice = parseFloat(bidPrice);
   switch (String(auctionNum)) {
     case "1":
-    case "4": // 에코옥션, 메키키옥션 - 1000엔 단위
+    case "4":
+    case "5": // 에코옥션, 메키키옥션, 펭귄옥션 - 1000엔 단위
       if (bidPrice % 1000 !== 0) {
         return {
           valid: false,
@@ -92,6 +94,7 @@ function validateBidUnit(auctionNum, bidPrice, currentPrice = 0) {
   switch (String(auctionNum)) {
     case "1": // 에코옥션 - 1000엔 단위
     case "4": // 메키키옥션 - 1000엔 단위
+    case "5": // 펭귄옥션 - 1000엔 단위
       if (bidPrice % 1000 !== 0) {
         return {
           valid: false,
@@ -166,8 +169,8 @@ async function submitBid(bidData, item) {
   }
 
   // 경매장별 입찰가 검증 (submitBid에서는 기본적인 검증만 수행)
-  // 에코옥션만 1000단위 검증, 브랜드옥션/스타옥션은 클라이언트에서 이미 검증됨
-  if (item.auc_num === 1) {
+  // 에코옥션, 펭귄옥션만 1000단위 검증, 브랜드옥션/스타옥션은 클라이언트에서 이미 검증됨
+  if (item.auc_num === 1 || item.auc_num === 5) {
     const validation = validateBidByAuction(
       item.auc_num,
       price,
@@ -215,6 +218,12 @@ async function submitBid(bidData, item) {
       `Submitting bid to MekikiAuc platform for item ${item.item_id} with price ${price}`,
     );
     bidResult = await mekikiAucCrawler.directBid(item.item_id, price);
+  } else if (item.auc_num == 5) {
+    // PenguinAuc 경매
+    console.log(
+      `Submitting bid to PenguinAuc platform for item ${item.item_id} with price ${price}`,
+    );
+    bidResult = await penguinAucCrawler.directBid(item.item_id, price);
   } else {
     console.log(`Unknown auction platform: ${item.auc_num}`);
     await connection.rollback();

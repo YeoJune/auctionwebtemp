@@ -135,12 +135,13 @@ const productPageConfig = {
         message: "2차 제안금액 참고 후\n해당상품에 지불 가능한 최대금액 입력",
       },
 
-      // 8. 타이머 정보 아이콘 (에코옥션, 스타옥션만)
+      // 8. 타이머 정보 아이콘 (에코옥션, 스타옥션, 펭귄옥션만)
       {
         selector: ".timer-info-icon",
         type: "timer-info",
         condition: (item) =>
-          item.bid_type == "direct" && (item.auc_num == 1 || item.auc_num == 3),
+          item.bid_type == "direct" &&
+          (item.auc_num == 1 || item.auc_num == 3 || item.auc_num == 5),
         message:
           "마감 전 5분 입찰 발생 시\n5분씩 자동 연장\n\n추가 입찰 없을 시\n마지막 입찰 금액 낙찰",
       },
@@ -242,7 +243,7 @@ window.WishlistManager = (function () {
   async function toggleWishlist(itemId, favoriteNumber) {
     if (
       !window.AuthManager.requireAuth(
-        "위시리스트 기능을 사용하려면 로그인이 필요합니다."
+        "위시리스트 기능을 사용하려면 로그인이 필요합니다.",
       )
     ) {
       return;
@@ -251,7 +252,7 @@ window.WishlistManager = (function () {
     try {
       const state = getCurrentState();
       const existingItem = state.wishlist.find(
-        (w) => w.item_id == itemId && w.favorite_number === favoriteNumber
+        (w) => w.item_id == itemId && w.favorite_number === favoriteNumber,
       );
 
       if (existingItem) {
@@ -266,7 +267,7 @@ window.WishlistManager = (function () {
 
         // ProductListController의 state에서 제거
         state.wishlist = state.wishlist.filter(
-          (w) => !(w.item_id == itemId && w.favorite_number === favoriteNumber)
+          (w) => !(w.item_id == itemId && w.favorite_number === favoriteNumber),
         );
       } else {
         // 추가
@@ -297,7 +298,7 @@ window.WishlistManager = (function () {
    */
   function updateWishlistUI(itemId) {
     const card = document.querySelector(
-      `.product-card[data-item-id="${itemId}"]`
+      `.product-card[data-item-id="${itemId}"]`,
     );
     if (card) {
       const wishlistBtns = card.querySelectorAll(".wishlist-btn");
@@ -306,7 +307,7 @@ window.WishlistManager = (function () {
       wishlistBtns.forEach((btn) => {
         const favoriteNumber = parseInt(btn.dataset.favorite);
         const isActive = state.wishlist.some(
-          (w) => w.item_id == itemId && w.favorite_number == favoriteNumber
+          (w) => w.item_id == itemId && w.favorite_number == favoriteNumber,
         );
 
         btn.classList.toggle("active", isActive);
@@ -354,7 +355,7 @@ window.ProductRenderer = (function () {
           card,
           item,
           productPageConfig.tooltips.cardTooltips,
-          bidInfo
+          bidInfo,
         );
       }, 150);
     }
@@ -371,13 +372,13 @@ window.ProductRenderer = (function () {
 
     // 각 favorite_number별로 개별 확인 (타입 안전)
     const isActive1 = state.wishlist.some(
-      (w) => w.item_id == item.item_id && w.favorite_number === 1
+      (w) => w.item_id == item.item_id && w.favorite_number === 1,
     );
     const isActive2 = state.wishlist.some(
-      (w) => w.item_id == item.item_id && w.favorite_number === 2
+      (w) => w.item_id == item.item_id && w.favorite_number === 2,
     );
     const isActive3 = state.wishlist.some(
-      (w) => w.item_id == item.item_id && w.favorite_number === 3
+      (w) => w.item_id == item.item_id && w.favorite_number === 3,
     );
 
     // 버튼 HTML 생성
@@ -429,10 +430,10 @@ window.ProductRenderer = (function () {
 
     // 입찰 정보 찾기
     const liveBidInfo = state.liveBidData.find(
-      (b) => b.item_id == item.item_id
+      (b) => b.item_id == item.item_id,
     );
     const directBidInfo = state.directBidData.find(
-      (b) => b.item_id == item.item_id
+      (b) => b.item_id == item.item_id,
     );
 
     // 입찰 섹션 HTML 생성
@@ -443,7 +444,7 @@ window.ProductRenderer = (function () {
           item.item_id,
           item.auc_num,
           item.category,
-          { showTimer: false }
+          { showTimer: false },
         );
       } else {
         bidSection.innerHTML = window.BidManager.getLiveBidSectionHTML(
@@ -451,7 +452,7 @@ window.ProductRenderer = (function () {
           item.item_id,
           item.auc_num,
           item.category,
-          { showTimer: false }
+          { showTimer: false },
         );
       }
     } catch (error) {
@@ -509,7 +510,7 @@ window.ProductRenderer = (function () {
 
     const timer = window.BidManager.getRemainingTime(
       item.scheduled_date,
-      bidStage
+      bidStage,
     );
     const isNearEnd = timer?.isNearEnd;
     const timeText = timer ? timer.text : "--:--:--";
@@ -547,10 +548,10 @@ window.ProductRenderer = (function () {
 
     // 입찰 정보 찾기
     const liveBidInfo = state.liveBidData.find(
-      (b) => b.item_id == item.item_id
+      (b) => b.item_id == item.item_id,
     );
     const directBidInfo = state.directBidData.find(
-      (b) => b.item_id == item.item_id
+      (b) => b.item_id == item.item_id,
     );
 
     // 현재 가격 계산
@@ -563,7 +564,7 @@ window.ProductRenderer = (function () {
 
     // 템플릿 라벨 변경
     const secondCellLabel = card.querySelector(
-      ".info-cell:nth-child(2) .info-label"
+      ".info-cell:nth-child(2) .info-label",
     );
     if (secondCellLabel) {
       if (item.bid_type === "direct") {
@@ -575,7 +576,7 @@ window.ProductRenderer = (function () {
 
     // 세 번째 칸 라벨 변경 (리팩토링 전과 동일하게)
     const thirdCellLabel = card.querySelector(
-      ".info-cell:nth-child(3) .info-label"
+      ".info-cell:nth-child(3) .info-label",
     );
     if (thirdCellLabel) {
       if (item.bid_type === "direct") {
@@ -587,10 +588,10 @@ window.ProductRenderer = (function () {
 
     // 가격 표시 업데이트
     const priceValueEl = card.querySelector(
-      ".info-cell:nth-child(2) .info-value"
+      ".info-cell:nth-child(2) .info-value",
     );
     const priceDetailEl = card.querySelector(
-      ".info-cell:nth-child(2) .info-price-detail"
+      ".info-cell:nth-child(2) .info-price-detail",
     );
 
     if (priceValueEl) {
@@ -599,16 +600,16 @@ window.ProductRenderer = (function () {
 
     if (priceDetailEl && live_price) {
       priceDetailEl.textContent = `${cleanNumberFormat(
-        calculateTotalPrice(live_price, item.auc_num, item.category)
+        calculateTotalPrice(live_price, item.auc_num, item.category),
       )}원`;
     }
 
     // 세 번째 칸 (입찰/제안 정보) 업데이트
     const thirdCellValue = card.querySelector(
-      ".info-cell:nth-child(3) .info-value"
+      ".info-cell:nth-child(3) .info-value",
     );
     const thirdCellDetail = card.querySelector(
-      ".info-cell:nth-child(3) .info-price-detail"
+      ".info-cell:nth-child(3) .info-price-detail",
     );
 
     if (thirdCellValue) {
@@ -621,8 +622,8 @@ window.ProductRenderer = (function () {
           calculateTotalPrice(
             directBidInfo.current_price,
             item.auc_num,
-            item.category
-          )
+            item.category,
+          ),
         )}원`;
       } else if (item.bid_type === "live" && liveBidInfo?.second_price) {
         thirdValue = `${cleanNumberFormat(liveBidInfo.second_price)}¥`;
@@ -630,8 +631,8 @@ window.ProductRenderer = (function () {
           calculateTotalPrice(
             liveBidInfo.second_price,
             item.auc_num,
-            item.category
-          )
+            item.category,
+          ),
         )}원`;
       }
 
@@ -653,7 +654,7 @@ window.ProductRenderer = (function () {
           const alertDiv = createElement(
             "div",
             "higher-bid-alert",
-            "더 높은 입찰 존재"
+            "더 높은 입찰 존재",
           );
           header.appendChild(alertDiv);
         }
@@ -703,7 +704,7 @@ window.RealtimeManager = (function () {
       const state = window.ProductListController.getState();
       const visibleItemIds = state.currentData.map((item) => item.item_id);
       const itemsToUpdate = data.itemIds.filter((id) =>
-        visibleItemIds.includes(id)
+        visibleItemIds.includes(id),
       );
 
       if (itemsToUpdate.length > 0) {
@@ -792,7 +793,7 @@ function initializeBidInfo(itemId, item = null) {
       directBidInfo,
       itemId,
       item.auc_num,
-      item.category
+      item.category,
       // 옵션을 전달하지 않으면 기본값 { showTimer: true }가 사용됨
     );
   } else {
@@ -801,7 +802,7 @@ function initializeBidInfo(itemId, item = null) {
       liveBidInfo,
       itemId,
       item.auc_num,
-      item.category
+      item.category,
       // 옵션을 전달하지 않으면 기본값 { showTimer: true }가 사용됨
     );
   }
@@ -818,7 +819,7 @@ function initializeBidInfo(itemId, item = null) {
         modal,
         item,
         productPageConfig.tooltips.modalTooltips,
-        bidInfo
+        bidInfo,
       );
     }, 100);
   }

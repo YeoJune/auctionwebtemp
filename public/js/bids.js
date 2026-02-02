@@ -34,8 +34,22 @@ window.BidManager = (function () {
       },
       errorMessage: (minBid) =>
         `3번 경매장은 자동 계산된 최소금액(${cleanNumberFormat(
-          minBid
+          minBid,
         )}엔)으로만 입찰 가능합니다.`,
+    },
+    4: {
+      // 메키키옥션
+      buttons: [1, 5, 10],
+      unit: 1000,
+      validator: (price) => price % 1000 === 0,
+      errorMessage: "4번 경매장은 1,000엔 단위로만 입찰 가능합니다.",
+    },
+    5: {
+      // 펭귄옥션
+      buttons: [1, 5, 10],
+      unit: 1000,
+      validator: (price) => price % 1000 === 0,
+      errorMessage: "5번 경매장은 1,000엔 단위로만 입찰 가능합니다.",
     },
   };
 
@@ -89,7 +103,7 @@ window.BidManager = (function () {
   async function getBidOptions(itemId, auctionNum, currentPrice) {
     try {
       const response = await API.fetchAPI(
-        `/direct-bids/bid-options/${itemId}?aucNum=${auctionNum}`
+        `/direct-bids/bid-options/${itemId}?aucNum=${auctionNum}`,
       );
       return response;
     } catch (error) {
@@ -105,7 +119,7 @@ window.BidManager = (function () {
     price,
     auctionNum,
     itemId,
-    isFirstBid = false
+    isFirstBid = false,
   ) {
     const config = AUCTION_BUTTON_CONFIGS[auctionNum];
     if (!config) return { valid: true };
@@ -129,8 +143,8 @@ window.BidManager = (function () {
         message: isValid
           ? null
           : typeof config.errorMessage === "function"
-          ? config.errorMessage(isFirstBid)
-          : config.errorMessage,
+            ? config.errorMessage(isFirstBid)
+            : config.errorMessage,
       };
     }
   }
@@ -182,7 +196,7 @@ window.BidManager = (function () {
       <p>실시간: ${cleanNumberFormat(startingPrice)} ¥</p>
       <div class="price-details-container">
         관부가세 포함 ${cleanNumberFormat(
-          calculateTotalPrice(startingPrice, aucNum, category)
+          calculateTotalPrice(startingPrice, aucNum, category),
         )}원
       </div>
     </div>`;
@@ -193,7 +207,7 @@ window.BidManager = (function () {
         <p>최종 입찰금액: ${cleanNumberFormat(bidInfo.final_price)} ¥</p>
         <div class="price-details-container">
           관부가세 포함 ${cleanNumberFormat(
-            calculateTotalPrice(bidInfo.final_price, aucNum, category)
+            calculateTotalPrice(bidInfo.final_price, aucNum, category),
           )}원
         </div>
       </div>`;
@@ -205,7 +219,7 @@ window.BidManager = (function () {
         <p>1차 입찰금액: ${cleanNumberFormat(bidInfo.first_price)} ¥</p>
         <div class="price-details-container first-price">
           관부가세 포함 ${cleanNumberFormat(
-            calculateTotalPrice(bidInfo.first_price, aucNum, category)
+            calculateTotalPrice(bidInfo.first_price, aucNum, category),
           )}원
         </div>
       </div>`;
@@ -216,7 +230,7 @@ window.BidManager = (function () {
         <p>2차 제안금액: ${cleanNumberFormat(bidInfo.second_price)} ¥</p>
         <div class="price-details-container second-price">
           관부가세 포함 ${cleanNumberFormat(
-            calculateTotalPrice(bidInfo.second_price, aucNum, category)
+            calculateTotalPrice(bidInfo.second_price, aucNum, category),
           )}원
         </div>
       </div>`;
@@ -260,7 +274,7 @@ window.BidManager = (function () {
       <p>실시간 금액: ${cleanNumberFormat(live_price)} ¥</p>
       <div class="price-details-container">
         관부가세 포함 ${cleanNumberFormat(
-          calculateTotalPrice(live_price, aucNum, category)
+          calculateTotalPrice(live_price, aucNum, category),
         )}원
       </div>
     </div>`;
@@ -270,7 +284,7 @@ window.BidManager = (function () {
         <p>나의 입찰 금액: ${cleanNumberFormat(bidInfo.current_price)} ¥</p>
         <div class="price-details-container my-price">
           관부가세 포함 ${cleanNumberFormat(
-            calculateTotalPrice(bidInfo.current_price, aucNum, category)
+            calculateTotalPrice(bidInfo.current_price, aucNum, category),
           )}원
         </div>
       </div>`;
@@ -330,7 +344,7 @@ window.BidManager = (function () {
     auctionNum,
     bidType,
     isExpired,
-    isFirstBid = false
+    isFirstBid = false,
   ) {
     if (isExpired) {
       return `<div class="quick-bid-buttons">
@@ -487,7 +501,7 @@ window.BidManager = (function () {
     itemId,
     aucNum,
     category,
-    options = { showTimer: true }
+    options = { showTimer: true },
   ) {
     let item = _state.currentData.find((item) => item.item_id === itemId);
 
@@ -507,7 +521,7 @@ window.BidManager = (function () {
           <p>최종 입찰금액: ${cleanNumberFormat(bidInfo.final_price)} ¥</p>
           <div class="price-details-container">
             관부가세 포함 ${cleanNumberFormat(
-              calculateTotalPrice(bidInfo.final_price, aucNum, category)
+              calculateTotalPrice(bidInfo.final_price, aucNum, category),
             )}원
           </div>
         </div>
@@ -528,7 +542,7 @@ window.BidManager = (function () {
       itemId,
       aucNum,
       "live",
-      isExpired
+      isExpired,
     );
 
     return `<div class="bid-info live">${timerHTML}${priceHTML}${inputHTML}</div>`;
@@ -542,7 +556,7 @@ window.BidManager = (function () {
     itemId,
     aucNum,
     category,
-    options = { showTimer: true }
+    options = { showTimer: true },
   ) {
     let item = _state.currentData.find((item) => item.item_id === itemId);
 
@@ -562,14 +576,14 @@ window.BidManager = (function () {
       bidInfo,
       item,
       aucNum,
-      category
+      category,
     );
     const inputHTML = generateBidInputHTML(
       bidInfo,
       itemId,
       aucNum,
       "direct",
-      isExpired
+      isExpired,
     );
 
     return `<div class="bid-info direct">${statusHTML}${timerHTML}${priceHTML}${inputHTML}</div>`;
@@ -664,7 +678,7 @@ window.BidManager = (function () {
 
       if (typeof window.dispatchEvent === "function") {
         window.dispatchEvent(
-          new CustomEvent("bidSuccess", { detail: { itemId, type: "live" } })
+          new CustomEvent("bidSuccess", { detail: { itemId, type: "live" } }),
         );
       }
     } catch (error) {
@@ -711,7 +725,7 @@ window.BidManager = (function () {
     // 경매장별 입찰 가격 검증
     if (item && item.auc_num) {
       const myBidInfo = _state.directBidData.find(
-        (bid) => bid.item_id === itemId
+        (bid) => bid.item_id === itemId,
       );
       const isFirstBid = !myBidInfo || !myBidInfo.current_price;
 
@@ -719,7 +733,7 @@ window.BidManager = (function () {
         numericValue,
         item.auc_num,
         itemId,
-        isFirstBid
+        isFirstBid,
       );
       if (!validation.valid) {
         alert(validation.message);
@@ -746,7 +760,7 @@ window.BidManager = (function () {
 
       if (typeof window.dispatchEvent === "function") {
         window.dispatchEvent(
-          new CustomEvent("bidSuccess", { detail: { itemId, type: "direct" } })
+          new CustomEvent("bidSuccess", { detail: { itemId, type: "direct" } }),
         );
       }
     } catch (error) {
@@ -783,7 +797,7 @@ window.BidManager = (function () {
     // 브랜드옥션 500엔 버튼 검증
     if (item.auc_num == 2 && amount === 0.5) {
       const myBidInfo = _state.directBidData.find(
-        (bid) => bid.item_id === itemId
+        (bid) => bid.item_id === itemId,
       );
       const isFirstBid = !myBidInfo || !myBidInfo.current_price;
 
@@ -819,10 +833,10 @@ window.BidManager = (function () {
       html += `<div class="bid-price-info">
         <span class="price-label">1차 입찰금액</span>
         <span class="price-value">${cleanNumberFormat(
-          bidInfo.first_price
+          bidInfo.first_price,
         )}￥</span>
         <span class="price-detail">관부가세 포함 ${cleanNumberFormat(
-          calculateTotalPrice(bidInfo.first_price, item.auc_num, item.category)
+          calculateTotalPrice(bidInfo.first_price, item.auc_num, item.category),
         )}원</span>
       </div>`;
     }
@@ -831,10 +845,10 @@ window.BidManager = (function () {
       html += `<div class="final-price">
         <span class="price-label">최종 입찰금액</span>
         <span class="price-value">${cleanNumberFormat(
-          bidInfo.final_price
+          bidInfo.final_price,
         )}￥</span>
         <span class="price-detail">관부가세 포함 ${cleanNumberFormat(
-          calculateTotalPrice(bidInfo.final_price, item.auc_num, item.category)
+          calculateTotalPrice(bidInfo.final_price, item.auc_num, item.category),
         )}원</span>
       </div>`;
     }
@@ -851,10 +865,10 @@ window.BidManager = (function () {
     return `<div class="my-bid-price">
       <span class="price-label">나의 입찰 금액</span>
       <span class="price-value">${cleanNumberFormat(
-        bidInfo.current_price
+        bidInfo.current_price,
       )}￥</span>
       <span class="price-detail">관부가세 포함 ${cleanNumberFormat(
-        calculateTotalPrice(bidInfo.current_price, item.auc_num, item.category)
+        calculateTotalPrice(bidInfo.current_price, item.auc_num, item.category),
       )}원</span>
     </div>`;
   }
@@ -882,7 +896,7 @@ window.BidManager = (function () {
       item.item_id,
       item.auc_num,
       bidType,
-      isExpired
+      isExpired,
     );
   }
 
@@ -926,7 +940,7 @@ window.BidManager = (function () {
           const totalPrice = calculateTotalPrice(
             price,
             item.auc_num,
-            item.category
+            item.category,
           );
 
           const message =
@@ -962,7 +976,7 @@ window.BidManager = (function () {
 
         if (item.bid_type === "live") {
           const bidInfo = _state.liveBidData.find(
-            (bid) => bid.item_id === itemId
+            (bid) => bid.item_id === itemId,
           );
 
           stageText = "1차입찰마감";
@@ -1105,7 +1119,7 @@ function setupMobileBidTooltips() {
     if (e.target.classList.contains("increment-500") && e.target.disabled) {
       showMobileTooltip(
         e.target,
-        "첫 입찰은 1,000엔, 이후 입찰은 500엔 단위로 입찰 가능합니다."
+        "첫 입찰은 1,000엔, 이후 입찰은 500엔 단위로 입찰 가능합니다.",
       );
     }
   });

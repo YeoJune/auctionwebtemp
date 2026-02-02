@@ -662,10 +662,13 @@ class UnifiedAuctionManager {
       2: (itemId) =>
         `https://bid.brand-auc.com/items/detail?uketsukeBng=${itemId}`,
       3: (itemId) => `https://www.starbuyers-global-auction.com/item/${itemId}`,
+      4: (itemId, additionalInfo) =>
+        `https://auction.mekiki.ai/en/auction/${additionalInfo?.event_id}/${itemId}`,
+      5: (itemId) => `https://penguin-auction.jp/product/detail/${itemId}/`,
     };
 
     if (bid.item?.auc_num && linkFunc[bid.item.auc_num]) {
-      return linkFunc[bid.item.auc_num](bid.item_id);
+      return linkFunc[bid.item.auc_num](bid.item_id, bid.item?.additional_info);
     }
     return "#";
   }

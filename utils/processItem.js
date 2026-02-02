@@ -9,6 +9,7 @@ const {
   starAucCrawler,
   starAucValueCrawler,
   mekikiAucCrawler,
+  penguinAucCrawler,
 } = require("../crawlers/index");
 const DBManager = require("./DBManager");
 
@@ -32,7 +33,7 @@ async function processItem(
   returnData = false,
   userId = null,
   priority = 2,
-  aucNum = null
+  aucNum = null,
 ) {
   try {
     const tableName = isValue ? "values_items" : "crawled_items";
@@ -60,7 +61,7 @@ async function processItem(
     // 여러 개의 item이 반환되는 경우 (같은 item_id, 다른 auc_num)
     if (items.length > 1) {
       console.warn(
-        `Multiple items found for item_id ${itemId}, using first one`
+        `Multiple items found for item_id ${itemId}, using first one`,
       );
     }
 
@@ -85,7 +86,7 @@ async function processItem(
           WHERE user_id = ? AND item_id = ?
           LIMIT 1
           `,
-          [userId, itemId]
+          [userId, itemId],
         );
         if (liveBids.length > 0) {
           userBids.live = liveBids[0];
@@ -100,7 +101,7 @@ async function processItem(
           WHERE user_id = ? AND item_id = ?
           LIMIT 1
           `,
-          [userId, itemId]
+          [userId, itemId],
         );
         if (directBids.length > 0) {
           userBids.direct = directBids[0];
@@ -108,7 +109,7 @@ async function processItem(
       } catch (bidError) {
         console.error(
           `Error fetching bids for user ${userId}, item ${itemId}:`,
-          bidError
+          bidError,
         );
         // Continue without bid data if fetching fails
       }
@@ -133,12 +134,14 @@ async function processItem(
       crawler = isValue ? starAucValueCrawler : starAucCrawler;
     } else if (item.auc_num == 4) {
       crawler = isValue ? null : mekikiAucCrawler;
+    } else if (item.auc_num == 5) {
+      crawler = isValue ? null : penguinAucCrawler;
     }
 
     // If no suitable crawler, return current item data with bids
     if (!crawler) {
       console.warn(
-        `No crawler found for item ${itemId}, auc_num ${item.auc_num}, isValue ${isValue}`
+        `No crawler found for item ${itemId}, auc_num ${item.auc_num}, isValue ${isValue}`,
       );
       if (returnData) return item;
       return res.json(item);
@@ -159,7 +162,7 @@ async function processItem(
             [crawledDetails],
             imageFolder,
             priority,
-            cropType
+            cropType,
           )
         )[0];
 
@@ -168,13 +171,13 @@ async function processItem(
             itemId,
             processedDetails,
             tableName,
-            item.auc_num // auc_num 추가
+            item.auc_num, // auc_num 추가
           );
 
           // Fetch the updated item data
           const [updatedItems] = await pool.query(
             `SELECT * FROM ${tableName} WHERE item_id = ?`,
-            [itemId]
+            [itemId],
           );
 
           if (updatedItems.length > 0) {
@@ -192,7 +195,7 @@ async function processItem(
           }
         } else {
           console.warn(
-            `Processing crawled details yielded no result for item ${itemId}`
+            `Processing crawled details yielded no result for item ${itemId}`,
           );
           if (returnData) return item; // Return original item with bids
           return res.json(item);

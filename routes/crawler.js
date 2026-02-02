@@ -10,6 +10,7 @@ const {
   starAucValueCrawler,
   mekikiAucCrawler,
   mekikiAucValueCrawler,
+  penguinAucCrawler,
 } = require("../crawlers/index");
 const DBManager = require("../utils/DBManager");
 const { pool } = require("../utils/DB");
@@ -114,6 +115,14 @@ const AUCTION_CONFIG = {
     enabled: true,
     updateInterval: 0,
     updateWithIdInterval: 0,
+  },
+  5: {
+    name: "PenguinAuc",
+    crawler: penguinAucCrawler,
+    valueCrawler: null,
+    enabled: true,
+    updateInterval: parseInt(process.env.UPDATE_INTERVAL, 10) || 40,
+    updateWithIdInterval: parseInt(process.env.UPDATE_INTERVAL_ID, 10) || 10,
   },
 };
 

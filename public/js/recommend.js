@@ -129,7 +129,8 @@ const recommendPageConfig = {
         selector: ".timer-info-icon",
         type: "timer-info",
         condition: (item) =>
-          item.bid_type == "direct" && (item.auc_num == 1 || item.auc_num == 3),
+          item.bid_type == "direct" &&
+          (item.auc_num == 1 || item.auc_num == 3 || item.auc_num == 5),
         message:
           "마감 전 5분 입찰 발생 시\n5분씩 자동 연장\n\n추가 입찰 없을 시\n마지막 입찰 금액 낙찰",
       },
@@ -218,7 +219,7 @@ window.WishlistManager = (function () {
   async function toggleWishlist(itemId, favoriteNumber) {
     if (
       !window.AuthManager.requireAuth(
-        "위시리스트 기능을 사용하려면 로그인이 필요합니다."
+        "위시리스트 기능을 사용하려면 로그인이 필요합니다.",
       )
     ) {
       return;
@@ -227,7 +228,7 @@ window.WishlistManager = (function () {
     try {
       const state = getCurrentState();
       const existingItem = state.wishlist.find(
-        (w) => w.item_id == itemId && w.favorite_number === favoriteNumber
+        (w) => w.item_id == itemId && w.favorite_number === favoriteNumber,
       );
 
       if (existingItem) {
@@ -240,7 +241,7 @@ window.WishlistManager = (function () {
         });
 
         state.wishlist = state.wishlist.filter(
-          (w) => !(w.item_id == itemId && w.favorite_number === favoriteNumber)
+          (w) => !(w.item_id == itemId && w.favorite_number === favoriteNumber),
         );
       } else {
         await window.API.fetchAPI("/wishlist", {
@@ -266,7 +267,7 @@ window.WishlistManager = (function () {
 
   function updateWishlistUI(itemId) {
     const card = document.querySelector(
-      `.product-card[data-item-id="${itemId}"]`
+      `.product-card[data-item-id="${itemId}"]`,
     );
     if (card) {
       const wishlistBtns = card.querySelectorAll(".wishlist-btn");
@@ -275,7 +276,7 @@ window.WishlistManager = (function () {
       wishlistBtns.forEach((btn) => {
         const favoriteNumber = parseInt(btn.dataset.favorite);
         const isActive = state.wishlist.some(
-          (w) => w.item_id == itemId && w.favorite_number == favoriteNumber
+          (w) => w.item_id == itemId && w.favorite_number == favoriteNumber,
         );
 
         btn.classList.toggle("active", isActive);
@@ -314,7 +315,7 @@ window.RecommendRenderer = (function () {
           card,
           item,
           recommendPageConfig.tooltips.cardTooltips,
-          bidInfo
+          bidInfo,
         );
       }, 150);
     }
@@ -327,13 +328,13 @@ window.RecommendRenderer = (function () {
     const state = window.ProductListController.getState();
 
     const isActive1 = state.wishlist.some(
-      (w) => w.item_id == item.item_id && w.favorite_number === 1
+      (w) => w.item_id == item.item_id && w.favorite_number === 1,
     );
     const isActive2 = state.wishlist.some(
-      (w) => w.item_id == item.item_id && w.favorite_number === 2
+      (w) => w.item_id == item.item_id && w.favorite_number === 2,
     );
     const isActive3 = state.wishlist.some(
-      (w) => w.item_id == item.item_id && w.favorite_number === 3
+      (w) => w.item_id == item.item_id && w.favorite_number === 3,
     );
 
     wishlistButtons.innerHTML = `
@@ -379,10 +380,10 @@ window.RecommendRenderer = (function () {
     const state = window.ProductListController.getState();
 
     const liveBidInfo = state.liveBidData.find(
-      (b) => b.item_id == item.item_id
+      (b) => b.item_id == item.item_id,
     );
     const directBidInfo = state.directBidData.find(
-      (b) => b.item_id == item.item_id
+      (b) => b.item_id == item.item_id,
     );
 
     try {
@@ -392,7 +393,7 @@ window.RecommendRenderer = (function () {
           item.item_id,
           item.auc_num,
           item.category,
-          { showTimer: false }
+          { showTimer: false },
         );
       } else {
         bidSection.innerHTML = window.BidManager.getLiveBidSectionHTML(
@@ -400,7 +401,7 @@ window.RecommendRenderer = (function () {
           item.item_id,
           item.auc_num,
           item.category,
-          { showTimer: false }
+          { showTimer: false },
         );
       }
     } catch (error) {
@@ -445,7 +446,7 @@ window.RecommendRenderer = (function () {
 
     const timer = window.BidManager.getRemainingTime(
       item.scheduled_date,
-      bidStage
+      bidStage,
     );
     const isNearEnd = timer?.isNearEnd;
     const timeText = timer ? timer.text : "--:--:--";
@@ -476,10 +477,10 @@ window.RecommendRenderer = (function () {
     const state = window.ProductListController.getState();
 
     const liveBidInfo = state.liveBidData.find(
-      (b) => b.item_id == item.item_id
+      (b) => b.item_id == item.item_id,
     );
     const directBidInfo = state.directBidData.find(
-      (b) => b.item_id == item.item_id
+      (b) => b.item_id == item.item_id,
     );
 
     const live_price =
@@ -490,7 +491,7 @@ window.RecommendRenderer = (function () {
         : item.starting_price;
 
     const secondCellLabel = card.querySelector(
-      ".info-cell:nth-child(2) .info-label"
+      ".info-cell:nth-child(2) .info-label",
     );
     if (secondCellLabel) {
       if (item.bid_type === "direct") {
@@ -501,7 +502,7 @@ window.RecommendRenderer = (function () {
     }
 
     const thirdCellLabel = card.querySelector(
-      ".info-cell:nth-child(3) .info-label"
+      ".info-cell:nth-child(3) .info-label",
     );
     if (thirdCellLabel) {
       if (item.bid_type === "direct") {
@@ -512,10 +513,10 @@ window.RecommendRenderer = (function () {
     }
 
     const priceValueEl = card.querySelector(
-      ".info-cell:nth-child(2) .info-value"
+      ".info-cell:nth-child(2) .info-value",
     );
     const priceDetailEl = card.querySelector(
-      ".info-cell:nth-child(2) .info-price-detail"
+      ".info-cell:nth-child(2) .info-price-detail",
     );
 
     if (priceValueEl) {
@@ -524,15 +525,15 @@ window.RecommendRenderer = (function () {
 
     if (priceDetailEl && live_price) {
       priceDetailEl.textContent = `${cleanNumberFormat(
-        calculateTotalPrice(live_price, item.auc_num, item.category)
+        calculateTotalPrice(live_price, item.auc_num, item.category),
       )}원`;
     }
 
     const thirdCellValue = card.querySelector(
-      ".info-cell:nth-child(3) .info-value"
+      ".info-cell:nth-child(3) .info-value",
     );
     const thirdCellDetail = card.querySelector(
-      ".info-cell:nth-child(3) .info-price-detail"
+      ".info-cell:nth-child(3) .info-price-detail",
     );
 
     if (thirdCellValue) {
@@ -545,8 +546,8 @@ window.RecommendRenderer = (function () {
           calculateTotalPrice(
             directBidInfo.current_price,
             item.auc_num,
-            item.category
-          )
+            item.category,
+          ),
         )}원`;
       } else if (item.bid_type === "live" && liveBidInfo?.second_price) {
         thirdValue = `${cleanNumberFormat(liveBidInfo.second_price)}¥`;
@@ -554,8 +555,8 @@ window.RecommendRenderer = (function () {
           calculateTotalPrice(
             liveBidInfo.second_price,
             item.auc_num,
-            item.category
-          )
+            item.category,
+          ),
         )}원`;
       }
 
@@ -576,7 +577,7 @@ window.RecommendRenderer = (function () {
           const alertDiv = createElement(
             "div",
             "higher-bid-alert",
-            "더 높은 입찰 존재"
+            "더 높은 입찰 존재",
           );
           header.appendChild(alertDiv);
         }
@@ -621,7 +622,7 @@ window.RealtimeManager = (function () {
       const state = window.ProductListController.getState();
       const visibleItemIds = state.currentData.map((item) => item.item_id);
       const itemsToUpdate = data.itemIds.filter((id) =>
-        visibleItemIds.includes(id)
+        visibleItemIds.includes(id),
       );
 
       if (itemsToUpdate.length > 0) {
@@ -689,7 +690,7 @@ function initializeBidInfo(itemId, item = null) {
       directBidInfo,
       itemId,
       item.auc_num,
-      item.category
+      item.category,
     );
   } else {
     const liveBidInfo = state.liveBidData.find((b) => b.item_id == itemId);
@@ -697,7 +698,7 @@ function initializeBidInfo(itemId, item = null) {
       liveBidInfo,
       itemId,
       item.auc_num,
-      item.category
+      item.category,
     );
   }
 
@@ -713,7 +714,7 @@ function initializeBidInfo(itemId, item = null) {
         modal,
         item,
         recommendPageConfig.tooltips.modalTooltips,
-        bidInfo
+        bidInfo,
       );
     }, 100);
   }

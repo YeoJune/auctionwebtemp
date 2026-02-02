@@ -18,6 +18,8 @@ const aucNames = {
   1: "EcoAuc",
   2: "BrandAuc",
   3: "StarAuc",
+  4: "MekikiAuc",
+  5: "PenguinAuc",
 };
 
 // 상태 이름 매핑
@@ -143,7 +145,7 @@ async function loadInvoices() {
     const response = await fetchInvoices(
       state.currentPage,
       state.limit,
-      state.filters
+      state.filters,
     );
 
     // 응답 데이터를 테이블에 표시
@@ -153,7 +155,7 @@ async function loadInvoices() {
     renderPagination(
       response.pagination.currentPage,
       response.pagination.totalPages,
-      response.pagination.total
+      response.pagination.total,
     );
 
     // 페이지 상태 업데이트
@@ -163,7 +165,7 @@ async function loadInvoices() {
     console.error("인보이스 로드 오류:", error);
     showNoData(
       "invoicesTableBody",
-      "인보이스 데이터를 불러오는 중 오류가 발생했습니다."
+      "인보이스 데이터를 불러오는 중 오류가 발생했습니다.",
     );
     renderPagination(0, 0, 0);
   }
@@ -195,8 +197,8 @@ function renderInvoicesTable(invoices) {
             <td><span class="status-badge status-${
               invoice.status || "unknown"
             }">${
-      statusNames[invoice.status] || invoice.status || "알 수 없음"
-    }</span></td>
+              statusNames[invoice.status] || invoice.status || "알 수 없음"
+            }</span></td>
             <td>${invoice.amount ? formatCurrency(invoice.amount) : "-"}</td>
           </tr>
         `;

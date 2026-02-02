@@ -410,6 +410,7 @@ function renderLiveBidsTable(liveBids) {
     3: (itemId) => `https://www.starbuyers-global-auction.com/item/${itemId}`,
     4: (itemId, additionalInfo) =>
       `https://auction.mekiki.ai/en/auction/${additionalInfo.event_id}/${itemId}`,
+    5: (itemId) => `https://penguin-auction.jp/product/detail/${itemId}/`,
   };
 
   liveBids.forEach((bid) => {

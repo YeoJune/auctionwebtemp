@@ -17,7 +17,7 @@ document.addEventListener("DOMContentLoaded", function () {
   fetchNotices()
     .then(displayNotices)
     .catch((error) =>
-      handleError(error, "공지 목록을 불러오는데 실패했습니다.")
+      handleError(error, "공지 목록을 불러오는데 실패했습니다."),
     );
 
   // 접근 제한 설정 로드
@@ -105,6 +105,8 @@ function getMonthsInputId(aucId) {
       return "starAucMonths";
     case "4":
       return "mekikiAucMonths";
+    case "5":
+      return "penguinAucMonths";
     default:
       return "";
   }
@@ -215,7 +217,7 @@ async function updateMetrics() {
 async function resetMetricsData() {
   if (
     !confirmAction(
-      "정말로 모든 메트릭스 데이터를 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+      "정말로 모든 메트릭스 데이터를 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
     )
   ) {
     return;
@@ -581,8 +583,8 @@ function displayNotices(notices) {
         <h3>${notice.title}</h3>
         <div class="notice-image-container">
           <img src="${notice.imageUrl}" alt="${
-      notice.title
-    }" style="max-width: 100%; max-height: 200px;">
+            notice.title
+          }" style="max-width: 100%; max-height: 200px;">
         </div>
         <div class="notice-url">
           ${
@@ -657,7 +659,7 @@ async function loadAccessControlSettings() {
 async function saveAccessControlSettings() {
   try {
     const requireLogin = document.getElementById(
-      "requireLoginForFeatures"
+      "requireLoginForFeatures",
     ).checked;
 
     await fetchAPI("/admin/settings", {

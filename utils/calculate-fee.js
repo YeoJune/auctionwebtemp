@@ -123,6 +123,12 @@
       return Math.round(price * 0.055 + feeInYen);
     }
 
+    if (auctionId == 5) {
+      const feeInKRW = 5000; // 5,000원 고정 수수료
+      const feeInYen = feeInKRW / exchangeRate; // 환율로 나눠서 엔화로 변환
+      return Math.round(price * 0.077 + feeInYen);
+    }
+
     return 0;
   }
 
@@ -192,7 +198,7 @@
     price,
     auctionId,
     category,
-    exchangeRate = null
+    exchangeRate = null,
   ) {
     price = parseFloat(price) || 0;
 
@@ -288,7 +294,7 @@
       fetchUserCommissionRate().then((rate) => {
         console.log(
           "User commission rate loaded:",
-          rate !== null ? rate + "%" : "기본 수수료율 사용"
+          rate !== null ? rate + "%" : "기본 수수료율 사용",
         );
       });
     });
