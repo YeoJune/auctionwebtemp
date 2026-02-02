@@ -442,15 +442,24 @@ function createDetailContent(settlement, detailData) {
       '<tr><td colspan="6" class="text-center">낙찰 완료된 상품이 없습니다.</td></tr>';
   }
 
-  // 수동 정산 처리 버튼 (모든 상태에서 표시)
+  // 정산 처리 버튼 (상태에 따라 텍스트 변경)
+  let buttonText = "정산 처리";
+  let noteText = "입금자명과 금액을 입력하여 정산 처리";
+
+  if (settlement.paymentStatus === "pending") {
+    buttonText = "입금 확인 및 승인";
+    noteText = "입금 확인 후 승인하여 정산 완료";
+  } else if (settlement.paymentStatus === "paid") {
+    buttonText = "추가 입금 처리";
+    noteText = "추가 입금이 있는 경우 처리 가능";
+  }
+
   let actionHTML = `
     <div class="detail-actions">
       <button class="btn btn-primary btn-approve">
-        <i class="fas fa-hand-holding-usd"></i> 수동 정산 처리
+        <i class="fas fa-hand-holding-usd"></i> ${buttonText}
       </button>
-      <p class="action-note">
-        ${settlement.paymentStatus === "paid" ? "추가 입금 처리 가능" : "입금자명과 금액을 입력하여 정산 처리"}
-      </p>
+      <p class="action-note">${noteText}</p>
     </div>
   `;
 
@@ -555,6 +564,33 @@ function setupSettlementApprovalModal() {
 
 function openSettlementApprovalModal(settlement) {
   currentSettlement = settlement;
+
+  // 상태에 따른 모달 제목 변경
+  const modalTitle = document.querySelector(
+    "#settlementApprovalModal .modal-header h3",
+  );
+  if (modalTitle) {
+    if (settlement.paymentStatus === "pending") {
+      modalTitle.textContent = "입금 확인 및 승인";
+    } else if (settlement.paymentStatus === "paid") {
+      modalTitle.textContent = "추가 입금 처리";
+    } else {
+      modalTitle.textContent = "정산 수동 처리";
+    }
+  }
+
+  // 상태에 따른 버튼 텍스트 변경
+  const confirmBtn = document.getElementById("approvalConfirmBtn");
+  if (confirmBtn) {
+    const iconHTML = '<i class="fas fa-check"></i> ';
+    if (settlement.paymentStatus === "pending") {
+      confirmBtn.innerHTML = iconHTML + "승인";
+    } else if (settlement.paymentStatus === "paid") {
+      confirmBtn.innerHTML = iconHTML + "추가 처리";
+    } else {
+      confirmBtn.innerHTML = iconHTML + "처리";
+    }
+  }
 
   // 모달 데이터 채우기
   const userIdText = settlement.userLoginId || settlement.userId || "-";

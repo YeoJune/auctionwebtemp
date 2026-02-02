@@ -341,8 +341,8 @@ function renderSettlements() {
       const actionBtn = `
         <button 
           class="btn btn-sm btn-primary" 
-          onclick="openSettlementApprovalModal(${st.id}, '${st.login_id || st.user_id}', '${st.settlement_date}', ${st.final_amount}, ${st.completed_amount || 0}, '${st.depositor_name || ""}')"
-          title="수동 정산 처리"
+          onclick="openSettlementApprovalModal(${st.id}, '${st.login_id || st.user_id}', '${st.settlement_date}', ${st.final_amount}, ${st.completed_amount || 0}, '${st.depositor_name || ""}', '${st.payment_status}')"
+          title="정산 처리"
         >
           <i class="fas fa-hand-holding-usd"></i> 처리
         </button>
@@ -514,6 +514,7 @@ function openSettlementApprovalModal(
   total,
   completed,
   depositorName = null,
+  paymentStatus = "unpaid",
 ) {
   currentSettlement = {
     id,
@@ -523,7 +524,35 @@ function openSettlementApprovalModal(
     completed,
     remaining: total - completed,
     depositorName,
+    paymentStatus,
   };
+
+  // 상태에 따른 모달 제목 변경
+  const modalTitle = document.querySelector(
+    "#settlementApprovalModal .modal-header h3",
+  );
+  if (modalTitle) {
+    if (paymentStatus === "pending") {
+      modalTitle.textContent = "입금 확인 및 승인";
+    } else if (paymentStatus === "paid") {
+      modalTitle.textContent = "추가 입금 처리";
+    } else {
+      modalTitle.textContent = "정산 수동 처리";
+    }
+  }
+
+  // 상태에 따른 버튼 텍스트 변경
+  const approveBtn = document.getElementById("settlementApproveBtn");
+  if (approveBtn) {
+    const iconHTML = '<i class="fas fa-check"></i> ';
+    if (paymentStatus === "pending") {
+      approveBtn.innerHTML = iconHTML + "승인";
+    } else if (paymentStatus === "paid") {
+      approveBtn.innerHTML = iconHTML + "추가 처리";
+    } else {
+      approveBtn.innerHTML = iconHTML + "처리";
+    }
+  }
 
   document.getElementById("stUserId").textContent = userId;
   document.getElementById("stDate").textContent = date;
