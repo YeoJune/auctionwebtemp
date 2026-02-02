@@ -292,16 +292,23 @@ function renderHeader(currentPage = "") {
 // 날짜 포맷팅
 function formatDate(dateString, isUTC2KST = false) {
   if (!dateString) return "-";
+
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "-";
 
-  let targetDate = date;
   if (isUTC2KST) {
-    targetDate = new Date(
-      date.toLocaleString("en-US", { timeZone: "Asia/Seoul" }),
-    );
+    // 로컬 시간대 기준
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  } else {
+    // UTC 기준으로 날짜 추출 (시간대 영향 없음)
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(date.getUTCDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
   }
-
-  return targetDate.toISOString().split("T")[0];
 }
 
 // 날짜 + 시간 포맷팅 함수

@@ -57,26 +57,7 @@ function renderUsers(users) {
     const row = createElement("tr");
 
     // 날짜 형식 변환 - UTC 기준으로 날짜만 추출
-    let registrationDate = "-";
-    if (user.registration_date) {
-      const dateStr = String(user.registration_date);
-      // ISO 문자열에서 날짜 부분만 추출 (시간대 영향 없음)
-      const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
-      if (match) {
-        registrationDate = match[1] + "-" + match[2] + "-" + match[3];
-      } else {
-        // Date 객체인 경우 UTC 기준으로 추출
-        try {
-          const date = new Date(dateStr);
-          const year = date.getUTCFullYear();
-          const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-          const day = String(date.getUTCDate()).padStart(2, "0");
-          registrationDate = `${year}-${month}-${day}`;
-        } catch (e) {
-          registrationDate = "-";
-        }
-      }
-    }
+    let registrationDate = formatDate(user.registration_date, true);
 
     // 회원 구분
     const accountType = user.account_type || "individual";
@@ -198,25 +179,8 @@ function renderUsers(users) {
 // 날짜를 입력 필드용 형식으로 변환 (YYYY-MM-DD)
 function formatDateForInput(dateString) {
   if (!dateString) return "";
-
-  // ISO 문자열에서 날짜 부분만 추출
-  const dateMatch = String(dateString).match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (dateMatch) {
-    return `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}`;
-  }
-
-  // Date 객체인 경우 UTC 기준으로 날짜 추출
-  try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return "";
-
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-    const day = String(date.getUTCDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  } catch (e) {
-    return "";
-  }
+  const formatted = formatDate(dateString, true); // isUTC2KST=true
+  return formatted === "-" ? "" : formatted;
 }
 
 // 회원 등록/수정 모달 열기
