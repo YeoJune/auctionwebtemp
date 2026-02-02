@@ -1348,6 +1348,6 @@ const startAutoSubmitScheduler = () => {
   }, AUTO_SUBMIT_INTERVAL);
 };
 
-startAutoSubmitScheduler();
+// startAutoSubmitScheduler();
 
 module.exports = router;
