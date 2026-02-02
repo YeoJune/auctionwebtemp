@@ -268,7 +268,7 @@
       style="display: none">
       <div class="modal-dialog">
         <div class="modal-header">
-          <h3>정산 승인</h3>
+          <h3>정산 수동 처리</h3>
           <button class="modal-close" id="settlementModalClose">&times;</button>
         </div>
         <div class="modal-body">
@@ -285,19 +285,80 @@
               <span class="label">총 청구액</span>
               <span class="value" id="stTotal">0원</span>
             </div>
+            <div class="info-row">
+              <span class="label">기 결제액</span>
+              <span class="value" id="stCompleted">0원</span>
+            </div>
             <div class="info-row highlight">
-              <span class="label">입금 확인할 금액</span>
+              <span class="label">남은 결제액</span>
               <span class="value primary" id="stRemaining">0원</span>
             </div>
           </div>
 
           <div class="form-group">
-            <label for="stAdminMemo">관리자 메모</label>
+            <label for="stDepositorName"
+              >입금자명 <span style="color: #999">(선택)</span></label
+            >
+            <input
+              type="text"
+              id="stDepositorName"
+              class="form-control"
+              placeholder="입금자명을 입력하세요"
+              maxlength="50" />
+            <small
+              style="
+                color: #666;
+                font-size: 12px;
+                margin-top: 4px;
+                display: block;
+              "
+              >현재 입금자명: <span id="stCurrentDepositorName">-</span></small
+            >
+          </div>
+
+          <div class="form-group">
+            <label for="stPaymentAmount"
+              >입금 금액 (원) <span style="color: #999">(선택)</span></label
+            >
+            <input
+              type="number"
+              id="stPaymentAmount"
+              class="form-control"
+              placeholder="미입력 시 남은 금액 전액 처리"
+              min="0"
+              step="1000" />
+            <small
+              style="
+                color: #666;
+                font-size: 12px;
+                margin-top: 4px;
+                display: block;
+              "
+              >입력하지 않으면 남은 금액 전액이 처리됩니다.</small
+            >
+          </div>
+
+          <div class="form-group">
+            <label for="stAdminMemo"
+              >관리자 메모 <span style="color: #999">(선택)</span></label
+            >
             <textarea
               id="stAdminMemo"
               class="form-control"
               rows="2"
-              placeholder="입금 확인 완료 등..."></textarea>
+              placeholder="입금 확인 관련 메모를 입력하세요"></textarea>
+          </div>
+
+          <div class="warning-box">
+            <i class="fas fa-info-circle"></i>
+            <div>
+              <p style="margin: 0 0 8px 0"><strong>수동 정산 처리</strong></p>
+              <ul style="margin: 0; padding-left: 20px; font-size: 13px">
+                <li>부분 입금 처리 가능 (여러 번 나눠서 입금 가능)</li>
+                <li>입금액 미입력 시 남은 금액 전액 처리</li>
+                <li>완납 시 자동으로 '결제 완료' 상태로 변경</li>
+              </ul>
+            </div>
           </div>
         </div>
         <div class="modal-footer">
@@ -305,7 +366,7 @@
             취소
           </button>
           <button class="btn btn-success" id="settlementApproveBtn">
-            승인
+            <i class="fas fa-check"></i> 처리
           </button>
         </div>
       </div>

@@ -1451,55 +1451,130 @@ router.get("/admin/settlements", isAdmin, async (req, res) => {
 
 /**
  * PUT /api/bid-results/admin/settlements/:id
- * 정산 상태 업데이트
+ * 정산 수동 처리 (입금자명, 입금액 기반)
+ * - 부분 결제 지원 (누적)
+ * - 입금액 미입력 시 남은 금액 전액 처리
+ * - 완납 시 자동으로 'paid' 상태로 변경
  */
 router.put("/admin/settlements/:id", isAdmin, async (req, res) => {
   const settlementId = req.params.id;
-  const { status, admin_memo } = req.body;
-
-  // 🔧 unpaid, pending, paid로 변경
-  if (!status || !["unpaid", "pending", "paid"].includes(status)) {
-    return res.status(400).json({
-      message: "Invalid status. Must be: unpaid, pending, or paid",
-    });
-  }
+  const { depositor_name, payment_amount, admin_memo } = req.body;
 
   const connection = await pool.getConnection();
 
   try {
-    // 🔧 payment_status로 변경
-    const updates = ["payment_status = ?"];
-    const params = [status];
+    await connection.beginTransaction();
 
+    // 1. 현재 정산 정보 조회
+    const [settlements] = await connection.query(
+      "SELECT * FROM daily_settlements WHERE id = ?",
+      [settlementId],
+    );
+
+    if (settlements.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ message: "Settlement not found" });
+    }
+
+    const settlement = settlements[0];
+    const finalAmount = Number(settlement.final_amount);
+    const currentCompletedAmount = Number(settlement.completed_amount || 0);
+    const remainingAmount = finalAmount - currentCompletedAmount;
+
+    // 2. 입금액 결정 (미입력 시 남은 금액 전액)
+    let paymentAmount = payment_amount
+      ? Number(payment_amount)
+      : remainingAmount;
+
+    // 3. 유효성 검사
+    if (paymentAmount <= 0) {
+      await connection.rollback();
+      return res.status(400).json({ message: "입금액은 0보다 커야 합니다." });
+    }
+
+    if (paymentAmount > remainingAmount) {
+      await connection.rollback();
+      return res.status(400).json({
+        message: `입금액(${paymentAmount.toLocaleString()}원)이 남은 금액(${remainingAmount.toLocaleString()}원)을 초과할 수 없습니다.`,
+      });
+    }
+
+    // 4. 결제액 누적 계산
+    const newCompletedAmount = currentCompletedAmount + paymentAmount;
+
+    // 5. 정산 상태 자동 결정
+    let newPaymentStatus;
+    if (newCompletedAmount >= finalAmount) {
+      newPaymentStatus = "paid"; // 완납
+    } else if (newCompletedAmount > 0) {
+      newPaymentStatus = "pending"; // 부분 입금
+    } else {
+      newPaymentStatus = "unpaid"; // 미결제
+    }
+
+    // 6. 업데이트 쿼리 구성
+    const updates = [
+      "completed_amount = ?",
+      "payment_status = ?",
+      "payment_method = 'manual'",
+    ];
+    const params = [newCompletedAmount, newPaymentStatus];
+
+    // 입금자명 업데이트 (제공된 경우)
+    if (depositor_name !== undefined && depositor_name.trim() !== "") {
+      updates.push("depositor_name = ?");
+      params.push(depositor_name.trim());
+    }
+
+    // 관리자 메모 업데이트
     if (admin_memo !== undefined) {
       updates.push("admin_memo = ?");
       params.push(admin_memo);
     }
 
-    if (status === "paid") {
+    // 완납 시 paid_at 기록
+    if (newPaymentStatus === "paid") {
       updates.push("paid_at = NOW()");
-      updates.push("completed_amount = final_amount");
     }
 
     params.push(settlementId);
 
+    // 7. 데이터베이스 업데이트
     await connection.query(
       `UPDATE daily_settlements SET ${updates.join(", ")} WHERE id = ?`,
       params,
     );
 
+    // 8. 업데이트된 데이터 조회
     const [updated] = await connection.query(
       "SELECT * FROM daily_settlements WHERE id = ?",
       [settlementId],
     );
 
+    await connection.commit();
+
+    console.log(
+      `[정산 처리] ID: ${settlementId}, 입금: ${paymentAmount.toLocaleString()}원, 누적: ${newCompletedAmount.toLocaleString()}원/${finalAmount.toLocaleString()}원, 상태: ${newPaymentStatus}`,
+    );
+
     res.json({
-      message: "Settlement status updated successfully",
+      message: "정산 처리가 완료되었습니다.",
       settlement: updated[0],
+      payment_info: {
+        payment_amount: paymentAmount,
+        previous_completed: currentCompletedAmount,
+        new_completed: newCompletedAmount,
+        remaining: finalAmount - newCompletedAmount,
+        status: newPaymentStatus,
+      },
     });
   } catch (err) {
-    console.error("Error updating settlement:", err);
-    res.status(500).json({ message: "Error updating settlement" });
+    await connection.rollback();
+    console.error("Error processing settlement:", err);
+    res.status(500).json({
+      message: "정산 처리 중 오류가 발생했습니다.",
+      error: err.message,
+    });
   } finally {
     connection.release();
   }

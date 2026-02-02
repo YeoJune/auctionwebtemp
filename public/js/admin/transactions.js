@@ -335,23 +335,18 @@ function renderSettlements() {
   tbody.innerHTML = state.settlements.results
     .map((st) => {
       const remaining = st.final_amount - (st.completed_amount || 0);
-      // 🔧 수정: st.status → st.payment_status
       const statusBadge = getPaymentStatusBadge(st.payment_status);
 
-      let actionBtn = "";
-      // 🔧 수정: st.status → st.payment_status
-      if (st.payment_status === "pending") {
-        actionBtn = `
+      // 모든 상태에서 수동 처리 버튼 표시
+      const actionBtn = `
         <button 
-          class="btn btn-sm btn-success" 
-          onclick="openSettlementApprovalModal(${st.id}, '${st.login_id || st.user_id}', '${st.settlement_date}', ${st.final_amount}, ${st.completed_amount || 0})"
+          class="btn btn-sm btn-primary" 
+          onclick="openSettlementApprovalModal(${st.id}, '${st.login_id || st.user_id}', '${st.settlement_date}', ${st.final_amount}, ${st.completed_amount || 0}, '${st.depositor_name || ""}')"
+          title="수동 정산 처리"
         >
-          <i class="fas fa-check"></i> 승인
+          <i class="fas fa-hand-holding-usd"></i> 처리
         </button>
       `;
-      } else {
-        actionBtn = '<span class="text-muted">-</span>';
-      }
 
       return `
       <tr>
@@ -512,7 +507,14 @@ function setupSettlementModalEvents() {
     ?.addEventListener("click", approveSettlement);
 }
 
-function openSettlementApprovalModal(id, userId, date, total, completed) {
+function openSettlementApprovalModal(
+  id,
+  userId,
+  date,
+  total,
+  completed,
+  depositorName = null,
+) {
   currentSettlement = {
     id,
     userId,
@@ -520,13 +522,24 @@ function openSettlementApprovalModal(id, userId, date, total, completed) {
     total,
     completed,
     remaining: total - completed,
+    depositorName,
   };
 
   document.getElementById("stUserId").textContent = userId;
   document.getElementById("stDate").textContent = date;
   document.getElementById("stTotal").textContent = `₩${total.toLocaleString()}`;
+  document.getElementById("stCompleted").textContent =
+    `₩${completed.toLocaleString()}`;
   document.getElementById("stRemaining").textContent =
     `₩${(total - completed).toLocaleString()}`;
+
+  // 현재 입금자명 표시
+  document.getElementById("stCurrentDepositorName").textContent =
+    depositorName || "-";
+
+  // 입력 필드 초기화
+  document.getElementById("stDepositorName").value = "";
+  document.getElementById("stPaymentAmount").value = ""; // 빈 값으로 설정 (전액 처리)
   document.getElementById("stAdminMemo").value = "";
 
   document.getElementById("settlementApprovalModal").style.display = "flex";
@@ -540,32 +553,87 @@ function closeSettlementModal() {
 async function approveSettlement() {
   if (!currentSettlement) return;
 
-  const memo =
-    document.getElementById("stAdminMemo").value.trim() || "입금 확인 완료";
+  const depositorName = document.getElementById("stDepositorName").value.trim();
+  const paymentAmountStr = document
+    .getElementById("stPaymentAmount")
+    .value.trim();
+  const memo = document.getElementById("stAdminMemo").value.trim();
 
-  if (!confirm(`${currentSettlement.userId}의 정산을 승인하시겠습니까?`)) {
+  // 입금액 처리 (미입력 시 undefined로 전송하여 백엔드에서 전액 처리)
+  const paymentAmount =
+    paymentAmountStr && paymentAmountStr !== ""
+      ? parseInt(paymentAmountStr)
+      : undefined;
+
+  // 입금액이 입력된 경우 유효성 검사
+  if (paymentAmount !== undefined) {
+    if (paymentAmount <= 0) {
+      alert("입금 금액은 0보다 커야 합니다.");
+      return;
+    }
+
+    if (paymentAmount > currentSettlement.remaining) {
+      alert(
+        `입금 금액(₩${paymentAmount.toLocaleString()})이 남은 결제액(₩${currentSettlement.remaining.toLocaleString()})을 초과할 수 없습니다.`,
+      );
+      return;
+    }
+  }
+
+  // 확인 메시지
+  const amountText = paymentAmount
+    ? `₩${paymentAmount.toLocaleString()}`
+    : `₩${currentSettlement.remaining.toLocaleString()} (전액)`;
+  const depositorText = depositorName ? `\n입금자: ${depositorName}` : "";
+
+  if (
+    !confirm(
+      `${currentSettlement.userId}의 정산을 처리하시겠습니까?\n금액: ${amountText}${depositorText}`,
+    )
+  ) {
     return;
   }
 
   try {
-    await window.API.fetchAPI(
+    // 백엔드 API 호출
+    const requestBody = {
+      admin_memo: memo || "수동 정산 처리",
+    };
+
+    // 선택적 파라미터 추가
+    if (depositorName) {
+      requestBody.depositor_name = depositorName;
+    }
+    if (paymentAmount !== undefined) {
+      requestBody.payment_amount = paymentAmount;
+    }
+
+    const response = await window.API.fetchAPI(
       `/bid-results/admin/settlements/${currentSettlement.id}`,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status: "paid",
-          admin_memo: memo,
-        }),
+        body: JSON.stringify(requestBody),
       },
     );
 
-    alert("정산이 승인되었습니다.");
-    closeSettlementModal();
-    await loadSettlements();
+    if (response && response.settlement) {
+      const paymentInfo = response.payment_info || {};
+      alert(
+        `정산 처리가 완료되었습니다.\n\n` +
+          `처리 금액: ₩${(paymentInfo.payment_amount || 0).toLocaleString()}\n` +
+          `누적 결제액: ₩${(paymentInfo.new_completed || 0).toLocaleString()}\n` +
+          `남은 금액: ₩${(paymentInfo.remaining || 0).toLocaleString()}\n` +
+          `상태: ${paymentInfo.status === "paid" ? "결제 완료" : paymentInfo.status === "pending" ? "부분 입금" : "미결제"}`,
+      );
+      closeSettlementModal();
+      await loadSettlements();
+    } else {
+      throw new Error(response.message || "정산 처리에 실패했습니다.");
+    }
   } catch (error) {
-    console.error("정산 승인 실패:", error);
-    alert("정산 승인 중 오류가 발생했습니다.\n" + (error.message || ""));
+    console.error("정산 처리 실패:", error);
+    alert("정산 처리 중 오류가 발생했습니다.\n" + (error.message || ""));
   }
 }
 
