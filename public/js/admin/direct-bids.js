@@ -73,12 +73,12 @@ const DirectBidsRealtimeManager = (function () {
       // 현재 표시된 직접경매 테이블의 item_id들과 비교
       const visibleItemIds = getVisibleDirectBidItemIds();
       const itemsToUpdate = data.itemIds.filter((id) =>
-        visibleItemIds.includes(id)
+        visibleItemIds.includes(id),
       );
 
       if (itemsToUpdate.length > 0) {
         console.log(
-          `${itemsToUpdate.length}개 아이템 업데이트 - 테이블 새로고침`
+          `${itemsToUpdate.length}개 아이템 업데이트 - 테이블 새로고침`,
         );
         debouncedLoadDirectBids();
       }
@@ -438,7 +438,7 @@ async function loadDirectBids() {
       fromDate,
       toDate,
       currentSearch,
-      currentAucNum
+      currentAucNum,
     );
 
     if (!directBids?.bids || directBids.count === 0) {
@@ -455,7 +455,7 @@ async function loadDirectBids() {
     renderPagination(
       directBids.currentPage,
       directBids.totalPages,
-      directBids.total
+      directBids.total,
     );
     totalPages = directBids.totalPages;
   } catch (error) {
@@ -463,7 +463,7 @@ async function loadDirectBids() {
     handleError(error, "직접 경매 데이터를 불러오는 중 오류가 발생했습니다.");
     showNoData(
       "directBidsTableBody",
-      "데이터를 불러오는 중 오류가 발생했습니다."
+      "데이터를 불러오는 중 오류가 발생했습니다.",
     );
     renderPagination(0, 0, 0);
   }
@@ -595,7 +595,7 @@ function renderDirectBidsTable(directBids) {
       (bid.item.original_scheduled_date || bid.item.scheduled_date)
     ) {
       const date = new Date(
-        bid.item.original_scheduled_date || bid.item.scheduled_date
+        bid.item.original_scheduled_date || bid.item.scheduled_date,
       );
       scheduledDate = new Intl.DateTimeFormat("ko-KR", {
         timeZone: "Asia/Seoul",
@@ -624,7 +624,7 @@ function renderDirectBidsTable(directBids) {
     if (bid.item && bid.item.auc_num && linkFunc[bid.item.auc_num]) {
       itemUrl = linkFunc[bid.item.auc_num](
         bid.item_id,
-        JSON.parse(bid.item.additional_info)
+        JSON.parse(bid.item.additional_info),
       );
     }
 
@@ -647,7 +647,7 @@ function renderDirectBidsTable(directBids) {
       const calculatedPrice = calculateTotalPrice(
         bid.current_price,
         auc_num,
-        itemCategory
+        itemCategory,
       );
       totalPrice = formatCurrency(calculatedPrice, "KRW");
     }
@@ -656,7 +656,7 @@ function renderDirectBidsTable(directBids) {
       const calculatedWinningPrice = calculateTotalPrice(
         bid.winning_price,
         auc_num,
-        itemCategory
+        itemCategory,
       );
       winningTotalPrice = formatCurrency(calculatedWinningPrice, "KRW");
     }
@@ -692,7 +692,7 @@ function renderDirectBidsTable(directBids) {
       </div>
     </td>
     <td>
-     <div>${bid.user_id}<br>(${bid.company_name || "-"})</div>
+     <div>${bid.login_id || bid.user_id}<br>(${bid.company_name || "-"})</div>
    </td>
    <td>
      <div>현지가: ${formatCurrency(bid.current_price, "JPY")}</div>
@@ -741,7 +741,7 @@ function addCheckboxEventListeners() {
 
 function updateBulkActionButtons() {
   const checkedCount = document.querySelectorAll(
-    ".bid-checkbox:checked"
+    ".bid-checkbox:checked",
   ).length;
   document.getElementById("bulkCompleteBtn").disabled = checkedCount === 0;
   document.getElementById("bulkCancelBtn").disabled = checkedCount === 0;
@@ -768,7 +768,7 @@ function openCompleteModal(bidId) {
 function updateWinningPriceKRW() {
   const bidId = document.getElementById("completeBidId").value;
   const winningPrice = parseFloat(
-    document.getElementById("winningPrice").value
+    document.getElementById("winningPrice").value,
   );
 
   if (!winningPrice || isNaN(winningPrice)) {
@@ -779,7 +779,7 @@ function updateWinningPriceKRW() {
 
   // 해당 입찰 찾기
   const checkbox = document.querySelector(
-    `.bid-checkbox[data-bid-id="${bidId}"]`
+    `.bid-checkbox[data-bid-id="${bidId}"]`,
   );
   if (!checkbox) return;
 
@@ -790,9 +790,8 @@ function updateWinningPriceKRW() {
 
   // 관부가세 포함 가격 계산
   const totalPrice = calculateTotalPrice(winningPrice, auc_num, category);
-  document.getElementById(
-    "winningPriceKRW"
-  ).textContent = `관부가세 포함: ${formatCurrency(totalPrice, "KRW")}`;
+  document.getElementById("winningPriceKRW").textContent =
+    `관부가세 포함: ${formatCurrency(totalPrice, "KRW")}`;
 
   // 현재 입찰가와 비교
   const priceComparisonMsg = document.getElementById("priceComparisonMessage");
@@ -909,7 +908,7 @@ function openBulkCompleteModal() {
 // 일괄 관부가세 포함 가격 업데이트
 function updateBulkWinningPriceKRW() {
   const winningPrice = parseFloat(
-    document.getElementById("bulkWinningPrice").value
+    document.getElementById("bulkWinningPrice").value,
   );
   if (!winningPrice || isNaN(winningPrice)) {
     document.getElementById("bulkWinningPriceKRW").textContent =
@@ -919,9 +918,8 @@ function updateBulkWinningPriceKRW() {
 
   // 카테고리와 경매번호는 일괄 처리에서 단순화를 위해 기본값 사용
   const totalPrice = calculateTotalPrice(winningPrice, 1, "기타");
-  document.getElementById(
-    "bulkWinningPriceKRW"
-  ).textContent = `관부가세 포함: ${formatCurrency(totalPrice, "KRW")}`;
+  document.getElementById("bulkWinningPriceKRW").textContent =
+    `관부가세 포함: ${formatCurrency(totalPrice, "KRW")}`;
 }
 
 // 일괄 낙찰 완료 제출
@@ -934,7 +932,7 @@ async function submitBulkComplete() {
 
   try {
     const bidIds = Array.from(checkedBids).map((checkbox) =>
-      parseInt(checkbox.dataset.bidId)
+      parseInt(checkbox.dataset.bidId),
     );
 
     const winningPriceValue = document.getElementById("bulkWinningPrice").value;
@@ -973,7 +971,7 @@ async function submitBulkCancel() {
 
   try {
     const bidIds = Array.from(checkedBids).map((checkbox) =>
-      parseInt(checkbox.dataset.bidId)
+      parseInt(checkbox.dataset.bidId),
     );
 
     await cancelDirectBid(bidIds);
@@ -981,7 +979,7 @@ async function submitBulkCancel() {
     closeAllModals();
     showAlert(
       `${bidIds.length}개 입찰이 낙찰 실패로 처리되었습니다.`,
-      "success"
+      "success",
     );
     await loadDirectBids();
   } catch (error) {
@@ -1010,7 +1008,7 @@ async function submitBulkMarkAsSubmitted() {
 
   try {
     const bidIds = Array.from(checkedBids).map((checkbox) =>
-      parseInt(checkbox.dataset.bidId)
+      parseInt(checkbox.dataset.bidId),
     );
 
     await markDirectBidAsSubmitted(bidIds);
@@ -1018,7 +1016,7 @@ async function submitBulkMarkAsSubmitted() {
     closeAllModals();
     showAlert(
       `${bidIds.length}개 입찰이 플랫폼 반영 완료로 표시되었습니다.`,
-      "success"
+      "success",
     );
     await loadDirectBids();
   } catch (error) {
@@ -1055,8 +1053,8 @@ function openEditBidModal(bidId) {
         status: statusText.includes("활성")
           ? "active"
           : statusText.includes("완료")
-          ? "completed"
-          : "cancelled",
+            ? "completed"
+            : "cancelled",
         submitted_to_platform: submittedText.includes("반영됨"),
       };
       break;
@@ -1090,7 +1088,7 @@ async function submitEditBid() {
   const currentPriceValue = document.getElementById("editCurrentPrice").value;
   const status = document.getElementById("editStatus").value;
   const submittedToPlatform = document.getElementById(
-    "editSubmittedToPlatform"
+    "editSubmittedToPlatform",
   ).checked;
   const winningPriceValue = document.getElementById("editWinningPrice").value;
 
@@ -1138,7 +1136,7 @@ async function markAsShipped(bidId) {
 async function bulkMarkAsShipped() {
   const checkedBoxes = document.querySelectorAll(".bid-checkbox:checked");
   const bidIds = Array.from(checkedBoxes).map((cb) =>
-    parseInt(cb.dataset.bidId)
+    parseInt(cb.dataset.bidId),
   );
 
   if (bidIds.length === 0) {
@@ -1155,13 +1153,13 @@ async function bulkMarkAsShipped() {
   try {
     // 각 항목에 대해 개별적으로 상태 업데이트
     const promises = bidIds.map((bidId) =>
-      updateDirectBid(bidId, { status: "shipped" })
+      updateDirectBid(bidId, { status: "shipped" }),
     );
     await Promise.all(promises);
 
     showAlert(
       `${bidIds.length}개 항목이 출고됨으로 변경되었습니다.`,
-      "success"
+      "success",
     );
     await loadDirectBids();
   } catch (error) {
@@ -1208,7 +1206,7 @@ function openRepairModal(bidId, bidType, repairData = null) {
     // 신청 시간 표시
     requestedAtGroup.style.display = "block";
     requestedAtText.textContent = formatDateTime(
-      repairData.repair_requested_at
+      repairData.repair_requested_at,
     );
 
     // 취소 버튼 표시
@@ -1273,7 +1271,7 @@ async function submitRepair() {
         (isEdit
           ? "수선 정보가 수정되었습니다."
           : "수선 접수가 완료되었습니다."),
-      "success"
+      "success",
     );
     await loadDirectBids();
   } catch (error) {
@@ -1281,7 +1279,7 @@ async function submitRepair() {
       error,
       isEdit
         ? "수선 정보 수정 중 오류가 발생했습니다."
-        : "수선 접수 중 오류가 발생했습니다."
+        : "수선 접수 중 오류가 발생했습니다.",
     );
   }
 }

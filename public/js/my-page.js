@@ -891,7 +891,7 @@ class MyPageManager {
   populateAccountForm() {
     const data = this.userData;
 
-    document.getElementById("user-id").value = data.id || "";
+    document.getElementById("user-id").value = data.login_id || data.id || "";
     document.getElementById("user-email").value = data.email || "";
     document.getElementById("user-phone").value = data.phone || "";
     document.getElementById("registration-date").value = data.registration_date

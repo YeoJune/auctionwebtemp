@@ -221,10 +221,10 @@ function renderDeposits() {
       let actionBtn = "";
       if (tx.status === "pending") {
         actionBtn = `
-        <button class="btn btn-sm btn-success" onclick="openDepositApprovalModal(${tx.id}, '${tx.user_id}', '${tx.type}', ${tx.amount})">
+        <button class="btn btn-sm btn-success" onclick="openDepositApprovalModal(${tx.id}, '${tx.login_id || tx.user_id}', '${tx.type}', ${tx.amount})">
           <i class="fas fa-check"></i> 승인
         </button>
-        <button class="btn btn-sm btn-danger" onclick="openDepositRejectionModal(${tx.id}, '${tx.user_id}', '${tx.type}', ${tx.amount})">
+        <button class="btn btn-sm btn-danger" onclick="openDepositRejectionModal(${tx.id}, '${tx.login_id || tx.user_id}', '${tx.type}', ${tx.amount})">
           <i class="fas fa-times"></i> 거절
         </button>
       `;
@@ -235,7 +235,7 @@ function renderDeposits() {
       return `
       <tr>
         <td>${tx.id}</td>
-        <td>${tx.user_id}</td>
+        <td>${tx.login_id || tx.user_id}</td>
         <td>${typeText}</td>
         <td class="text-right">₩${tx.amount.toLocaleString()}</td>
         <td>${tx.depositor_name || "-"}</td>
@@ -344,7 +344,7 @@ function renderSettlements() {
         actionBtn = `
         <button 
           class="btn btn-sm btn-success" 
-          onclick="openSettlementApprovalModal(${st.id}, '${st.user_id}', '${st.settlement_date}', ${st.final_amount}, ${st.completed_amount || 0})"
+          onclick="openSettlementApprovalModal(${st.id}, '${st.login_id || st.user_id}', '${st.settlement_date}', ${st.final_amount}, ${st.completed_amount || 0})"
         >
           <i class="fas fa-check"></i> 승인
         </button>
@@ -356,7 +356,7 @@ function renderSettlements() {
       return `
       <tr>
         <td>${st.id}</td>
-        <td>${st.user_id}</td>
+        <td>${st.login_id || st.user_id}</td>
         <td>${st.settlement_date}</td>
         <td class="text-right">₩${st.final_amount.toLocaleString()}</td>
         <td class="text-right">₩${(st.completed_amount || 0).toLocaleString()}</td>

@@ -359,7 +359,7 @@ async function loadLiveBids() {
       fromDate,
       toDate,
       currentSearch,
-      currentAucNum
+      currentAucNum,
     );
 
     if (!liveBids?.bids || liveBids.count === 0) {
@@ -375,7 +375,7 @@ async function loadLiveBids() {
     handleError(error, "현장 경매 데이터를 불러오는 중 오류가 발생했습니다.");
     showNoData(
       "liveBidsTableBody",
-      "데이터를 불러오는 중 오류가 발생했습니다."
+      "데이터를 불러오는 중 오류가 발생했습니다.",
     );
     renderPagination(0, 0, 0);
   }
@@ -489,7 +489,7 @@ function renderLiveBidsTable(liveBids) {
       (bid.item.original_scheduled_date || bid.item.scheduled_date)
     ) {
       const date = new Date(
-        bid.item.original_scheduled_date || bid.item.scheduled_date
+        bid.item.original_scheduled_date || bid.item.scheduled_date,
       );
       scheduledDate = new Intl.DateTimeFormat("ko-KR", {
         timeZone: "Asia/Seoul",
@@ -506,7 +506,7 @@ function renderLiveBidsTable(liveBids) {
     if (bid.item && bid.item.auc_num && linkFunc[bid.item.auc_num]) {
       itemUrl = linkFunc[bid.item.auc_num](
         bid.item_id,
-        JSON.parse(bid.item.additional_info)
+        JSON.parse(bid.item.additional_info),
       );
     }
 
@@ -538,28 +538,28 @@ function renderLiveBidsTable(liveBids) {
       if (bid.first_price) {
         firstTotalPrice = formatCurrency(
           calculateTotalPrice(bid.first_price, auc_num, category),
-          "KRW"
+          "KRW",
         );
       }
 
       if (bid.second_price) {
         secondTotalPrice = formatCurrency(
           calculateTotalPrice(bid.second_price, auc_num, category),
-          "KRW"
+          "KRW",
         );
       }
 
       if (bid.final_price) {
         finalTotalPrice = formatCurrency(
           calculateTotalPrice(bid.final_price, auc_num, category),
-          "KRW"
+          "KRW",
         );
       }
 
       if (bid.winning_price) {
         winningTotalPrice = formatCurrency(
           calculateTotalPrice(bid.winning_price, auc_num, category),
-          "KRW"
+          "KRW",
         );
       }
     }
@@ -575,8 +575,8 @@ function renderLiveBidsTable(liveBids) {
     <td>
       <div class="item-info">
         <img src="${imagePath}" alt="${
-      bid.item?.title || ""
-    }" class="item-thumbnail" />
+          bid.item?.title || ""
+        }" class="item-thumbnail" />
         <div class="item-details">
           <div><a href="${itemUrl}" target="_blank">${bid.item_id}</a></div>
           <div class="item-meta">
@@ -597,7 +597,7 @@ function renderLiveBidsTable(liveBids) {
       </div>
     </td>
     <td>
-      <div>${bid.user_id}<br>(${bid.company_name || "-"})</div>
+      <div>${bid.login_id || bid.user_id}<br>(${bid.company_name || "-"})</div>
     </td>
     <td>
       <div>현지가: ${formatCurrency(bid.first_price, "JPY")}</div>
@@ -657,7 +657,7 @@ function addCheckboxEventListeners() {
 // 일괄 처리 버튼 상태 업데이트
 function updateBulkActionButtons() {
   const checkedCount = document.querySelectorAll(
-    ".bid-checkbox:checked"
+    ".bid-checkbox:checked",
   ).length;
   const bulkCompleteBtn = document.getElementById("bulkCompleteBtn");
   const bulkCancelBtn = document.getElementById("bulkCancelBtn");
@@ -718,7 +718,7 @@ function openCompleteModal(bidId) {
 function updateWinningPriceKRW() {
   const bidId = document.getElementById("completeBidId").value;
   const winningPrice = parseFloat(
-    document.getElementById("winningPrice").value
+    document.getElementById("winningPrice").value,
   );
 
   if (!winningPrice || isNaN(winningPrice)) {
@@ -728,7 +728,7 @@ function updateWinningPriceKRW() {
   }
 
   const checkbox = document.querySelector(
-    `.bid-checkbox[data-bid-id="${bidId}"]`
+    `.bid-checkbox[data-bid-id="${bidId}"]`,
   );
   if (!checkbox) return;
 
@@ -737,9 +737,8 @@ function updateWinningPriceKRW() {
   const finalPrice = parseFloat(checkbox.getAttribute("data-final-price")) || 0;
 
   const totalPrice = calculateTotalPrice(winningPrice, auc_num, category);
-  document.getElementById(
-    "winningPriceKRW"
-  ).textContent = `관부가세 포함: ${formatCurrency(totalPrice, "KRW")}`;
+  document.getElementById("winningPriceKRW").textContent =
+    `관부가세 포함: ${formatCurrency(totalPrice, "KRW")}`;
 
   const priceComparisonMsg = document.getElementById("priceComparisonMessage");
   if (finalPrice && winningPrice > finalPrice) {
@@ -830,7 +829,7 @@ function openBulkCompleteModal() {
 // 일괄 관부가세 포함 가격 업데이트
 function updateBulkWinningPriceKRW() {
   const winningPrice = parseFloat(
-    document.getElementById("bulkWinningPrice").value
+    document.getElementById("bulkWinningPrice").value,
   );
   if (!winningPrice || isNaN(winningPrice)) {
     document.getElementById("bulkWinningPriceKRW").textContent =
@@ -839,9 +838,8 @@ function updateBulkWinningPriceKRW() {
   }
 
   const totalPrice = calculateTotalPrice(winningPrice, 1, "기타");
-  document.getElementById(
-    "bulkWinningPriceKRW"
-  ).textContent = `관부가세 포함: ${formatCurrency(totalPrice, "KRW")}`;
+  document.getElementById("bulkWinningPriceKRW").textContent =
+    `관부가세 포함: ${formatCurrency(totalPrice, "KRW")}`;
 }
 
 // 일괄 낙찰 완료 제출
@@ -854,7 +852,7 @@ async function submitBulkComplete() {
 
   try {
     const bidIds = Array.from(checkedBids).map((checkbox) =>
-      parseInt(checkbox.dataset.bidId)
+      parseInt(checkbox.dataset.bidId),
     );
 
     const winningPriceValue = document.getElementById("bulkWinningPrice").value;
@@ -896,14 +894,14 @@ async function submitBulkCancel() {
 
   try {
     const bidIds = Array.from(checkedBids).map((checkbox) =>
-      parseInt(checkbox.dataset.bidId)
+      parseInt(checkbox.dataset.bidId),
     );
 
     await cancelBid(bidIds);
     closeAllModals();
     showAlert(
       `${bidIds.length}개 입찰이 낙찰 실패로 처리되었습니다.`,
-      "success"
+      "success",
     );
     await loadLiveBids();
   } catch (error) {
@@ -949,12 +947,12 @@ function openEditBidModal(bidId) {
         status: statusText.includes("1차 입찰")
           ? "first"
           : statusText.includes("2차 제안")
-          ? "second"
-          : statusText.includes("최종 입찰")
-          ? "final"
-          : statusText.includes("완료")
-          ? "completed"
-          : "cancelled",
+            ? "second"
+            : statusText.includes("최종 입찰")
+              ? "final"
+              : statusText.includes("완료")
+                ? "completed"
+                : "cancelled",
       };
       break;
     }
@@ -1036,7 +1034,7 @@ async function markAsShipped(bidId) {
 async function bulkMarkAsShipped() {
   const checkedBoxes = document.querySelectorAll(".bid-checkbox:checked");
   const bidIds = Array.from(checkedBoxes).map((cb) =>
-    parseInt(cb.dataset.bidId)
+    parseInt(cb.dataset.bidId),
   );
 
   if (bidIds.length === 0) {
@@ -1053,13 +1051,13 @@ async function bulkMarkAsShipped() {
   try {
     // 각 항목에 대해 개별적으로 상태 업데이트
     const promises = bidIds.map((bidId) =>
-      updateLiveBid(bidId, { status: "shipped" })
+      updateLiveBid(bidId, { status: "shipped" }),
     );
     await Promise.all(promises);
 
     showAlert(
       `${bidIds.length}개 항목이 출고됨으로 변경되었습니다.`,
-      "success"
+      "success",
     );
     await loadLiveBids();
   } catch (error) {
@@ -1106,7 +1104,7 @@ function openRepairModal(bidId, bidType, repairData = null) {
     // 신청 시간 표시
     requestedAtGroup.style.display = "block";
     requestedAtText.textContent = formatDateTime(
-      repairData.repair_requested_at
+      repairData.repair_requested_at,
     );
 
     // 취소 버튼 표시
@@ -1171,7 +1169,7 @@ async function submitRepair() {
         (isEdit
           ? "수선 정보가 수정되었습니다."
           : "수선 접수가 완료되었습니다."),
-      "success"
+      "success",
     );
     await loadLiveBids();
   } catch (error) {
@@ -1179,7 +1177,7 @@ async function submitRepair() {
       error,
       isEdit
         ? "수선 정보 수정 중 오류가 발생했습니다."
-        : "수선 접수 중 오류가 발생했습니다."
+        : "수선 접수 중 오류가 발생했습니다.",
     );
   }
 }

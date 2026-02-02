@@ -32,7 +32,7 @@ router.get("/current", requireAuth, async (req, res) => {
 
     // 사용자 정보 조회 - normal 사용자만
     const [users] = await conn.query(
-      `SELECT id, registration_date, email, business_number, company_name, 
+      `SELECT id, login_id, registration_date, email, business_number, company_name, 
        phone, address, is_active, created_at, commission_rate 
        FROM users WHERE id = ? AND role = 'normal'`,
       [userId],

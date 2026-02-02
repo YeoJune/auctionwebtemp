@@ -28,7 +28,7 @@ async function loadDashboardData() {
     updateBusinessKPIs(
       kpiData.successRate,
       kpiData.avgBidPrice,
-      kpiData.todayBids
+      kpiData.todayBids,
     );
 
     // 활성 경매 데이터 로드
@@ -243,7 +243,7 @@ function updateActiveUsers(users) {
 
     html += `
       <div class="active-user">
-        <div class="user-id">${user.user_id}</div>
+        <div class="user-id">${user.login_id || user.user_id}</div>
         <div class="activity-stats">
           <span>마지막 활동: ${lastActivity}</span>
           <span>활동 수: ${user.bid_count}회</span>

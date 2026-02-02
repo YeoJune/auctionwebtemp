@@ -291,17 +291,19 @@ router.get("/active-users", isAdmin, async (req, res) => {
   const connection = await pool.getConnection();
 
   try {
-    // 각 테이블의 최근 활동 데이터 조회
+    // 각 테이블의 최근 활동 데이터 조회 (login_id 포함)
     const [liveBidUsers] = await connection.query(`
-      SELECT user_id, updated_at
-      FROM live_bids
-      ORDER BY updated_at DESC
+      SELECT lb.user_id, lb.updated_at, u.login_id
+      FROM live_bids lb
+      LEFT JOIN users u ON lb.user_id = u.id
+      ORDER BY lb.updated_at DESC
     `);
 
     const [directBidUsers] = await connection.query(`
-      SELECT user_id, updated_at
-      FROM direct_bids
-      ORDER BY updated_at DESC
+      SELECT db.user_id, db.updated_at, u.login_id
+      FROM direct_bids db
+      LEFT JOIN users u ON db.user_id = u.id
+      ORDER BY db.updated_at DESC
     `);
 
     // 자바스크립트에서 데이터 가공
@@ -318,6 +320,7 @@ router.get("/active-users", isAdmin, async (req, res) => {
       ) {
         userActivities[userId] = {
           user_id: userId,
+          login_id: activity.login_id,
           last_activity: activity.updated_at,
           bid_count: userActivities[userId]
             ? userActivities[userId].bid_count + 1
@@ -339,6 +342,7 @@ router.get("/active-users", isAdmin, async (req, res) => {
       ) {
         userActivities[userId] = {
           user_id: userId,
+          login_id: activity.login_id,
           last_activity: activity.updated_at,
           bid_count: userActivities[userId]
             ? userActivities[userId].bid_count + 1

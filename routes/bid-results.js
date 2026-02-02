@@ -1423,7 +1423,9 @@ router.get("/admin/settlements", isAdmin, async (req, res) => {
     const offset = (page - 1) * limit;
 
     const [settlements] = await connection.query(
-      `SELECT * FROM daily_settlements 
+      `SELECT ds.*, u.login_id
+       FROM daily_settlements ds
+       LEFT JOIN users u ON ds.user_id = u.id
        WHERE ${whereClause}
        ORDER BY ${orderByClause}
        LIMIT ? OFFSET ?`,
@@ -2067,6 +2069,7 @@ router.get("/admin/bid-results", isAdmin, async (req, res) => {
       `SELECT 
          ds.id as settlementId,
          ds.user_id as userId,
+         u.login_id as userLoginId,
          ds.settlement_date as date,
          ds.item_count as itemCount,
          ds.final_amount as grandTotal,
@@ -2074,6 +2077,7 @@ router.get("/admin/bid-results", isAdmin, async (req, res) => {
          ds.payment_status as paymentStatus,
          ds.depositor_name as depositorName
        FROM daily_settlements ds
+       LEFT JOIN users u ON ds.user_id = u.id
        WHERE ${whereClause}
        ORDER BY ${orderByField} ${sortOrder.toUpperCase()}
        LIMIT ? OFFSET ?`,

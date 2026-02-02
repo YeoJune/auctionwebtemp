@@ -292,7 +292,7 @@ function createSettlementRow(settlement, index) {
       </div>
       <div class="summary-item">
         <span class="label">유저 ID</span>
-        <span class="value">${settlement.userId}</span>
+        <span class="value">${settlement.userLoginId || settlement.userId}</span>
       </div>
       <div class="summary-item">
         <span class="label">상품 수</span>
@@ -472,7 +472,7 @@ function createDetailContent(settlement, detailData) {
         <div class="detail-grid">
           <div class="detail-item">
             <span class="label">유저 ID</span>
-            <span class="value">${settlement.userId}</span>
+            <span class="value">${settlement.userLoginId || settlement.userId}</span>
           </div>
           <div class="detail-item">
             <span class="label">날짜</span>
@@ -569,7 +569,7 @@ function openSettlementApprovalModal(settlement) {
 
   // 모달 데이터 채우기
   document.getElementById("approvalUserId").textContent =
-    settlement.userId || "-";
+    settlement.userLoginId || settlement.userId || "-";
   document.getElementById("approvalDate").textContent =
     formatDate(settlement.date) || "-";
   document.getElementById("approvalDepositorName").textContent =
