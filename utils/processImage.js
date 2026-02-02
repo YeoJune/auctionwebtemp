@@ -134,7 +134,9 @@ async function downloadAndSaveImage(
       const response = await client.client({
         method: "GET",
         url: url,
-        responseType: "arraybuffer",
+        responseType: "arraybuffer",headers: {
+            Referer: "https://penguin-auction.jp/",
+          },
       });
 
       const filePath = path.join(IMAGE_DIR, fileName);
