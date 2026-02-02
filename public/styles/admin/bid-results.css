@@ -438,7 +438,7 @@
 /* 1단계: 날짜별 아코디언 */
 .daily-row-wrapper {
   background: #fff;
-  border: 2px solid #007bff;
+  border: 2px solid #dee2e6;
   border-radius: 8px;
   margin-bottom: 16px;
   overflow: hidden;
@@ -446,8 +446,8 @@
 }
 
 .daily-row-wrapper:hover {
-  border-color: #0056b3;
-  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
+  border-color: #adb5bd;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .daily-header {
@@ -455,13 +455,14 @@
   justify-content: space-between;
   align-items: center;
   padding: 18px 20px;
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  background: #fff;
+  border-bottom: 2px solid #e9ecef;
   cursor: pointer;
   user-select: none;
 }
 
 .daily-header:hover {
-  background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+  background: #f8f9fa;
 }
 
 .daily-summary {
@@ -483,7 +484,7 @@
 
 .daily-summary .summary-item .label {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.85);
+  color: #6c757d;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -491,7 +492,7 @@
 
 .daily-summary .summary-item .value {
   font-size: 16px;
-  color: #fff;
+  color: #212529;
   font-weight: 700;
 }
 
@@ -604,11 +605,11 @@
 }
 
 .daily-header .toggle-btn {
-  color: rgba(255, 255, 255, 0.9);
+  color: #495057;
 }
 
 .daily-header .toggle-btn:hover {
-  color: #fff;
+  color: #212529;
   transform: scale(1.15);
 }
 
