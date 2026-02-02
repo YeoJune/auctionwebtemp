@@ -83,7 +83,7 @@ function renderUsers(users) {
     }
 
     row.innerHTML = `
-      <td>${user.id}</td>
+      <td>${user.login_id || user.id}</td>
       <td>${accountTypeText}</td>
       <td>${balanceInfo}</td>
       <td>${registrationDate}</td>
@@ -203,8 +203,9 @@ function openUserForm(user = null) {
   if (user) {
     editMode.value = "1";
     document.getElementById("userFormTitle").textContent = "회원 정보 수정";
-    userId.value = user.id;
-    userId.readOnly = true;
+    userId.value = user.login_id || user.id;
+    userId.readOnly = false; // 아이디 수정 가능하게 변경
+    userId.dataset.originalId = user.id; // 원본 DB ID 저장
 
     // 사용자 데이터 설정
     if (user.registration_date) {
@@ -300,7 +301,9 @@ function handleAccountTypeChange() {
 async function saveUser() {
   try {
     const editMode = document.getElementById("editMode").value === "1";
-    const id = document.getElementById("userId").value;
+    const userId = document.getElementById("userId");
+    const id = userId.value;
+    const originalId = userId.dataset.originalId; // 원본 DB ID (수정 시)
     const password = document.getElementById("userPassword").value;
     const registrationDate = document.getElementById("registrationDate").value;
     const businessNumber = document.getElementById("businessNumber").value;
@@ -376,6 +379,11 @@ async function saveUser() {
         : null,
     };
 
+    // 수정 모드일 때 login_id 변경 사항 추가
+    if (editMode && originalId) {
+      userData.new_login_id = id; // 새 login_id
+    }
+
     // 비밀번호가 입력된 경우에만 포함
     if (password) {
       userData.password = password;
@@ -383,15 +391,15 @@ async function saveUser() {
 
     let response;
     if (editMode) {
-      // 수정
-      response = await updateUser(id, userData);
+      // 수정 - originalId를 사용하여 업데이트
+      response = await updateUser(originalId, userData);
 
       // 예치금 설정 수정
       await window.API.fetchAPI("/deposits/admin/user-settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          user_id: id,
+          user_id: originalId,
           account_type: accountType,
           daily_limit: dailyLimit,
         }),
@@ -402,12 +410,15 @@ async function saveUser() {
       // 등록
       response = await createUser(userData);
 
+      // 생성된 사용자의 DB ID 사용 (response.userId)
+      const newUserId = response.userId;
+
       // 예치금 설정 초기화
       await window.API.fetchAPI("/deposits/admin/user-settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          user_id: id,
+          user_id: newUserId,
           account_type: accountType,
           daily_limit: dailyLimit,
         }),

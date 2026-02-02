@@ -61,7 +61,7 @@ router.get("/", requireAuth, async (req, res) => {
 
     // 회원 목록 조회 - normal 사용자만, 예치금/한도 정보 포함
     const [users] = await conn.query(
-      `SELECT u.id, u.registration_date, u.email, u.business_number, u.company_name, 
+      `SELECT u.id, u.login_id, u.registration_date, u.email, u.business_number, u.company_name, 
        u.phone, u.address, u.created_at, u.is_active, u.commission_rate,
        ua.account_type, ua.deposit_balance, ua.daily_limit, ua.daily_used
        FROM users u
@@ -90,7 +90,7 @@ router.get("/:id", requireAuth, async (req, res) => {
 
     // 회원 정보 조회 - normal 사용자만
     const [users] = await conn.query(
-      `SELECT id, registration_date, email, business_number, company_name, 
+      `SELECT id, login_id, registration_date, email, business_number, company_name, 
        phone, address, is_active, created_at, commission_rate 
        FROM users WHERE id = ? AND role = 'normal'`,
       [id],
@@ -136,10 +136,11 @@ router.post("/", requireAuth, async (req, res) => {
         .json({ message: "아이디와 비밀번호는 필수 입력 항목입니다." });
     }
 
-    // 중복 아이디 확인
-    const [existing] = await conn.query("SELECT id FROM users WHERE id = ?", [
-      id,
-    ]);
+    // 중복 아이디 확인 - login_id로 체크
+    const [existing] = await conn.query(
+      "SELECT id FROM users WHERE login_id = ?",
+      [id],
+    );
     if (existing.length > 0) {
       return res.status(400).json({ message: "이미 사용 중인 아이디입니다." });
     }
@@ -161,10 +162,10 @@ router.post("/", requireAuth, async (req, res) => {
     // 비밀번호 해싱
     const hashedPassword = hashPassword(password);
 
-    // 회원 추가 - normal role로 설정
-    await conn.query(
+    // 회원 추가 - normal role로 설정, login_id 사용
+    const [result] = await conn.query(
       `INSERT INTO users (
-        id, 
+        login_id, 
         registration_date,
         password, 
         email, 
@@ -191,7 +192,13 @@ router.post("/", requireAuth, async (req, res) => {
       ],
     );
 
-    res.status(201).json({ message: "회원이 등록되었습니다." });
+    // 생성된 사용자의 auto-increment ID 반환
+    const newUserId = result.insertId;
+
+    res.status(201).json({
+      message: "회원이 등록되었습니다.",
+      userId: newUserId,
+    });
   } catch (error) {
     console.error("회원 추가 오류:", error);
     res.status(500).json({ message: "회원 등록 중 오류가 발생했습니다." });
@@ -207,6 +214,7 @@ router.put("/:id", requireAuth, async (req, res) => {
     conn = await pool.getConnection();
     const id = req.params.id;
     const {
+      new_login_id,
       email,
       password,
       is_active,
@@ -227,6 +235,19 @@ router.put("/:id", requireAuth, async (req, res) => {
       return res.status(404).json({ message: "회원을 찾을 수 없습니다." });
     }
 
+    // login_id 변경 시 중복 확인
+    if (new_login_id !== undefined) {
+      const [duplicateCheck] = await conn.query(
+        "SELECT id FROM users WHERE login_id = ? AND id != ?",
+        [new_login_id, id],
+      );
+      if (duplicateCheck.length > 0) {
+        return res
+          .status(400)
+          .json({ message: "이미 사용 중인 아이디입니다." });
+      }
+    }
+
     // 날짜 형식 변환
     const formattedDate = registration_date
       ? formatDateString(registration_date)
@@ -244,6 +265,11 @@ router.put("/:id", requireAuth, async (req, res) => {
     // 업데이트할 필드 설정
     const updateFields = [];
     const updateValues = [];
+
+    if (new_login_id !== undefined) {
+      updateFields.push("login_id = ?");
+      updateValues.push(new_login_id);
+    }
 
     if (registration_date !== undefined) {
       updateFields.push("registration_date = ?");
