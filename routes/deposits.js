@@ -325,7 +325,7 @@ router.get("/admin/transactions", isAdmin, async (req, res) => {
 
     // 거래 내역 조회
     const [transactions] = await pool.query(
-      `SELECT dt.id, dt.user_id, u.login_id, dt.type, dt.amount, dt.balance_after, dt.status, dt.admin_memo, 
+      `SELECT dt.id, dt.user_id, u.login_id, u.company_name, dt.type, dt.amount, dt.balance_after, dt.status, dt.admin_memo, 
               dt.related_type, dt.related_id, dt.bank_tran_id, dt.description, dt.depositor_name, dt.created_at, dt.processed_at
       FROM deposit_transactions dt
       LEFT JOIN users u ON dt.user_id = u.id
@@ -399,8 +399,8 @@ router.get("/admin/settlements", isAdmin, async (req, res) => {
 
     // 🔧 정산 내역 조회 - payment_status 추가
     const [settlements] = await pool.query(
-      `SELECT ds.id, ds.user_id, u.login_id, ds.settlement_date, ds.final_amount, ds.completed_amount, 
-              ds.payment_status, ds.admin_memo, ds.created_at, ds.paid_at
+      `SELECT ds.id, ds.user_id, u.login_id, u.company_name, ds.settlement_date, ds.final_amount, ds.completed_amount, 
+              ds.payment_status, ds.admin_memo, ds.created_at, ds.paid_at, ds.depositor_name
        FROM daily_settlements ds
        LEFT JOIN users u ON ds.user_id = u.id
        ${whereClause}

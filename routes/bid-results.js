@@ -2070,6 +2070,7 @@ router.get("/admin/bid-results", isAdmin, async (req, res) => {
          ds.id as settlementId,
          ds.user_id as userId,
          u.login_id as userLoginId,
+         u.company_name as companyName,
          ds.settlement_date as date,
          ds.item_count as itemCount,
          ds.final_amount as grandTotal,
