@@ -8,8 +8,8 @@ let pLimit;
   pLimit = (await import("p-limit")).default;
 })();
 
-const LIMIT1 = 3;
-const LIMIT2 = 3;
+const LIMIT1 = 10;
+const LIMIT2 = 10;
 
 const penguinAucConfig = {
   name: "PenguinAuc",
@@ -443,8 +443,8 @@ class PenguinAucCrawler extends AxiosCrawler {
         .trim();
       const scheduledDate = this.extractScheduleDate(scheduleText);
 
-      // 브랜드는 플레이스홀더
-      const brand = "brand";
+      // 브랜드는 제목의 첫 단어
+      const brand = title.split(" ")[0];
 
       // 카테고리 추출
       const category = this.config.categoryTable[this.config.currentCategoryId];
