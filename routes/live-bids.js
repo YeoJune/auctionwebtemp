@@ -513,7 +513,7 @@ router.put("/:id/final", async (req, res) => {
     // 4. 환율 조회
     const exchangeRate = await getExchangeRate();
 
-    // 5. 차감액 계산
+    // 5. 차감액 계산 - 계정 타입별 분리
     const totalPrice = calculateTotalPrice(
       finalPrice,
       bid.auc_num,
@@ -522,7 +522,6 @@ router.put("/:id/final", async (req, res) => {
     );
     const userCommissionRate = await getUserCommissionRate(userId);
     const platformFee = calculateFee(totalPrice, userCommissionRate);
-    const deductAmount = totalPrice + platformFee;
 
     // 6. 계정 정보 조회
     const [accounts] = await connection.query(
@@ -545,7 +544,15 @@ router.put("/:id/final", async (req, res) => {
       };
     }
 
-    // 7. 예치금/한도 체크 (부족 시 거부)
+    // 7. 계정 타입별 차감액 결정
+    let deductAmount;
+    if (account.account_type === "individual") {
+      deductAmount = totalPrice + platformFee; // 개인: 수수료 포함
+    } else {
+      deductAmount = totalPrice; // 기업: 수수료 제외
+    }
+
+    // 8. 예치금/한도 체크 (부족 시 거부)
     if (account.account_type === "individual") {
       if (account.deposit_balance < deductAmount) {
         await connection.rollback();

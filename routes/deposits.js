@@ -2,6 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const { pool } = require("../utils/DB");
+const cron = require("node-cron");
 
 // 미들웨어
 const isAuthenticated = (req, res, next) => {
@@ -633,5 +634,61 @@ router.put(
     }
   },
 );
+
+/**
+ * 기업 회원의 daily_used를 0으로 초기화하고 limit_reset_date 갱신
+ */
+async function resetCorporateDailyLimits() {
+  const connection = await pool.getConnection();
+
+  try {
+    const today = new Date().toISOString().split("T")[0];
+
+    const [result] = await connection.query(
+      `UPDATE user_accounts 
+       SET daily_used = 0, 
+           limit_reset_date = ? 
+       WHERE account_type = 'corporate'`,
+      [today],
+    );
+
+    console.log(
+      `[CRON] 기업 회원 한도 초기화 완료: ${result.affectedRows}개 계정 (${today})`,
+    );
+  } catch (err) {
+    console.error("[CRON] 기업 회원 한도 초기화 실패:", err);
+  } finally {
+    connection.release();
+  }
+}
+
+/**
+ * 스케줄러 초기화
+ * - 매일 자정(00:00)에 실행
+ * - development 환경에서는 실행 안 함
+ */
+function initializeDailyLimitResetScheduler() {
+  // 매일 자정(00:00)에 실행
+  cron.schedule(
+    "0 0 * * *",
+    () => {
+      console.log(
+        "[CRON] 기업 회원 한도 초기화 시작:",
+        new Date().toISOString(),
+      );
+      resetCorporateDailyLimits();
+    },
+    {
+      timezone: "Asia/Seoul",
+    },
+  );
+
+  console.log("[CRON] 기업 회원 한도 초기화 스케줄러 활성화 (매일 00:00 KST)");
+}
+
+// 스케줄러 시작
+if (process.env.ENV !== "development") {
+  initializeDailyLimitResetScheduler();
+}
 
 module.exports = router;
