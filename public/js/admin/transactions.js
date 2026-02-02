@@ -235,7 +235,7 @@ function renderDeposits() {
       return `
       <tr>
         <td>${tx.id}</td>
-        <td>${tx.login_id || tx.user_id}</td>
+        <td>${tx.login_id || tx.user_id}<br>(${tx.company_name || "-"})</td>
         <td>${typeText}</td>
         <td class="text-right">₩${tx.amount.toLocaleString()}</td>
         <td>${tx.depositor_name || "-"}</td>
@@ -356,7 +356,7 @@ function renderSettlements() {
       return `
       <tr>
         <td>${st.id}</td>
-        <td>${st.login_id || st.user_id}</td>
+        <td>${st.login_id || st.user_id}<br>(${st.company_name || "-"})</td>
         <td>${st.settlement_date}</td>
         <td class="text-right">₩${st.final_amount.toLocaleString()}</td>
         <td class="text-right">₩${(st.completed_amount || 0).toLocaleString()}</td>
