@@ -17,10 +17,10 @@ router.post("/login", async (req, res) => {
     conn = await pool.getConnection();
     const hashedPassword = hashPassword(password);
 
-    // Check user in DB - role 필드도 조회
+    // login_id로 조회 - id(INT)와 login_id(VARCHAR) 모두 가져오기
     const [users] = await conn.query(
-      "SELECT id, email, is_active, password, role FROM users WHERE id = ?",
-      [id]
+      "SELECT id, login_id, email, is_active, password, role FROM users WHERE login_id = ?",
+      [id],
     );
 
     if (users.length === 0) {
@@ -42,9 +42,10 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    // 로그인 성공 - role 정보도 세션에 저장
+    // 로그인 성공 - id(INT)와 login_id(VARCHAR) 모두 세션에 저장
     req.session.user = {
-      id: user.id,
+      id: user.id, // INT - DB JOIN용
+      login_id: user.login_id, // VARCHAR - 화면 표시용
       email: user.email,
       role: user.role,
     };
@@ -118,10 +119,10 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    // 중복 아이디 확인
+    // 중복 아이디 확인 - login_id로 체크
     const [existingUser] = await conn.query(
-      "SELECT id FROM users WHERE id = ?",
-      [id]
+      "SELECT id FROM users WHERE login_id = ?",
+      [id],
     );
 
     if (existingUser.length > 0) {
@@ -134,7 +135,7 @@ router.post("/register", async (req, res) => {
     // 중복 이메일 확인
     const [existingEmail] = await conn.query(
       "SELECT email FROM users WHERE email = ?",
-      [email]
+      [email],
     );
 
     if (existingEmail.length > 0) {
@@ -156,10 +157,10 @@ router.post("/register", async (req, res) => {
     // 비밀번호 해싱
     const hashedPassword = hashPassword(password);
 
-    // 회원 정보 저장 - role을 'appr'로 설정
+    // 회원 정보 저장 - login_id에 저장
     await conn.query(
       `INSERT INTO users (
-        id, password, email, company_name, phone, 
+        login_id, password, email, company_name, phone, 
         is_active, registration_date, role
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
@@ -168,10 +169,10 @@ router.post("/register", async (req, res) => {
         email,
         company_name || null,
         normalizedPhone || null,
-        1, // appr 사용자는 비활성으로 저장 (normal 사이트용)
-        new Date().toISOString().split("T")[0], // 오늘 날짜
-        "appr", // appr 사용자로 설정
-      ]
+        1,
+        new Date().toISOString().split("T")[0],
+        "appr",
+      ],
     );
 
     res.status(201).json({
@@ -189,7 +190,6 @@ router.post("/register", async (req, res) => {
   }
 });
 
-// Add this route to your routes/auth.js file
 router.get("/preview", async (req, res) => {
   res.redirect("/productPage");
 });
