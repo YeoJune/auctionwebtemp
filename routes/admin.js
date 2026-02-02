@@ -31,7 +31,7 @@ const DBManager = require("../utils/DBManager");
 
 // Middleware to check if user is admin
 const isAdmin = (req, res, next) => {
-  if (req.session.user && req.session.user.id === "admin") {
+  if (req.session.user && req.session.user.login_id === "admin") {
     next();
   } else {
     res.status(403).json({ message: "Access denied. Admin only." });
@@ -202,7 +202,7 @@ router.get("/public/notices/:id", async (req, res) => {
 });
 
 router.get("/check-status", async (req, res) => {
-  const isAdmin = req.session.user && req.session.user.id === "admin";
+  const isAdmin = req.session.user && req.session.user.login_id === "admin";
   res.json({ isAdmin });
 });
 
