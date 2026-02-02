@@ -41,4 +41,11 @@ async function resetDailyLimits() {
   }
 }
 
+if (require.main === module) {
+  resetDailyLimits().then(() => {
+    console.log("Daily limit reset job finished.");
+    process.exit(0);
+  });
+}
+
 module.exports = { resetDailyLimits };
