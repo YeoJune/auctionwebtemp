@@ -221,7 +221,7 @@ async function loadSettlements() {
 }
 
 // =====================================================
-// 정산 목록 렌더링
+// 정산 목록 렌더링 (3단계 아코디언: 날짜 → 유저 → 상품)
 // =====================================================
 function renderSettlements() {
   const container = document.getElementById("resultsList");
@@ -232,7 +232,7 @@ function renderSettlements() {
     return;
   }
 
-  // 총 결과 수 업데이트
+  // 총 결과 수 업데이트 (날짜 개수)
   if (totalResultsSpan) {
     totalResultsSpan.textContent = state.totalItems;
   }
@@ -244,173 +244,257 @@ function renderSettlements() {
     return;
   }
 
-  // 각 정산을 아코디언 형태로 렌더링
+  // 각 날짜별 아코디언 렌더링
   container.innerHTML = "";
 
-  state.settlements.forEach((settlement, index) => {
-    const settlementRow = createSettlementRow(settlement, index);
-    container.appendChild(settlementRow);
+  state.settlements.forEach((dailyData, index) => {
+    const dailyRow = createDailyRow(dailyData, index);
+    container.appendChild(dailyRow);
   });
 
-  console.log(`${state.settlements.length}개의 정산 데이터 렌더링 완료`);
+  console.log(`${state.settlements.length}개의 날짜 데이터 렌더링 완료`);
 }
 
 // =====================================================
-// 정산 행 생성 (아코디언)
+// 1단계: 날짜별 행 생성
 // =====================================================
-function createSettlementRow(settlement, index) {
+function createDailyRow(dailyData, index) {
   const wrapper = document.createElement("div");
-  wrapper.className = "settlement-row-wrapper";
+  wrapper.className = "daily-row-wrapper";
+  wrapper.setAttribute("data-date", dailyData.date);
+
+  // 날짜 헤더
+  const header = document.createElement("div");
+  header.className = "daily-header";
+
+  const summary = dailyData.summary || {};
+
+  header.innerHTML = `
+    <div class="daily-summary">
+      <div class="summary-item main-date">
+        <span class="label">날짜</span>
+        <span class="value">${formatDate(dailyData.date)}</span>
+      </div>
+      <div class="summary-item">
+        <span class="label">유저 수</span>
+        <span class="value">${summary.totalUsers || 0}명</span>
+      </div>
+      <div class="summary-item">
+        <span class="label">총 상품 수</span>
+        <span class="value">${summary.totalItemCount || 0}건</span>
+      </div>
+      <div class="summary-item">
+        <span class="label">총 청구액</span>
+        <span class="value">${formatCurrency(summary.totalGrandTotal || 0)}</span>
+      </div>
+      <div class="summary-item">
+        <span class="label">기 결제액</span>
+        <span class="value">${formatCurrency(summary.totalCompletedAmount || 0)}</span>
+      </div>
+      <div class="summary-item">
+        <span class="label">미수금</span>
+        <span class="value ${summary.totalRemainingAmount > 0 ? "text-danger" : ""}">${formatCurrency(summary.totalRemainingAmount || 0)}</span>
+      </div>
+    </div>
+    <button class="toggle-btn" data-level="date">
+      <i class="fas fa-chevron-down"></i>
+    </button>
+  `;
+
+  // 유저 목록 영역 (초기에는 숨김)
+  const usersContainer = document.createElement("div");
+  usersContainer.className = "users-container hidden";
+
+  // 각 유저의 행 생성
+  if (dailyData.users && dailyData.users.length > 0) {
+    dailyData.users.forEach((user) => {
+      const userRow = createUserRow(user, dailyData.date);
+      usersContainer.appendChild(userRow);
+    });
+  } else {
+    usersContainer.innerHTML =
+      '<div class="no-results">유저 데이터가 없습니다.</div>';
+  }
+
+  // 토글 이벤트
+  const toggleBtn = header.querySelector(".toggle-btn");
+  toggleBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleDateLevel(usersContainer, toggleBtn);
+  });
+
+  wrapper.appendChild(header);
+  wrapper.appendChild(usersContainer);
+
+  return wrapper;
+}
+
+// =====================================================
+// 2단계: 유저별 행 생성
+// =====================================================
+function createUserRow(user, date) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "user-row-wrapper";
+  wrapper.setAttribute("data-user-id", user.userId);
 
   // 정산 상태 배지
   let statusBadgeClass = "status-badge ";
   let statusText = "";
 
-  if (settlement.paymentStatus === "unpaid") {
+  if (user.paymentStatus === "unpaid") {
     statusBadgeClass += "status-unpaid";
     statusText = "결제 필요";
-  } else if (settlement.paymentStatus === "pending") {
+  } else if (user.paymentStatus === "pending") {
     statusBadgeClass += "status-pending";
     statusText = "입금 확인 중";
-  } else if (settlement.paymentStatus === "paid") {
+  } else if (user.paymentStatus === "paid") {
     statusBadgeClass += "status-paid";
     statusText = "정산 완료";
   }
 
-  // 남은 금액 계산
-  const remainingAmount =
-    (settlement.grandTotal || 0) - (settlement.completedAmount || 0);
-
   // 헤더 (클릭 가능)
   const header = document.createElement("div");
-  header.className = "settlement-header";
+  header.className = "user-header";
   header.innerHTML = `
-    <div class="settlement-summary">
-      <div class="summary-item">
-        <span class="label">날짜</span>
-        <span class="value">${formatDate(settlement.date)}</span>
-      </div>
+    <div class="user-summary">
       <div class="summary-item">
         <span class="label">유저 ID</span>
-        <span class="value">${settlement.userLoginId || settlement.userId}<br>(${settlement.companyName || "-"})</span>
+        <span class="value">${user.userLoginId || user.userId}</span>
+      </div>
+      <div class="summary-item">
+        <span class="label">회사명</span>
+        <span class="value">${user.companyName || "-"}</span>
       </div>
       <div class="summary-item">
         <span class="label">상품 수</span>
-        <span class="value">${settlement.itemCount || 0}건</span>
+        <span class="value">${user.itemCount || 0}건</span>
       </div>
       <div class="summary-item">
         <span class="label">총 청구액</span>
-        <span class="value">${formatCurrency(settlement.grandTotal || 0)}</span>
+        <span class="value">${formatCurrency(user.grandTotal || 0)}</span>
       </div>
       <div class="summary-item">
         <span class="label">기 결제액</span>
-        <span class="value">${formatCurrency(settlement.completedAmount || 0)}</span>
+        <span class="value">${formatCurrency(user.completedAmount || 0)}</span>
       </div>
       <div class="summary-item">
         <span class="label">미수금</span>
-        <span class="value ${remainingAmount > 0 ? "text-danger" : ""}">${formatCurrency(remainingAmount)}</span>
+        <span class="value ${user.remainingAmount > 0 ? "text-danger" : ""}">${formatCurrency(user.remainingAmount || 0)}</span>
       </div>
       <div class="summary-item">
         <span class="label">입금자명</span>
-        <span class="value">${settlement.depositorName || "-"}</span>
+        <span class="value">${user.depositorName || "-"}</span>
       </div>
       <div class="summary-item">
         <span class="label">정산 상태</span>
         <span class="${statusBadgeClass}">${statusText}</span>
       </div>
     </div>
-    <button class="toggle-btn">
+    <button class="toggle-btn" data-level="user">
       <i class="fas fa-chevron-down"></i>
     </button>
   `;
 
-  // 상세 정보 영역 (초기에는 숨김)
-  const detail = document.createElement("div");
-  detail.className = "settlement-detail hidden";
-  detail.innerHTML = '<div class="loading-msg">로딩 중...</div>';
+  // 상품 목록 영역 (초기에는 숨김)
+  const itemsContainer = document.createElement("div");
+  itemsContainer.className = "items-container hidden";
+  itemsContainer.innerHTML = '<div class="loading-msg">로딩 중...</div>';
 
   // 토글 이벤트
-  header.addEventListener("click", () => {
-    toggleDetail(settlement, detail, header.querySelector(".toggle-btn"));
+  const toggleBtn = header.querySelector(".toggle-btn");
+  toggleBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleUserLevel(user, date, itemsContainer, toggleBtn);
   });
 
   wrapper.appendChild(header);
-  wrapper.appendChild(detail);
+  wrapper.appendChild(itemsContainer);
 
   return wrapper;
 }
 
 // =====================================================
-// 상세 정보 토글
+// 토글 함수들
 // =====================================================
-async function toggleDetail(settlement, detailElement, toggleBtn) {
-  const isCurrentlyOpen = !detailElement.classList.contains("hidden");
-
-  // 다른 열린 상세 정보 닫기
-  if (state.currentOpenDetail && state.currentOpenDetail !== detailElement) {
-    state.currentOpenDetail.classList.add("hidden");
-    const prevBtn = document.querySelector(".toggle-btn.open");
-    if (prevBtn) {
-      prevBtn.classList.remove("open");
-      prevBtn.querySelector("i").className = "fas fa-chevron-down";
-    }
-  }
+// 1단계: 날짜 토글
+function toggleDateLevel(usersContainer, toggleBtn) {
+  const isCurrentlyOpen = !usersContainer.classList.contains("hidden");
 
   if (isCurrentlyOpen) {
     // 닫기
-    detailElement.classList.add("hidden");
+    usersContainer.classList.add("hidden");
     toggleBtn.classList.remove("open");
     toggleBtn.querySelector("i").className = "fas fa-chevron-down";
-    state.currentOpenDetail = null;
   } else {
     // 열기
-    detailElement.classList.remove("hidden");
+    usersContainer.classList.remove("hidden");
     toggleBtn.classList.add("open");
     toggleBtn.querySelector("i").className = "fas fa-chevron-up";
-    state.currentOpenDetail = detailElement;
+  }
+}
 
-    // 상세 데이터 로드
-    await loadDetailData(settlement, detailElement);
+// 2단계: 유저 토글
+async function toggleUserLevel(user, date, itemsContainer, toggleBtn) {
+  const isCurrentlyOpen = !itemsContainer.classList.contains("hidden");
+
+  if (isCurrentlyOpen) {
+    // 닫기
+    itemsContainer.classList.add("hidden");
+    toggleBtn.classList.remove("open");
+    toggleBtn.querySelector("i").className = "fas fa-chevron-down";
+  } else {
+    // 열기
+    itemsContainer.classList.remove("hidden");
+    toggleBtn.classList.add("open");
+    toggleBtn.querySelector("i").className = "fas fa-chevron-up";
+
+    // 상품 목록 로드 (처음 열 때만)
+    if (itemsContainer.innerHTML.includes("로딩 중")) {
+      await loadItemsData(user, date, itemsContainer);
+    }
   }
 }
 
 // =====================================================
-// 상세 데이터 로드
+// 3단계: 상품 목록 데이터 로드
 // =====================================================
-async function loadDetailData(settlement, detailElement) {
+async function loadItemsData(user, date, itemsContainer) {
   try {
-    detailElement.innerHTML = '<div class="loading-msg">로딩 중...</div>';
+    itemsContainer.innerHTML = '<div class="loading-msg">로딩 중...</div>';
 
     // 날짜를 YYYY-MM-DD 형식으로 변환
-    const dateOnly = formatDateForAPI(settlement.date);
+    const dateOnly = formatDateForAPI(date);
 
     const response = await window.API.fetchAPI(
-      `/bid-results/admin/bid-results/detail?userId=${settlement.userId}&date=${dateOnly}`,
+      `/bid-results/admin/bid-results/detail?userId=${user.userId}&date=${dateOnly}`,
     );
 
-    console.log("상세 데이터 응답:", response);
+    console.log("상품 목록 응답:", response);
 
-    // 상세 내용 렌더링
-    detailElement.innerHTML = createDetailContent(settlement, response);
+    // 상품 목록 렌더링
+    itemsContainer.innerHTML = createItemsContent(user, response);
 
-    // 수동 정산 처리 버튼 이벤트 바인딩 (모든 상태에서)
-    const approveBtn = detailElement.querySelector(".btn-approve");
+    // 수동 정산 처리 버튼 이벤트 바인딩
+    const approveBtn = itemsContainer.querySelector(".btn-approve");
     if (approveBtn) {
       approveBtn.addEventListener("click", () => {
-        openSettlementApprovalModal(settlement);
+        openSettlementApprovalModal({
+          ...user,
+          date: date,
+        });
       });
     }
   } catch (error) {
-    console.error("상세 정보 로드 실패:", error);
-    detailElement.innerHTML =
-      '<div class="error-msg">상세 정보를 불러오는 데 실패했습니다.</div>';
+    console.error("상품 목록 로드 실패:", error);
+    itemsContainer.innerHTML =
+      '<div class="error-msg">상품 정보를 불러오는 데 실패했습니다.</div>';
   }
 }
 
 // =====================================================
-// 상세 내용 HTML 생성
+// 상품 목록 HTML 생성
 // =====================================================
-function createDetailContent(settlement, detailData) {
+function createItemsContent(user, detailData) {
   const items = detailData.items || [];
 
   // 상품 목록 HTML
@@ -446,10 +530,10 @@ function createDetailContent(settlement, detailData) {
   let buttonText = "정산 처리";
   let noteText = "입금자명과 금액을 입력하여 정산 처리";
 
-  if (settlement.paymentStatus === "pending") {
+  if (user.paymentStatus === "pending") {
     buttonText = "입금 확인 및 승인";
     noteText = "입금 확인 후 승인하여 정산 완료";
-  } else if (settlement.paymentStatus === "paid") {
+  } else if (user.paymentStatus === "paid") {
     buttonText = "추가 입금 처리";
     noteText = "추가 입금이 있는 경우 처리 가능";
   }
@@ -464,25 +548,25 @@ function createDetailContent(settlement, detailData) {
   `;
 
   return `
-    <div class="detail-content">
+    <div class="items-content">
       <div class="detail-section">
         <h4>기본 정보</h4>
         <div class="detail-grid">
           <div class="detail-item">
             <span class="label">유저 ID</span>
-            <span class="value">${settlement.userLoginId || settlement.userId}<br>(${settlement.companyName || "-"})</span>
+            <span class="value">${user.userLoginId || user.userId}</span>
           </div>
           <div class="detail-item">
-            <span class="label">날짜</span>
-            <span class="value">${formatDate(settlement.date)}</span>
+            <span class="label">회사명</span>
+            <span class="value">${user.companyName || "-"}</span>
           </div>
           <div class="detail-item">
             <span class="label">입금자명</span>
-            <span class="value">${settlement.depositorName || "-"}</span>
+            <span class="value">${user.depositorName || "-"}</span>
           </div>
           <div class="detail-item">
             <span class="label">상품 수</span>
-            <span class="value">${settlement.itemCount || 0}건</span>
+            <span class="value">${user.itemCount || 0}건</span>
           </div>
         </div>
       </div>
@@ -512,16 +596,28 @@ function createDetailContent(settlement, detailData) {
         <h4>정산 정보</h4>
         <div class="settlement-detail-grid">
           <div class="settlement-detail-item">
+            <span class="label">관부가세 포함 총액</span>
+            <span class="value">${formatCurrency(user.totalKoreanPrice || 0)}</span>
+          </div>
+          <div class="settlement-detail-item">
+            <span class="label">수수료 (VAT 포함)</span>
+            <span class="value">${formatCurrency(user.feeAmount || 0)}</span>
+          </div>
+          <div class="settlement-detail-item">
+            <span class="label">감정서 수수료 (VAT 포함)</span>
+            <span class="value">${formatCurrency(user.appraisalFee || 0)}</span>
+          </div>
+          <div class="settlement-detail-item highlight">
             <span class="label">총 청구액</span>
-            <span class="value">${formatCurrency(settlement.grandTotal || 0)}</span>
+            <span class="value">${formatCurrency(user.grandTotal || 0)}</span>
           </div>
           <div class="settlement-detail-item">
             <span class="label">기 결제액</span>
-            <span class="value">${formatCurrency(settlement.completedAmount || 0)}</span>
+            <span class="value">${formatCurrency(user.completedAmount || 0)}</span>
           </div>
           <div class="settlement-detail-item highlight">
             <span class="label">미수금</span>
-            <span class="value">${formatCurrency((settlement.grandTotal || 0) - (settlement.completedAmount || 0))}</span>
+            <span class="value">${formatCurrency(user.remainingAmount || 0)}</span>
           </div>
         </div>
       </div>

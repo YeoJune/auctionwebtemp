@@ -2078,7 +2078,7 @@ function classifyBidStatus(item) {
 
 /**
  * GET /api/admin/bid-results
- * 관리자용 입찰 결과 목록 조회 (모든 유저의 일별 정산 정보)
+ * 관리자용 입찰 결과 목록 조회 (3단계 구조: 날짜별 → 사람별 → 상품별)
  */
 router.get("/admin/bid-results", isAdmin, async (req, res) => {
   const {
@@ -2098,74 +2098,175 @@ router.get("/admin/bid-results", isAdmin, async (req, res) => {
     dateLimit.setDate(dateLimit.getDate() - parseInt(dateRange));
     const fromDate = dateLimit.toISOString().split("T")[0];
 
-    // 쿼리 조건 구성
-    let whereConditions = ["ds.settlement_date >= ?"];
-    const queryParams = [fromDate];
+    // ========================================
+    // 1단계: 날짜 목록 조회 (필터링 적용)
+    // ========================================
+    let dateWhereConditions = ["ds.settlement_date >= ?"];
+    let dateQueryParams = [fromDate];
 
     // 정산 상태 필터
     if (status) {
-      whereConditions.push("ds.payment_status = ?");
-      queryParams.push(status);
+      dateWhereConditions.push("ds.payment_status = ?");
+      dateQueryParams.push(status);
     }
 
-    // 키워드 검색 (유저ID 또는 날짜)
+    // 키워드 검색 (유저ID, 유저명, 회사명, 날짜)
     if (keyword) {
-      whereConditions.push("(ds.user_id LIKE ? OR ds.settlement_date LIKE ?)");
-      queryParams.push(`%${keyword}%`, `%${keyword}%`);
+      dateWhereConditions.push(
+        "(u.login_id LIKE ? OR u.company_name LIKE ? OR ds.settlement_date LIKE ?)",
+      );
+      dateQueryParams.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
     }
 
-    const whereClause = whereConditions.join(" AND ");
+    const dateWhereClause = dateWhereConditions.join(" AND ");
 
-    // 정렬 필드 매핑
-    let orderByField = "ds.settlement_date";
-    if (sortBy === "total_price") {
-      orderByField = "ds.final_amount";
-    } else if (sortBy === "item_count") {
-      orderByField = "ds.item_count";
-    }
+    // 날짜별 정렬 설정
+    const dateOrder = sortBy === "date" ? sortOrder.toUpperCase() : "DESC";
 
-    // 전체 개수 조회
-    const [countResult] = await connection.query(
-      `SELECT COUNT(*) as total 
-       FROM daily_settlements ds 
-       WHERE ${whereClause}`,
-      queryParams,
-    );
-
-    const totalItems = countResult[0].total;
-    const totalPages = Math.ceil(totalItems / parseInt(limit));
-
-    // 페이지네이션 적용
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-    queryParams.push(parseInt(limit), offset);
-
-    // 데이터 조회
-    const [rows] = await connection.query(
-      `SELECT 
-         ds.id as settlementId,
-         ds.user_id as userId,
-         u.login_id as userLoginId,
-         u.company_name as companyName,
-         ds.settlement_date as date,
-         ds.item_count as itemCount,
-         ds.final_amount as grandTotal,
-         ds.completed_amount as completedAmount,
-         ds.payment_status as paymentStatus,
-         ds.depositor_name as depositorName
+    // 전체 날짜 수 조회
+    const [dateCountResult] = await connection.query(
+      `SELECT COUNT(DISTINCT ds.settlement_date) as total
        FROM daily_settlements ds
        LEFT JOIN users u ON ds.user_id = u.id
-       WHERE ${whereClause}
-       ORDER BY ${orderByField} ${sortOrder.toUpperCase()}
-       LIMIT ? OFFSET ?`,
-      queryParams,
+       WHERE ${dateWhereClause}`,
+      dateQueryParams,
     );
 
+    const totalDates = dateCountResult[0].total;
+    const totalPages = Math.ceil(totalDates / parseInt(limit));
+
+    // 페이지네이션 적용하여 날짜 목록 조회
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const [dateRows] = await connection.query(
+      `SELECT DISTINCT ds.settlement_date as date
+       FROM daily_settlements ds
+       LEFT JOIN users u ON ds.user_id = u.id
+       WHERE ${dateWhereClause}
+       ORDER BY ds.settlement_date ${dateOrder}
+       LIMIT ? OFFSET ?`,
+      [...dateQueryParams, parseInt(limit), offset],
+    );
+
+    // ========================================
+    // 2단계: 각 날짜별로 유저 목록 조회
+    // ========================================
+    const dailyResults = [];
+
+    for (const dateRow of dateRows) {
+      const targetDate = dateRow.date;
+
+      // 해당 날짜의 모든 유저 정산 정보 조회
+      let userWhereConditions = ["ds.settlement_date = ?"];
+      let userQueryParams = [targetDate];
+
+      // 정산 상태 필터 적용
+      if (status) {
+        userWhereConditions.push("ds.payment_status = ?");
+        userQueryParams.push(status);
+      }
+
+      // 키워드 검색 적용
+      if (keyword) {
+        userWhereConditions.push(
+          "(u.login_id LIKE ? OR u.company_name LIKE ?)",
+        );
+        userQueryParams.push(`%${keyword}%`, `%${keyword}%`);
+      }
+
+      const userWhereClause = userWhereConditions.join(" AND ");
+
+      // 유저별 정렬 설정
+      let userOrderBy = "u.login_id";
+      if (sortBy === "total_price") {
+        userOrderBy = "ds.final_amount";
+      } else if (sortBy === "item_count") {
+        userOrderBy = "ds.item_count";
+      }
+      const userOrder = sortBy !== "date" ? sortOrder.toUpperCase() : "ASC";
+
+      const [userRows] = await connection.query(
+        `SELECT 
+           ds.id as settlementId,
+           ds.user_id as userId,
+           u.login_id as userLoginId,
+           u.company_name as companyName,
+           ds.item_count as itemCount,
+           ds.total_amount as totalKoreanPrice,
+           ds.fee_amount as feeAmount,
+           ds.vat_amount as vatAmount,
+           ds.appraisal_fee as appraisalFee,
+           ds.appraisal_vat as appraisalVat,
+           ds.final_amount as grandTotal,
+           ds.completed_amount as completedAmount,
+           ds.payment_status as paymentStatus,
+           ds.depositor_name as depositorName,
+           ds.exchange_rate as exchangeRate
+         FROM daily_settlements ds
+         LEFT JOIN users u ON ds.user_id = u.id
+         WHERE ${userWhereClause}
+         ORDER BY ${userOrderBy} ${userOrder}`,
+        userQueryParams,
+      );
+
+      // 날짜별 총계 계산
+      const dateTotal = {
+        totalUsers: userRows.length,
+        totalItemCount: 0,
+        totalKoreanPrice: 0,
+        totalFeeAmount: 0,
+        totalAppraisalFee: 0,
+        totalGrandTotal: 0,
+        totalCompletedAmount: 0,
+        totalRemainingAmount: 0,
+      };
+
+      const users = userRows.map((user) => {
+        const remainingAmount =
+          (user.grandTotal || 0) - (user.completedAmount || 0);
+
+        // 날짜별 총계 누적
+        dateTotal.totalItemCount += user.itemCount || 0;
+        dateTotal.totalKoreanPrice += parseFloat(user.totalKoreanPrice || 0);
+        dateTotal.totalFeeAmount += parseFloat(user.feeAmount || 0);
+        dateTotal.totalAppraisalFee += parseFloat(user.appraisalFee || 0);
+        dateTotal.totalGrandTotal += parseFloat(user.grandTotal || 0);
+        dateTotal.totalCompletedAmount += parseFloat(user.completedAmount || 0);
+        dateTotal.totalRemainingAmount += remainingAmount;
+
+        return {
+          settlementId: user.settlementId,
+          userId: user.userId,
+          userLoginId: user.userLoginId,
+          companyName: user.companyName,
+          itemCount: user.itemCount,
+          totalKoreanPrice: user.totalKoreanPrice,
+          feeAmount: user.feeAmount,
+          vatAmount: user.vatAmount,
+          appraisalFee: user.appraisalFee,
+          appraisalVat: user.appraisalVat,
+          grandTotal: user.grandTotal,
+          completedAmount: user.completedAmount,
+          remainingAmount: remainingAmount,
+          paymentStatus: user.paymentStatus,
+          depositorName: user.depositorName,
+          exchangeRate: user.exchangeRate,
+        };
+      });
+
+      dailyResults.push({
+        date: targetDate,
+        users: users,
+        summary: dateTotal,
+      });
+    }
+
+    // 응답
     res.json({
-      dailyResults: rows,
+      dailyResults: dailyResults,
       pagination: {
         currentPage: parseInt(page),
-        totalPages,
-        totalItems,
+        totalPages: totalPages,
+        totalItems: totalDates,
       },
     });
   } catch (err) {

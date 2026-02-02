@@ -432,42 +432,205 @@
 }
 
 /* ========================================
-   아코디언 스타일
+   3단계 아코디언 스타일 (날짜 → 유저 → 상품)
 ======================================== */
-.settlement-row-wrapper {
+
+/* 1단계: 날짜별 아코디언 */
+.daily-row-wrapper {
   background: #fff;
-  border: 1px solid #e0e0e0;
+  border: 2px solid #007bff;
   border-radius: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
   overflow: hidden;
   transition: all 0.2s;
 }
 
-.settlement-row-wrapper:hover {
-  border-color: #b0b0b0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+.daily-row-wrapper:hover {
+  border-color: #0056b3;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
 }
 
-.settlement-header {
+.daily-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px;
+  padding: 18px 20px;
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
   cursor: pointer;
   user-select: none;
 }
 
-.settlement-header:hover {
-  background: #f8f9fa;
+.daily-header:hover {
+  background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
 }
 
-.settlement-summary {
+.daily-summary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 20px;
   flex: 1;
 }
 
+.daily-summary .summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.daily-summary .summary-item.main-date {
+  grid-column: span 1;
+}
+
+.daily-summary .summary-item .label {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.daily-summary .summary-item .value {
+  font-size: 16px;
+  color: #fff;
+  font-weight: 700;
+}
+
+/* 유저 컨테이너 */
+.users-container {
+  background: #f8f9fa;
+  padding: 16px;
+  max-height: 5000px;
+  opacity: 1;
+  transition: all 0.3s ease;
+}
+
+.users-container.hidden {
+  max-height: 0;
+  opacity: 0;
+  padding: 0 16px;
+  overflow: hidden;
+}
+
+/* 2단계: 유저별 아코디언 */
+.user-row-wrapper {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  transition: all 0.2s;
+  margin-left: 20px;
+}
+
+.user-row-wrapper:hover {
+  border-color: #adb5bd;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.user-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: #fff;
+  cursor: pointer;
+  user-select: none;
+}
+
+.user-header:hover {
+  background: #f8f9fa;
+}
+
+.user-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 14px;
+  flex: 1;
+}
+
+.user-summary .summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.user-summary .summary-item .label {
+  font-size: 10px;
+  color: #6c757d;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.user-summary .summary-item .value {
+  font-size: 13px;
+  color: #212529;
+  font-weight: 600;
+}
+
+/* 상품 컨테이너 */
+.items-container {
+  border-top: 1px solid #e9ecef;
+  background: #f8f9fa;
+  padding: 16px;
+  max-height: 3000px;
+  opacity: 1;
+  transition: all 0.3s ease;
+}
+
+.items-container.hidden {
+  max-height: 0;
+  opacity: 0;
+  padding: 0 16px;
+  overflow: hidden;
+}
+
+/* 3단계: 상품 목록 */
+.items-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-left: 20px;
+}
+
+/* 토글 버튼 */
+.toggle-btn {
+  background: none;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  margin-left: 16px;
+}
+
+.daily-header .toggle-btn {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.daily-header .toggle-btn:hover {
+  color: #fff;
+  transform: scale(1.15);
+}
+
+.user-header .toggle-btn {
+  color: #6c757d;
+}
+
+.user-header .toggle-btn:hover {
+  color: #495057;
+  transform: scale(1.1);
+}
+
+.toggle-btn i {
+  font-size: 18px;
+  transition: transform 0.3s;
+}
+
+.toggle-btn.open i {
+  transform: rotate(180deg);
+}
+
+/* 공통 스타일 */
 .summary-item {
   display: flex;
   flex-direction: column;
@@ -485,54 +648,6 @@
   font-size: 14px;
   color: #333;
   font-weight: 600;
-}
-
-.toggle-btn {
-  background: none;
-  border: none;
-  padding: 8px;
-  cursor: pointer;
-  color: #666;
-  transition: all 0.2s;
-  flex-shrink: 0;
-  margin-left: 16px;
-}
-
-.toggle-btn:hover {
-  color: #333;
-  transform: scale(1.1);
-}
-
-.toggle-btn i {
-  font-size: 18px;
-  transition: transform 0.3s;
-}
-
-.toggle-btn.open i {
-  transform: rotate(180deg);
-}
-
-/* 상세 정보 영역 */
-.settlement-detail {
-  border-top: 1px solid #e9ecef;
-  background: #f8f9fa;
-  padding: 20px;
-  max-height: 1000px;
-  opacity: 1;
-  transition: all 0.3s ease;
-}
-
-.settlement-detail.hidden {
-  max-height: 0;
-  opacity: 0;
-  padding: 0 20px;
-  overflow: hidden;
-}
-
-.detail-content {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
 }
 
 .detail-section {
