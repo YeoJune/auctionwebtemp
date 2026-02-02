@@ -522,11 +522,6 @@ function setupModal(modalId) {
     if (window.ModalHistoryManager) {
       window.ModalHistoryManager.closeModal();
     }
-
-    // 이미지 갤러리 정리
-    if (window.ModalImageGallery) {
-      window.ModalImageGallery.cleanup();
-    }
   };
 
   if (closeBtn) {
