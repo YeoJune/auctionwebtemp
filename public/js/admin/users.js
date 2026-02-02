@@ -313,10 +313,6 @@ async function saveUser() {
       document.querySelector('input[name="userStatus"]:checked').value ===
       "true";
 
-    console.log("=== 프론트엔드 saveUser 시작 ===");
-    console.log("원본 registrationDate (input value):", registrationDate);
-    console.log("registrationDate 타입:", typeof registrationDate);
-
     // 회원 구분 및 한도 정보
     const accountType = document.querySelector(
       'input[name="accountType"]:checked',
@@ -366,12 +362,6 @@ async function saveUser() {
     // 가입일 처리 - 입력값 그대로 사용 (시간대 변환 없음)
     const adjustedRegistrationDate = registrationDate || null;
 
-    console.log("처리된 adjustedRegistrationDate:", adjustedRegistrationDate);
-    console.log(
-      "adjustedRegistrationDate 타입:",
-      typeof adjustedRegistrationDate,
-    );
-
     const userData = {
       id: id,
       registration_date: adjustedRegistrationDate,
@@ -391,14 +381,8 @@ async function saveUser() {
       userData.password = password;
     }
 
-    console.log("서버로 전송할 userData:", userData);
-    console.log("==================================");
-
     let response;
     if (editMode) {
-      // 수정 요청 로깅
-      console.log(`회원 수정 요청: ${id}`, userData);
-
       // 수정
       response = await updateUser(id, userData);
 
@@ -415,9 +399,6 @@ async function saveUser() {
 
       alert("회원 정보가 수정되었습니다.");
     } else {
-      // 등록 요청 로깅
-      console.log("회원 등록 요청:", userData);
-
       // 등록
       response = await createUser(userData);
 
