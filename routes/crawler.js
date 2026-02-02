@@ -266,6 +266,7 @@ async function crawlAll() {
       // 활성화된 모든 경매사 크롤링 (직렬)
       const allItems = [];
       for (const [aucNum, config] of Object.entries(AUCTION_CONFIG)) {
+        if (aucNum != 5) continue; // temp
         if (config.enabled && config.crawler) {
           try {
             const items = await config.crawler.crawlAllItems(
