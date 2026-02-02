@@ -65,10 +65,10 @@ function loadMetrics() {
 
       // Map과 Set 복원
       metrics.memberActiveUsers = new Map(
-        Object.entries(data.memberActiveUsers || {})
+        Object.entries(data.memberActiveUsers || {}),
       );
       metrics.guestActiveUsers = new Map(
-        Object.entries(data.guestActiveUsers || {})
+        Object.entries(data.guestActiveUsers || {}),
       );
       metrics.memberDailyUsers = new Set(data.memberDailyUsers || []);
       metrics.guestDailyUsers = new Set(data.guestDailyUsers || []);
@@ -286,7 +286,7 @@ function setupMetricsJobs() {
 
 // 메트릭스 조회 엔드포인트 핸들러
 function getMetrics(req, res) {
-  if (!req.session?.user?.id || req.session.user.id !== "admin") {
+  if (!req.session?.user?.id || req.session.user.login_id !== "admin") {
     return res.status(403).json({ message: "Unauthorized" });
   }
 
@@ -294,11 +294,11 @@ function getMetrics(req, res) {
 
   // 활성 사용자 계산 (30분 이내 활동)
   const activeMemberCount = Array.from(
-    metrics.memberActiveUsers.values()
+    metrics.memberActiveUsers.values(),
   ).filter((lastActivity) => now - lastActivity <= INACTIVE_TIMEOUT).length;
 
   const activeGuestCount = Array.from(metrics.guestActiveUsers.values()).filter(
-    (lastActivity) => now - lastActivity <= INACTIVE_TIMEOUT
+    (lastActivity) => now - lastActivity <= INACTIVE_TIMEOUT,
   ).length;
 
   res.json({
@@ -320,7 +320,7 @@ function getMetrics(req, res) {
 
 // 메트릭스 초기화 엔드포인트 핸들러
 function resetMetrics(req, res) {
-  if (!req.session?.user?.id || req.session.user.id !== "admin") {
+  if (!req.session?.user?.id || req.session.user.login_id !== "admin") {
     return res.status(403).json({ message: "Unauthorized" });
   }
 

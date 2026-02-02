@@ -181,7 +181,7 @@ router.get("/", async (req, res) => {
     }
 
     // 일반 사용자는 자신의 입찰만 볼 수 있고, 관리자는 모든 입찰을 볼 수 있음
-    if (req.session.user.id !== "admin") {
+    if (req.session.user.login_id !== "admin") {
       countQuery += " AND d.user_id = ?";
       mainQuery += " AND d.user_id = ?";
       queryParams.push(req.session.user.id);
@@ -1151,7 +1151,7 @@ router.get("/:id", async (req, res) => {
     const bid = bids[0];
 
     // 인증 확인 - 관리자 또는 입찰 소유자만 볼 수 있음
-    if (userId !== "admin" && bid.user_id !== userId) {
+    if (req.session.user.login_id !== "admin" && bid.user_id !== userId) {
       return res
         .status(403)
         .json({ message: "Not authorized to view this bid" });

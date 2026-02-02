@@ -18,7 +18,7 @@ const {
 
 // 미들웨어
 const isAdmin = (req, res, next) => {
-  if (req.session.user?.id === "admin") {
+  if (req.session.user?.login_id === "admin") {
     next();
   } else {
     res.status(403).json({ message: "Access denied. Admin only." });
@@ -39,7 +39,7 @@ router.get("/", async (req, res) => {
   }
 
   const userId = req.session.user.id;
-  const isAdminUser = userId === "admin";
+  const isAdminUser = req.session.user.login_id === "admin";
 
   const {
     dateRange = 30,
@@ -755,7 +755,7 @@ router.post("/live/:id/request-repair", async (req, res) => {
   const userId = req.session.user.id;
 
   // 어드민만 수선 접수 가능
-  if (userId !== "admin") {
+  if (req.session.user.login_id !== "admin") {
     return res
       .status(403)
       .json({ message: "관리자만 수선 접수가 가능합니다." });
@@ -940,7 +940,7 @@ router.post("/direct/:id/request-repair", async (req, res) => {
   const userId = req.session.user.id;
 
   // 어드민만 수선 접수 가능
-  if (userId !== "admin") {
+  if (req.session.user.login_id !== "admin") {
     return res
       .status(403)
       .json({ message: "관리자만 수선 접수가 가능합니다." });
@@ -1124,7 +1124,7 @@ router.delete("/live/:id/repair", async (req, res) => {
   const userId = req.session.user.id;
 
   // 어드민만 취소 가능
-  if (userId !== "admin") {
+  if (req.session.user.login_id !== "admin") {
     return res
       .status(403)
       .json({ message: "관리자만 수선 접수를 취소할 수 있습니다." });
@@ -1209,7 +1209,7 @@ router.delete("/direct/:id/repair", async (req, res) => {
   const userId = req.session.user.id;
 
   // 어드민만 취소 가능
-  if (userId !== "admin") {
+  if (req.session.user.login_id !== "admin") {
     return res
       .status(403)
       .json({ message: "관리자만 수선 접수를 취소할 수 있습니다." });

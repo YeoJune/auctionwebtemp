@@ -121,7 +121,7 @@ router.get("/", async (req, res) => {
   }
 
   // Regular users can only see their own bids, admins can see all
-  if (req.session.user.id !== "admin") {
+  if (req.session.user.login_id !== "admin") {
     queryConditions.push("b.user_id = ?");
     queryParams.push(userId);
   }
@@ -929,7 +929,7 @@ router.get("/:id", async (req, res) => {
     const bid = bids[0];
 
     // Check authorization - only admin or bid owner can view
-    if (userId !== "admin" && bid.user_id !== userId) {
+    if (req.session.user.login_id !== "admin" && bid.user_id !== userId) {
       return res
         .status(403)
         .json({ message: "Not authorized to view this bid" });
