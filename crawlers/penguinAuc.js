@@ -26,7 +26,7 @@ const penguinAucConfig = {
     password: process.env.CRAWLER_PASSWORD5,
     m: "login",
   },
-  useMultipleClients: true,
+  useMultipleClients: false,
   categoryIds: ["1", "2", "3", "4", "5", "6", "7", "8", "9"],
   categoryTable: {
     1: "가방",
