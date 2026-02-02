@@ -325,6 +325,10 @@ async function saveUser() {
       document.querySelector('input[name="userStatus"]:checked').value ===
       "true";
 
+    console.log("=== 프론트엔드 saveUser 시작 ===");
+    console.log("원본 registrationDate (input value):", registrationDate);
+    console.log("registrationDate 타입:", typeof registrationDate);
+
     // 회원 구분 및 한도 정보
     const accountType = document.querySelector(
       'input[name="accountType"]:checked',
@@ -371,16 +375,14 @@ async function saveUser() {
       }
     }
 
-    // 가입일 처리 - 임시로 하루 더하기
-    let adjustedRegistrationDate = null;
-    if (registrationDate) {
-      const date = new Date(registrationDate);
-      date.setDate(date.getDate() + 1);
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
-      adjustedRegistrationDate = `${year}-${month}-${day}`;
-    }
+    // 가입일 처리 - 입력값 그대로 사용 (시간대 변환 없음)
+    const adjustedRegistrationDate = registrationDate || null;
+
+    console.log("처리된 adjustedRegistrationDate:", adjustedRegistrationDate);
+    console.log(
+      "adjustedRegistrationDate 타입:",
+      typeof adjustedRegistrationDate,
+    );
 
     const userData = {
       id: id,
@@ -400,6 +402,9 @@ async function saveUser() {
     if (password) {
       userData.password = password;
     }
+
+    console.log("서버로 전송할 userData:", userData);
+    console.log("==================================");
 
     let response;
     if (editMode) {
