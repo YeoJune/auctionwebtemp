@@ -438,7 +438,7 @@ class PenguinAucCrawler extends AxiosCrawler {
         .find(this.config.crawlSelectors.scheduleText)
         .text()
         .trim();
-      const scheduledDate = this.extractScheduleDate(scheduleText);
+      const scheduledDate = this.extractDate(this.extractScheduleDate(scheduleText));
 
       // 브랜드는 제목의 첫 단어
       const brand = title.split(" ")[0];
