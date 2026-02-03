@@ -67,9 +67,10 @@ router.get("/", async (req, res) => {
   if (search) {
     const searchTerm = `%${search}%`;
     queryConditions.push(
-      "(b.item_id LIKE ? OR i.original_title LIKE ? OR i.brand LIKE ? OR i.additional_info LIKE ? OR b.user_id LIKE ?)",
+      "(b.item_id LIKE ? OR i.original_title LIKE ? OR i.brand LIKE ? OR i.additional_info LIKE ? OR u.login_id LIKE ? OR u.company_name LIKE ?)",
     );
     queryParams.push(
+      searchTerm,
       searchTerm,
       searchTerm,
       searchTerm,
