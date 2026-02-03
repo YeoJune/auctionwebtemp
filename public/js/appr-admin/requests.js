@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", function () {
     .getElementById("restoration-request-search-btn")
     .addEventListener("click", function () {
       requestSearchQuery = document.getElementById(
-        "restoration-request-search"
+        "restoration-request-search",
       ).value;
       currentRequestPage = 1;
       loadRestorationRequestList();
@@ -71,14 +71,13 @@ function loadRestorationRequestList() {
         displayRestorationRequestList(data.restorations, data.pagination);
       } else {
         throw new Error(
-          data.message || "복원 요청 목록을 불러오는데 실패했습니다."
+          data.message || "복원 요청 목록을 불러오는데 실패했습니다.",
         );
       }
     })
     .catch((error) => {
-      document.getElementById(
-        "restoration-requests-list"
-      ).innerHTML = `<tr><td colspan="9" style="text-align: center;">오류: ${error.message}</td></tr>`;
+      document.getElementById("restoration-requests-list").innerHTML =
+        `<tr><td colspan="9" style="text-align: center;">오류: ${error.message}</td></tr>`;
     });
 }
 
@@ -108,9 +107,7 @@ function displayRestorationRequestList(restorations, pagination) {
                 ? `${request.brand} / ${request.model_name}`
                 : "-"
             }</td>
-            <td>${
-              request.user_email || request.company_name || request.user_id
-            }</td>
+            <td>${request.user_login_id || request.user_id}${request.company_name ? `(${request.company_name})` : ""}</td>
             <td>${serviceCount}개 항목</td>
             <td>${getStatusBadge(request.status)}</td>
             <td>${formatDate(request.created_at)}</td>
@@ -133,7 +130,7 @@ function displayRestorationRequestList(restorations, pagination) {
       currentRequestPage = page;
       loadRestorationRequestList();
     },
-    "restoration-requests-pagination"
+    "restoration-requests-pagination",
   );
 }
 
@@ -159,21 +156,20 @@ function viewRestorationRequestDetail(requestId) {
         displayRestorationRequestDetail(data.restoration);
       } else {
         throw new Error(
-          data.message || "복원 요청 정보를 불러오는데 실패했습니다."
+          data.message || "복원 요청 정보를 불러오는데 실패했습니다.",
         );
       }
     })
     .catch((error) => {
-      document.getElementById(
-        "restoration-request-detail-content"
-      ).innerHTML = `<p style="text-align: center;">오류: ${error.message}</p>`;
+      document.getElementById("restoration-request-detail-content").innerHTML =
+        `<p style="text-align: center;">오류: ${error.message}</p>`;
     });
 }
 
 // 복원 요청 상세 정보 표시 함수
 function displayRestorationRequestDetail(restoration) {
   const container = document.getElementById(
-    "restoration-request-detail-content"
+    "restoration-request-detail-content",
   );
 
   // 복원 요청 기본 정보 섹션
@@ -193,11 +189,7 @@ function displayRestorationRequestDetail(restoration) {
                 <th>감정 ID</th>
                 <td>${restoration.appraisal_id}</td>
                 <th>신청자 정보</th>
-                <td>${
-                  restoration.user_email ||
-                  restoration.company_name ||
-                  restoration.user_id
-                }</td>
+                <td>${restoration.user_login_id || restoration.user_id}${restoration.company_name ? `(${restoration.company_name})` : ""}</td>
             </tr>
             <tr>
                 <th>신청일</th>
@@ -231,8 +223,8 @@ function displayRestorationRequestDetail(restoration) {
                 <td colspan="3">
                     ${delivery.name} / ${delivery.phone}<br>
                     (${delivery.zipcode}) ${delivery.address1} ${
-      delivery.address2 || ""
-    }
+                      delivery.address2 || ""
+                    }
                 </td>
             </tr>
         `;
@@ -490,8 +482,8 @@ function displayRestorationRequestDetail(restoration) {
                         }>완료</option>
                     </select>
                     <input type="hidden" id="service-id-${index}" value="${
-        service.service_id
-      }">
+                      service.service_id
+                    }">
                 </div>
             `;
     });
@@ -554,12 +546,12 @@ function updateRestorationRequest() {
   const formData = new FormData();
   formData.append(
     "status",
-    document.getElementById("restoration-status").value
+    document.getElementById("restoration-status").value,
   );
 
   // 예상 완료일이 있으면 추가
   const estimatedDate = document.getElementById(
-    "restoration-estimated-date"
+    "restoration-estimated-date",
   ).value;
   if (estimatedDate) {
     formData.append("estimated_completion_date", estimatedDate);
@@ -567,7 +559,7 @@ function updateRestorationRequest() {
 
   // 실제 완료일이 있으면 추가
   const completedDate = document.getElementById(
-    "restoration-completed-date"
+    "restoration-completed-date",
   ).value;
   if (completedDate) {
     formData.append("completed_at", completedDate);
@@ -580,14 +572,14 @@ function updateRestorationRequest() {
 
   // 이미지 파일 추가
   const beforeImages = document.getElementById(
-    "restoration-before-images"
+    "restoration-before-images",
   ).files;
   for (let i = 0; i < beforeImages.length; i++) {
     formData.append("before_images", beforeImages[i]);
   }
 
   const progressImages = document.getElementById(
-    "restoration-progress-images"
+    "restoration-progress-images",
   ).files;
   for (let i = 0; i < progressImages.length; i++) {
     formData.append("progress_images", progressImages[i]);

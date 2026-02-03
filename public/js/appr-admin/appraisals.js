@@ -110,7 +110,7 @@ document.addEventListener("DOMContentLoaded", function () {
 function setSubmitLoading(
   buttonSelector,
   isLoading,
-  loadingText = "처리 중..."
+  loadingText = "처리 중...",
 ) {
   const btn = document.querySelector(buttonSelector);
   if (!btn) return;
@@ -212,7 +212,7 @@ function renderImages() {
     imageList.length,
     "개",
     "컨테이너:",
-    container.id
+    container.id,
   );
 
   // 빈 목록 처리 (기존과 동일)
@@ -377,8 +377,8 @@ function searchUsersRealtime(query) {
               index < data.users.length - 1 ? "1px solid #f1f5f9" : "none"
             }; cursor: pointer; transition: background-color 0.2s;" 
                  onclick="selectUserFromSearch('${user.id}', '${
-            user.email
-          }', '${user.company_name || ""}')"
+                   user.email
+                 }', '${user.company_name || ""}')"
                  onmouseover="this.style.backgroundColor='#f8fafc'" 
                  onmouseout="this.style.backgroundColor='white'">
               <div style="font-weight: 500; color: #1a2a3a;">${user.id}</div>
@@ -464,9 +464,8 @@ function loadAppraisalList() {
       }
     })
     .catch((error) => {
-      document.getElementById(
-        "appraisals-list"
-      ).innerHTML = `<tr><td colspan="8" style="text-align: center;">오류: ${error.message}</td></tr>`;
+      document.getElementById("appraisals-list").innerHTML =
+        `<tr><td colspan="8" style="text-align: center;">오류: ${error.message}</td></tr>`;
     });
 }
 
@@ -498,7 +497,7 @@ function displayAppraisalList(appraisals, pagination) {
               appraisal.appraisal_type === "quicklink" ? "퀵링크" : "오프라인"
             }</td>
             <td>${appraisal.brand} / ${appraisal.model_name}</td>
-            <td>${appraisal.user_email || appraisal.user_id}</td>
+            <td>${appraisal.user_login_id || appraisal.user_id}${appraisal.company_name ? `(${appraisal.company_name})` : ""}</td>
             <td>${getStatusBadge(appraisal.status)}</td>
             <td>${getStatusBadge(appraisal.result)}</td>
             <td>${formatDate(appraisal.created_at)}</td>
@@ -520,7 +519,7 @@ function displayAppraisalList(appraisals, pagination) {
       currentAppraisalPage = page;
       loadAppraisalList();
     },
-    "appraisals-pagination"
+    "appraisals-pagination",
   );
 }
 
@@ -528,7 +527,7 @@ function displayAppraisalList(appraisals, pagination) {
 function deleteAppraisal(appraisalId, certificateNumber, brand, modelName) {
   if (
     confirm(
-      `정말로 감정을 삭제하시겠습니까?\n\n${certificateNumber} - ${brand} / ${modelName}\n\n삭제된 데이터는 복구할 수 없습니다.`
+      `정말로 감정을 삭제하시겠습니까?\n\n${certificateNumber} - ${brand} / ${modelName}\n\n삭제된 데이터는 복구할 수 없습니다.`,
     )
   ) {
     // API 호출
@@ -590,9 +589,8 @@ function viewAppraisalDetail(appraisalId) {
       }
     })
     .catch((error) => {
-      document.getElementById(
-        "appraisal-detail-content"
-      ).innerHTML = `<p style="text-align: center;">오류: ${error.message}</p>`;
+      document.getElementById("appraisal-detail-content").innerHTML =
+        `<p style="text-align: center;">오류: ${error.message}</p>`;
     });
 }
 
@@ -764,7 +762,7 @@ function displayAppraisalDetail(appraisal) {
                                         : ""
                                     }
                                 </div>
-                            `
+                            `,
                                 )
                                 .join("")
                             : `
@@ -952,8 +950,8 @@ function displayAppraisalDetail(appraisal) {
                 <button type="button" class="btn" style="background-color: #dc2626;" onclick="deleteAppraisal('${
                   appraisal.id
                 }', '${appraisal.certificate_number || "미발급"}', '${
-    appraisal.brand
-  }', '${appraisal.model_name}')">
+                  appraisal.brand
+                }', '${appraisal.model_name}')">
                     삭제
                 </button>
             </div>
@@ -1063,14 +1061,13 @@ function loadRestorationServicesForAppraisal() {
         displayRestorationServicesCheckboxes(data.services);
       } else {
         throw new Error(
-          data.message || "복원 서비스 목록을 불러오는데 실패했습니다."
+          data.message || "복원 서비스 목록을 불러오는데 실패했습니다.",
         );
       }
     })
     .catch((error) => {
-      document.getElementById(
-        "suggested-restoration-services"
-      ).innerHTML = `<p>오류: ${error.message}</p>`;
+      document.getElementById("suggested-restoration-services").innerHTML =
+        `<p>오류: ${error.message}</p>`;
     });
 }
 
@@ -1111,7 +1108,7 @@ function updateAppraisal() {
   setSubmitLoading(
     '#appraisal-update-form button[onclick="updateAppraisal()"]',
     true,
-    "저장 중..."
+    "저장 중...",
   );
 
   const appraisalId = document.getElementById("appraisal-id").value;
@@ -1122,27 +1119,27 @@ function updateAppraisal() {
   // 기본 정보 필드들 추가
   formData.append(
     "certificate_number",
-    document.getElementById("appraisal-certificate-number").value || ""
+    document.getElementById("appraisal-certificate-number").value || "",
   );
   formData.append(
     "appraisal_type",
-    document.getElementById("appraisal-type-select").value
+    document.getElementById("appraisal-type-select").value,
   );
   formData.append(
     "brand",
-    document.getElementById("appraisal-brand-input").value
+    document.getElementById("appraisal-brand-input").value,
   );
   formData.append(
     "model_name",
-    document.getElementById("appraisal-model-input").value
+    document.getElementById("appraisal-model-input").value,
   );
   formData.append(
     "category",
-    document.getElementById("appraisal-category-select").value
+    document.getElementById("appraisal-category-select").value,
   );
   formData.append(
     "remarks",
-    document.getElementById("appraisal-remarks-input").value
+    document.getElementById("appraisal-remarks-input").value,
   );
 
   // 감정 유형별 필드 추가
@@ -1151,15 +1148,15 @@ function updateAppraisal() {
   if (appraisalType === "quicklink") {
     formData.append(
       "product_link",
-      document.getElementById("appraisal-product-link").value || ""
+      document.getElementById("appraisal-product-link").value || "",
     );
     formData.append(
       "platform",
-      document.getElementById("appraisal-platform").value || ""
+      document.getElementById("appraisal-platform").value || "",
     );
   } else if (appraisalType === "offline") {
     const purchaseYear = document.getElementById(
-      "appraisal-purchase-year"
+      "appraisal-purchase-year",
     ).value;
     if (purchaseYear) {
       formData.append("purchase_year", purchaseYear);
@@ -1167,7 +1164,7 @@ function updateAppraisal() {
 
     // 구성품 수집
     const componentInputs = document.querySelectorAll(
-      ".component-input-detail"
+      ".component-input-detail",
     );
     const components = Array.from(componentInputs)
       .map((input) => input.value.trim())
@@ -1204,20 +1201,20 @@ function updateAppraisal() {
   formData.append("result", document.getElementById("appraisal-result").value);
   formData.append(
     "result_notes",
-    document.getElementById("appraisal-result-notes").value
+    document.getElementById("appraisal-result-notes").value,
   );
 
   // 추천 복원 서비스 ID 추가
   const suggestedServices = document.querySelectorAll(
-    'input[name="suggested-restoration-service"]:checked'
+    'input[name="suggested-restoration-service"]:checked',
   );
   if (suggestedServices.length > 0) {
     const serviceIds = Array.from(suggestedServices).map(
-      (checkbox) => checkbox.value
+      (checkbox) => checkbox.value,
     );
     formData.append(
       "suggested_restoration_services",
-      JSON.stringify(serviceIds)
+      JSON.stringify(serviceIds),
     );
   }
 
@@ -1239,7 +1236,7 @@ function updateAppraisal() {
     .filter((img) => !img.isNew)
     .map((img) => img.id);
   const deletedIds = originalImageIds.filter(
-    (id) => !currentImageIds.includes(id)
+    (id) => !currentImageIds.includes(id),
   );
   formData.append("deleted_image_ids", JSON.stringify(deletedIds));
 
@@ -1252,8 +1249,8 @@ function updateAppraisal() {
         order: index,
         isNew: img.isNew,
         originalName: img.isNew ? img.originalName : null,
-      }))
-    )
+      })),
+    ),
   );
 
   // 유효성 검사
@@ -1300,8 +1297,8 @@ function updateAppraisal() {
     .finally(() =>
       setSubmitLoading(
         '#appraisal-update-form button[onclick="updateAppraisal()"]',
-        false
-      )
+        false,
+      ),
     );
 }
 
@@ -1461,7 +1458,7 @@ function submitCreateAppraisal() {
   setSubmitLoading(
     '#create-appraisal-form button[type="submit"]',
     true,
-    "생성 중..."
+    "생성 중...",
   );
 
   const formData = new FormData();
@@ -1470,19 +1467,19 @@ function submitCreateAppraisal() {
   formData.append("user_id", document.getElementById("create-user-id").value);
   formData.append(
     "appraisal_type",
-    document.getElementById("create-appraisal-type").value
+    document.getElementById("create-appraisal-type").value,
   );
   formData.append("brand", document.getElementById("create-brand").value);
   formData.append(
     "model_name",
-    document.getElementById("create-model-name").value
+    document.getElementById("create-model-name").value,
   );
   formData.append("category", document.getElementById("create-category").value);
   formData.append("remarks", document.getElementById("create-remarks").value);
 
   // 인증서 번호
   const certificateNumber = document.getElementById(
-    "create-certificate-number"
+    "create-certificate-number",
   ).value;
   if (certificateNumber) {
     formData.append("certificate_number", certificateNumber);
@@ -1493,11 +1490,11 @@ function submitCreateAppraisal() {
   if (appraisalType === "quicklink") {
     formData.append(
       "product_link",
-      document.getElementById("create-product-link").value
+      document.getElementById("create-product-link").value,
     );
     formData.append(
       "platform",
-      document.getElementById("create-platform").value
+      document.getElementById("create-platform").value,
     );
   } else if (appraisalType === "offline") {
     // 구매연도, 구성품, 배송정보 등 기존 로직 유지
@@ -1514,16 +1511,16 @@ function submitCreateAppraisal() {
     // 배송정보 처리 (기존 로직)
     const deliveryName = document.getElementById("create-delivery-name").value;
     const deliveryPhone = document.getElementById(
-      "create-delivery-phone"
+      "create-delivery-phone",
     ).value;
     const deliveryZipcode = document.getElementById(
-      "create-delivery-zipcode"
+      "create-delivery-zipcode",
     ).value;
     const deliveryAddress1 = document.getElementById(
-      "create-delivery-address1"
+      "create-delivery-address1",
     ).value;
     const deliveryAddress2 = document.getElementById(
-      "create-delivery-address2"
+      "create-delivery-address2",
     ).value;
 
     if (deliveryName || deliveryPhone || deliveryAddress1) {
@@ -1535,7 +1532,7 @@ function submitCreateAppraisal() {
           zipcode: deliveryZipcode,
           address1: deliveryAddress1,
           address2: deliveryAddress2,
-        })
+        }),
       );
     }
   }
@@ -1575,7 +1572,7 @@ function submitCreateAppraisal() {
     })
     .catch((error) => showAlert(error.message, "error"))
     .finally(() =>
-      setSubmitLoading('#create-appraisal-form button[type="submit"]', false)
+      setSubmitLoading('#create-appraisal-form button[type="submit"]', false),
     );
 }
 
@@ -1645,7 +1642,7 @@ function toggleSelectAll() {
   const selectAllCheckbox = document.getElementById("select-all-checkbox");
   const itemCheckboxes = document.querySelectorAll(".bulk-select-checkbox");
   itemCheckboxes.forEach(
-    (checkbox) => (checkbox.checked = selectAllCheckbox.checked)
+    (checkbox) => (checkbox.checked = selectAllCheckbox.checked),
   );
   updateBulkActionButtons();
 }
@@ -1653,13 +1650,13 @@ function toggleSelectAll() {
 // 일괄 작업 버튼 업데이트 함수 (기존 함수명 변경)
 function updateBulkActionButtons() {
   const selectedItems = document.querySelectorAll(
-    ".bulk-select-checkbox:checked"
+    ".bulk-select-checkbox:checked",
   );
   const selectedCount = selectedItems.length;
 
   // 삭제 버튼 업데이트
   const executeDeleteButton = document.getElementById(
-    "execute-bulk-delete-btn"
+    "execute-bulk-delete-btn",
   );
   if (executeDeleteButton) {
     executeDeleteButton.style.display =
@@ -1677,10 +1674,10 @@ function updateBulkActionButtons() {
 // 일괄 상태 변경 실행
 function executeBulkStatusChange() {
   const selectedCheckboxes = document.querySelectorAll(
-    ".bulk-select-checkbox:checked"
+    ".bulk-select-checkbox:checked",
   );
   const selectedIds = Array.from(selectedCheckboxes).map(
-    (checkbox) => checkbox.value
+    (checkbox) => checkbox.value,
   );
   const newStatus = document.getElementById("bulk-status-select").value;
 
@@ -1703,7 +1700,7 @@ function executeBulkStatusChange() {
 
   if (
     confirm(
-      `정말로 선택된 ${selectedIds.length}개의 감정 상태를 "${statusNames[newStatus]}"로 변경하시겠습니까?`
+      `정말로 선택된 ${selectedIds.length}개의 감정 상태를 "${statusNames[newStatus]}"로 변경하시겠습니까?`,
     )
   ) {
     fetch("/api/appr/admin/appraisals/bulk-status", {
@@ -1735,10 +1732,10 @@ function executeBulkStatusChange() {
 // 일괄 결과 변경 실행
 function executeBulkResultChange() {
   const selectedCheckboxes = document.querySelectorAll(
-    ".bulk-select-checkbox:checked"
+    ".bulk-select-checkbox:checked",
   );
   const selectedIds = Array.from(selectedCheckboxes).map(
-    (checkbox) => checkbox.value
+    (checkbox) => checkbox.value,
   );
   const newResult = document.getElementById("bulk-result-select").value;
   const resultNotes = document.getElementById("bulk-result-notes").value;
@@ -1810,10 +1807,10 @@ function executeBulkResultChange() {
 // 다중 삭제 실행 함수
 function executeBulkDelete() {
   const selectedCheckboxes = document.querySelectorAll(
-    ".bulk-select-checkbox:checked"
+    ".bulk-select-checkbox:checked",
   );
   const selectedIds = Array.from(selectedCheckboxes).map(
-    (checkbox) => checkbox.value
+    (checkbox) => checkbox.value,
   );
   if (selectedIds.length === 0) {
     showAlert("삭제할 감정을 선택해주세요.", "error");
@@ -1821,7 +1818,7 @@ function executeBulkDelete() {
   }
   if (
     confirm(
-      `정말로 선택된 ${selectedIds.length}개의 감정을 삭제하시겠습니까?\n\n삭제된 데이터는 복구할 수 없습니다.`
+      `정말로 선택된 ${selectedIds.length}개의 감정을 삭제하시겠습니까?\n\n삭제된 데이터는 복구할 수 없습니다.`,
     )
   ) {
     fetch("/api/appr/admin/appraisals", {

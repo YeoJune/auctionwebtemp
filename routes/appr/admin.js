@@ -44,9 +44,9 @@ const appraisalUpload = multer({
     } else {
       cb(
         new Error(
-          "유효하지 않은 파일 형식입니다. 이미지 또는 PDF만 업로드 가능합니다."
+          "유효하지 않은 파일 형식입니다. 이미지 또는 PDF만 업로드 가능합니다.",
         ),
-        false
+        false,
       );
     }
   },
@@ -76,7 +76,7 @@ const restorationUpload = multer({
     } else {
       cb(
         new Error("유효하지 않은 파일 형식입니다. 이미지만 업로드 가능합니다."),
-        false
+        false,
       );
     }
   },
@@ -105,7 +105,7 @@ const authenticityUpload = multer({
     } else {
       cb(
         new Error("유효하지 않은 파일 형식입니다. 이미지만 업로드 가능합니다."),
-        false
+        false,
       );
     }
   },
@@ -135,7 +135,7 @@ const bannerUpload = multer({
     } else {
       cb(
         new Error("유효하지 않은 파일 형식입니다. 이미지만 업로드 가능합니다."),
-        false
+        false,
       );
     }
   },
@@ -146,16 +146,17 @@ function normalizeImageData(images) {
 
   try {
     const parsed = JSON.parse(images);
-    
+
     if (!Array.isArray(parsed)) return [];
     if (parsed.length === 0) return [];
 
     // 새 구조 확인 (첫 번째 요소가 객체이고 id 속성을 가짐)
-    const isNewFormat = parsed.every(item => 
-      typeof item === "object" && 
-      item !== null && 
-      typeof item.id === "string" && 
-      typeof item.url === "string"
+    const isNewFormat = parsed.every(
+      (item) =>
+        typeof item === "object" &&
+        item !== null &&
+        typeof item.id === "string" &&
+        typeof item.url === "string",
     );
 
     if (isNewFormat) {
@@ -168,8 +169,8 @@ function normalizeImageData(images) {
     }
 
     // Legacy 구조 (문자열 배열) 변환
-    const isLegacyFormat = parsed.every(item => typeof item === "string");
-    
+    const isLegacyFormat = parsed.every((item) => typeof item === "string");
+
     if (isLegacyFormat) {
       return parsed.map((url, index) => ({
         id: `legacy-${uuidv4()}-${index}`, // UUID 사용으로 중복 방지
@@ -193,7 +194,7 @@ router.get("/banners", isAuthenticated, isAdmin, async (req, res) => {
     conn = await pool.getConnection();
 
     const [rows] = await conn.query(
-      "SELECT * FROM main_banners ORDER BY display_order ASC, created_at DESC"
+      "SELECT * FROM main_banners ORDER BY display_order ASC, created_at DESC",
     );
 
     res.json({
@@ -254,7 +255,7 @@ router.post(
           button_link?.trim() || null,
           parseInt(display_order) || 0,
           is_active === "true" || is_active === true,
-        ]
+        ],
       );
 
       res.status(201).json({
@@ -280,7 +281,7 @@ router.post(
     } finally {
       if (conn) conn.release();
     }
-  }
+  },
 );
 
 // 배너 수정 - PUT /api/appr/admin/banners/:id
@@ -308,7 +309,7 @@ router.put(
       // 배너 존재 여부 확인
       const [bannerRows] = await conn.query(
         "SELECT * FROM main_banners WHERE id = ?",
-        [banner_id]
+        [banner_id],
       );
 
       if (bannerRows.length === 0) {
@@ -388,7 +389,7 @@ router.put(
 
       // 업데이트 쿼리 실행
       const query = `UPDATE main_banners SET ${updateFields.join(
-        ", "
+        ", ",
       )} WHERE id = ?`;
       updateValues.push(banner_id);
 
@@ -411,7 +412,7 @@ router.put(
     } finally {
       if (conn) conn.release();
     }
-  }
+  },
 );
 
 // 배너 삭제 - DELETE /api/appr/admin/banners/:id
@@ -425,7 +426,7 @@ router.delete("/banners/:id", isAuthenticated, isAdmin, async (req, res) => {
     // 배너 존재 여부 확인
     const [bannerRows] = await conn.query(
       "SELECT * FROM main_banners WHERE id = ?",
-      [banner_id]
+      [banner_id],
     );
 
     if (bannerRows.length === 0) {
@@ -551,7 +552,7 @@ router.put("/users/:id", isAuthenticated, isAdmin, async (req, res) => {
     // appr_users 테이블에 사용자 존재 여부 확인
     const [apprUserRows] = await conn.query(
       "SELECT * FROM appr_users WHERE user_id = ?",
-      [user_id]
+      [user_id],
     );
 
     if (apprUserRows.length === 0) {
@@ -569,7 +570,7 @@ router.put("/users/:id", isAuthenticated, isAdmin, async (req, res) => {
           quick_link_subscription_type || "free",
           quick_link_subscription_expires_at || null,
           offline_appraisal_fee || 38000,
-        ]
+        ],
       );
     } else {
       // 기존 사용자 정보 업데이트
@@ -627,7 +628,7 @@ router.put("/users/:id", isAuthenticated, isAdmin, async (req, res) => {
       FROM users u
       JOIN appr_users a ON u.id = a.user_id
       WHERE u.id = ?`,
-      [user_id]
+      [user_id],
     );
 
     res.json({
@@ -695,7 +696,7 @@ router.post(
         const imageUrls = await processUploadedImages(
           req.files,
           path.join(__dirname, "../../public/images/appraisals"),
-          { skipExisting: true }
+          { skipExisting: true },
         );
 
         // ✅ 통일된 방식으로 구조화
@@ -704,7 +705,7 @@ router.post(
 
       const finalCertificateNumber = await generateCertificateNumber(
         conn,
-        certificate_number
+        certificate_number,
       );
 
       await conn.query(
@@ -731,7 +732,7 @@ router.post(
           finalCertificateNumber,
           // ✅ 통일된 방식으로 저장 (utils/appr.js와 동일)
           finalImages.length > 0 ? JSON.stringify(finalImages) : null,
-        ]
+        ],
       );
 
       const [createdAppraisal] = await conn.query(
@@ -739,7 +740,7 @@ router.post(
        FROM appraisals a
        JOIN users u ON a.user_id = u.id
        WHERE a.certificate_number = ?`,
-        [finalCertificateNumber]
+        [finalCertificateNumber],
       );
 
       res.status(201).json({
@@ -755,7 +756,7 @@ router.post(
     } finally {
       if (conn) conn.release();
     }
-  }
+  },
 );
 
 // 전체 감정 목록 조회 - GET /api/appr/admin/appraisals
@@ -772,7 +773,7 @@ router.get("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
       SELECT 
         a.id, a.user_id, a.appraisal_type, a.status, a.brand, a.model_name,
         a.category, a.result, a.certificate_number, a.created_at,
-        u.email as user_email, u.company_name as company_name,
+        u.email as user_email, u.company_name as company_name, u.login_id as user_login_id,
         a.images
       FROM appraisals a
       JOIN users u ON a.user_id = u.id
@@ -805,7 +806,7 @@ router.get("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
         searchPattern,
         searchPattern,
         searchPattern,
-        searchPattern
+        searchPattern,
       );
     }
 
@@ -851,7 +852,7 @@ router.get("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
         searchPattern,
         searchPattern,
         searchPattern,
-        searchPattern
+        searchPattern,
       );
     }
 
@@ -907,7 +908,7 @@ router.delete("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
     const placeholders = ids.map(() => "?").join(", ");
     const [appraisalRows] = await conn.query(
       `SELECT * FROM appraisals WHERE id IN (${placeholders})`,
-      ids
+      ids,
     );
 
     if (appraisalRows.length === 0) {
@@ -935,14 +936,14 @@ router.delete("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
         // 1. 관련 복원 요청이 있는지 확인하고 삭제
         const [restorationRequests] = await conn.query(
           "SELECT id FROM restoration_requests WHERE appraisal_id = ?",
-          [appraisal.id]
+          [appraisal.id],
         );
 
         if (restorationRequests.length > 0) {
           // 복원 요청도 함께 삭제
           await conn.query(
             "DELETE FROM restoration_requests WHERE appraisal_id = ?",
-            [appraisal.id]
+            [appraisal.id],
           );
           relatedRestorationsDeleted += restorationRequests.length;
         }
@@ -952,7 +953,7 @@ router.delete("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
           `UPDATE payments 
            SET related_resource_id = NULL, related_resource_type = NULL 
            WHERE related_resource_id = ? AND related_resource_type = 'appraisal'`,
-          [appraisal.id]
+          [appraisal.id],
         );
 
         // 3. 크레딧이 차감된 경우 복구 (퀵링크만)
@@ -962,14 +963,14 @@ router.delete("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
         ) {
           const [userRows] = await conn.query(
             "SELECT * FROM appr_users WHERE user_id = ?",
-            [appraisal.user_id]
+            [appraisal.user_id],
           );
 
           if (userRows.length > 0) {
             // 크레딧 1개 복구
             await conn.query(
               "UPDATE appr_users SET quick_link_credits_remaining = quick_link_credits_remaining + 1 WHERE user_id = ?",
-              [appraisal.user_id]
+              [appraisal.user_id],
             );
             creditRestoredCount++;
           }
@@ -997,7 +998,7 @@ router.delete("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
             normalizedImages.forEach((img) => {
               if (img.url) {
                 filesToDelete.push(
-                  path.join(__dirname, "../../public", img.url)
+                  path.join(__dirname, "../../public", img.url),
                 );
               }
             });
@@ -1009,14 +1010,14 @@ router.delete("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
         // PDF 파일
         if (appraisal.certificate_url) {
           filesToDelete.push(
-            path.join(__dirname, "../../public", appraisal.certificate_url)
+            path.join(__dirname, "../../public", appraisal.certificate_url),
           );
         }
 
         // QR 코드 파일
         if (appraisal.qrcode_url) {
           filesToDelete.push(
-            path.join(__dirname, "../../public", appraisal.qrcode_url)
+            path.join(__dirname, "../../public", appraisal.qrcode_url),
           );
         }
       }
@@ -1091,7 +1092,7 @@ router.get(
       conn = await pool.getConnection();
 
       const [rows] = await conn.query(
-        "SELECT * FROM restoration_services ORDER BY name ASC"
+        "SELECT * FROM restoration_services ORDER BY name ASC",
       );
 
       res.json({
@@ -1107,7 +1108,7 @@ router.get(
     } finally {
       if (conn) conn.release();
     }
-  }
+  },
 );
 
 // 복원 서비스 추가 - POST /api/appr/admin/restoration-services
@@ -1166,7 +1167,7 @@ router.post(
           before_image,
           after_image,
           true,
-        ]
+        ],
       );
 
       res.status(201).json({
@@ -1191,7 +1192,7 @@ router.post(
     } finally {
       if (conn) conn.release();
     }
-  }
+  },
 );
 
 // 복원 서비스 수정 - PUT /api/appr/admin/restoration-services/:id
@@ -1214,7 +1215,7 @@ router.put(
       // 서비스 존재 여부 확인
       const [serviceRows] = await conn.query(
         "SELECT * FROM restoration_services WHERE id = ?",
-        [service_id]
+        [service_id],
       );
 
       if (serviceRows.length === 0) {
@@ -1289,7 +1290,7 @@ router.put(
 
       // 업데이트 쿼리 실행
       const query = `UPDATE restoration_services SET ${updateFields.join(
-        ", "
+        ", ",
       )} WHERE id = ?`;
       updateValues.push(service_id);
 
@@ -1312,7 +1313,7 @@ router.put(
     } finally {
       if (conn) conn.release();
     }
-  }
+  },
 );
 
 // 복원 서비스 비활성화 - DELETE /api/appr/admin/restoration-services/:id
@@ -1330,7 +1331,7 @@ router.delete(
       // 서비스 존재 여부 확인
       const [serviceRows] = await conn.query(
         "SELECT * FROM restoration_services WHERE id = ?",
-        [service_id]
+        [service_id],
       );
 
       if (serviceRows.length === 0) {
@@ -1343,7 +1344,7 @@ router.delete(
       // 서비스 비활성화 (실제 삭제하지 않음)
       await conn.query(
         "UPDATE restoration_services SET is_active = ? WHERE id = ?",
-        [false, service_id]
+        [false, service_id],
       );
 
       res.json({
@@ -1359,7 +1360,7 @@ router.delete(
     } finally {
       if (conn) conn.release();
     }
-  }
+  },
 );
 
 // 전체 복원 요청 목록 조회 - GET /api/appr/admin/restorations
@@ -1377,7 +1378,7 @@ router.get("/restorations", isAuthenticated, isAdmin, async (req, res) => {
         r.id, r.appraisal_id, r.status, r.total_price, 
         r.created_at, r.estimated_completion_date, r.completed_at,
         a.brand, a.model_name,
-        u.id as user_id, u.email as user_email, u.company_name
+        u.id as user_id, u.email as user_email, u.company_name, u.login_id as user_login_id
       FROM restoration_requests r
       JOIN appraisals a ON r.appraisal_id = a.id
       JOIN users u ON r.user_id = u.id
@@ -1401,7 +1402,7 @@ router.get("/restorations", isAuthenticated, isAdmin, async (req, res) => {
         searchPattern,
         searchPattern,
         searchPattern,
-        searchPattern
+        searchPattern,
       );
     }
 
@@ -1435,7 +1436,7 @@ router.get("/restorations", isAuthenticated, isAdmin, async (req, res) => {
         searchPattern,
         searchPattern,
         searchPattern,
-        searchPattern
+        searchPattern,
       );
     }
 
@@ -1478,7 +1479,7 @@ router.get("/restorations/:id", isAuthenticated, isAdmin, async (req, res) => {
       JOIN appraisals a ON r.appraisal_id = a.id
       JOIN users u ON r.user_id = u.id
       WHERE r.id = ?`,
-      [restoration_id]
+      [restoration_id],
     );
 
     if (rows.length === 0) {
@@ -1562,7 +1563,7 @@ router.put(
       // 복원 요청 정보 조회
       const [restorationRows] = await conn.query(
         "SELECT * FROM restoration_requests WHERE id = ?",
-        [restoration_id]
+        [restoration_id],
       );
 
       if (restorationRows.length === 0) {
@@ -1584,7 +1585,7 @@ router.put(
       if (req.files) {
         if (req.files.before_images) {
           const newBeforeImages = req.files.before_images.map(
-            (file) => `/images/restorations/${file.filename}`
+            (file) => `/images/restorations/${file.filename}`,
           );
           existingImages.before = [
             ...(existingImages.before || []),
@@ -1594,7 +1595,7 @@ router.put(
 
         if (req.files.after_images) {
           const newAfterImages = req.files.after_images.map(
-            (file) => `/images/restorations/${file.filename}`
+            (file) => `/images/restorations/${file.filename}`,
           );
           existingImages.after = [
             ...(existingImages.after || []),
@@ -1604,7 +1605,7 @@ router.put(
 
         if (req.files.progress_images) {
           const newProgressImages = req.files.progress_images.map(
-            (file) => `/images/restorations/${file.filename}`
+            (file) => `/images/restorations/${file.filename}`,
           );
           existingImages.progress = [
             ...(existingImages.progress || []),
@@ -1621,7 +1622,7 @@ router.put(
           // 서비스 ID를 기반으로 기존 서비스 업데이트
           services = services.map((service) => {
             const updatedService = updatedServices.find(
-              (s) => s.service_id === service.service_id
+              (s) => s.service_id === service.service_id,
             );
             if (updatedService && updatedService.status) {
               return { ...service, status: updatedService.status };
@@ -1681,7 +1682,7 @@ router.put(
 
       // 업데이트 쿼리 실행
       const query = `UPDATE restoration_requests SET ${updateFields.join(
-        ", "
+        ", ",
       )} WHERE id = ?`;
       updateValues.push(restoration_id);
 
@@ -1708,7 +1709,7 @@ router.put(
     } finally {
       if (conn) conn.release();
     }
-  }
+  },
 );
 
 // 결제 내역 조회 - GET /api/appr/admin/payments
@@ -1773,7 +1774,7 @@ router.get("/payments", isAuthenticated, isAdmin, async (req, res) => {
         searchPattern,
         searchPattern,
         searchPattern,
-        searchPattern
+        searchPattern,
       );
     }
 
@@ -1821,7 +1822,7 @@ router.get("/payments", isAuthenticated, isAdmin, async (req, res) => {
         searchPattern,
         searchPattern,
         searchPattern,
-        searchPattern
+        searchPattern,
       );
     }
 
@@ -1862,7 +1863,7 @@ router.get("/payments/:id", isAuthenticated, isAdmin, async (req, res) => {
       FROM payments p
       JOIN users u ON p.user_id = u.id
       WHERE p.id = ?`,
-      [payment_id]
+      [payment_id],
     );
 
     if (rows.length === 0) {
@@ -1881,7 +1882,7 @@ router.get("/payments/:id", isAuthenticated, isAdmin, async (req, res) => {
       if (payment.related_resource_type === "appraisal") {
         const [appraisalRows] = await conn.query(
           "SELECT id, brand, model_name, appraisal_type, status, result FROM appraisals WHERE id = ?",
-          [payment.related_resource_id]
+          [payment.related_resource_id],
         );
 
         if (appraisalRows.length > 0) {
@@ -1896,7 +1897,7 @@ router.get("/payments/:id", isAuthenticated, isAdmin, async (req, res) => {
           FROM restoration_requests r
           JOIN appraisals a ON r.appraisal_id = a.id
           WHERE r.id = ?`,
-          [payment.related_resource_id]
+          [payment.related_resource_id],
         );
 
         if (restorationRows.length > 0) {
@@ -1982,7 +1983,7 @@ router.get(
     } finally {
       if (conn) conn.release();
     }
-  }
+  },
 );
 
 // 정품 구별법 추가 - POST /api/appr/admin/authenticity-guides
@@ -2041,7 +2042,7 @@ router.post(
           authentic_image,
           fake_image,
           true,
-        ]
+        ],
       );
 
       res.status(201).json({
@@ -2066,7 +2067,7 @@ router.post(
     } finally {
       if (conn) conn.release();
     }
-  }
+  },
 );
 
 // 정품 구별법 수정 - PUT /api/appr/admin/authenticity-guides/:id
@@ -2089,7 +2090,7 @@ router.put(
       // 구별법 존재 여부 확인
       const [guideRows] = await conn.query(
         "SELECT * FROM authenticity_guides WHERE id = ?",
-        [guide_id]
+        [guide_id],
       );
 
       if (guideRows.length === 0) {
@@ -2171,7 +2172,7 @@ router.put(
 
       // 업데이트 쿼리 실행
       const query = `UPDATE authenticity_guides SET ${updateFields.join(
-        ", "
+        ", ",
       )} WHERE id = ?`;
       updateValues.push(guide_id);
 
@@ -2194,7 +2195,7 @@ router.put(
     } finally {
       if (conn) conn.release();
     }
-  }
+  },
 );
 
 // 정품 구별법 비활성화 - DELETE /api/appr/admin/authenticity-guides/:id
@@ -2212,7 +2213,7 @@ router.delete(
       // 실제 삭제 대신 비활성화 처리
       await conn.query(
         "UPDATE authenticity_guides SET is_active = false WHERE id = ?",
-        [guide_id]
+        [guide_id],
       );
 
       res.json({
@@ -2228,7 +2229,7 @@ router.delete(
     } finally {
       if (conn) conn.release();
     }
-  }
+  },
 );
 
 // 감정 상태 일괄 변경 - PUT /api/appr/admin/appraisals/bulk-status
@@ -2279,7 +2280,7 @@ router.put(
       const placeholders = ids.map(() => "?").join(", ");
       const [appraisalRows] = await conn.query(
         `SELECT id, certificate_number, brand, model_name, user_id, status FROM appraisals WHERE id IN (${placeholders})`,
-        ids
+        ids,
       );
 
       if (appraisalRows.length === 0) {
@@ -2361,7 +2362,7 @@ router.put(
     } finally {
       if (conn) conn.release();
     }
-  }
+  },
 );
 
 // 감정 결과 일괄 변경 - PUT /api/appr/admin/appraisals/bulk-result
@@ -2412,7 +2413,7 @@ router.put(
       const placeholders = ids.map(() => "?").join(", ");
       const [appraisalRows] = await conn.query(
         `SELECT id, certificate_number, brand, model_name, user_id, result, status, appraisal_type, credit_deducted FROM appraisals WHERE id IN (${placeholders})`,
-        ids
+        ids,
       );
 
       if (appraisalRows.length === 0) {
@@ -2462,19 +2463,19 @@ router.put(
             // 사용자 크레딧 조회 및 차감
             const [userRows] = await conn.query(
               "SELECT * FROM appr_users WHERE user_id = ?",
-              [appraisal.user_id]
+              [appraisal.user_id],
             );
 
             if (userRows.length > 0) {
               const user = userRows[0];
               const newCredits = Math.max(
                 0,
-                user.quick_link_credits_remaining - 1
+                user.quick_link_credits_remaining - 1,
               );
 
               await conn.query(
                 "UPDATE appr_users SET quick_link_credits_remaining = ? WHERE user_id = ?",
-                [newCredits, appraisal.user_id]
+                [newCredits, appraisal.user_id],
               );
 
               creditDeducted = true;
@@ -2554,7 +2555,7 @@ router.put(
     } finally {
       if (conn) conn.release();
     }
-  }
+  },
 );
 
 // 감정 상세 정보 조회 - GET /api/appr/admin/appraisals/:id
@@ -2570,7 +2571,7 @@ router.get("/appraisals/:id", isAuthenticated, isAdmin, async (req, res) => {
       FROM appraisals a
       JOIN users u ON a.user_id = u.id
       WHERE a.id = ?`,
-      [appraisal_id]
+      [appraisal_id],
     );
 
     if (rows.length === 0) {
@@ -2648,7 +2649,7 @@ router.put(
       // 감정 정보 조회
       const [appraisalRows] = await conn.query(
         "SELECT * FROM appraisals WHERE id = ?",
-        [appraisal_id]
+        [appraisal_id],
       );
 
       if (appraisalRows.length === 0) {
@@ -2670,13 +2671,12 @@ router.put(
 
       // (선택적이지만 권장) 기존 이미지에 워터마크가 없는 경우 이 시점에 적용
       const needsWatermarkUpdate = existingImages.some(
-        (img) => !isWatermarked(img.url)
+        (img) => !isWatermarked(img.url),
       );
       if (needsWatermarkUpdate) {
         const existingImageUrls = existingImages.map((img) => img.url);
-        const watermarkedUrls = await ensureWatermarkOnExistingImages(
-          existingImageUrls
-        );
+        const watermarkedUrls =
+          await ensureWatermarkOnExistingImages(existingImageUrls);
         // 워터마크가 적용된 URL로 기존 이미지 정보 업데이트
         existingImages.forEach((img, index) => {
           img.url = watermarkedUrls[index];
@@ -2689,7 +2689,7 @@ router.put(
         newImageUrls = await processUploadedImages(
           req.files.images,
           path.join(__dirname, "../../public/images/appraisals"),
-          { skipExisting: true }
+          { skipExisting: true },
         );
       }
 
@@ -2700,7 +2700,7 @@ router.put(
       // 4. 최종 이미지 목록 재구성
       finalImages = []; // 기존 선언된 변수 재사용
       const existingImageMap = new Map(
-        existingImages.map((img) => [img.id, img])
+        existingImages.map((img) => [img.id, img]),
       );
       let newImageIndex = 0; // 새 이미지 인덱스 추적
 
@@ -2782,7 +2782,7 @@ router.put(
 
         const [existing] = await conn.query(
           "SELECT certificate_number FROM appraisals WHERE certificate_number = ? AND id != ?",
-          [normalizedNumber, appraisal_id]
+          [normalizedNumber, appraisal_id],
         );
 
         if (existing.length > 0) {
@@ -2859,7 +2859,7 @@ router.put(
       if (components_included !== undefined) {
         updateFields.push("components_included = ?");
         updateValues.push(
-          components_included ? JSON.stringify(components_included) : null
+          components_included ? JSON.stringify(components_included) : null,
         );
         updateData.components_included = components_included;
       }
@@ -2879,7 +2879,7 @@ router.put(
       if (certificate_number !== undefined) {
         updateFields.push("certificate_number = ?");
         updateValues.push(
-          certificate_number ? certificate_number.toLowerCase() : null
+          certificate_number ? certificate_number.toLowerCase() : null,
         );
         updateData.certificate_number = certificate_number
           ? certificate_number.toLowerCase()
@@ -2909,7 +2909,7 @@ router.put(
       // 이미지 필드 업데이트 - 통일된 방식 사용
       updateFields.push("images = ?");
       updateValues.push(
-        finalImages.length > 0 ? JSON.stringify(finalImages) : null
+        finalImages.length > 0 ? JSON.stringify(finalImages) : null,
       );
       updateData.images = finalImages;
 
@@ -2947,19 +2947,19 @@ router.put(
         if (appraisal.appraisal_type === "quicklink") {
           const [userRows] = await conn.query(
             "SELECT * FROM appr_users WHERE user_id = ?",
-            [appraisal.user_id]
+            [appraisal.user_id],
           );
 
           if (userRows.length > 0) {
             const user = userRows[0];
             const newCredits = Math.max(
               0,
-              user.quick_link_credits_remaining - 1
+              user.quick_link_credits_remaining - 1,
             );
 
             await conn.query(
               "UPDATE appr_users SET quick_link_credits_remaining = ? WHERE user_id = ?",
-              [newCredits, appraisal.user_id]
+              [newCredits, appraisal.user_id],
             );
 
             creditInfo = { deducted: true, remaining: newCredits };
@@ -2983,7 +2983,7 @@ router.put(
 
       // 업데이트 쿼리 실행
       const query = `UPDATE appraisals SET ${updateFields.join(
-        ", "
+        ", ",
       )} WHERE id = ?`;
       updateValues.push(appraisal_id);
 
@@ -3008,7 +3008,7 @@ router.put(
     } finally {
       if (conn) conn.release();
     }
-  }
+  },
 );
 
 module.exports = router;
