@@ -800,9 +800,11 @@ router.get("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
 
     if (search) {
       query +=
-        " AND (a.brand LIKE ? OR a.model_name LIKE ? OR a.user_id LIKE ? OR a.certificate_number LIKE ?)";
+        " AND (a.brand LIKE ? OR a.model_name LIKE ? OR a.user_id LIKE ? OR a.certificate_number LIKE ? OR u.login_id LIKE ? OR u.company_name LIKE ?)";
       const searchPattern = `%${search}%`;
       queryParams.push(
+        searchPattern,
+        searchPattern,
         searchPattern,
         searchPattern,
         searchPattern,
@@ -846,9 +848,11 @@ router.get("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
 
     if (search) {
       countQuery +=
-        " AND (a.brand LIKE ? OR a.model_name LIKE ? OR a.user_id LIKE ? OR a.certificate_number LIKE ?)";
+        " AND (a.brand LIKE ? OR a.model_name LIKE ? OR a.user_id LIKE ? OR a.certificate_number LIKE ? OR u.login_id LIKE ? OR u.company_name LIKE ?)";
       const searchPattern = `%${search}%`;
       countParams.push(
+        searchPattern,
+        searchPattern,
         searchPattern,
         searchPattern,
         searchPattern,
@@ -1396,9 +1400,11 @@ router.get("/restorations", isAuthenticated, isAdmin, async (req, res) => {
     // 검색 조건 추가
     if (search) {
       query +=
-        " AND (a.brand LIKE ? OR a.model_name LIKE ? OR u.id LIKE ? OR u.email LIKE ?)";
+        " AND (a.brand LIKE ? OR a.model_name LIKE ? OR u.id LIKE ? OR u.email LIKE ? OR u.login_id LIKE ? OR u.company_name LIKE ?)";
       const searchPattern = `%${search}%`;
       queryParams.push(
+        searchPattern,
+        searchPattern,
         searchPattern,
         searchPattern,
         searchPattern,
@@ -1430,9 +1436,11 @@ router.get("/restorations", isAuthenticated, isAdmin, async (req, res) => {
 
     if (search) {
       countQuery +=
-        " AND (a.brand LIKE ? OR a.model_name LIKE ? OR u.id LIKE ? OR u.email LIKE ?)";
+        " AND (a.brand LIKE ? OR a.model_name LIKE ? OR u.id LIKE ? OR u.email LIKE ? OR u.login_id LIKE ? OR u.company_name LIKE ?)";
       const searchPattern = `%${search}%`;
       countParams.push(
+        searchPattern,
+        searchPattern,
         searchPattern,
         searchPattern,
         searchPattern,
