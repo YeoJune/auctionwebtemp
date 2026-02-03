@@ -106,6 +106,7 @@ router.get("/", async (req, res) => {
         SELECT COUNT(*) as total 
         FROM direct_bids d
         LEFT JOIN crawled_items i ON d.item_id = i.item_id
+        LEFT JOIN users u ON d.user_id = u.id
         WHERE 1=1
       `;
 
