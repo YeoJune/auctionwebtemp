@@ -438,7 +438,7 @@ class PenguinAucCrawler extends AxiosCrawler {
         .find(this.config.crawlSelectors.scheduleText)
         .text()
         .trim();
-      const scheduledDate = this.extractDate(this.extractScheduleDate(scheduleText));
+      const scheduledDate = this.extractScheduleDate(scheduleText);
 
       // 브랜드는 제목의 첫 단어
       const brand = title.split(" ")[0];
@@ -492,7 +492,7 @@ class PenguinAucCrawler extends AxiosCrawler {
       }
 
       const date = new Date(year, month - 1, day, hour, minute);
-      return date.toISOString();
+      return extractDate(date.toISOString());
     } catch (error) {
       console.error("날짜 파싱 실패:", error);
       return null;
