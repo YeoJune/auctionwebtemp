@@ -88,6 +88,7 @@ function renderUsers(users) {
       <td>${balanceInfo}</td>
       <td>${registrationDate}</td>
       <td>${user.company_name || "-"}</td>
+      <td>${user.email || "-"}</td>
       <td>${user.phone || "-"}</td>
       <td>${
         user.commission_rate !== null ? user.commission_rate + "%" : "-"
