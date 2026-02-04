@@ -492,7 +492,7 @@ function renderLiveBidsTable(liveBids) {
       const date = new Date(
         bid.item.original_scheduled_date || bid.item.scheduled_date,
       );
-      scheduledDate = formatDateTime(date);
+      scheduledDate = formatDateTime(date, true);
     }
 
     // auc_num을 이용한, 적절한 URL 생성
