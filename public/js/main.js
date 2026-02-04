@@ -123,11 +123,11 @@ window.ProductListController = (function () {
         window.LoginRequiredModal.initialize();
       }
 
-      if (isAuth && currentUser && currentUser.id) {
-        console.log("상품 페이지 - 현재 사용자 ID:", currentUser.id);
+      if (isAuth && currentUser && currentUser.login_id) {
+        console.log("상품 페이지 - 현재 사용자 ID:", currentUser.login_id);
 
         // 특정 사용자 ID에 대한 임시 처리
-        if (currentUser.id === "admin") {
+        if (currentUser.login_id === "admin") {
           // 임시 코드 실행
           document
             .querySelector("#aucNumFilters")
@@ -307,7 +307,7 @@ window.ProductListController = (function () {
     try {
       const filterPromises = Object.entries(config.filters).map(
         ([key, endpoint]) =>
-          API.fetchAPI(endpoint).then((data) => ({ key, data }))
+          API.fetchAPI(endpoint).then((data) => ({ key, data })),
       );
 
       const filterResults = await Promise.all(filterPromises);
@@ -399,7 +399,7 @@ window.ProductListController = (function () {
           updateArrayFilter(
             state.selectedAucNums,
             e.target.value,
-            e.target.checked
+            e.target.checked,
           );
         }
       });
@@ -414,7 +414,7 @@ window.ProductListController = (function () {
             updateArrayFilter(
               state.selectedAuctionTypes,
               e.target.value,
-              e.target.checked
+              e.target.checked,
             );
           }
         });
@@ -431,7 +431,7 @@ window.ProductListController = (function () {
             updateArrayFilter(
               state.selectedFavoriteNumbers,
               favoriteNum,
-              e.target.checked
+              e.target.checked,
             );
           }
         });
@@ -589,7 +589,7 @@ window.ProductListController = (function () {
 
     if (config.features.scheduledDates) {
       params.scheduledDates = state.selectedDates.map((date) =>
-        date === "NO_DATE" ? "null" : date
+        date === "NO_DATE" ? "null" : date,
       );
     }
 
@@ -725,7 +725,7 @@ window.ProductListController = (function () {
           break;
         case "formatted_price":
           value = cleanNumberFormat(
-            item.starting_price || item.final_price || 0
+            item.starting_price || item.final_price || 0,
           );
           break;
       }
@@ -880,7 +880,7 @@ window.ProductListController = (function () {
         `${config.detailEndpoint}${itemId}`,
         {
           method: "POST",
-        }
+        },
       );
 
       updateModalWithDetails(updatedItem);
@@ -909,11 +909,10 @@ window.ProductListController = (function () {
   function initializeModal(item) {
     document.querySelector(".modal-brand").textContent = item.brand || "";
     document.querySelector(".modal-title").textContent = item.title || "";
-    document.querySelector(
-      ".modal-item-id"
-    ).textContent = `id: ${item.item_id}`;
+    document.querySelector(".modal-item-id").textContent =
+      `id: ${item.item_id}`;
     document.querySelector(".main-image").src = API.validateImageUrl(
-      item.image
+      item.image,
     );
     document.querySelector(".modal-description").textContent = "로딩 중...";
     document.querySelector(".modal-category").textContent =
@@ -953,9 +952,8 @@ window.ProductListController = (function () {
     document.querySelector(".modal-brand").textContent = item.brand || "";
     document.querySelector(".modal-brand2").textContent = item.brand || "";
     document.querySelector(".modal-title").textContent = item.title || "";
-    document.querySelector(
-      ".modal-item-id"
-    ).textContent = `id: ${item.item_id}`;
+    document.querySelector(".modal-item-id").textContent =
+      `id: ${item.item_id}`;
     document.querySelector(".modal-rank").textContent = item.rank || "N";
 
     if (config.type === "products") {
@@ -994,7 +992,7 @@ window.ProductListController = (function () {
 
       const visibleItemIds = state.currentData.map((item) => item.item_id);
       const itemsToUpdate = data.itemIds.filter((id) =>
-        visibleItemIds.includes(id)
+        visibleItemIds.includes(id),
       );
 
       if (itemsToUpdate.length > 0) {
@@ -1216,7 +1214,7 @@ window.ProductListController = (function () {
     if (brandAllCheckbox) {
       brandAllCheckbox.addEventListener("change", function () {
         const checkboxes = brandCheckboxes.querySelectorAll(
-          'input[type="checkbox"]:not(#brand-all)'
+          'input[type="checkbox"]:not(#brand-all)',
         );
         checkboxes.forEach((checkbox) => {
           checkbox.checked = this.checked;
@@ -1285,14 +1283,14 @@ window.ProductListController = (function () {
     if (categoryAllCheckbox) {
       categoryAllCheckbox.addEventListener("change", function () {
         const checkboxes = categoryCheckboxes.querySelectorAll(
-          'input[type="checkbox"]:not(#category-all)'
+          'input[type="checkbox"]:not(#category-all)',
         );
         checkboxes.forEach((checkbox) => {
           checkbox.checked = this.checked;
           updateArrayFilter(
             state.selectedCategories,
             checkbox.value,
-            this.checked
+            this.checked,
           );
         });
         updateSelectedCount("category");
@@ -1362,7 +1360,7 @@ window.ProductListController = (function () {
           rankData.rank,
           "rank",
           state.selectedRanks,
-          rankData.rank
+          rankData.rank,
         );
         rankFilters.appendChild(rankItem);
       }
@@ -1409,7 +1407,7 @@ window.ProductListController = (function () {
    */
   function displayDateFilters(dates) {
     const scheduledDateFilters = document.getElementById(
-      "scheduledDateFilters"
+      "scheduledDateFilters",
     );
     if (!scheduledDateFilters) return;
 
@@ -1419,7 +1417,7 @@ window.ProductListController = (function () {
       "NO_DATE",
       "date",
       state.selectedDates,
-      "날짜 없음"
+      "날짜 없음",
     );
     scheduledDateFilters.appendChild(noScheduledDateItem);
 
@@ -1439,7 +1437,7 @@ window.ProductListController = (function () {
           normalizedDate,
           "date",
           state.selectedDates,
-          normalizedDate
+          normalizedDate,
         );
         scheduledDateFilters.appendChild(dateItem);
       }
@@ -1483,10 +1481,10 @@ window.ProductListController = (function () {
     if (!allCheckbox) return;
 
     const checkboxes = container.querySelectorAll(
-      `input[type='checkbox']:not(#${type}-all)`
+      `input[type='checkbox']:not(#${type}-all)`,
     );
     const checkedCount = container.querySelectorAll(
-      `input[type='checkbox']:not(#${type}-all):checked`
+      `input[type='checkbox']:not(#${type}-all):checked`,
     ).length;
 
     allCheckbox.checked =
@@ -1501,10 +1499,10 @@ window.ProductListController = (function () {
     if (!container) return;
 
     const checkboxes = container.querySelectorAll(
-      `input[type='checkbox']:not(#${type}-all)`
+      `input[type='checkbox']:not(#${type}-all)`,
     );
     const checkedCount = container.querySelectorAll(
-      `input[type='checkbox']:not(#${type}-all):checked`
+      `input[type='checkbox']:not(#${type}-all):checked`,
     ).length;
 
     let countElement = container.querySelector(".multiselect-selected-count");

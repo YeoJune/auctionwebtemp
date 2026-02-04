@@ -1011,12 +1011,4 @@ class PenguinAucCrawler extends AxiosCrawler {
 
 const penguinAucCrawler = new PenguinAucCrawler(penguinAucConfig);
 
-setTimeout(() => {
-  penguinAucCrawler.login().then(() => {
-    penguinAucCrawler
-      .crawlItemDetails("2106182375")
-      .then((data) => console.log(data));
-  });
-}, 100);
-
 module.exports = { penguinAucCrawler };
