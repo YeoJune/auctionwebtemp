@@ -492,14 +492,7 @@ function renderLiveBidsTable(liveBids) {
       const date = new Date(
         bid.item.original_scheduled_date || bid.item.scheduled_date,
       );
-      scheduledDate = new Intl.DateTimeFormat("ko-KR", {
-        timeZone: "Asia/Seoul",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      }).format(date);
+      scheduledDate = formatDate(date);
     }
 
     // auc_num을 이용한, 적절한 URL 생성
