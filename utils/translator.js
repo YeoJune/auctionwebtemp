@@ -21,6 +21,7 @@ class Translator {
   }
 
   async translate(text) {
+    if (!text) return text;
     const cached = await this.getFromCache(text);
     if (cached) return cached;
 
@@ -53,7 +54,7 @@ class Translator {
         console.log(
           `Throttled. Retrying in ${this.retryDelay}ms... (${retries + 1}/${
             this.maxRetries
-          })`
+          })`,
         );
         await this.delay(this.retryDelay);
         return this.callAPI(text, retries + 1);
@@ -69,13 +70,13 @@ class Translator {
       conn = await pool.getConnection();
       const [rows] = await conn.query(
         "SELECT translated_text FROM translation_cache WHERE source_text = ?",
-        [text]
+        [text],
       );
 
       if (rows.length > 0) {
         await conn.query(
           "UPDATE translation_cache SET updated_at = NOW() WHERE source_text = ?",
-          [text]
+          [text],
         );
         return rows[0].translated_text;
       }
@@ -96,7 +97,7 @@ class Translator {
       await conn.query(
         "INSERT INTO translation_cache (source_text, translated_text) VALUES (?, ?) " +
           "ON DUPLICATE KEY UPDATE translated_text = VALUES(translated_text), updated_at = NOW()",
-        [sourceText, translatedText]
+        [sourceText, translatedText],
       );
     } catch (error) {
       console.error("Cache save error:", error);
@@ -111,7 +112,7 @@ class Translator {
       conn = await pool.getConnection();
 
       const [countRows] = await conn.query(
-        "SELECT COUNT(*) as count FROM translation_cache"
+        "SELECT COUNT(*) as count FROM translation_cache",
       );
       const count = countRows[0].count;
 
@@ -119,14 +120,14 @@ class Translator {
         const deleteCount = count - this.maxCacheSize;
         await conn.query(
           "DELETE FROM translation_cache ORDER BY updated_at ASC LIMIT ?",
-          [deleteCount]
+          [deleteCount],
         );
         console.log(`Cleaned up ${deleteCount} old cache entries (size limit)`);
       }
 
       const [result] = await conn.query(
         "DELETE FROM translation_cache WHERE updated_at < DATE_SUB(NOW(), INTERVAL ? DAY)",
-        [this.cacheExpireDays]
+        [this.cacheExpireDays],
       );
 
       if (result.affectedRows > 0) {
