@@ -1,10 +1,7 @@
 // crawlers/penguinAuc.js
 const cheerio = require("cheerio");
 const { AxiosCrawler } = require("./baseCrawler");
-const { v4: uuidv4 } = require("uuid");
-const sharp = require("sharp");
-const path = require("path");
-const fs = require("fs");
+const translator = require("../utils/translator");
 
 let pLimit;
 (async () => {
@@ -536,8 +533,6 @@ class PenguinAucCrawler extends AxiosCrawler {
         },
       });
 
-      console.log(response.data);
-
       const $ = cheerio.load(response.data, { xmlMode: false });
 
       // 이미지 추출 - .swiper-slide img에서
@@ -566,29 +561,27 @@ class PenguinAucCrawler extends AxiosCrawler {
         const $row = $(row);
         const td = $row.find("td").text().trim();
 
-        // 순서로 판단 (영어로 변환된 HTML 기준)
-        // 0: Lot 번호 (스킵)
-        // 1: 카테고리 (스킵)
-        // 2: 등급 (스킵 - 필요 없음)
-        // 3: ブランド (Brand)
-        // 4: モデル (Model)
-        // 5: 素材 (Material)
-        // 6: 色 (Color)
-        // 7: 付属品 (Accessories)
-        // 8: その他／備考 (Other/Notes)
-
         if (i === 3)
           brand = td; // Brand
         else if (i === 4)
           model = td; // Model
-        else if (i === 5)
-          material = td; // Material
-        else if (i === 6)
-          color = td; // Color
         else if (i === 7)
+          material = td; // Material
+        else if (i === 8)
+          color = td; // Color
+        else if (i === 9)
           accessories = td; // Accessories
-        else if (i === 8) notes = td; // Other/Notes
+        else if (i === 10) notes = td; // Other/Notes
       });
+      // 여러 줄 정리
+      notes = notes.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
+
+      brand = await translator.translate(brand);
+      model = await translator.translate(model);
+      material = await translator.translate(material);
+      color = await translator.translate(color);
+      accessories = await translator.translate(accessories);
+      notes = await translator.translate(notes);
 
       // 가격 추출 - .currency-tbl에서 현재가
       let price = null;
@@ -604,15 +597,10 @@ class PenguinAucCrawler extends AxiosCrawler {
       // 상세 설명 생성 (요청된 형식)
       const descriptionParts = [];
       if (model) descriptionParts.push(`Model: ${model}`);
-      if (material) descriptionParts.push(`material: ${material}`);
-      if (color) descriptionParts.push(`color: ${color}`);
+      if (material) descriptionParts.push(`Material: ${material}`);
+      if (color) descriptionParts.push(`Color: ${color}`);
       if (notes) {
-        // notes는 여러 줄일 수 있으므로 정리
-        const cleanNotes = notes
-          .replace(/\n/g, " ")
-          .replace(/\s+/g, " ")
-          .trim();
-        descriptionParts.push(cleanNotes);
+        descriptionParts.push(notes);
       }
 
       const description = descriptionParts.join(", ");
@@ -1022,5 +1010,13 @@ class PenguinAucCrawler extends AxiosCrawler {
 }
 
 const penguinAucCrawler = new PenguinAucCrawler(penguinAucConfig);
+
+setTimeout(() => {
+  penguinAucCrawler.login().then(() => {
+    penguinAucCrawler
+      .crawlItemDetails("2106182375")
+      .then((data) => console.log(data));
+  });
+}, 100);
 
 module.exports = { penguinAucCrawler };
