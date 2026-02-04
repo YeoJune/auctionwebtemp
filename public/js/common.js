@@ -314,22 +314,27 @@ function formatDate(dateString, isUTC2KST = false) {
 // 날짜 + 시간 포맷팅 함수
 function formatDateTime(dateString, isUTC2KST = false) {
   if (!dateString) return "-";
+
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "-";
 
-  let targetDate = date;
   if (isUTC2KST) {
-    targetDate = new Date(
-      date.toLocaleString("en-US", { timeZone: "Asia/Seoul" }),
-    );
+    // 로컬 시간대 기준
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    return `${year}-${month}-${day} ${hours}:${minutes}`;
+  } else {
+    // UTC 기준으로 날짜/시간 추출 (시간대 영향 없음)
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(date.getUTCDate()).padStart(2, "0");
+    const hours = String(date.getUTCHours()).padStart(2, "0");
+    const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+    return `${year}-${month}-${day} ${hours}:${minutes}`;
   }
-
-  const year = targetDate.getFullYear();
-  const month = String(targetDate.getMonth() + 1).padStart(2, "0");
-  const day = String(targetDate.getDate()).padStart(2, "0");
-  const hours = String(targetDate.getHours()).padStart(2, "0");
-  const minutes = String(targetDate.getMinutes()).padStart(2, "0");
-
-  return `${year}-${month}-${day} ${hours}:${minutes}`;
 }
 
 // 숫자 포맷팅 (1000 -> 1,000)
