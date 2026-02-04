@@ -1634,7 +1634,9 @@ window.openPaymentModal = function (settlementData) {
   const depositorNameInput = document.getElementById("paymentDepositorName");
   if (depositorNameInput) depositorNameInput.value = "";
 
-  document.getElementById("paymentDate").textContent = settlementData.date;
+  document.getElementById("paymentDate").textContent = formatDate(
+    settlementData.date,
+  );
   document.getElementById("paymentTotalAmount").textContent =
     `₩${settlementData.grandTotal.toLocaleString()}`;
   document.getElementById("paymentCompletedAmount").textContent =

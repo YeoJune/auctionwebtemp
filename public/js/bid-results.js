@@ -390,7 +390,9 @@ window.openPaymentModal = function (settlementData) {
   if (depositorNameInput) depositorNameInput.value = "";
 
   // 모달 데이터 바인딩
-  document.getElementById("paymentDate").textContent = settlementData.date;
+  document.getElementById("paymentDate").textContent = formatDate(
+    settlementData.date,
+  );
   document.getElementById("paymentTotalAmount").textContent =
     `₩${settlementData.grandTotal.toLocaleString()}`;
   document.getElementById("paymentCompletedAmount").textContent =

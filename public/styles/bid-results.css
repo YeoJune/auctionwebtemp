@@ -999,78 +999,258 @@
 }
 
 /* ========================================
-   결제 요청 모달
+   결제 요청 모달 - 개선된 스타일
 ======================================== */
-.payment-info {
-  margin-bottom: 16px;
+
+/* 모달 전용 크기 설정 - 최고 우선순위 */
+#paymentRequestModal .modal-dialog {
+  max-width: 1000px !important;
+  width: 98% !important;
+  min-width: 600px !important;
 }
 
-.payment-info .info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #f1f3f5;
+@media (max-width: 1200px) {
+  #paymentRequestModal .modal-dialog {
+    max-width: 900px !important;
+    width: 96% !important;
+  }
 }
 
-.payment-info .info-row:last-child {
-  border-bottom: none;
+@media (max-width: 992px) {
+  #paymentRequestModal .modal-dialog {
+    max-width: 800px !important;
+    width: 95% !important;
+  }
 }
 
-.payment-info .info-row.highlight {
-  padding: 12px 14px;
-  background: linear-gradient(135deg, #e7f3ff 0%, #f0f7ff 100%);
-  border-radius: 8px;
-  border: 1.5px solid #2c5aa0;
-  margin-top: 10px;
+@media (max-width: 768px) {
+  #paymentRequestModal .modal-dialog {
+    min-width: auto !important;
+    width: 96% !important;
+    max-width: none !important;
+  }
 }
 
-.payment-info .label {
-  font-size: 13px;
-  color: #495057;
-  font-weight: 500;
+/* 섹션 스타일 */
+.payment-section {
+  margin-bottom: 28px;
 }
 
-.payment-info .value {
-  font-size: 14px;
-  font-weight: 600;
-  color: #212529;
+.payment-section:last-of-type {
+  margin-bottom: 20px;
 }
 
-.payment-info .value.primary {
-  font-size: 18px;
+.payment-section-title {
+  font-size: 15px;
   font-weight: 700;
   color: #2c5aa0;
+  margin: 0 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e7f3ff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.account-info-box {
-  display: flex;
-  gap: 10px;
-  padding: 12px 14px;
-  background: #e8f4f8;
-  border-left: 3px solid #17a2b8;
-  border-radius: 6px;
+/* 입금자 정보 폼 */
+.payment-form-group {
+  margin-bottom: 0;
+}
+
+.payment-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #495057;
+}
+
+.payment-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.payment-input:focus {
+  outline: none;
+  border-color: #2c5aa0;
+  box-shadow: 0 0 0 3px rgba(44, 90, 160, 0.1);
+}
+
+.payment-help-text {
+  display: block;
+  margin-top: 10px;
+  font-size: 13px;
+  color: #dc3545;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.required-mark {
+  color: #dc3545;
+}
+
+/* 정산 금액 상세 박스 */
+.payment-details-box {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 16px 20px;
+  border: 1px solid #e9ecef;
   margin-bottom: 14px;
 }
 
-.account-info-box i {
-  font-size: 20px;
-  color: #17a2b8;
-  margin-top: 1px;
-  flex-shrink: 0;
+.payment-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
 }
 
-.account-info-box strong {
-  display: block;
-  margin-bottom: 4px;
+.payment-detail-row:not(:last-child) {
+  border-bottom: 1px solid #dee2e6;
+}
+
+.payment-detail-label {
+  font-size: 14px;
+  color: #6c757d;
+  font-weight: 500;
+  min-width: 150px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.payment-detail-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: #212529;
+  text-align: right;
+  word-break: keep-all;
+  flex: 1;
+  padding-left: 20px;
+}
+
+/* 입금액 강조 박스 */
+.payment-highlight-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 20px;
+  background: linear-gradient(135deg, #e7f3ff 0%, #f0f7ff 100%);
+  border-radius: 12px;
+  border: 2px solid #2c5aa0;
+}
+
+.payment-highlight-label {
+  font-size: 16px;
+  color: #2c5aa0;
+  font-weight: 700;
+}
+
+.payment-highlight-value {
+  font-size: 24px;
+  font-weight: 800;
+  color: #2c5aa0;
+  letter-spacing: -0.5px;
+}
+
+/* 입금 계좌 박스 */
+.payment-account-box {
+  display: flex;
+  gap: 16px;
+  padding: 18px 20px;
+  background: linear-gradient(135deg, #e8f4f8 0%, #f0f9fc 100%);
+  border: 1px solid #b8daff;
+  border-left: 5px solid #17a2b8;
+  border-radius: 12px;
+}
+
+.payment-account-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: rgba(23, 162, 184, 0.1);
+  border-radius: 50%;
+}
+
+.payment-account-icon i {
+  font-size: 24px;
+  color: #17a2b8;
+}
+
+.payment-account-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.payment-account-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.payment-account-label {
   font-size: 13px;
   color: #0c5460;
+  font-weight: 600;
+  min-width: 110px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
-.account-info-box div {
-  font-size: 12px;
-  line-height: 1.5;
+.payment-account-value {
+  font-size: 14px;
   color: #0c5460;
+  font-weight: 700;
+  text-align: right;
+  word-break: keep-all;
+  flex: 1;
+  padding-left: 20px;
+}
+
+/* 안내 박스 */
+.payment-notice-box {
+  display: flex;
+  gap: 14px;
+  padding: 16px 18px;
+  background: #fff8e6;
+  border-left: 5px solid #ffc107;
+  border-radius: 10px;
+}
+
+.payment-notice-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  padding-top: 2px;
+}
+
+.payment-notice-icon i {
+  font-size: 20px;
+  color: #ffc107;
+}
+
+.payment-notice-content {
+  flex: 1;
+}
+
+.payment-notice-content p {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #856404;
+}
+
+.payment-notice-content p:last-child {
+  margin-bottom: 0;
 }
 
 /* 반응형 - 정산 섹션 */
@@ -1092,15 +1272,10 @@
   .settlement-row.highlight .value.remaining {
     font-size: 16px;
   }
-
-  .payment-info .info-row {
-    flex-direction: column;
-    gap: 4px;
-  }
 }
 
 /* =====================================================
-   결제 요청 모달 스타일
+   결제 요청 모달 오버레이 & 다이얼로그 기본 스타일
    ===================================================== */
 
 .modal-overlay {
@@ -1120,11 +1295,11 @@
 
 .modal-dialog {
   background: white;
-  border-radius: 10px;
-  width: 90%;
-  max-width: 560px;
+  border-radius: 12px;
+  width: 96%;
+  max-width: 900px;
   max-height: 90vh;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
   margin: auto;
@@ -1134,16 +1309,16 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
+  padding: 20px 24px;
   border-bottom: 1px solid #e9ecef;
   background: #f8f9fa;
-  border-radius: 10px 10px 0 0;
+  border-radius: 12px 12px 0 0;
   flex-shrink: 0;
 }
 
 .modal-header h3 {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 700;
   margin: 0;
   color: #212529;
 }
@@ -1151,16 +1326,17 @@
 .modal-close {
   background: none;
   border: none;
-  font-size: 24px;
+  font-size: 28px;
   color: #999;
   cursor: pointer;
   padding: 0;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: color 0.2s;
+  line-height: 1;
 }
 
 .modal-close:hover {
@@ -1168,255 +1344,32 @@
 }
 
 .modal-body {
-  padding: 18px 20px;
+  padding: 24px;
   overflow-y: auto;
   flex: 1;
   min-height: 0;
 }
 
-.modal-body .form-group {
-  margin-bottom: 14px;
-}
-
-.modal-body label {
-  display: block;
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 6px;
-  color: #495057;
-}
-
-.modal-body .form-control {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #dee2e6;
-  border-radius: 6px;
-  font-size: 13px;
-  transition: border-color 0.15s ease-in-out;
-  box-sizing: border-box;
-}
-
-.modal-body .form-control:focus {
-  outline: none;
-  border-color: #2c5aa0;
-  box-shadow: 0 0 0 2px rgba(44, 90, 160, 0.1);
-}
-
-.modal-body .form-text {
-  display: block;
-  margin-top: 4px;
-  font-size: 11px;
-  color: #6c757d;
-}
-
-.modal-body .form-help-text {
-  display: block;
-  margin-top: 6px;
-  font-size: 12px;
-  color: #dc3545;
-  font-weight: 500;
-}
-
-.modal-section {
-  margin-bottom: 18px;
-}
-
-.modal-section:last-child {
-  margin-bottom: 0;
-}
-
-.section-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: #2c5aa0;
-  margin: 0 0 10px 0;
-  padding-bottom: 6px;
-  border-bottom: 2px solid #e7f3ff;
-}
-
-.required-mark {
-  color: #dc3545;
-}
-
-/* Payment Info Styles */
-.payment-info {
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 12px 14px;
-  border: 1px solid #e9ecef;
-}
-
-.payment-info .info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 0;
-  border-bottom: 1px solid #dee2e6;
-}
-
-.payment-info .info-row:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-.payment-info .label {
-  font-size: 13px;
-  color: #6c757d;
-  font-weight: 500;
-}
-
-.payment-info .value {
-  font-size: 14px;
-  font-weight: 600;
-  color: #212529;
-  text-align: right;
-}
-
-/* Account Info Box */
-.account-info-box {
-  display: flex;
-  gap: 14px;
-  padding: 16px;
-  background: linear-gradient(135deg, #e8f4f8 0%, #f0f9fc 100%);
-  border: 1px solid #b8daff;
-  border-left: 4px solid #17a2b8;
-  border-radius: 10px;
-}
-
-.account-info-box i {
-  font-size: 24px;
-  color: #17a2b8;
-  flex-shrink: 0;
-}
-
-.account-details {
-  flex: 1;
-}
-
-.account-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 5px 0;
-}
-
-.account-label {
-  font-size: 13px;
-  color: #0c5460;
-  font-weight: 500;
-}
-
-.account-value {
-  font-size: 13px;
-  color: #0c5460;
-  font-weight: 600;
-}
-
-/* Payment Amount Highlight */
-.payment-amount-highlight {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  background: linear-gradient(135deg, #e7f3ff 0%, #f0f7ff 100%);
-  border-radius: 10px;
-  border: 2px solid #2c5aa0;
-  margin-top: 10px;
-}
-
-.payment-amount-highlight .label {
-  font-size: 15px;
-  color: #2c5aa0;
-  font-weight: 600;
-}
-
-.payment-amount-highlight .value {
-  font-size: 22px;
-  font-weight: 700;
-  color: #2c5aa0;
-}
-
-/* Info Notice */
-.info-notice {
-  display: flex;
-  gap: 12px;
-  padding: 14px;
-  background: #fff8e6;
-  border-left: 4px solid #ffc107;
-  border-radius: 8px;
-}
-
-.info-notice i {
-  font-size: 18px;
-  color: #ffc107;
-  flex-shrink: 0;
-}
-
-.info-notice p {
-  margin: 0 0 4px 0;
-  font-size: 13px;
-  line-height: 1.5;
-  color: #856404;
-}
-
-.info-notice p:last-child {
-  margin-bottom: 0;
-}
-
-.info-box,
-.warning-box {
-  display: flex;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 6px;
-  margin-top: 12px;
-}
-
-.info-box {
-  background: #e8f4f8;
-  border-left: 3px solid #17a2b8;
-  color: #0c5460;
-}
-
-.warning-box {
-  background: #fff8e6;
-  border-left: 3px solid #ffc107;
-  color: #856404;
-}
-
-.info-box i,
-.warning-box i {
-  font-size: 16px;
-  margin-top: 1px;
-  flex-shrink: 0;
-}
-
-.info-box p,
-.warning-box p {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.4;
-}
-
 .modal-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  padding: 12px 20px;
+  gap: 10px;
+  padding: 16px 24px;
   border-top: 1px solid #e9ecef;
   background: #fafbfc;
-  border-radius: 0 0 10px 10px;
+  border-radius: 0 0 12px 12px;
   flex-shrink: 0;
 }
 
 .modal-footer .btn {
-  padding: 8px 18px;
-  font-size: 13px;
+  padding: 10px 24px;
+  font-size: 14px;
   font-weight: 600;
-  border-radius: 6px;
+  border-radius: 8px;
   border: none;
   cursor: pointer;
   transition: all 0.2s;
-  min-width: 80px;
+  min-width: 90px;
 }
 
 .modal-footer .btn-primary {
@@ -1426,6 +1379,8 @@
 
 .modal-footer .btn-primary:hover {
   background: #234a87;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(44, 90, 160, 0.3);
 }
 
 .modal-footer .btn-secondary {
@@ -1459,52 +1414,188 @@
   }
 
   .modal-header h3 {
-    font-size: 15px;
+    font-size: 16px;
   }
 
   .modal-body {
-    padding: 16px;
+    padding: 20px 16px;
   }
 
-  .modal-section {
-    margin-bottom: 16px;
+  /* 결제 모달 섹션 */
+  .payment-section {
+    margin-bottom: 24px;
   }
 
-  .section-title {
+  .payment-section-title {
+    font-size: 14px;
+    margin-bottom: 14px;
+  }
+
+  /* 입력 필드 */
+  .payment-label {
     font-size: 13px;
+    margin-bottom: 8px;
   }
 
-  .payment-amount-highlight {
-    padding: 14px;
+  .payment-input {
+    padding: 12px 14px;
+    font-size: 14px;
   }
 
-  .payment-amount-highlight .label {
-    font-size: 13px;
-  }
-
-  .payment-amount-highlight .value {
-    font-size: 18px;
-  }
-
-  .payment-info .label {
+  .payment-help-text {
     font-size: 12px;
+    margin-top: 8px;
   }
 
-  .payment-info .value {
+  /* 상세 금액 박스 */
+  .payment-details-box {
+    padding: 14px 16px;
+  }
+
+  .payment-detail-row {
+    padding: 10px 0;
+  }
+
+  .payment-detail-label {
     font-size: 13px;
+    min-width: 105px;
+    flex-shrink: 0;
   }
 
-  .account-info-box {
+  .payment-detail-value {
+    font-size: 14px;
+    padding-left: 12px;
+  }
+
+  /* 입금액 강조 */
+  .payment-highlight-box {
+    padding: 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .payment-highlight-label {
+    font-size: 14px;
+  }
+
+  .payment-highlight-value {
+    font-size: 22px;
+    align-self: flex-end;
+  }
+
+  /* 계좌 정보 */
+  .payment-account-box {
+    padding: 16px;
+    gap: 14px;
+  }
+
+  .payment-account-icon {
+    width: 44px;
+    height: 44px;
+  }
+
+  .payment-account-icon i {
+    font-size: 22px;
+  }
+
+  .payment-account-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .payment-account-label {
+    font-size: 12px;
+    min-width: auto;
+    white-space: nowrap;
+  }
+
+  .payment-account-value {
+    font-size: 15px;
+    text-align: left;
+    font-weight: 800;
+    width: 100%;
+    padding-left: 0;
+  }
+
+  /* 안내 박스 */
+  .payment-notice-box {
+    padding: 14px 16px;
     gap: 12px;
   }
 
-  .account-row {
-    flex-direction: column;
-    gap: 2px;
+  .payment-notice-icon i {
+    font-size: 18px;
   }
 
-  .account-value {
-    text-align: left;
-    font-weight: 700;
+  .payment-notice-content p {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  /* 모달 하단 버튼 */
+  .modal-footer {
+    padding: 14px 16px;
+  }
+
+  .modal-footer .btn {
+    padding: 10px 16px;
+    font-size: 14px;
+    min-width: 90px;
+  }
+}
+
+/* 작은 모바일 기기 (360px 이하) */
+@media (max-width: 360px) {
+  .modal-body {
+    padding: 16px 12px;
+  }
+
+  .payment-section {
+    margin-bottom: 20px;
+  }
+
+  .payment-section-title {
+    font-size: 13px;
+  }
+
+  .payment-details-box {
+    padding: 12px 14px;
+  }
+
+  .payment-detail-label {
+    font-size: 12px;
+    min-width: 90px;
+    flex-shrink: 0;
+  }
+
+  .payment-detail-value {
+    font-size: 13px;
+    padding-left: 10px;
+  }
+
+  .payment-highlight-box {
+    padding: 14px;
+  }
+
+  .payment-highlight-label {
+    font-size: 13px;
+  }
+
+  .payment-highlight-value {
+    font-size: 20px;
+  }
+
+  .payment-account-box {
+    padding: 14px;
+  }
+
+  .payment-account-value {
+    font-size: 14px;
+  }
+
+  .payment-notice-content p {
+    font-size: 12px;
   }
 }
