@@ -440,6 +440,7 @@ class MekikiAucCrawler extends AxiosCrawler {
       item.brandTrans,
     )} ${model} ${model2} ${serialNumber} ${size}`
       .replace(" -", "")
+      .replace("-", "")
       .trim();
 
     const parts = [
@@ -1085,6 +1086,7 @@ class MekikiAucValueCrawler extends AxiosCrawler {
       item.brandTrans,
     )} ${model} ${model2} ${serialNumber} ${size}`
       .replace(" -", "")
+      .replace("-", "")
       .trim();
 
     const parts = [
