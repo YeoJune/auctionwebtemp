@@ -220,7 +220,9 @@
   border: 1px solid #ced4da;
   border-radius: 6px;
   font-size: 14px;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .form-control:focus {
@@ -252,15 +254,31 @@
 .modal-dialog {
   background-color: #fff;
   border-radius: 8px;
-  width: 500px;
-  max-width: 90%;
+  width: 650px;
+  max-width: 95%;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   animation: slideIn 0.3s ease;
 }
+/* 정산 모달 전용 크기 */
+#settlementApprovalModal .modal-dialog {
+  width: 850px !important;
+  max-width: 96% !important;
+}
 
+@media (max-width: 1200px) {
+  #settlementApprovalModal .modal-dialog {
+    width: 750px !important;
+  }
+}
+
+@media (max-width: 992px) {
+  #settlementApprovalModal .modal-dialog {
+    width: 90% !important;
+  }
+}
 .modal-header {
   padding: 20px 25px 15px;
   border-bottom: 1px solid #e9ecef;
@@ -545,6 +563,30 @@
   .modal-dialog {
     width: 95%;
     margin: 20px;
+  }
+
+  #settlementApprovalModal .modal-dialog {
+    width: 96% !important;
+  }
+
+  #settlementApprovalModal .payment-info .label,
+  .settlement-info .info-row .label,
+  .transaction-info .info-row .label {
+    min-width: 95px;
+    font-size: 13px;
+  }
+
+  #settlementApprovalModal .payment-info .value,
+  .settlement-info .info-row .value,
+  .transaction-info .info-row .value {
+    font-size: 14px;
+    padding-left: 12px;
+  }
+
+  #settlementApprovalModal .payment-info .value.primary,
+  .settlement-info .info-row .value.primary,
+  .transaction-info .info-row .value.primary {
+    font-size: 20px;
   }
 
   .data-table {
