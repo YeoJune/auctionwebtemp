@@ -599,6 +599,7 @@ class PenguinAucCrawler extends AxiosCrawler {
       if (model) descriptionParts.push(`Model: ${model}`);
       if (material) descriptionParts.push(`Material: ${material}`);
       if (color) descriptionParts.push(`Color: ${color}`);
+      if (accessories) descriptionParts.push(`Accessories: ${accessories}`);
       if (notes) {
         descriptionParts.push(notes);
       }
@@ -611,7 +612,7 @@ class PenguinAucCrawler extends AxiosCrawler {
         rank: null, // 필요하지 않음
         additional_images: JSON.stringify(images),
         description: description || "-",
-        accessory_code: accessories || "", // Accessories만
+        accessory_code: "",
         price: price || null,
         detail_info: {},
       };
