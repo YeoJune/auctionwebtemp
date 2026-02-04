@@ -264,13 +264,13 @@
 }
 /* 정산 모달 전용 크기 */
 #settlementApprovalModal .modal-dialog {
-  width: 850px !important;
+  width: 950px !important;
   max-width: 96% !important;
 }
 
 @media (max-width: 1200px) {
   #settlementApprovalModal .modal-dialog {
-    width: 750px !important;
+    width: 850px !important;
   }
 }
 
