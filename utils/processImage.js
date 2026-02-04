@@ -85,7 +85,8 @@ async function downloadAndSaveImage(
   url,
   folderName,
   cropType = null,
-  scheduledDate = null
+  scheduledDate = null,
+  options = null,
 ) {
   // folderName 검증 및 기본값 설정
   if (!folderName || typeof folderName !== "string") {
@@ -116,7 +117,7 @@ async function downloadAndSaveImage(
     "public",
     "images",
     folderName,
-    subFolder
+    subFolder,
   );
 
   // 폴더가 없으면 생성 (하위 폴더 포함)
@@ -130,13 +131,11 @@ async function downloadAndSaveImage(
     currentClientIndex = (currentClientIndex + 1) % clients.length;
 
     try {
-      // ProxyManager 클라이언트는 이미 설정이 되어있으므로 responseType만 설정
       const response = await client.client({
         method: "GET",
         url: url,
-        responseType: "arraybuffer",headers: {
-            Referer: "https://penguin-auction.jp/",
-          },
+        responseType: "arraybuffer",
+        ...(options || {}),
       });
 
       const filePath = path.join(IMAGE_DIR, fileName);
@@ -201,7 +200,7 @@ async function downloadAndSaveImage(
     } catch (error) {
       console.error(
         `${client.name} 이미지 다운로드 실패: ${url}`,
-        error.message
+        error.message,
       );
 
       // 404인 경우 다른 프록시로 재시도하지 않음
@@ -257,7 +256,7 @@ function isQueuesEmpty() {
   return queues.every((queue) => queue.length === 0);
 }
 
-// 큐 프로세서 (folderName 파라미터 제거)
+// 큐 프로세서
 async function processQueue() {
   if (isProcessing || processingPaused || isQueuesEmpty()) return;
 
@@ -273,7 +272,7 @@ async function processQueue() {
 
     const limit = pLimit(CONCURRENT_DOWNLOADS);
     const tasks = batch.map((task) =>
-      limit(() => processQueueItem(task, priority))
+      limit(() => processQueueItem(task, priority)),
     );
 
     await Promise.all(tasks);
@@ -288,7 +287,7 @@ async function processQueue() {
   }
 }
 
-// 개별 큐 항목 처리 (folderName을 task에서 가져옴)
+// 개별 큐 항목 처리
 async function processQueueItem(task, priority) {
   const {
     url,
@@ -297,6 +296,7 @@ async function processQueueItem(task, priority) {
     cropType,
     folderName,
     scheduledDate,
+    options,
   } = task;
 
   // folderName 검증
@@ -318,7 +318,8 @@ async function processQueueItem(task, priority) {
     url,
     folderName,
     cropType,
-    scheduledDate
+    scheduledDate,
+    options,
   );
 
   // 결과 처리
@@ -335,6 +336,7 @@ async function processQueueItem(task, priority) {
         cropType,
         folderName,
         scheduledDate,
+        options,
       });
     } else {
       console.warn(`404 error after retry for ${url} in folder ${folderName}`);
@@ -350,23 +352,25 @@ async function processQueueItem(task, priority) {
         cropType,
         folderName,
         scheduledDate,
+        options,
       });
     } else {
       console.error(
-        `Failed after ${MAX_RETRIES} retries for ${url} in folder ${folderName}`
+        `Failed after ${MAX_RETRIES} retries for ${url} in folder ${folderName}`,
       );
       resolve(null);
     }
   }
 }
 
-// 큐에 항목 추가 (folderName을 task에 포함)
+// 큐에 항목 추가
 function enqueueImage(
   url,
   folderName,
   priority = 2,
   cropType = null,
-  scheduledDate = null
+  scheduledDate = null,
+  options = null,
 ) {
   // 파라미터 검증
   if (!url || typeof url !== "string") {
@@ -388,7 +392,8 @@ function enqueueImage(
       resolve,
       cropType,
       folderName,
-      scheduledDate, // ← scheduledDate 추가
+      scheduledDate,
+      options,
     });
 
     if (!isProcessing && !processingPaused) {
@@ -402,7 +407,8 @@ async function processImagesInChunks(
   items,
   folderName,
   priority = 2,
-  cropType = null
+  cropType = null,
+  options = null,
 ) {
   // 파라미터 검증
   if (!Array.isArray(items)) {
@@ -412,7 +418,7 @@ async function processImagesInChunks(
 
   if (!folderName || typeof folderName !== "string") {
     console.error(
-      `Invalid folderName: ${folderName}, aborting image processing`
+      `Invalid folderName: ${folderName}, aborting image processing`,
     );
     return items;
   }
@@ -422,7 +428,7 @@ async function processImagesInChunks(
       items.length
     } items in folder: ${folderName}, priority: ${priority}${
       cropType ? `, crop: ${cropType}` : ""
-    }`
+    }${options ? `, with custom options` : ""}`,
   );
 
   const itemsWithImages = [];
@@ -442,7 +448,7 @@ async function processImagesInChunks(
   // 개별 아이템 처리 함수
   const processItem = async (item) => {
     const tasks = [];
-    const scheduledDate = item.scheduled_date || null; // ← scheduled_date 추출
+    const scheduledDate = item.scheduled_date || null;
 
     if (item.image) {
       tasks.push(
@@ -451,10 +457,11 @@ async function processImagesInChunks(
           folderName,
           priority,
           cropType,
-          scheduledDate
+          scheduledDate,
+          options,
         ).then((savedPath) => {
           item.image = savedPath;
-        })
+        }),
       );
     }
 
@@ -470,12 +477,13 @@ async function processImagesInChunks(
               folderName,
               priority,
               cropType,
-              scheduledDate
+              scheduledDate,
+              options,
             ).then((savedPath) => {
               if (savedPath) {
                 savedImages.push(savedPath);
               }
-            })
+            }),
           );
         });
 
@@ -504,15 +512,15 @@ async function processImagesInChunks(
 
       console.log(
         `📥 다운로드 진행률: ${completed} / ${total} (${Math.round(
-          (completed / total) * 100
+          (completed / total) * 100,
         )}%), 큐 길이: [${queueSizes}], 폴더: ${folderName}, 우선순위: ${priority}${
           cropType ? `, 크롭: ${cropType}` : ""
-        }`
+        }`,
       );
     }, 5000);
   }
 
-  // ✅ 배치 처리: 한 번에 PROCESSING_BATCH_SIZE개씩만 처리
+  // 배치 처리: 한 번에 PROCESSING_BATCH_SIZE개씩만 처리
   const processedItems = [];
 
   for (let i = 0; i < itemsWithImages.length; i += PROCESSING_BATCH_SIZE) {
@@ -523,7 +531,7 @@ async function processImagesInChunks(
         Math.floor(i / PROCESSING_BATCH_SIZE) + 1
       }/${Math.ceil(itemsWithImages.length / PROCESSING_BATCH_SIZE)} (${
         batch.length
-      } items)`
+      } items)`,
     );
 
     const results = await Promise.allSettled(
@@ -531,7 +539,7 @@ async function processImagesInChunks(
         const result = await processItem(item);
         completed++;
         return result;
-      })
+      }),
     );
 
     const batchProcessed = results
@@ -555,7 +563,7 @@ async function processImagesInChunks(
       processedItems.length
     } 항목 성공, 폴더: ${folderName}, 우선순위: ${priority}${
       cropType ? `, 크롭: ${cropType}` : ""
-    }`
+    }`,
   );
 
   return [...processedItems, ...itemsWithoutImages];

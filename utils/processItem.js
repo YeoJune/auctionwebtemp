@@ -156,6 +156,14 @@ async function processItem(
         crawledDetails &&
         (crawledDetails.description || crawledDetails.images?.length > 0)
       ) {
+        let options = {};
+        if (item.auc_num == 5) {
+          options = {
+            headers: {
+              Referer: "https://penguin-auction.jp/",
+            },
+          };
+        }
         // 여기서 imageFolder, priority, cropType 파라미터를 전달하여 적절한 폴더에 저장
         const processedDetails = (
           await processImagesInChunks(
@@ -163,6 +171,7 @@ async function processItem(
             imageFolder,
             priority,
             cropType,
+            options,
           )
         )[0];
 

@@ -204,8 +204,17 @@ class PenguinAucCrawler extends AxiosCrawler {
         `Starting image processing for ${allCrawledItems.length} items...`,
       );
       const itemsWithImages = allCrawledItems.filter((item) => item.image);
-      const finalProcessedItems =
-        await this.processImagesWithClients(itemsWithImages);
+      const finalProcessedItems = await processImagesInChunks(
+        itemsWithImages,
+        "products",
+        3,
+        null,
+        {
+          headers: {
+            Referer: "https://penguin-auction.jp/",
+          },
+        },
+      );
 
       // 이미지가 없는 아이템들도 포함
       const itemsWithoutImages = allCrawledItems.filter((item) => !item.image);
@@ -287,8 +296,17 @@ class PenguinAucCrawler extends AxiosCrawler {
       // 이미지 처리
       if (!skipImageProcessing) {
         const itemsWithImages = allItems.filter((item) => item.image);
-        const processedItems =
-          await this.processImagesWithClients(itemsWithImages);
+        const processedItems = await processImagesInChunks(
+          itemsWithImages,
+          "products",
+          3,
+          null,
+          {
+            headers: {
+              Referer: "https://penguin-auction.jp/",
+            },
+          },
+        );
         const itemsWithoutImages = allItems.filter((item) => !item.image);
         return [...processedItems, ...itemsWithoutImages];
       }
@@ -1000,95 +1018,6 @@ class PenguinAucCrawler extends AxiosCrawler {
         error: err.message,
       };
     }
-  }
-
-  // 저장된 클라이언트를 사용해서 직접 이미지 다운로드
-  async processImagesWithClients(items) {
-    const MAX_WIDTH = 800;
-    const MAX_HEIGHT = 800;
-    const CONCURRENT_LIMIT = 10;
-
-    console.log(`Processing ${items.length} images with saved clients...`);
-
-    const limit = pLimit(CONCURRENT_LIMIT);
-    let processedCount = 0;
-
-    const processImage = async (item) => {
-      try {
-        if (!item.image) return item;
-
-        const clientInfo = this.getClient();
-        const url = item.image;
-
-        // 이미지 다운로드
-        const response = await clientInfo.client.get(url, {
-          responseType: "arraybuffer",
-          headers: {
-            Referer: "https://penguin-auction.jp/",
-          },
-        });
-
-        // 파일명 생성
-        const dateString = new Date()
-          .toISOString()
-          .replaceAll(":", "-")
-          .split(".")[0];
-        const fileName = `${dateString}_${uuidv4()}.webp`;
-
-        // 저장 경로
-        const IMAGE_DIR = path.join(
-          __dirname,
-          "..",
-          "public",
-          "images",
-          "products",
-        );
-
-        if (!fs.existsSync(IMAGE_DIR)) {
-          fs.mkdirSync(IMAGE_DIR, { recursive: true });
-        }
-
-        const filePath = path.join(IMAGE_DIR, fileName);
-
-        // 이미지 처리 및 저장
-        const metadata = await sharp(response.data).metadata();
-        let processedImage = sharp(response.data);
-
-        if (metadata.width > MAX_WIDTH || metadata.height > MAX_HEIGHT) {
-          processedImage = processedImage.resize({
-            width: Math.min(metadata.width, MAX_WIDTH),
-            height: Math.min(metadata.height, MAX_HEIGHT),
-            fit: "inside",
-            withoutEnlargement: true,
-          });
-        }
-
-        await processedImage.webp({ quality: 100 }).toFile(filePath);
-
-        processedCount++;
-        if (processedCount % 100 === 0) {
-          console.log(`Processed ${processedCount}/${items.length} images`);
-        }
-
-        return {
-          ...item,
-          image: `/images/products/${fileName}`,
-        };
-      } catch (error) {
-        console.error(
-          `Failed to process image for item ${item.item_id}:`,
-          error.message,
-        );
-        return item; // 실패시 원본 반환
-      }
-    };
-
-    const results = await Promise.all(
-      items.map((item) => limit(() => processImage(item))),
-    );
-
-    console.log(`Completed processing ${processedCount} images`);
-    return results;
   }
 }
 
