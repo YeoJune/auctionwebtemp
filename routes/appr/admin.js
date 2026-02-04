@@ -828,7 +828,8 @@ router.get("/appraisals", isAuthenticated, isAdmin, async (req, res) => {
     });
 
     // 전체 개수 조회 (기존과 동일)
-    let countQuery = "SELECT COUNT(*) as total FROM appraisals a JOIN users u ON a.user_id = u.id WHERE 1=1";
+    let countQuery =
+      "SELECT COUNT(*) as total FROM appraisals a JOIN users u ON a.user_id = u.id WHERE 1=1";
     const countParams = [];
 
     if (status) {
