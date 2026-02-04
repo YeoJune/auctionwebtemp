@@ -312,7 +312,7 @@ function formatDate(dateString, isUTC2KST = false) {
 }
 
 // 날짜 + 시간 포맷팅 함수
-function formatDateTime(dateString, isUTC2KST = false) {
+function formatDateTime(dateString, isUTC2KST = true) {
   if (!dateString) return "-";
 
   const date = new Date(dateString);
