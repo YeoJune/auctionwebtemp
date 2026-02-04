@@ -84,7 +84,7 @@ class MekikiAucCrawler extends AxiosCrawler {
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       if (loginResponse.status !== 200) {
@@ -96,14 +96,13 @@ class MekikiAucCrawler extends AxiosCrawler {
       console.log(`API Token received: ${authToken.substring(0, 20)}...`);
 
       // 클라이언트의 기본 헤더에 Bearer 토큰 추가
-      clientInfo.client.defaults.headers.common[
-        "Authorization"
-      ] = `Bearer ${authToken}`;
+      clientInfo.client.defaults.headers.common["Authorization"] =
+        `Bearer ${authToken}`;
       console.log(`Bearer token set for ${clientInfo.name}`);
 
       // 로그인 확인 및 user_id 추출
       const meResponse = await clientInfo.client.get(
-        this.config.loginCheckUrls[0]
+        this.config.loginCheckUrls[0],
       );
 
       if (meResponse.status === 200 && meResponse.data?.id) {
@@ -149,7 +148,7 @@ class MekikiAucCrawler extends AxiosCrawler {
       });
 
       console.log(
-        `Found ${activeEvents.length} active events out of ${response.data.collection.length} total events`
+        `Found ${activeEvents.length} active events out of ${response.data.collection.length} total events`,
       );
 
       return activeEvents;
@@ -178,10 +177,10 @@ class MekikiAucCrawler extends AxiosCrawler {
       // 각 이벤트별로 크롤링
       for (const event of activeEvents) {
         console.log(
-          `\n=== Crawling event: ${event.title} (ID: ${event.id}) ===`
+          `\n=== Crawling event: ${event.title} (ID: ${event.id}) ===`,
         );
         console.log(
-          `Event period: ${event.start_datetime} ~ ${event.end_datetime}`
+          `Event period: ${event.start_datetime} ~ ${event.end_datetime}`,
         );
 
         const eventItems = await this.crawlEvent(event.id, existingIds, true);
@@ -189,7 +188,7 @@ class MekikiAucCrawler extends AxiosCrawler {
         if (eventItems && eventItems.length > 0) {
           allCrawledItems.push(...eventItems);
           console.log(
-            `Completed crawl for event ${event.id}. Items found: ${eventItems.length}`
+            `Completed crawl for event ${event.id}. Items found: ${eventItems.length}`,
           );
         }
       }
@@ -201,13 +200,13 @@ class MekikiAucCrawler extends AxiosCrawler {
 
       // 전체 이미지 일괄 처리
       console.log(
-        `Starting image processing for ${allCrawledItems.length} items...`
+        `Starting image processing for ${allCrawledItems.length} items...`,
       );
       const itemsWithImages = allCrawledItems.filter((item) => item.image);
       const finalProcessedItems = await processImagesInChunks(
         itemsWithImages,
         "products",
-        3
+        3,
       );
 
       // 이미지가 없는 아이템들도 포함
@@ -219,7 +218,7 @@ class MekikiAucCrawler extends AxiosCrawler {
       const endTime = Date.now();
       const executionTime = endTime - startTime;
       console.log(
-        `Operation completed in ${this.formatExecutionTime(executionTime)}`
+        `Operation completed in ${this.formatExecutionTime(executionTime)}`,
       );
 
       return allFinalItems;
@@ -233,7 +232,7 @@ class MekikiAucCrawler extends AxiosCrawler {
   async crawlEvent(
     eventId,
     existingIds = new Set(),
-    skipImageProcessing = false
+    skipImageProcessing = false,
   ) {
     try {
       const clientInfo = this.getClient();
@@ -253,7 +252,7 @@ class MekikiAucCrawler extends AxiosCrawler {
           headers: {
             Accept: "application/json",
           },
-        }
+        },
       );
       await this.sleep(API_DELAY);
 
@@ -261,7 +260,7 @@ class MekikiAucCrawler extends AxiosCrawler {
       const totalItems = firstPageResponse.data.meta?.total || 0;
 
       console.log(
-        `Event ${eventId}: Found ${totalItems} items across ${totalPages} pages`
+        `Event ${eventId}: Found ${totalItems} items across ${totalPages} pages`,
       );
 
       // 첫 페이지 아이템 처리
@@ -269,7 +268,7 @@ class MekikiAucCrawler extends AxiosCrawler {
       const firstPageItems = await this.processItemsPage(
         firstPageResponse.data.collection || [],
         existingIds,
-        eventId
+        eventId,
       );
       allItems.push(...firstPageItems);
 
@@ -282,7 +281,7 @@ class MekikiAucCrawler extends AxiosCrawler {
           pagePromises.push(
             limit(async () => {
               console.log(
-                `Crawling event ${eventId}, page ${page} of ${totalPages}`
+                `Crawling event ${eventId}, page ${page} of ${totalPages}`,
               );
 
               const pageClientInfo = this.getClient();
@@ -300,7 +299,7 @@ class MekikiAucCrawler extends AxiosCrawler {
                   headers: {
                     Accept: "application/json",
                   },
-                }
+                },
               );
 
               await this.sleep(API_DELAY);
@@ -308,15 +307,15 @@ class MekikiAucCrawler extends AxiosCrawler {
               const pageItems = await this.processItemsPage(
                 response.data.collection || [],
                 existingIds,
-                eventId
+                eventId,
               );
 
               console.log(
-                `Processed ${pageItems.length} items from page ${page}`
+                `Processed ${pageItems.length} items from page ${page}`,
               );
 
               return pageItems;
-            })
+            }),
           );
         }
 
@@ -384,7 +383,9 @@ class MekikiAucCrawler extends AxiosCrawler {
       const boxNo = item.box_no || "";
       const brandName = await translator.translate(item.brand?.name || "");
       item.brandTrans = brandName; // 번역된 브랜드명 저장
-      const original_scheduled_date = this.extractDate(item.end_datetime);
+      const original_scheduled_date = this.extractDate(
+        this.convertToKST(this.extractDate(item.end_datetime)),
+      );
       const scheduled_date = this.getPreviousDayAt18(original_scheduled_date);
       const category = this.config.categoryTable[item.category?.id] || "기타";
       const rank = item.grade || "N";
@@ -430,13 +431,13 @@ class MekikiAucCrawler extends AxiosCrawler {
     const color = await translator.translate(item.color || "-");
     const serialNumber = await translator.translate(item.serial_number || "-");
     const accessoryNote = await translator.translate(
-      item.accessory_note || "-"
+      item.accessory_note || "-",
     );
     const size = await translator.translate(item.size || "-");
     const detail = await translator.translate(item.detail || "-");
 
     const title = `${getValue(item.category?.name?.en)} ${getValue(
-      item.brandTrans
+      item.brandTrans,
     )} ${model} ${model2} ${serialNumber} ${size}`
       .replace(" -", "")
       .trim();
@@ -470,7 +471,7 @@ class MekikiAucCrawler extends AxiosCrawler {
     return await this.retryOperation(
       async () => {
         console.log(
-          `Placing live bid for item ${item_id} with price ${price}...`
+          `Placing live bid for item ${item_id} with price ${price}...`,
         );
 
         // 직접 연결 클라이언트 사용
@@ -489,7 +490,7 @@ class MekikiAucCrawler extends AxiosCrawler {
               "Content-Type": "application/json",
               Accept: "application/json",
             },
-          }
+          },
         );
 
         // 응답 확인
@@ -505,7 +506,7 @@ class MekikiAucCrawler extends AxiosCrawler {
         }
       },
       3,
-      10 * 1000
+      10 * 1000,
     ).catch((error) => {
       console.error(`Error placing bid for item ${item_id}:`, error.message);
       return {
@@ -536,7 +537,7 @@ class MekikiAucCrawler extends AxiosCrawler {
             "Content-Type": "application/json",
             Accept: "application/json",
           },
-        }
+        },
       );
 
       // 응답 확인
@@ -553,7 +554,7 @@ class MekikiAucCrawler extends AxiosCrawler {
     } catch (error) {
       console.error(
         `Error adding wishlist for item ${item_id}:`,
-        error.message
+        error.message,
       );
       return {
         success: false,
@@ -568,7 +569,7 @@ class MekikiAucCrawler extends AxiosCrawler {
     // API 응답에 이미 모든 정보가 포함되어 있으므로
     // 별도의 상세 API 호출 불필요
     console.log(
-      `Item ${itemId} details already included in list response (fallback not needed)`
+      `Item ${itemId} details already included in list response (fallback not needed)`,
     );
     return {
       additional_images: item.additional_images || null,
@@ -598,7 +599,7 @@ class MekikiAucValueCrawler extends AxiosCrawler {
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       if (loginResponse.status !== 200) {
@@ -610,14 +611,13 @@ class MekikiAucValueCrawler extends AxiosCrawler {
       console.log(`API Token received: ${authToken.substring(0, 20)}...`);
 
       // 클라이언트의 기본 헤더에 Bearer 토큰 추가
-      clientInfo.client.defaults.headers.common[
-        "Authorization"
-      ] = `Bearer ${authToken}`;
+      clientInfo.client.defaults.headers.common["Authorization"] =
+        `Bearer ${authToken}`;
       console.log(`Bearer token set for ${clientInfo.name}`);
 
       // 로그인 확인 및 user_id 추출
       const meResponse = await clientInfo.client.get(
-        this.config.loginCheckUrls[0]
+        this.config.loginCheckUrls[0],
       );
 
       if (meResponse.status === 200 && meResponse.data?.id) {
@@ -686,7 +686,7 @@ class MekikiAucValueCrawler extends AxiosCrawler {
       });
 
       console.log(
-        `Found ${recentEvents.length} finished events in last ${months} months (out of ${allEvents.length} total)`
+        `Found ${recentEvents.length} finished events in last ${months} months (out of ${allEvents.length} total)`,
       );
 
       return recentEvents;
@@ -723,7 +723,7 @@ class MekikiAucValueCrawler extends AxiosCrawler {
           headers: {
             Accept: "application/json",
           },
-        }
+        },
       );
       await this.sleep(API_DELAY);
 
@@ -778,7 +778,7 @@ class MekikiAucValueCrawler extends AxiosCrawler {
               headers: {
                 Accept: "application/json",
               },
-            }
+            },
           );
 
           await this.sleep(API_DELAY);
@@ -786,9 +786,9 @@ class MekikiAucValueCrawler extends AxiosCrawler {
           return await this.processItemsPage(
             response.data.collection || [],
             existingIds,
-            event
+            event,
           );
-        })
+        }),
       );
     }
 
@@ -821,10 +821,10 @@ class MekikiAucValueCrawler extends AxiosCrawler {
       // 각 이벤트별로 크롤링
       for (const event of finishedEvents) {
         console.log(
-          `\n=== Crawling finished event: ${event.title} (ID: ${event.id}) ===`
+          `\n=== Crawling finished event: ${event.title} (ID: ${event.id}) ===`,
         );
         console.log(
-          `Event period: ${event.start_datetime} ~ ${event.end_datetime}`
+          `Event period: ${event.start_datetime} ~ ${event.end_datetime}`,
         );
 
         const eventItems = await this.crawlEvent(event, existingIds, true);
@@ -832,7 +832,7 @@ class MekikiAucValueCrawler extends AxiosCrawler {
         if (eventItems && eventItems.length > 0) {
           allCrawledItems.push(...eventItems);
           console.log(
-            `Completed crawl for event ${event.id}. Items found: ${eventItems.length}`
+            `Completed crawl for event ${event.id}. Items found: ${eventItems.length}`,
           );
         }
       }
@@ -844,13 +844,13 @@ class MekikiAucValueCrawler extends AxiosCrawler {
 
       // 전체 이미지 일괄 처리
       console.log(
-        `Starting image processing for ${allCrawledItems.length} items...`
+        `Starting image processing for ${allCrawledItems.length} items...`,
       );
       const itemsWithImages = allCrawledItems.filter((item) => item.image);
       const finalProcessedItems = await processImagesInChunks(
         itemsWithImages,
         "values",
-        3
+        3,
       );
 
       // 이미지가 없는 아이템들도 포함
@@ -863,8 +863,8 @@ class MekikiAucValueCrawler extends AxiosCrawler {
       const executionTime = endTime - startTime;
       console.log(
         `Value crawl operation completed in ${this.formatExecutionTime(
-          executionTime
-        )}`
+          executionTime,
+        )}`,
       );
 
       return allFinalItems;
@@ -878,7 +878,7 @@ class MekikiAucValueCrawler extends AxiosCrawler {
   async crawlEvent(
     event,
     existingIds = new Set(),
-    skipImageProcessing = false
+    skipImageProcessing = false,
   ) {
     try {
       const eventId = event.id;
@@ -899,7 +899,7 @@ class MekikiAucValueCrawler extends AxiosCrawler {
           headers: {
             Accept: "application/json",
           },
-        }
+        },
       );
       await this.sleep(API_DELAY);
 
@@ -907,7 +907,7 @@ class MekikiAucValueCrawler extends AxiosCrawler {
       const totalItems = firstPageResponse.data.meta?.total || 0;
 
       console.log(
-        `Event ${eventId}: Found ${totalItems} items across ${totalPages} pages`
+        `Event ${eventId}: Found ${totalItems} items across ${totalPages} pages`,
       );
 
       // 첫 페이지 아이템 처리
@@ -915,7 +915,7 @@ class MekikiAucValueCrawler extends AxiosCrawler {
       const firstPageItems = await this.processItemsPage(
         firstPageResponse.data.collection || [],
         existingIds,
-        event
+        event,
       );
       allItems.push(...firstPageItems);
 
@@ -928,7 +928,7 @@ class MekikiAucValueCrawler extends AxiosCrawler {
           pagePromises.push(
             limit(async () => {
               console.log(
-                `Crawling event ${eventId}, page ${page} of ${totalPages}`
+                `Crawling event ${eventId}, page ${page} of ${totalPages}`,
               );
 
               const pageClientInfo = this.getClient();
@@ -946,7 +946,7 @@ class MekikiAucValueCrawler extends AxiosCrawler {
                   headers: {
                     Accept: "application/json",
                   },
-                }
+                },
               );
 
               await this.sleep(API_DELAY);
@@ -954,15 +954,15 @@ class MekikiAucValueCrawler extends AxiosCrawler {
               const pageItems = await this.processItemsPage(
                 response.data.collection || [],
                 existingIds,
-                event
+                event,
               );
 
               console.log(
-                `Processed ${pageItems.length} items from page ${page}`
+                `Processed ${pageItems.length} items from page ${page}`,
               );
 
               return pageItems;
-            })
+            }),
           );
         }
 
@@ -1031,7 +1031,9 @@ class MekikiAucValueCrawler extends AxiosCrawler {
       const brandName = await translator.translate(item.brand?.name || "");
       item.brandTrans = brandName;
 
-      const scheduledDate = this.extractDate(event.end_datetime);
+      const scheduledDate = this.extractDate(
+        this.convertToKST(this.extractDate(event.end_datetime)),
+      );
       const category = this.config.categoryTable[item.category?.id] || "기타";
       const rank = item.grade || "N";
       const finalPrice = item.current_price || 0; // 종료된 경매의 최종 가격
@@ -1074,13 +1076,13 @@ class MekikiAucValueCrawler extends AxiosCrawler {
     const color = await translator.translate(item.color || "-");
     const serialNumber = await translator.translate(item.serial_number || "-");
     const accessoryNote = await translator.translate(
-      item.accessory_note || "-"
+      item.accessory_note || "-",
     );
     const size = await translator.translate(item.size || "-");
     const detail = await translator.translate(item.detail || "-");
 
     const title = `${getValue(item.category?.name?.en)} ${getValue(
-      item.brandTrans
+      item.brandTrans,
     )} ${model} ${model2} ${serialNumber} ${size}`
       .replace(" -", "")
       .trim();
@@ -1114,7 +1116,7 @@ class MekikiAucValueCrawler extends AxiosCrawler {
     // API 응답에 이미 모든 정보가 포함되어 있으므로
     // 별도의 상세 API 호출 불필요
     console.log(
-      `Item ${itemId} details already included in list response (fallback not needed)`
+      `Item ${itemId} details already included in list response (fallback not needed)`,
     );
     return {
       additional_images: item.additional_images || null,
