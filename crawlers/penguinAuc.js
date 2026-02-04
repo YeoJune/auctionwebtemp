@@ -507,7 +507,7 @@ class PenguinAucCrawler extends AxiosCrawler {
       }
 
       const date = new Date(year, month - 1, day, hour, minute);
-      return this.extractDate(date.toISOString());
+      return this.extractDate(this.convertToKST(date.toISOString()));
     } catch (error) {
       console.error("날짜 파싱 실패:", error);
       return null;
