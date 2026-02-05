@@ -698,6 +698,39 @@ router.put("/complete", isAdmin, async (req, res) => {
 
     // 낙찰 금액이 있는 경우
     if (winningPrice !== undefined) {
+      // 취소될 입찰 정보 조회 (예치금/한도 복구를 위해)
+      const [bidsToCancel] = await connection.query(
+        `SELECT lb.id, lb.user_id, u.account_type
+         FROM live_bids lb
+         JOIN user_accounts u ON lb.user_id = u.user_id
+         WHERE lb.id IN (${placeholders}) AND lb.status = 'final' AND lb.final_price < ?`,
+        [...bidIds, winningPrice],
+      );
+
+      // 예치금/한도 복구
+      for (const bid of bidsToCancel) {
+        const deductAmount = await getBidDeductAmount(
+          connection,
+          bid.id,
+          "live_bid",
+        );
+
+        if (deductAmount > 0) {
+          if (bid.account_type === "individual") {
+            await refundDeposit(
+              connection,
+              bid.user_id,
+              deductAmount,
+              "live_bid",
+              bid.id,
+              "낙찰가 초과로 인한 취소 환불",
+            );
+          } else {
+            await refundLimit(connection, bid.user_id, deductAmount);
+          }
+        }
+      }
+
       // 취소 처리: winningPrice > final_price
       const [cancelResult] = await connection.query(
         `UPDATE live_bids SET status = 'cancelled', winning_price = ? WHERE id IN (${placeholders}) AND status = 'final' AND final_price < ?`,

@@ -23,6 +23,11 @@ const { sendHigherBidAlerts } = require("../utils/message");
 const { ValuesImageMigration } = require("../utils/s3Migration");
 const { processImagesInChunks } = require("../utils/processImage");
 const esManager = require("../utils/elasticsearch");
+const {
+  refundDeposit,
+  refundLimit,
+  getBidDeductAmount,
+} = require("../utils/deposit");
 
 dotenv.config();
 
@@ -840,15 +845,36 @@ async function processBidsAfterCrawl() {
 
     // 2. final 상태이면서 final_price < vi.final_price인 입찰들 조회
     const [bidsToCancel] = await conn.query(
-      `SELECT lb.id, vi.final_price
+      `SELECT lb.id, lb.user_id, vi.final_price, u.account_type
        FROM live_bids lb
        JOIN values_items vi ON lb.item_id = vi.item_id
+       JOIN user_accounts u ON lb.user_id = u.user_id
        WHERE lb.status = 'final' AND lb.final_price < vi.final_price`,
     );
 
     if (bidsToCancel.length > 0) {
       const bidIds = bidsToCancel.map((bid) => bid.id);
       const placeholders = bidIds.map(() => "?").join(",");
+
+      // 각 입찰에 대해 예치금/한도 복구
+      for (const bid of bidsToCancel) {
+        const deductAmount = await getBidDeductAmount(conn, bid.id, "live_bid");
+
+        if (deductAmount > 0) {
+          if (bid.account_type === "individual") {
+            await refundDeposit(
+              conn,
+              bid.user_id,
+              deductAmount,
+              "live_bid",
+              bid.id,
+              "낙찰가 초과로 인한 취소 환불",
+            );
+          } else {
+            await refundLimit(conn, bid.user_id, deductAmount);
+          }
+        }
+      }
 
       // status를 cancelled로 변경하고 winning_price 설정
       await conn.query(
@@ -883,11 +909,12 @@ async function processChangedBids(changedItems) {
   try {
     await conn.beginTransaction();
 
-    // 관련된 모든 active 입찰 조회
+    // 관련된 모든 active 입찰 조회 (account_type 포함)
     const [activeBids] = await conn.query(
-      "SELECT db.id, db.item_id, db.current_price, ci.starting_price " +
+      "SELECT db.id, db.item_id, db.user_id, db.current_price, ci.starting_price, u.account_type " +
         "FROM direct_bids db " +
         "JOIN crawled_items ci ON db.item_id = ci.item_id " +
+        "JOIN user_accounts u ON db.user_id = u.user_id " +
         "WHERE db.current_price < ci.starting_price AND db.status = 'active'",
     );
 
@@ -905,19 +932,46 @@ async function processChangedBids(changedItems) {
       );
     }
 
-    // 취소 처리 - 100개씩 배치 처리
-    for (let i = 0; i < bidsToCancel.length; i += 100) {
-      const batch = bidsToCancel.slice(i, i + 100);
+    // 예치금/한도 복구 및 취소 처리 - 100개씩 배치 처리
+    for (let i = 0; i < activeBids.length; i += 100) {
+      const batch = activeBids.slice(i, i + 100);
+
       if (batch.length > 0) {
+        // 각 입찰에 대해 예치금/한도 복구
+        for (const bid of batch) {
+          const deductAmount = await getBidDeductAmount(
+            conn,
+            bid.id,
+            "direct_bid",
+          );
+
+          if (deductAmount > 0) {
+            if (bid.account_type === "individual") {
+              await refundDeposit(
+                conn,
+                bid.user_id,
+                deductAmount,
+                "direct_bid",
+                bid.id,
+                "가격 변경으로 인한 취소 환불",
+              );
+            } else {
+              await refundLimit(conn, bid.user_id, deductAmount);
+            }
+          }
+        }
+
+        // 입찰 상태 변경
+        const batchIds = batch.map((b) => b.id);
         await conn.query(
           "UPDATE direct_bids SET status = 'cancelled' WHERE id IN (?) AND status = 'active'",
-          [batch],
+          [batchIds],
         );
 
         console.log(
           `Cancelled batch ${Math.floor(i / 100) + 1}: ${
             batch.length
-          } bids due to price changes`,
+          } bids due to price changes (deposits/limits refunded)`,
         );
       }
     }

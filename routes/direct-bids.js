@@ -675,7 +675,45 @@ router.post("/", async (req, res) => {
         await deductLimit(newConnection, userId, deductAmount);
       }
 
-      // 낮은 입찰 취소 (같은 트랜잭션 내에서 원자적 처리)
+      // 낮은 입찰 취소 및 예치금/한도 복구 (같은 트랜잭션 내에서 원자적 처리)
+      // 1) 취소할 낮은 입찰들 조회
+      const [lowerBids] = await newConnection.query(
+        `SELECT d.id, d.user_id, d.current_price, u.account_type 
+         FROM direct_bids d
+         JOIN user_accounts u ON d.user_id = u.user_id
+         WHERE d.item_id = ? AND d.current_price < ? AND d.status = 'active' AND d.id != ?`,
+        [itemId, currentPrice, bidId],
+      );
+
+      // 2) 각 낮은 입찰에 대해 예치금/한도 복구
+      for (const lowerBid of lowerBids) {
+        const lowerBidDeductAmount = await getBidDeductAmount(
+          newConnection,
+          lowerBid.id,
+          "direct_bid",
+        );
+
+        if (lowerBidDeductAmount > 0) {
+          if (lowerBid.account_type === "individual") {
+            await refundDeposit(
+              newConnection,
+              lowerBid.user_id,
+              lowerBidDeductAmount,
+              "direct_bid",
+              lowerBid.id,
+              "상위 입찰로 인한 취소 환불",
+            );
+          } else {
+            await refundLimit(
+              newConnection,
+              lowerBid.user_id,
+              lowerBidDeductAmount,
+            );
+          }
+        }
+      }
+
+      // 3) 낮은 입찰 상태 변경
       await newConnection.query(
         "UPDATE direct_bids SET status = 'cancelled' WHERE item_id = ? AND current_price < ? AND status = 'active' AND id != ?",
         [itemId, currentPrice, bidId],
@@ -811,8 +849,48 @@ router.put("/complete", isAdmin, async (req, res) => {
       );
     }
 
-    // ===== 3. 동일 상품의 다른 입찰 취소 =====
+    // ===== 3. 동일 상품의 다른 입찰 취소 및 예치금/한도 복구 =====
     for (const bid of completedBids) {
+      // 3-1) 취소할 다른 입찰들 조회
+      const [otherBids] = await connection.query(
+        `SELECT d.id, d.user_id, u.account_type 
+         FROM direct_bids d
+         JOIN user_accounts u ON d.user_id = u.user_id
+         WHERE d.item_id = ? 
+           AND d.id NOT IN (${placeholders}) 
+           AND d.status = 'active'`,
+        [bid.item_id, ...bidIds],
+      );
+
+      // 3-2) 각 입찰에 대해 예치금/한도 복구
+      for (const otherBid of otherBids) {
+        const otherBidDeductAmount = await getBidDeductAmount(
+          connection,
+          otherBid.id,
+          "direct_bid",
+        );
+
+        if (otherBidDeductAmount > 0) {
+          if (otherBid.account_type === "individual") {
+            await refundDeposit(
+              connection,
+              otherBid.user_id,
+              otherBidDeductAmount,
+              "direct_bid",
+              otherBid.id,
+              "낙찰 완료로 인한 취소 환불",
+            );
+          } else {
+            await refundLimit(
+              connection,
+              otherBid.user_id,
+              otherBidDeductAmount,
+            );
+          }
+        }
+      }
+
+      // 3-3) 입찰 상태 변경
       await connection.query(
         `UPDATE direct_bids 
          SET status = 'cancelled' 
