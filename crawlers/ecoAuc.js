@@ -168,7 +168,7 @@ class EcoAucCrawler extends AxiosCrawler {
           validateStatus: function (status) {
             return status >= 200 && status < 400;
           },
-        }
+        },
       );
 
       // 로그인 후 검증
@@ -222,7 +222,7 @@ class EcoAucCrawler extends AxiosCrawler {
           const categoryItems = [];
 
           console.log(
-            `Starting crawl for category ${categoryId} with bid type ${urlConfig.type}`
+            `Starting crawl for category ${categoryId} with bid type ${urlConfig.type}`,
           );
           this.config.currentCategoryId = categoryId;
 
@@ -235,7 +235,7 @@ class EcoAucCrawler extends AxiosCrawler {
 
           for (let page = 1; page <= totalPages; page++) {
             pagePromises.push(
-              limit(() => this.crawlPage(categoryId, page, existingIds, true))
+              limit(() => this.crawlPage(categoryId, page, existingIds, true)),
             );
           }
 
@@ -249,11 +249,11 @@ class EcoAucCrawler extends AxiosCrawler {
           if (categoryItems && categoryItems.length > 0) {
             allCrawledItems.push(...categoryItems);
             console.log(
-              `Completed crawl for category ${categoryId}, bid type ${urlConfig.type}. Items found: ${categoryItems.length}`
+              `Completed crawl for category ${categoryId}, bid type ${urlConfig.type}. Items found: ${categoryItems.length}`,
             );
           } else {
             console.log(
-              `No items found for category ${categoryId}, bid type ${urlConfig.type}`
+              `No items found for category ${categoryId}, bid type ${urlConfig.type}`,
             );
           }
         }
@@ -266,13 +266,13 @@ class EcoAucCrawler extends AxiosCrawler {
 
       // 전체 이미지 일괄 처리
       console.log(
-        `Starting image processing for ${allCrawledItems.length} items...`
+        `Starting image processing for ${allCrawledItems.length} items...`,
       );
       const itemsWithImages = allCrawledItems.filter((item) => item.image);
       const finalProcessedItems = await processImagesInChunks(
         itemsWithImages,
         "products",
-        3
+        3,
       );
 
       // 이미지가 없는 아이템들도 포함
@@ -280,13 +280,13 @@ class EcoAucCrawler extends AxiosCrawler {
       const allFinalItems = [...finalProcessedItems, ...itemsWithoutImages];
 
       console.log(
-        `Crawling completed for all categories. Total items: ${allFinalItems.length}`
+        `Crawling completed for all categories. Total items: ${allFinalItems.length}`,
       );
 
       const endTime = Date.now();
       const executionTime = endTime - startTime;
       console.log(
-        `Operation completed in ${this.formatExecutionTime(executionTime)}`
+        `Operation completed in ${this.formatExecutionTime(executionTime)}`,
       );
 
       return allFinalItems;
@@ -300,7 +300,7 @@ class EcoAucCrawler extends AxiosCrawler {
     categoryId,
     page,
     existingIds = new Set(),
-    skipImageProcessing = false
+    skipImageProcessing = false,
   ) {
     try {
       const clientInfo = this.getClient();
@@ -308,7 +308,7 @@ class EcoAucCrawler extends AxiosCrawler {
       return await this.retryOperation(
         async () => {
           console.log(
-            `Crawling page ${page} in category ${categoryId} with ${clientInfo.name}...`
+            `Crawling page ${page} in category ${categoryId} with ${clientInfo.name}...`,
           );
           const url =
             this.config.searchUrl + this.config.searchParams(categoryId, page);
@@ -324,7 +324,7 @@ class EcoAucCrawler extends AxiosCrawler {
             this.filterHandles($, itemElements, existingIds);
 
           console.log(
-            `Filtered to ${filteredElements.length} items for detailed extraction`
+            `Filtered to ${filteredElements.length} items for detailed extraction`,
           );
 
           // 필터링된 아이템이 없으면 종료
@@ -338,7 +338,7 @@ class EcoAucCrawler extends AxiosCrawler {
             const item = this.extractItemInfo(
               $,
               $(filteredElements[i]),
-              filteredItems[i]
+              filteredItems[i],
             );
             if (item) pageItems.push(item);
           }
@@ -351,17 +351,17 @@ class EcoAucCrawler extends AxiosCrawler {
           }
 
           console.log(
-            `Crawled ${finalItems.length} items from page ${page} (${clientInfo.name})`
+            `Crawled ${finalItems.length} items from page ${page} (${clientInfo.name})`,
           );
           return [...finalItems, ...remainItems];
         },
         3,
-        10 * 1000
+        10 * 1000,
       );
     } catch (error) {
       console.error(
         `Error crawling page ${page} in category ${categoryId}:`,
-        error.message
+        error.message,
       );
       return [];
     }
@@ -373,7 +373,7 @@ class EcoAucCrawler extends AxiosCrawler {
 
     return this.retryOperation(async () => {
       console.log(
-        `Crawling details for item ${itemId} with ${clientInfo.name}...`
+        `Crawling details for item ${itemId} with ${clientInfo.name}...`,
       );
 
       const bidType = item0?.bid_type || this.currentBidType;
@@ -431,7 +431,7 @@ class EcoAucCrawler extends AxiosCrawler {
 
     return this.retryOperation(async () => {
       console.log(
-        `Getting total pages for category ${categoryId} with ${clientInfo.name}...`
+        `Getting total pages for category ${categoryId} with ${clientInfo.name}...`,
       );
       const url =
         this.config.searchUrl + this.config.searchParams(categoryId, 1);
@@ -504,7 +504,7 @@ class EcoAucCrawler extends AxiosCrawler {
 
     // 날짜 추출
     const $scheduledDate = $element.find(
-      this.config.crawlSelectors.scheduledDate
+      this.config.crawlSelectors.scheduledDate,
     );
     const scheduledDateText =
       $scheduledDate.length > 0 ? $scheduledDate.text().trim() : null;
@@ -561,7 +561,7 @@ class EcoAucCrawler extends AxiosCrawler {
 
     // 시작가 추출
     const $startingPrice = $element.find(
-      this.config.crawlSelectors.startingPrice
+      this.config.crawlSelectors.startingPrice,
     );
     const startingPriceText =
       $startingPrice.length > 0 ? $startingPrice.text().trim() : null;
@@ -644,7 +644,7 @@ class EcoAucCrawler extends AxiosCrawler {
 
       // 카테고리 구분 없이 전체 페이지 처리
       console.log(
-        `Starting update crawl with bid type ${urlConfig.type} for all categories`
+        `Starting update crawl with bid type ${urlConfig.type} for all categories`,
       );
 
       // 전체 페이지 수 가져오기 - 카테고리 없이 호출
@@ -660,10 +660,10 @@ class EcoAucCrawler extends AxiosCrawler {
           pagePromises.push(
             limit(async () => {
               console.log(
-                `Crawling page ${page} of ${totalPages} for all categories`
+                `Crawling page ${page} of ${totalPages} for all categories`,
               );
               return await this.crawlUpdatePage(page);
-            })
+            }),
           );
         }
 
@@ -684,15 +684,15 @@ class EcoAucCrawler extends AxiosCrawler {
       }
 
       console.log(
-        `Update crawling completed for all categories. Total items: ${allCrawledItems.length}`
+        `Update crawling completed for all categories. Total items: ${allCrawledItems.length}`,
       );
 
       const endTime = Date.now();
       const executionTime = endTime - startTime;
       console.log(
         `Update operation completed in ${this.formatExecutionTime(
-          executionTime
-        )}`
+          executionTime,
+        )}`,
       );
 
       return allCrawledItems;
@@ -707,7 +707,7 @@ class EcoAucCrawler extends AxiosCrawler {
 
     return this.retryOperation(async () => {
       console.log(
-        `Getting total pages for all categories with ${clientInfo.name}...`
+        `Getting total pages for all categories with ${clientInfo.name}...`,
       );
       const url =
         this.config.searchUrl + this.config.searchParamsAllCategories(1);
@@ -741,7 +741,7 @@ class EcoAucCrawler extends AxiosCrawler {
       return await this.retryOperation(
         async () => {
           console.log(
-            `Crawling update page ${page} for all categories with ${clientInfo.name}...`
+            `Crawling update page ${page} for all categories with ${clientInfo.name}...`,
           );
           const url =
             this.config.searchUrl + this.config.searchParamsAllCategories(page);
@@ -754,7 +754,7 @@ class EcoAucCrawler extends AxiosCrawler {
           // 아이템 컨테이너 선택
           const itemElements = $(this.config.crawlSelectors.itemContainer);
           console.log(
-            `Found ${itemElements.length} items on update page ${page}`
+            `Found ${itemElements.length} items on update page ${page}`,
           );
 
           if (itemElements.length === 0) {
@@ -772,12 +772,12 @@ class EcoAucCrawler extends AxiosCrawler {
           });
 
           console.log(
-            `Crawled ${pageItems.length} update items from page ${page}`
+            `Crawled ${pageItems.length} update items from page ${page}`,
           );
           return pageItems;
         },
         3,
-        5 * 1000
+        5 * 1000,
       );
     } catch (error) {
       console.error(`Error crawling update page ${page}:`, error.message);
@@ -809,7 +809,7 @@ class EcoAucCrawler extends AxiosCrawler {
 
       // 날짜 추출
       const $scheduledDate = element.find(
-        this.config.crawlSelectors.scheduledDate
+        this.config.crawlSelectors.scheduledDate,
       );
       const scheduledDateText =
         $scheduledDate.length > 0 ? $scheduledDate.text().trim() : null;
@@ -823,7 +823,7 @@ class EcoAucCrawler extends AxiosCrawler {
 
       // 시작가 추출
       const $startingPrice = element.find(
-        this.config.crawlSelectors.startingPrice
+        this.config.crawlSelectors.startingPrice,
       );
       const startingPriceText =
         $startingPrice.length > 0 ? $startingPrice.text().trim() : null;
@@ -842,7 +842,7 @@ class EcoAucCrawler extends AxiosCrawler {
   async directBid(item_id, price) {
     try {
       console.log(
-        `Placing direct bid for item ${item_id} with price ${price}...`
+        `Placing direct bid for item ${item_id} with price ${price}...`,
       );
 
       // 직접 연결 클라이언트 사용
@@ -851,14 +851,14 @@ class EcoAucCrawler extends AxiosCrawler {
       // CSRF 토큰 가져오기 - 메인 페이지에서
       const mainPageResponse = await clientInfo.client.get(
         ecoAucConfig.searchUrl,
-        { timeout: 5000 }
+        { timeout: 30 * 1000 },
       );
       const $ = cheerio.load(mainPageResponse.data, { xmlMode: true });
       const csrfToken = $('[name="_csrfToken"]').attr("value");
 
       if (!csrfToken) {
         console.warn(
-          "CSRF token not found on main page. Continuing without it..."
+          "CSRF token not found on main page. Continuing without it...",
         );
       } else {
         console.log("CSRF token retrieved successfully");
@@ -880,7 +880,7 @@ class EcoAucCrawler extends AxiosCrawler {
       console.log(`Sending bid request to: ${bidUrl}`);
 
       const bidResponse = await clientInfo.client.post(bidUrl, bidData, {
-        timeout: 5000,
+        timeout: 30 * 1000,
         headers: {
           "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
           Referer: "https://www.ecoauc.com/client/timelimit-auctions",
@@ -900,7 +900,7 @@ class EcoAucCrawler extends AxiosCrawler {
         };
       } else {
         throw new Error(
-          `Bid failed for item ${item_id}. with price ${price}.)`
+          `Bid failed for item ${item_id}. with price ${price}.)`,
         );
       }
     } catch (err) {
@@ -917,7 +917,7 @@ class EcoAucCrawler extends AxiosCrawler {
     return await this.retryOperation(
       async () => {
         console.log(
-          `Placing live bid for item ${item_id} with price ${price}...`
+          `Placing live bid for item ${item_id} with price ${price}...`,
         );
 
         // 직접 연결 클라이언트 사용
@@ -926,14 +926,14 @@ class EcoAucCrawler extends AxiosCrawler {
         // CSRF 토큰 가져오기 - 메인 페이지에서
         const mainPageResponse = await clientInfo.client.get(
           ecoAucConfig.searchUrl,
-          { timeout: 5000 }
+          { timeout: 30 * 1000 },
         );
         const $ = cheerio.load(mainPageResponse.data, { xmlMode: true });
         const csrfToken = $('[name="_csrfToken"]').attr("value");
 
         if (!csrfToken) {
           console.warn(
-            "CSRF token not found on main page. Continuing without it..."
+            "CSRF token not found on main page. Continuing without it...",
           );
         } else {
           console.log("CSRF token retrieved successfully");
@@ -955,7 +955,7 @@ class EcoAucCrawler extends AxiosCrawler {
         console.log(`Sending bid request to: ${bidUrl}`);
 
         const bidResponse = await clientInfo.client.post(bidUrl, bidData, {
-          timeout: 5000,
+          timeout: 30 * 1000,
           headers: {
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
             Referer: "https://www.ecoauc.com/client/auctions/inspect",
@@ -975,12 +975,12 @@ class EcoAucCrawler extends AxiosCrawler {
           };
         } else {
           throw new Error(
-            `Bid failed for item ${item_id}. with price ${price}.)`
+            `Bid failed for item ${item_id}. with price ${price}.)`,
           );
         }
       },
       3,
-      10 * 1000
+      10 * 1000,
     ).catch((err) => {
       console.error("Error placing bid:", err.message);
       return {
@@ -1000,14 +1000,14 @@ class EcoAucCrawler extends AxiosCrawler {
 
       // CSRF 토큰 가져오기 - 메인 페이지에서
       const mainPageResponse = await clientInfo.client.get(
-        ecoAucConfig.searchUrl
+        ecoAucConfig.searchUrl,
       );
       const $ = cheerio.load(mainPageResponse.data, { xmlMode: true });
       const csrfToken = $('[name="_csrfToken"]').attr("value");
 
       if (!csrfToken) {
         console.warn(
-          "CSRF token not found on main page. Continuing without it..."
+          "CSRF token not found on main page. Continuing without it...",
         );
       } else {
         console.log("CSRF token retrieved successfully");
@@ -1039,7 +1039,7 @@ class EcoAucCrawler extends AxiosCrawler {
             ...(csrfToken && { "X-CSRF-Token": csrfToken }),
             "X-Requested-With": "XMLHttpRequest",
           },
-        }
+        },
       );
 
       // 응답 확인
@@ -1153,7 +1153,7 @@ class EcoAucCrawler extends AxiosCrawler {
     return this.retryOperation(
       async () => {
         console.log(
-          `Crawling update info for item ${itemId} with ${clientInfo.name}...`
+          `Crawling update info for item ${itemId} with ${clientInfo.name}...`,
         );
 
         const bidType = "direct";
@@ -1165,7 +1165,7 @@ class EcoAucCrawler extends AxiosCrawler {
         const $ = cheerio.load(response.data, { xmlMode: true });
 
         const startingPriceText = $(
-          "dt:contains('Starting price') + dd big.canopy-large-value"
+          "dt:contains('Starting price') + dd big.canopy-large-value",
         )
           .text()
           .trim();
@@ -1191,7 +1191,7 @@ class EcoAucCrawler extends AxiosCrawler {
         };
       },
       3,
-      5 * 1000
+      5 * 1000,
     );
   }
 
@@ -1218,7 +1218,7 @@ class EcoAucCrawler extends AxiosCrawler {
             console.error(`Error crawling update for item ${itemId}:`, error);
             return null;
           }
-        })
+        }),
       );
 
       // 모든 결과 기다리기
@@ -1273,7 +1273,7 @@ class EcoAucValueCrawler extends AxiosCrawler {
           validateStatus: function (status) {
             return status >= 200 && status < 400;
           },
-        }
+        },
       );
 
       // 로그인 후 검증
@@ -1299,7 +1299,7 @@ class EcoAucValueCrawler extends AxiosCrawler {
 
     return this.retryOperation(async () => {
       console.log(
-        `Getting total pages for category ${categoryId} with ${clientInfo.name}...`
+        `Getting total pages for category ${categoryId} with ${clientInfo.name}...`,
       );
       const url =
         this.config.searchUrl + this.config.searchParams(categoryId, 1, months);
@@ -1366,9 +1366,9 @@ class EcoAucValueCrawler extends AxiosCrawler {
             page,
             existingIds,
             chunk.months,
-            true // skipImageProcessing
-          )
-        )
+            true, // skipImageProcessing
+          ),
+        ),
       );
     }
 
@@ -1406,8 +1406,8 @@ class EcoAucValueCrawler extends AxiosCrawler {
         for (let page = 1; page <= totalPages; page++) {
           pagePromises.push(
             limit(
-              () => this.crawlPage(categoryId, page, existingIds, months, true) // skipImageProcessing = true
-            )
+              () => this.crawlPage(categoryId, page, existingIds, months, true), // skipImageProcessing = true
+            ),
           );
         }
 
@@ -1422,7 +1422,7 @@ class EcoAucValueCrawler extends AxiosCrawler {
         if (categoryItems && categoryItems.length > 0) {
           allCrawledItems.push(...categoryItems);
           console.log(
-            `Completed crawl for category ${categoryId}. Items found: ${categoryItems.length}`
+            `Completed crawl for category ${categoryId}. Items found: ${categoryItems.length}`,
           );
         } else {
           console.log(`No items found for category ${categoryId}`);
@@ -1436,13 +1436,13 @@ class EcoAucValueCrawler extends AxiosCrawler {
 
       // 전체 이미지 일괄 처리
       console.log(
-        `Starting image processing for ${allCrawledItems.length} items...`
+        `Starting image processing for ${allCrawledItems.length} items...`,
       );
       const itemsWithImages = allCrawledItems.filter((item) => item.image);
       const finalProcessedItems = await processImagesInChunks(
         itemsWithImages,
         "values",
-        3
+        3,
       );
 
       // 이미지가 없는 아이템들도 포함
@@ -1450,13 +1450,13 @@ class EcoAucValueCrawler extends AxiosCrawler {
       const allFinalItems = [...finalProcessedItems, ...itemsWithoutImages];
 
       console.log(
-        `Crawling completed for all categories. Total items: ${allFinalItems.length}`
+        `Crawling completed for all categories. Total items: ${allFinalItems.length}`,
       );
 
       const endTime = Date.now();
       const executionTime = endTime - startTime;
       console.log(
-        `Operation completed in ${this.formatExecutionTime(executionTime)}`
+        `Operation completed in ${this.formatExecutionTime(executionTime)}`,
       );
 
       return allFinalItems;
@@ -1471,14 +1471,14 @@ class EcoAucValueCrawler extends AxiosCrawler {
     page,
     existingIds = new Set(),
     months = 3,
-    skipImageProcessing = false
+    skipImageProcessing = false,
   ) {
     try {
       return await this.retryOperation(
         async () => {
           const clientInfo = this.getClient();
           console.log(
-            `Crawling page ${page} in category ${categoryId} with ${clientInfo.name}...`
+            `Crawling page ${page} in category ${categoryId} with ${clientInfo.name}...`,
           );
           const url =
             this.config.searchUrl +
@@ -1515,17 +1515,17 @@ class EcoAucValueCrawler extends AxiosCrawler {
           }
 
           console.log(
-            `Crawled ${finalItems.length} items from page ${page} (${clientInfo.name})`
+            `Crawled ${finalItems.length} items from page ${page} (${clientInfo.name})`,
           );
           return finalItems;
         },
         3,
-        10 * 1000
+        10 * 1000,
       );
     } catch (error) {
       console.error(
         `Error crawling page ${page} in category ${categoryId}:`,
-        error.message
+        error.message,
       );
       return [];
     }
@@ -1545,7 +1545,7 @@ class EcoAucValueCrawler extends AxiosCrawler {
 
       // 날짜 추출
       const $scheduledDate = element.find(
-        this.config.crawlSelectors.scheduledDate
+        this.config.crawlSelectors.scheduledDate,
       );
       const scheduledDateText = $scheduledDate.text().trim();
       const scheduledDate = this.extractDate(scheduledDateText);
@@ -1599,7 +1599,7 @@ class EcoAucValueCrawler extends AxiosCrawler {
 
     return this.retryOperation(async () => {
       console.log(
-        `Crawling details for item ${itemId} with ${clientInfo.name}...`
+        `Crawling details for item ${itemId} with ${clientInfo.name}...`,
       );
       const url = this.config.detailUrl(itemId);
 
