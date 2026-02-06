@@ -34,20 +34,21 @@ class PopbillService {
    */
   async checkPayment(transaction, startDate) {
     try {
-      // 하드코딩: 2026-02-05 조회
-      const hardcodedStart = "20260205";
-      const hardcodedEnd = "20260205";
+      // 동적 날짜 계산: 하루 전부터 오늘까지
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      const start = this.formatDate(yesterday);
+      const end = this.formatDate(today);
 
       console.log("\n[입금 확인 시작]");
       console.log("- 금액:", transaction.amount);
       console.log("- 입금자명:", transaction.depositor_name);
-      console.log("- 조회 기간:", hardcodedStart, "~", hardcodedEnd);
+      console.log("- 조회 기간:", start, "~", end);
 
-      // 1. 계좌조회 요청 (하드코딩된 날짜 전달)
-      const jobID = await this.requestBankJobHardcoded(
-        hardcodedStart,
-        hardcodedEnd,
-      );
+      // 1. 계좌조회 요청 (동적 날짜 전달)
+      const jobID = await this.requestBankJobHardcoded(start, end);
       console.log("- JobID:", jobID);
 
       // 2. 완료 대기
@@ -61,7 +62,7 @@ class PopbillService {
       // 4. 매칭 (적요 또는 예금주와 비교)
       const matched = transactions.find(
         (t) =>
-          Number(t.accIn) === transaction.amount &&
+          Number(t.accIn) === Number(transaction.amount) &&
           (this.nameMatch(transaction.depositor_name, t.remark1) ||
             this.nameMatch(transaction.depositor_name, t.remark2)),
       );
