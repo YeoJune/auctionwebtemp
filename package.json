@@ -33,6 +33,7 @@
     "p-limit": "^6.2.0",
     "path": "^0.12.7",
     "pdfkit": "^0.17.1",
+    "popbill": "^1.62.0",
     "puppeteer": "^23.6.0",
     "qrcode": "^1.5.4",
     "serve-favicon": "^2.5.1",

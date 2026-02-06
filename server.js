@@ -31,6 +31,7 @@ const userRoutes = require("./routes/users");
 const dashboardRoutes = require("./routes/dashboard");
 const bidResultsRouter = require("./routes/bid-results");
 const depositsRoutes = require("./routes/deposits");
+const popbillRoutes = require("./routes/popbill");
 
 // --- 감정 시스템 관련 라우트 ---
 const appraisalsApprRoutes = require("./routes/appr/appraisals");
@@ -148,6 +149,7 @@ app.get("/api/metrics", metricsModule.getMetrics);
 app.post("/api/metrics/reset", metricsModule.resetMetrics);
 app.use("/api/bid-results", bidResultsRouter);
 app.use("/api/deposits", depositsRoutes);
+app.use("/api/popbill", popbillRoutes);
 
 app.use("/api/appr/appraisals", appraisalsApprRoutes);
 app.use("/api/appr/restorations", restorationsApprRoutes);
