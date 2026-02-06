@@ -385,13 +385,13 @@ router.get("/admin/transactions", isAdmin, async (req, res) => {
 
     // 상태 필터
     if (status) {
-      whereConditions.push("status = ?");
+      whereConditions.push("dt.status = ?");
       queryParams.push(status);
     }
 
     // 키워드 검색 (유저ID)
     if (keyword) {
-      whereConditions.push("user_id LIKE ?");
+      whereConditions.push("dt.user_id LIKE ?");
       queryParams.push(`%${keyword}%`);
     }
 
@@ -407,7 +407,7 @@ router.get("/admin/transactions", isAdmin, async (req, res) => {
 
     // 총 개수 조회
     const [countResult] = await pool.query(
-      `SELECT COUNT(*) as total FROM deposit_transactions ${whereClause}`,
+      `SELECT COUNT(*) as total FROM deposit_transactions dt ${whereClause}`,
       queryParams,
     );
 
@@ -461,13 +461,13 @@ router.get("/admin/settlements", isAdmin, async (req, res) => {
 
     // 🔧 상태 필터 - payment_status로 변경
     if (status) {
-      whereConditions.push("payment_status = ?");
+      whereConditions.push("ds.payment_status = ?");
       queryParams.push(status);
     }
 
     // 키워드 검색 (유저ID 또는 날짜)
     if (keyword) {
-      whereConditions.push("(user_id LIKE ? OR settlement_date LIKE ?)");
+      whereConditions.push("(ds.user_id LIKE ? OR ds.settlement_date LIKE ?)");
       queryParams.push(`%${keyword}%`, `%${keyword}%`);
     }
 
@@ -483,7 +483,7 @@ router.get("/admin/settlements", isAdmin, async (req, res) => {
 
     // 총 개수 조회
     const [countResult] = await pool.query(
-      `SELECT COUNT(*) as total FROM daily_settlements ${whereClause}`,
+      `SELECT COUNT(*) as total FROM daily_settlements ds ${whereClause}`,
       queryParams,
     );
 
