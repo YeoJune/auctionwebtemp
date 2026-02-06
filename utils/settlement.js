@@ -160,9 +160,12 @@ async function createOrUpdateSettlement(userId, date) {
         completedAmount = Number(existing[0].completed_amount || 0);
 
         // [핵심] 차액 발생 여부 확인
-        if (finalAmount > completedAmount) {
-          // 총액이 기 결제액보다 커지면(수선비 추가 등) -> 미결제(Unpaid)로 전환
+        if (completedAmount === 0) {
+          // 아직 결제 안됨 -> 미결제(Unpaid) 유지
           initialPaymentStatus = "unpaid";
+        } else if (finalAmount > completedAmount) {
+          // 부분 결제 상태 (총액이 기 결제액보다 큼) -> 부분 결제(Pending) 유지
+          initialPaymentStatus = "pending";
         } else if (finalAmount <= completedAmount) {
           // 총액이 같거나 줄어들면 -> 결제 완료(Paid) 유지
           // (환불 로직은 별도 고려 필요하나, 여기서는 완료 상태 유지)

@@ -779,23 +779,32 @@ router.put("/complete", isAdmin, async (req, res) => {
         // 정산 생성
         await createOrUpdateSettlement(bid.user_id, date);
 
-        // 예치금 조정 (환율 변동 대응)
-        await adjustDepositBalance(
-          bid.user_id,
-          bid.winning_price,
-          date,
-          bid.title,
-        );
-
-        // payment_status 업데이트
+        // 계정 타입 확인
         const conn = await pool.getConnection();
         try {
-          await conn.query(
-            `UPDATE daily_settlements 
-            SET payment_status = 'paid' 
-            WHERE user_id = ? AND settlement_date = ?`,
-            [bid.user_id, date],
+          const [accounts] = await conn.query(
+            "SELECT account_type FROM user_accounts WHERE user_id = ?",
+            [bid.user_id],
           );
+
+          // 개인 회원인 경우에만 예치금 조정 + payment_status 업데이트
+          if (accounts[0]?.account_type === "individual") {
+            await adjustDepositBalance(
+              bid.user_id,
+              bid.winning_price,
+              date,
+              bid.title,
+            );
+
+            await conn.query(
+              `UPDATE daily_settlements 
+              SET payment_status = 'paid', payment_method = 'deposit' 
+              WHERE user_id = ? AND settlement_date = ?`,
+              [bid.user_id, date],
+            );
+
+            console.log(`[SETTLEMENT] 예치금 조정 완료: user=${bid.user_id}`);
+          }
         } finally {
           conn.release();
         }
