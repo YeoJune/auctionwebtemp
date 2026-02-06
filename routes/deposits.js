@@ -176,9 +176,9 @@ router.post("/admin/approve/:id", isAdmin, async (req, res) => {
   try {
     await connection.beginTransaction();
 
-    // 1. 트랜잭션 조회
+    // 1. 트랜잭션 조회 (pending 또는 manual_review 상태)
     const [txs] = await connection.query(
-      `SELECT * FROM deposit_transactions WHERE id = ? AND status = 'pending' FOR UPDATE`,
+      `SELECT * FROM deposit_transactions WHERE id = ? AND status IN ('pending', 'manual_review') FOR UPDATE`,
       [transactionId],
     );
 
@@ -238,7 +238,7 @@ router.post("/admin/reject/:id", isAdmin, async (req, res) => {
     await connection.beginTransaction();
 
     const [txs] = await connection.query(
-      `SELECT * FROM deposit_transactions WHERE id = ? AND status = 'pending' FOR UPDATE`,
+      `SELECT * FROM deposit_transactions WHERE id = ? AND status IN ('pending', 'manual_review') FOR UPDATE`,
       [transactionId],
     );
 
