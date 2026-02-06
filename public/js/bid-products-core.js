@@ -73,18 +73,18 @@ window.BidProductsCore = (function () {
       if (product.first_price && !product.final_price) {
         timer = window.BidManager?.getRemainingTime(
           product.item.scheduled_date,
-          "final"
+          "final",
         );
       } else {
         timer = window.BidManager?.getRemainingTime(
           product.item.scheduled_date,
-          "first"
+          "first",
         );
       }
     } else {
       timer = window.BidManager?.getRemainingTime(
         product.item.scheduled_date,
-        "first"
+        "first",
       );
     }
 
@@ -108,16 +108,16 @@ window.BidProductsCore = (function () {
           return product.status === "second" && !isExpired;
 
         case "final":
-          // 최종 입찰만
+          // 최종 입찰만 (마감 여부와 무관)
           return product.status === "final";
 
         case "cancelled":
           // 낙찰 실패:
           // - cancelled 상태
-          // - 1차/2차/최종 중 마감된 것
+          // - 1차/2차 중 마감된 것 (최종 입찰 제외)
           return (
             product.status === "cancelled" ||
-            (["first", "second", "final"].includes(product.status) && isExpired)
+            (["first", "second"].includes(product.status) && isExpired)
           );
 
         case "completed":
@@ -164,13 +164,13 @@ window.BidProductsCore = (function () {
     if (!_pageState) return;
 
     _pageState.filteredResults = _pageState.combinedResults.filter((product) =>
-      filterByStatusAndDeadline(product, _pageState.status)
+      filterByStatusAndDeadline(product, _pageState.status),
     );
 
     // 필터링 후 총 개수 및 페이지 수 재계산
     _pageState.totalItems = _pageState.filteredResults.length;
     _pageState.totalPages = Math.ceil(
-      _pageState.totalItems / _pageState.itemsPerPage
+      _pageState.totalItems / _pageState.itemsPerPage,
     );
 
     // 현재 페이지가 범위를 벗어나면 1페이지로
@@ -337,12 +337,12 @@ window.BidProductsCore = (function () {
       const statusClass = getStatusClass(
         product.displayStatus,
         item.scheduled_date,
-        bidInfo
+        bidInfo,
       );
       const statusText = getStatusDisplay(
         product.displayStatus,
         item.scheduled_date,
-        product.type === "live" ? bidInfo : null // direct는 null 전달
+        product.type === "live" ? bidInfo : null, // direct는 null 전달
       );
 
       statusEl.textContent = statusText;
@@ -400,26 +400,26 @@ window.BidProductsCore = (function () {
         let bidHtml = "";
         if (product.type === "direct") {
           const directBidInfo = _pageState.directBids.find(
-            (b) => b.id === product.id
+            (b) => b.id === product.id,
           );
           bidHtml = window.BidManager
             ? window.BidManager.getDirectBidSectionHTML(
                 directBidInfo,
                 item.item_id,
                 item.auc_num,
-                item.category
+                item.category,
               )
             : "";
         } else {
           const liveBidInfo = _pageState.liveBids.find(
-            (b) => b.id === product.id
+            (b) => b.id === product.id,
           );
           bidHtml = window.BidManager
             ? window.BidManager.getLiveBidSectionHTML(
                 liveBidInfo,
                 item.item_id,
                 item.auc_num,
-                item.category
+                item.category,
               )
             : "";
         }
@@ -442,7 +442,7 @@ window.BidProductsCore = (function () {
 
         // 가격 요소들
         const priceElements = tempDiv.querySelectorAll(
-          ".real-time-price, .bid-price-info, .final-price"
+          ".real-time-price, .bid-price-info, .final-price",
         );
         priceElements.forEach((el) => {
           leftContent.appendChild(el);
@@ -450,7 +450,7 @@ window.BidProductsCore = (function () {
 
         // 입력 컨테이너
         const inputContainerSource = tempDiv.querySelector(
-          ".bid-input-container"
+          ".bid-input-container",
         );
         if (inputContainerSource) {
           while (inputContainerSource.firstChild) {
@@ -482,7 +482,7 @@ window.BidProductsCore = (function () {
             <div class="price-row">
               <span class="price-label">입찰 금액:</span>
               <span class="price-value">${formatNumber(
-                product.current_price
+                product.current_price,
               )} ¥</span>
             </div>
           `;
@@ -491,19 +491,19 @@ window.BidProductsCore = (function () {
             const winningKoreanPrice = calculateTotalPrice(
               product.winning_price,
               auctionId,
-              category
+              category,
             );
             bidInfoHTML += `
               <div class="price-row winning-price">
                 <span class="price-label">낙찰 금액:</span>
                 <span class="price-value">${formatNumber(
-                  product.winning_price
+                  product.winning_price,
                 )} ¥</span>
               </div>
               <div class="price-row price-korean winning-price">
                 <span class="price-label">관부가세 포함:</span>
                 <span class="price-value">${formatNumber(
-                  winningKoreanPrice
+                  winningKoreanPrice,
                 )} ₩</span>
               </div>
             `;
@@ -512,7 +512,7 @@ window.BidProductsCore = (function () {
               <div class="price-row price-korean">
                 <span class="price-label">관부가세 포함:</span>
                 <span class="price-value">${formatNumber(
-                  calculateTotalPrice(japanesePrice, auctionId, category)
+                  calculateTotalPrice(japanesePrice, auctionId, category),
                 )} ₩</span>
               </div>
             `;
@@ -525,7 +525,7 @@ window.BidProductsCore = (function () {
               <div class="price-row">
                 <span class="price-label">1차 입찰:</span>
                 <span class="price-value">${formatNumber(
-                  product.first_price
+                  product.first_price,
                 )} ¥</span>
               </div>
             `;
@@ -536,7 +536,7 @@ window.BidProductsCore = (function () {
               <div class="price-row">
                 <span class="price-label">2차 제안:</span>
                 <span class="price-value">${formatNumber(
-                  product.second_price
+                  product.second_price,
                 )} ¥</span>
               </div>
             `;
@@ -547,7 +547,7 @@ window.BidProductsCore = (function () {
               <div class="price-row">
                 <span class="price-label">최종 입찰:</span>
                 <span class="price-value">${formatNumber(
-                  product.final_price
+                  product.final_price,
                 )} ¥</span>
               </div>
             `;
@@ -565,19 +565,19 @@ window.BidProductsCore = (function () {
             const winningKoreanPrice = calculateTotalPrice(
               product.winning_price,
               auctionId,
-              category
+              category,
             );
             bidInfoHTML += `
               <div class="price-row winning-price">
                 <span class="price-label">낙찰 금액:</span>
                 <span class="price-value">${formatNumber(
-                  product.winning_price
+                  product.winning_price,
                 )} ¥</span>
               </div>
               <div class="price-row price-korean winning-price">
                 <span class="price-label">관부가세 포함:</span>
                 <span class="price-value">${formatNumber(
-                  winningKoreanPrice
+                  winningKoreanPrice,
                 )} ₩</span>
               </div>
             `;
@@ -586,7 +586,7 @@ window.BidProductsCore = (function () {
               <div class="price-row price-korean">
                 <span class="price-label">관부가세 포함:</span>
                 <span class="price-value">${formatNumber(
-                  calculateTotalPrice(japanesePrice, auctionId, category)
+                  calculateTotalPrice(japanesePrice, auctionId, category),
                 )} ₩</span>
               </div>
             `;
@@ -678,7 +678,7 @@ window.BidProductsCore = (function () {
       _pageState.currentPage,
       _pageState.totalPages,
       onPageChange,
-      paginationId
+      paginationId,
     );
   }
 
@@ -739,7 +739,7 @@ window.BidProductsCore = (function () {
     if (!modalManager) return;
 
     const product = _pageState.filteredResults.find(
-      (p) => p.item?.item_id === itemId
+      (p) => p.item?.item_id === itemId,
     );
     if (!product) return;
 
@@ -765,7 +765,7 @@ window.BidProductsCore = (function () {
         {
           method: "POST",
           body: JSON.stringify({ aucNum: item.auc_num }),
-        }
+        },
       );
 
       // 상세 정보 업데이트
@@ -798,7 +798,7 @@ window.BidProductsCore = (function () {
     document.querySelector(".modal-title").textContent = item.title || "-";
     document.querySelector(".modal-title").dataset.itemId = item.item_id;
     document.querySelector(".main-image").src = window.API.validateImageUrl(
-      item.image
+      item.image,
     );
     document.querySelector(".modal-description").textContent = "로딩 중...";
     document.querySelector(".modal-category").textContent =
@@ -854,12 +854,12 @@ window.BidProductsCore = (function () {
       if (product.first_price && !product.final_price) {
         timer = window.BidManager.getRemainingTime(
           item.scheduled_date,
-          "final"
+          "final",
         );
       } else {
         timer = window.BidManager.getRemainingTime(
           item.scheduled_date,
-          "first"
+          "first",
         );
       }
     } else {
@@ -877,13 +877,13 @@ window.BidProductsCore = (function () {
     // 입찰 가능 상태인 경우 BidManager를 사용하여 입찰 폼 생성
     if (product.type === "direct") {
       const directBidInfo = _pageState.directBids.find(
-        (b) => b.id === product.id
+        (b) => b.id === product.id,
       );
       bidSection.innerHTML = window.BidManager.getDirectBidSectionHTML(
         directBidInfo,
         item.item_id,
         item.auc_num,
-        item.category
+        item.category,
       );
     } else {
       const liveBidInfo = _pageState.liveBids.find((b) => b.id === product.id);
@@ -891,7 +891,7 @@ window.BidProductsCore = (function () {
         liveBidInfo,
         item.item_id,
         item.auc_num,
-        item.category
+        item.category,
       );
     }
 
@@ -906,12 +906,12 @@ window.BidProductsCore = (function () {
     const statusClass = getStatusClass(
       product.displayStatus,
       item.scheduled_date,
-      product.type === "live" ? product : null
+      product.type === "live" ? product : null,
     );
     const statusText = getStatusDisplay(
       product.displayStatus,
       item.scheduled_date,
-      product.type === "live" ? product : null // direct는 null 전달
+      product.type === "live" ? product : null, // direct는 null 전달
     );
 
     // 원화 가격 계산
@@ -949,7 +949,7 @@ window.BidProductsCore = (function () {
         </div>
         <div class="price-current">
           <strong>현재 입찰가:</strong> ￥${formatNumber(
-            product.current_price || 0
+            product.current_price || 0,
           )}
         </div>
       `;
@@ -958,7 +958,7 @@ window.BidProductsCore = (function () {
         const winningKoreanPrice = calculateTotalPrice(
           product.winning_price,
           auctionId,
-          category
+          category,
         );
         priceInfoHTML += `
           <div class="price-winning">
@@ -1010,7 +1010,7 @@ window.BidProductsCore = (function () {
         const winningKoreanPrice = calculateTotalPrice(
           product.winning_price,
           auctionId,
-          category
+          category,
         );
         priceInfoHTML += `
           <div class="price-winning">
