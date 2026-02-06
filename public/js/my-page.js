@@ -208,45 +208,45 @@ class MyPageManager {
     const corporateSection = document.getElementById("corporateDepositInfo");
 
     if (account_type === "individual") {
-      // 개인 회원 UI 표시
+      // 개인 회원 - 예치금 UI 비활성화
+      depositInfoCard.style.display = "none";
+    } else if (account_type === "corporate") {
+      // 기업 회원 - 한도 UI 활성화
       depositInfoCard.style.display = "block";
-      cardTitle.textContent = "예치금 정보";
-      individualSection.style.display = "block";
-      corporateSection.style.display = "none";
+      cardTitle.textContent = "한도 정보";
+      individualSection.style.display = "none";
+      corporateSection.style.display = "block";
 
-      const balanceElement = document.getElementById("currentDepositBalance");
-      balanceElement.textContent = `${deposit_balance.toLocaleString()}원`;
+      document.getElementById("dailyLimitAmount").textContent =
+        `${daily_limit.toLocaleString()}원`;
+      document.getElementById("dailyUsedAmount").textContent =
+        `${daily_used.toLocaleString()}원`;
+      document.getElementById("remainingLimitAmount").textContent =
+        `${remaining_limit.toLocaleString()}원`;
 
-      // 마이너스 잔액 강조 (빨간색)
-      if (deposit_balance < 0) {
-        balanceElement.classList.add("negative");
-        const cardBody = balanceElement.closest(".card-body");
+      // 한도 초과 경고 표시
+      if (remaining_limit < 0) {
+        const remainingElement = document.getElementById(
+          "remainingLimitAmount",
+        );
+        remainingElement.classList.add("negative");
+        const cardBody = remainingElement.closest(".card-body");
         if (cardBody && !cardBody.querySelector(".warning-message")) {
           cardBody.insertAdjacentHTML(
             "beforeend",
-            '<div class="warning-message"><i class="fas fa-exclamation-circle"></i> 예치금이 부족합니다. 충전해주세요.</div>',
+            '<div class="warning-message"><i class="fas fa-exclamation-circle"></i> 일일 한도를 초과했습니다.</div>',
           );
         }
       } else {
-        balanceElement.classList.remove("negative");
-        const warning = balanceElement
+        const remainingElement = document.getElementById(
+          "remainingLimitAmount",
+        );
+        remainingElement.classList.remove("negative");
+        const warning = remainingElement
           .closest(".card-body")
           ?.querySelector(".warning-message");
         if (warning) warning.remove();
       }
-    } else if (account_type === "corporate") {
-      // 기업 회원 - 카드 전체 숨김 (임시)
-      depositInfoCard.style.display = "none";
-
-      // cardTitle.textContent = "한도 정보";
-      // individualSection.style.display = "none";
-      // corporateSection.style.display = "block";
-      // document.getElementById("dailyLimitAmount").textContent =
-      //   `${daily_limit.toLocaleString()}원`;
-      // document.getElementById("dailyUsedAmount").textContent =
-      //   `${daily_used.toLocaleString()}원`;
-      // document.getElementById("remainingLimitAmount").textContent =
-      //   `${remaining_limit.toLocaleString()}원`;
     }
   }
 
