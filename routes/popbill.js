@@ -185,9 +185,9 @@ router.post("/admin/issue-cashbill", isAdmin, async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    // 1. 거래 조회
+    // 1. 거래 조회 - email, phone, company_name 사용
     const [transactions] = await conn.query(
-      `SELECT dt.*, u.email, u.phone, u.name 
+      `SELECT dt.*, u.email, u.phone, u.company_name 
        FROM deposit_transactions dt 
        JOIN users u ON dt.user_id = u.id 
        WHERE dt.id = ?`,
@@ -215,13 +215,13 @@ router.post("/admin/issue-cashbill", isAdmin, async (req, res) => {
       });
     }
 
-    // 3. 현금영수증 발행
+    // 3. 현금영수증 발행 - email, phone, company_name 전달
     let result;
     try {
       result = await popbillService.issueCashbill(transaction, {
         email: transaction.email,
         phone: transaction.phone,
-        name: transaction.name,
+        company_name: transaction.company_name,
       });
     } catch (error) {
       await conn.rollback();
@@ -281,10 +281,9 @@ router.post("/admin/issue-taxinvoice", isAdmin, async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    // 1. 정산 조회
+    // 1. 정산 조회 - business_number, company_name, email 사용
     const [settlements] = await conn.query(
-      `SELECT ds.*, u.email, u.business_number, u.company_name, u.ceo_name, 
-              u.company_address, u.business_type, u.business_class 
+      `SELECT ds.*, u.business_number, u.company_name, u.email
        FROM daily_settlements ds 
        JOIN users u ON ds.user_id = u.id 
        WHERE ds.id = ?`,
@@ -307,9 +306,16 @@ router.post("/admin/issue-taxinvoice", isAdmin, async (req, res) => {
       });
     }
 
+    if (!settlement.company_name) {
+      await conn.rollback();
+      return res.status(400).json({
+        message: "회사명(상호)이 등록되지 않았습니다.",
+      });
+    }
+
     // 3. 이미 발행된 문서가 있는지 확인
     const [existing] = await conn.query(
-      "SELECT * FROM popbill_documents WHERE related_type = 'settlement' AND related_id = ? AND type = 'taxinvoice'",
+      "SELECT * FROM popbill_documents WHERE related_type = 'settlement' AND related_id = ? AND type = 'taxinvoice' AND status = 'issued'",
       [settlement_id],
     );
 
@@ -321,10 +327,14 @@ router.post("/admin/issue-taxinvoice", isAdmin, async (req, res) => {
       });
     }
 
-    // 4. 세금계산서 발행
+    // 4. 세금계산서 발행 - business_number, company_name, email 전달
     let result;
     try {
-      result = await popbillService.issueTaxinvoice(settlement, settlement);
+      result = await popbillService.issueTaxinvoice(settlement, {
+        business_number: settlement.business_number,
+        company_name: settlement.company_name,
+        email: settlement.email,
+      });
     } catch (error) {
       await conn.rollback();
       console.error("[세금계산서 발행 실패]", error);
@@ -362,6 +372,109 @@ router.post("/admin/issue-taxinvoice", isAdmin, async (req, res) => {
     res
       .status(500)
       .json({ message: "세금계산서 발행 중 오류가 발생했습니다." });
+  } finally {
+    conn.release();
+  }
+});
+
+/**
+ * POST /api/popbill/admin/issue-cashbill-settlement
+ * 현금영수증 발행 (정산용) - 관리자
+ */
+router.post("/admin/issue-cashbill-settlement", isAdmin, async (req, res) => {
+  const { settlement_id } = req.body;
+
+  if (!settlement_id) {
+    return res.status(400).json({ message: "settlement_id가 필요합니다." });
+  }
+
+  const conn = await pool.getConnection();
+
+  try {
+    await conn.beginTransaction();
+
+    // 1. 정산 조회 - email, phone, company_name 사용
+    const [settlements] = await conn.query(
+      `SELECT ds.*, u.email, u.phone, u.company_name 
+       FROM daily_settlements ds 
+       JOIN users u ON ds.user_id = u.id 
+       WHERE ds.id = ?`,
+      [settlement_id],
+    );
+
+    if (settlements.length === 0) {
+      await conn.rollback();
+      return res.status(404).json({ message: "정산을 찾을 수 없습니다." });
+    }
+
+    const settlement = settlements[0];
+
+    // 2. 이미 발행된 문서가 있는지 확인
+    const [existing] = await conn.query(
+      "SELECT * FROM popbill_documents WHERE related_type = 'settlement' AND related_id = ? AND type = 'cashbill' AND status = 'issued'",
+      [settlement_id],
+    );
+
+    if (existing.length > 0) {
+      await conn.rollback();
+      return res.status(400).json({
+        message: "이미 발행된 현금영수증이 있습니다.",
+        confirmNum: existing[0].confirm_num,
+      });
+    }
+
+    // 3. 현금영수증 발행 - 정산 데이터를 트랜잭션 형식으로 변환
+    const transactionData = {
+      id: settlement_id,
+      amount: settlement.final_amount,
+      user_id: settlement.user_id,
+      processed_at: settlement.paid_at || new Date(),
+    };
+
+    let result;
+    try {
+      result = await popbillService.issueCashbill(transactionData, {
+        email: settlement.email,
+        phone: settlement.phone,
+        company_name: settlement.company_name,
+      });
+    } catch (error) {
+      await conn.rollback();
+      console.error("[현금영수증 발행 실패]", error);
+      return res.status(500).json({
+        message: "현금영수증 발행 실패",
+        error: error.message,
+      });
+    }
+
+    // 4. DB 저장
+    await conn.query(
+      `INSERT INTO popbill_documents 
+       (type, mgt_key, related_type, related_id, user_id, confirm_num, amount, status) 
+       VALUES ('cashbill', ?, 'settlement', ?, ?, ?, ?, 'issued')`,
+      [
+        result.mgtKey,
+        settlement_id,
+        settlement.user_id,
+        result.confirmNum,
+        settlement.final_amount,
+      ],
+    );
+
+    await conn.commit();
+
+    res.status(200).json({
+      success: true,
+      message: "현금영수증이 발행되었습니다.",
+      confirmNum: result.confirmNum,
+      mgtKey: result.mgtKey,
+    });
+  } catch (err) {
+    await conn.rollback();
+    console.error("Error issuing cashbill:", err);
+    res
+      .status(500)
+      .json({ message: "현금영수증 발행 중 오류가 발생했습니다." });
   } finally {
     conn.release();
   }
@@ -417,6 +530,158 @@ router.get("/admin/documents", isAdmin, async (req, res) => {
   } catch (err) {
     console.error("Error fetching documents:", err);
     res.status(500).json({ message: "문서 조회 중 오류가 발생했습니다." });
+  } finally {
+    conn.release();
+  }
+});
+
+/**
+ * POST /api/popbill/admin/retry-issue/:id
+ * 실패한 문서 재발행 (관리자)
+ */
+router.post("/admin/retry-issue/:id", isAdmin, async (req, res) => {
+  const documentId = req.params.id;
+
+  const conn = await pool.getConnection();
+
+  try {
+    await conn.beginTransaction();
+
+    // 1. 문서 조회
+    const [docs] = await conn.query(
+      "SELECT * FROM popbill_documents WHERE id = ?",
+      [documentId],
+    );
+
+    if (docs.length === 0) {
+      await conn.rollback();
+      return res.status(404).json({ message: "문서를 찾을 수 없습니다." });
+    }
+
+    const doc = docs[0];
+
+    // 2. 관련 데이터 조회
+    let result;
+    if (doc.related_type === "deposit") {
+      // 예치금 거래
+      const [transactions] = await conn.query(
+        `SELECT dt.*, u.email, u.phone, u.company_name 
+         FROM deposit_transactions dt 
+         JOIN users u ON dt.user_id = u.id 
+         WHERE dt.id = ?`,
+        [doc.related_id],
+      );
+
+      if (transactions.length === 0) {
+        await conn.rollback();
+        return res.status(404).json({ message: "거래를 찾을 수 없습니다." });
+      }
+
+      const transaction = transactions[0];
+
+      if (doc.type === "cashbill") {
+        result = await popbillService.issueCashbill(transaction, {
+          email: transaction.email,
+          phone: transaction.phone,
+          company_name: transaction.company_name,
+        });
+
+        // 기존 문서 업데이트
+        await conn.query(
+          `UPDATE popbill_documents 
+           SET mgt_key = ?, confirm_num = ?, status = 'issued', error_message = NULL, created_at = NOW() 
+           WHERE id = ?`,
+          [result.mgtKey, result.confirmNum, documentId],
+        );
+      }
+    } else if (doc.related_type === "settlement") {
+      // 정산
+      const [settlements] = await conn.query(
+        `SELECT ds.*, u.business_number, u.company_name, u.email, u.phone
+         FROM daily_settlements ds 
+         JOIN users u ON ds.user_id = u.id 
+         WHERE ds.id = ?`,
+        [doc.related_id],
+      );
+
+      if (settlements.length === 0) {
+        await conn.rollback();
+        return res.status(404).json({ message: "정산을 찾을 수 없습니다." });
+      }
+
+      const settlement = settlements[0];
+
+      if (doc.type === "taxinvoice") {
+        if (!settlement.business_number) {
+          await conn.rollback();
+          return res
+            .status(400)
+            .json({ message: "사업자등록번호가 등록되지 않았습니다." });
+        }
+
+        result = await popbillService.issueTaxinvoice(settlement, {
+          business_number: settlement.business_number,
+          company_name: settlement.company_name,
+          email: settlement.email,
+        });
+
+        // 기존 문서 업데이트
+        await conn.query(
+          `UPDATE popbill_documents 
+           SET mgt_key = ?, confirm_num = ?, status = 'issued', error_message = NULL, created_at = NOW() 
+           WHERE id = ?`,
+          [result.invoicerMgtKey, result.ntsConfirmNum, documentId],
+        );
+      } else if (doc.type === "cashbill") {
+        const transactionData = {
+          id: settlement.id,
+          amount: settlement.final_amount,
+          user_id: settlement.user_id,
+          processed_at: new Date(),
+        };
+
+        result = await popbillService.issueCashbill(transactionData, {
+          email: settlement.email,
+          phone: settlement.phone,
+          company_name: settlement.company_name,
+        });
+
+        // 기존 문서 업데이트
+        await conn.query(
+          `UPDATE popbill_documents 
+           SET mgt_key = ?, confirm_num = ?, status = 'issued', error_message = NULL, created_at = NOW() 
+           WHERE id = ?`,
+          [result.mgtKey, result.confirmNum, documentId],
+        );
+      }
+    }
+
+    await conn.commit();
+
+    res.status(200).json({
+      success: true,
+      message: "문서가 성공적으로 재발행되었습니다.",
+      confirmNum: result.confirmNum || result.ntsConfirmNum,
+      mgtKey: result.mgtKey || result.invoicerMgtKey,
+    });
+  } catch (err) {
+    await conn.rollback();
+    console.error("Error retrying document issue:", err);
+
+    // 실패 시 에러 메시지 업데이트
+    try {
+      await pool.query(
+        "UPDATE popbill_documents SET error_message = ? WHERE id = ?",
+        [err.message, documentId],
+      );
+    } catch (updateErr) {
+      console.error("Error updating error message:", updateErr);
+    }
+
+    res.status(500).json({
+      message: "문서 재발행 중 오류가 발생했습니다.",
+      error: err.message,
+    });
   } finally {
     conn.release();
   }
@@ -499,6 +764,80 @@ cron.schedule("*/10 * * * *", async () => {
           console.log(
             `✅ 자동 승인 성공: 거래 #${transaction.id}, 금액: ${transaction.amount}원`,
           );
+
+          // 현금영수증 자동 발행 (별도 처리)
+          try {
+            // 이미 발행된 문서가 있는지 확인
+            const [existingDocs] = await pool.query(
+              "SELECT * FROM popbill_documents WHERE related_type = 'deposit' AND related_id = ? AND status = 'issued'",
+              [transaction.id],
+            );
+
+            if (existingDocs.length === 0) {
+              // 사용자 정보 조회
+              const [users] = await pool.query(
+                "SELECT email, phone, company_name FROM users WHERE id = ?",
+                [transaction.user_id],
+              );
+
+              if (users.length > 0) {
+                console.log(
+                  `[자동 발행] 현금영수증 발행 시작 (예치금 거래 ID: ${transaction.id})`,
+                );
+
+                const cashResult = await popbillService.issueCashbill(
+                  transaction,
+                  users[0],
+                );
+
+                // DB 저장
+                await pool.query(
+                  `INSERT INTO popbill_documents 
+                   (type, mgt_key, related_type, related_id, user_id, confirm_num, amount, status, created_at) 
+                   VALUES ('cashbill', ?, 'deposit', ?, ?, ?, ?, 'issued', NOW())`,
+                  [
+                    cashResult.mgtKey,
+                    transaction.id,
+                    transaction.user_id,
+                    cashResult.confirmNum,
+                    transaction.amount,
+                  ],
+                );
+
+                console.log(
+                  `✅ 현금영수증 자동 발행 완료 (승인번호: ${cashResult.confirmNum})`,
+                );
+              }
+            }
+          } catch (docError) {
+            // 발행 실패 시 DB에 실패 상태 기록 (승인은 유지)
+            console.error(
+              `❌ 현금영수증 자동 발행 실패 (예치금 거래 ID: ${transaction.id}):`,
+              docError.message,
+            );
+
+            const mgtKey = `CASHBILL-FAILED-${transaction.id}-${Date.now()}`;
+
+            try {
+              await pool.query(
+                `INSERT INTO popbill_documents 
+                 (type, mgt_key, related_type, related_id, user_id, amount, status, error_message, created_at) 
+                 VALUES ('cashbill', ?, 'deposit', ?, ?, ?, 'failed', ?, NOW())`,
+                [
+                  mgtKey,
+                  transaction.id,
+                  transaction.user_id,
+                  transaction.amount,
+                  docError.message,
+                ],
+              );
+            } catch (dbError) {
+              console.error(
+                `❌ 발행 실패 기록 저장 오류 (거래 ID: ${transaction.id}):`,
+                dbError.message,
+              );
+            }
+          }
         } else {
           // 재시도 카운트 증가
           const newRetryCount = transaction.retry_count + 1;

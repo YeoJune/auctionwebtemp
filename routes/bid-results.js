@@ -1455,6 +1455,7 @@ router.get("/admin/settlements", isAdmin, async (req, res) => {
  * - 부분 결제 지원 (누적)
  * - 입금액 미입력 시 남은 금액 전액 처리
  * - 완납 시 자동으로 'paid' 상태로 변경
+ * - 완납 시 세금계산서/현금영수증 자동 발행
  */
 router.put("/admin/settlements/:id", isAdmin, async (req, res) => {
   const settlementId = req.params.id;
@@ -1465,9 +1466,12 @@ router.put("/admin/settlements/:id", isAdmin, async (req, res) => {
   try {
     await connection.beginTransaction();
 
-    // 1. 현재 정산 정보 조회
+    // 1. 현재 정산 정보 및 사용자 정보 조회
     const [settlements] = await connection.query(
-      "SELECT * FROM daily_settlements WHERE id = ?",
+      `SELECT ds.*, u.business_number, u.company_name, u.email, u.phone
+       FROM daily_settlements ds
+       JOIN users u ON ds.user_id = u.id
+       WHERE ds.id = ?`,
       [settlementId],
     );
 
@@ -1504,7 +1508,9 @@ router.put("/admin/settlements/:id", isAdmin, async (req, res) => {
 
     // 5. 정산 상태 자동 결정
     let newPaymentStatus;
-    if (newCompletedAmount >= finalAmount) {
+    const isFullyPaid = newCompletedAmount >= finalAmount;
+
+    if (isFullyPaid) {
       newPaymentStatus = "paid"; // 완납
     } else if (newCompletedAmount > 0) {
       newPaymentStatus = "pending"; // 부분 입금
@@ -1557,6 +1563,144 @@ router.put("/admin/settlements/:id", isAdmin, async (req, res) => {
       `[정산 처리] ID: ${settlementId}, 입금: ${paymentAmount.toLocaleString()}원, 누적: ${newCompletedAmount.toLocaleString()}원/${finalAmount.toLocaleString()}원, 상태: ${newPaymentStatus}`,
     );
 
+    // 9. 완납 시 세금계산서/현금영수증 자동 발행 (별도 처리)
+    let documentIssueResult = null;
+    if (isFullyPaid) {
+      try {
+        const popbillService = require("../utils/popbill");
+
+        // 이미 발행된 문서가 있는지 확인
+        const [existingDocs] = await pool.query(
+          "SELECT * FROM popbill_documents WHERE related_type = 'settlement' AND related_id = ? AND status = 'issued'",
+          [settlementId],
+        );
+
+        if (existingDocs.length === 0) {
+          // business_number 유무에 따라 세금계산서 또는 현금영수증 발행
+          if (settlement.business_number) {
+            // 세금계산서 발행
+            console.log(
+              `[자동 발행] 세금계산서 발행 시작 (정산 ID: ${settlementId})`,
+            );
+            const taxResult = await popbillService.issueTaxinvoice(settlement, {
+              business_number: settlement.business_number,
+              company_name: settlement.company_name,
+              email: settlement.email,
+            });
+
+            // DB 저장
+            await pool.query(
+              `INSERT INTO popbill_documents 
+               (type, mgt_key, related_type, related_id, user_id, confirm_num, amount, status, created_at) 
+               VALUES ('taxinvoice', ?, 'settlement', ?, ?, ?, ?, 'issued', NOW())`,
+              [
+                taxResult.invoicerMgtKey,
+                settlementId,
+                settlement.user_id,
+                taxResult.ntsConfirmNum,
+                finalAmount,
+              ],
+            );
+
+            documentIssueResult = {
+              type: "taxinvoice",
+              status: "issued",
+              confirmNum: taxResult.ntsConfirmNum,
+              mgtKey: taxResult.invoicerMgtKey,
+            };
+
+            console.log(
+              `✅ 세금계산서 자동 발행 완료 (승인번호: ${taxResult.ntsConfirmNum})`,
+            );
+          } else {
+            // 현금영수증 발행
+            console.log(
+              `[자동 발행] 현금영수증 발행 시작 (정산 ID: ${settlementId})`,
+            );
+
+            // 정산 데이터를 현금영수증 발행용 트랜잭션 형식으로 변환
+            const transactionData = {
+              id: settlementId,
+              amount: finalAmount,
+              user_id: settlement.user_id,
+              processed_at: new Date(),
+            };
+
+            const cashResult = await popbillService.issueCashbill(
+              transactionData,
+              {
+                email: settlement.email,
+                phone: settlement.phone,
+                company_name: settlement.company_name,
+              },
+            );
+
+            // DB 저장
+            await pool.query(
+              `INSERT INTO popbill_documents 
+               (type, mgt_key, related_type, related_id, user_id, confirm_num, amount, status, created_at) 
+               VALUES ('cashbill', ?, 'settlement', ?, ?, ?, ?, 'issued', NOW())`,
+              [
+                cashResult.mgtKey,
+                settlementId,
+                settlement.user_id,
+                cashResult.confirmNum,
+                finalAmount,
+              ],
+            );
+
+            documentIssueResult = {
+              type: "cashbill",
+              status: "issued",
+              confirmNum: cashResult.confirmNum,
+              mgtKey: cashResult.mgtKey,
+            };
+
+            console.log(
+              `✅ 현금영수증 자동 발행 완료 (승인번호: ${cashResult.confirmNum})`,
+            );
+          }
+        } else {
+          console.log(
+            `[자동 발행] 이미 발행된 문서 존재 (정산 ID: ${settlementId})`,
+          );
+          documentIssueResult = {
+            status: "already_issued",
+            existing: existingDocs[0],
+          };
+        }
+      } catch (error) {
+        // 발행 실패 시 DB에 실패 상태 기록
+        console.error(
+          `❌ 문서 자동 발행 실패 (정산 ID: ${settlementId}):`,
+          error.message,
+        );
+
+        const docType = settlement.business_number ? "taxinvoice" : "cashbill";
+        const mgtKey = `${docType.toUpperCase()}-FAILED-${settlementId}-${Date.now()}`;
+
+        await pool.query(
+          `INSERT INTO popbill_documents 
+           (type, mgt_key, related_type, related_id, user_id, amount, status, error_message, created_at) 
+           VALUES (?, ?, 'settlement', ?, ?, ?, 'failed', ?, NOW())`,
+          [
+            docType,
+            mgtKey,
+            settlementId,
+            settlement.user_id,
+            finalAmount,
+            error.message,
+          ],
+        );
+
+        documentIssueResult = {
+          type: docType,
+          status: "failed",
+          error: error.message,
+        };
+      }
+    }
+
     res.json({
       message: "정산 처리가 완료되었습니다.",
       settlement: updated[0],
@@ -1567,6 +1711,7 @@ router.put("/admin/settlements/:id", isAdmin, async (req, res) => {
         remaining: finalAmount - newCompletedAmount,
         status: newPaymentStatus,
       },
+      document_issue: documentIssueResult,
     });
   } catch (err) {
     await connection.rollback();

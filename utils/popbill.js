@@ -87,14 +87,14 @@ class PopbillService {
   /**
    * 현금영수증 발행
    * @param {Object} transaction - { id, amount, depositor_name, processed_at }
-   * @param {Object} user - { email, phone, name }
+   * @param {Object} user - { email, phone, company_name }
    * @returns {Object} { confirmNum, tradeDate, mgtKey }
    */
   async issueCashbill(transaction, user) {
     try {
       console.log("\n[현금영수증 발행 시작]");
       console.log("- 금액:", transaction.amount);
-      console.log("- 입금자:", transaction.depositor_name);
+      console.log("- 고객명:", user.company_name);
 
       const mgtKey = `CB-${transaction.id}-${Date.now()}`;
 
@@ -115,8 +115,8 @@ class PopbillService {
         franchiseCEOName: process.env.COMPANY_CEO,
         franchiseAddr: process.env.COMPANY_ADDRESS,
         franchiseTEL: process.env.COMPANY_TEL,
-        identityNum: user.phone || "010-000-1234",
-        customerName: transaction.depositor_name,
+        identityNum: user.phone || "010-0000-0000",
+        customerName: user.company_name,
         itemName: "예치금 충전",
         email: user.email,
         hp: user.phone,
@@ -143,7 +143,7 @@ class PopbillService {
   /**
    * 세금계산서 발행
    * @param {Object} settlement - { id, settlement_date, final_amount, item_count }
-   * @param {Object} user - { business_number, company_name, ceo_name, email, ... }
+   * @param {Object} user - { business_number, company_name, email }
    * @returns {Object} { ntsConfirmNum, issueDT, invoicerMgtKey }
    */
   async issueTaxinvoice(settlement, user) {
@@ -180,14 +180,14 @@ class PopbillService {
         invoicerBizClass: process.env.COMPANY_BUSINESS_CLASS,
         invoicerTEL: process.env.COMPANY_TEL,
 
-        // 공급받는자 (고객)
+        // 공급받는자 (고객) - 간소화
         invoiceeType: "사업자",
         invoiceeCorpNum: user.business_number,
         invoiceeCorpName: user.company_name,
-        invoiceeCEOName: user.ceo_name,
-        invoiceeAddr: user.company_address || "",
-        invoiceeBizType: user.business_type || "",
-        invoiceeBizClass: user.business_class || "",
+        invoiceeCEOName: user.company_name, // 대표자명도 company_name 사용
+        invoiceeAddr: "",
+        invoiceeBizType: "",
+        invoiceeBizClass: "",
         invoiceeEmail1: user.email,
 
         // 품목

@@ -209,7 +209,7 @@ function renderDeposits() {
 
   if (state.deposits.results.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="8" class="text-center">결과가 없습니다.</td></tr>';
+      '<tr><td colspan="10" class="text-center">결과가 없습니다.</td></tr>';
     return;
   }
 
@@ -217,6 +217,23 @@ function renderDeposits() {
     .map((tx) => {
       const typeText = getDepositTypeText(tx.type);
       const statusBadge = getDepositStatusBadge(tx.status);
+
+      // 발행 상태 배지 (충전 거래만)
+      let docBadge = "-";
+      if (tx.type === "charge") {
+        if (tx.doc_id) {
+          if (tx.doc_status === "issued") {
+            docBadge = `<span class="badge badge-success" title="승인번호: ${tx.confirm_num || "-"}">현금영수증</span>`;
+          } else if (tx.doc_status === "failed") {
+            docBadge = `<span class="badge badge-danger" title="${tx.error_message || "발행 실패"}" style="cursor: pointer;" onclick="retryDepositDocument(${tx.doc_id})">발행 실패 (재시도)</span>`;
+          } else {
+            docBadge = `<span class="badge badge-secondary">${tx.doc_status}</span>`;
+          }
+        } else if (tx.status === "confirmed") {
+          // 승인됐는데 발행 정보가 없는 경우
+          docBadge = `<span class="badge badge-warning" style="cursor: pointer;" onclick="issueDepositDocument(${tx.id})">미발행 (수동 발행)</span>`;
+        }
+      }
 
       let actionBtn = "";
       if (tx.status === "pending") {
@@ -240,6 +257,7 @@ function renderDeposits() {
         <td class="text-right">₩${tx.amount.toLocaleString()}</td>
         <td>${tx.depositor_name || "-"}</td>
         <td>${statusBadge}</td>
+        <td>${docBadge}</td>
         <td>${formatDateTime(tx.created_at)}</td>
         <td>
           <small>${tx.description || "-"}</small>
@@ -328,7 +346,7 @@ function renderSettlements() {
 
   if (state.settlements.results.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="9" class="text-center">결과가 없습니다.</td></tr>';
+      '<tr><td colspan="10" class="text-center">결과가 없습니다.</td></tr>';
     return;
   }
 
@@ -336,6 +354,24 @@ function renderSettlements() {
     .map((st) => {
       const remaining = st.final_amount - (st.completed_amount || 0);
       const statusBadge = getPaymentStatusBadge(st.payment_status);
+
+      // 발행 상태 배지
+      let docBadge = "-";
+      if (st.doc_id) {
+        if (st.doc_status === "issued") {
+          docBadge = `<span class="badge badge-success" title="승인번호: ${st.confirm_num || "-"}">${st.doc_type === "taxinvoice" ? "세금계산서" : "현금영수증"}</span>`;
+        } else if (st.doc_status === "failed") {
+          docBadge = `<span class="badge badge-danger" title="${st.error_message || "발행 실패"}" style="cursor: pointer;" onclick="retryDocumentIssue(${st.doc_id})">발행 실패 (재시도)</span>`;
+        } else {
+          docBadge = `<span class="badge badge-secondary">${st.doc_status}</span>`;
+        }
+      } else if (st.payment_status === "paid") {
+        // 완납인데 발행 정보가 없는 경우
+        const expectedDocType = st.business_number
+          ? "세금계산서"
+          : "현금영수증";
+        docBadge = `<span class="badge badge-warning" style="cursor: pointer;" onclick="issueDocumentManually(${st.id}, '${st.business_number ? "taxinvoice" : "cashbill"}')">미발행 (수동 발행)</span>`;
+      }
 
       // 모든 상태에서 수동 처리 버튼 표시
       const actionBtn = `
@@ -358,6 +394,7 @@ function renderSettlements() {
         <td class="text-right ${remaining > 0 ? "text-danger" : ""}">₩${remaining.toLocaleString()}</td>
         <td>${st.depositor_name || "-"}</td>
         <td>${statusBadge}</td>
+        <td>${docBadge}</td>
         <td>${actionBtn}</td>
       </tr>
     `;
@@ -741,6 +778,132 @@ function formatDateTime(dateString) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+// =====================================================
+// 문서 발행 관련 함수
+// =====================================================
+
+/**
+ * 문서 재발행 (실패한 경우)
+ */
+async function retryDocumentIssue(docId) {
+  if (!confirm("문서를 재발행하시겠습니까?")) {
+    return;
+  }
+
+  try {
+    const response = await window.API.fetchAPI(
+      `/popbill/admin/retry-issue/${docId}`,
+      { method: "POST" },
+    );
+
+    if (response.success) {
+      alert(`재발행 성공!\n승인번호: ${response.confirmNum || "-"}`);
+      await loadSettlements();
+    } else {
+      alert("재발행에 실패했습니다.");
+    }
+  } catch (error) {
+    console.error("재발행 실패:", error);
+    alert("재발행 중 오류가 발생했습니다.\n" + (error.message || ""));
+  }
+}
+
+/**
+ * 문서 수동 발행 (미발행 상태인 경우)
+ */
+async function issueDocumentManually(settlementId, docType) {
+  const docTypeName = docType === "taxinvoice" ? "세금계산서" : "현금영수증";
+
+  if (!confirm(`${docTypeName}을(를) 발행하시겠습니까?`)) {
+    return;
+  }
+
+  try {
+    const endpoint =
+      docType === "taxinvoice"
+        ? "/popbill/admin/issue-taxinvoice"
+        : "/popbill/admin/issue-cashbill-settlement";
+
+    const body = { settlement_id: settlementId };
+
+    const response = await window.API.fetchAPI(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    if (response.success) {
+      alert(
+        `${docTypeName} 발행 성공!\n승인번호: ${response.confirmNum || response.ntsConfirmNum || "-"}`,
+      );
+      await loadSettlements();
+    } else {
+      alert(`${docTypeName} 발행에 실패했습니다.`);
+    }
+  } catch (error) {
+    console.error("발행 실패:", error);
+    alert(
+      `${docTypeName} 발행 중 오류가 발생했습니다.\n` + (error.message || ""),
+    );
+  }
+}
+
+/**
+ * 예치금 문서 재발행
+ */
+async function retryDepositDocument(docId) {
+  if (!confirm("현금영수증을 재발행하시겠습니까?")) {
+    return;
+  }
+
+  try {
+    const response = await window.API.fetchAPI(
+      `/popbill/admin/retry-issue/${docId}`,
+      { method: "POST" },
+    );
+
+    if (response.success) {
+      alert(`재발행 성공!\n승인번호: ${response.confirmNum || "-"}`);
+      await loadDeposits();
+    } else {
+      alert("재발행에 실패했습니다.");
+    }
+  } catch (error) {
+    console.error("재발행 실패:", error);
+    alert("재발행 중 오류가 발생했습니다.\n" + (error.message || ""));
+  }
+}
+
+/**
+ * 예치금 문서 수동 발행
+ */
+async function issueDepositDocument(transactionId) {
+  if (!confirm("현금영수증을 발행하시겠습니까?")) {
+    return;
+  }
+
+  try {
+    const response = await window.API.fetchAPI(
+      "/popbill/admin/issue-cashbill",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transaction_id: transactionId }),
+      },
+    );
+
+    if (response.success) {
+      alert(`현금영수증 발행 성공!\n승인번호: ${response.confirmNum || "-"}`);
+      await loadDeposits();
+    } else {
+      alert("현금영수증 발행에 실패했습니다.");
+    }
+  } catch (error) {
+    console.error("발행 실패:", error);
+    alert("현금영수증 발행 중 오류가 발생했습니다.\n" + (error.message || ""));
+  }
 }
 
 // =====================================================

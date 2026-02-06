@@ -168,6 +168,7 @@ router.post("/refund", isAuthenticated, async (req, res) => {
 /**
  * POST /api/deposits/admin/approve/:id
  * 관리자: 충전/환불 승인
+ * - 충전 승인 시 현금영수증 자동 발행
  */
 router.post("/admin/approve/:id", isAdmin, async (req, res) => {
   const transactionId = req.params.id;
@@ -176,9 +177,13 @@ router.post("/admin/approve/:id", isAdmin, async (req, res) => {
   try {
     await connection.beginTransaction();
 
-    // 1. 트랜잭션 조회 (pending 또는 manual_review 상태)
+    // 1. 트랜잭션 및 사용자 정보 조회 (pending 또는 manual_review 상태)
     const [txs] = await connection.query(
-      `SELECT * FROM deposit_transactions WHERE id = ? AND status IN ('pending', 'manual_review') FOR UPDATE`,
+      `SELECT dt.*, u.email, u.phone, u.company_name
+       FROM deposit_transactions dt
+       JOIN users u ON dt.user_id = u.id
+       WHERE dt.id = ? AND dt.status IN ('pending', 'manual_review')
+       FOR UPDATE`,
       [transactionId],
     );
 
@@ -215,7 +220,91 @@ router.post("/admin/approve/:id", isAdmin, async (req, res) => {
     );
 
     await connection.commit();
-    res.json({ message: "승인 처리되었습니다." });
+
+    // 4. 충전 승인 시 현금영수증 자동 발행 (별도 처리)
+    let documentIssueResult = null;
+    if (tx.type === "charge") {
+      try {
+        const popbillService = require("../utils/popbill");
+
+        // 이미 발행된 문서가 있는지 확인
+        const [existingDocs] = await pool.query(
+          "SELECT * FROM popbill_documents WHERE related_type = 'deposit' AND related_id = ? AND status = 'issued'",
+          [transactionId],
+        );
+
+        if (existingDocs.length === 0) {
+          console.log(
+            `[자동 발행] 현금영수증 발행 시작 (예치금 거래 ID: ${transactionId})`,
+          );
+
+          const cashResult = await popbillService.issueCashbill(tx, {
+            email: tx.email,
+            phone: tx.phone,
+            company_name: tx.company_name,
+          });
+
+          // DB 저장
+          await pool.query(
+            `INSERT INTO popbill_documents 
+             (type, mgt_key, related_type, related_id, user_id, confirm_num, amount, status, created_at) 
+             VALUES ('cashbill', ?, 'deposit', ?, ?, ?, ?, 'issued', NOW())`,
+            [
+              cashResult.mgtKey,
+              transactionId,
+              tx.user_id,
+              cashResult.confirmNum,
+              tx.amount,
+            ],
+          );
+
+          documentIssueResult = {
+            type: "cashbill",
+            status: "issued",
+            confirmNum: cashResult.confirmNum,
+            mgtKey: cashResult.mgtKey,
+          };
+
+          console.log(
+            `✅ 현금영수증 자동 발행 완료 (승인번호: ${cashResult.confirmNum})`,
+          );
+        } else {
+          console.log(
+            `[자동 발행] 이미 발행된 문서 존재 (예치금 거래 ID: ${transactionId})`,
+          );
+          documentIssueResult = {
+            status: "already_issued",
+            existing: existingDocs[0],
+          };
+        }
+      } catch (error) {
+        // 발행 실패 시 DB에 실패 상태 기록
+        console.error(
+          `❌ 현금영수증 자동 발행 실패 (예치금 거래 ID: ${transactionId}):`,
+          error.message,
+        );
+
+        const mgtKey = `CASHBILL-FAILED-${transactionId}-${Date.now()}`;
+
+        await pool.query(
+          `INSERT INTO popbill_documents 
+           (type, mgt_key, related_type, related_id, user_id, amount, status, error_message, created_at) 
+           VALUES ('cashbill', ?, 'deposit', ?, ?, ?, 'failed', ?, NOW())`,
+          [mgtKey, transactionId, tx.user_id, tx.amount, error.message],
+        );
+
+        documentIssueResult = {
+          type: "cashbill",
+          status: "failed",
+          error: error.message,
+        };
+      }
+    }
+
+    res.json({
+      message: "승인 처리되었습니다.",
+      document_issue: documentIssueResult,
+    });
   } catch (err) {
     await connection.rollback();
     console.error("Approve error:", err);
@@ -324,12 +413,14 @@ router.get("/admin/transactions", isAdmin, async (req, res) => {
 
     const total = countResult[0].total;
 
-    // 거래 내역 조회
+    // 거래 내역 조회 + 발행 정보 포함
     const [transactions] = await pool.query(
       `SELECT dt.id, dt.user_id, u.login_id, u.company_name, dt.type, dt.amount, dt.balance_after, dt.status, dt.admin_memo, 
-              dt.related_type, dt.related_id, dt.bank_tran_id, dt.description, dt.depositor_name, dt.created_at, dt.processed_at
+              dt.related_type, dt.related_id, dt.bank_tran_id, dt.description, dt.depositor_name, dt.created_at, dt.processed_at,
+              pd.id as doc_id, pd.type as doc_type, pd.status as doc_status, pd.confirm_num, pd.error_message
       FROM deposit_transactions dt
       LEFT JOIN users u ON dt.user_id = u.id
+      LEFT JOIN popbill_documents pd ON pd.related_type = 'deposit' AND pd.related_id = dt.id
       ${whereClause}
       ORDER BY dt.created_at DESC
       LIMIT ? OFFSET ?`,
@@ -398,12 +489,14 @@ router.get("/admin/settlements", isAdmin, async (req, res) => {
 
     const total = countResult[0].total;
 
-    // 🔧 정산 내역 조회 - payment_status 추가
+    // 🔧 정산 내역 조회 - payment_status 추가 + 발행 정보 포함
     const [settlements] = await pool.query(
-      `SELECT ds.id, ds.user_id, u.login_id, u.company_name, ds.settlement_date, ds.final_amount, ds.completed_amount, 
-              ds.payment_status, ds.admin_memo, ds.created_at, ds.paid_at, ds.depositor_name
+      `SELECT ds.id, ds.user_id, u.login_id, u.company_name, u.business_number, ds.settlement_date, ds.final_amount, ds.completed_amount, 
+              ds.payment_status, ds.admin_memo, ds.created_at, ds.paid_at, ds.depositor_name,
+              pd.id as doc_id, pd.type as doc_type, pd.status as doc_status, pd.confirm_num, pd.error_message
        FROM daily_settlements ds
        LEFT JOIN users u ON ds.user_id = u.id
+       LEFT JOIN popbill_documents pd ON pd.related_type = 'settlement' AND pd.related_id = ds.id
        ${whereClause}
        ORDER BY ds.settlement_date DESC
        LIMIT ? OFFSET ?`,
