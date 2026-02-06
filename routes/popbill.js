@@ -689,7 +689,7 @@ router.post("/admin/retry-issue/:id", isAdmin, async (req, res) => {
 
 // ===== Cron: 입금 자동 확인 (10분마다) =====
 
-cron.schedule("*/1 * * * *", async () => {
+cron.schedule("*/10 * * * *", async () => {
   console.log(
     `\n[입금 자동 확인] 시작... ${new Date().toLocaleString("ko-KR")}`,
   );
