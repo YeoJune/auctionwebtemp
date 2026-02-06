@@ -912,6 +912,10 @@ async function issueDepositDocument(transactionId) {
 window.openDepositApprovalModal = openDepositApprovalModal;
 window.openDepositRejectionModal = openDepositRejectionModal;
 window.openSettlementApprovalModal = openSettlementApprovalModal;
+window.retryDocumentIssue = retryDocumentIssue;
+window.issueDocumentManually = issueDocumentManually;
+window.retryDepositDocument = retryDepositDocument;
+window.issueDepositDocument = issueDepositDocument;
 
 // =====================================================
 // 초기화
