@@ -778,6 +778,10 @@ router.get("/users-list", isAdmin, async (req, res) => {
  * 입찰 항목 엑셀 내보내기 (현장 + 직접 통합)
  */
 router.get("/export/bids", isAdmin, async (req, res) => {
+  // 타임아웃 설정: 5분 (대용량 데이터 처리를 위해)
+  req.setTimeout(300000);
+  res.setTimeout(300000);
+
   const {
     userId = "",
     brands = "",
@@ -803,13 +807,13 @@ router.get("/export/bids", isAdmin, async (req, res) => {
     const queryConditions = ["1=1"];
     const queryParams = [];
 
-    // 유저 필터
+    // 유저 필터 (빈 문자열 = 전체 유저)
     if (userId) {
       queryConditions.push("b.user_id = ?");
       queryParams.push(userId);
     }
 
-    // 브랜드 필터
+    // 브랜드 필터 (빈 문자열 = 전체 브랜드)
     if (brands) {
       const brandArray = brands.split(",");
       if (brandArray.length === 1) {
@@ -822,7 +826,7 @@ router.get("/export/bids", isAdmin, async (req, res) => {
       }
     }
 
-    // 카테고리 필터
+    // 카테고리 필터 (빈 문자열 = 전체 카테고리)
     if (categories) {
       const categoryArray = categories.split(",");
       if (categoryArray.length === 1) {
@@ -835,7 +839,7 @@ router.get("/export/bids", isAdmin, async (req, res) => {
       }
     }
 
-    // 상태 필터
+    // 상태 필터 (빈 문자열 = 전체 상태)
     if (status) {
       const statusArray = status.split(",");
       if (statusArray.length === 1) {
@@ -1066,6 +1070,10 @@ router.get("/export/bids", isAdmin, async (req, res) => {
  * 입찰 결과(정산) 엑셀 내보내기
  */
 router.get("/export/bid-results", isAdmin, async (req, res) => {
+  // 타임아웃 설정: 5분 (대용량 데이터 처리를 위해)
+  req.setTimeout(300000);
+  res.setTimeout(300000);
+
   const {
     fromDate = "",
     toDate = "",
@@ -1087,7 +1095,7 @@ router.get("/export/bid-results", isAdmin, async (req, res) => {
     let whereConditions = ["1=1"];
     let queryParams = [];
 
-    // 날짜 범위 필터
+    // 날짜 범위 필터 (빈 문자열 = 전체 날짜)
     if (fromDate) {
       whereConditions.push("ds.settlement_date >= ?");
       queryParams.push(fromDate);
@@ -1097,13 +1105,13 @@ router.get("/export/bid-results", isAdmin, async (req, res) => {
       queryParams.push(toDate);
     }
 
-    // 유저 필터
+    // 유저 필터 (빈 문자열 = 전체 유저)
     if (userId) {
       whereConditions.push("ds.user_id = ?");
       queryParams.push(userId);
     }
 
-    // 정산 상태 필터
+    // 정산 상태 필터 (빈 문자열 = 전체 상태)
     if (status) {
       whereConditions.push("ds.payment_status = ?");
       queryParams.push(status);

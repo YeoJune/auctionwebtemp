@@ -902,23 +902,23 @@ function hideExportBidResultsModal() {
 // 입찰 항목 엑셀 다운로드
 async function downloadBidsExcel() {
   try {
-    // 유저 선택
+    // 유저 선택 (미선택 시 빈 문자열 = 전체)
     const selectedUser = document.querySelector(
       'input[name="exportBidsUser"]:checked',
     );
     const userId = selectedUser ? selectedUser.value : "";
 
-    // 브랜드 선택
+    // 브랜드 선택 (미선택 시 빈 배열 = 전체)
     const selectedBrands = Array.from(
       document.querySelectorAll(".export-brand-checkbox:checked"),
     ).map((cb) => cb.value);
 
-    // 카테고리 선택
+    // 카테고리 선택 (미선택 시 빈 배열 = 전체)
     const selectedCategories = Array.from(
       document.querySelectorAll(".export-category-checkbox:checked"),
     ).map((cb) => cb.value);
 
-    // 필터 값 수집
+    // 필터 값 수집 (빈 값은 전체를 의미)
     const filters = {
       userId: userId,
       brands: selectedBrands.join(","),
@@ -932,42 +932,81 @@ async function downloadBidsExcel() {
       sortOrder: document.getElementById("exportBidsSortOrder").value,
     };
 
-    // 쿼리 파라미터 생성
+    // 쿼리 파라미터 생성 (빈 값도 포함하여 기본값 처리)
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
-      if (value) {
+      // sortBy와 sortOrder는 항상 포함
+      if (value || key === "sortBy" || key === "sortOrder") {
         params.append(key, value);
       }
     });
 
-    // 다운로드 시작 알림
-    showAlert("엑셀 파일을 생성 중입니다. 잠시만 기다려주세요...", "info");
+    // 다운로드 진행 알림
+    showAlert(
+      "엑셀 파일을 생성 중입니다. 데이터가 많을 경우 1~2분 정도 소요될 수 있습니다...",
+      "info",
+    );
 
-    // 다운로드 트리거
+    // 모달은 일단 닫기
+    hideExportBidsModal();
+
+    // fetch를 사용한 다운로드 (타임아웃 없음)
     const downloadUrl = `/api/admin/export/bids?${params.toString()}`;
-    window.location.href = downloadUrl;
+    const response = await fetch(downloadUrl, {
+      method: "GET",
+      credentials: "include",
+    });
 
-    // 모달 닫기
-    setTimeout(() => {
-      hideExportBidsModal();
-      showAlert("엑셀 파일 다운로드가 시작되었습니다.", "success");
-    }, 500);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        message: "엑셀 파일 생성에 실패했습니다.",
+      }));
+      throw new Error(errorData.message || "엑셀 파일 생성에 실패했습니다.");
+    }
+
+    // Blob으로 변환
+    const blob = await response.blob();
+
+    // 파일명 추출 (Content-Disposition 헤더에서)
+    const contentDisposition = response.headers.get("Content-Disposition");
+    let filename = "입찰항목.xlsx";
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i);
+      if (filenameMatch) {
+        filename = decodeURIComponent(filenameMatch[1]);
+      }
+    }
+
+    // Blob URL 생성 및 다운로드
+    const blobUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(blobUrl);
+
+    showAlert("엑셀 파일 다운로드가 완료되었습니다.", "success");
   } catch (error) {
     console.error("입찰 항목 내보내기 오류:", error);
-    showAlert("엑셀 파일 생성 중 오류가 발생했습니다.", "error");
+    showAlert(
+      error.message || "엑셀 파일 생성 중 오류가 발생했습니다.",
+      "error",
+    );
   }
 }
 
 // 입찰 결과 엑셀 다운로드
 async function downloadBidResultsExcel() {
   try {
-    // 유저 선택
+    // 유저 선택 (미선택 시 빈 문자열 = 전체)
     const selectedUser = document.querySelector(
       'input[name="exportBidResultsUser"]:checked',
     );
     const userId = selectedUser ? selectedUser.value : "";
 
-    // 필터 값 수집
+    // 필터 값 수집 (빈 값은 전체를 의미)
     const filters = {
       userId: userId,
       fromDate: document.getElementById("exportBidResultsFromDate").value,
@@ -977,28 +1016,67 @@ async function downloadBidResultsExcel() {
       sortOrder: document.getElementById("exportBidResultsSortOrder").value,
     };
 
-    // 쿼리 파라미터 생성
+    // 쿼리 파라미터 생성 (빈 값도 포함하여 기본값 처리)
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
-      if (value) {
+      // sortBy와 sortOrder는 항상 포함
+      if (value || key === "sortBy" || key === "sortOrder") {
         params.append(key, value);
       }
     });
 
-    // 다운로드 시작 알림
-    showAlert("엑셀 파일을 생성 중입니다. 잠시만 기다려주세요...", "info");
+    // 다운로드 진행 알림
+    showAlert(
+      "엑셀 파일을 생성 중입니다. 데이터가 많을 경우 1~2분 정도 소요될 수 있습니다...",
+      "info",
+    );
 
-    // 다운로드 트리거
+    // 모달은 일단 닫기
+    hideExportBidResultsModal();
+
+    // fetch를 사용한 다운로드 (타임아웃 없음)
     const downloadUrl = `/api/admin/export/bid-results?${params.toString()}`;
-    window.location.href = downloadUrl;
+    const response = await fetch(downloadUrl, {
+      method: "GET",
+      credentials: "include",
+    });
 
-    // 모달 닫기
-    setTimeout(() => {
-      hideExportBidResultsModal();
-      showAlert("엑셀 파일 다운로드가 시작되었습니다.", "success");
-    }, 500);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        message: "엑셀 파일 생성에 실패했습니다.",
+      }));
+      throw new Error(errorData.message || "엑셀 파일 생성에 실패했습니다.");
+    }
+
+    // Blob으로 변환
+    const blob = await response.blob();
+
+    // 파일명 추출 (Content-Disposition 헤더에서)
+    const contentDisposition = response.headers.get("Content-Disposition");
+    let filename = "입찰결과.xlsx";
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i);
+      if (filenameMatch) {
+        filename = decodeURIComponent(filenameMatch[1]);
+      }
+    }
+
+    // Blob URL 생성 및 다운로드
+    const blobUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(blobUrl);
+
+    showAlert("엑셀 파일 다운로드가 완료되었습니다.", "success");
   } catch (error) {
     console.error("입찰 결과 내보내기 오류:", error);
-    showAlert("엑셀 파일 생성 중 오류가 발생했습니다.", "error");
+    showAlert(
+      error.message || "엑셀 파일 생성 중 오류가 발생했습니다.",
+      "error",
+    );
   }
 }
