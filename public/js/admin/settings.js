@@ -959,7 +959,12 @@ async function downloadBidsExcel() {
       const errorData = await response.json().catch(() => ({
         message: "엑셀 파일 생성에 실패했습니다.",
       }));
-      throw new Error(errorData.message || "엑셀 파일 생성에 실패했습니다.");
+      console.error("서버 응답 상태:", response.status, response.statusText);
+      console.error("에러 데이터:", errorData);
+      throw new Error(
+        errorData.message ||
+          `엑셀 파일 생성에 실패했습니다 (${response.status})`,
+      );
     }
 
     // 파일명 추출 (Content-Disposition 헤더에서)
@@ -1082,7 +1087,12 @@ async function downloadBidResultsExcel() {
       const errorData = await response.json().catch(() => ({
         message: "엑셀 파일 생성에 실패했습니다.",
       }));
-      throw new Error(errorData.message || "엑셀 파일 생성에 실패했습니다.");
+      console.error("서버 응답 상태:", response.status, response.statusText);
+      console.error("에러 데이터:", errorData);
+      throw new Error(
+        errorData.message ||
+          `엑셀 파일 생성에 실패했습니다 (${response.status})`,
+      );
     }
 
     // 파일명 추출 (Content-Disposition 헤더에서)

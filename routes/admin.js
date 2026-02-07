@@ -1055,10 +1055,14 @@ router.get("/export/bids", isAdmin, async (req, res) => {
     console.log(`입찰 항목 엑셀 내보내기 완료: ${filename}`);
   } catch (error) {
     console.error("입찰 항목 엑셀 내보내기 오류:", error);
+    console.error("오류 스택:", error.stack);
+    console.error("요청 파라미터:", req.query);
     if (!res.headersSent) {
-      res
-        .status(500)
-        .json({ message: "엑셀 내보내기 중 오류가 발생했습니다." });
+      res.status(500).json({
+        message: "엑셀 내보내기 중 오류가 발생했습니다.",
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
+      });
     }
   } finally {
     connection.release();
@@ -1358,10 +1362,14 @@ router.get("/export/bid-results", isAdmin, async (req, res) => {
     console.log(`입찰 결과 엑셀 내보내기 완료: ${filename}`);
   } catch (error) {
     console.error("입찰 결과 엑셀 내보내기 오류:", error);
+    console.error("오류 스택:", error.stack);
+    console.error("요청 파라미터:", req.query);
     if (!res.headersSent) {
-      res
-        .status(500)
-        .json({ message: "엑셀 내보내기 중 오류가 발생했습니다." });
+      res.status(500).json({
+        message: "엑셀 내보내기 중 오류가 발생했습니다.",
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
+      });
     }
   } finally {
     connection.release();

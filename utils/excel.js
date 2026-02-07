@@ -233,10 +233,15 @@ async function streamWorkbookToResponse(workbook, res, filename) {
     "Content-Type",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   );
-  // RFC 5987 형식으로 인코딩된 파일명 전송 (한글 파일명 지원)
+
+  // RFC 5987 표준: ASCII fallback과 UTF-8 인코딩된 파일명 제공
+  // filename에는 ASCII만 사용 (한글 불가), filename*에 실제 파일명 인코딩
+  const asciiFilename = "export.xlsx"; // ASCII fallback
+  const encodedFilename = encodeURIComponent(filename);
+
   res.setHeader(
     "Content-Disposition",
-    `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`,
+    `attachment; filename="${asciiFilename}"; filename*=UTF-8''${encodedFilename}`,
   );
 
   await workbook.xlsx.write(res);
