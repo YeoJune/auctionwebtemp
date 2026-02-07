@@ -4,6 +4,8 @@
 const ExcelJS = require("exceljs");
 const axios = require("axios");
 const sharp = require("sharp");
+const fs = require("fs").promises;
+const path = require("path");
 
 let pLimit;
 (async () => {
@@ -27,22 +29,40 @@ async function downloadAndResizeImage(
       return null;
     }
 
-    // 상대 경로를 절대 URL로 변환
-    let fullUrl = imageUrl;
+    let imageBuffer;
+
+    // 로컬 파일인 경우 (상대 경로)
     if (imageUrl.startsWith("/")) {
-      // 로컬 파일인 경우 - S3나 다른 경로로 처리 필요
-      // 일단은 null 반환
-      return null;
+      // public 폴더 기준 절대 경로 생성
+      const localPath = path.join(__dirname, "..", "public", imageUrl);
+
+      try {
+        imageBuffer = await fs.readFile(localPath);
+      } catch (fsError) {
+        console.error(`로컬 이미지 읽기 실패 (${localPath}):`, fsError.message);
+        return null;
+      }
+    }
+    // S3 또는 외부 URL인 경우
+    else {
+      try {
+        const response = await axios.get(imageUrl, {
+          responseType: "arraybuffer",
+          timeout: 10000, // 10초 타임아웃
+          maxRedirects: 5,
+        });
+        imageBuffer = response.data;
+      } catch (axiosError) {
+        console.error(
+          `이미지 다운로드 실패 (${imageUrl}):`,
+          axiosError.message,
+        );
+        return null;
+      }
     }
 
-    const response = await axios.get(fullUrl, {
-      responseType: "arraybuffer",
-      timeout: 10000, // 10초 타임아웃
-      maxRedirects: 5,
-    });
-
     // Sharp로 리사이즈
-    const resizedBuffer = await sharp(response.data)
+    const resizedBuffer = await sharp(imageBuffer)
       .resize(maxWidth, maxHeight, {
         fit: "inside",
         withoutEnlargement: true,
@@ -52,7 +72,7 @@ async function downloadAndResizeImage(
 
     return resizedBuffer;
   } catch (error) {
-    console.error(`이미지 다운로드 실패 (${imageUrl}):`, error.message);
+    console.error(`이미지 처리 실패 (${imageUrl}):`, error.message);
     return null;
   }
 }
