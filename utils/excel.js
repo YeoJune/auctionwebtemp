@@ -3,8 +3,12 @@
 
 const ExcelJS = require("exceljs");
 const axios = require("axios");
-const pLimit = require("p-limit");
 const sharp = require("sharp");
+
+let pLimit;
+(async () => {
+  pLimit = (await import("p-limit")).default;
+})();
 
 /**
  * 이미지 다운로드 및 버퍼 변환
