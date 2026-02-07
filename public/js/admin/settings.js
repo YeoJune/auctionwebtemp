@@ -941,14 +941,11 @@ async function downloadBidsExcel() {
       }
     });
 
-    // 다운로드 진행 알림
-    showAlert(
-      "엑셀 파일을 생성 중입니다. 데이터가 많을 경우 1~2분 정도 소요될 수 있습니다...",
-      "info",
-    );
-
     // 모달은 일단 닫기
     hideExportBidsModal();
+
+    // 진행률 표시 모달 표시
+    showDownloadProgress("엑셀 파일 생성 중...", 0);
 
     // fetch를 사용한 다운로드 (타임아웃 없음)
     const downloadUrl = `/api/admin/export/bids?${params.toString()}`;
@@ -958,26 +955,64 @@ async function downloadBidsExcel() {
     });
 
     if (!response.ok) {
+      hideDownloadProgress();
       const errorData = await response.json().catch(() => ({
         message: "엑셀 파일 생성에 실패했습니다.",
       }));
       throw new Error(errorData.message || "엑셀 파일 생성에 실패했습니다.");
     }
 
-    // Blob으로 변환
-    const blob = await response.blob();
-
     // 파일명 추출 (Content-Disposition 헤더에서)
     const contentDisposition = response.headers.get("Content-Disposition");
     let filename = "입찰항목.xlsx";
     if (contentDisposition) {
-      const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i);
-      if (filenameMatch) {
-        filename = decodeURIComponent(filenameMatch[1]);
+      // RFC 5987 형식 먼저 확인 (filename*=UTF-8''...)
+      const filenameStarMatch = contentDisposition.match(
+        /filename\*=UTF-8''([^;]+)/i,
+      );
+      if (filenameStarMatch) {
+        filename = decodeURIComponent(filenameStarMatch[1]);
+      } else {
+        // 일반 filename 형식 확인
+        const filenameMatch = contentDisposition.match(/filename="([^"]+)"/i);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
       }
     }
 
+    // 진행률과 함께 Blob 다운로드
+    const contentLength = response.headers.get("Content-Length");
+    const total = parseInt(contentLength, 10);
+    let loaded = 0;
+
+    const reader = response.body.getReader();
+    const chunks = [];
+
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) break;
+
+      chunks.push(value);
+      loaded += value.length;
+
+      if (total) {
+        const progress = Math.round((loaded / total) * 100);
+        updateDownloadProgress(progress, `다운로드 중... ${progress}%`);
+      } else {
+        updateDownloadProgress(
+          50,
+          `다운로드 중... (${Math.round(loaded / 1024)}KB)`,
+        );
+      }
+    }
+
+    // Blob 생성
+    const blob = new Blob(chunks);
+
     // Blob URL 생성 및 다운로드
+    updateDownloadProgress(100, "다운로드 완료!");
     const blobUrl = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = blobUrl;
@@ -987,8 +1022,12 @@ async function downloadBidsExcel() {
     document.body.removeChild(a);
     window.URL.revokeObjectURL(blobUrl);
 
-    showAlert("엑셀 파일 다운로드가 완료되었습니다.", "success");
+    setTimeout(() => {
+      hideDownloadProgress();
+      showAlert("엑셀 파일 다운로드가 완료되었습니다.", "success");
+    }, 500);
   } catch (error) {
+    hideDownloadProgress();
     console.error("입찰 항목 내보내기 오류:", error);
     showAlert(
       error.message || "엑셀 파일 생성 중 오류가 발생했습니다.",
@@ -1025,14 +1064,11 @@ async function downloadBidResultsExcel() {
       }
     });
 
-    // 다운로드 진행 알림
-    showAlert(
-      "엑셀 파일을 생성 중입니다. 데이터가 많을 경우 1~2분 정도 소요될 수 있습니다...",
-      "info",
-    );
-
     // 모달은 일단 닫기
     hideExportBidResultsModal();
+
+    // 진행률 표시 모달 표시
+    showDownloadProgress("엑셀 파일 생성 중...", 0);
 
     // fetch를 사용한 다운로드 (타임아웃 없음)
     const downloadUrl = `/api/admin/export/bid-results?${params.toString()}`;
@@ -1042,26 +1078,64 @@ async function downloadBidResultsExcel() {
     });
 
     if (!response.ok) {
+      hideDownloadProgress();
       const errorData = await response.json().catch(() => ({
         message: "엑셀 파일 생성에 실패했습니다.",
       }));
       throw new Error(errorData.message || "엑셀 파일 생성에 실패했습니다.");
     }
 
-    // Blob으로 변환
-    const blob = await response.blob();
-
     // 파일명 추출 (Content-Disposition 헤더에서)
     const contentDisposition = response.headers.get("Content-Disposition");
     let filename = "입찰결과.xlsx";
     if (contentDisposition) {
-      const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i);
-      if (filenameMatch) {
-        filename = decodeURIComponent(filenameMatch[1]);
+      // RFC 5987 형식 먼저 확인 (filename*=UTF-8''...)
+      const filenameStarMatch = contentDisposition.match(
+        /filename\*=UTF-8''([^;]+)/i,
+      );
+      if (filenameStarMatch) {
+        filename = decodeURIComponent(filenameStarMatch[1]);
+      } else {
+        // 일반 filename 형식 확인
+        const filenameMatch = contentDisposition.match(/filename="([^"]+)"/i);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
       }
     }
 
+    // 진행률과 함께 Blob 다운로드
+    const contentLength = response.headers.get("Content-Length");
+    const total = parseInt(contentLength, 10);
+    let loaded = 0;
+
+    const reader = response.body.getReader();
+    const chunks = [];
+
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) break;
+
+      chunks.push(value);
+      loaded += value.length;
+
+      if (total) {
+        const progress = Math.round((loaded / total) * 100);
+        updateDownloadProgress(progress, `다운로드 중... ${progress}%`);
+      } else {
+        updateDownloadProgress(
+          50,
+          `다운로드 중... (${Math.round(loaded / 1024)}KB)`,
+        );
+      }
+    }
+
+    // Blob 생성
+    const blob = new Blob(chunks);
+
     // Blob URL 생성 및 다운로드
+    updateDownloadProgress(100, "다운로드 완료!");
     const blobUrl = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = blobUrl;
@@ -1071,8 +1145,12 @@ async function downloadBidResultsExcel() {
     document.body.removeChild(a);
     window.URL.revokeObjectURL(blobUrl);
 
-    showAlert("엑셀 파일 다운로드가 완료되었습니다.", "success");
+    setTimeout(() => {
+      hideDownloadProgress();
+      showAlert("엑셀 파일 다운로드가 완료되었습니다.", "success");
+    }, 500);
   } catch (error) {
+    hideDownloadProgress();
     console.error("입찰 결과 내보내기 오류:", error);
     showAlert(
       error.message || "엑셀 파일 생성 중 오류가 발생했습니다.",
