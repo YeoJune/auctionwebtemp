@@ -403,6 +403,186 @@
             <div id="noticeList" class="notice-list-container mt-3"></div>
           </div>
         </div>
+
+        <!-- 데이터 내보내기 섹션 -->
+        <div class="card">
+          <div class="card-title">데이터 내보내기</div>
+          <div class="export-section">
+            <div class="export-buttons">
+              <button id="exportBidsBtn" class="btn btn-primary">
+                <i class="fas fa-file-excel"></i> 입찰 항목 내보내기
+              </button>
+              <button id="exportBidResultsBtn" class="btn btn-primary">
+                <i class="fas fa-file-excel"></i> 입찰 결과 내보내기
+              </button>
+            </div>
+            <p class="help-text mt-2">
+              필터 조건을 설정하여 입찰 항목 또는 입찰 결과를 엑셀 파일로 내보낼
+              수 있습니다.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 입찰 항목 내보내기 필터 모달 -->
+    <div id="exportBidsModal" class="modal-overlay" style="display: none">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3 class="modal-title">입찰 항목 내보내기</h3>
+          <button class="close-modal" id="exportBidsModalClose">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">검색어</label>
+            <input
+              type="text"
+              id="exportBidsSearch"
+              class="form-control"
+              placeholder="상품ID, 제목, 브랜드, 유저ID 검색..." />
+          </div>
+
+          <div class="form-group mt-3">
+            <label class="form-label">상태</label>
+            <select id="exportBidsStatus" class="form-control">
+              <option value="">전체</option>
+              <optgroup label="현장 경매">
+                <option value="first">1차 입찰</option>
+                <option value="second">2차 제안</option>
+                <option value="final">최종 입찰</option>
+                <option value="completed">완료</option>
+                <option value="shipped">출고됨</option>
+                <option value="cancelled">낙찰 실패</option>
+              </optgroup>
+              <optgroup label="직접 경매">
+                <option value="active">활성</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <div class="form-group mt-3">
+            <label class="form-label">출품사</label>
+            <select id="exportBidsAucNum" class="form-control">
+              <option value="">전체</option>
+              <option value="1">1번 (EcoAuc)</option>
+              <option value="2">2번 (BrandAuc)</option>
+              <option value="3">3번 (StarAuc)</option>
+              <option value="4">4번 (MekikiAuc)</option>
+              <option value="5">5번 (PenguinAuc)</option>
+            </select>
+          </div>
+
+          <div class="form-group mt-3">
+            <label class="form-label">경매 유형</label>
+            <select id="exportBidsType" class="form-control">
+              <option value="">전체 (현장 + 직접)</option>
+              <option value="live">현장 경매만</option>
+              <option value="direct">직접 경매만</option>
+            </select>
+          </div>
+
+          <div class="form-group mt-3">
+            <label class="form-label">날짜 범위</label>
+            <div class="date-range-inputs">
+              <input
+                type="date"
+                id="exportBidsFromDate"
+                class="form-control"
+                placeholder="시작일" />
+              <span class="mx-2">~</span>
+              <input
+                type="date"
+                id="exportBidsToDate"
+                class="form-control"
+                placeholder="종료일" />
+            </div>
+          </div>
+
+          <div class="form-group mt-3">
+            <label class="form-label">정렬 기준</label>
+            <div class="d-flex">
+              <select id="exportBidsSortBy" class="form-control mr-2">
+                <option value="original_scheduled_date">예정일</option>
+                <option value="updated_at">변경일</option>
+                <option value="original_title">제목</option>
+              </select>
+              <select id="exportBidsSortOrder" class="form-control">
+                <option value="desc">내림차순</option>
+                <option value="asc">오름차순</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary close-modal">취소</button>
+          <button class="btn btn-primary" id="confirmExportBids">
+            <i class="fas fa-download"></i> 다운로드
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 입찰 결과 내보내기 필터 모달 -->
+    <div id="exportBidResultsModal" class="modal-overlay" style="display: none">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3 class="modal-title">입찰 결과 내보내기</h3>
+          <button class="close-modal" id="exportBidResultsModalClose">
+            &times;
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">기간</label>
+            <select id="exportBidResultsDateRange" class="form-control">
+              <option value="7">최근 1주일</option>
+              <option value="30" selected>최근 1개월</option>
+              <option value="90">최근 3개월</option>
+              <option value="180">최근 6개월</option>
+              <option value="365">최근 1년</option>
+            </select>
+          </div>
+
+          <div class="form-group mt-3">
+            <label class="form-label">정산 상태</label>
+            <select id="exportBidResultsStatus" class="form-control">
+              <option value="">전체</option>
+              <option value="unpaid">결제 필요</option>
+              <option value="pending">입금 확인 중</option>
+              <option value="paid">정산 완료</option>
+            </select>
+          </div>
+
+          <div class="form-group mt-3">
+            <label class="form-label">검색어</label>
+            <input
+              type="text"
+              id="exportBidResultsKeyword"
+              class="form-control"
+              placeholder="유저 ID, 회사명, 날짜 검색..." />
+          </div>
+
+          <div class="form-group mt-3">
+            <label class="form-label">정렬 기준</label>
+            <div class="d-flex">
+              <select id="exportBidResultsSortBy" class="form-control mr-2">
+                <option value="date">날짜</option>
+                <option value="total_price">금액</option>
+                <option value="item_count">상품 수</option>
+              </select>
+              <select id="exportBidResultsSortOrder" class="form-control">
+                <option value="desc">내림차순</option>
+                <option value="asc">오름차순</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary close-modal">취소</button>
+          <button class="btn btn-primary" id="confirmExportBidResults">
+            <i class="fas fa-download"></i> 다운로드
+          </button>
+        </div>
       </div>
     </div>
 

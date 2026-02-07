@@ -70,6 +70,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // 시세표 크롤링 UI 관련 이벤트 리스너 추가
   setupValueCrawlUI();
+
+  // 내보내기 관련 이벤트 리스너
+  setupExportUI();
 });
 
 // 시세표 크롤링 UI 관련 이벤트 리스너 설정
@@ -672,5 +675,158 @@ async function saveAccessControlSettings() {
     showAlert("접근 제한 설정이 저장되었습니다.", "success");
   } catch (error) {
     handleError(error, "접근 제한 설정 저장 중 오류가 발생했습니다.");
+  }
+}
+
+// ----- 내보내기 관리 -----
+
+// 내보내기 UI 관련 이벤트 리스너 설정
+function setupExportUI() {
+  // 입찰 항목 내보내기 버튼
+  document
+    .getElementById("exportBidsBtn")
+    .addEventListener("click", showExportBidsModal);
+
+  // 입찰 결과 내보내기 버튼
+  document
+    .getElementById("exportBidResultsBtn")
+    .addEventListener("click", showExportBidResultsModal);
+
+  // 입찰 항목 모달 - 닫기 버튼들
+  document.querySelectorAll("#exportBidsModal .close-modal").forEach((btn) => {
+    btn.addEventListener("click", hideExportBidsModal);
+  });
+
+  // 입찰 결과 모달 - 닫기 버튼들
+  document
+    .querySelectorAll("#exportBidResultsModal .close-modal")
+    .forEach((btn) => {
+      btn.addEventListener("click", hideExportBidResultsModal);
+    });
+
+  // 입찰 항목 다운로드 확인 버튼
+  document
+    .getElementById("confirmExportBids")
+    .addEventListener("click", downloadBidsExcel);
+
+  // 입찰 결과 다운로드 확인 버튼
+  document
+    .getElementById("confirmExportBidResults")
+    .addEventListener("click", downloadBidResultsExcel);
+
+  // 모달 오버레이 클릭 시 닫기
+  document
+    .getElementById("exportBidsModal")
+    .addEventListener("click", function (e) {
+      if (e.target === this) {
+        hideExportBidsModal();
+      }
+    });
+
+  document
+    .getElementById("exportBidResultsModal")
+    .addEventListener("click", function (e) {
+      if (e.target === this) {
+        hideExportBidResultsModal();
+      }
+    });
+}
+
+// 입찰 항목 내보내기 모달 표시
+function showExportBidsModal() {
+  document.getElementById("exportBidsModal").style.display = "flex";
+}
+
+// 입찰 항목 내보내기 모달 숨기기
+function hideExportBidsModal() {
+  document.getElementById("exportBidsModal").style.display = "none";
+}
+
+// 입찰 결과 내보내기 모달 표시
+function showExportBidResultsModal() {
+  document.getElementById("exportBidResultsModal").style.display = "flex";
+}
+
+// 입찰 결과 내보내기 모달 숨기기
+function hideExportBidResultsModal() {
+  document.getElementById("exportBidResultsModal").style.display = "none";
+}
+
+// 입찰 항목 엑셀 다운로드
+async function downloadBidsExcel() {
+  try {
+    // 필터 값 수집
+    const filters = {
+      search: document.getElementById("exportBidsSearch").value.trim(),
+      status: document.getElementById("exportBidsStatus").value,
+      aucNum: document.getElementById("exportBidsAucNum").value,
+      type: document.getElementById("exportBidsType").value,
+      fromDate: document.getElementById("exportBidsFromDate").value,
+      toDate: document.getElementById("exportBidsToDate").value,
+      sortBy: document.getElementById("exportBidsSortBy").value,
+      sortOrder: document.getElementById("exportBidsSortOrder").value,
+    };
+
+    // 쿼리 파라미터 생성
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) {
+        params.append(key, value);
+      }
+    });
+
+    // 다운로드 시작 알림
+    showAlert("엑셀 파일을 생성 중입니다. 잠시만 기다려주세요...", "info");
+
+    // 다운로드 트리거 (새 창으로 열어서 다운로드)
+    const downloadUrl = `/api/admin/export/bids?${params.toString()}`;
+    window.location.href = downloadUrl;
+
+    // 모달 닫기
+    setTimeout(() => {
+      hideExportBidsModal();
+      showAlert("엑셀 파일 다운로드가 시작되었습니다.", "success");
+    }, 500);
+  } catch (error) {
+    console.error("입찰 항목 내보내기 오류:", error);
+    showAlert("엑셀 파일 생성 중 오류가 발생했습니다.", "error");
+  }
+}
+
+// 입찰 결과 엑셀 다운로드
+async function downloadBidResultsExcel() {
+  try {
+    // 필터 값 수집
+    const filters = {
+      dateRange: document.getElementById("exportBidResultsDateRange").value,
+      status: document.getElementById("exportBidResultsStatus").value,
+      keyword: document.getElementById("exportBidResultsKeyword").value.trim(),
+      sortBy: document.getElementById("exportBidResultsSortBy").value,
+      sortOrder: document.getElementById("exportBidResultsSortOrder").value,
+    };
+
+    // 쿼리 파라미터 생성
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) {
+        params.append(key, value);
+      }
+    });
+
+    // 다운로드 시작 알림
+    showAlert("엑셀 파일을 생성 중입니다. 잠시만 기다려주세요...", "info");
+
+    // 다운로드 트리거
+    const downloadUrl = `/api/admin/export/bid-results?${params.toString()}`;
+    window.location.href = downloadUrl;
+
+    // 모달 닫기
+    setTimeout(() => {
+      hideExportBidResultsModal();
+      showAlert("엑셀 파일 다운로드가 시작되었습니다.", "success");
+    }, 500);
+  } catch (error) {
+    console.error("입찰 결과 내보내기 오류:", error);
+    showAlert("엑셀 파일 생성 중 오류가 발생했습니다.", "error");
   }
 }

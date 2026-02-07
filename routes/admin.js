@@ -28,6 +28,14 @@ const {
   syncRecommendSettingsToItems,
 } = require("../utils/dataUtils");
 const DBManager = require("../utils/DBManager");
+const {
+  createWorkbook,
+  streamWorkbookToResponse,
+  formatDateForExcel,
+  formatNumberForExcel,
+} = require("../utils/excel");
+const { calculateTotalPrice } = require("../utils/calculate-fee");
+const { getExchangeRate } = require("../utils/exchange-rate");
 
 // Middleware to check if user is admin
 const isAdmin = (req, res, next) => {
@@ -741,5 +749,609 @@ router.get("/invoices", isAdmin, async (req, res) => {
       .json({ message: "인보이스 목록을 불러오는 중 오류가 발생했습니다." });
   }
 });
+
+// =====================================================
+// 엑셀 내보내기 API
+// =====================================================
+
+/**
+ * GET /api/admin/export/bids
+ * 입찰 항목 엑셀 내보내기 (현장 + 직접 통합)
+ */
+router.get("/export/bids", isAdmin, async (req, res) => {
+  const {
+    search = "",
+    status = "",
+    aucNum = "",
+    fromDate = "",
+    toDate = "",
+    sortBy = "original_scheduled_date",
+    sortOrder = "desc",
+    type = "", // live, direct, or empty for both
+  } = req.query;
+
+  const connection = await pool.getConnection();
+
+  try {
+    console.log("입찰 항목 엑셀 내보내기 시작:", req.query);
+
+    // 환율 가져오기
+    const exchangeRate = await getExchangeRate();
+
+    // 쿼리 조건 구성
+    const queryConditions = ["1=1"];
+    const queryParams = [];
+
+    // 검색 조건
+    if (search) {
+      const searchTerm = `%${search}%`;
+      queryConditions.push(
+        "(b.item_id LIKE ? OR i.original_title LIKE ? OR i.brand LIKE ? OR i.additional_info LIKE ? OR u.login_id LIKE ? OR u.company_name LIKE ?)",
+      );
+      queryParams.push(
+        searchTerm,
+        searchTerm,
+        searchTerm,
+        searchTerm,
+        searchTerm,
+        searchTerm,
+      );
+    }
+
+    // 상태 필터
+    if (status) {
+      const statusArray = status.split(",");
+      if (statusArray.length === 1) {
+        queryConditions.push("b.status = ?");
+        queryParams.push(status);
+      } else {
+        const placeholders = statusArray.map(() => "?").join(",");
+        queryConditions.push(`b.status IN (${placeholders})`);
+        queryParams.push(...statusArray);
+      }
+    }
+
+    // 출품사 필터
+    if (aucNum) {
+      const aucNumArray = aucNum.split(",");
+      if (aucNumArray.length === 1) {
+        queryConditions.push("i.auc_num = ?");
+        queryParams.push(aucNum);
+      } else {
+        const placeholders = aucNumArray.map(() => "?").join(",");
+        queryConditions.push(`i.auc_num IN (${placeholders})`);
+        queryParams.push(...aucNumArray);
+      }
+    }
+
+    // 날짜 필터
+    if (fromDate) {
+      queryConditions.push("b.updated_at >= ?");
+      queryParams.push(fromDate);
+    }
+    if (toDate) {
+      queryConditions.push("b.updated_at <= ?");
+      queryParams.push(toDate);
+    }
+
+    const whereClause = queryConditions.join(" AND ");
+
+    // 정렬 설정
+    let orderByColumn;
+    switch (sortBy) {
+      case "original_scheduled_date":
+        orderByColumn = "i.original_scheduled_date";
+        break;
+      case "updated_at":
+        orderByColumn = "b.updated_at";
+        break;
+      case "original_title":
+        orderByColumn = "i.original_title";
+        break;
+      default:
+        orderByColumn = "i.original_scheduled_date";
+        break;
+    }
+    const direction = sortOrder.toUpperCase() === "ASC" ? "ASC" : "DESC";
+
+    // 데이터 수집
+    const allRows = [];
+
+    // 현장 경매 데이터 (type이 비어있거나 'live'인 경우)
+    if (!type || type === "live") {
+      const liveQuery = `
+        SELECT 
+          'live' as type,
+          b.id, b.status, b.user_id,
+          b.first_price, b.second_price, b.final_price, b.winning_price,
+          b.appr_id, b.repair_requested_at, b.repair_details, b.repair_fee,
+          b.created_at, b.updated_at, b.completed_at,
+          i.item_id, i.original_title, i.title, i.brand, i.category, i.image,
+          i.scheduled_date, i.original_scheduled_date, i.auc_num, i.rank, i.starting_price,
+          u.login_id, u.company_name
+        FROM live_bids b
+        LEFT JOIN crawled_items i ON b.item_id = i.item_id
+        LEFT JOIN users u ON b.user_id = u.id
+        WHERE ${whereClause}
+        ORDER BY ${orderByColumn} ${direction}
+      `;
+
+      const [liveRows] = await connection.query(liveQuery, queryParams);
+      allRows.push(...liveRows);
+    }
+
+    // 직접 경매 데이터 (type이 비어있거나 'direct'인 경우)
+    if (!type || type === "direct") {
+      const directQuery = `
+        SELECT 
+          'direct' as type,
+          b.id, b.status, b.user_id,
+          NULL as first_price, NULL as second_price, 
+          b.current_price as final_price, b.winning_price,
+          b.appr_id, b.repair_requested_at, b.repair_details, b.repair_fee,
+          b.submitted_to_platform,
+          b.created_at, b.updated_at, b.completed_at,
+          i.item_id, i.original_title, i.title, i.brand, i.category, i.image,
+          i.scheduled_date, i.original_scheduled_date, i.auc_num, i.rank, i.starting_price,
+          u.login_id, u.company_name
+        FROM direct_bids b
+        LEFT JOIN crawled_items i ON b.item_id = i.item_id
+        LEFT JOIN users u ON b.user_id = u.id
+        WHERE ${whereClause}
+        ORDER BY ${orderByColumn} ${direction}
+      `;
+
+      const [directRows] = await connection.query(directQuery, queryParams);
+      allRows.push(...directRows);
+    }
+
+    console.log(`총 ${allRows.length}개 입찰 항목 조회 완료`);
+
+    // 엑셀 컬럼 정의
+    const columns = [
+      { header: "구분", key: "type", width: 10 },
+      { header: "입찰ID", key: "bid_id", width: 10 },
+      { header: "상태", key: "status", width: 12 },
+      { header: "유저ID", key: "user_login", width: 15 },
+      { header: "회사명", key: "company_name", width: 20 },
+      { header: "상품ID", key: "item_id", width: 15 },
+      { header: "제목", key: "title", width: 40 },
+      { header: "브랜드", key: "brand", width: 15 },
+      { header: "카테고리", key: "category", width: 12 },
+      { header: "등급", key: "rank", width: 10 },
+      { header: "출품사", key: "auc_num", width: 10 },
+      { header: "예정일시", key: "scheduled_date", width: 20 },
+      { header: "원시작가(¥)", key: "starting_price", width: 15 },
+      { header: "1차입찰가(¥)", key: "first_price", width: 15 },
+      { header: "2차제안가(¥)", key: "second_price", width: 15 },
+      { header: "최종입찰가(¥)", key: "final_price", width: 15 },
+      { header: "낙찰금액(¥)", key: "winning_price", width: 15 },
+      { header: "관부가세포함(₩)", key: "krw_total", width: 18 },
+      { header: "감정서ID", key: "appr_id", width: 12 },
+      { header: "수선신청일", key: "repair_requested_at", width: 20 },
+      { header: "수선비용(₩)", key: "repair_fee", width: 15 },
+      { header: "플랫폼반영", key: "submitted_to_platform", width: 12 },
+      { header: "생성일", key: "created_at", width: 20 },
+      { header: "수정일", key: "updated_at", width: 20 },
+      { header: "완료일", key: "completed_at", width: 20 },
+      { header: "이미지", key: "image", width: 15 },
+    ];
+
+    // 데이터 행 변환
+    const rows = allRows.map((row) => {
+      // 관부가세 포함 가격 계산
+      let krw_total = "";
+      const priceToUse = row.winning_price || row.final_price || 0;
+      if (priceToUse && row.auc_num && row.category) {
+        try {
+          krw_total = calculateTotalPrice(
+            priceToUse,
+            row.auc_num,
+            row.category,
+            exchangeRate,
+          );
+        } catch (error) {
+          console.error("관부가세 계산 오류:", error);
+        }
+      }
+
+      return {
+        type: row.type === "live" ? "현장" : "직접",
+        bid_id: row.id,
+        status: getStatusText(row.status, row.type),
+        user_login: row.login_id || "",
+        company_name: row.company_name || "",
+        item_id: row.item_id || "",
+        title: row.original_title || row.title || "",
+        brand: row.brand || "",
+        category: row.category || "",
+        rank: row.rank || "",
+        auc_num: row.auc_num || "",
+        scheduled_date: formatDateForExcel(
+          row.original_scheduled_date || row.scheduled_date,
+        ),
+        starting_price: formatNumberForExcel(row.starting_price),
+        first_price: formatNumberForExcel(row.first_price),
+        second_price: formatNumberForExcel(row.second_price),
+        final_price: formatNumberForExcel(row.final_price),
+        winning_price: formatNumberForExcel(row.winning_price),
+        krw_total: formatNumberForExcel(krw_total),
+        appr_id: row.appr_id || "",
+        repair_requested_at: formatDateForExcel(row.repair_requested_at),
+        repair_fee: formatNumberForExcel(row.repair_fee),
+        submitted_to_platform: row.submitted_to_platform ? "Y" : "N",
+        created_at: formatDateForExcel(row.created_at),
+        updated_at: formatDateForExcel(row.updated_at),
+        completed_at: formatDateForExcel(row.completed_at),
+        image: row.image || "",
+      };
+    });
+
+    // 워크북 생성
+    const workbook = await createWorkbook({
+      sheetName: "입찰 항목",
+      columns,
+      rows,
+      imageColumns: ["image"],
+      imageWidth: 100,
+      imageHeight: 100,
+      maxConcurrency: 5,
+    });
+
+    // 파일명 생성 (날짜 포함)
+    const now = new Date();
+    const dateStr = now
+      .toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })
+      .replace(/\. /g, "-")
+      .replace(/\./g, "")
+      .replace(/:/g, "")
+      .replace(/ /g, "_");
+    const filename = `입찰항목_${dateStr}.xlsx`;
+
+    // 응답 스트림
+    await streamWorkbookToResponse(workbook, res, filename);
+
+    console.log(`입찰 항목 엑셀 내보내기 완료: ${filename}`);
+  } catch (error) {
+    console.error("입찰 항목 엑셀 내보내기 오류:", error);
+    if (!res.headersSent) {
+      res
+        .status(500)
+        .json({ message: "엑셀 내보내기 중 오류가 발생했습니다." });
+    }
+  } finally {
+    connection.release();
+  }
+});
+
+/**
+ * GET /api/admin/export/bid-results
+ * 입찰 결과(정산) 엑셀 내보내기
+ */
+router.get("/export/bid-results", isAdmin, async (req, res) => {
+  const {
+    dateRange = 365,
+    status = "",
+    keyword = "",
+    sortBy = "date",
+    sortOrder = "desc",
+  } = req.query;
+
+  const connection = await pool.getConnection();
+
+  try {
+    console.log("입찰 결과 엑셀 내보내기 시작:", req.query);
+
+    // 날짜 범위 계산
+    const dateLimit = new Date();
+    dateLimit.setDate(dateLimit.getDate() - parseInt(dateRange));
+    const fromDate = dateLimit.toISOString().split("T")[0];
+
+    // 환율 가져오기
+    const exchangeRate = await getExchangeRate();
+
+    // 쿼리 조건 구성
+    let whereConditions = ["ds.settlement_date >= ?"];
+    let queryParams = [fromDate];
+
+    // 정산 상태 필터
+    if (status) {
+      whereConditions.push("ds.payment_status = ?");
+      queryParams.push(status);
+    }
+
+    // 키워드 검색
+    if (keyword) {
+      whereConditions.push(
+        "(u.login_id LIKE ? OR u.company_name LIKE ? OR ds.settlement_date LIKE ?)",
+      );
+      queryParams.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
+    }
+
+    const whereClause = whereConditions.join(" AND ");
+
+    // 정렬 설정
+    let orderByClause = "ds.settlement_date DESC";
+    if (sortBy === "total_price") {
+      orderByClause = `ds.final_amount ${sortOrder.toUpperCase()}`;
+    } else if (sortBy === "item_count") {
+      orderByClause = `ds.item_count ${sortOrder.toUpperCase()}`;
+    }
+
+    // 정산 데이터 조회
+    const [settlements] = await connection.query(
+      `SELECT 
+         ds.id as settlement_id,
+         ds.settlement_date,
+         ds.user_id,
+         u.login_id,
+         u.company_name,
+         ds.item_count,
+         ds.total_amount,
+         ds.fee_amount,
+         ds.vat_amount,
+         ds.appraisal_fee,
+         ds.appraisal_vat,
+         ds.final_amount,
+         ds.completed_amount,
+         ds.payment_status,
+         ds.depositor_name,
+         ds.exchange_rate
+       FROM daily_settlements ds
+       LEFT JOIN users u ON ds.user_id = u.id
+       WHERE ${whereClause}
+       ORDER BY ${orderByClause}`,
+      queryParams,
+    );
+
+    console.log(`총 ${settlements.length}개 정산 데이터 조회 완료`);
+
+    // 각 정산에 대한 상세 아이템 조회
+    const allRows = [];
+
+    for (const settlement of settlements) {
+      const { user_id, settlement_date } = settlement;
+
+      // 낙찰 완료된 live_bids 조회
+      const [liveBids] = await connection.query(
+        `SELECT 
+           lb.id,
+           'live' as type,
+           lb.item_id,
+           lb.first_price,
+           lb.second_price,
+           lb.final_price,
+           lb.winning_price,
+           lb.status,
+           lb.appr_id,
+           lb.repair_fee,
+           i.title,
+           i.original_title,
+           i.brand,
+           i.category,
+           i.auc_num,
+           i.starting_price,
+           i.image
+         FROM live_bids lb
+         JOIN crawled_items i ON lb.item_id = i.item_id
+         WHERE lb.user_id = ? AND DATE(i.scheduled_date) = ? AND lb.status = 'completed'`,
+        [user_id, settlement_date],
+      );
+
+      // 낙찰 완료된 direct_bids 조회
+      const [directBids] = await connection.query(
+        `SELECT 
+           db.id,
+           'direct' as type,
+           db.item_id,
+           NULL as first_price,
+           NULL as second_price,
+           db.current_price as final_price,
+           db.winning_price,
+           db.status,
+           db.appr_id,
+           db.repair_fee,
+           i.title,
+           i.original_title,
+           i.brand,
+           i.category,
+           i.auc_num,
+           i.starting_price,
+           i.image
+         FROM direct_bids db
+         JOIN crawled_items i ON db.item_id = i.item_id
+         WHERE db.user_id = ? AND DATE(i.scheduled_date) = ? AND db.status = 'completed'`,
+        [user_id, settlement_date],
+      );
+
+      const items = [...liveBids, ...directBids];
+
+      // 아이템이 없어도 정산 요약 행은 추가 (아이템별 행 구조)
+      if (items.length === 0) {
+        allRows.push({
+          settlement_date: settlement.settlement_date,
+          user_login: settlement.login_id,
+          company_name: settlement.company_name,
+          payment_status: getPaymentStatusText(settlement.payment_status),
+          depositor_name: settlement.depositor_name || "",
+          item_id: "",
+          title: "",
+          brand: "",
+          category: "",
+          auc_num: "",
+          start_price: "",
+          first_price: "",
+          second_price: "",
+          final_price: "",
+          winning_price: "",
+          korean_price: "",
+          appr_id: "",
+          repair_fee: "",
+          fee_amount: formatNumberForExcel(settlement.fee_amount),
+          vat_amount: formatNumberForExcel(settlement.vat_amount),
+          appraisal_fee: formatNumberForExcel(settlement.appraisal_fee),
+          appraisal_vat: formatNumberForExcel(settlement.appraisal_vat),
+          grand_total: formatNumberForExcel(settlement.final_amount),
+          completed_amount: formatNumberForExcel(settlement.completed_amount),
+          remaining_amount: formatNumberForExcel(
+            settlement.final_amount - settlement.completed_amount,
+          ),
+          image: "",
+        });
+      } else {
+        // 각 아이템을 행으로 추가
+        items.forEach((item) => {
+          let koreanPrice = 0;
+          const price = parseInt(item.winning_price) || 0;
+          if (price > 0 && item.auc_num && item.category) {
+            try {
+              koreanPrice = calculateTotalPrice(
+                price,
+                item.auc_num,
+                item.category,
+                settlement.exchange_rate || exchangeRate,
+              );
+            } catch (error) {
+              console.error("관부가세 계산 오류:", error);
+            }
+          }
+
+          allRows.push({
+            settlement_date: settlement.settlement_date,
+            user_login: settlement.login_id,
+            company_name: settlement.company_name,
+            payment_status: getPaymentStatusText(settlement.payment_status),
+            depositor_name: settlement.depositor_name || "",
+            item_id: item.item_id || "",
+            title: item.original_title || item.title || "",
+            brand: item.brand || "",
+            category: item.category || "",
+            auc_num: item.auc_num || "",
+            start_price: formatNumberForExcel(item.starting_price),
+            first_price: formatNumberForExcel(item.first_price),
+            second_price: formatNumberForExcel(item.second_price),
+            final_price: formatNumberForExcel(item.final_price),
+            winning_price: formatNumberForExcel(item.winning_price),
+            korean_price: formatNumberForExcel(koreanPrice),
+            appr_id: item.appr_id || "",
+            repair_fee: formatNumberForExcel(item.repair_fee),
+            fee_amount: formatNumberForExcel(settlement.fee_amount),
+            vat_amount: formatNumberForExcel(settlement.vat_amount),
+            appraisal_fee: formatNumberForExcel(settlement.appraisal_fee),
+            appraisal_vat: formatNumberForExcel(settlement.appraisal_vat),
+            grand_total: formatNumberForExcel(settlement.final_amount),
+            completed_amount: formatNumberForExcel(settlement.completed_amount),
+            remaining_amount: formatNumberForExcel(
+              settlement.final_amount - settlement.completed_amount,
+            ),
+            image: item.image || "",
+          });
+        });
+      }
+    }
+
+    console.log(`총 ${allRows.length}개 아이템 행 생성 완료`);
+
+    // 엑셀 컬럼 정의
+    const columns = [
+      { header: "정산일", key: "settlement_date", width: 15 },
+      { header: "유저ID", key: "user_login", width: 15 },
+      { header: "회사명", key: "company_name", width: 20 },
+      { header: "정산상태", key: "payment_status", width: 12 },
+      { header: "입금자명", key: "depositor_name", width: 15 },
+      { header: "상품ID", key: "item_id", width: 15 },
+      { header: "제목", key: "title", width: 40 },
+      { header: "브랜드", key: "brand", width: 15 },
+      { header: "카테고리", key: "category", width: 12 },
+      { header: "출품사", key: "auc_num", width: 10 },
+      { header: "시작가(¥)", key: "start_price", width: 15 },
+      { header: "1차입찰가(¥)", key: "first_price", width: 15 },
+      { header: "2차제안가(¥)", key: "second_price", width: 15 },
+      { header: "최종입찰가(¥)", key: "final_price", width: 15 },
+      { header: "낙찰금액(¥)", key: "winning_price", width: 15 },
+      { header: "관부가세포함(₩)", key: "korean_price", width: 18 },
+      { header: "감정서ID", key: "appr_id", width: 12 },
+      { header: "수선비용(₩)", key: "repair_fee", width: 15 },
+      { header: "수수료(₩)", key: "fee_amount", width: 15 },
+      { header: "VAT(₩)", key: "vat_amount", width: 15 },
+      { header: "감정서수수료(₩)", key: "appraisal_fee", width: 15 },
+      { header: "감정서VAT(₩)", key: "appraisal_vat", width: 15 },
+      { header: "총청구액(₩)", key: "grand_total", width: 18 },
+      { header: "기결제액(₩)", key: "completed_amount", width: 18 },
+      { header: "미수금(₩)", key: "remaining_amount", width: 18 },
+      { header: "이미지", key: "image", width: 15 },
+    ];
+
+    // 워크북 생성
+    const workbook = await createWorkbook({
+      sheetName: "입찰 결과",
+      columns,
+      rows: allRows,
+      imageColumns: ["image"],
+      imageWidth: 100,
+      imageHeight: 100,
+      maxConcurrency: 5,
+    });
+
+    // 파일명 생성
+    const now = new Date();
+    const dateStr = now
+      .toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })
+      .replace(/\. /g, "-")
+      .replace(/\./g, "")
+      .replace(/:/g, "")
+      .replace(/ /g, "_");
+    const filename = `입찰결과_${dateStr}.xlsx`;
+
+    // 응답 스트림
+    await streamWorkbookToResponse(workbook, res, filename);
+
+    console.log(`입찰 결과 엑셀 내보내기 완료: ${filename}`);
+  } catch (error) {
+    console.error("입찰 결과 엑셀 내보내기 오류:", error);
+    if (!res.headersSent) {
+      res
+        .status(500)
+        .json({ message: "엑셀 내보내기 중 오류가 발생했습니다." });
+    }
+  } finally {
+    connection.release();
+  }
+});
+
+// =====================================================
+// 헬퍼 함수
+// =====================================================
+
+function getStatusText(status, type) {
+  if (type === "live") {
+    const statusMap = {
+      first: "1차 입찰",
+      second: "2차 제안",
+      final: "최종 입찰",
+      completed: "완료",
+      shipped: "출고됨",
+      cancelled: "낙찰 실패",
+    };
+    return statusMap[status] || status;
+  } else {
+    const statusMap = {
+      active: "활성",
+      completed: "완료",
+      shipped: "출고됨",
+      cancelled: "낙찰 실패",
+    };
+    return statusMap[status] || status;
+  }
+}
+
+function getPaymentStatusText(status) {
+  const statusMap = {
+    unpaid: "결제 필요",
+    pending: "입금 확인 중",
+    paid: "정산 완료",
+  };
+  return statusMap[status] || status;
+}
 
 module.exports = router;
