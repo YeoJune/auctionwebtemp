@@ -117,6 +117,25 @@
           </div>
         </div>
 
+        <!-- 데이터 내보내기 섹션 -->
+        <div class="card">
+          <div class="card-title">데이터 내보내기</div>
+          <div class="export-section">
+            <div class="export-buttons">
+              <button id="exportBidsBtn" class="btn btn-primary">
+                <i class="fas fa-file-excel"></i> 입찰 항목 내보내기
+              </button>
+              <button id="exportBidResultsBtn" class="btn btn-primary">
+                <i class="fas fa-file-excel"></i> 입찰 결과 내보내기
+              </button>
+            </div>
+            <p class="help-text mt-2">
+              필터 조건을 설정하여 입찰 항목 또는 입찰 결과를 엑셀 파일로 내보낼
+              수 있습니다.
+            </p>
+          </div>
+        </div>
+
         <!-- 크롤링 관리 섹션 -->
         <div class="card">
           <div class="card-title">크롤링 관리</div>
@@ -403,25 +422,6 @@
             <div id="noticeList" class="notice-list-container mt-3"></div>
           </div>
         </div>
-
-        <!-- 데이터 내보내기 섹션 -->
-        <div class="card">
-          <div class="card-title">데이터 내보내기</div>
-          <div class="export-section">
-            <div class="export-buttons">
-              <button id="exportBidsBtn" class="btn btn-primary">
-                <i class="fas fa-file-excel"></i> 입찰 항목 내보내기
-              </button>
-              <button id="exportBidResultsBtn" class="btn btn-primary">
-                <i class="fas fa-file-excel"></i> 입찰 결과 내보내기
-              </button>
-            </div>
-            <p class="help-text mt-2">
-              필터 조건을 설정하여 입찰 항목 또는 입찰 결과를 엑셀 파일로 내보낼
-              수 있습니다.
-            </p>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -434,12 +434,74 @@
         </div>
         <div class="modal-body">
           <div class="form-group">
-            <label class="form-label">검색어</label>
-            <input
-              type="text"
-              id="exportBidsSearch"
-              class="form-control"
-              placeholder="상품ID, 제목, 브랜드, 유저ID 검색..." />
+            <label class="form-label">유저 선택</label>
+            <div class="multiselect-container">
+              <div class="multiselect-header">
+                <input
+                  type="text"
+                  id="exportBidsUserSearch"
+                  class="multiselect-search"
+                  placeholder="유저 검색..." />
+              </div>
+              <div class="multiselect-body" id="exportBidsUserList">
+                <div class="multiselect-all">
+                  <input
+                    type="radio"
+                    id="export-bids-user-all"
+                    name="exportBidsUser"
+                    value=""
+                    checked />
+                  <label for="export-bids-user-all">전체</label>
+                </div>
+                <!-- 여기에 자바스크립트로 유저 목록 추가 -->
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group mt-3">
+            <label class="form-label">브랜드</label>
+            <div class="multiselect-container">
+              <div class="multiselect-header">
+                <input
+                  type="text"
+                  id="exportBidsBrandSearch"
+                  class="multiselect-search"
+                  placeholder="브랜드 검색..." />
+              </div>
+              <div class="multiselect-body" id="exportBidsBrandList">
+                <div class="multiselect-all">
+                  <input
+                    type="checkbox"
+                    id="export-bids-brand-all"
+                    value="all" />
+                  <label for="export-bids-brand-all">전체 선택</label>
+                </div>
+                <!-- 여기에 자바스크립트로 브랜드 체크박스 추가 -->
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group mt-3">
+            <label class="form-label">카테고리</label>
+            <div class="multiselect-container">
+              <div class="multiselect-header">
+                <input
+                  type="text"
+                  id="exportBidsCategorySearch"
+                  class="multiselect-search"
+                  placeholder="카테고리 검색..." />
+              </div>
+              <div class="multiselect-body" id="exportBidsCategoryList">
+                <div class="multiselect-all">
+                  <input
+                    type="checkbox"
+                    id="export-bids-category-all"
+                    value="all" />
+                  <label for="export-bids-category-all">전체 선택</label>
+                </div>
+                <!-- 여기에 자바스크립트로 카테고리 체크박스 추가 -->
+              </div>
+            </div>
           </div>
 
           <div class="form-group mt-3">
@@ -533,14 +595,45 @@
         </div>
         <div class="modal-body">
           <div class="form-group">
-            <label class="form-label">기간</label>
-            <select id="exportBidResultsDateRange" class="form-control">
-              <option value="7">최근 1주일</option>
-              <option value="30" selected>최근 1개월</option>
-              <option value="90">최근 3개월</option>
-              <option value="180">최근 6개월</option>
-              <option value="365">최근 1년</option>
-            </select>
+            <label class="form-label">유저 선택</label>
+            <div class="multiselect-container">
+              <div class="multiselect-header">
+                <input
+                  type="text"
+                  id="exportBidResultsUserSearch"
+                  class="multiselect-search"
+                  placeholder="유저 검색..." />
+              </div>
+              <div class="multiselect-body" id="exportBidResultsUserList">
+                <div class="multiselect-all">
+                  <input
+                    type="radio"
+                    id="export-results-user-all"
+                    name="exportBidResultsUser"
+                    value=""
+                    checked />
+                  <label for="export-results-user-all">전체</label>
+                </div>
+                <!-- 여기에 자바스크립트로 유저 목록 추가 -->
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group mt-3">
+            <label class="form-label">날짜 범위</label>
+            <div class="date-range-inputs">
+              <input
+                type="date"
+                id="exportBidResultsFromDate"
+                class="form-control"
+                placeholder="시작일" />
+              <span class="mx-2">~</span>
+              <input
+                type="date"
+                id="exportBidResultsToDate"
+                class="form-control"
+                placeholder="종료일" />
+            </div>
           </div>
 
           <div class="form-group mt-3">
@@ -551,15 +644,6 @@
               <option value="pending">입금 확인 중</option>
               <option value="paid">정산 완료</option>
             </select>
-          </div>
-
-          <div class="form-group mt-3">
-            <label class="form-label">검색어</label>
-            <input
-              type="text"
-              id="exportBidResultsKeyword"
-              class="form-control"
-              placeholder="유저 ID, 회사명, 날짜 검색..." />
           </div>
 
           <div class="form-group mt-3">

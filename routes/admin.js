@@ -755,12 +755,33 @@ router.get("/invoices", isAdmin, async (req, res) => {
 // =====================================================
 
 /**
+ * GET /api/admin/users-list
+ * 유저 목록 조회 (엑셀 내보내기 필터용)
+ */
+router.get("/users-list", isAdmin, async (req, res) => {
+  try {
+    const [users] = await pool.query(
+      `SELECT id, login_id, company_name 
+       FROM users 
+       WHERE login_id != 'admin' 
+       ORDER BY company_name ASC, login_id ASC`,
+    );
+    res.json(users);
+  } catch (error) {
+    console.error("Error fetching users list:", error);
+    res.status(500).json({ message: "Error fetching users list" });
+  }
+});
+
+/**
  * GET /api/admin/export/bids
  * 입찰 항목 엑셀 내보내기 (현장 + 직접 통합)
  */
 router.get("/export/bids", isAdmin, async (req, res) => {
   const {
-    search = "",
+    userId = "",
+    brands = "",
+    categories = "",
     status = "",
     aucNum = "",
     fromDate = "",
@@ -782,20 +803,36 @@ router.get("/export/bids", isAdmin, async (req, res) => {
     const queryConditions = ["1=1"];
     const queryParams = [];
 
-    // 검색 조건
-    if (search) {
-      const searchTerm = `%${search}%`;
-      queryConditions.push(
-        "(b.item_id LIKE ? OR i.original_title LIKE ? OR i.brand LIKE ? OR i.additional_info LIKE ? OR u.login_id LIKE ? OR u.company_name LIKE ?)",
-      );
-      queryParams.push(
-        searchTerm,
-        searchTerm,
-        searchTerm,
-        searchTerm,
-        searchTerm,
-        searchTerm,
-      );
+    // 유저 필터
+    if (userId) {
+      queryConditions.push("b.user_id = ?");
+      queryParams.push(userId);
+    }
+
+    // 브랜드 필터
+    if (brands) {
+      const brandArray = brands.split(",");
+      if (brandArray.length === 1) {
+        queryConditions.push("i.brand = ?");
+        queryParams.push(brands);
+      } else {
+        const placeholders = brandArray.map(() => "?").join(",");
+        queryConditions.push(`i.brand IN (${placeholders})`);
+        queryParams.push(...brandArray);
+      }
+    }
+
+    // 카테고리 필터
+    if (categories) {
+      const categoryArray = categories.split(",");
+      if (categoryArray.length === 1) {
+        queryConditions.push("i.category = ?");
+        queryParams.push(categories);
+      } else {
+        const placeholders = categoryArray.map(() => "?").join(",");
+        queryConditions.push(`i.category IN (${placeholders})`);
+        queryParams.push(...categoryArray);
+      }
     }
 
     // 상태 필터
@@ -1030,9 +1067,10 @@ router.get("/export/bids", isAdmin, async (req, res) => {
  */
 router.get("/export/bid-results", isAdmin, async (req, res) => {
   const {
-    dateRange = 365,
+    fromDate = "",
+    toDate = "",
+    userId = "",
     status = "",
-    keyword = "",
     sortBy = "date",
     sortOrder = "desc",
   } = req.query;
@@ -1042,30 +1080,33 @@ router.get("/export/bid-results", isAdmin, async (req, res) => {
   try {
     console.log("입찰 결과 엑셀 내보내기 시작:", req.query);
 
-    // 날짜 범위 계산
-    const dateLimit = new Date();
-    dateLimit.setDate(dateLimit.getDate() - parseInt(dateRange));
-    const fromDate = dateLimit.toISOString().split("T")[0];
-
     // 환율 가져오기
     const exchangeRate = await getExchangeRate();
 
     // 쿼리 조건 구성
-    let whereConditions = ["ds.settlement_date >= ?"];
-    let queryParams = [fromDate];
+    let whereConditions = ["1=1"];
+    let queryParams = [];
+
+    // 날짜 범위 필터
+    if (fromDate) {
+      whereConditions.push("ds.settlement_date >= ?");
+      queryParams.push(fromDate);
+    }
+    if (toDate) {
+      whereConditions.push("ds.settlement_date <= ?");
+      queryParams.push(toDate);
+    }
+
+    // 유저 필터
+    if (userId) {
+      whereConditions.push("ds.user_id = ?");
+      queryParams.push(userId);
+    }
 
     // 정산 상태 필터
     if (status) {
       whereConditions.push("ds.payment_status = ?");
       queryParams.push(status);
-    }
-
-    // 키워드 검색
-    if (keyword) {
-      whereConditions.push(
-        "(u.login_id LIKE ? OR u.company_name LIKE ? OR ds.settlement_date LIKE ?)",
-      );
-      queryParams.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`);
     }
 
     const whereClause = whereConditions.join(" AND ");

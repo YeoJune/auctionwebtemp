@@ -681,7 +681,10 @@ async function saveAccessControlSettings() {
 // ----- 내보내기 관리 -----
 
 // 내보내기 UI 관련 이벤트 리스너 설정
-function setupExportUI() {
+async function setupExportUI() {
+  // 데이터 로드
+  await loadExportFilterData();
+
   // 입찰 항목 내보내기 버튼
   document
     .getElementById("exportBidsBtn")
@@ -730,6 +733,150 @@ function setupExportUI() {
         hideExportBidResultsModal();
       }
     });
+
+  // 검색 기능 설정
+  setupExportSearchFilters();
+}
+
+// 필터 데이터 로드
+async function loadExportFilterData() {
+  try {
+    // 유저, 브랜드, 카테고리 병렬 로드
+    const [users, brands, categories] = await Promise.all([
+      fetchAPI("/admin/users-list"),
+      fetchAPI("/data/brands"),
+      fetchAPI("/data/categories"),
+    ]);
+
+    // 입찰 항목용 유저 목록
+    displayExportUserList("exportBidsUserList", "exportBidsUser", users);
+    // 입찰 결과용 유저 목록
+    displayExportUserList(
+      "exportBidResultsUserList",
+      "exportBidResultsUser",
+      users,
+    );
+
+    // 브랜드 목록
+    displayExportBrandList(brands);
+    // 카테고리 목록
+    displayExportCategoryList(categories);
+  } catch (error) {
+    console.error("필터 데이터 로드 실패:", error);
+  }
+}
+
+// 유저 목록 표시
+function displayExportUserList(containerId, radioName, users) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const allRadio = container.querySelector(".multiselect-all");
+  container.innerHTML = "";
+  if (allRadio) container.appendChild(allRadio);
+
+  users.forEach((user) => {
+    const item = document.createElement("div");
+    item.className = "multiselect-item";
+    item.innerHTML = `
+      <input type="radio" id="${containerId}-${user.id}" name="${radioName}" value="${user.id}" />
+      <label for="${containerId}-${user.id}">${user.company_name || user.login_id} (${user.login_id})</label>
+    `;
+    container.appendChild(item);
+  });
+}
+
+// 브랜드 목록 표시
+function displayExportBrandList(brands) {
+  const container = document.getElementById("exportBidsBrandList");
+  if (!container) return;
+
+  const allCheckbox = container.querySelector(".multiselect-all");
+  container.innerHTML = "";
+  if (allCheckbox) container.appendChild(allCheckbox);
+
+  brands.forEach((brand) => {
+    const item = document.createElement("div");
+    item.className = "multiselect-item";
+    item.innerHTML = `
+      <input type="checkbox" id="export-brand-${brand}" class="export-brand-checkbox" value="${brand}" />
+      <label for="export-brand-${brand}">${brand}</label>
+    `;
+    container.appendChild(item);
+  });
+
+  // 전체 선택 체크박스 이벤트
+  const allCheckboxElem = document.getElementById("export-bids-brand-all");
+  if (allCheckboxElem) {
+    allCheckboxElem.addEventListener("change", function () {
+      const checkboxes = container.querySelectorAll(".export-brand-checkbox");
+      checkboxes.forEach((cb) => (cb.checked = this.checked));
+    });
+  }
+}
+
+// 카테고리 목록 표시
+function displayExportCategoryList(categories) {
+  const container = document.getElementById("exportBidsCategoryList");
+  if (!container) return;
+
+  const allCheckbox = container.querySelector(".multiselect-all");
+  container.innerHTML = "";
+  if (allCheckbox) container.appendChild(allCheckbox);
+
+  categories.forEach((category) => {
+    const item = document.createElement("div");
+    item.className = "multiselect-item";
+    item.innerHTML = `
+      <input type="checkbox" id="export-category-${category}" class="export-category-checkbox" value="${category}" />
+      <label for="export-category-${category}">${category}</label>
+    `;
+    container.appendChild(item);
+  });
+
+  // 전체 선택 체크박스 이벤트
+  const allCheckboxElem = document.getElementById("export-bids-category-all");
+  if (allCheckboxElem) {
+    allCheckboxElem.addEventListener("change", function () {
+      const checkboxes = container.querySelectorAll(
+        ".export-category-checkbox",
+      );
+      checkboxes.forEach((cb) => (cb.checked = this.checked));
+    });
+  }
+}
+
+// 검색 필터 설정
+function setupExportSearchFilters() {
+  // 입찰 항목 - 유저 검색
+  setupFilterSearch("exportBidsUserSearch", "exportBidsUserList");
+  // 입찰 결과 - 유저 검색
+  setupFilterSearch("exportBidResultsUserSearch", "exportBidResultsUserList");
+  // 브랜드 검색
+  setupFilterSearch("exportBidsBrandSearch", "exportBidsBrandList");
+  // 카테고리 검색
+  setupFilterSearch("exportBidsCategorySearch", "exportBidsCategoryList");
+}
+
+// 필터 검색 기능 (common.js의 함수를 참고하되 단순화)
+function setupFilterSearch(searchInputId, containerIdOrQueryId) {
+  const searchInput = document.getElementById(searchInputId);
+  const container = document.getElementById(containerIdOrQueryId);
+
+  if (!searchInput || !container) return;
+
+  searchInput.addEventListener("input", function () {
+    const searchTerm = this.value.toLowerCase();
+    const items = container.querySelectorAll(".multiselect-item");
+
+    items.forEach((item) => {
+      const label = item.querySelector("label");
+      if (label) {
+        const text = label.textContent.toLowerCase();
+        item.style.display = text.includes(searchTerm) ? "" : "none";
+      }
+    });
+  });
 }
 
 // 입찰 항목 내보내기 모달 표시
@@ -755,9 +902,27 @@ function hideExportBidResultsModal() {
 // 입찰 항목 엑셀 다운로드
 async function downloadBidsExcel() {
   try {
+    // 유저 선택
+    const selectedUser = document.querySelector(
+      'input[name="exportBidsUser"]:checked',
+    );
+    const userId = selectedUser ? selectedUser.value : "";
+
+    // 브랜드 선택
+    const selectedBrands = Array.from(
+      document.querySelectorAll(".export-brand-checkbox:checked"),
+    ).map((cb) => cb.value);
+
+    // 카테고리 선택
+    const selectedCategories = Array.from(
+      document.querySelectorAll(".export-category-checkbox:checked"),
+    ).map((cb) => cb.value);
+
     // 필터 값 수집
     const filters = {
-      search: document.getElementById("exportBidsSearch").value.trim(),
+      userId: userId,
+      brands: selectedBrands.join(","),
+      categories: selectedCategories.join(","),
       status: document.getElementById("exportBidsStatus").value,
       aucNum: document.getElementById("exportBidsAucNum").value,
       type: document.getElementById("exportBidsType").value,
@@ -778,7 +943,7 @@ async function downloadBidsExcel() {
     // 다운로드 시작 알림
     showAlert("엑셀 파일을 생성 중입니다. 잠시만 기다려주세요...", "info");
 
-    // 다운로드 트리거 (새 창으로 열어서 다운로드)
+    // 다운로드 트리거
     const downloadUrl = `/api/admin/export/bids?${params.toString()}`;
     window.location.href = downloadUrl;
 
@@ -796,11 +961,18 @@ async function downloadBidsExcel() {
 // 입찰 결과 엑셀 다운로드
 async function downloadBidResultsExcel() {
   try {
+    // 유저 선택
+    const selectedUser = document.querySelector(
+      'input[name="exportBidResultsUser"]:checked',
+    );
+    const userId = selectedUser ? selectedUser.value : "";
+
     // 필터 값 수집
     const filters = {
-      dateRange: document.getElementById("exportBidResultsDateRange").value,
+      userId: userId,
+      fromDate: document.getElementById("exportBidResultsFromDate").value,
+      toDate: document.getElementById("exportBidResultsToDate").value,
       status: document.getElementById("exportBidResultsStatus").value,
-      keyword: document.getElementById("exportBidResultsKeyword").value.trim(),
       sortBy: document.getElementById("exportBidResultsSortBy").value,
       sortOrder: document.getElementById("exportBidResultsSortOrder").value,
     };
