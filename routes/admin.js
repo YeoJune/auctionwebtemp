@@ -1187,7 +1187,7 @@ router.get("/export/bid-results", isAdmin, async (req, res) => {
            i.image
          FROM live_bids lb
          JOIN crawled_items i ON lb.item_id = i.item_id
-         WHERE lb.user_id = ? AND DATE(i.scheduled_date) = ? AND lb.status = 'completed'`,
+         WHERE lb.user_id = ? AND DATE(i.scheduled_date) = ? AND lb.status IN ('completed', 'shipped')`,
         [user_id, settlement_date],
       );
 
@@ -1213,7 +1213,7 @@ router.get("/export/bid-results", isAdmin, async (req, res) => {
            i.image
          FROM direct_bids db
          JOIN crawled_items i ON db.item_id = i.item_id
-         WHERE db.user_id = ? AND DATE(i.scheduled_date) = ? AND db.status = 'completed'`,
+         WHERE db.user_id = ? AND DATE(i.scheduled_date) = ? AND db.status IN ('completed', 'shipped')`,
         [user_id, settlement_date],
       );
 
