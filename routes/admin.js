@@ -867,11 +867,11 @@ router.get("/export/bids", isAdmin, async (req, res) => {
 
     // 날짜 필터
     if (fromDate) {
-      queryConditions.push("b.updated_at >= ?");
+      queryConditions.push("i.scheduled_date >= ?");
       queryParams.push(fromDate);
     }
     if (toDate) {
-      queryConditions.push("b.updated_at <= ?");
+      queryConditions.push("i.scheduled_date <= ?");
       queryParams.push(toDate);
     }
 
@@ -1101,11 +1101,11 @@ router.get("/export/bid-results", isAdmin, async (req, res) => {
 
     // 날짜 범위 필터 (빈 문자열 = 전체 날짜)
     if (fromDate) {
-      whereConditions.push("ds.settlement_date >= ?");
+      whereConditions.push("i.scheduled_date >= ?");
       queryParams.push(fromDate);
     }
     if (toDate) {
-      whereConditions.push("ds.settlement_date <= ?");
+      whereConditions.push("i.scheduled_date <= ?");
       queryParams.push(toDate);
     }
 
