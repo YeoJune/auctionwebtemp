@@ -1101,11 +1101,11 @@ router.get("/export/bid-results", isAdmin, async (req, res) => {
 
     // 날짜 범위 필터 (빈 문자열 = 전체 날짜)
     if (fromDate) {
-      whereConditions.push("i.scheduled_date >= ?");
+      whereConditions.push("ds.settlement_date >= ?");
       queryParams.push(fromDate);
     }
     if (toDate) {
-      whereConditions.push("i.scheduled_date <= ?");
+      whereConditions.push("ds.settlement_date <= ?");
       queryParams.push(toDate);
     }
 
