@@ -697,11 +697,13 @@ cron.schedule("*/10 * * * *", async () => {
   const conn = await pool.getConnection();
 
   try {
-    // pending 상태이고 재시도 횟수가 12회 미만인 거래 조회
+    // pending 상태이고 재시도 횟수가 12회 미만인 거래 조회 (사용자 정보 포함)
     const [pendingTransactions] = await conn.query(
-      `SELECT * FROM deposit_transactions 
-       WHERE status = 'pending' AND retry_count < 12 
-       ORDER BY created_at ASC 
+      `SELECT dt.*, u.email, u.phone, u.company_name
+       FROM deposit_transactions dt
+       JOIN users u ON dt.user_id = u.id
+       WHERE dt.status = 'pending' AND dt.retry_count < 12 
+       ORDER BY dt.created_at ASC 
        LIMIT 10`,
     );
 
@@ -774,21 +776,19 @@ cron.schedule("*/10 * * * *", async () => {
             );
 
             if (existingDocs.length === 0) {
-              // 사용자 정보 조회
-              const [users] = await pool.query(
-                "SELECT email, phone, company_name FROM users WHERE id = ?",
-                [transaction.user_id],
+              // 사용자 정보는 이미 JOIN으로 가져옴
+              console.log(
+                `[자동 발행] 현금영수증 발행 시작 (예치금 거래 ID: ${transaction.id})`,
               );
 
-              if (users.length > 0) {
-                console.log(
-                  `[자동 발행] 현금영수증 발행 시작 (예치금 거래 ID: ${transaction.id})`,
-                );
-
-                const cashResult = await popbillService.issueCashbill(
-                  transaction,
-                  users[0],
-                );
+              const cashResult = await popbillService.issueCashbill(
+                transaction,
+                {
+                  email: transaction.email,
+                  phone: transaction.phone,
+                  company_name: transaction.company_name,
+                },
+              );
 
                 // DB 저장
                 await pool.query(

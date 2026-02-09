@@ -286,12 +286,19 @@ router.post("/admin/approve/:id", isAdmin, async (req, res) => {
 
         const mgtKey = `CASHBILL-FAILED-${transactionId}-${Date.now()}`;
 
-        await pool.query(
-          `INSERT INTO popbill_documents 
-           (type, mgt_key, related_type, related_id, user_id, amount, status, error_message, created_at) 
-           VALUES ('cashbill', ?, 'deposit', ?, ?, ?, 'failed', ?, NOW())`,
-          [mgtKey, transactionId, tx.user_id, tx.amount, error.message],
-        );
+        try {
+          await pool.query(
+            `INSERT INTO popbill_documents 
+             (type, mgt_key, related_type, related_id, user_id, amount, status, error_message, created_at) 
+             VALUES ('cashbill', ?, 'deposit', ?, ?, ?, 'failed', ?, NOW())`,
+            [mgtKey, transactionId, tx.user_id, tx.amount, error.message],
+          );
+        } catch (dbError) {
+          console.error(
+            `❌ 발행 실패 기록 저장 오류 (예치금 거래 ID: ${transactionId}):`,
+            dbError.message,
+          );
+        }
 
         documentIssueResult = {
           type: "cashbill",

@@ -1679,19 +1679,26 @@ router.put("/admin/settlements/:id", isAdmin, async (req, res) => {
         const docType = settlement.business_number ? "taxinvoice" : "cashbill";
         const mgtKey = `${docType.toUpperCase()}-FAILED-${settlementId}-${Date.now()}`;
 
-        await pool.query(
-          `INSERT INTO popbill_documents 
-           (type, mgt_key, related_type, related_id, user_id, amount, status, error_message, created_at) 
-           VALUES (?, ?, 'settlement', ?, ?, ?, 'failed', ?, NOW())`,
-          [
-            docType,
-            mgtKey,
-            settlementId,
-            settlement.user_id,
-            finalAmount,
-            error.message,
-          ],
-        );
+        try {
+          await pool.query(
+            `INSERT INTO popbill_documents 
+             (type, mgt_key, related_type, related_id, user_id, amount, status, error_message, created_at) 
+             VALUES (?, ?, 'settlement', ?, ?, ?, 'failed', ?, NOW())`,
+            [
+              docType,
+              mgtKey,
+              settlementId,
+              settlement.user_id,
+              finalAmount,
+              error.message,
+            ],
+          );
+        } catch (dbError) {
+          console.error(
+            `❌ 발행 실패 기록 저장 오류 (정산 ID: ${settlementId}):`,
+            dbError.message,
+          );
+        }
 
         documentIssueResult = {
           type: docType,
