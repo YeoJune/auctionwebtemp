@@ -871,7 +871,14 @@ async function processBidsAfterCrawl() {
               "낙찰가 초과로 인한 취소 환불",
             );
           } else {
-            await refundLimit(conn, bid.user_id, deductAmount);
+            await refundLimit(
+              conn,
+              bid.user_id,
+              deductAmount,
+              "live_bid",
+              bid.id,
+              "낙찰가 초과로 인한 취소 환불",
+            );
           }
         }
       }
@@ -956,7 +963,14 @@ async function processChangedBids(changedItems) {
                 "가격 변경으로 인한 취소 환불",
               );
             } else {
-              await refundLimit(conn, bid.user_id, deductAmount);
+              await refundLimit(
+                conn,
+                bid.user_id,
+                deductAmount,
+                "direct_bid",
+                bid.id,
+                "가격 변경으로 인한 취소 환불",
+              );
             }
           }
         }

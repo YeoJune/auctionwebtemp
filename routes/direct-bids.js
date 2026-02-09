@@ -672,7 +672,14 @@ router.post("/", async (req, res) => {
           `직접경매 입찰 차감 (환율: ${exchangeRate.toFixed(2)})`,
         );
       } else {
-        await deductLimit(newConnection, userId, deductAmount);
+        await deductLimit(
+          newConnection,
+          userId,
+          deductAmount,
+          "direct_bid",
+          bidId,
+          `직접경매 입찰 차감 (환율: ${exchangeRate.toFixed(2)})`,
+        );
       }
 
       // 낮은 입찰 취소 및 예치금/한도 복구 (같은 트랜잭션 내에서 원자적 처리)
@@ -708,6 +715,9 @@ router.post("/", async (req, res) => {
               newConnection,
               lowerBid.user_id,
               lowerBidDeductAmount,
+              "direct_bid",
+              lowerBid.id,
+              "상위 입찰로 인한 취소 환불",
             );
           }
         }
@@ -885,6 +895,9 @@ router.put("/complete", isAdmin, async (req, res) => {
               connection,
               otherBid.user_id,
               otherBidDeductAmount,
+              "direct_bid",
+              otherBid.id,
+              "낙찰 완료로 인한 취소 환불",
             );
           }
         }
@@ -1067,7 +1080,14 @@ router.put("/cancel", isAdmin, async (req, res) => {
           );
         } else {
           // 한도 복구
-          await refundLimit(connection, bid.user_id, deductAmount);
+          await refundLimit(
+            connection,
+            bid.user_id,
+            deductAmount,
+            "direct_bid",
+            bid.id,
+            "입찰 취소 환불",
+          );
         }
       }
 

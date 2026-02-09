@@ -75,16 +75,23 @@ async function refundDeposit(
 
 /**
  * 한도 차감 (기업 회원)
- * deposit_transactions에 기록하지 않음
+ * deposit_transactions에 기록하여 추적 가능하도록 함
  */
-async function deductLimit(connection, userId, amount) {
-  // daily_used 증가만 수행
+async function deductLimit(
+  connection,
+  userId,
+  amount,
+  relatedType,
+  relatedId,
+  description,
+) {
+  // 1. 한도 사용량 증가
   await connection.query(
     "UPDATE user_accounts SET daily_used = daily_used + ? WHERE user_id = ?",
     [amount, userId],
   );
 
-  // 잔액 조회
+  // 2. 잔액 조회
   const [account] = await connection.query(
     "SELECT daily_limit, daily_used FROM user_accounts WHERE user_id = ?",
     [userId],
@@ -92,22 +99,37 @@ async function deductLimit(connection, userId, amount) {
   const dailyLimit = account[0]?.daily_limit || 0;
   const dailyUsed = account[0]?.daily_used || 0;
   const remainingLimit = dailyLimit - dailyUsed;
+
+  // 3. 거래 내역 기록 (status = 'confirmed' 추가)
+  await connection.query(
+    `INSERT INTO deposit_transactions 
+     (user_id, type, amount, balance_after, status, related_type, related_id, description, created_at) 
+     VALUES (?, 'deduct', ?, ?, 'confirmed', ?, ?, ?, NOW())`,
+    [userId, amount, remainingLimit, relatedType, relatedId, description],
+  );
 
   return remainingLimit;
 }
 
 /**
  * 한도 복구 (기업 회원)
- * deposit_transactions에 기록하지 않음
+ * deposit_transactions에 기록하여 추적 가능하도록 함
  */
-async function refundLimit(connection, userId, amount) {
-  // daily_used 감소만 수행
+async function refundLimit(
+  connection,
+  userId,
+  amount,
+  relatedType,
+  relatedId,
+  description,
+) {
+  // 1. 한도 사용량 감소
   await connection.query(
     "UPDATE user_accounts SET daily_used = daily_used - ? WHERE user_id = ?",
     [amount, userId],
   );
 
-  // 잔액 조회
+  // 2. 잔액 조회
   const [account] = await connection.query(
     "SELECT daily_limit, daily_used FROM user_accounts WHERE user_id = ?",
     [userId],
@@ -115,6 +137,14 @@ async function refundLimit(connection, userId, amount) {
   const dailyLimit = account[0]?.daily_limit || 0;
   const dailyUsed = account[0]?.daily_used || 0;
   const remainingLimit = dailyLimit - dailyUsed;
+
+  // 3. 거래 내역 기록 (status = 'confirmed' 추가)
+  await connection.query(
+    `INSERT INTO deposit_transactions 
+     (user_id, type, amount, balance_after, status, related_type, related_id, description, created_at) 
+     VALUES (?, 'refund', ?, ?, 'confirmed', ?, ?, ?, NOW())`,
+    [userId, amount, remainingLimit, relatedType, relatedId, description],
+  );
 
   return remainingLimit;
 }

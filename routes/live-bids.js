@@ -629,7 +629,14 @@ router.put("/:id/final", async (req, res) => {
           `현장경매 최종입찰 차감 (환율: ${exchangeRate.toFixed(2)})`,
         );
       } else {
-        await deductLimit(newConnection, userId, deductAmount);
+        await deductLimit(
+          newConnection,
+          userId,
+          deductAmount,
+          "live_bid",
+          id,
+          `현장경매 최종입찰 차감 (환율: ${exchangeRate.toFixed(2)})`,
+        );
       }
 
       await newConnection.commit();
@@ -726,7 +733,14 @@ router.put("/complete", isAdmin, async (req, res) => {
               "낙찰가 초과로 인한 취소 환불",
             );
           } else {
-            await refundLimit(connection, bid.user_id, deductAmount);
+            await refundLimit(
+              connection,
+              bid.user_id,
+              deductAmount,
+              "live_bid",
+              bid.id,
+              "낙찰가 초과로 인한 취소 환불",
+            );
           }
         }
       }
@@ -927,7 +941,14 @@ router.put("/cancel", isAdmin, async (req, res) => {
           );
         } else {
           // 한도 복구
-          await refundLimit(connection, bid.user_id, deductAmount);
+          await refundLimit(
+            connection,
+            bid.user_id,
+            deductAmount,
+            "live_bid",
+            bid.id,
+            "입찰 취소 환불",
+          );
         }
       }
 
