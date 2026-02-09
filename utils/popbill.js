@@ -86,6 +86,70 @@ class PopbillService {
   }
 
   /**
+   * 정산 출금 확인 (계좌조회 API)
+   * @param {Object} settlement - { final_amount, depositor_name, company_name, settlement_date }
+   * @param {Date} startDate - 조회 시작일 (선택, 없으면 정산일)
+   * @returns {Object|null} 매칭된 거래 또는 null
+   */
+  async checkSettlement(settlement, startDate) {
+    try {
+      // 동적 날짜 계산: 정산일 기준 하루 전부터 오늘까지
+      const today = new Date();
+      const settlementDate = new Date(settlement.settlement_date);
+      settlementDate.setDate(settlementDate.getDate() - 1);
+
+      const start = this.formatDate(settlementDate);
+      const end = this.formatDate(today);
+
+      console.log("\n[정산 출금 확인 시작]");
+      console.log("- 금액:", settlement.final_amount);
+      console.log(
+        "- 입금자명:",
+        settlement.depositor_name || settlement.company_name,
+      );
+      console.log("- 조회 기간:", start, "~", end);
+
+      // 1. 계좌조회 요청 (동적 날짜 전달)
+      const jobID = await this.requestBankJobHardcoded(start, end);
+      console.log("- JobID:", jobID);
+
+      // 2. 완료 대기
+      await this.waitJob(jobID);
+      console.log("- 수집 완료");
+
+      // 3. 거래내역 조회 (출금 거래)
+      const transactions = await this.getWithdrawalTransactions(jobID);
+      console.log("- 출금 거래내역 수:", transactions.length, "건");
+
+      // 4. 매칭 (출금액과 수취인명 비교)
+      const recipientName =
+        settlement.depositor_name || settlement.company_name;
+      const matched = transactions.find(
+        (t) =>
+          Number(t.accOut) === Number(settlement.final_amount) &&
+          (this.nameMatch(recipientName, t.remark1) ||
+            this.nameMatch(recipientName, t.remark2)),
+      );
+
+      if (matched) {
+        console.log("✅ 매칭 성공!");
+        console.log("- TID:", matched.tid);
+        console.log("- 거래일시:", matched.trdt);
+        console.log("- 출금액:", matched.accOut);
+        console.log("- 적요:", matched.remark1);
+        console.log("- 수취인:", matched.remark2);
+      } else {
+        console.log("❌ 매칭 실패 (출금내역 없음)");
+      }
+
+      return matched || null;
+    } catch (error) {
+      console.error("❌ [정산 출금 확인 오류]", error.message);
+      throw error;
+    }
+  }
+
+  /**
    * 현금영수증 발행
    * @param {Object} transaction - { id, amount, depositor_name, processed_at }
    * @param {Object} user - { email, phone, company_name }
@@ -340,6 +404,52 @@ class PopbillService {
         },
         (error) => {
           console.error("- 거래내역 조회 실패:", error.message);
+          reject(error);
+        },
+      );
+    });
+  }
+
+  getWithdrawalTransactions(jobID) {
+    return new Promise((resolve, reject) => {
+      bankService.search(
+        this.CORP_NUM,
+        jobID,
+        [], // 모든 거래 조회
+        "", // 검색어 없음
+        1, // 페이지
+        500, // 최대 500건
+        "D", // 내림차순
+        null,
+        (result) => {
+          console.log("- 출금 거래내역 조회 성공");
+
+          // 출금만 필터링 (trtype이 없는 경우 accOut > 0이면 출금)
+          const withdrawals = (result.list || []).filter(
+            (t) => t.trtype === "출금" || (Number(t.accOut) > 0 && !t.trtype),
+          );
+          console.log(
+            `- 출금 거래: ${withdrawals.length}건 (전체 ${result.list?.length || 0}건)`,
+          );
+
+          // 디버깅: 출금 거래내역만 출력
+          if (withdrawals.length > 0) {
+            console.log("\n[출금 거래내역]");
+            withdrawals.forEach((t, idx) => {
+              console.log(`\n${idx + 1}. ${t.trtype || "출금"}`);
+              console.log(`   - TID: ${t.tid}`);
+              console.log(`   - 일시: ${t.trdt}`);
+              console.log(`   - 출금액: ${t.accOut}원`);
+              console.log(`   - 적요: ${t.remark1 || "-"}`);
+              console.log(`   - 수취인: ${t.remark2 || "-"}`);
+            });
+            console.log("\n");
+          }
+
+          resolve(withdrawals);
+        },
+        (error) => {
+          console.error("- 출금 거래내역 조회 실패:", error.message);
           reject(error);
         },
       );

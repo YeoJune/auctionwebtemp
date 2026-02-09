@@ -878,4 +878,210 @@ cron.schedule("*/10 * * * *", async () => {
 
 console.log("✅ 팝빌 Cron 작업 시작: 10분마다 입금 자동 확인");
 
+// ===== Cron: 정산 자동 확인 (10분마다) =====
+
+cron.schedule("*/10 * * * *", async () => {
+  console.log(
+    `\n[정산 자동 확인] 시작... ${new Date().toLocaleString("ko-KR")}`,
+  );
+
+  const conn = await pool.getConnection();
+
+  try {
+    // pending 상태인 정산 조회 (송금 대기 중)
+    const [pendingSettlements] = await conn.query(
+      `SELECT ds.*, u.business_number, u.company_name, u.email, u.phone
+       FROM daily_settlements ds
+       JOIN users u ON ds.user_id = u.id
+       WHERE ds.payment_status = 'pending'
+       ORDER BY ds.settlement_date ASC
+       LIMIT 10`,
+    );
+
+    console.log(`[정산 자동 확인] 대상: ${pendingSettlements.length}건`);
+
+    for (const settlement of pendingSettlements) {
+      try {
+        await conn.beginTransaction();
+
+        // 정산 출금 확인
+        const startDate = new Date(settlement.settlement_date);
+        startDate.setHours(0, 0, 0, 0);
+
+        const matched = await popbillService.checkSettlement(
+          settlement,
+          startDate,
+        );
+
+        if (matched) {
+          // 중복 확인
+          const isUsed = await popbillService.isTransactionUsed(matched.tid);
+          if (isUsed) {
+            console.log(
+              `⚠️ 중복 거래: 정산 #${settlement.id} (TID: ${matched.tid})`,
+            );
+            await conn.rollback();
+            continue;
+          }
+
+          // 자동 완납 처리
+          await conn.query(
+            `UPDATE daily_settlements 
+             SET payment_status = 'paid',
+                 completed_amount = final_amount,
+                 paid_at = NOW()
+             WHERE id = ?`,
+            [settlement.id],
+          );
+
+          await popbillService.markTransactionUsed(
+            matched.tid,
+            matched,
+            "settlement",
+            settlement.id,
+          );
+
+          await conn.commit();
+          console.log(
+            `✅ 정산 자동 완료: 정산 #${settlement.id}, 금액: ${settlement.final_amount}원`,
+          );
+
+          // 세금계산서/현금영수증 자동 발행 (별도 처리)
+          try {
+            // 이미 발행된 문서가 있는지 확인
+            const [existingDocs] = await pool.query(
+              "SELECT * FROM popbill_documents WHERE related_type = 'settlement' AND related_id = ? AND status = 'issued'",
+              [settlement.id],
+            );
+
+            if (existingDocs.length === 0) {
+              if (settlement.business_number) {
+                // 세금계산서 발행
+                console.log(
+                  `[자동 발행] 세금계산서 발행 시작 (정산 ID: ${settlement.id})`,
+                );
+
+                const taxResult = await popbillService.issueTaxinvoice(
+                  settlement,
+                  {
+                    business_number: settlement.business_number,
+                    company_name: settlement.company_name,
+                    email: settlement.email,
+                  },
+                );
+
+                // DB 저장
+                await pool.query(
+                  `INSERT INTO popbill_documents 
+                   (type, mgt_key, related_type, related_id, user_id, confirm_num, amount, status, created_at) 
+                   VALUES ('taxinvoice', ?, 'settlement', ?, ?, ?, ?, 'issued', NOW())`,
+                  [
+                    taxResult.invoicerMgtKey,
+                    settlement.id,
+                    settlement.user_id,
+                    taxResult.ntsConfirmNum,
+                    settlement.final_amount,
+                  ],
+                );
+
+                console.log(
+                  `✅ 세금계산서 자동 발행 완료 (승인번호: ${taxResult.ntsConfirmNum})`,
+                );
+              } else {
+                // 현금영수증 발행
+                console.log(
+                  `[자동 발행] 현금영수증 발행 시작 (정산 ID: ${settlement.id})`,
+                );
+
+                const transactionData = {
+                  id: settlement.id,
+                  amount: settlement.final_amount,
+                  user_id: settlement.user_id,
+                  processed_at: new Date(),
+                };
+
+                const cashResult = await popbillService.issueCashbill(
+                  transactionData,
+                  {
+                    email: settlement.email,
+                    phone: settlement.phone,
+                    company_name: settlement.company_name,
+                  },
+                );
+
+                // DB 저장
+                await pool.query(
+                  `INSERT INTO popbill_documents 
+                   (type, mgt_key, related_type, related_id, user_id, confirm_num, amount, status, created_at) 
+                   VALUES ('cashbill', ?, 'settlement', ?, ?, ?, ?, 'issued', NOW())`,
+                  [
+                    cashResult.mgtKey,
+                    settlement.id,
+                    settlement.user_id,
+                    cashResult.confirmNum,
+                    settlement.final_amount,
+                  ],
+                );
+
+                console.log(
+                  `✅ 현금영수증 자동 발행 완료 (승인번호: ${cashResult.confirmNum})`,
+                );
+              }
+            }
+          } catch (docError) {
+            // 발행 실패 시 DB에 실패 상태 기록 (정산 완료는 유지)
+            console.error(
+              `❌ 문서 자동 발행 실패 (정산 ID: ${settlement.id}):`,
+              docError.message,
+            );
+
+            const docType = settlement.business_number
+              ? "taxinvoice"
+              : "cashbill";
+            const mgtKey = `${docType.toUpperCase()}-FAILED-${settlement.id}-${Date.now()}`;
+
+            try {
+              await pool.query(
+                `INSERT INTO popbill_documents 
+                 (type, mgt_key, related_type, related_id, user_id, amount, status, error_message, created_at) 
+                 VALUES (?, ?, 'settlement', ?, ?, ?, 'failed', ?, NOW())`,
+                [
+                  docType,
+                  mgtKey,
+                  settlement.id,
+                  settlement.user_id,
+                  settlement.final_amount,
+                  docError.message,
+                ],
+              );
+            } catch (dbError) {
+              console.error(
+                `❌ 발행 실패 기록 저장 오류 (정산 ID: ${settlement.id}):`,
+                dbError.message,
+              );
+            }
+          }
+        } else {
+          // 매칭 실패 - pending 상태 유지
+          await conn.rollback();
+          console.log(
+            `🔄 정산 미확인: 정산 #${settlement.id} (아직 출금되지 않음)`,
+          );
+        }
+      } catch (error) {
+        await conn.rollback();
+        console.error(`❌ 정산 #${settlement.id} 처리 실패:`, error.message);
+      }
+    }
+
+    console.log(`[정산 자동 확인] 완료\n`);
+  } catch (err) {
+    console.error("Error in settlement auto-check cron:", err);
+  } finally {
+    conn.release();
+  }
+});
+
+console.log("✅ 팝빌 Cron 작업 시작: 10분마다 정산 자동 확인");
+
 module.exports = router;
