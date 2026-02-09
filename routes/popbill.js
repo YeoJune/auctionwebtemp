@@ -687,431 +687,228 @@ router.post("/admin/retry-issue/:id", isAdmin, async (req, res) => {
   }
 });
 
-// ===== Cron: 입금 자동 확인 (10분마다) =====
-
-cron.schedule("*/10 * * * *", async () => {
-  console.log(
-    `\n[입금 자동 확인] 시작... ${new Date().toLocaleString("ko-KR")}`,
-  );
+// ===== 공통 자동 확인 함수 =====
+async function autoCheckPayments(type) {
+  const isDeposit = type === "deposit";
+  const label = isDeposit ? "입금" : "정산";
 
   const conn = await pool.getConnection();
 
   try {
-    // pending 상태이고 재시도 횟수가 12회 미만인 거래 조회 (사용자 정보 포함)
-    const [pendingTransactions] = await conn.query(
-      `SELECT dt.*, u.email, u.phone, u.company_name
-       FROM deposit_transactions dt
-       JOIN users u ON dt.user_id = u.id
-       WHERE dt.status = 'pending' AND dt.retry_count < 12 
-         AND dt.depositor_name IS NOT NULL AND dt.depositor_name != ''
-       ORDER BY dt.created_at ASC 
-       LIMIT 100`,
-    );
+    // pending 건수 조회
+    const query = isDeposit
+      ? `SELECT dt.*, u.email, u.phone, u.company_name
+         FROM deposit_transactions dt
+         JOIN users u ON dt.user_id = u.id
+         WHERE dt.status = 'pending' AND dt.retry_count < 12 
+           AND dt.depositor_name IS NOT NULL AND dt.depositor_name != ''
+         ORDER BY dt.created_at ASC 
+         LIMIT 100`
+      : `SELECT ds.*, u.business_number, u.company_name, u.email, u.phone
+         FROM daily_settlements ds
+         JOIN users u ON ds.user_id = u.id
+         WHERE ds.payment_status = 'pending' AND ds.retry_count < 12
+           AND ds.depositor_name IS NOT NULL AND ds.depositor_name != ''
+         ORDER BY ds.settlement_date ASC
+         LIMIT 100`;
 
-    console.log(`[입금 자동 확인] 대상: ${pendingTransactions.length}건`);
+    const [pendingItems] = await conn.query(query);
+    console.log(`\n[${label} 자동확인] ${pendingItems.length}건 처리 시작`);
 
-    for (const transaction of pendingTransactions) {
+    for (const item of pendingItems) {
       try {
         await conn.beginTransaction();
 
-        // 입금 확인
-        const startDate = new Date(transaction.created_at);
+        const startDate = new Date(
+          isDeposit ? item.created_at : item.settlement_date,
+        );
         startDate.setHours(0, 0, 0, 0);
 
-        const matched = await popbillService.checkPayment(
-          transaction,
-          startDate,
-        );
+        const checkFunc = isDeposit
+          ? popbillService.checkPayment
+          : popbillService.checkSettlement;
+        const matched = await checkFunc(item, startDate);
 
         if (matched) {
-          // 중복 확인
           const isUsed = await popbillService.isTransactionUsed(matched.tid);
           if (isUsed) {
-            console.log(
-              `⚠️ 중복 거래: 거래 #${transaction.id} (TID: ${matched.tid})`,
-            );
-            await conn.query(
-              "UPDATE deposit_transactions SET status = 'manual_review', retry_count = 12 WHERE id = ?",
-              [transaction.id],
-            );
+            console.log(`⚠️ 중복 거래 감지: ${label} #${item.id}`);
+            if (isDeposit) {
+              await conn.query(
+                "UPDATE deposit_transactions SET status = 'manual_review', retry_count = 12 WHERE id = ?",
+                [item.id],
+              );
+            }
             await conn.commit();
             continue;
           }
 
-          // 자동 승인
-          await conn.query(
-            "UPDATE user_accounts SET deposit_balance = deposit_balance + ? WHERE user_id = ?",
-            [transaction.amount, transaction.user_id],
-          );
-
-          const [updateResult] = await conn.query(
-            `UPDATE deposit_transactions 
-             SET status = 'confirmed', 
-                 processed_at = NOW(),
-                 matched_at = NOW(),
-                 matched_amount = ?,
-                 matched_name = ?,
-                 retry_count = 0
-             WHERE id = ?`,
-            [matched.accIn, matched.remark2 || matched.remark1, transaction.id],
-          );
-
-          console.log(
-            `[업데이트] 거래 #${transaction.id} - ${updateResult.affectedRows}행 업데이트됨`,
-          );
-
-          await popbillService.markTransactionUsed(
-            matched.tid,
-            matched,
-            "deposit",
-            transaction.id,
-          );
-
-          await conn.commit();
-          console.log(
-            `✅ 자동 승인 성공: 거래 #${transaction.id}, 금액: ${transaction.amount}원 (COMMIT 완료)`,
-          );
-
-          // 현금영수증 자동 발행 (별도 처리)
-          try {
-            // 이미 발행된 문서가 있는지 확인
-            const [existingDocs] = await pool.query(
-              "SELECT * FROM popbill_documents WHERE related_type = 'deposit' AND related_id = ? AND status = 'issued'",
-              [transaction.id],
-            );
-
-            if (existingDocs.length === 0) {
-              // 사용자 정보는 이미 JOIN으로 가져옴
-              console.log(
-                `[자동 발행] 현금영수증 발행 시작 (예치금 거래 ID: ${transaction.id})`,
-              );
-
-              const cashResult = await popbillService.issueCashbill(
-                transaction,
-                {
-                  email: transaction.email,
-                  phone: transaction.phone,
-                  company_name: transaction.company_name,
-                },
-              );
-
-              // DB 저장
-              await pool.query(
-                `INSERT INTO popbill_documents 
-                 (type, mgt_key, related_type, related_id, user_id, confirm_num, amount, status, created_at) 
-                 VALUES ('cashbill', ?, 'deposit', ?, ?, ?, ?, 'issued', NOW())`,
-                [
-                  cashResult.mgtKey,
-                  transaction.id,
-                  transaction.user_id,
-                  cashResult.confirmNum,
-                  transaction.amount,
-                ],
-              );
-
-              console.log(
-                `✅ 현금영수증 자동 발행 완료 (승인번호: ${cashResult.confirmNum})`,
-              );
-            }
-          } catch (docError) {
-            // 발행 실패 시 DB에 실패 상태 기록 (승인은 유지)
-            console.error(
-              `❌ 현금영수증 자동 발행 실패 (예치금 거래 ID: ${transaction.id}):`,
-              docError.message,
-            );
-
-            const mgtKey = `CASHBILL-FAILED-${transaction.id}-${Date.now()}`;
-
-            try {
-              await pool.query(
-                `INSERT INTO popbill_documents 
-                 (type, mgt_key, related_type, related_id, user_id, amount, status, error_message, created_at) 
-                 VALUES ('cashbill', ?, 'deposit', ?, ?, ?, 'failed', ?, NOW())`,
-                [
-                  mgtKey,
-                  transaction.id,
-                  transaction.user_id,
-                  transaction.amount,
-                  docError.message,
-                ],
-              );
-            } catch (dbError) {
-              console.error(
-                `❌ 발행 실패 기록 저장 오류 (거래 ID: ${transaction.id}):`,
-                dbError.message,
-              );
-            }
-          }
-        } else {
-          // 재시도 카운트 증가
-          const newRetryCount = transaction.retry_count + 1;
-
-          if (newRetryCount >= 12) {
+          // 업데이트 실행
+          if (isDeposit) {
             await conn.query(
-              "UPDATE deposit_transactions SET status = 'manual_review', retry_count = ? WHERE id = ?",
-              [newRetryCount, transaction.id],
+              "UPDATE user_accounts SET deposit_balance = deposit_balance + ? WHERE user_id = ?",
+              [item.amount, item.user_id],
             );
-            console.log(
-              `⚠️ 수동 확인 필요: 거래 #${transaction.id} (12회 재시도 실패)`,
+            await conn.query(
+              `UPDATE deposit_transactions 
+               SET status = 'confirmed', processed_at = NOW(), matched_at = NOW(),
+                   matched_amount = ?, matched_name = ?, retry_count = 0
+               WHERE id = ?`,
+              [matched.accIn, matched.remark2 || matched.remark1, item.id],
             );
           } else {
             await conn.query(
-              "UPDATE deposit_transactions SET retry_count = ? WHERE id = ?",
-              [newRetryCount, transaction.id],
-            );
-            console.log(
-              `🔄 재시도 증가: 거래 #${transaction.id} (${newRetryCount}/12)`,
+              `UPDATE daily_settlements 
+               SET payment_status = 'paid', completed_amount = final_amount, paid_at = NOW(),
+                   matched_at = NOW(), matched_amount = ?, matched_name = ?, retry_count = 0
+               WHERE id = ?`,
+              [matched.accIn, matched.remark2 || matched.remark1, item.id],
             );
           }
-
-          await conn.commit();
-        }
-      } catch (error) {
-        await conn.rollback();
-        console.error(`❌ 거래 #${transaction.id} 처리 실패:`, error.message);
-      }
-    }
-
-    console.log(`[입금 자동 확인] 완료\n`);
-  } catch (err) {
-    console.error("Error in auto-check cron:", err);
-  } finally {
-    conn.release();
-  }
-});
-
-console.log("✅ 팝빌 Cron 작업 시작: 10분마다 입금 자동 확인");
-
-// ===== Cron: 정산 자동 확인 (10분마다) =====
-
-cron.schedule("*/10 * * * *", async () => {
-  console.log(
-    `\n[정산 자동 확인] 시작... ${new Date().toLocaleString("ko-KR")}`,
-  );
-
-  const conn = await pool.getConnection();
-
-  try {
-    // pending 상태이고 재시도 횟수가 12회 미만인 정산 조회 (송금 대기 중)
-    const [pendingSettlements] = await conn.query(
-      `SELECT ds.*, u.business_number, u.company_name, u.email, u.phone
-       FROM daily_settlements ds
-       JOIN users u ON ds.user_id = u.id
-       WHERE ds.payment_status = 'pending' AND ds.retry_count < 12
-         AND (ds.depositor_name IS NOT NULL AND ds.depositor_name != '')
-       ORDER BY ds.settlement_date ASC
-       LIMIT 100`,
-    );
-
-    console.log(`[정산 자동 확인] 대상: ${pendingSettlements.length}건`);
-
-    for (const settlement of pendingSettlements) {
-      try {
-        await conn.beginTransaction();
-
-        // 정산 출금 확인
-        const startDate = new Date(settlement.settlement_date);
-        startDate.setHours(0, 0, 0, 0);
-
-        const matched = await popbillService.checkSettlement(
-          settlement,
-          startDate,
-        );
-
-        if (matched) {
-          // 중복 확인
-          const isUsed = await popbillService.isTransactionUsed(matched.tid);
-          if (isUsed) {
-            console.log(
-              `⚠️ 중복 거래: 정산 #${settlement.id} (TID: ${matched.tid})`,
-            );
-            await conn.rollback();
-            continue;
-          }
-
-          // 자동 완납 처리
-          const [updateResult] = await conn.query(
-            `UPDATE daily_settlements 
-             SET payment_status = 'paid',
-                 completed_amount = final_amount,
-                 paid_at = NOW(),
-                 matched_at = NOW(),
-                 matched_amount = ?,
-                 matched_name = ?,
-                 retry_count = 0
-             WHERE id = ?`,
-            [matched.accIn, matched.remark2 || matched.remark1, settlement.id],
-          );
-
-          console.log(
-            `[업데이트] 정산 #${settlement.id} - ${updateResult.affectedRows}행 업데이트됨`,
-          );
 
           await popbillService.markTransactionUsed(
             matched.tid,
             matched,
-            "settlement",
-            settlement.id,
+            type,
+            item.id,
           );
-
           await conn.commit();
           console.log(
-            `✅ 정산 자동 완료: 정산 #${settlement.id}, 금액: ${settlement.final_amount}원 (COMMIT 완료)`,
+            `✅ ${label} #${item.id} 자동 완료 (${isDeposit ? item.amount : item.final_amount}원)`,
           );
 
-          // 세금계산서/현금영수증 자동 발행 (별도 처리)
+          // 문서 자동 발행
           try {
-            // 이미 발행된 문서가 있는지 확인
             const [existingDocs] = await pool.query(
-              "SELECT * FROM popbill_documents WHERE related_type = 'settlement' AND related_id = ? AND status = 'issued'",
-              [settlement.id],
+              "SELECT * FROM popbill_documents WHERE related_type = ? AND related_id = ? AND status = 'issued'",
+              [type, item.id],
             );
 
             if (existingDocs.length === 0) {
-              if (settlement.business_number) {
-                // 세금계산서 발행
-                console.log(
-                  `[자동 발행] 세금계산서 발행 시작 (정산 ID: ${settlement.id})`,
-                );
+              if (!isDeposit && item.business_number) {
+                const taxResult = await popbillService.issueTaxinvoice(item, {
+                  business_number: item.business_number,
+                  company_name: item.company_name,
+                  email: item.email,
+                });
 
-                const taxResult = await popbillService.issueTaxinvoice(
-                  settlement,
-                  {
-                    business_number: settlement.business_number,
-                    company_name: settlement.company_name,
-                    email: settlement.email,
-                  },
-                );
-
-                // DB 저장
                 await pool.query(
                   `INSERT INTO popbill_documents 
                    (type, mgt_key, related_type, related_id, user_id, confirm_num, amount, status, created_at) 
-                   VALUES ('taxinvoice', ?, 'settlement', ?, ?, ?, ?, 'issued', NOW())`,
+                   VALUES ('taxinvoice', ?, ?, ?, ?, ?, ?, 'issued', NOW())`,
                   [
                     taxResult.invoicerMgtKey,
-                    settlement.id,
-                    settlement.user_id,
+                    type,
+                    item.id,
+                    item.user_id,
                     taxResult.ntsConfirmNum,
-                    settlement.final_amount,
+                    isDeposit ? item.amount : item.final_amount,
                   ],
                 );
-
-                console.log(
-                  `✅ 세금계산서 자동 발행 완료 (승인번호: ${taxResult.ntsConfirmNum})`,
-                );
               } else {
-                // 현금영수증 발행
-                console.log(
-                  `[자동 발행] 현금영수증 발행 시작 (정산 ID: ${settlement.id})`,
-                );
-
-                const transactionData = {
-                  id: settlement.id,
-                  amount: settlement.final_amount,
-                  user_id: settlement.user_id,
-                  processed_at: new Date(),
-                };
+                const transactionData = isDeposit
+                  ? item
+                  : {
+                      id: item.id,
+                      amount: item.final_amount,
+                      user_id: item.user_id,
+                      processed_at: new Date(),
+                    };
 
                 const cashResult = await popbillService.issueCashbill(
                   transactionData,
                   {
-                    email: settlement.email,
-                    phone: settlement.phone,
-                    company_name: settlement.company_name,
+                    email: item.email,
+                    phone: item.phone,
+                    company_name: item.company_name,
                   },
                 );
 
-                // DB 저장
                 await pool.query(
                   `INSERT INTO popbill_documents 
                    (type, mgt_key, related_type, related_id, user_id, confirm_num, amount, status, created_at) 
-                   VALUES ('cashbill', ?, 'settlement', ?, ?, ?, ?, 'issued', NOW())`,
+                   VALUES ('cashbill', ?, ?, ?, ?, ?, ?, 'issued', NOW())`,
                   [
                     cashResult.mgtKey,
-                    settlement.id,
-                    settlement.user_id,
+                    type,
+                    item.id,
+                    item.user_id,
                     cashResult.confirmNum,
-                    settlement.final_amount,
+                    isDeposit ? item.amount : item.final_amount,
                   ],
-                );
-
-                console.log(
-                  `✅ 현금영수증 자동 발행 완료 (승인번호: ${cashResult.confirmNum})`,
                 );
               }
             }
           } catch (docError) {
-            // 발행 실패 시 DB에 실패 상태 기록 (정산 완료는 유지)
-            console.error(
-              `❌ 문서 자동 발행 실패 (정산 ID: ${settlement.id}):`,
-              docError.message,
-            );
-
-            const docType = settlement.business_number
-              ? "taxinvoice"
-              : "cashbill";
-            const mgtKey = `${docType.toUpperCase()}-FAILED-${settlement.id}-${Date.now()}`;
+            console.error(`❌ 문서 발행 실패: ${label} #${item.id}`);
+            const docType =
+              !isDeposit && item.business_number ? "taxinvoice" : "cashbill";
+            const mgtKey = `${docType.toUpperCase()}-FAILED-${item.id}-${Date.now()}`;
 
             try {
               await pool.query(
                 `INSERT INTO popbill_documents 
                  (type, mgt_key, related_type, related_id, user_id, amount, status, error_message, created_at) 
-                 VALUES (?, ?, 'settlement', ?, ?, ?, 'failed', ?, NOW())`,
+                 VALUES (?, ?, ?, ?, ?, ?, 'failed', LEFT(?, 255), NOW())`,
                 [
                   docType,
                   mgtKey,
-                  settlement.id,
-                  settlement.user_id,
-                  settlement.final_amount,
+                  type,
+                  item.id,
+                  item.user_id,
+                  isDeposit ? item.amount : item.final_amount,
                   docError.message,
                 ],
               );
             } catch (dbError) {
-              console.error(
-                `❌ 발행 실패 기록 저장 오류 (정산 ID: ${settlement.id}):`,
-                dbError.message,
-              );
+              // 무시
             }
           }
         } else {
           // 재시도 카운트 증가
-          const newRetryCount = settlement.retry_count + 1;
+          const newRetryCount = item.retry_count + 1;
+          const needsManual = newRetryCount >= 12;
 
-          if (newRetryCount >= 12) {
+          if (isDeposit) {
             await conn.query(
-              "UPDATE daily_settlements SET retry_count = ? WHERE id = ?",
-              [newRetryCount, settlement.id],
-            );
-            console.log(
-              `⚠️ 수동 확인 필요: 정산 #${settlement.id} (12회 재시도 실패)`,
+              "UPDATE deposit_transactions SET status = ?, retry_count = ? WHERE id = ?",
+              [
+                needsManual ? "manual_review" : "pending",
+                newRetryCount,
+                item.id,
+              ],
             );
           } else {
             await conn.query(
               "UPDATE daily_settlements SET retry_count = ? WHERE id = ?",
-              [newRetryCount, settlement.id],
-            );
-            console.log(
-              `🔄 재시도 증가: 정산 #${settlement.id} (${newRetryCount}/12)`,
+              [newRetryCount, item.id],
             );
           }
 
           await conn.commit();
+
+          if (needsManual) {
+            console.log(`⚠️ ${label} #${item.id} 수동 확인 필요 (12회 초과)`);
+          }
         }
       } catch (error) {
         await conn.rollback();
-        console.error(`❌ 정산 #${settlement.id} 처리 실패:`, error.message);
+        console.error(`❌ ${label} #${item.id} 처리 오류:`, error.message);
       }
     }
-
-    console.log(`[정산 자동 확인] 완료\n`);
   } catch (err) {
-    console.error("Error in settlement auto-check cron:", err);
+    console.error(`❌ ${label} 자동확인 오류:`, err.message);
   } finally {
     conn.release();
   }
-});
+}
 
-console.log("✅ 팝빌 Cron 작업 시작: 10분마다 정산 자동 확인");
+// ===== Cron: 입금 자동 확인 (10분마다) =====
+cron.schedule("*/10 * * * *", () => autoCheckPayments("deposit"));
+
+// ===== Cron: 정산 자동 확인 (10분마다) =====
+cron.schedule("*/10 * * * *", () => autoCheckPayments("settlement"));
+
+console.log("✅ 팝빌 자동확인 Cron 시작 (10분마다: 입금/정산)");
 
 module.exports = router;
