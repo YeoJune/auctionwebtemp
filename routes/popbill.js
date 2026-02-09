@@ -790,24 +790,23 @@ cron.schedule("*/10 * * * *", async () => {
                 },
               );
 
-                // DB 저장
-                await pool.query(
-                  `INSERT INTO popbill_documents 
-                   (type, mgt_key, related_type, related_id, user_id, confirm_num, amount, status, created_at) 
-                   VALUES ('cashbill', ?, 'deposit', ?, ?, ?, ?, 'issued', NOW())`,
-                  [
-                    cashResult.mgtKey,
-                    transaction.id,
-                    transaction.user_id,
-                    cashResult.confirmNum,
-                    transaction.amount,
-                  ],
-                );
+              // DB 저장
+              await pool.query(
+                `INSERT INTO popbill_documents 
+                 (type, mgt_key, related_type, related_id, user_id, confirm_num, amount, status, created_at) 
+                 VALUES ('cashbill', ?, 'deposit', ?, ?, ?, ?, 'issued', NOW())`,
+                [
+                  cashResult.mgtKey,
+                  transaction.id,
+                  transaction.user_id,
+                  cashResult.confirmNum,
+                  transaction.amount,
+                ],
+              );
 
-                console.log(
-                  `✅ 현금영수증 자동 발행 완료 (승인번호: ${cashResult.confirmNum})`,
-                );
-              }
+              console.log(
+                `✅ 현금영수증 자동 발행 완료 (승인번호: ${cashResult.confirmNum})`,
+              );
             }
           } catch (docError) {
             // 발행 실패 시 DB에 실패 상태 기록 (승인은 유지)
