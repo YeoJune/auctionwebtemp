@@ -888,12 +888,12 @@ cron.schedule("*/10 * * * *", async () => {
   const conn = await pool.getConnection();
 
   try {
-    // pending 상태인 정산 조회 (송금 대기 중)
+    // pending 상태이고 재시도 횟수가 12회 미만인 정산 조회 (송금 대기 중)
     const [pendingSettlements] = await conn.query(
       `SELECT ds.*, u.business_number, u.company_name, u.email, u.phone
        FROM daily_settlements ds
        JOIN users u ON ds.user_id = u.id
-       WHERE ds.payment_status = 'pending'
+       WHERE ds.payment_status = 'pending' AND ds.retry_count < 12
        ORDER BY ds.settlement_date ASC
        LIMIT 10`,
     );
@@ -929,9 +929,13 @@ cron.schedule("*/10 * * * *", async () => {
             `UPDATE daily_settlements 
              SET payment_status = 'paid',
                  completed_amount = final_amount,
-                 paid_at = NOW()
+                 paid_at = NOW(),
+                 matched_at = NOW(),
+                 matched_amount = ?,
+                 matched_name = ?,
+                 retry_count = 0
              WHERE id = ?`,
-            [settlement.id],
+            [matched.accOut, matched.remark2 || matched.remark1, settlement.id],
           );
 
           await popbillService.markTransactionUsed(
@@ -1062,11 +1066,28 @@ cron.schedule("*/10 * * * *", async () => {
             }
           }
         } else {
-          // 매칭 실패 - pending 상태 유지
-          await conn.rollback();
-          console.log(
-            `🔄 정산 미확인: 정산 #${settlement.id} (아직 출금되지 않음)`,
-          );
+          // 재시도 카운트 증가
+          const newRetryCount = settlement.retry_count + 1;
+
+          if (newRetryCount >= 12) {
+            await conn.query(
+              "UPDATE daily_settlements SET retry_count = ? WHERE id = ?",
+              [newRetryCount, settlement.id],
+            );
+            console.log(
+              `⚠️ 수동 확인 필요: 정산 #${settlement.id} (12회 재시도 실패)`,
+            );
+          } else {
+            await conn.query(
+              "UPDATE daily_settlements SET retry_count = ? WHERE id = ?",
+              [newRetryCount, settlement.id],
+            );
+            console.log(
+              `🔄 재시도 증가: 정산 #${settlement.id} (${newRetryCount}/12)`,
+            );
+          }
+
+          await conn.commit();
         }
       } catch (error) {
         await conn.rollback();
