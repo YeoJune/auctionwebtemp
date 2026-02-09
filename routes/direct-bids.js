@@ -26,6 +26,7 @@ const {
   getBidDeductAmount,
 } = require("../utils/deposit");
 const { processItem } = require("../utils/processItem");
+const cron = require("node-cron");
 
 const isAdmin = (req, res, next) => {
   if (req.session.user && req.session.user.login_id === "admin") {
@@ -1420,47 +1421,56 @@ router.put("/:id", isAdmin, async (req, res) => {
   }
 });
 
-// 자동 입찰 제출 스케줄러
-let autoSubmitInterval = null;
-const AUTO_SUBMIT_INTERVAL = 30 * 1000; // 30초 간격
-
+// 자동 입찰 제출 스케줄러 - 월요일 매 시간 정각 실행
 const startAutoSubmitScheduler = () => {
-  if (autoSubmitInterval) return;
-
-  autoSubmitInterval = setInterval(async () => {
-    const connection = await pool.getConnection();
-    try {
-      // 2. starting_price와 current_price가 다른 입찰만 조회하여 재입찰
-      const [unsubmittedBids] = await connection.query(
-        `SELECT d.*, i.* FROM direct_bids d 
+  // 크론 표현식: '0 * * * 1' = 월요일 매 시간 0분에 실행
+  cron.schedule(
+    "0 * * * 1",
+    async () => {
+      console.log("[Auto-Submit] 월요일 정기 재시도 작업 시작...");
+      const connection = await pool.getConnection();
+      try {
+        // starting_price와 current_price가 다른 입찰만 조회하여 재입찰
+        const [unsubmittedBids] = await connection.query(
+          `SELECT d.*, i.* FROM direct_bids d 
          JOIN crawled_items i ON d.item_id = i.item_id 
          WHERE d.status = 'active' 
          AND d.submitted_to_platform = FALSE
          AND i.starting_price != d.current_price`,
-      );
+        );
 
-      for (const bid of unsubmittedBids) {
-        try {
-          await submitBid(
-            {
-              bid_id: bid.id,
-              price: bid.current_price,
-            },
-            bid,
-          );
-          console.log(`Auto-submitted bid ${bid.id}`);
-        } catch (error) {
-          console.error(`Failed to auto-submit bid ${bid.id}:`, error);
+        console.log(
+          `[Auto-Submit] ${unsubmittedBids.length}건의 미제출 입찰 발견`,
+        );
+
+        for (const bid of unsubmittedBids) {
+          try {
+            await submitBid(
+              {
+                bid_id: bid.id,
+                price: bid.current_price,
+              },
+              bid,
+            );
+            console.log(`[Auto-Submit] 입찰 ${bid.id} 자동 제출 성공`);
+          } catch (error) {
+            console.error(`[Auto-Submit] 입찰 ${bid.id} 제출 실패:`, error);
+          }
         }
+      } catch (error) {
+        console.error("[Auto-Submit] 스케줄러 오류:", error);
+      } finally {
+        connection.release();
       }
-    } catch (error) {
-      console.error("Auto-submit scheduler error:", error);
-    } finally {
-      connection.release();
-    }
-  }, AUTO_SUBMIT_INTERVAL);
+    },
+    {
+      timezone: "Asia/Seoul",
+    },
+  );
+
+  console.log("[Auto-Submit] 스케줄러 시작됨 - 월요일 매 시간 정각 실행");
 };
 
-// startAutoSubmitScheduler();
+startAutoSubmitScheduler();
 
 module.exports = router;
