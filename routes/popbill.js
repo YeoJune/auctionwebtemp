@@ -703,8 +703,9 @@ cron.schedule("*/10 * * * *", async () => {
        FROM deposit_transactions dt
        JOIN users u ON dt.user_id = u.id
        WHERE dt.status = 'pending' AND dt.retry_count < 12 
+         AND dt.depositor_name IS NOT NULL AND dt.depositor_name != ''
        ORDER BY dt.created_at ASC 
-       LIMIT 10`,
+       LIMIT 100`,
     );
 
     console.log(`[입금 자동 확인] 대상: ${pendingTransactions.length}건`);
@@ -743,7 +744,7 @@ cron.schedule("*/10 * * * *", async () => {
             [transaction.amount, transaction.user_id],
           );
 
-          await conn.query(
+          const [updateResult] = await conn.query(
             `UPDATE deposit_transactions 
              SET status = 'confirmed', 
                  processed_at = NOW(),
@@ -755,6 +756,10 @@ cron.schedule("*/10 * * * *", async () => {
             [matched.accIn, matched.remark2 || matched.remark1, transaction.id],
           );
 
+          console.log(
+            `[업데이트] 거래 #${transaction.id} - ${updateResult.affectedRows}행 업데이트됨`,
+          );
+
           await popbillService.markTransactionUsed(
             matched.tid,
             matched,
@@ -764,7 +769,7 @@ cron.schedule("*/10 * * * *", async () => {
 
           await conn.commit();
           console.log(
-            `✅ 자동 승인 성공: 거래 #${transaction.id}, 금액: ${transaction.amount}원`,
+            `✅ 자동 승인 성공: 거래 #${transaction.id}, 금액: ${transaction.amount}원 (COMMIT 완료)`,
           );
 
           // 현금영수증 자동 발행 (별도 처리)
@@ -893,8 +898,9 @@ cron.schedule("*/10 * * * *", async () => {
        FROM daily_settlements ds
        JOIN users u ON ds.user_id = u.id
        WHERE ds.payment_status = 'pending' AND ds.retry_count < 12
+         AND (ds.depositor_name IS NOT NULL AND ds.depositor_name != '')
        ORDER BY ds.settlement_date ASC
-       LIMIT 10`,
+       LIMIT 100`,
     );
 
     console.log(`[정산 자동 확인] 대상: ${pendingSettlements.length}건`);
@@ -924,7 +930,7 @@ cron.schedule("*/10 * * * *", async () => {
           }
 
           // 자동 완납 처리
-          await conn.query(
+          const [updateResult] = await conn.query(
             `UPDATE daily_settlements 
              SET payment_status = 'paid',
                  completed_amount = final_amount,
@@ -934,7 +940,11 @@ cron.schedule("*/10 * * * *", async () => {
                  matched_name = ?,
                  retry_count = 0
              WHERE id = ?`,
-            [matched.accOut, matched.remark2 || matched.remark1, settlement.id],
+            [matched.accIn, matched.remark2 || matched.remark1, settlement.id],
+          );
+
+          console.log(
+            `[업데이트] 정산 #${settlement.id} - ${updateResult.affectedRows}행 업데이트됨`,
           );
 
           await popbillService.markTransactionUsed(
@@ -946,7 +956,7 @@ cron.schedule("*/10 * * * *", async () => {
 
           await conn.commit();
           console.log(
-            `✅ 정산 자동 완료: 정산 #${settlement.id}, 금액: ${settlement.final_amount}원`,
+            `✅ 정산 자동 완료: 정산 #${settlement.id}, 금액: ${settlement.final_amount}원 (COMMIT 완료)`,
           );
 
           // 세금계산서/현금영수증 자동 발행 (별도 처리)
