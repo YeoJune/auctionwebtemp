@@ -119,25 +119,37 @@ function translateResult(result) {
 }
 
 /**
- * 이미지를 지정된 사각형에 맞게 리사이징 (고화질)
+ * 이미지를 지정된 사각형에 맞게 리사이징 (고화질 유지를 위한 Scale Factor 적용)
  */
-async function resizeImageToFit(imagePath, targetWidth, targetHeight) {
+async function resizeImageToFit(
+  imagePath,
+  targetWidth,
+  targetHeight,
+  scale = 3,
+) {
   try {
-    // 고화질 유지를 위한 설정
-    const imageBuffer = await sharp(imagePath)
-      .resize(Math.round(targetWidth), Math.round(targetHeight), {
-        fit: "inside", // 비율 유지하면서 박스 안에 맞춤
-        withoutEnlargement: false, // 원본보다 크게도 허용
-        kernel: sharp.kernel.lanczos3, // 최고 화질의 리샘플링 알고리즘
+    // scale = 3이면 3배 더 많은 픽셀을 생성 (약 216 DPI 수준)
+    const widthPx = Math.round(targetWidth * scale);
+    const heightPx = Math.round(targetHeight * scale);
+
+    const image = sharp(imagePath);
+    const metadata = await image.metadata();
+
+    // 입력 파일이 PNG, JPEG 등일 수 있으므로 처리
+    // 사진(상품 이미지)의 경우 jpeg로 변환하는 것이 용량 관리에 유리함
+    // QR코드는 선명도가 중요하므로 png 유지
+    const isPhoto = !imagePath.toLowerCase().includes("qr");
+
+    return await image
+      .resize(widthPx, heightPx, {
+        fit: "inside",
+        withoutEnlargement: false,
+        kernel: sharp.kernel.lanczos3,
       })
-      .png({
-        quality: 100, // PNG 최고 화질
-        compressionLevel: 0, // 압축 최소화
-        adaptiveFiltering: false, // 빠른 처리
+      .toFormat(isPhoto ? "jpeg" : "png", {
+        quality: isPhoto ? 90 : 100, // JPEG 품질 90% (충분히 고화질)
       })
       .toBuffer();
-
-    return imageBuffer;
   } catch (error) {
     console.error("이미지 리사이징 오류:", error);
     throw error;
@@ -337,7 +349,7 @@ async function generateCertificatePDF(appraisal, coordinates) {
       }
     }
 
-    // QR 코드 이미지 삽입
+    // QR 코드 이미지 삽입 (QR은 선명한 선이 중요하므로 PNG 유지)
     if (coordinates.qrcode && pdfData.qrcode_url) {
       try {
         const qrcodePath = path.join(
@@ -347,21 +359,21 @@ async function generateCertificatePDF(appraisal, coordinates) {
         );
 
         if (fs.existsSync(qrcodePath)) {
+          // QR 코드는 4배 스케일로 매우 선명하게
           const qrcodeImageBytes = await resizeImageToFit(
             qrcodePath,
             coordinates.qrcode.width,
             coordinates.qrcode.height,
+            4, // Scale Factor
           );
-          const qrcodeImage = await pdfDoc.embedPng(qrcodeImageBytes);
+          const qrcodeImage = await pdfDoc.embedPng(qrcodeImageBytes); // QR은 PNG
 
           firstPage.drawImage(qrcodeImage, {
             x: coordinates.qrcode.x,
             y: coordinates.qrcode.y,
-            width: coordinates.qrcode.width,
-            height: coordinates.qrcode.height,
+            width: coordinates.qrcode.width, // PDF 상의 크기는 그대로 (Point)
+            height: coordinates.qrcode.height, // PDF 상의 크기는 그대로 (Point)
           });
-        } else {
-          console.warn("QR 코드 파일을 찾을 수 없음:", qrcodePath);
         }
       } catch (error) {
         console.error("QR 코드 삽입 오류:", error);
@@ -378,21 +390,30 @@ async function generateCertificatePDF(appraisal, coordinates) {
         );
 
         if (fs.existsSync(imagePath)) {
+          // 상품 이미지는 3배 스케일
           const productImageBytes = await resizeImageToFit(
             imagePath,
             coordinates.image.width,
             coordinates.image.height,
+            3, // Scale Factor
           );
-          const productImage = await pdfDoc.embedPng(productImageBytes);
+
+          // 위 resizeImageToFit에서 사진은 jpeg로 변환하도록 로직을 바꿨다면 embedJpg 사용
+          // 만약 무조건 png를 쓴다면 embedPng 유지
+          let productImage;
+          try {
+            productImage = await pdfDoc.embedJpg(productImageBytes);
+          } catch (e) {
+            // 혹시 PNG로 넘어왔을 경우를 대비
+            productImage = await pdfDoc.embedPng(productImageBytes);
+          }
 
           firstPage.drawImage(productImage, {
             x: coordinates.image.x,
             y: coordinates.image.y,
-            width: coordinates.image.width,
-            height: coordinates.image.height,
+            width: coordinates.image.width, // PDF 상의 크기는 그대로
+            height: coordinates.image.height, // PDF 상의 크기는 그대로
           });
-        } else {
-          console.warn("상품 이미지 파일을 찾을 수 없음:", imagePath);
         }
       } catch (error) {
         console.error("상품 이미지 삽입 오류:", error);
