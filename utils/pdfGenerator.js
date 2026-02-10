@@ -408,6 +408,34 @@ module.exports = {
 if (require.main === module) {
   console.log("PDF 생성 테스트 시작...");
 
+  // PDF를 이미지로 변환하는 함수
+  async function convertPdfToImage(pdfPath) {
+    const { pdfToPng } = require("pdf-to-png-converter");
+
+    console.log("\n📸 PDF를 이미지로 변환 중...");
+
+    const pngPages = await pdfToPng(pdfPath, {
+      disableFontFace: false,
+      useSystemFonts: false,
+      viewportScale: 2.0, // 해상도 (2.0 = 2배)
+      outputFolder: path.join(__dirname, "../public/certificates"),
+      outputFileMask: "preview",
+      pngFilePrefix: "page",
+      pagesToProcess: [1], // 첫 페이지만
+    });
+
+    const imagePath = path.join(__dirname, "../public/certificates/page_1.png");
+    console.log(`✅ 이미지 저장 완료: ${imagePath}`);
+    console.log(`\n💡 이 이미지를 열어서 좌표를 확인하세요!`);
+    console.log(
+      `   이미지 편집 프로그램(포토샵, GIMP 등)에서 마우스 좌표를 볼 수 있습니다.`,
+    );
+    console.log(`   주의: 이미지 좌표는 왼쪽 상단이 원점입니다.`);
+    console.log(`   PDF 좌표로 변환: pdf_y = 이미지높이 - 이미지_y`);
+
+    return imagePath;
+  }
+
   // 좌표 설정 (PDF는 왼쪽 하단이 원점, 단위: 포인트)
   // A4 크기: 595 x 842 포인트
   const testCoordinates = {
@@ -462,6 +490,27 @@ if (require.main === module) {
       console.log("\n1. 디렉토리 생성 확인...");
       ensureDirectories();
 
+      // 이미지 변환 옵션
+      const args = process.argv.slice(2);
+      if (args.includes("--image")) {
+        const pdfPath = args[args.indexOf("--image") + 1];
+        if (!pdfPath) {
+          console.error("❌ PDF 파일 경로를 지정해주세요.");
+          console.log(
+            "사용법: node utils/pdfGenerator.js --image <PDF파일경로>",
+          );
+          process.exit(1);
+        }
+
+        if (!fs.existsSync(pdfPath)) {
+          console.error(`❌ 파일을 찾을 수 없습니다: ${pdfPath}`);
+          process.exit(1);
+        }
+
+        await convertPdfToImage(pdfPath);
+        process.exit(0);
+      }
+
       console.log("\n2. DB에서 최신 감정 데이터 조회 중...");
       const { pool } = require("../utils/DB");
       conn = await pool.getConnection();
@@ -492,15 +541,25 @@ if (require.main === module) {
       console.log("   생성 데이터:", JSON.parse(result.pdfData));
 
       console.log("\n📄 생성된 PDF 파일을 확인하세요:");
-      console.log("   " + path.join(__dirname, "../public", result.pdfPath));
+      const fullPdfPath = path.join(__dirname, "../public", result.pdfPath);
+      console.log("   " + fullPdfPath);
 
       console.log("\n💡 좌표 조정 가이드:");
-      console.log("   - PDF 좌표계는 왼쪽 하단이 원점 (0, 0)");
-      console.log("   - A4 크기: 595 x 842 포인트");
-      console.log("   - x: 왼쪽에서 오른쪽 방향");
-      console.log("   - y: 아래에서 위쪽 방향");
+      console.log("   1. 템플릿 PDF를 이미지로 변환:");
+      console.log(
+        `      node utils/pdfGenerator.js --image public/appr_template.pdf`,
+      );
+      console.log("\n   2. 생성된 이미지를 편집 프로그램에서 열기");
+      console.log("   3. 원하는 위치의 좌표(x, y) 확인");
+      console.log("   4. PDF 좌표로 변환:");
+      console.log("      - x는 그대로 사용 (픽셀 → 포인트 변환 필요시 /2)");
+      console.log("      - y = (이미지 높이 - 이미지의 y) / 2");
       console.log("\n   현재 좌표 설정:");
       console.log(JSON.stringify(testCoordinates, null, 2));
+
+      // 자동으로 이미지 변환 제안
+      console.log("\n📸 생성된 PDF를 이미지로 변환하시겠습니까?");
+      console.log(`   node utils/pdfGenerator.js --image ${fullPdfPath}`);
     } catch (error) {
       console.error("\n❌ 테스트 실패:", error);
       console.error(error.stack);
