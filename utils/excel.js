@@ -61,22 +61,9 @@ async function downloadAndResizeImage(
       }
     }
 
-    // Sharp로 리사이즈 (원본 포맷과 품질 유지, 비율 맞춰 긴 쪽 기준으로 정사각형 안에 맞춤)
-    const sharpImage = sharp(imageBuffer);
-    const metadata = await sharpImage.metadata();
-
-    const resizedBuffer = await sharpImage
-      .resize(maxWidth, maxHeight, {
-        fit: "inside", // 긴 쪽 기준으로 비율 유지하며 정사각형 안에 맞춤
-        withoutEnlargement: true, // 작은 이미지는 확대하지 않음
-      })
-      // 원본 포맷 유지하고 품질 최대로 설정
-      .toFormat(metadata.format || "jpeg", {
-        quality: 100, // 원본 해상도 유지
-      })
-      .toBuffer();
-
-    return resizedBuffer;
+    // 원본 해상도 유지 - 리사이즈 없이 원본 그대로 반환
+    // 엑셀에 삽입할 때 표시 크기만 조절됨
+    return imageBuffer;
   } catch (error) {
     console.error(`이미지 처리 실패 (${imageUrl}):`, error.message);
     return null;
