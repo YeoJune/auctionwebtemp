@@ -592,7 +592,7 @@ if (require.main === module) {
       x: Math.round(917 * scaleX),
       y: Math.round(PDF_HEIGHT - 654 * scaleY), // QR 하단
       width: Math.round((1153 - 917) * scaleX),
-      height: Math.round((654 - 415) * scaleY),
+      height: Math.round((654 - 416) * scaleY),
     },
     image: {
       x: Math.round(29 * scaleX),
