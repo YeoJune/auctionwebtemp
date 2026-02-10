@@ -119,16 +119,22 @@ function translateResult(result) {
 }
 
 /**
- * 이미지를 지정된 사각형에 맞게 리사이징
+ * 이미지를 지정된 사각형에 맞게 리사이징 (고화질)
  */
 async function resizeImageToFit(imagePath, targetWidth, targetHeight) {
   try {
+    // 고화질 유지를 위한 설정
     const imageBuffer = await sharp(imagePath)
-      .resize(targetWidth, targetHeight, {
-        fit: "inside",
-        withoutEnlargement: false,
+      .resize(Math.round(targetWidth), Math.round(targetHeight), {
+        fit: "inside", // 비율 유지하면서 박스 안에 맞춤
+        withoutEnlargement: false, // 원본보다 크게도 허용
+        kernel: sharp.kernel.lanczos3, // 최고 화질의 리샘플링 알고리즘
       })
-      .png()
+      .png({
+        quality: 100, // PNG 최고 화질
+        compressionLevel: 0, // 압축 최소화
+        adaptiveFiltering: false, // 빠른 처리
+      })
       .toBuffer();
 
     return imageBuffer;
@@ -221,13 +227,13 @@ async function generateCertificatePDF(appraisal, coordinates) {
     }
 
     if (coordinates.model) {
-      const textWidth = font.widthOfTextAtSize(pdfData.model, 8);
+      const textWidth = font.widthOfTextAtSize(pdfData.model, 10);
       drawTextManual(
         firstPage,
         pdfData.model,
         coordinates.model.x - textWidth,
         coordinates.model.y,
-        8,
+        10,
         font,
         rgb(0, 0, 0),
       );
@@ -590,9 +596,9 @@ if (require.main === module) {
     },
     qrcode: {
       x: Math.round(917 * scaleX),
-      y: Math.round(PDF_HEIGHT - 654 * scaleY), // QR 하단
-      width: Math.round((1153 - 917) * scaleX),
-      height: Math.round((654 - 418) * scaleY),
+      y: Math.round(PDF_HEIGHT - 652 * scaleY), // QR 하단
+      width: Math.round((1154 - 917) * scaleX),
+      height: Math.round((652 - 415) * scaleY),
     },
     image: {
       x: Math.round(29 * scaleX),
@@ -636,7 +642,6 @@ if (require.main === module) {
 
       const [rows] = await conn.query(
         `SELECT * FROM appraisals 
-        WHERE status = 'completed'
          ORDER BY created_at DESC 
          LIMIT 1`,
       );
