@@ -1,6 +1,6 @@
 // public/js/appr-admin/appraisals.js - Blob 최적화 버전 (기존 동작 완전 보존)
 
-// ===== 기존 전역 변수들 (완전히 동일) =====
+// ===== 전역 변수들 =====
 let currentAppraisalPage = 1;
 let appraisalSearchQuery = "";
 let appraisalStatusFilter = "all";
@@ -12,63 +12,10 @@ let userSearchTimeout = null;
 let originalImageStateForEdit = [];
 let isSubmitting = false;
 
-// ===== 새로 추가되는 최적화 관련 변수들 =====
+// ===== 이미지 최적화 관련 변수들 =====
 let imageUrlCache = new Map(); // Blob URL 캐시
 
-// ===== PDF 좌표 정의 (pdfGenerator.js 테스트 코드에서 가져옴) =====
-const PDF_COORDINATES = {
-  brand: {
-    x: Math.round(566 * 0.5),
-    y: Math.round(419.528 - 700 * 0.5),
-    size: 14,
-  },
-  model: {
-    x: Math.round(566 * 0.5),
-    y: Math.round(419.528 - 746 * 0.5),
-    size: 12,
-  },
-  tccode: {
-    x: Math.round(566 * 0.5),
-    y: Math.round(419.528 - 792 * 0.5),
-    size: 10,
-  },
-  result: {
-    x: Math.round(1161 * 0.5),
-    y: Math.round(419.528 - 112 * 0.5),
-    size: 16,
-  },
-  date: {
-    x: Math.round(1161 * 0.5),
-    y: Math.round(419.528 - 156 * 0.5),
-    size: 10,
-  },
-  serial: {
-    x: Math.round(1161 * 0.5),
-    y: Math.round(419.528 - 202 * 0.5),
-    size: 10,
-  },
-  report: {
-    x: Math.round(625 * 0.5),
-    y: Math.round(419.528 - 361 * 0.5),
-    width: Math.round((1161 - 625) * 0.5),
-    height: Math.round((361 - 267) * 0.5),
-    size: 10,
-  },
-  qrcode: {
-    x: Math.round(917 * 0.5),
-    y: Math.round(419.528 - 654 * 0.5),
-    width: Math.round((1153 - 917) * 0.5),
-    height: Math.round((654 - 418) * 0.5),
-  },
-  image: {
-    x: Math.round(29 * 0.5),
-    y: Math.round(419.528 - 621 * 0.5),
-    width: Math.round((566 - 29) * 0.5),
-    height: Math.round((621 - 194) * 0.5),
-  },
-};
-
-// ===== 기존 DOMContentLoaded 이벤트 (완전히 동일) =====
+// ===== DOMContentLoaded 이벤트 =====
 document.addEventListener("DOMContentLoaded", function () {
   // 모든 기존 이벤트 리스너들 동일하게 유지
   document
@@ -1951,13 +1898,12 @@ function executeBulkPdfDownload() {
   // 로딩 표시
   showAlert("PDF 생성 및 압축 중입니다. 잠시만 기다려주세요...", "info");
 
-  // API 호출
+  // API 호출 - 백엔드에서 좌표를 관리하므로 ids만 전송
   fetch("/api/appr/admin/appraisals/bulk-download-pdf", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       ids: selectedIds,
-      coordinates: PDF_COORDINATES,
     }),
   })
     .then((response) => {

@@ -18,6 +18,7 @@ const {
 const {
   ensureCertificatePDF,
   createZipStream,
+  DEFAULT_PDF_COORDINATES,
 } = require("../../utils/pdfGenerator");
 
 // Multer 설정 - 감정 이미지 저장
@@ -3038,20 +3039,13 @@ router.post(
   async (req, res) => {
     let conn;
     try {
-      const { ids, coordinates } = req.body;
+      const { ids } = req.body;
 
       // 입력 검증
       if (!ids || !Array.isArray(ids) || ids.length === 0) {
         return res.status(400).json({
           success: false,
           message: "다운로드할 감정 ID 목록이 필요합니다.",
-        });
-      }
-
-      if (!coordinates) {
-        return res.status(400).json({
-          success: false,
-          message: "PDF 좌표 정보가 필요합니다.",
         });
       }
 
@@ -3062,6 +3056,9 @@ router.post(
           message: "한 번에 최대 100개까지만 다운로드할 수 있습니다.",
         });
       }
+
+      // 기본 좌표 사용 (백엔드에서 관리)
+      const coordinates = DEFAULT_PDF_COORDINATES;
 
       conn = await pool.getConnection();
 

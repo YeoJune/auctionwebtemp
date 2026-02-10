@@ -7,6 +7,72 @@ const archiver = require("archiver");
 const fontkit = require("@pdf-lib/fontkit");
 
 /**
+ * PDF 템플릿 좌표 기본값 (이미지 좌표를 PDF 좌표로 변환)
+ * 이미지 크기: 1190.4 x 839.04 px
+ * PDF 크기: 595.276 x 419.528 포인트
+ * 변환 공식: scaleX = PDF_WIDTH / IMAGE_WIDTH, scaleY = PDF_HEIGHT / IMAGE_HEIGHT
+ *           pdf_x = img_x * scaleX, pdf_y = PDF_HEIGHT - (img_y * scaleY)
+ */
+const IMAGE_WIDTH = 1190.4;
+const IMAGE_HEIGHT = 839.04;
+const PDF_WIDTH = 595.276;
+const PDF_HEIGHT = 419.528;
+const SCALE_X = PDF_WIDTH / IMAGE_WIDTH;
+const SCALE_Y = PDF_HEIGHT / IMAGE_HEIGHT;
+
+const DEFAULT_PDF_COORDINATES = {
+  brand: {
+    x: Math.round(566 * SCALE_X),
+    y: Math.round(PDF_HEIGHT - 700 * SCALE_Y),
+    size: 14,
+  },
+  model: {
+    x: Math.round(566 * SCALE_X),
+    y: Math.round(PDF_HEIGHT - 746 * SCALE_Y),
+    size: 12,
+  },
+  tccode: {
+    x: Math.round(566 * SCALE_X),
+    y: Math.round(PDF_HEIGHT - 792 * SCALE_Y),
+    size: 10,
+  },
+  result: {
+    x: Math.round(1161 * SCALE_X),
+    y: Math.round(PDF_HEIGHT - 112 * SCALE_Y),
+    size: 16,
+  },
+  date: {
+    x: Math.round(1161 * SCALE_X),
+    y: Math.round(PDF_HEIGHT - 156 * SCALE_Y),
+    size: 10,
+  },
+  serial: {
+    x: Math.round(1161 * SCALE_X),
+    y: Math.round(PDF_HEIGHT - 202 * SCALE_Y),
+    size: 10,
+  },
+  report: {
+    x: Math.round(625 * SCALE_X),
+    y: Math.round(PDF_HEIGHT - 361 * SCALE_Y),
+    width: Math.round((1161 - 625) * SCALE_X),
+    height: Math.round((361 - 267) * SCALE_Y),
+    size: 10,
+  },
+  qrcode: {
+    x: Math.round(917 * SCALE_X),
+    y: Math.round(PDF_HEIGHT - 654 * SCALE_Y),
+    width: Math.round((1153 - 917) * SCALE_X),
+    height: Math.round((654 - 418) * SCALE_Y),
+  },
+  image: {
+    x: Math.round(29 * SCALE_X),
+    y: Math.round(PDF_HEIGHT - 621 * SCALE_Y),
+    width: Math.round((566 - 29) * SCALE_X),
+    height: Math.round((621 - 194) * SCALE_Y),
+  },
+};
+
+/**
  * 필요한 디렉토리 자동 생성
  */
 function ensureDirectories() {
@@ -513,6 +579,7 @@ module.exports = {
   generateCertificatePDF,
   ensureCertificatePDF,
   createZipStream,
+  DEFAULT_PDF_COORDINATES,
 };
 
 // 테스트 코드
