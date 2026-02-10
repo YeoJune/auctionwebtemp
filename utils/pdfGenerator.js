@@ -208,80 +208,65 @@ async function generateCertificatePDF(appraisal, coordinates) {
 
     // 텍스트 삽입 (우측 정렬 - 기준점 왼쪽으로 텍스트 배치)
     if (coordinates.brand) {
-      const textWidth = font.widthOfTextAtSize(
-        pdfData.brand,
-        coordinates.brand.size || 12,
-      );
+      const textWidth = font.widthOfTextAtSize(pdfData.brand, 12);
       drawTextManual(
         firstPage,
         pdfData.brand,
         coordinates.brand.x - textWidth,
         coordinates.brand.y,
-        coordinates.brand.size || 12,
+        12,
         font,
         rgb(0, 0, 0),
       );
     }
 
     if (coordinates.model) {
-      const textWidth = font.widthOfTextAtSize(
-        pdfData.model,
-        coordinates.model.size || 12,
-      );
+      const textWidth = font.widthOfTextAtSize(pdfData.model, 12);
       drawTextManual(
         firstPage,
         pdfData.model,
         coordinates.model.x - textWidth,
         coordinates.model.y,
-        coordinates.model.size || 12,
+        12,
         font,
         rgb(0, 0, 0),
       );
     }
 
     if (coordinates.tccode) {
-      const textWidth = font.widthOfTextAtSize(
-        pdfData.tccode,
-        coordinates.tccode.size || 10,
-      );
+      const textWidth = font.widthOfTextAtSize(pdfData.tccode, 12);
       drawTextManual(
         firstPage,
         pdfData.tccode,
         coordinates.tccode.x - textWidth,
         coordinates.tccode.y,
-        coordinates.tccode.size || 10,
+        12,
         font,
         rgb(0, 0, 0),
       );
     }
 
     if (coordinates.date) {
-      const textWidth = font.widthOfTextAtSize(
-        pdfData.date,
-        coordinates.date.size || 10,
-      );
+      const textWidth = font.widthOfTextAtSize(pdfData.date, 12);
       drawTextManual(
         firstPage,
         pdfData.date,
         coordinates.date.x - textWidth,
         coordinates.date.y,
-        coordinates.date.size || 10,
+        12,
         font,
         rgb(0, 0, 0),
       );
     }
 
     if (coordinates.serial) {
-      const textWidth = font.widthOfTextAtSize(
-        pdfData.certificate_number,
-        coordinates.serial.size || 10,
-      );
+      const textWidth = font.widthOfTextAtSize(pdfData.certificate_number, 12);
       drawTextManual(
         firstPage,
         pdfData.certificate_number,
         coordinates.serial.x - textWidth,
         coordinates.serial.y,
-        coordinates.serial.size || 10,
+        12,
         font,
         rgb(0, 0, 0),
       );
@@ -289,16 +274,13 @@ async function generateCertificatePDF(appraisal, coordinates) {
 
     if (coordinates.result) {
       const resultText = translateResult(pdfData.result);
-      const textWidth = font.widthOfTextAtSize(
-        resultText,
-        coordinates.result.size || 14,
-      );
+      const textWidth = font.widthOfTextAtSize(resultText, 10);
       drawTextManual(
         firstPage,
         resultText,
         coordinates.result.x - textWidth,
         coordinates.result.y,
-        coordinates.result.size || 14,
+        10,
         boldFont,
         rgb(0, 0, 0),
       );
@@ -350,36 +332,6 @@ async function generateCertificatePDF(appraisal, coordinates) {
         );
         currentY -= lineHeight;
       }
-    }
-
-    if (coordinates.date) {
-      firstPage.drawText(pdfData.date, {
-        x: coordinates.date.x,
-        y: coordinates.date.y,
-        size: coordinates.date.size || 10,
-        font: font,
-        color: rgb(0, 0, 0),
-      });
-    }
-
-    if (coordinates.serial) {
-      firstPage.drawText(pdfData.certificate_number, {
-        x: coordinates.serial.x,
-        y: coordinates.serial.y,
-        size: coordinates.serial.size || 10,
-        font: font,
-        color: rgb(0, 0, 0),
-      });
-    }
-
-    if (coordinates.tccode) {
-      firstPage.drawText(pdfData.tccode, {
-        x: coordinates.tccode.x,
-        y: coordinates.tccode.y,
-        size: coordinates.tccode.size || 10,
-        font: font,
-        color: rgb(0, 0, 0),
-      });
     }
 
     // QR 코드 이미지 삽입
