@@ -7,7 +7,6 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const { v4: uuidv4 } = require("uuid");
-const QRCode = require("qrcode");
 const {
   generateCertificateNumber,
   generateQRCode,
@@ -16,6 +15,10 @@ const {
   isWatermarked,
   structureImageData,
 } = require("../../utils/appr");
+const {
+  ensureCertificatePDF,
+  createZipStream,
+} = require("../../utils/pdfGenerator");
 
 // Multer 설정 - 감정 이미지 저장
 const appraisalStorage = multer.diskStorage({
@@ -2646,6 +2649,7 @@ router.put(
         delivery_info,
         remarks,
         certificate_number,
+        tccode,
         result,
         result_notes,
         suggested_restoration_services,
@@ -2895,6 +2899,12 @@ router.put(
           : null;
       }
 
+      if (tccode !== undefined) {
+        updateFields.push("tccode = ?");
+        updateValues.push(tccode);
+        updateData.tccode = tccode;
+      }
+
       if (result) {
         updateFields.push("result = ?");
         updateValues.push(result);
@@ -3014,6 +3024,121 @@ router.put(
         message:
           err.message || "감정 정보 업데이트 중 서버 오류가 발생했습니다.",
       });
+    } finally {
+      if (conn) conn.release();
+    }
+  },
+);
+
+// 일괄 PDF 생성 및 다운로드 - POST /api/appr/admin/appraisals/bulk-download-pdf
+router.post(
+  "/appraisals/bulk-download-pdf",
+  isAuthenticated,
+  isAdmin,
+  async (req, res) => {
+    let conn;
+    try {
+      const { ids, coordinates } = req.body;
+
+      // 입력 검증
+      if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "다운로드할 감정 ID 목록이 필요합니다.",
+        });
+      }
+
+      if (!coordinates) {
+        return res.status(400).json({
+          success: false,
+          message: "PDF 좌표 정보가 필요합니다.",
+        });
+      }
+
+      // ID 개수 제한
+      if (ids.length > 100) {
+        return res.status(400).json({
+          success: false,
+          message: "한 번에 최대 100개까지만 다운로드할 수 있습니다.",
+        });
+      }
+
+      conn = await pool.getConnection();
+
+      // 감정 정보들 조회
+      const placeholders = ids.map(() => "?").join(", ");
+      const [appraisalRows] = await conn.query(
+        `SELECT * FROM appraisals WHERE id IN (${placeholders})`,
+        ids,
+      );
+
+      if (appraisalRows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "다운로드할 감정 정보를 찾을 수 없습니다.",
+        });
+      }
+
+      const pdfPaths = [];
+      const processResults = [];
+
+      // 각 감정에 대해 PDF 생성 (Lazy Evaluation)
+      for (const appraisal of appraisalRows) {
+        try {
+          const { pdfPath, pdfData, wasGenerated } = await ensureCertificatePDF(
+            appraisal,
+            coordinates,
+          );
+
+          // DB 업데이트 (새로 생성된 경우만)
+          if (wasGenerated) {
+            await conn.query(
+              "UPDATE appraisals SET certificate_url = ?, pdf_data = ? WHERE id = ?",
+              [pdfPath, pdfData, appraisal.id],
+            );
+          }
+
+          pdfPaths.push(pdfPath);
+          processResults.push({
+            id: appraisal.id,
+            certificate_number: appraisal.certificate_number,
+            pdf_url: pdfPath,
+            was_generated: wasGenerated,
+            status: "success",
+          });
+        } catch (error) {
+          console.error(`PDF 생성 실패 (감정 ID: ${appraisal.id}):`, error);
+          processResults.push({
+            id: appraisal.id,
+            certificate_number: appraisal.certificate_number,
+            status: "failed",
+            error: error.message,
+          });
+        }
+      }
+
+      // ZIP 파일로 압축하여 스트림 응답
+      const zipFilename = `certificates-${Date.now()}.zip`;
+      const archive = createZipStream(res, pdfPaths, zipFilename);
+
+      // ZIP 완료 처리
+      archive.finalize();
+
+      // 로그 출력
+      console.log(
+        `PDF 일괄 다운로드 완료: ${pdfPaths.length}/${appraisalRows.length}개 성공`,
+      );
+    } catch (err) {
+      console.error("PDF 일괄 다운로드 중 오류 발생:", err);
+
+      // 이미 응답이 시작된 경우 에러를 보낼 수 없음
+      if (!res.headersSent) {
+        res.status(500).json({
+          success: false,
+          message:
+            err.message || "PDF 일괄 다운로드 중 서버 오류가 발생했습니다.",
+        });
+      }
     } finally {
       if (conn) conn.release();
     }
