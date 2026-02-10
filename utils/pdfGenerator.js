@@ -208,65 +208,65 @@ async function generateCertificatePDF(appraisal, coordinates) {
 
     // 텍스트 삽입 (우측 정렬 - 기준점 왼쪽으로 텍스트 배치)
     if (coordinates.brand) {
-      const textWidth = font.widthOfTextAtSize(pdfData.brand, 12);
+      const textWidth = font.widthOfTextAtSize(pdfData.brand, 10);
       drawTextManual(
         firstPage,
         pdfData.brand,
         coordinates.brand.x - textWidth,
         coordinates.brand.y,
-        12,
+        10,
         font,
         rgb(0, 0, 0),
       );
     }
 
     if (coordinates.model) {
-      const textWidth = font.widthOfTextAtSize(pdfData.model, 12);
+      const textWidth = font.widthOfTextAtSize(pdfData.model, 10);
       drawTextManual(
         firstPage,
         pdfData.model,
         coordinates.model.x - textWidth,
         coordinates.model.y,
-        12,
+        10,
         font,
         rgb(0, 0, 0),
       );
     }
 
     if (coordinates.tccode) {
-      const textWidth = font.widthOfTextAtSize(pdfData.tccode, 12);
+      const textWidth = font.widthOfTextAtSize(pdfData.tccode, 10);
       drawTextManual(
         firstPage,
         pdfData.tccode,
         coordinates.tccode.x - textWidth,
         coordinates.tccode.y,
-        12,
+        10,
         font,
         rgb(0, 0, 0),
       );
     }
 
     if (coordinates.date) {
-      const textWidth = font.widthOfTextAtSize(pdfData.date, 12);
+      const textWidth = font.widthOfTextAtSize(pdfData.date, 10);
       drawTextManual(
         firstPage,
         pdfData.date,
         coordinates.date.x - textWidth,
         coordinates.date.y,
-        12,
+        10,
         font,
         rgb(0, 0, 0),
       );
     }
 
     if (coordinates.serial) {
-      const textWidth = font.widthOfTextAtSize(pdfData.certificate_number, 12);
+      const textWidth = font.widthOfTextAtSize(pdfData.certificate_number, 10);
       drawTextManual(
         firstPage,
         pdfData.certificate_number,
         coordinates.serial.x - textWidth,
         coordinates.serial.y,
-        12,
+        10,
         font,
         rgb(0, 0, 0),
       );
@@ -299,10 +299,7 @@ async function generateCertificatePDF(appraisal, coordinates) {
 
       for (const char of words) {
         const testLine = currentLine + char;
-        const testWidth = font.widthOfTextAtSize(
-          testLine,
-          coordinates.report.size || 10,
-        );
+        const testWidth = font.widthOfTextAtSize(testLine, 8);
 
         if (testWidth > maxWidth && currentLine.length > 0) {
           lines.push(currentLine);
@@ -316,7 +313,7 @@ async function generateCertificatePDF(appraisal, coordinates) {
       }
 
       // 각 라인을 그리기 (위에서 아래로)
-      const lineHeight = (coordinates.report.size || 10) * 1.5;
+      const lineHeight = 8 * 1.5;
       let currentY =
         coordinates.report.y + coordinates.report.height - lineHeight;
 
@@ -326,7 +323,7 @@ async function generateCertificatePDF(appraisal, coordinates) {
           line,
           coordinates.report.x + 3,
           currentY,
-          coordinates.report.size || 10,
+          8,
           font,
           rgb(0, 0, 0),
         );
