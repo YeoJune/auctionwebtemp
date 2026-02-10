@@ -501,57 +501,66 @@ if (require.main === module) {
   // 좌표 설정 (이미지 좌표를 PDF 좌표로 변환)
   // 이미지 크기: 1190.4 x 839.04 px
   // PDF 크기: 595 x 842 포인트 (A4)
-  // 변환 공식: pdf_x = img_x / 2, pdf_y = 842 - (img_y / 2)
+  // 변환 공식: scaleX = 595 / 1190.4, scaleY = 842 / 839.04
+  //           pdf_x = img_x * scaleX, pdf_y = 842 - (img_y * scaleY)
+
+  const IMAGE_WIDTH = 1190.4;
+  const IMAGE_HEIGHT = 839.04;
+  const PDF_WIDTH = 595;
+  const PDF_HEIGHT = 842;
+
+  const scaleX = PDF_WIDTH / IMAGE_WIDTH;
+  const scaleY = PDF_HEIGHT / IMAGE_HEIGHT;
 
   const testCoordinates = {
     brand: {
-      x: Math.round(566 / 2),
-      y: Math.round(842 - 700 / 2),
+      x: Math.round(566 * scaleX),
+      y: Math.round(PDF_HEIGHT - 700 * scaleY),
       size: 14,
     },
     model: {
-      x: Math.round(566 / 2),
-      y: Math.round(842 - 746 / 2),
+      x: Math.round(566 * scaleX),
+      y: Math.round(PDF_HEIGHT - 746 * scaleY),
       size: 12,
     },
     tccode: {
-      x: Math.round(566 / 2),
-      y: Math.round(842 - 792 / 2),
+      x: Math.round(566 * scaleX),
+      y: Math.round(PDF_HEIGHT - 792 * scaleY),
       size: 10,
     },
     result: {
-      x: Math.round(1161 / 2),
-      y: Math.round(842 - 112 / 2),
+      x: Math.round(1161 * scaleX),
+      y: Math.round(PDF_HEIGHT - 112 * scaleY),
       size: 16,
     },
     date: {
-      x: Math.round(1161 / 2),
-      y: Math.round(842 - 156 / 2),
+      x: Math.round(1161 * scaleX),
+      y: Math.round(PDF_HEIGHT - 156 * scaleY),
       size: 10,
     },
     serial: {
-      x: Math.round(1161 / 2),
-      y: Math.round(842 - 202 / 2),
+      x: Math.round(1161 * scaleX),
+      y: Math.round(PDF_HEIGHT - 202 * scaleY),
       size: 10,
     },
     report: {
-      x: Math.round(625 / 2),
-      y: Math.round(842 - 361 / 2), // 박스 하단
-      width: Math.round((1161 - 625) / 2),
-      height: Math.round((361 - 267) / 2),
+      x: Math.round(625 * scaleX),
+      y: Math.round(PDF_HEIGHT - 361 * scaleY), // 박스 하단
+      width: Math.round((1161 - 625) * scaleX),
+      height: Math.round((361 - 267) * scaleY),
       size: 10,
     },
     qrcode: {
-      x: Math.round(917 / 2),
-      y: Math.round(842 - 652 / 2), // QR 하단
-      width: Math.round((1154 - 917) / 2),
-      height: Math.round((652 - 415) / 2),
+      x: Math.round(917 * scaleX),
+      y: Math.round(PDF_HEIGHT - 652 * scaleY), // QR 하단
+      width: Math.round((1154 - 917) * scaleX),
+      height: Math.round((652 - 415) * scaleY),
     },
     image: {
-      x: Math.round(29 / 2),
-      y: Math.round(842 - 621 / 2), // 이미지 하단
-      width: Math.round((566 - 29) / 2),
-      height: Math.round((621 - 194) / 2),
+      x: Math.round(29 * scaleX),
+      y: Math.round(PDF_HEIGHT - 621 * scaleY), // 이미지 하단
+      width: Math.round((566 - 29) * scaleX),
+      height: Math.round((621 - 194) * scaleY),
     },
   };
 
