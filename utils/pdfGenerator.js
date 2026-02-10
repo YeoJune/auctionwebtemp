@@ -217,6 +217,52 @@ async function generateCertificatePDF(appraisal, coordinates) {
       });
     }
 
+    // Report 텍스트 박스 처리 (다중 라인 지원)
+    if (coordinates.report) {
+      const resultText = translateResult(pdfData.result);
+      const reportText = `본 감정 결과는 CAS 감정 매뉴얼에 의거하여 '${resultText}'으로 최종 판정되었음을 소견합니다.`;
+
+      // 텍스트를 박스 너비에 맞게 분할
+      const maxWidth = coordinates.report.width;
+      const words = reportText.split("");
+      const lines = [];
+      let currentLine = "";
+
+      for (const char of words) {
+        const testLine = currentLine + char;
+        const testWidth = font.widthOfTextAtSize(
+          testLine,
+          coordinates.report.size || 10,
+        );
+
+        if (testWidth > maxWidth && currentLine.length > 0) {
+          lines.push(currentLine);
+          currentLine = char;
+        } else {
+          currentLine = testLine;
+        }
+      }
+      if (currentLine.length > 0) {
+        lines.push(currentLine);
+      }
+
+      // 각 라인을 그리기 (위에서 아래로)
+      const lineHeight = (coordinates.report.size || 10) * 1.5;
+      let currentY =
+        coordinates.report.y + coordinates.report.height - lineHeight;
+
+      for (const line of lines) {
+        firstPage.drawText(line, {
+          x: coordinates.report.x,
+          y: currentY,
+          size: coordinates.report.size || 10,
+          font: font,
+          color: rgb(0, 0, 0),
+        });
+        currentY -= lineHeight;
+      }
+    }
+
     if (coordinates.date) {
       firstPage.drawText(pdfData.date, {
         x: coordinates.date.x,
@@ -452,50 +498,60 @@ if (require.main === module) {
     }
   }
 
-  // 좌표 설정 (PDF는 왼쪽 하단이 원점, 단위: 포인트)
-  // A4 크기: 595 x 842 포인트
+  // 좌표 설정 (이미지 좌표를 PDF 좌표로 변환)
+  // 이미지 크기: 1190.4 x 839.04 px
+  // PDF 크기: 595 x 842 포인트 (A4)
+  // 변환 공식: pdf_x = img_x / 2, pdf_y = 842 - (img_y / 2)
+
   const testCoordinates = {
     brand: {
-      x: 100,
-      y: 700,
+      x: 566 / 2,
+      y: 842 - 700 / 2,
       size: 14,
     },
     model: {
-      x: 100,
-      y: 680,
+      x: 566 / 2,
+      y: 842 - 746 / 2,
       size: 12,
     },
+    tccode: {
+      x: 566 / 2,
+      y: 842 - 792 / 2,
+      size: 10,
+    },
     result: {
-      x: 100,
-      y: 650,
+      x: 1161 / 2,
+      y: 842 - 112 / 2,
       size: 16,
     },
     date: {
-      x: 100,
-      y: 620,
+      x: 1161 / 2,
+      y: 842 - 156 / 2,
       size: 10,
     },
     serial: {
-      x: 100,
-      y: 600,
+      x: 1161 / 2,
+      y: 842 - 202 / 2,
       size: 10,
     },
-    tccode: {
-      x: 100,
-      y: 580,
+    report: {
+      x: 625 / 2,
+      y: 842 - 361 / 2, // 박스 하단
+      width: (1161 - 625) / 2,
+      height: (361 - 267) / 2,
       size: 10,
     },
     qrcode: {
-      x: 400,
-      y: 650,
-      width: 100,
-      height: 100,
+      x: 917 / 2,
+      y: 842 - 652 / 2, // QR 하단
+      width: (1154 - 917) / 2,
+      height: (652 - 415) / 2,
     },
     image: {
-      x: 100,
-      y: 200,
-      width: 300,
-      height: 300,
+      x: 29 / 2,
+      y: 842 - 621 / 2, // 이미지 하단
+      width: (566 - 29) / 2,
+      height: (621 - 194) / 2,
     },
   };
 
