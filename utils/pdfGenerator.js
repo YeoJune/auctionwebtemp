@@ -505,53 +505,53 @@ if (require.main === module) {
 
   const testCoordinates = {
     brand: {
-      x: 566 / 2,
-      y: 842 - 700 / 2,
+      x: Math.round(566 / 2),
+      y: Math.round(842 - 700 / 2),
       size: 14,
     },
     model: {
-      x: 566 / 2,
-      y: 842 - 746 / 2,
+      x: Math.round(566 / 2),
+      y: Math.round(842 - 746 / 2),
       size: 12,
     },
     tccode: {
-      x: 566 / 2,
-      y: 842 - 792 / 2,
+      x: Math.round(566 / 2),
+      y: Math.round(842 - 792 / 2),
       size: 10,
     },
     result: {
-      x: 1161 / 2,
-      y: 842 - 112 / 2,
+      x: Math.round(1161 / 2),
+      y: Math.round(842 - 112 / 2),
       size: 16,
     },
     date: {
-      x: 1161 / 2,
-      y: 842 - 156 / 2,
+      x: Math.round(1161 / 2),
+      y: Math.round(842 - 156 / 2),
       size: 10,
     },
     serial: {
-      x: 1161 / 2,
-      y: 842 - 202 / 2,
+      x: Math.round(1161 / 2),
+      y: Math.round(842 - 202 / 2),
       size: 10,
     },
     report: {
-      x: 625 / 2,
-      y: 842 - 361 / 2, // 박스 하단
-      width: (1161 - 625) / 2,
-      height: (361 - 267) / 2,
+      x: Math.round(625 / 2),
+      y: Math.round(842 - 361 / 2), // 박스 하단
+      width: Math.round((1161 - 625) / 2),
+      height: Math.round((361 - 267) / 2),
       size: 10,
     },
     qrcode: {
-      x: 917 / 2,
-      y: 842 - 652 / 2, // QR 하단
-      width: (1154 - 917) / 2,
-      height: (652 - 415) / 2,
+      x: Math.round(917 / 2),
+      y: Math.round(842 - 652 / 2), // QR 하단
+      width: Math.round((1154 - 917) / 2),
+      height: Math.round((652 - 415) / 2),
     },
     image: {
-      x: 29 / 2,
-      y: 842 - 621 / 2, // 이미지 하단
-      width: (566 - 29) / 2,
-      height: (621 - 194) / 2,
+      x: Math.round(29 / 2),
+      y: Math.round(842 - 621 / 2), // 이미지 하단
+      width: Math.round((566 - 29) / 2),
+      height: Math.round((621 - 194) / 2),
     },
   };
 
