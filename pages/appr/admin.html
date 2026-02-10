@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
@@ -588,6 +588,20 @@
                     결과 변경
                   </button>
                 </div>
+
+                <div style="display: flex; align-items: center; gap: 10px">
+                  <button
+                    type="button"
+                    class="btn"
+                    onclick="executeBulkPdfDownload()"
+                    style="
+                      padding: 6px 12px;
+                      background-color: #10b981;
+                      border-color: #10b981;
+                    ">
+                    <i class="fas fa-file-pdf"></i> PDF 일괄 다운로드
+                  </button>
+                </div>
               </div>
 
               <div style="margin-top: 10px; font-size: 0.875rem; color: #666">
@@ -990,6 +1004,18 @@
             <small style="color: #666"
               >비워두면 자동으로 생성됩니다. 직접 입력시 CAS + 숫자 형태</small
             >
+          </div>
+
+          <div class="form-group">
+            <label for="create-tccode" class="form-label"
+              >TC코드 (선택사항)</label
+            >
+            <input
+              type="text"
+              id="create-tccode"
+              class="form-input"
+              placeholder="TC코드 입력 (예: TC12345)" />
+            <small style="color: #666">제품 고유 식별 코드</small>
           </div>
 
           <div class="form-group">
@@ -1755,7 +1781,7 @@
         const date = new Date(dateString);
         return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
           2,
-          "0"
+          "0",
         )}-${String(date.getDate()).padStart(2, "0")}`;
       }
 
@@ -1788,7 +1814,7 @@
         currentPage,
         totalPages,
         callback,
-        containerId
+        containerId,
       ) {
         const container = document.getElementById(containerId);
         if (!container) {
@@ -1967,7 +1993,7 @@
       function showAlert(
         message,
         type = "success",
-        container = "main-content"
+        container = "main-content",
       ) {
         const alertDiv = document.createElement("div");
         alertDiv.className = `alert alert-${type}`;

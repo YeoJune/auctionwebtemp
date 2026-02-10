@@ -15,6 +15,59 @@ let isSubmitting = false;
 // ===== 새로 추가되는 최적화 관련 변수들 =====
 let imageUrlCache = new Map(); // Blob URL 캐시
 
+// ===== PDF 좌표 정의 (pdfGenerator.js 테스트 코드에서 가져옴) =====
+const PDF_COORDINATES = {
+  brand: {
+    x: Math.round(566 * 0.5),
+    y: Math.round(419.528 - 700 * 0.5),
+    size: 14,
+  },
+  model: {
+    x: Math.round(566 * 0.5),
+    y: Math.round(419.528 - 746 * 0.5),
+    size: 12,
+  },
+  tccode: {
+    x: Math.round(566 * 0.5),
+    y: Math.round(419.528 - 792 * 0.5),
+    size: 10,
+  },
+  result: {
+    x: Math.round(1161 * 0.5),
+    y: Math.round(419.528 - 112 * 0.5),
+    size: 16,
+  },
+  date: {
+    x: Math.round(1161 * 0.5),
+    y: Math.round(419.528 - 156 * 0.5),
+    size: 10,
+  },
+  serial: {
+    x: Math.round(1161 * 0.5),
+    y: Math.round(419.528 - 202 * 0.5),
+    size: 10,
+  },
+  report: {
+    x: Math.round(625 * 0.5),
+    y: Math.round(419.528 - 361 * 0.5),
+    width: Math.round((1161 - 625) * 0.5),
+    height: Math.round((361 - 267) * 0.5),
+    size: 10,
+  },
+  qrcode: {
+    x: Math.round(917 * 0.5),
+    y: Math.round(419.528 - 654 * 0.5),
+    width: Math.round((1153 - 917) * 0.5),
+    height: Math.round((654 - 418) * 0.5),
+  },
+  image: {
+    x: Math.round(29 * 0.5),
+    y: Math.round(419.528 - 621 * 0.5),
+    width: Math.round((566 - 29) * 0.5),
+    height: Math.round((621 - 194) * 0.5),
+  },
+};
+
 // ===== 기존 DOMContentLoaded 이벤트 (완전히 동일) =====
 document.addEventListener("DOMContentLoaded", function () {
   // 모든 기존 이벤트 리스너들 동일하게 유지
@@ -623,6 +676,17 @@ function displayAppraisalDetail(appraisal) {
                 <small style="color: #666">비워두면 자동으로 생성됩니다</small>
             </div>
 
+            <div class="form-group">
+                <label for="appraisal-tccode" class="form-label">TC코드</label>
+                <input
+                    type="text"
+                    id="appraisal-tccode"
+                    class="form-input"
+                    value="${appraisal.tccode || ""}"
+                    placeholder="TC코드 입력 (예: TC12345)" />
+                <small style="color: #666">제품 고유 식별 코드</small>
+            </div>
+
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                 <div class="form-group">
                     <label for="appraisal-type-select" class="form-label">감정 유형</label>
@@ -1122,6 +1186,10 @@ function updateAppraisal() {
     document.getElementById("appraisal-certificate-number").value || "",
   );
   formData.append(
+    "tccode",
+    document.getElementById("appraisal-tccode").value || "",
+  );
+  formData.append(
     "appraisal_type",
     document.getElementById("appraisal-type-select").value,
   );
@@ -1485,6 +1553,12 @@ function submitCreateAppraisal() {
     formData.append("certificate_number", certificateNumber);
   }
 
+  // TC코드
+  const tccode = document.getElementById("create-tccode").value;
+  if (tccode) {
+    formData.append("tccode", tccode);
+  }
+
   // 감정 유형별 필드 (기존과 동일)
   const appraisalType = document.getElementById("create-appraisal-type").value;
   if (appraisalType === "quicklink") {
@@ -1845,6 +1919,76 @@ function executeBulkDelete() {
       })
       .catch((error) => showAlert(error.message, "error"));
   }
+}
+
+// 일괄 PDF 다운로드 실행 함수
+function executeBulkPdfDownload() {
+  const selectedCheckboxes = document.querySelectorAll(
+    ".bulk-select-checkbox:checked",
+  );
+  const selectedIds = Array.from(selectedCheckboxes).map(
+    (checkbox) => checkbox.value,
+  );
+
+  if (selectedIds.length === 0) {
+    showAlert("PDF를 다운로드할 감정을 선택해주세요.", "error");
+    return;
+  }
+
+  if (selectedIds.length > 100) {
+    showAlert("한 번에 최대 100개까지만 다운로드할 수 있습니다.", "error");
+    return;
+  }
+
+  if (
+    !confirm(
+      `선택된 ${selectedIds.length}개의 감정서 PDF를 생성하여 다운로드하시겠습니까?\n\n※ PDF가 없는 경우 자동으로 생성되며, 시간이 다소 걸릴 수 있습니다.`,
+    )
+  ) {
+    return;
+  }
+
+  // 로딩 표시
+  showAlert("PDF 생성 및 압축 중입니다. 잠시만 기다려주세요...", "info");
+
+  // API 호출
+  fetch("/api/appr/admin/appraisals/bulk-download-pdf", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ids: selectedIds,
+      coordinates: PDF_COORDINATES,
+    }),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        return response.json().then((data) => {
+          throw new Error(data.message || "PDF 다운로드에 실패했습니다.");
+        });
+      }
+      return response.blob();
+    })
+    .then((blob) => {
+      // ZIP 파일 다운로드
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+      a.download = `certificates-${Date.now()}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      showAlert(
+        `${selectedIds.length}개의 감정서 PDF가 다운로드되었습니다.`,
+        "success",
+      );
+    })
+    .catch((error) => {
+      console.error("PDF 다운로드 오류:", error);
+      showAlert(error.message, "error");
+    });
 }
 
 // ===== 페이지 언로드시 메모리 정리 =====
