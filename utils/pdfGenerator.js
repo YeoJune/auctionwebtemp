@@ -160,6 +160,9 @@ async function generateCertificatePDF(appraisal, coordinates) {
     // 첫 페이지 가져오기
     const pages = pdfDoc.getPages();
     const firstPage = pages[0];
+    const { width: pdfWidth, height: pdfHeight } = firstPage.getSize();
+
+    console.log(`템플릿 PDF 크기: ${pdfWidth} x ${pdfHeight} 포인트`);
 
     // 한글 폰트 로드 (NotoSansKR-Bold.ttf)
     let font, boldFont;
@@ -182,39 +185,123 @@ async function generateCertificatePDF(appraisal, coordinates) {
       throw new Error(`폰트 로드 실패: ${error.message}`);
     }
 
+    // 텍스트 그리기 헬퍼 함수 (커스텀 폰트의 ligature/spacing 문제 우회)
+    // pdf-lib는 커스텀 폰트 사용 시 간격이 이상하게 늘어나는 버그가 있음
+    // 해결책: 각 글자를 개별적으로 렌더링
+    function drawTextManual(page, text, x, y, size, fontObj, color) {
+      let currentX = x;
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        page.drawText(char, {
+          x: currentX,
+          y: y,
+          size: size,
+          font: fontObj,
+          color: color,
+        });
+        currentX += fontObj.widthOfTextAtSize(char, size);
+      }
+    }
+
     // PDF 데이터 추출
     const pdfData = extractPdfData(appraisal);
 
-    // 텍스트 삽입
+    // 텍스트 삽입 (우측 정렬 - 기준점 왼쪽으로 텍스트 배치)
     if (coordinates.brand) {
-      firstPage.drawText(pdfData.brand, {
-        x: coordinates.brand.x,
-        y: coordinates.brand.y,
-        size: coordinates.brand.size || 12,
-        font: font,
-        color: rgb(0, 0, 0),
-      });
+      const textWidth = font.widthOfTextAtSize(
+        pdfData.brand,
+        coordinates.brand.size || 12,
+      );
+      drawTextManual(
+        firstPage,
+        pdfData.brand,
+        coordinates.brand.x - textWidth,
+        coordinates.brand.y,
+        coordinates.brand.size || 12,
+        font,
+        rgb(0, 0, 0),
+      );
     }
 
     if (coordinates.model) {
-      firstPage.drawText(pdfData.model, {
-        x: coordinates.model.x,
-        y: coordinates.model.y,
-        size: coordinates.model.size || 12,
-        font: font,
-        color: rgb(0, 0, 0),
-      });
+      const textWidth = font.widthOfTextAtSize(
+        pdfData.model,
+        coordinates.model.size || 12,
+      );
+      drawTextManual(
+        firstPage,
+        pdfData.model,
+        coordinates.model.x - textWidth,
+        coordinates.model.y,
+        coordinates.model.size || 12,
+        font,
+        rgb(0, 0, 0),
+      );
+    }
+
+    if (coordinates.tccode) {
+      const textWidth = font.widthOfTextAtSize(
+        pdfData.tccode,
+        coordinates.tccode.size || 10,
+      );
+      drawTextManual(
+        firstPage,
+        pdfData.tccode,
+        coordinates.tccode.x - textWidth,
+        coordinates.tccode.y,
+        coordinates.tccode.size || 10,
+        font,
+        rgb(0, 0, 0),
+      );
+    }
+
+    if (coordinates.date) {
+      const textWidth = font.widthOfTextAtSize(
+        pdfData.date,
+        coordinates.date.size || 10,
+      );
+      drawTextManual(
+        firstPage,
+        pdfData.date,
+        coordinates.date.x - textWidth,
+        coordinates.date.y,
+        coordinates.date.size || 10,
+        font,
+        rgb(0, 0, 0),
+      );
+    }
+
+    if (coordinates.serial) {
+      const textWidth = font.widthOfTextAtSize(
+        pdfData.certificate_number,
+        coordinates.serial.size || 10,
+      );
+      drawTextManual(
+        firstPage,
+        pdfData.certificate_number,
+        coordinates.serial.x - textWidth,
+        coordinates.serial.y,
+        coordinates.serial.size || 10,
+        font,
+        rgb(0, 0, 0),
+      );
     }
 
     if (coordinates.result) {
       const resultText = translateResult(pdfData.result);
-      firstPage.drawText(resultText, {
-        x: coordinates.result.x,
-        y: coordinates.result.y,
-        size: coordinates.result.size || 14,
-        font: boldFont,
-        color: rgb(0, 0, 0),
-      });
+      const textWidth = font.widthOfTextAtSize(
+        resultText,
+        coordinates.result.size || 14,
+      );
+      drawTextManual(
+        firstPage,
+        resultText,
+        coordinates.result.x - textWidth,
+        coordinates.result.y,
+        coordinates.result.size || 14,
+        boldFont,
+        rgb(0, 0, 0),
+      );
     }
 
     // Report 텍스트 박스 처리 (다중 라인 지원)
@@ -222,8 +309,8 @@ async function generateCertificatePDF(appraisal, coordinates) {
       const resultText = translateResult(pdfData.result);
       const reportText = `본 감정 결과는 CAS 감정 매뉴얼에 의거하여 '${resultText}'으로 최종 판정되었음을 소견합니다.`;
 
-      // 텍스트를 박스 너비에 맞게 분할
-      const maxWidth = coordinates.report.width;
+      // 텍스트를 박스 너비에 맞게 분할 (최소 여백 5)
+      const maxWidth = coordinates.report.width - 5;
       const words = reportText.split("");
       const lines = [];
       let currentLine = "";
@@ -252,13 +339,15 @@ async function generateCertificatePDF(appraisal, coordinates) {
         coordinates.report.y + coordinates.report.height - lineHeight;
 
       for (const line of lines) {
-        firstPage.drawText(line, {
-          x: coordinates.report.x,
-          y: currentY,
-          size: coordinates.report.size || 10,
-          font: font,
-          color: rgb(0, 0, 0),
-        });
+        drawTextManual(
+          firstPage,
+          line,
+          coordinates.report.x + 3,
+          currentY,
+          coordinates.report.size || 10,
+          font,
+          rgb(0, 0, 0),
+        );
         currentY -= lineHeight;
       }
     }
@@ -500,14 +589,14 @@ if (require.main === module) {
 
   // 좌표 설정 (이미지 좌표를 PDF 좌표로 변환)
   // 이미지 크기: 1190.4 x 839.04 px
-  // PDF 크기: 595 x 842 포인트 (A4)
-  // 변환 공식: scaleX = 595 / 1190.4, scaleY = 842 / 839.04
-  //           pdf_x = img_x * scaleX, pdf_y = 842 - (img_y * scaleY)
+  // PDF 크기: 595.276 x 419.528 포인트
+  // 변환 공식: scaleX = PDF_WIDTH / IMAGE_WIDTH, scaleY = PDF_HEIGHT / IMAGE_HEIGHT
+  //           pdf_x = img_x * scaleX, pdf_y = PDF_HEIGHT - (img_y * scaleY)
 
   const IMAGE_WIDTH = 1190.4;
   const IMAGE_HEIGHT = 839.04;
-  const PDF_WIDTH = 595;
-  const PDF_HEIGHT = 842;
+  const PDF_WIDTH = 595.276;
+  const PDF_HEIGHT = 419.528;
 
   const scaleX = PDF_WIDTH / IMAGE_WIDTH;
   const scaleY = PDF_HEIGHT / IMAGE_HEIGHT;
