@@ -227,13 +227,13 @@ async function generateCertificatePDF(appraisal, coordinates) {
     }
 
     if (coordinates.model) {
-      const textWidth = font.widthOfTextAtSize(pdfData.model, 10);
+      const textWidth = font.widthOfTextAtSize(pdfData.model, 8);
       drawTextManual(
         firstPage,
         pdfData.model,
         coordinates.model.x - textWidth,
         coordinates.model.y,
-        10,
+        8,
         font,
         rgb(0, 0, 0),
       );
@@ -596,9 +596,9 @@ if (require.main === module) {
     },
     qrcode: {
       x: Math.round(917 * scaleX),
-      y: Math.round(PDF_HEIGHT - 652 * scaleY), // QR 하단
-      width: Math.round((1154 - 917) * scaleX),
-      height: Math.round((652 - 415) * scaleY),
+      y: Math.round(PDF_HEIGHT - 654 * scaleY), // QR 하단
+      width: Math.round((1153 - 917) * scaleX),
+      height: Math.round((654 - 418) * scaleY),
     },
     image: {
       x: Math.round(29 * scaleX),
@@ -642,6 +642,7 @@ if (require.main === module) {
 
       const [rows] = await conn.query(
         `SELECT * FROM appraisals 
+        WHERE status = 'completed'
          ORDER BY created_at DESC 
          LIMIT 1`,
       );
