@@ -1117,8 +1117,15 @@ router.get("/export/bid-results", isAdmin, async (req, res) => {
 
     // 정산 상태 필터 (빈 문자열 = 전체 상태)
     if (status) {
-      whereConditions.push("ds.payment_status = ?");
-      queryParams.push(status);
+      const statusArray = status.split(",");
+      if (statusArray.length === 1) {
+        whereConditions.push("ds.payment_status = ?");
+        queryParams.push(status);
+      } else {
+        const placeholders = statusArray.map(() => "?").join(",");
+        whereConditions.push(`ds.payment_status IN (${placeholders})`);
+        queryParams.push(...statusArray);
+      }
     }
 
     const whereClause = whereConditions.join(" AND ");

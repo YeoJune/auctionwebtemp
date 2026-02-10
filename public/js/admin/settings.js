@@ -856,6 +856,37 @@ function setupExportSearchFilters() {
   setupFilterSearch("exportBidsBrandSearch", "exportBidsBrandList");
   // 카테고리 검색
   setupFilterSearch("exportBidsCategorySearch", "exportBidsCategoryList");
+  // 입찰 항목 상태 검색
+  setupFilterSearch("exportBidsStatusSearch", "exportBidsStatusList");
+  // 입찰 결과 상태 검색
+  setupFilterSearch(
+    "exportBidResultsStatusSearch",
+    "exportBidResultsStatusList",
+  );
+
+  // 입찰 항목 - 상태 전체 선택
+  const bidsStatusAllCheckbox = document.getElementById(
+    "export-bids-status-all",
+  );
+  if (bidsStatusAllCheckbox) {
+    bidsStatusAllCheckbox.addEventListener("change", function () {
+      const checkboxes = document.querySelectorAll(".export-status-checkbox");
+      checkboxes.forEach((cb) => (cb.checked = this.checked));
+    });
+  }
+
+  // 입찰 결과 - 상태 전체 선택
+  const resultsStatusAllCheckbox = document.getElementById(
+    "export-results-status-all",
+  );
+  if (resultsStatusAllCheckbox) {
+    resultsStatusAllCheckbox.addEventListener("change", function () {
+      const checkboxes = document.querySelectorAll(
+        ".export-results-status-checkbox",
+      );
+      checkboxes.forEach((cb) => (cb.checked = this.checked));
+    });
+  }
 }
 
 // 필터 검색 기능 (common.js의 함수를 참고하되 단순화)
@@ -918,12 +949,17 @@ async function downloadBidsExcel() {
       document.querySelectorAll(".export-category-checkbox:checked"),
     ).map((cb) => cb.value);
 
+    // 상태 선택 (미선택 시 빈 배열 = 전체)
+    const selectedStatuses = Array.from(
+      document.querySelectorAll(".export-status-checkbox:checked"),
+    ).map((cb) => cb.value);
+
     // 필터 값 수집 (빈 값은 전체를 의미)
     const filters = {
       userId: userId,
       brands: selectedBrands.join(","),
       categories: selectedCategories.join(","),
-      status: document.getElementById("exportBidsStatus").value,
+      status: selectedStatuses.join(","),
       aucNum: document.getElementById("exportBidsAucNum").value,
       type: document.getElementById("exportBidsType").value,
       fromDate: document.getElementById("exportBidsFromDate").value,
@@ -1050,12 +1086,17 @@ async function downloadBidResultsExcel() {
     );
     const userId = selectedUser ? selectedUser.value : "";
 
+    // 상태 선택 (미선택 시 빈 배열 = 전체)
+    const selectedStatuses = Array.from(
+      document.querySelectorAll(".export-results-status-checkbox:checked"),
+    ).map((cb) => cb.value);
+
     // 필터 값 수집 (빈 값은 전체를 의미)
     const filters = {
       userId: userId,
       fromDate: document.getElementById("exportBidResultsFromDate").value,
       toDate: document.getElementById("exportBidResultsToDate").value,
-      status: document.getElementById("exportBidResultsStatus").value,
+      status: selectedStatuses.join(","),
       sortBy: document.getElementById("exportBidResultsSortBy").value,
       sortOrder: document.getElementById("exportBidResultsSortOrder").value,
     };

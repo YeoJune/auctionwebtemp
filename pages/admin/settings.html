@@ -542,20 +542,98 @@
 
           <div class="form-group mt-3">
             <label class="form-label">상태</label>
-            <select id="exportBidsStatus" class="form-control">
-              <option value="">전체</option>
-              <optgroup label="현장 경매">
-                <option value="first">1차 입찰</option>
-                <option value="second">2차 제안</option>
-                <option value="final">최종 입찰</option>
-                <option value="completed">완료</option>
-                <option value="shipped">출고됨</option>
-                <option value="cancelled">낙찰 실패</option>
-              </optgroup>
-              <optgroup label="직접 경매">
-                <option value="active">활성</option>
-              </optgroup>
-            </select>
+            <div class="multiselect-container">
+              <div class="multiselect-header">
+                <input
+                  type="text"
+                  id="exportBidsStatusSearch"
+                  class="multiselect-search"
+                  placeholder="상태 검색..." />
+              </div>
+              <div class="multiselect-body" id="exportBidsStatusList">
+                <div class="multiselect-all">
+                  <input
+                    type="checkbox"
+                    id="export-bids-status-all"
+                    value="all" />
+                  <label for="export-bids-status-all">전체 선택</label>
+                </div>
+                <div
+                  style="
+                    margin-top: 8px;
+                    font-weight: bold;
+                    font-size: 12px;
+                    color: #666;
+                  ">
+                  현장 경매
+                </div>
+                <div class="multiselect-item">
+                  <input
+                    type="checkbox"
+                    class="export-status-checkbox"
+                    id="export-bids-status-first"
+                    value="first" />
+                  <label for="export-bids-status-first">1차 입찰</label>
+                </div>
+                <div class="multiselect-item">
+                  <input
+                    type="checkbox"
+                    class="export-status-checkbox"
+                    id="export-bids-status-second"
+                    value="second" />
+                  <label for="export-bids-status-second">2차 제안</label>
+                </div>
+                <div class="multiselect-item">
+                  <input
+                    type="checkbox"
+                    class="export-status-checkbox"
+                    id="export-bids-status-final"
+                    value="final" />
+                  <label for="export-bids-status-final">최종 입찰</label>
+                </div>
+                <div class="multiselect-item">
+                  <input
+                    type="checkbox"
+                    class="export-status-checkbox"
+                    id="export-bids-status-completed"
+                    value="completed" />
+                  <label for="export-bids-status-completed">완료</label>
+                </div>
+                <div class="multiselect-item">
+                  <input
+                    type="checkbox"
+                    class="export-status-checkbox"
+                    id="export-bids-status-shipped"
+                    value="shipped" />
+                  <label for="export-bids-status-shipped">출고됨</label>
+                </div>
+                <div class="multiselect-item">
+                  <input
+                    type="checkbox"
+                    class="export-status-checkbox"
+                    id="export-bids-status-cancelled"
+                    value="cancelled" />
+                  <label for="export-bids-status-cancelled">낙찰 실패</label>
+                </div>
+                <div
+                  style="
+                    margin-top: 8px;
+                    font-weight: bold;
+                    font-size: 12px;
+                    color: #666;
+                  ">
+                  직접 경매
+                </div>
+                <div class="multiselect-item">
+                  <input
+                    type="checkbox"
+                    class="export-status-checkbox"
+                    id="export-bids-status-active"
+                    value="active" />
+                  <label for="export-bids-status-active">활성</label>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="form-group mt-3">
@@ -686,12 +764,50 @@
 
           <div class="form-group mt-3">
             <label class="form-label">정산 상태</label>
-            <select id="exportBidResultsStatus" class="form-control">
-              <option value="">전체</option>
-              <option value="unpaid">결제 필요</option>
-              <option value="pending">입금 확인 중</option>
-              <option value="paid">정산 완료</option>
-            </select>
+            <div class="multiselect-container">
+              <div class="multiselect-header">
+                <input
+                  type="text"
+                  id="exportBidResultsStatusSearch"
+                  class="multiselect-search"
+                  placeholder="상태 검색..." />
+              </div>
+              <div class="multiselect-body" id="exportBidResultsStatusList">
+                <div class="multiselect-all">
+                  <input
+                    type="checkbox"
+                    id="export-results-status-all"
+                    value="all" />
+                  <label for="export-results-status-all">전체 선택</label>
+                </div>
+                <div class="multiselect-item">
+                  <input
+                    type="checkbox"
+                    class="export-results-status-checkbox"
+                    id="export-results-status-unpaid"
+                    value="unpaid" />
+                  <label for="export-results-status-unpaid">결제 필요</label>
+                </div>
+                <div class="multiselect-item">
+                  <input
+                    type="checkbox"
+                    class="export-results-status-checkbox"
+                    id="export-results-status-pending"
+                    value="pending" />
+                  <label for="export-results-status-pending"
+                    >입금 확인 중</label
+                  >
+                </div>
+                <div class="multiselect-item">
+                  <input
+                    type="checkbox"
+                    class="export-results-status-checkbox"
+                    id="export-results-status-paid"
+                    value="paid" />
+                  <label for="export-results-status-paid">정산 완료</label>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="form-group mt-3">
