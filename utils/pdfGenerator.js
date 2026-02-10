@@ -636,6 +636,7 @@ if (require.main === module) {
 
       const [rows] = await conn.query(
         `SELECT * FROM appraisals 
+        WHERE status = 'completed'
          ORDER BY created_at DESC 
          LIMIT 1`,
       );
