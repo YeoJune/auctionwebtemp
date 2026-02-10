@@ -413,27 +413,43 @@ if (require.main === module) {
     const { pdfToPng } = require("pdf-to-png-converter");
 
     console.log("\n📸 PDF를 이미지로 변환 중...");
+    console.log(`   입력: ${pdfPath}`);
 
-    const pngPages = await pdfToPng(pdfPath, {
-      disableFontFace: false,
-      useSystemFonts: false,
-      viewportScale: 2.0, // 해상도 (2.0 = 2배)
-      outputFolder: path.join(__dirname, "../public/certificates"),
-      outputFileMask: "preview",
-      pngFilePrefix: "page",
-      pagesToProcess: [1], // 첫 페이지만
-    });
+    try {
+      const pngPages = await pdfToPng(pdfPath, {
+        disableFontFace: false,
+        useSystemFonts: false,
+        viewportScale: 2.0, // 해상도 (2.0 = 2배)
+      });
 
-    const imagePath = path.join(__dirname, "../public/certificates/page_1.png");
-    console.log(`✅ 이미지 저장 완료: ${imagePath}`);
-    console.log(`\n💡 이 이미지를 열어서 좌표를 확인하세요!`);
-    console.log(
-      `   이미지 편집 프로그램(포토샵, GIMP 등)에서 마우스 좌표를 볼 수 있습니다.`,
-    );
-    console.log(`   주의: 이미지 좌표는 왼쪽 상단이 원점입니다.`);
-    console.log(`   PDF 좌표로 변환: pdf_y = 이미지높이 - 이미지_y`);
+      if (!pngPages || pngPages.length === 0) {
+        throw new Error("PDF 변환 실패");
+      }
 
-    return imagePath;
+      // 첫 페이지만 저장
+      const outputPath = path.join(
+        __dirname,
+        "../public/certificates/template-preview.png",
+      );
+      fs.writeFileSync(outputPath, pngPages[0].content);
+
+      console.log(`✅ 이미지 저장 완료: ${outputPath}`);
+      console.log(`\n💡 좌표 찾는 방법:`);
+      console.log(
+        `   1. 이미지를 편집 프로그램에서 열기 (포토샵, GIMP, Paint.NET 등)`,
+      );
+      console.log(`   2. 마우스를 원하는 위치에 올리면 좌표 표시됨`);
+      console.log(`   3. 좌표를 알려주시면 PDF 좌표로 변환해드립니다!`);
+      console.log(`\n   이미지 크기 정보:`);
+      console.log(`   - 폭: ${pngPages[0].width}px`);
+      console.log(`   - 높이: ${pngPages[0].height}px`);
+      console.log(`   - PDF 크기: 595 x 842 포인트 (A4)`);
+
+      return outputPath;
+    } catch (error) {
+      console.error("PDF 변환 중 오류:", error);
+      throw error;
+    }
   }
 
   // 좌표 설정 (PDF는 왼쪽 하단이 원점, 단위: 포인트)
