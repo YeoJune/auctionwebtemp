@@ -221,13 +221,13 @@ async function generateCertificatePDF(appraisal, coordinates) {
     }
 
     if (coordinates.model) {
-      const textWidth = font.widthOfTextAtSize(pdfData.model, 10);
+      const textWidth = font.widthOfTextAtSize(pdfData.model, 8);
       drawTextManual(
         firstPage,
         pdfData.model,
         coordinates.model.x - textWidth,
         coordinates.model.y,
-        10,
+        8,
         font,
         rgb(0, 0, 0),
       );
