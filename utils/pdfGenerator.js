@@ -590,9 +590,9 @@ if (require.main === module) {
     },
     qrcode: {
       x: Math.round(917 * scaleX),
-      y: Math.round(PDF_HEIGHT - 653 * scaleY), // QR 하단
+      y: Math.round(PDF_HEIGHT - 652 * scaleY), // QR 하단
       width: Math.round((1153 - 917) * scaleX),
-      height: Math.round((653 - 415) * scaleY),
+      height: Math.round((652 - 415) * scaleY),
     },
     image: {
       x: Math.round(29 * scaleX),
