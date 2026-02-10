@@ -79,8 +79,8 @@ document.addEventListener("DOMContentLoaded", function () {
     .getElementById("bulk-delete-btn")
     .addEventListener("click", toggleBulkDeleteMode);
   document
-    .getElementById("bulk-change-btn")
-    .addEventListener("click", toggleBulkChangeMode);
+    .getElementById("bulk-action-btn")
+    .addEventListener("click", toggleBulkActionMode);
   document
     .getElementById("execute-bulk-delete-btn")
     .addEventListener("click", executeBulkDelete);
@@ -1601,61 +1601,66 @@ function submitCreateAppraisal() {
 function toggleBulkDeleteMode() {
   // 다른 모드가 활성화되어 있으면 해제
   if (bulkChangeMode) {
-    toggleBulkChangeMode();
+    toggleBulkActionMode();
   }
 
   bulkDeleteMode = !bulkDeleteMode;
   const button = document.getElementById("bulk-delete-btn");
-  button.textContent = bulkDeleteMode ? "다중 삭제 취소" : "다중 삭제";
-  button.style.backgroundColor = bulkDeleteMode ? "#dc2626" : "#1a2a3a";
+
+  if (bulkDeleteMode) {
+    button.innerHTML = '<i class="fas fa-times"></i> 다중 삭제 취소';
+    button.style.backgroundColor = "#dc2626";
+    button.style.borderColor = "#dc2626";
+  } else {
+    button.innerHTML = '<i class="fas fa-trash"></i> 다중 삭제';
+    button.style.backgroundColor = "#ef4444";
+    button.style.borderColor = "#ef4444";
+  }
 
   document.getElementById("select-all-container").style.display = bulkDeleteMode
     ? "block"
     : "none";
 
-  // 일괄 변경 UI 숨기기/보이기
-  document.getElementById("bulk-change-container").style.display = "none";
+  // 일괄 작업 패널 숨기기
+  const container = document.getElementById("bulk-action-container");
+  if (container) {
+    container.style.display = "none";
+  }
 
   loadAppraisalList();
 }
 
-// 일괄 변경 모드 토글 함수 (새로 추가)
-function toggleBulkChangeMode() {
+// 일괄 작업 모드 토글 함수
+function toggleBulkActionMode() {
   // 다른 모드가 활성화되어 있으면 해제
   if (bulkDeleteMode) {
     toggleBulkDeleteMode();
   }
 
   bulkChangeMode = !bulkChangeMode;
-  const button = document.getElementById("bulk-change-btn");
+  const button = document.getElementById("bulk-action-btn");
 
-  button.textContent = bulkChangeMode ? "일괄 변경 취소" : "일괄 변경";
-  button.style.backgroundColor = bulkChangeMode ? "#dc2626" : "#1a2a3a";
+  if (bulkChangeMode) {
+    button.innerHTML = '<i class="fas fa-times"></i> 일괄 작업 취소';
+    button.style.backgroundColor = "#ef4444";
+    button.style.borderColor = "#ef4444";
+  } else {
+    button.innerHTML = '<i class="fas fa-tasks"></i> 일괄 작업';
+    button.style.backgroundColor = "#3b82f6";
+    button.style.borderColor = "#3b82f6";
+  }
 
   document.getElementById("select-all-container").style.display = bulkChangeMode
     ? "block"
     : "none";
 
-  // 일괄 변경 UI 보이기/숨기기
-  toggleBulkChangeUI();
+  // 일괄 작업 패널 보이기/숨기기
+  const container = document.getElementById("bulk-action-container");
+  if (container) {
+    container.style.display = bulkChangeMode ? "block" : "none";
+  }
 
   loadAppraisalList();
-}
-
-// 일괄 변경 UI 토글
-function toggleBulkChangeUI() {
-  const container = document.getElementById("bulk-change-container");
-  if (container) {
-    container.style.display = bulkChangeMode ? "block" : "none";
-  }
-}
-
-// 일괄 변경 UI 토글
-function toggleBulkChangeUI() {
-  const container = document.getElementById("bulk-change-container");
-  if (container) {
-    container.style.display = bulkChangeMode ? "block" : "none";
-  }
 }
 
 // 전체 선택 토글 함수

@@ -7,6 +7,12 @@
     <link
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap"
       rel="stylesheet" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer" />
     <style>
       * {
         margin: 0;
@@ -468,18 +474,29 @@
                   <option value="uncertain">판단불가</option>
                   <option value="pending">감정대기</option>
                 </select>
-                <button id="create-appraisal-btn" class="btn">감정 생성</button>
+                <button id="create-appraisal-btn" class="btn">
+                  <i class="fas fa-plus"></i> 새 감정 생성
+                </button>
                 <button
-                  id="bulk-change-btn"
+                  id="bulk-action-btn"
                   class="btn"
-                  style="margin-left: 10px">
-                  일괄 변경
+                  style="
+                    margin-left: 10px;
+                    background-color: #3b82f6;
+                    border-color: #3b82f6;
+                  ">
+                  <i class="fas fa-tasks"></i> 일괄 작업
                 </button>
                 <button
                   id="bulk-delete-btn"
                   class="btn"
-                  style="margin-left: 10px">
-                  다중 삭제
+                  style="
+                    margin-left: 10px;
+                    background-color: #ef4444;
+                    border-color: #ef4444;
+                    display: none;
+                  ">
+                  <i class="fas fa-trash"></i> 다중 삭제
                 </button>
                 <button
                   id="execute-bulk-delete-btn"
@@ -489,7 +506,7 @@
                     background-color: #dc2626;
                     display: none;
                   ">
-                  삭제 실행
+                  <i class="fas fa-trash-alt"></i> 삭제 실행
                 </button>
               </div>
             </div>
@@ -500,54 +517,172 @@
                 placeholder="인증서번호, 브랜드, 모델명, 이메일 검색" />
               <button id="appraisal-search-btn">검색</button>
             </div>
+            <!-- 일괄 작업 선택 UI -->
             <div
               id="select-all-container"
               style="
                 display: none;
                 margin-bottom: 15px;
-                padding: 10px;
-                background-color: #f8fafc;
-                border-radius: 6px;
-              ">
-              <label style="font-weight: 500">
-                <input
-                  type="checkbox"
-                  id="select-all-checkbox"
-                  style="margin-right: 8px" />
-                전체 선택
-              </label>
-              <span style="margin-left: 15px; color: #666; font-size: 0.9rem">
-                선택 후 우측 상단의 "삭제 실행" 버튼을 클릭하세요.
-              </span>
-            </div>
-            <div
-              id="bulk-change-container"
-              style="
-                display: none;
-                margin-bottom: 15px;
-                padding: 15px;
-                background-color: #f8fafc;
-                border-radius: 6px;
-                border: 1px solid #e2e8f0;
+                padding: 12px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                border-radius: 8px;
+                box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
               ">
               <div
                 style="
                   display: flex;
+                  justify-content: space-between;
                   align-items: center;
-                  gap: 15px;
-                  flex-wrap: wrap;
                 ">
-                <div style="font-weight: 500; color: #1a2a3a">
-                  선택된 항목 일괄 변경:
+                <label style="font-weight: 600; color: white; font-size: 1rem">
+                  <input
+                    type="checkbox"
+                    id="select-all-checkbox"
+                    style="
+                      margin-right: 10px;
+                      width: 18px;
+                      height: 18px;
+                      cursor: pointer;
+                    " />
+                  전체 선택
+                </label>
+                <span
+                  style="color: rgba(255, 255, 255, 0.9); font-size: 0.9rem">
+                  <i class="fas fa-info-circle"></i> 원하는 감정을 선택한 후
+                  아래 작업 버튼을 클릭하세요
+                </span>
+              </div>
+            </div>
+            <!-- 일괄 작업 컨트롤 패널 -->
+            <div
+              id="bulk-action-container"
+              style="
+                display: none;
+                margin-bottom: 20px;
+                padding: 20px;
+                background-color: #ffffff;
+                border-radius: 12px;
+                border: 2px solid #e5e7eb;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+              ">
+              <div
+                style="
+                  margin-bottom: 15px;
+                  padding-bottom: 15px;
+                  border-bottom: 2px solid #f3f4f6;
+                ">
+                <h3
+                  style="
+                    margin: 0;
+                    font-size: 1.1rem;
+                    color: #1f2937;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                  ">
+                  <i class="fas fa-sliders-h" style="color: #3b82f6"></i>
+                  일괄 작업 패널
+                  <span
+                    style="
+                      margin-left: auto;
+                      font-size: 0.9rem;
+                      font-weight: normal;
+                      color: #6b7280;
+                    ">
+                    선택된 항목:
+                    <strong
+                      id="bulk-selected-count"
+                      style="color: #3b82f6; font-size: 1.1rem"
+                      >0</strong
+                    >개
+                  </span>
+                </h3>
+              </div>
+
+              <!-- 작업 버튼 그리드 -->
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                  gap: 15px;
+                ">
+                <!-- PDF 다운로드 카드 -->
+                <div
+                  style="
+                    padding: 15px;
+                    background: linear-gradient(
+                      135deg,
+                      #10b981 0%,
+                      #059669 100%
+                    );
+                    border-radius: 8px;
+                    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+                  ">
+                  <div style="margin-bottom: 10px">
+                    <i
+                      class="fas fa-file-pdf"
+                      style="color: white; font-size: 1.5rem"></i>
+                  </div>
+                  <h4
+                    style="margin: 0 0 8px 0; color: white; font-size: 0.95rem">
+                    PDF 다운로드
+                  </h4>
+                  <p
+                    style="
+                      margin: 0 0 12px 0;
+                      color: rgba(255, 255, 255, 0.9);
+                      font-size: 0.8rem;
+                    ">
+                    선택한 감정서를 ZIP으로 다운로드
+                  </p>
+                  <button
+                    type="button"
+                    class="btn"
+                    onclick="executeBulkPdfDownload()"
+                    style="
+                      width: 100%;
+                      padding: 8px 16px;
+                      background-color: rgba(255, 255, 255, 0.2);
+                      border: 2px solid white;
+                      color: white;
+                      font-weight: 600;
+                    "
+                    onmouseover="
+                      this.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+                    "
+                    onmouseout="
+                      this.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+                    ">
+                    <i class="fas fa-download"></i> 다운로드
+                  </button>
                 </div>
 
-                <div style="display: flex; align-items: center; gap: 10px">
-                  <label style="font-weight: 500">상태 변경:</label>
+                <!-- 상태 변경 카드 -->
+                <div
+                  style="
+                    padding: 15px;
+                    background: linear-gradient(
+                      135deg,
+                      #3b82f6 0%,
+                      #2563eb 100%
+                    );
+                    border-radius: 8px;
+                    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+                  ">
+                  <div style="margin-bottom: 10px">
+                    <i
+                      class="fas fa-sync-alt"
+                      style="color: white; font-size: 1.5rem"></i>
+                  </div>
+                  <h4
+                    style="margin: 0 0 8px 0; color: white; font-size: 0.95rem">
+                    상태 변경
+                  </h4>
                   <select
                     id="bulk-status-select"
                     class="form-select"
-                    style="width: auto; min-width: 120px">
-                    <option value="">선택</option>
+                    style="width: 100%; margin-bottom: 10px; font-size: 0.9rem">
+                    <option value="">상태 선택</option>
                     <option value="pending">접수완료</option>
                     <option value="in_review">감정중</option>
                     <option value="completed">완료</option>
@@ -555,20 +690,52 @@
                   </select>
                   <button
                     type="button"
-                    class="btn btn-outline"
+                    class="btn"
                     onclick="executeBulkStatusChange()"
-                    style="padding: 6px 12px">
-                    상태 변경
+                    style="
+                      width: 100%;
+                      padding: 8px 16px;
+                      background-color: rgba(255, 255, 255, 0.2);
+                      border: 2px solid white;
+                      color: white;
+                      font-weight: 600;
+                    "
+                    onmouseover="
+                      this.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+                    "
+                    onmouseout="
+                      this.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+                    ">
+                    <i class="fas fa-check"></i> 변경
                   </button>
                 </div>
 
-                <div style="display: flex; align-items: center; gap: 10px">
-                  <label style="font-weight: 500">결과 변경:</label>
+                <!-- 결과 변경 카드 -->
+                <div
+                  style="
+                    padding: 15px;
+                    background: linear-gradient(
+                      135deg,
+                      #8b5cf6 0%,
+                      #7c3aed 100%
+                    );
+                    border-radius: 8px;
+                    box-shadow: 0 2px 4px rgba(139, 92, 246, 0.3);
+                  ">
+                  <div style="margin-bottom: 10px">
+                    <i
+                      class="fas fa-clipboard-check"
+                      style="color: white; font-size: 1.5rem"></i>
+                  </div>
+                  <h4
+                    style="margin: 0 0 8px 0; color: white; font-size: 0.95rem">
+                    결과 변경
+                  </h4>
                   <select
                     id="bulk-result-select"
                     class="form-select"
-                    style="width: auto; min-width: 120px">
-                    <option value="">선택</option>
+                    style="width: 100%; margin-bottom: 8px; font-size: 0.9rem">
+                    <option value="">결과 선택</option>
                     <option value="pending">감정대기</option>
                     <option value="authentic">정품</option>
                     <option value="fake">가품</option>
@@ -578,35 +745,50 @@
                     type="text"
                     id="bulk-result-notes"
                     class="form-input"
-                    placeholder="결과 소견 (선택사항)"
-                    style="width: 200px" />
-                  <button
-                    type="button"
-                    class="btn btn-outline"
-                    onclick="executeBulkResultChange()"
-                    style="padding: 6px 12px">
-                    결과 변경
-                  </button>
-                </div>
-
-                <div style="display: flex; align-items: center; gap: 10px">
+                    placeholder="소견 (선택사항)"
+                    style="
+                      width: 100%;
+                      margin-bottom: 10px;
+                      font-size: 0.85rem;
+                    " />
                   <button
                     type="button"
                     class="btn"
-                    onclick="executeBulkPdfDownload()"
+                    onclick="executeBulkResultChange()"
                     style="
-                      padding: 6px 12px;
-                      background-color: #10b981;
-                      border-color: #10b981;
+                      width: 100%;
+                      padding: 8px 16px;
+                      background-color: rgba(255, 255, 255, 0.2);
+                      border: 2px solid white;
+                      color: white;
+                      font-weight: 600;
+                    "
+                    onmouseover="
+                      this.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+                    "
+                    onmouseout="
+                      this.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
                     ">
-                    <i class="fas fa-file-pdf"></i> PDF 일괄 다운로드
+                    <i class="fas fa-edit"></i> 변경
                   </button>
                 </div>
               </div>
 
-              <div style="margin-top: 10px; font-size: 0.875rem; color: #666">
-                <span id="bulk-selected-count">0</span>개 항목이 선택되었습니다.
-                변경하고 싶은 항목을 선택한 후 해당 버튼을 클릭하세요.
+              <!-- 안내 메시지 -->
+              <div
+                style="
+                  margin-top: 15px;
+                  padding: 12px;
+                  background-color: #f0f9ff;
+                  border-left: 4px solid #3b82f6;
+                  border-radius: 4px;
+                ">
+                <p style="margin: 0; color: #1e40af; font-size: 0.875rem">
+                  <i class="fas fa-lightbulb" style="margin-right: 8px"></i>
+                  <strong>팁:</strong> 테이블에서 체크박스로 원하는 감정을
+                  선택한 후, 위의 작업 카드에서 원하는 작업을 선택하세요. PDF
+                  다운로드는 최대 100개까지 가능합니다.
+                </p>
               </div>
             </div>
             <div id="appraisals-table-container">
