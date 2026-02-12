@@ -724,10 +724,9 @@ async function autoCheckPayments(type) {
         );
         startDate.setHours(0, 0, 0, 0);
 
-        const checkFunc = isDeposit
-          ? popbillService.checkPayment
-          : popbillService.checkSettlement;
-        const matched = await checkFunc(item, startDate);
+        const matched = isDeposit
+          ? await popbillService.checkPayment(item, startDate)
+          : await popbillService.checkSettlement(item, startDate);
 
         if (matched) {
           const isUsed = await popbillService.isTransactionUsed(matched.tid);
@@ -910,5 +909,7 @@ cron.schedule("*/10 * * * *", () => autoCheckPayments("deposit"));
 cron.schedule("*/10 * * * *", () => autoCheckPayments("settlement"));
 
 console.log("✅ 팝빌 자동확인 Cron 시작 (10분마다: 입금/정산)");
+
+autoCheckPayments("settlement");
 
 module.exports = router;
