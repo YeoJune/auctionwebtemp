@@ -771,19 +771,30 @@ function displayExportUserList(containerId, radioName, users) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
-  const allRadio = container.querySelector(".multiselect-all");
+  const allCheckbox = container.querySelector(".multiselect-all");
   container.innerHTML = "";
-  if (allRadio) container.appendChild(allRadio);
+  if (allCheckbox) container.appendChild(allCheckbox);
 
   users.forEach((user) => {
     const item = document.createElement("div");
     item.className = "multiselect-item";
     item.innerHTML = `
-      <input type="radio" id="${containerId}-${user.id}" name="${radioName}" value="${user.id}" />
+      <input type="checkbox" id="${containerId}-${user.id}" class="export-user-checkbox" value="${user.id}" />
       <label for="${containerId}-${user.id}">${user.company_name || user.login_id} (${user.login_id})</label>
     `;
     container.appendChild(item);
   });
+
+  // 전체 선택 체크박스 이벤트 추가
+  const allCheckboxElem = container.querySelector(
+    '.multiselect-all input[type="checkbox"]',
+  );
+  if (allCheckboxElem) {
+    allCheckboxElem.addEventListener("change", function () {
+      const checkboxes = container.querySelectorAll(".export-user-checkbox");
+      checkboxes.forEach((cb) => (cb.checked = this.checked));
+    });
+  }
 }
 
 // 브랜드 목록 표시
@@ -933,11 +944,12 @@ function hideExportBidResultsModal() {
 // 입찰 항목 엑셀 다운로드
 async function downloadBidsExcel() {
   try {
-    // 유저 선택 (미선택 시 빈 문자열 = 전체)
-    const selectedUser = document.querySelector(
-      'input[name="exportBidsUser"]:checked',
-    );
-    const userId = selectedUser ? selectedUser.value : "";
+    // 유저 선택 (미선택 시 빈 배열 = 전체)
+    const selectedUsers = Array.from(
+      document.querySelectorAll(
+        "#exportBidsUserList .export-user-checkbox:checked",
+      ),
+    ).map((cb) => cb.value);
 
     // 브랜드 선택 (미선택 시 빈 배열 = 전체)
     const selectedBrands = Array.from(
@@ -956,7 +968,7 @@ async function downloadBidsExcel() {
 
     // 필터 값 수집 (빈 값은 전체를 의미)
     const filters = {
-      userId: userId,
+      userId: selectedUsers.join(","),
       brands: selectedBrands.join(","),
       categories: selectedCategories.join(","),
       status: selectedStatuses.join(","),
@@ -1080,11 +1092,12 @@ async function downloadBidsExcel() {
 // 입찰 결과 엑셀 다운로드
 async function downloadBidResultsExcel() {
   try {
-    // 유저 선택 (미선택 시 빈 문자열 = 전체)
-    const selectedUser = document.querySelector(
-      'input[name="exportBidResultsUser"]:checked',
-    );
-    const userId = selectedUser ? selectedUser.value : "";
+    // 유저 선택 (미선택 시 빈 배열 = 전체)
+    const selectedUsers = Array.from(
+      document.querySelectorAll(
+        "#exportBidResultsUserList .export-user-checkbox:checked",
+      ),
+    ).map((cb) => cb.value);
 
     // 상태 선택 (미선택 시 빈 배열 = 전체)
     const selectedStatuses = Array.from(
@@ -1093,7 +1106,7 @@ async function downloadBidResultsExcel() {
 
     // 필터 값 수집 (빈 값은 전체를 의미)
     const filters = {
-      userId: userId,
+      userId: selectedUsers.join(","),
       fromDate: document.getElementById("exportBidResultsFromDate").value,
       toDate: document.getElementById("exportBidResultsToDate").value,
       status: selectedStatuses.join(","),

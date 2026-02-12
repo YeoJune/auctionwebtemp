@@ -809,8 +809,15 @@ router.get("/export/bids", isAdmin, async (req, res) => {
 
     // 유저 필터 (빈 문자열 = 전체 유저)
     if (userId) {
-      queryConditions.push("b.user_id = ?");
-      queryParams.push(userId);
+      const userIdArray = userId.split(",");
+      if (userIdArray.length === 1) {
+        queryConditions.push("b.user_id = ?");
+        queryParams.push(userId);
+      } else {
+        const placeholders = userIdArray.map(() => "?").join(",");
+        queryConditions.push(`b.user_id IN (${placeholders})`);
+        queryParams.push(...userIdArray);
+      }
     }
 
     // 브랜드 필터 (빈 문자열 = 전체 브랜드)
@@ -1111,8 +1118,15 @@ router.get("/export/bid-results", isAdmin, async (req, res) => {
 
     // 유저 필터 (빈 문자열 = 전체 유저)
     if (userId) {
-      whereConditions.push("ds.user_id = ?");
-      queryParams.push(userId);
+      const userIdArray = userId.split(",");
+      if (userIdArray.length === 1) {
+        whereConditions.push("ds.user_id = ?");
+        queryParams.push(userId);
+      } else {
+        const placeholders = userIdArray.map(() => "?").join(",");
+        whereConditions.push(`ds.user_id IN (${placeholders})`);
+        queryParams.push(...userIdArray);
+      }
     }
 
     // 정산 상태 필터 (빈 문자열 = 전체 상태)
