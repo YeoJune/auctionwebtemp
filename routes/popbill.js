@@ -910,6 +910,4 @@ cron.schedule("*/10 * * * *", () => autoCheckPayments("settlement"));
 
 console.log("✅ 팝빌 자동확인 Cron 시작 (10분마다: 입금/정산)");
 
-autoCheckPayments("settlement");
-
 module.exports = router;
