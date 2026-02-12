@@ -61,7 +61,11 @@ function updateCache(cacheItem, data) {
 
 // ===== 기본 필터 조건 (단순화) =====
 async function buildBaseFilterConditions(isRecommendOnly = false) {
-  const conditions = ["ci.is_enabled = 1", "ci.auc_num != 3"];
+  const conditions = [
+    "ci.is_enabled = 1",
+    "ci.auc_num != 3",
+    "ci.auc_num != 4",
+  ];
   const queryParams = [];
 
   if (isRecommendOnly) {
@@ -121,7 +125,7 @@ router.get("/", async (req, res) => {
         SELECT 'live' as bid_type, item_id, first_price, second_price, final_price, status, id
         FROM live_bids WHERE user_id = ?
       `,
-        [userId]
+        [userId],
       );
 
       const [userDirectBids] = await pool.query(
@@ -129,7 +133,7 @@ router.get("/", async (req, res) => {
         SELECT 'direct' as bid_type, item_id, current_price, status, id
         FROM direct_bids WHERE user_id = ?
       `,
-        [userId]
+        [userId],
       );
 
       bidData = [...userLiveBids, ...userDirectBids];
@@ -141,7 +145,11 @@ router.get("/", async (req, res) => {
     // 3. 쿼리 구성 시작
     let baseQuery = "SELECT ci.* FROM crawled_items ci";
     const joins = [];
-    const conditions = ["ci.is_enabled = 1", "ci.auc_num != 3"]; // 기본 조건: 활성화된 아이템만
+    const conditions = [
+      "ci.is_enabled = 1",
+      "ci.auc_num != 3",
+      "ci.auc_num != 4",
+    ]; // 기본 조건: 활성화된 아이템만
     const queryParams = [];
 
     if (!userId) {
@@ -161,7 +169,7 @@ router.get("/", async (req, res) => {
         conditions.push(
           `ci.item_id IN (SELECT DISTINCT item_id FROM wishlists WHERE user_id = ? AND favorite_number IN (${favoriteNumbersList
             .map(() => "?")
-            .join(",")}))`
+            .join(",")}))`,
         );
         queryParams.push(userId, ...favoriteNumbersList);
       }
@@ -176,7 +184,7 @@ router.get("/", async (req, res) => {
     if (bidsOnly === "true" && userId) {
       if (userBidItemIds.length > 0) {
         conditions.push(
-          `ci.item_id IN (${userBidItemIds.map(() => "?").join(",")})`
+          `ci.item_id IN (${userBidItemIds.map(() => "?").join(",")})`,
         );
         queryParams.push(...userBidItemIds);
       } else {
@@ -213,12 +221,12 @@ router.get("/", async (req, res) => {
               fuzziness: "AUTO",
               operator: "and",
               size: 5000,
-            }
+            },
           );
 
           if (itemIds.length > 0) {
             conditions.push(
-              `ci.item_id IN (${itemIds.map(() => "?").join(",")})`
+              `ci.item_id IN (${itemIds.map(() => "?").join(",")})`,
             );
             queryParams.push(...itemIds);
           } else {
@@ -234,7 +242,7 @@ router.get("/", async (req, res) => {
         } catch (esError) {
           console.error(
             "ES search failed, using DB LIKE fallback:",
-            esError.message
+            esError.message,
           );
           const searchTerms = search.trim().split(/\s+/);
           const searchConditions = searchTerms
@@ -268,7 +276,7 @@ router.get("/", async (req, res) => {
     if (categories) {
       const categoryList = categories.split(",");
       conditions.push(
-        `ci.category IN (${categoryList.map(() => "?").join(",")})`
+        `ci.category IN (${categoryList.map(() => "?").join(",")})`,
       );
       queryParams.push(...categoryList);
     }
@@ -296,7 +304,7 @@ router.get("/", async (req, res) => {
     if (auctionTypes) {
       const auctionTypeList = auctionTypes.split(",");
       conditions.push(
-        `ci.bid_type IN (${auctionTypeList.map(() => "?").join(",")})`
+        `ci.bid_type IN (${auctionTypeList.map(() => "?").join(",")})`,
       );
       queryParams.push(...auctionTypeList);
     }
@@ -360,7 +368,7 @@ router.get("/", async (req, res) => {
     const [items] = await pool.query(finalQuery, queryParams);
     const [countResult] = await pool.query(
       countQuery,
-      queryParams.slice(0, -2)
+      queryParams.slice(0, -2),
     );
 
     const totalItems = countResult[0].total;
@@ -371,7 +379,7 @@ router.get("/", async (req, res) => {
     if (userId) {
       [wishlist] = await pool.query(
         "SELECT item_id, favorite_number FROM wishlists WHERE user_id = ?",
-        [userId]
+        [userId],
       );
     }
 
@@ -391,8 +399,8 @@ router.get("/", async (req, res) => {
       const processItemsInBatches = async (items) => {
         const promises = items.map((item) =>
           limit(() =>
-            processItem(item.item_id, false, null, true, null, 2, item.auc_num)
-          )
+            processItem(item.item_id, false, null, true, null, 2, item.auc_num),
+          ),
         );
         const processedItems = await Promise.all(promises);
         return processedItems.filter((item) => item !== null);
@@ -438,7 +446,7 @@ router.get("/recommended", async (req, res) => {
       ORDER BY ci.recommend DESC, ci.scheduled_date ASC
       LIMIT ?
     `,
-      [parseInt(minScore), parseInt(limit)]
+      [parseInt(minScore), parseInt(limit)],
     );
 
     res.json(items);
@@ -462,9 +470,8 @@ router.get("/brands-with-count", async (req, res) => {
       return res.json(cacheKey.data);
     }
 
-    const { conditions, queryParams } = await buildBaseFilterConditions(
-      isRecommendOnly
-    );
+    const { conditions, queryParams } =
+      await buildBaseFilterConditions(isRecommendOnly);
 
     const [results] = await pool.query(
       `SELECT ci.brand, COUNT(*) as count
@@ -472,7 +479,7 @@ router.get("/brands-with-count", async (req, res) => {
        WHERE ${conditions.join(" AND ")}
        GROUP BY ci.brand
        ORDER BY count DESC, ci.brand ASC`,
-      queryParams
+      queryParams,
     );
 
     updateCache(cacheKey, results);
@@ -497,9 +504,8 @@ router.get("/auction-types", async (req, res) => {
       return res.json(cacheKey.data);
     }
 
-    const { conditions, queryParams } = await buildBaseFilterConditions(
-      isRecommendOnly
-    );
+    const { conditions, queryParams } =
+      await buildBaseFilterConditions(isRecommendOnly);
 
     const [results] = await pool.query(
       `SELECT ci.bid_type, COUNT(*) as count
@@ -507,7 +513,7 @@ router.get("/auction-types", async (req, res) => {
        WHERE ${conditions.join(" AND ")} AND ci.bid_type IS NOT NULL
        GROUP BY ci.bid_type
        ORDER BY count DESC`,
-      queryParams
+      queryParams,
     );
 
     updateCache(cacheKey, results);
@@ -532,9 +538,8 @@ router.get("/scheduled-dates-with-count", async (req, res) => {
       return res.json(cacheKey.data);
     }
 
-    const { conditions, queryParams } = await buildBaseFilterConditions(
-      isRecommendOnly
-    );
+    const { conditions, queryParams } =
+      await buildBaseFilterConditions(isRecommendOnly);
 
     const [results] = await pool.query(
       `SELECT DATE(ci.scheduled_date) as Date, COUNT(*) as count
@@ -542,7 +547,7 @@ router.get("/scheduled-dates-with-count", async (req, res) => {
        WHERE ${conditions.join(" AND ")}
        GROUP BY DATE(ci.scheduled_date)
        ORDER BY Date ASC`,
-      queryParams
+      queryParams,
     );
 
     updateCache(cacheKey, results);
@@ -569,9 +574,8 @@ router.get("/auc-nums", async (req, res) => {
       return res.json(cacheKey.data);
     }
 
-    const { conditions, queryParams } = await buildBaseFilterConditions(
-      isRecommendOnly
-    );
+    const { conditions, queryParams } =
+      await buildBaseFilterConditions(isRecommendOnly);
 
     const [results] = await pool.query(
       `SELECT ci.auc_num, COUNT(*) as count
@@ -579,7 +583,7 @@ router.get("/auc-nums", async (req, res) => {
        WHERE ${conditions.join(" AND ")} AND ci.auc_num IS NOT NULL
        GROUP BY ci.auc_num
        ORDER BY ci.auc_num ASC`,
-      queryParams
+      queryParams,
     );
 
     updateCache(cacheKey, results);
@@ -604,9 +608,8 @@ router.get("/ranks", async (req, res) => {
       return res.json(cacheKey.data);
     }
 
-    const { conditions, queryParams } = await buildBaseFilterConditions(
-      isRecommendOnly
-    );
+    const { conditions, queryParams } =
+      await buildBaseFilterConditions(isRecommendOnly);
 
     const [results] = await pool.query(
       `SELECT TRIM(ci.rank) as rank, COUNT(*) as count
@@ -614,7 +617,7 @@ router.get("/ranks", async (req, res) => {
        WHERE ${conditions.join(" AND ")}
        GROUP BY TRIM(ci.rank)
        ORDER BY FIELD(TRIM(ci.rank), 'N', 'S', 'SA', 'A', 'AB', 'B', 'BC', 'C', 'D', 'E', 'F')`,
-      queryParams
+      queryParams,
     );
 
     const normalizedResults = results.map((result) => ({
