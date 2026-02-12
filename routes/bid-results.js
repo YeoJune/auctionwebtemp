@@ -1582,11 +1582,15 @@ router.put("/admin/settlements/:id", isAdmin, async (req, res) => {
             console.log(
               `[자동 발행] 세금계산서 발행 시작 (정산 ID: ${settlementId})`,
             );
-            const taxResult = await popbillService.issueTaxinvoice(settlement, {
-              business_number: settlement.business_number,
-              company_name: settlement.company_name,
-              email: settlement.email,
-            });
+            const taxResult = await popbillService.issueTaxinvoice(
+              settlement,
+              {
+                business_number: settlement.business_number,
+                company_name: settlement.company_name,
+                email: settlement.email,
+              },
+              "입찰결과 정산",
+            );
 
             // DB 저장
             await pool.query(
@@ -1633,6 +1637,7 @@ router.put("/admin/settlements/:id", isAdmin, async (req, res) => {
                 phone: settlement.phone,
                 company_name: settlement.company_name,
               },
+              "입찰결과 정산",
             );
 
             // DB 저장

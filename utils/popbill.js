@@ -80,9 +80,10 @@ class PopbillService {
    * 현금영수증 발행
    * @param {Object} transaction - { id, amount, depositor_name, processed_at }
    * @param {Object} user - { email, phone, company_name }
+   * @param {String} itemName - "예치금 충전" 또는 "입찰결과 정산"
    * @returns {Object} { confirmNum, tradeDate, mgtKey }
    */
-  async issueCashbill(transaction, user) {
+  async issueCashbill(transaction, user, itemName = "예치금 충전") {
     try {
       const mgtKey = `CB-${transaction.id}-${Date.now()}`;
 
@@ -105,7 +106,7 @@ class PopbillService {
         franchiseTEL: process.env.COMPANY_TEL,
         identityNum: user.phone || "010-0000-0000",
         customerName: user.company_name,
-        itemName: "예치금 충전",
+        itemName: itemName,
         email: user.email,
         hp: user.phone,
         smssendYN: true,
@@ -126,9 +127,10 @@ class PopbillService {
    * 세금계산서 발행
    * @param {Object} settlement - { id, settlement_date, final_amount, item_count }
    * @param {Object} user - { business_number, company_name, email }
+   * @param {String} itemName - "입찰결과 정산" 등
    * @returns {Object} { ntsConfirmNum, issueDT, invoicerMgtKey }
    */
-  async issueTaxinvoice(settlement, user) {
+  async issueTaxinvoice(settlement, user, itemName = "입찰결과 정산") {
     try {
       if (!user.business_number) {
         throw new Error("사업자등록번호가 없습니다.");
@@ -173,7 +175,7 @@ class PopbillService {
           {
             serialNum: 1,
             purchaseDT: this.formatDate(settlement.settlement_date),
-            itemName: "경매 대행 서비스",
+            itemName: itemName,
             spec: `낙찰 ${settlement.item_count || 1}건`,
             qty: "1",
             supplyCost: Math.round(settlement.final_amount / 1.1).toString(),

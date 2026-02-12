@@ -238,11 +238,15 @@ router.post("/admin/approve/:id", isAdmin, async (req, res) => {
             `[자동 발행] 현금영수증 발행 시작 (예치금 거래 ID: ${transactionId})`,
           );
 
-          const cashResult = await popbillService.issueCashbill(tx, {
-            email: tx.email,
-            phone: tx.phone,
-            company_name: tx.company_name,
-          });
+          const cashResult = await popbillService.issueCashbill(
+            tx,
+            {
+              email: tx.email,
+              phone: tx.phone,
+              company_name: tx.company_name,
+            },
+            "예치금 충전",
+          );
 
           // DB 저장
           await pool.query(

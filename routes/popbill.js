@@ -218,11 +218,15 @@ router.post("/admin/issue-cashbill", isAdmin, async (req, res) => {
     // 3. 현금영수증 발행 - email, phone, company_name 전달
     let result;
     try {
-      result = await popbillService.issueCashbill(transaction, {
-        email: transaction.email,
-        phone: transaction.phone,
-        company_name: transaction.company_name,
-      });
+      result = await popbillService.issueCashbill(
+        transaction,
+        {
+          email: transaction.email,
+          phone: transaction.phone,
+          company_name: transaction.company_name,
+        },
+        "예치금 충전",
+      );
     } catch (error) {
       await conn.rollback();
       console.error("[현금영수증 발행 실패]", error);
@@ -330,11 +334,15 @@ router.post("/admin/issue-taxinvoice", isAdmin, async (req, res) => {
     // 4. 세금계산서 발행 - business_number, company_name, email 전달
     let result;
     try {
-      result = await popbillService.issueTaxinvoice(settlement, {
-        business_number: settlement.business_number,
-        company_name: settlement.company_name,
-        email: settlement.email,
-      });
+      result = await popbillService.issueTaxinvoice(
+        settlement,
+        {
+          business_number: settlement.business_number,
+          company_name: settlement.company_name,
+          email: settlement.email,
+        },
+        "입찰결과 정산",
+      );
     } catch (error) {
       await conn.rollback();
       console.error("[세금계산서 발행 실패]", error);
@@ -433,11 +441,15 @@ router.post("/admin/issue-cashbill-settlement", isAdmin, async (req, res) => {
 
     let result;
     try {
-      result = await popbillService.issueCashbill(transactionData, {
-        email: settlement.email,
-        phone: settlement.phone,
-        company_name: settlement.company_name,
-      });
+      result = await popbillService.issueCashbill(
+        transactionData,
+        {
+          email: settlement.email,
+          phone: settlement.phone,
+          company_name: settlement.company_name,
+        },
+        "입찰결과 정산",
+      );
     } catch (error) {
       await conn.rollback();
       console.error("[현금영수증 발행 실패]", error);
@@ -580,11 +592,15 @@ router.post("/admin/retry-issue/:id", isAdmin, async (req, res) => {
       const transaction = transactions[0];
 
       if (doc.type === "cashbill") {
-        result = await popbillService.issueCashbill(transaction, {
-          email: transaction.email,
-          phone: transaction.phone,
-          company_name: transaction.company_name,
-        });
+        result = await popbillService.issueCashbill(
+          transaction,
+          {
+            email: transaction.email,
+            phone: transaction.phone,
+            company_name: transaction.company_name,
+          },
+          "예치금 충전",
+        );
 
         // 기존 문서 업데이트
         await conn.query(
@@ -619,11 +635,15 @@ router.post("/admin/retry-issue/:id", isAdmin, async (req, res) => {
             .json({ message: "사업자등록번호가 등록되지 않았습니다." });
         }
 
-        result = await popbillService.issueTaxinvoice(settlement, {
-          business_number: settlement.business_number,
-          company_name: settlement.company_name,
-          email: settlement.email,
-        });
+        result = await popbillService.issueTaxinvoice(
+          settlement,
+          {
+            business_number: settlement.business_number,
+            company_name: settlement.company_name,
+            email: settlement.email,
+          },
+          "입찰결과 정산",
+        );
 
         // 기존 문서 업데이트
         await conn.query(
@@ -640,11 +660,15 @@ router.post("/admin/retry-issue/:id", isAdmin, async (req, res) => {
           processed_at: new Date(),
         };
 
-        result = await popbillService.issueCashbill(transactionData, {
-          email: settlement.email,
-          phone: settlement.phone,
-          company_name: settlement.company_name,
-        });
+        result = await popbillService.issueCashbill(
+          transactionData,
+          {
+            email: settlement.email,
+            phone: settlement.phone,
+            company_name: settlement.company_name,
+          },
+          "입찰결과 정산",
+        );
 
         // 기존 문서 업데이트
         await conn.query(
@@ -785,11 +809,15 @@ async function autoCheckPayments(type) {
 
             if (existingDocs.length === 0) {
               if (!isDeposit && item.business_number) {
-                const taxResult = await popbillService.issueTaxinvoice(item, {
-                  business_number: item.business_number,
-                  company_name: item.company_name,
-                  email: item.email,
-                });
+                const taxResult = await popbillService.issueTaxinvoice(
+                  item,
+                  {
+                    business_number: item.business_number,
+                    company_name: item.company_name,
+                    email: item.email,
+                  },
+                  "입찰결과 정산",
+                );
 
                 await pool.query(
                   `INSERT INTO popbill_documents 
@@ -821,6 +849,7 @@ async function autoCheckPayments(type) {
                     phone: item.phone,
                     company_name: item.company_name,
                   },
+                  isDeposit ? "예치금 충전" : "입찰결과 정산",
                 );
 
                 await pool.query(
