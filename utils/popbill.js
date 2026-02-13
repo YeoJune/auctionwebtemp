@@ -106,19 +106,19 @@ class PopbillService {
         tradeType: "승인거래",
         tradeUsage: tradeUsage,
         taxationType: "과세",
-
-        // ⭐ 모든 금액 필드를 정수 문자열로 변환
-        totalAmount: amount.toString(), // "674606"
-        supplyCost: Math.round(amount / 1.1).toString(), // "613278"
-        tax: Math.round(amount - amount / 1.1).toString(), // "61328"
+        totalAmount: amount.toString(),
+        supplyCost: Math.round(amount / 1.1).toString(),
+        tax: Math.round(amount - amount / 1.1).toString(),
         serviceFee: "0",
 
+        // 가맹점 (공급자)
         franchiseCorpNum: this.CORP_NUM.replace(/-/g, ""),
         franchiseCorpName: process.env.COMPANY_NAME,
         franchiseCEOName: process.env.COMPANY_CEO,
         franchiseAddr: process.env.COMPANY_ADDRESS,
         franchiseTEL: (process.env.COMPANY_TEL || "").replace(/-/g, ""),
 
+        // 고객 (공급받는자)
         identityNum: identityNum,
         customerName: user.company_name || "고객명",
         itemName: itemName,
@@ -161,31 +161,32 @@ class PopbillService {
 
       const mgtKey = `TAX-${settlement.id}-${Date.now()}`;
 
+      // ⭐ 금액을 정수로 변환
+      const amount = Math.round(parseFloat(settlement.final_amount));
+
       const taxinvoiceData = {
         issueType: "정발행",
         taxType: "과세",
         chargeDirection: "정과금",
         writeDate: this.formatDate(settlement.settlement_date),
         purposeType: "영수",
-        supplyCostTotal: Math.round(settlement.final_amount / 1.1).toString(),
-        taxTotal: Math.round(
-          settlement.final_amount - settlement.final_amount / 1.1,
-        ).toString(),
-        totalAmount: settlement.final_amount.toString(),
+        supplyCostTotal: Math.round(amount / 1.1).toString(),
+        taxTotal: Math.round(amount - amount / 1.1).toString(),
+        totalAmount: amount.toString(),
         invoicerMgtKey: mgtKey,
 
         // 공급자 (우리 회사)
-        invoicerCorpNum: this.CORP_NUM,
+        invoicerCorpNum: this.CORP_NUM.replace(/-/g, ""),
         invoicerCorpName: process.env.COMPANY_NAME,
         invoicerCEOName: process.env.COMPANY_CEO,
         invoicerAddr: process.env.COMPANY_ADDRESS,
         invoicerBizType: process.env.COMPANY_BUSINESS_TYPE,
         invoicerBizClass: process.env.COMPANY_BUSINESS_CLASS,
-        invoicerTEL: process.env.COMPANY_TEL,
+        invoicerTEL: (process.env.COMPANY_TEL || "").replace(/-/g, ""),
 
         // 공급받는자 (고객)
         invoiceeType: "사업자",
-        invoiceeCorpNum: user.business_number,
+        invoiceeCorpNum: user.business_number.replace(/-/g, ""),
         invoiceeCorpName: user.company_name,
         invoiceeCEOName: user.company_name,
         invoiceeAddr: "",
@@ -201,26 +202,24 @@ class PopbillService {
             itemName: itemName,
             spec: `낙찰 ${settlement.item_count || 1}건`,
             qty: "1",
-            supplyCost: Math.round(settlement.final_amount / 1.1).toString(),
-            tax: Math.round(
-              settlement.final_amount - settlement.final_amount / 1.1,
-            ).toString(),
+            supplyCost: Math.round(amount / 1.1).toString(),
+            tax: Math.round(amount - amount / 1.1).toString(),
           },
         ],
       };
 
       const result = await new Promise((resolve, reject) => {
         taxService.registIssue(
-          this.CORP_NUM, // CorpNum
-          taxinvoiceData, // Taxinvoice
-          false, // writeSpecification (거래명세서 동시작성 안함)
-          true, // forceIssue (지연발행 가능)
-          null, // memo
-          null, // emailSubject
-          null, // dealInvoiceKey
-          null, // UserID
-          resolve, // success
-          reject, // error
+          this.CORP_NUM.replace(/-/g, ""),
+          taxinvoiceData,
+          false,
+          true,
+          null,
+          null,
+          null,
+          null,
+          resolve,
+          reject,
         );
       });
 
@@ -373,6 +372,128 @@ class PopbillService {
       .replace(/[-:T]/g, "")
       .slice(0, 14);
   }
+
+  // ===== 테스트/디버깅 함수 =====
+
+  /**
+   * 포인트 잔액 조회
+   */
+  async getBalance() {
+    return new Promise((resolve, reject) => {
+      cashService.getBalance(this.CORP_NUM.replace(/-/g, ""), resolve, reject);
+    });
+  }
+
+  /**
+   * 파트너 포인트 조회
+   */
+  async getPartnerBalance() {
+    return new Promise((resolve, reject) => {
+      cashService.getPartnerBalance(
+        this.CORP_NUM.replace(/-/g, ""),
+        resolve,
+        reject,
+      );
+    });
+  }
+
+  /**
+   * 현금영수증 단가 조회
+   */
+  async getUnitCost() {
+    return new Promise((resolve, reject) => {
+      cashService.getUnitCost(this.CORP_NUM.replace(/-/g, ""), resolve, reject);
+    });
+  }
 }
 
 module.exports = new PopbillService();
+
+// ===== 임시 테스트 코드 (개발 환경에서만 실행) =====
+if (require.main === module) {
+  console.log("\n========================================");
+  console.log("🔧 팝빌 서비스 테스트 시작");
+  console.log("========================================\n");
+
+  const service = new PopbillService();
+
+  (async () => {
+    try {
+      // 1. 환경 변수 확인
+      console.log("📋 환경 변수 확인:");
+      console.log("  - POPBILL_IS_TEST:", process.env.POPBILL_IS_TEST);
+      console.log("  - CORP_NUM:", service.CORP_NUM);
+      console.log("  - COMPANY_NAME:", process.env.COMPANY_NAME);
+      console.log("  - COMPANY_TEL:", process.env.COMPANY_TEL);
+      console.log("");
+
+      // 2. 포인트 잔액 조회
+      console.log("💰 포인트 잔액 조회 중...");
+      const balance = await service.getBalance();
+      console.log("  ✅ 잔액:", balance, "P");
+      console.log("");
+
+      // 3. 파트너 포인트 조회
+      console.log("💳 파트너 포인트 조회 중...");
+      const partnerBalance = await service.getPartnerBalance();
+      console.log("  ✅ 파트너 잔액:", partnerBalance, "P");
+      console.log("");
+
+      // 4. 현금영수증 단가 조회
+      console.log("💵 현금영수증 단가 조회 중...");
+      const unitCost = await service.getUnitCost();
+      console.log("  ✅ 단가:", unitCost, "원/건");
+      console.log("");
+
+      // 5. 현금영수증 발행 테스트 (최소 필드)
+      console.log("📝 현금영수증 발행 테스트 (최소 필드)...");
+      const testTransaction = {
+        id: 999999,
+        amount: "11000", // 11,000원 (최소 금액)
+        processed_at: new Date(),
+      };
+
+      const testUser = {
+        phone: "01012345678",
+        company_name: "테스트고객",
+        email: "test@test.com",
+      };
+
+      console.log("  - 테스트 데이터:");
+      console.log("    transaction:", testTransaction);
+      console.log("    user:", testUser);
+      console.log("");
+
+      const result = await service.issueCashbill(
+        testTransaction,
+        testUser,
+        "테스트상품",
+      );
+
+      console.log("  ✅ 발행 성공!");
+      console.log("    confirmNum:", result.confirmNum);
+      console.log("    mgtKey:", result.mgtKey);
+      console.log("");
+    } catch (error) {
+      console.error("\n❌ 테스트 실패:");
+      console.error("  코드:", error.code);
+      console.error("  메시지:", error.message);
+
+      if (error.code === -99005005) {
+        console.error("\n💡 포인트 부족 오류 해결 방법:");
+        console.error("  1. 팝빌 관리자 페이지에서 포인트 충전");
+        console.error("  2. 테스트 환경이라면 테스트 포인트 신청");
+        console.error("  3. POPBILL_IS_TEST 환경변수 확인");
+      }
+
+      console.error("\n전체 에러 객체:");
+      console.error(error);
+    }
+
+    console.log("\n========================================");
+    console.log("🔧 팝빌 서비스 테스트 종료");
+    console.log("========================================\n");
+
+    process.exit(0);
+  })();
+}
