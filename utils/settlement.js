@@ -45,8 +45,19 @@ async function createOrUpdateSettlement(userId, date) {
     );
     const accountType = accounts[0]?.account_type || "individual";
 
-    // 1. 환율 가져오기 (최신 환율)
-    const exchangeRate = await getExchangeRate();
+    // [수정] 1. 환율 결정 로직 (스냅샷 환율 유지)
+    // 정산 데이터가 이미 존재한다면, 최초 생성 시점의 환율을 그대로 사용해야 함
+    let exchangeRate;
+    const [existingSettlementData] = await connection.query(
+      "SELECT exchange_rate FROM daily_settlements WHERE user_id = ? AND settlement_date = ?",
+      [userId, date],
+    );
+
+    if (existingSettlementData.length > 0) {
+      exchangeRate = existingSettlementData[0].exchange_rate;
+    } else {
+      exchangeRate = await getExchangeRate();
+    }
 
     // 2. 사용자 수수료율 가져오기
     const userCommissionRate = await getUserCommissionRate(userId);
