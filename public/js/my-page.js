@@ -35,6 +35,7 @@ class MyPageManager {
       itemsPerPage: 7,
       sortBy: "date",
       sortOrder: "desc",
+      keyword: "", // 검색어 추가
       dailyResults: [],
       totalItems: 0,
       totalPages: 0,
@@ -378,6 +379,10 @@ class MyPageManager {
         page: this.bidResultsState.currentPage,
         limit: this.bidResultsState.itemsPerPage,
       };
+
+      if (this.bidResultsState.keyword && this.bidResultsState.keyword.trim()) {
+        params.search = this.bidResultsState.keyword.trim();
+      }
 
       const queryString = window.API.createURLParams(params);
 
@@ -1111,6 +1116,53 @@ class MyPageManager {
 
   // ✨ 입찰 결과 이벤트 설정 (백엔드 재요청)
   setupBidResultsEvents() {
+    // 검색 폼 요소들
+    const searchForm = document.getElementById("bidResults-searchForm");
+    const searchInput = document.getElementById("bidResults-searchInput");
+    const clearSearchBtn = document.getElementById("bidResults-clearSearch");
+
+    // 검색 입력 필드 값 변화 감지
+    if (searchInput) {
+      searchInput.addEventListener("input", () => {
+        if (clearSearchBtn) {
+          clearSearchBtn.style.display = searchInput.value ? "flex" : "none";
+        }
+      });
+    }
+
+    // 검색 폼 제출
+    if (searchForm) {
+      searchForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        try {
+          if (searchInput) {
+            this.bidResultsState.keyword = searchInput.value.trim();
+            this.bidResultsState.currentPage = 1;
+            await this.renderBidResultsSection();
+          }
+        } catch (error) {
+          console.error("입찰 결과 검색 실패:", error);
+        }
+      });
+    }
+
+    // 검색 초기화 버튼
+    if (clearSearchBtn) {
+      clearSearchBtn.addEventListener("click", async () => {
+        try {
+          if (searchInput) {
+            searchInput.value = "";
+            clearSearchBtn.style.display = "none";
+            this.bidResultsState.keyword = "";
+            this.bidResultsState.currentPage = 1;
+            await this.renderBidResultsSection();
+          }
+        } catch (error) {
+          console.error("입찰 결과 검색 초기화 실패:", error);
+        }
+      });
+    }
+
     document
       .getElementById("bidResults-dateRange")
       ?.addEventListener("change", async (e) => {
@@ -1214,6 +1266,15 @@ class MyPageManager {
     this.bidResultsState.currentPage = 1;
     this.bidResultsState.sortBy = "date";
     this.bidResultsState.sortOrder = "desc";
+    this.bidResultsState.keyword = ""; // 키워드 초기화
+
+    // 검색 입력창 초기화
+    const searchInput = document.getElementById("bidResults-searchInput");
+    if (searchInput) {
+      searchInput.value = "";
+      const clearBtn = document.getElementById("bidResults-clearSearch");
+      if (clearBtn) clearBtn.style.display = "none";
+    }
 
     this.updateBidResultsUI();
     await this.renderBidResultsSection();

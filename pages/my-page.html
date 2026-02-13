@@ -407,6 +407,24 @@
 
           <!-- 검색 툴바 -->
           <section class="search-toolbar">
+            <!-- 검색 폼 (새로 추가됨) -->
+            <form id="bidResults-searchForm" class="search-form">
+              <div class="search-input-wrapper">
+                <input
+                  type="text"
+                  id="bidResults-searchInput"
+                  placeholder="제목, 브랜드, 카테고리, ID로 검색..."
+                  class="search-input" />
+                <button
+                  type="button"
+                  id="bidResults-clearSearch"
+                  class="clear-icon-button"
+                  style="display: none">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+            </form>
+
             <div class="view-controls">
               <div class="sort-options">
                 <button

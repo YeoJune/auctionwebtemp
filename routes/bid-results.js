@@ -48,6 +48,7 @@ router.get("/", async (req, res) => {
     sortBy = "date",
     sortOrder = "desc",
     status,
+    search,
   } = req.query;
 
   const connection = await pool.getConnection();
@@ -57,6 +58,25 @@ router.get("/", async (req, res) => {
     const dateLimit = new Date();
     dateLimit.setDate(dateLimit.getDate() - parseInt(dateRange));
     const fromDate = dateLimit.toISOString().split("T")[0];
+
+    // 검색 조건 (SQL WHERE 절 일부)
+    let searchCondition = "";
+    let searchParams = [];
+
+    if (search && search.trim()) {
+      const keyword = `%${search.trim()}%`;
+      searchCondition = `
+        AND (
+          i.title LIKE ? OR 
+          i.brand LIKE ? OR 
+          i.category LIKE ? OR 
+          i.item_id LIKE ? OR
+          i.original_title LIKE ?
+        )
+      `;
+      // 날짜 쿼리용 파라미터 (5개)
+      searchParams = [keyword, keyword, keyword, keyword, keyword];
+    }
 
     // ✅ 1단계: 모든 입찰이 있는 날짜 조회
     let dateQuery;
@@ -72,10 +92,10 @@ router.get("/", async (req, res) => {
           SELECT item_id FROM direct_bids
         ) as bids
         JOIN crawled_items i ON bids.item_id = i.item_id
-        WHERE DATE(i.scheduled_date) >= ?
+        WHERE DATE(i.scheduled_date) >= ? ${searchCondition}
         ORDER BY bid_date ${sortOrder.toUpperCase()}
       `;
-      dateParams = [fromDate];
+      dateParams = [fromDate, ...searchParams];
     } else {
       // 일반 사용자: 해당 사용자의 날짜만
       dateQuery = `
@@ -86,10 +106,10 @@ router.get("/", async (req, res) => {
           SELECT item_id FROM direct_bids WHERE user_id = ?
         ) as bids
         JOIN crawled_items i ON bids.item_id = i.item_id
-        WHERE DATE(i.scheduled_date) >= ?
+        WHERE DATE(i.scheduled_date) >= ? ${searchCondition}
         ORDER BY bid_date ${sortOrder.toUpperCase()}
       `;
-      dateParams = [userId, userId, fromDate];
+      dateParams = [userId, userId, fromDate, ...searchParams];
     }
 
     const [allDates] = await connection.query(dateQuery, dateParams);
@@ -152,9 +172,9 @@ router.get("/", async (req, res) => {
             i.scheduled_date, i.auc_num, i.rank, i.starting_price
           FROM live_bids l
           JOIN crawled_items i ON l.item_id = i.item_id
-          WHERE DATE(i.scheduled_date) = ?
+          WHERE DATE(i.scheduled_date) = ? ${searchCondition}
         `;
-        liveBidsParams = [targetDate];
+        liveBidsParams = [targetDate, ...searchParams];
       } else {
         liveBidsQuery = `
           SELECT 
@@ -165,9 +185,9 @@ router.get("/", async (req, res) => {
             i.scheduled_date, i.auc_num, i.rank, i.starting_price
           FROM live_bids l
           JOIN crawled_items i ON l.item_id = i.item_id
-          WHERE l.user_id = ? AND DATE(i.scheduled_date) = ?
+          WHERE l.user_id = ? AND DATE(i.scheduled_date) = ? ${searchCondition}
         `;
-        liveBidsParams = [userId, targetDate];
+        liveBidsParams = [userId, targetDate, ...searchParams];
       }
 
       const [liveBids] = await connection.query(liveBidsQuery, liveBidsParams);
@@ -186,9 +206,9 @@ router.get("/", async (req, res) => {
             i.scheduled_date, i.auc_num, i.rank, i.starting_price
           FROM direct_bids d
           JOIN crawled_items i ON d.item_id = i.item_id
-          WHERE DATE(i.scheduled_date) = ?
+          WHERE DATE(i.scheduled_date) = ? ${searchCondition}
         `;
-        directBidsParams = [targetDate];
+        directBidsParams = [targetDate, ...searchParams];
       } else {
         directBidsQuery = `
           SELECT 
@@ -199,9 +219,9 @@ router.get("/", async (req, res) => {
             i.scheduled_date, i.auc_num, i.rank, i.starting_price
           FROM direct_bids d
           JOIN crawled_items i ON d.item_id = i.item_id
-          WHERE d.user_id = ? AND DATE(i.scheduled_date) = ?
+          WHERE d.user_id = ? AND DATE(i.scheduled_date) = ? ${searchCondition}
         `;
-        directBidsParams = [userId, targetDate];
+        directBidsParams = [userId, targetDate, ...searchParams];
       }
 
       const [directBids] = await connection.query(
