@@ -87,11 +87,24 @@ class PopbillService {
     try {
       const mgtKey = `CB-${transaction.id}-${Date.now()}`;
 
+      // ✅ 전화번호에서 하이픈 제거
+      const cleanPhone = user.phone
+        ? user.phone.replace(/-/g, "")
+        : "01000001234";
+
+      // ✅ 사업자번호가 있으면 지출증빙용, 없으면 소득공제용
+      const isBusinessCustomer =
+        user.business_number && user.business_number.length === 10;
+      const identityNum = isBusinessCustomer
+        ? user.business_number.replace(/-/g, "")
+        : cleanPhone;
+      const tradeUsage = isBusinessCustomer ? "지출증빙용" : "소득공제용";
+
       const cashbillData = {
         mgtKey,
         tradeDT: this.formatDateTime(transaction.processed_at || new Date()),
         tradeType: "승인거래",
-        tradeUsage: "소득공제용",
+        tradeUsage: tradeUsage, // ✅ 동적으로 설정
         taxationType: "과세",
         totalAmount: transaction.amount.toString(),
         supplyCost: Math.round(transaction.amount / 1.1).toString(),
@@ -100,31 +113,31 @@ class PopbillService {
         ).toString(),
         serviceFee: "0",
 
-        // 가맹점 (공급자)
-        franchiseCorpNum: this.CORP_NUM,
+        // 가맹점 (공급자) - ✅ 하이픈 제거 확인
+        franchiseCorpNum: this.CORP_NUM.replace(/-/g, ""),
         franchiseCorpName: process.env.COMPANY_NAME,
         franchiseCEOName: process.env.COMPANY_CEO,
         franchiseAddr: process.env.COMPANY_ADDRESS,
         franchiseTEL: process.env.COMPANY_TEL,
 
-        // 고객 (공급받는자)
-        identityNum: user.phone || "010-0000-0000",
+        // 고객 (공급받는자) - ✅ 하이픈 제거된 식별번호
+        identityNum: identityNum,
         customerName: user.company_name,
         itemName: itemName,
         email: user.email,
-        hp: user.phone,
+        hp: cleanPhone, // ✅ 하이픈 제거
         smssendYN: true,
       };
 
       const result = await new Promise((resolve, reject) => {
         cashService.registIssue(
-          this.CORP_NUM, // CorpNum
-          cashbillData, // Cashbill
-          null, // Memo
-          null, // UserID
-          null, // EmailSubject
-          resolve, // success
-          reject, // error
+          this.CORP_NUM.replace(/-/g, ""), // ✅ 여기도 하이픈 제거
+          cashbillData,
+          null,
+          null,
+          null,
+          resolve,
+          reject,
         );
       });
 
