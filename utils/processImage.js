@@ -26,7 +26,7 @@ const PROCESSING_BATCH_SIZE = 5000; // 한 번에 5000개씩만 처리
 // - cropTop/cropBottom: 위/아래에서 자를 픽셀 수
 // - cropLeft/cropRight: 좌/우에서 자를 픽셀 수
 const CROP_SETTINGS = {
-  brand: { cropTop: 12, cropBottom: 12, cropLeft: 0, cropRight: 0 },
+  brand: { cropTop: 25, cropBottom: 25, cropLeft: 0, cropRight: 0 },
 };
 
 /**
