@@ -85,19 +85,10 @@ class PopbillService {
    */
   async issueCashbill(transaction, user, itemName = "예치금 충전") {
     try {
-      // ===== 디버깅 로그 추가 =====
-      console.log("========== 현금영수증 발행 시도 ==========");
-      console.log("transaction:", JSON.stringify(transaction, null, 2));
-      console.log("user:", JSON.stringify(user, null, 2));
-      console.log("itemName:", itemName);
-      console.log("CORP_NUM:", this.CORP_NUM);
-      console.log("COMPANY_NAME:", process.env.COMPANY_NAME);
-      console.log("COMPANY_CEO:", process.env.COMPANY_CEO);
-      console.log("COMPANY_ADDRESS:", process.env.COMPANY_ADDRESS);
-      console.log("COMPANY_TEL:", process.env.COMPANY_TEL);
-      console.log("==========================================");
-
       const mgtKey = `CB-${transaction.id}-${Date.now()}`;
+
+      // ⭐ 금액을 정수로 변환
+      const amount = Math.round(parseFloat(transaction.amount));
 
       const cleanPhone = user.phone
         ? user.phone.replace(/-/g, "")
@@ -115,31 +106,26 @@ class PopbillService {
         tradeType: "승인거래",
         tradeUsage: tradeUsage,
         taxationType: "과세",
-        totalAmount: transaction.amount.toString(),
-        supplyCost: Math.round(transaction.amount / 1.1).toString(),
-        tax: Math.round(
-          transaction.amount - transaction.amount / 1.1,
-        ).toString(),
+
+        // ⭐ 모든 금액 필드를 정수 문자열로 변환
+        totalAmount: amount.toString(), // "674606"
+        supplyCost: Math.round(amount / 1.1).toString(), // "613278"
+        tax: Math.round(amount - amount / 1.1).toString(), // "61328"
         serviceFee: "0",
 
         franchiseCorpNum: this.CORP_NUM.replace(/-/g, ""),
         franchiseCorpName: process.env.COMPANY_NAME,
         franchiseCEOName: process.env.COMPANY_CEO,
         franchiseAddr: process.env.COMPANY_ADDRESS,
-        franchiseTEL: (process.env.COMPANY_TEL || "").replace(/-/g, ""), // ⭐ 수정
+        franchiseTEL: (process.env.COMPANY_TEL || "").replace(/-/g, ""),
 
         identityNum: identityNum,
-        customerName: user.company_name || "고객명", // ⭐ 기본값 추가
+        customerName: user.company_name || "고객명",
         itemName: itemName,
-        email: user.email || "", // ⭐ 기본값 추가
+        email: user.email || "",
         hp: cleanPhone,
         smssendYN: true,
       };
-
-      // ===== 전송 데이터 확인 =====
-      console.log("========== 팝빌 전송 데이터 ==========");
-      console.log(JSON.stringify(cashbillData, null, 2));
-      console.log("====================================");
 
       const result = await new Promise((resolve, reject) => {
         cashService.registIssue(
@@ -155,10 +141,7 @@ class PopbillService {
 
       return { ...result, mgtKey };
     } catch (error) {
-      console.error("❌ [현금영수증 발행 오류]");
-      console.error("에러 코드:", error.code);
-      console.error("에러 메시지:", error.message);
-      console.error("전체 에러:", JSON.stringify(error, null, 2));
+      console.error("❌ [현금영수증 발행 오류]", error.message);
       throw error;
     }
   }
