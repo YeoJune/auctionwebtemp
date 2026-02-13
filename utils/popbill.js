@@ -87,7 +87,7 @@ class PopbillService {
     try {
       const mgtKey = `CB-${transaction.id}-${Date.now()}`;
 
-      const data = {
+      const cashbillData = {
         mgtKey,
         tradeDT: this.formatDateTime(transaction.processed_at || new Date()),
         tradeType: "승인거래",
@@ -99,11 +99,15 @@ class PopbillService {
           transaction.amount - transaction.amount / 1.1,
         ).toString(),
         serviceFee: "0",
+
+        // 가맹점 (공급자)
         franchiseCorpNum: this.CORP_NUM,
         franchiseCorpName: process.env.COMPANY_NAME,
         franchiseCEOName: process.env.COMPANY_CEO,
         franchiseAddr: process.env.COMPANY_ADDRESS,
         franchiseTEL: process.env.COMPANY_TEL,
+
+        // 고객 (공급받는자)
         identityNum: user.phone || "010-0000-0000",
         customerName: user.company_name,
         itemName: itemName,
@@ -113,7 +117,15 @@ class PopbillService {
       };
 
       const result = await new Promise((resolve, reject) => {
-        cashService.registIssue(this.CORP_NUM, data, null, resolve, reject);
+        cashService.registIssue(
+          this.CORP_NUM, // CorpNum
+          cashbillData, // Cashbill
+          null, // Memo
+          null, // UserID
+          null, // EmailSubject
+          resolve, // success
+          reject, // error
+        );
       });
 
       return { ...result, mgtKey };
@@ -138,7 +150,7 @@ class PopbillService {
 
       const mgtKey = `TAX-${settlement.id}-${Date.now()}`;
 
-      const data = {
+      const taxinvoiceData = {
         issueType: "정발행",
         taxType: "과세",
         chargeDirection: "정과금",
@@ -160,11 +172,11 @@ class PopbillService {
         invoicerBizClass: process.env.COMPANY_BUSINESS_CLASS,
         invoicerTEL: process.env.COMPANY_TEL,
 
-        // 공급받는자 (고객) - 간소화
+        // 공급받는자 (고객)
         invoiceeType: "사업자",
         invoiceeCorpNum: user.business_number,
         invoiceeCorpName: user.company_name,
-        invoiceeCEOName: user.company_name, // 대표자명도 company_name 사용
+        invoiceeCEOName: user.company_name,
         invoiceeAddr: "",
         invoiceeBizType: "",
         invoiceeBizClass: "",
@@ -188,16 +200,16 @@ class PopbillService {
 
       const result = await new Promise((resolve, reject) => {
         taxService.registIssue(
-          this.CORP_NUM,
-          data,
-          false,
-          "",
-          false,
-          null,
-          "",
-          null,
-          resolve,
-          reject,
+          this.CORP_NUM, // CorpNum
+          taxinvoiceData, // Taxinvoice
+          false, // writeSpecification (거래명세서 동시작성 안함)
+          true, // forceIssue (지연발행 가능)
+          null, // memo
+          null, // emailSubject
+          null, // dealInvoiceKey
+          null, // UserID
+          resolve, // success
+          reject, // error
         );
       });
 
