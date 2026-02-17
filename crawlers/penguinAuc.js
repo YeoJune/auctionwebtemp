@@ -1,6 +1,7 @@
 // crawlers/penguinAuc.js
 const cheerio = require("cheerio");
 const { AxiosCrawler } = require("./baseCrawler");
+const { processImagesInChunks } = require("../utils/processImage");
 const translator = require("../utils/translator");
 
 let pLimit;
