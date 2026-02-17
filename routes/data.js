@@ -64,7 +64,6 @@ async function buildBaseFilterConditions(isRecommendOnly = false) {
   const conditions = [
     "ci.is_enabled = 1",
     "ci.auc_num != 3",
-    "ci.auc_num != 4",
   ];
   const queryParams = [];
 
@@ -148,7 +147,6 @@ router.get("/", async (req, res) => {
     const conditions = [
       "ci.is_enabled = 1",
       "ci.auc_num != 3",
-      "ci.auc_num != 4",
     ]; // 기본 조건: 활성화된 아이템만
     const queryParams = [];
 
