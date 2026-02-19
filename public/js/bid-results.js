@@ -392,42 +392,16 @@ window.openPaymentModal = function (settlementData) {
   const depositorNameInput = document.getElementById("paymentDepositorName");
   if (depositorNameInput) depositorNameInput.value = "";
 
-  // 날짜 포맷팅 안전 처리
-  let formattedDate = "-";
-  if (typeof formatDate === "function") {
-    formattedDate = formatDate(settlementData.date);
-  } else {
-    formattedDate = settlementData.date || "-";
-  }
-
   // 모달 데이터 바인딩
-  const dateElem = document.getElementById("paymentDate");
-  if (dateElem) dateElem.textContent = formattedDate;
-
-  // 금액 포맷팅 안전 처리
-  const safeLocaleString = (val) => {
-    try {
-      return `₩${(val || 0).toLocaleString()}`;
-    } catch (e) {
-      return `₩${val}`;
-    }
-  };
-
-  const totalElem = document.getElementById("paymentTotalAmount");
-  if (totalElem)
-    totalElem.textContent = safeLocaleString(settlementData.grandTotal);
-
-  const completedElem = document.getElementById("paymentCompletedAmount");
-  if (completedElem)
-    completedElem.textContent = safeLocaleString(
-      settlementData.completedAmount,
-    );
-
-  const remainingElem = document.getElementById("paymentRemainingAmount");
-  if (remainingElem)
-    remainingElem.textContent = safeLocaleString(
-      settlementData.remainingAmount,
-    );
+  document.getElementById("paymentDate").textContent = formatDate(
+    settlementData.date,
+  );
+  document.getElementById("paymentTotalAmount").textContent =
+    `₩${settlementData.grandTotal.toLocaleString()}`;
+  document.getElementById("paymentCompletedAmount").textContent =
+    `₩${settlementData.completedAmount.toLocaleString()}`;
+  document.getElementById("paymentRemainingAmount").textContent =
+    `₩${settlementData.remainingAmount.toLocaleString()}`;
 
   modal.style.display = "flex";
 };
@@ -502,13 +476,6 @@ async function submitPaymentRequest() {
       "결제 요청 중 오류가 발생했습니다.\n" +
         (error.message || "다시 시도해주세요."),
     );
-
-    // 버튼 상태 복구
-    const confirmBtn = document.getElementById("paymentConfirmBtn");
-    if (confirmBtn) {
-      confirmBtn.disabled = false;
-      confirmBtn.innerHTML = "입금 완료";
-    }
   }
 }
 
