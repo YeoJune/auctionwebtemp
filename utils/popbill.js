@@ -124,7 +124,7 @@ class PopbillService {
         itemName: itemName,
         email: user.email || "",
         hp: cleanPhone,
-        smssendYN: true,
+        smssendYN: false,
       };
 
       const result = await new Promise((resolve, reject) => {
