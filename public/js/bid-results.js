@@ -68,6 +68,9 @@ async function initialize() {
     console.log("입찰 결과 페이지 초기화 완료");
   } catch (error) {
     console.error("초기화 중 오류 발생:", error);
+    // 초기화 실패 시에도 모달 이벤트는 설정 시도
+    setupPaymentModalEvents();
+
     const container = document.getElementById("resultsList");
     if (container) {
       container.innerHTML =
@@ -389,16 +392,42 @@ window.openPaymentModal = function (settlementData) {
   const depositorNameInput = document.getElementById("paymentDepositorName");
   if (depositorNameInput) depositorNameInput.value = "";
 
+  // 날짜 포맷팅 안전 처리
+  let formattedDate = "-";
+  if (typeof formatDate === "function") {
+    formattedDate = formatDate(settlementData.date);
+  } else {
+    formattedDate = settlementData.date || "-";
+  }
+
   // 모달 데이터 바인딩
-  document.getElementById("paymentDate").textContent = formatDate(
-    settlementData.date,
-  );
-  document.getElementById("paymentTotalAmount").textContent =
-    `₩${settlementData.grandTotal.toLocaleString()}`;
-  document.getElementById("paymentCompletedAmount").textContent =
-    `₩${settlementData.completedAmount.toLocaleString()}`;
-  document.getElementById("paymentRemainingAmount").textContent =
-    `₩${settlementData.remainingAmount.toLocaleString()}`;
+  const dateElem = document.getElementById("paymentDate");
+  if (dateElem) dateElem.textContent = formattedDate;
+
+  // 금액 포맷팅 안전 처리
+  const safeLocaleString = (val) => {
+    try {
+      return `₩${(val || 0).toLocaleString()}`;
+    } catch (e) {
+      return `₩${val}`;
+    }
+  };
+
+  const totalElem = document.getElementById("paymentTotalAmount");
+  if (totalElem)
+    totalElem.textContent = safeLocaleString(settlementData.grandTotal);
+
+  const completedElem = document.getElementById("paymentCompletedAmount");
+  if (completedElem)
+    completedElem.textContent = safeLocaleString(
+      settlementData.completedAmount,
+    );
+
+  const remainingElem = document.getElementById("paymentRemainingAmount");
+  if (remainingElem)
+    remainingElem.textContent = safeLocaleString(
+      settlementData.remainingAmount,
+    );
 
   modal.style.display = "flex";
 };
@@ -412,8 +441,10 @@ function closePaymentModal() {
 
 // 결제 완료 처리
 async function submitPaymentRequest() {
+  console.log("결제 요청 제출 시도", currentSettlement);
+
   if (!currentSettlement) {
-    alert("정산 정보를 불러올 수 없습니다.");
+    alert("정산 정보를 불러올 수 없습니다. 다시 시도해주세요.");
     return;
   }
 
@@ -428,12 +459,26 @@ async function submitPaymentRequest() {
 
   const { settlementId, remainingAmount } = currentSettlement;
 
+  // 금액 포맷팅 안전 처리
+  let formattedAmount = "0";
+  try {
+    formattedAmount = remainingAmount.toLocaleString();
+  } catch (e) {
+    formattedAmount = String(remainingAmount);
+  }
+
   if (
     !confirm(
-      `${remainingAmount.toLocaleString()}원을 입금하셨습니까?\n\n입금자명: ${depositorName}\n입금 후 관리자가 확인하면 정산이 완료됩니다.`,
+      `${formattedAmount}원을 입금하셨습니까?\n\n입금자명: ${depositorName}\n입금 후 관리자가 확인하면 정산이 완료됩니다.`,
     )
   ) {
     return;
+  }
+
+  const confirmBtn = document.getElementById("paymentConfirmBtn");
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 처리중...';
   }
 
   try {
@@ -457,6 +502,13 @@ async function submitPaymentRequest() {
       "결제 요청 중 오류가 발생했습니다.\n" +
         (error.message || "다시 시도해주세요."),
     );
+
+    // 버튼 상태 복구
+    const confirmBtn = document.getElementById("paymentConfirmBtn");
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = "입금 완료";
+    }
   }
 }
 
