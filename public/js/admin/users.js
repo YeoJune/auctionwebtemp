@@ -26,6 +26,13 @@ document.addEventListener("DOMContentLoaded", function () {
   document.querySelectorAll('input[name="accountType"]').forEach((radio) => {
     radio.addEventListener("change", handleAccountTypeChange);
   });
+
+  // 증빙 유형 라디오 버튼 변경 시 수동 콘트롤 플래그 설정
+  document.querySelectorAll('input[name="documentType"]').forEach((radio) => {
+    radio.addEventListener("change", () => {
+      window.documentTypeManuallySet = true;
+    });
+  });
 });
 
 // 회원 목록 로드
@@ -66,6 +73,17 @@ function renderUsers(users) {
         ? '<span class="badge badge-corporate">기업</span>'
         : '<span class="badge badge-individual">개인</span>';
 
+    // 증빙 유형 배지
+    const docType =
+      user.document_type ||
+      (accountType === "corporate" ? "taxinvoice" : "cashbill");
+    const docTypeText =
+      docType === "taxinvoice"
+        ? '<span class="badge badge-taxinvoice" style="font-size:10px;background:#e8f4f8;color:#2980b9;border:1px solid #aed6f1;">세금계산서</span>'
+        : '<span class="badge badge-cashbill" style="font-size:10px;background:#eafaf1;color:#27ae60;border:1px solid #a9dfbf;">현금영수증</span>';
+
+    const accountTypeDisplay = `${accountTypeText}<br/><small style="margin-top:2px;display:inline-block;">${docTypeText}</small>`;
+
     // 예치금/한도 표시
     let balanceInfo = "";
     if (accountType === "individual") {
@@ -84,7 +102,7 @@ function renderUsers(users) {
 
     row.innerHTML = `
       <td>${user.login_id || user.id}</td>
-      <td>${accountTypeText}</td>
+      <td>${accountTypeDisplay}</td>
       <td>${balanceInfo}</td>
       <td>${registrationDate}</td>
       <td>${user.company_name || "-"}</td>
@@ -229,6 +247,15 @@ function openUserForm(user = null) {
     // 회원 구분 저장 (변경 확인용)
     window.currentEditingUserAccountType = accountType;
 
+    // 증빙 유형 설정
+    const docType =
+      user.document_type ||
+      (accountType === "corporate" ? "taxinvoice" : "cashbill");
+    document.querySelector(
+      `input[name="documentType"][value="${docType}"]`,
+    ).checked = true;
+    window.documentTypeManuallySet = false; // 수동 변경 첩기화
+
     // 예치금/한도 정보
     document.getElementById("depositBalance").value = user.deposit_balance || 0;
     document.getElementById("dailyLimit").value = user.daily_limit || 0;
@@ -256,6 +283,12 @@ function openUserForm(user = null) {
 
     // 회원 구분 저장 초기화
     window.currentEditingUserAccountType = null;
+
+    // 증빙 유형 초기값: 현금영수증 (개인 기본)
+    document.querySelector(
+      'input[name="documentType"][value="cashbill"]',
+    ).checked = true;
+    window.documentTypeManuallySet = false;
 
     // 비밀번호 필드
     userPassword.placeholder = "비밀번호 입력";
@@ -296,6 +329,15 @@ function handleAccountTypeChange() {
 
     document.getElementById("dailyLimit").required = true;
   }
+
+  // 수동으로 변경하지 않은 경우 증빙 유형 자동 전환
+  if (!window.documentTypeManuallySet) {
+    const autoDocType = accountType === "corporate" ? "taxinvoice" : "cashbill";
+    const docTypeRadio = document.querySelector(
+      `input[name="documentType"][value="${autoDocType}"]`,
+    );
+    if (docTypeRadio) docTypeRadio.checked = true;
+  }
 }
 
 // 회원 저장 (등록 또는 수정)
@@ -316,6 +358,11 @@ async function saveUser() {
     const isActive =
       document.querySelector('input[name="userStatus"]:checked').value ===
       "true";
+
+    // 증빙 유형
+    const documentType = document.querySelector(
+      'input[name="documentType"]:checked',
+    ).value;
 
     // 회원 구분 및 한도 정보
     const accountType = document.querySelector(
@@ -378,6 +425,7 @@ async function saveUser() {
       commission_rate: commissionRateValue
         ? parseFloat(commissionRateValue)
         : null,
+      document_type: documentType,
     };
 
     // 수정 모드일 때 login_id 변경 사항 추가

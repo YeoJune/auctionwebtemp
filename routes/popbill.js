@@ -729,14 +729,14 @@ async function autoCheckPayments(type) {
   try {
     // pending 건수 조회
     const query = isDeposit
-      ? `SELECT dt.*, u.email, u.phone, u.company_name
+      ? `SELECT dt.*, u.email, u.phone, u.company_name, u.document_type
          FROM deposit_transactions dt
          JOIN users u ON dt.user_id = u.id
          WHERE dt.status = 'pending' AND dt.retry_count < ${MAX_RETRY} 
            AND dt.depositor_name IS NOT NULL AND dt.depositor_name != ''
          ORDER BY dt.created_at ASC 
          LIMIT 100`
-      : `SELECT ds.*, u.business_number, u.company_name, u.email, u.phone
+      : `SELECT ds.*, u.business_number, u.company_name, u.email, u.phone, u.document_type
          FROM daily_settlements ds
          JOIN users u ON ds.user_id = u.id
          WHERE ds.payment_status = 'pending' AND ds.retry_count < ${MAX_RETRY}
@@ -816,7 +816,8 @@ async function autoCheckPayments(type) {
             );
 
             if (existingDocs.length === 0) {
-              if (!isDeposit && item.business_number) {
+              if (item.document_type === "taxinvoice" && item.business_number) {
+                // 세금계산서 발행
                 const taxResult = await popbillService.issueTaxinvoice(
                   item,
                   {
@@ -878,7 +879,9 @@ async function autoCheckPayments(type) {
           } catch (docError) {
             console.error(`❌ 문서 발행 실패: ${label} #${item.id}`);
             const docType =
-              !isDeposit && item.business_number ? "taxinvoice" : "cashbill";
+              item.document_type === "taxinvoice" && item.business_number
+                ? "taxinvoice"
+                : "cashbill";
             const mgtKey = `${docType.toUpperCase()}-FAILED-${item.id}-${Date.now()}`;
 
             try {

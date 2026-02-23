@@ -232,6 +232,29 @@
               </small>
             </div>
 
+            <!-- 증빙 유형 -->
+            <div class="form-group">
+              <label class="form-label">증빙 유형 *</label>
+              <div class="radio-group">
+                <label class="radio-label">
+                  <input
+                    type="radio"
+                    name="documentType"
+                    value="cashbill"
+                    checked />
+                  <span>현금영수증</span>
+                </label>
+                <label class="radio-label">
+                  <input type="radio" name="documentType" value="taxinvoice" />
+                  <span>세금계산서</span>
+                </label>
+              </div>
+              <small class="form-text text-muted">
+                정산·충전 완료 시 자동 발행되는 증빙 유형 (개인: 현금영수증 기본
+                / 기업: 세금계산서 기본)
+              </small>
+            </div>
+
             <div class="form-group">
               <label class="form-label">상태</label>
               <div class="radio-group">
