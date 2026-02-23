@@ -511,6 +511,7 @@ function setupModal(modalId) {
   if (!modal) return null;
 
   const closeBtn = modal.querySelector(".close, .close-modal");
+  const disableOutsideClose = modal.dataset.outsideClose === "false";
 
   const closeModalHandler = (event) => {
     if (event) event.stopPropagation();
@@ -529,7 +530,7 @@ function setupModal(modalId) {
   }
 
   window.onclick = (event) => {
-    if (event.target === modal) {
+    if (!disableOutsideClose && event.target === modal) {
       closeModalHandler();
     }
   };

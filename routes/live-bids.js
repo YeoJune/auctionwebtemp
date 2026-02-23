@@ -24,14 +24,31 @@ const {
   getBidDeductAmount,
 } = require("../utils/deposit");
 const { processItem } = require("../utils/processItem");
+const { isAdminUser } = require("../utils/adminAuth");
+const { syncWmsByBidStatus } = require("../utils/wms-bid-sync");
 
 const isAdmin = (req, res, next) => {
-  if (req.session.user && req.session.user.login_id === "admin") {
+  if (isAdminUser(req.session?.user)) {
     next();
   } else {
     res.status(403).json({ message: "Access denied. Admin only." });
   }
 };
+
+async function ensureBidWorkflowStagesTable() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS bid_workflow_stages (
+      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+      bid_type VARCHAR(20) NOT NULL,
+      bid_id BIGINT NOT NULL,
+      stage VARCHAR(30) NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_bid_workflow_stage (bid_type, bid_id),
+      KEY idx_bid_workflow_stage (stage)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+}
 
 // STATUS -> 'first', 'second', 'final', 'completed', 'cancelled', 'shipped'
 
@@ -66,8 +83,9 @@ router.get("/", async (req, res) => {
   // 검색 조건 추가
   if (search) {
     const searchTerm = `%${search}%`;
+    const compactSearchTerm = `%${String(search).replace(/\s+/g, "")}%`;
     queryConditions.push(
-      "(b.item_id LIKE ? OR i.original_title LIKE ? OR i.brand LIKE ? OR i.additional_info LIKE ? OR u.login_id LIKE ? OR u.company_name LIKE ?)",
+      "((CONVERT(b.item_id USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(i.original_title USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(i.brand USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(i.additional_info USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(u.login_id USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(u.company_name USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR REPLACE((CONVERT(u.company_name USING utf8mb4) COLLATE utf8mb4_unicode_ci), _utf8mb4' ' COLLATE utf8mb4_unicode_ci, _utf8mb4'' COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci))",
     );
     queryParams.push(
       searchTerm,
@@ -76,6 +94,7 @@ router.get("/", async (req, res) => {
       searchTerm,
       searchTerm,
       searchTerm,
+      compactSearchTerm,
     );
   }
 
@@ -122,7 +141,7 @@ router.get("/", async (req, res) => {
   }
 
   // Regular users can only see their own bids, admins can see all
-  if (req.session.user.login_id !== "admin") {
+  if (!isAdminUser(req.session?.user)) {
     queryConditions.push("b.user_id = ?");
     queryParams.push(userId);
   }
@@ -142,12 +161,25 @@ router.get("/", async (req, res) => {
   const mainQuery = `
     SELECT 
       b.*,
+      COALESCE(wms.internal_barcode, wmsi.internal_barcode) AS wms_internal_barcode,
+      COALESCE(wms.current_location_code, wmsi.current_location_code) AS wms_location_code,
       i.item_id, i.original_title, i.auc_num, i.category, i.brand, i.rank,
       i.starting_price, i.scheduled_date, i.image, i.original_scheduled_date, i.title, i.additional_info,
       u.company_name, u.login_id
     FROM live_bids b
     LEFT JOIN crawled_items i ON b.item_id = i.item_id
     LEFT JOIN users u ON b.user_id = u.id
+    LEFT JOIN (
+      SELECT source_bid_type, source_bid_id, MAX(internal_barcode) AS internal_barcode, MAX(current_location_code) AS current_location_code
+      FROM wms_items
+      GROUP BY source_bid_type, source_bid_id
+    ) wms ON wms.source_bid_type = 'live' AND wms.source_bid_id = b.id
+    LEFT JOIN (
+      SELECT source_item_id, MAX(internal_barcode) AS internal_barcode, MAX(current_location_code) AS current_location_code
+      FROM wms_items
+      WHERE source_item_id IS NOT NULL
+      GROUP BY source_item_id
+    ) wmsi ON wmsi.source_item_id = b.item_id
     WHERE ${whereClause}
   `;
 
@@ -196,6 +228,25 @@ router.get("/", async (req, res) => {
 
     // Get bids with item details in a single query
     const [rows] = await connection.query(finalQuery, finalQueryParams);
+    await ensureBidWorkflowStagesTable();
+
+    const rowIds = rows.map((r) => r.id);
+    let stageMap = {};
+    if (rowIds.length > 0) {
+      const placeholders = rowIds.map(() => "?").join(",");
+      const [stages] = await connection.query(
+        `
+        SELECT bid_id, stage
+        FROM bid_workflow_stages
+        WHERE bid_type = 'live' AND bid_id IN (${placeholders})
+        `,
+        rowIds,
+      );
+      stageMap = stages.reduce((acc, s) => {
+        acc[s.bid_id] = s.stage;
+        return acc;
+      }, {});
+    }
 
     // Format result to match expected structure
     const bidsWithItems = rows.map((row) => {
@@ -208,7 +259,10 @@ router.get("/", async (req, res) => {
         first_price: row.first_price,
         second_price: row.second_price,
         final_price: row.final_price,
-        status: row.status,
+        status:
+          row.status === "shipped"
+            ? "shipped"
+            : stageMap[row.id] || row.status,
         created_at: row.created_at,
         updated_at: row.updated_at,
         completed_at: row.completed_at,
@@ -218,6 +272,8 @@ router.get("/", async (req, res) => {
         repair_requested_at: row.repair_requested_at,
         repair_details: row.repair_details,
         repair_fee: row.repair_fee,
+        internal_barcode: row.wms_internal_barcode || null,
+        wms_location_code: row.wms_location_code || null,
       };
 
       // Only include item if it exists
@@ -393,7 +449,6 @@ router.put("/:id/second", isAdmin, async (req, res) => {
       await connection.rollback();
       return res.status(404).json({ message: "Bid not found" });
     }
-
     const bid = bids[0];
 
     if (bid.status !== "first") {
@@ -775,12 +830,28 @@ router.put("/complete", isAdmin, async (req, res) => {
     let completedBidsData = [];
     if (completedCount > 0) {
       [completedBidsData] = await connection.query(
-        `SELECT l.user_id, l.winning_price, l.final_price, i.title, i.scheduled_date 
+        `SELECT l.id, l.item_id, l.user_id, l.winning_price, l.final_price, i.title, i.scheduled_date 
         FROM live_bids l 
-        JOIN crawled_items i ON l.item_id = i.item_id 
+        LEFT JOIN crawled_items i ON l.item_id = i.item_id 
         WHERE l.id IN (${placeholders}) AND l.status = 'completed'`,
         bidIds,
       );
+
+      for (const completedBid of completedBidsData) {
+        const syncResult = await syncWmsByBidStatus(connection, {
+          bidType: "live",
+          bidId: Number(completedBid.id),
+          itemId: completedBid.item_id || null,
+          nextStatus: "completed",
+        });
+        if (!syncResult?.updated && syncResult?.reason !== "already-synced") {
+          console.warn("[WMS sync][live][complete] status update not applied:", {
+            bidId: Number(completedBid.id),
+            itemId: completedBid.item_id || null,
+            reason: syncResult?.reason || "unknown",
+          });
+        }
+      }
     }
 
     await connection.commit();
@@ -1002,7 +1073,7 @@ router.get("/:id", async (req, res) => {
     const bid = bids[0];
 
     // Check authorization - only admin or bid owner can view
-    if (req.session.user.login_id !== "admin" && bid.user_id !== userId) {
+    if (!isAdminUser(req.session?.user) && bid.user_id !== userId) {
       return res
         .status(403)
         .json({ message: "Not authorized to view this bid" });
@@ -1053,10 +1124,12 @@ router.put("/:id", isAdmin, async (req, res) => {
       await connection.rollback();
       return res.status(404).json({ message: "Bid not found" });
     }
+    const bid = bids[0];
 
     // 업데이트할 필드들과 값들을 동적으로 구성
     const updates = [];
     const params = [];
+    let workflowStageToSave = null;
 
     if (first_price !== undefined) {
       updates.push("first_price = ?");
@@ -1077,6 +1150,8 @@ router.put("/:id", isAdmin, async (req, res) => {
         "second",
         "final",
         "completed",
+        "domestic_arrived",
+        "processing",
         "cancelled",
         "shipped",
       ];
@@ -1087,8 +1162,12 @@ router.put("/:id", isAdmin, async (req, res) => {
             "Invalid status. Must be one of: " + validStatuses.join(", "),
         });
       }
-      updates.push("status = ?");
-      params.push(status);
+      if (status === "domestic_arrived" || status === "processing") {
+        workflowStageToSave = status;
+      } else {
+        updates.push("status = ?");
+        params.push(status);
+      }
     }
     if (winning_price !== undefined) {
       updates.push("winning_price = ?");
@@ -1096,7 +1175,7 @@ router.put("/:id", isAdmin, async (req, res) => {
     }
 
     // 업데이트할 필드가 없으면 에러 반환
-    if (updates.length === 0) {
+    if (updates.length === 0 && !workflowStageToSave) {
       await connection.rollback();
       return res.status(400).json({
         message:
@@ -1104,21 +1183,59 @@ router.put("/:id", isAdmin, async (req, res) => {
       });
     }
 
-    // updated_at 자동 업데이트 추가
-    updates.push("updated_at = NOW()");
-    params.push(id);
+    if (updates.length > 0) {
+      // updated_at 자동 업데이트 추가
+      updates.push("updated_at = NOW()");
+      params.push(id);
 
-    const updateQuery = `UPDATE live_bids SET ${updates.join(
-      ", ",
-    )} WHERE id = ?`;
+      const updateQuery = `UPDATE live_bids SET ${updates.join(
+        ", ",
+      )} WHERE id = ?`;
 
-    const [updateResult] = await connection.query(updateQuery, params);
+      const [updateResult] = await connection.query(updateQuery, params);
 
-    if (updateResult.affectedRows === 0) {
-      await connection.rollback();
-      return res
-        .status(404)
-        .json({ message: "Bid not found or no changes made" });
+      if (updateResult.affectedRows === 0) {
+        await connection.rollback();
+        return res
+          .status(404)
+          .json({ message: "Bid not found or no changes made" });
+      }
+    }
+
+    if (workflowStageToSave) {
+      await ensureBidWorkflowStagesTable();
+      await connection.query(
+        `
+        INSERT INTO bid_workflow_stages (bid_type, bid_id, stage)
+        VALUES ('live', ?, ?)
+        ON DUPLICATE KEY UPDATE
+          stage = VALUES(stage),
+          updated_at = NOW()
+        `,
+        [id, workflowStageToSave],
+      );
+    } else if (status !== undefined) {
+      await connection.query(
+        `DELETE FROM bid_workflow_stages WHERE bid_type = 'live' AND bid_id = ?`,
+        [id],
+      );
+    }
+
+    if (status !== undefined) {
+      const syncResult = await syncWmsByBidStatus(connection, {
+        bidType: "live",
+        bidId: Number(id),
+        itemId: bid.item_id || null,
+        nextStatus: status,
+      });
+      if (!syncResult?.updated && syncResult?.reason !== "already-synced") {
+        console.warn("[WMS sync][live] status update not applied:", {
+          bidId: Number(id),
+          itemId: bid.item_id || null,
+          status,
+          reason: syncResult?.reason || "unknown",
+        });
+      }
     }
 
     await connection.commit();

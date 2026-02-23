@@ -1,0 +1,59 @@
+.create-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 8px;
+}
+
+.create-form input {
+  min-height: 38px;
+}
+
+.menu-check-wrap {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 4px 10px;
+  margin-bottom: 8px;
+}
+
+.menu-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.password-wrap {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.password-wrap input {
+  min-height: 34px;
+  width: 140px;
+}
+
+.badge-super {
+  color: #fff;
+  background: #174ea6;
+  border-radius: 14px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.badge-normal {
+  color: #1f2937;
+  background: #e5e7eb;
+  border-radius: 14px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.btn-sm {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.mt-8 {
+  margin-top: 8px;
+}

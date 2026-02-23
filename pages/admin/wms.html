@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WMS 관리</title>
+    <link rel="stylesheet" href="/styles/common.css" />
+    <link rel="stylesheet" href="/styles/admin/common.css" />
+    <link rel="stylesheet" href="/styles/admin/unified.css" />
+    <style>
+      .wms-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      .card {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        padding: 16px;
+      }
+      .card h3 {
+        margin: 0 0 12px;
+      }
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      .form-row.single {
+        grid-template-columns: 1fr;
+      }
+      input,
+      select,
+      textarea,
+      button {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+      }
+      button.primary {
+        background: #2c6ecb;
+        border-color: #2c6ecb;
+        color: #fff;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .board-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+      }
+      .zone {
+        background: #f7f9fc;
+        border: 1px solid #e7edf7;
+        border-radius: 6px;
+        padding: 10px;
+      }
+      .zone.zone-clickable {
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+      .zone.zone-clickable:hover {
+        border-color: #2c6ecb;
+        background: #eef5ff;
+      }
+      .zone.zone-active {
+        border-color: #2c6ecb;
+        background: #e7f0ff;
+      }
+      .zone .name {
+        font-size: 13px;
+        color: #666;
+      }
+      .zone .count {
+        font-size: 24px;
+        font-weight: 800;
+        margin-top: 4px;
+      }
+      .items-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .items-table th,
+      .items-table td {
+        border-bottom: 1px solid #eee;
+        padding: 8px;
+        font-size: 13px;
+        text-align: left;
+        vertical-align: middle;
+      }
+      .photo-cell {
+        width: 64px;
+      }
+      .wms-item-thumb {
+        width: 48px;
+        height: 48px;
+        border-radius: 6px;
+        border: 1px solid #e7edf7;
+        object-fit: cover;
+        display: block;
+        background: #f5f7fb;
+      }
+      .thumb-empty {
+        color: #999;
+      }
+      .bid-type-badge {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 999px;
+        border: 1px solid #d7deea;
+        background: #f5f7fb;
+        color: #445;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.3;
+        white-space: nowrap;
+      }
+      .bid-type-badge.is-live {
+        background: #e7f2ff;
+        border-color: #bfd7ff;
+        color: #1b5fbf;
+      }
+      .bid-type-badge.is-direct {
+        background: #ecf9f0;
+        border-color: #c9ead6;
+        color: #1f7a44;
+      }
+      .items-wrap {
+        max-height: 420px;
+        overflow: auto;
+      }
+      .auction-wrap {
+        max-height: 360px;
+        overflow: auto;
+      }
+      .hint {
+        color: #777;
+        font-size: 12px;
+      }
+      .scan-mode-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      .status-box {
+        border: 1px dashed #cfd7e6;
+        background: #f9fbff;
+        border-radius: 6px;
+        padding: 8px 10px;
+        font-size: 13px;
+      }
+      .status-box strong {
+        color: #2c6ecb;
+      }
+      .board-filter-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        gap: 8px;
+      }
+      .board-filter-row .hint {
+        margin: 0;
+      }
+      .board-filter-row button {
+        width: auto;
+        padding: 8px 12px;
+      }
+      @media (max-width: 1200px) {
+        .wms-grid {
+          grid-template-columns: 1fr;
+        }
+        .board-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="admin-layout">
+      <div class="sidebar">
+        <div class="sidebar-logo"><h2>경매 관리자</h2></div>
+        <div class="sidebar-menu">
+          <a href="/admin">대시보드</a>
+          <a href="/admin/live-bids">현장 경매 관리</a>
+          <a href="/admin/direct-bids">직접 경매 관리</a>
+          <a href="/admin/all-bids">통합 경매 관리</a>
+          <a href="/admin/bid-results">입찰 결과 & 정산</a>
+          <a href="/admin/transactions">거래 내역 관리</a>
+          <a href="/admin/invoices">인보이스 관리</a>
+          <a href="/admin/users">회원 관리</a>
+          <a href="/admin/recommend-filters">추천 및 필터</a>
+          <a href="/admin/settings">관리자 설정</a>
+          <a href="/admin/wms" class="active">WMS(입고/수선/출고)</a>
+          <a href="/admin/repair-management">수선 관리</a>
+          <a href="/admin/activity-logs">사용자 활동기록</a>
+          <a href="/admin/admin-permissions">관리자 권한 관리</a>
+        </div>
+      </div>
+
+      <div class="main-content">
+        <div class="main-header">
+          <h1>WMS 관리</h1>
+          <div class="user-info">
+            관리자
+            <button id="logoutBtn" class="btn btn-secondary">로그아웃</button>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 16px">
+          <h3>1단계. 낙찰완료 조회 → 내부바코드 생성/출력</h3>
+          <div class="form-row">
+            <input id="searchScheduledDate" type="date" />
+            <input id="searchAucNum" placeholder="경매번호(예: 1,2,4)" />
+          </div>
+          <div class="form-row">
+            <button id="btnSearchCompleted" class="primary">낙찰완료 조회</button>
+            <button id="btnGenerateLabels" class="primary">
+              선택 바코드 생성 + 라벨 출력
+            </button>
+          </div>
+          <div class="hint">
+            국내에 도착한 박스를 보고 1) 경매 진행 날짜 확인 2) 날짜/경매번호 선택 3) 낙찰완료 조회 후 전체 선택 출력하면 국내도착존으로 자동 반영됩니다.
+          </div>
+          <div class="auction-wrap" style="margin-top: 10px">
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="selectAllAuctionRows" /></th>
+                  <th>유형</th>
+                  <th>입찰ID</th>
+                  <th>경매번호</th>
+                  <th>아이템ID</th>
+                  <th>상품명</th>
+                  <th>회원사</th>
+                  <th>상태</th>
+                  <th>내부바코드</th>
+                </tr>
+              </thead>
+              <tbody id="auctionItemsBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 16px">
+          <h3>2단계. 스캔 처리</h3>
+          <div class="scan-mode-row">
+            <select id="scanMode">
+              <option value="two_step">바코드 리더기 모드(존코드 → 물건바코드)</option>
+              <option value="manual">수동모드(존 선택 + 물건바코드)</option>
+            </select>
+            <button id="btnPrintZoneBarcodes" type="button" class="primary">존 바코드 출력</button>
+            <button id="btnClearStation" type="button">현재 존 초기화</button>
+          </div>
+          <div id="stationStatus" class="status-box">
+            현재 존: <strong>미설정</strong> (직원모드에서는 먼저 존 코드를 스캔하세요)
+          </div>
+          <div class="hint" style="margin-top: 6px">
+            입력창 클릭 후 영문(ABC) 상태에서 1) 존 바코드 스캔 2) 물건 바코드 연속 스캔
+          </div>
+          <hr />
+          <div class="form-row single">
+            <input id="scanBarcode" placeholder="바코드 입력 후 엔터 또는 버튼 클릭" />
+          </div>
+          <div class="form-row">
+            <select id="toLocationCode"></select>
+            <input id="staffName" placeholder="담당자명" />
+          </div>
+          <div class="form-row single">
+            <textarea id="scanNote" rows="2" placeholder="메모(선택)"></textarea>
+          </div>
+          <div class="form-row single">
+            <button id="btnScan" class="primary">스캔 기록</button>
+          </div>
+          <div id="scanResult" class="hint"></div>
+        </div>
+
+        <div class="card" style="margin-top: 16px">
+          <h3>3단계. 존별 현황</h3>
+          <div class="board-filter-row">
+            <div id="boardFilterHint" class="hint">숫자를 클릭하면 해당 존 물건만 아래 목록에 표시됩니다.</div>
+            <button id="btnClearBoardFilter" type="button">존 필터 해제</button>
+          </div>
+          <div id="boardGrid" class="board-grid"></div>
+        </div>
+
+        <div class="card" style="margin-top: 16px">
+          <h3>4단계. 최근 물건</h3>
+          <div class="items-wrap">
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>사진</th>
+                  <th>경매유형</th>
+                  <th>내부바코드</th>
+                  <th>상품명</th>
+                  <th>회원사</th>
+                  <th>상태</th>
+                  <th>위치</th>
+                  <th>도착후경과</th>
+                  <th>현재존 체류시간</th>
+                  <th>갱신시각</th>
+                </tr>
+              </thead>
+              <tbody id="itemsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script src="/js/admin/common.js"></script>
+    <script src="/js/admin/wms.js"></script>
+  </body>
+</html>

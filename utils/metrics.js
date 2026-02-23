@@ -1,7 +1,6 @@
 // utils/metrics.js
 const fs = require("fs");
 const path = require("path");
-const url = require("url");
 const crypto = require("crypto");
 const cron = require("node-cron"); // node-cron 추가
 
@@ -159,11 +158,19 @@ function cleanupInactiveUsers() {
 
 // 리소스 요청 여부 확인 (JS, CSS, 이미지 등)
 function isResourceRequest(req) {
-  const parsedUrl = url.parse(req.url);
-  const path = parsedUrl.pathname || "";
+  let requestPath = "";
+  try {
+    const requestUrl = new URL(
+      req.url,
+      `http://${req.headers.host || "localhost"}`,
+    );
+    requestPath = requestUrl.pathname || "";
+  } catch (error) {
+    requestPath = req.path || (req.url ? req.url.split("?")[0] : "");
+  }
 
   // 정적 리소스 요청인지 확인
-  const ext = path.split(".").pop().toLowerCase();
+  const ext = requestPath.split(".").pop().toLowerCase();
   const resourceExtensions = [
     "css",
     "js",
@@ -182,9 +189,9 @@ function isResourceRequest(req) {
 
   // API 요청이거나 정적 리소스, 또는 favicon 요청이면 제외
   if (
-    path.startsWith("/api/") ||
+    requestPath.startsWith("/api/") ||
     resourceExtensions.includes(ext) ||
-    path.includes("favicon.ico")
+    requestPath.includes("favicon.ico")
   ) {
     return true;
   }

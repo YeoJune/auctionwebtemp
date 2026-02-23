@@ -8,10 +8,134 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+const LIVE_STATUS_LABELS = {
+  first: "1차 입찰",
+  second: "2차 제안",
+  final: "최종 입찰",
+  completed: "완료",
+  domestic_arrived: "국내도착",
+  processing: "작업중",
+  shipped: "출고됨",
+  cancelled: "낙찰 실패",
+};
+
+const LIVE_NEXT_STATUS = {
+  completed: "domestic_arrived",
+  domestic_arrived: "processing",
+  processing: "shipped",
+};
+
+const LIVE_PREV_STATUS = {
+  domestic_arrived: "completed",
+};
+
+const LIVE_WORKFLOW_STATUSES = [
+  "completed",
+  "domestic_arrived",
+  "processing",
+  "shipped",
+];
+
+function getLiveNextStatus(status) {
+  return LIVE_NEXT_STATUS[status] || null;
+}
+
+function getLivePrevStatus(status) {
+  return LIVE_PREV_STATUS[status] || null;
+}
+
+function getLiveStatusLabel(status) {
+  return LIVE_STATUS_LABELS[status] || status;
+}
+
+function getLiveWorkflowStatusOptionsHtml(currentStatus) {
+  return LIVE_WORKFLOW_STATUSES.map(
+    (status) =>
+      `<option value="${status}"${
+        status === currentStatus ? " selected" : ""
+      }>${getLiveStatusLabel(status)}</option>`,
+  ).join("");
+}
+
+function getLiveZoneDisplayNameByCode(code) {
+  const map = {
+    DOMESTIC_ARRIVAL_ZONE: "국내도착존",
+    REPAIR_TEAM_CHECK_ZONE: "수선팀검수중존",
+    INTERNAL_REPAIR_ZONE: "내부수선존",
+    EXTERNAL_REPAIR_ZONE: "외부수선존",
+    REPAIR_DONE_ZONE: "수선완료존",
+    AUTH_ZONE: "감정출력존",
+    HOLD_ZONE: "HOLD존",
+    OUTBOUND_ZONE: "출고존",
+    REPAIR_ZONE: "수선존",
+    INSPECT_ZONE: "검수존",
+    SHIPPED_ZONE: "출고존",
+  };
+  return map[code] || "";
+}
+
+function getLiveProcessingStatusLabel(bid) {
+  const zoneName = getLiveZoneDisplayNameByCode(bid.wms_location_code);
+  if (zoneName) return `작업중(${zoneName})`;
+  return "작업중";
+}
+
+function renderProcessingZoneSummary(bids) {
+  const wrap = document.getElementById("processingZoneSummary");
+  const grid = document.getElementById("processingZoneGrid");
+  if (!wrap || !grid) return;
+
+  if (currentStatus !== "processing") {
+    wrap.style.display = "none";
+    grid.innerHTML = "";
+    return;
+  }
+
+  const zoneCountMap = (bids || []).reduce((acc, bid) => {
+    if (bid.status !== "processing") return acc;
+    const code = bid.wms_location_code || "UNKNOWN_ZONE";
+    acc[code] = (acc[code] || 0) + 1;
+    return acc;
+  }, {});
+
+  const entries = Object.entries(zoneCountMap).sort((a, b) => b[1] - a[1]);
+  if (!entries.length) {
+    wrap.style.display = "block";
+    grid.innerHTML = `<div class="processing-zone-item"><div class="name">작업중 데이터 없음</div><div class="count">0</div></div>`;
+    return;
+  }
+
+  const totalCount = entries.reduce((sum, [, count]) => sum + count, 0);
+  const allCard = `<div class="processing-zone-item ${
+    !currentProcessingZoneCode ? "is-active" : ""
+  }" data-zone-code=""><div class="name">전체</div><div class="count">${totalCount}</div></div>`;
+  const zoneCards = entries
+    .map(([code, count]) => {
+      const zoneName =
+        code === "UNKNOWN_ZONE"
+          ? "존 미지정"
+          : getLiveZoneDisplayNameByCode(code) || code;
+      return `<div class="processing-zone-item ${
+        currentProcessingZoneCode === code ? "is-active" : ""
+      }" data-zone-code="${code}"><div class="name">${zoneName}</div><div class="count">${count}</div></div>`;
+    })
+    .join("");
+  grid.innerHTML = allCard + zoneCards;
+  grid.querySelectorAll(".processing-zone-item[data-zone-code]").forEach((el) => {
+    el.addEventListener("click", () => {
+      currentProcessingZoneCode = el.dataset.zoneCode || "";
+      updateURLState();
+      renderProcessingZoneSummary(currentLiveBidsData);
+      renderLiveBidsTable(filterLiveBidsByZone(currentLiveBidsData));
+    });
+  });
+  wrap.style.display = "block";
+}
+
 // 현재 선택된 필터 상태 - URL로 관리
 let currentStatus = "";
 let currentPage = 1;
-let itemsPerPage = 10;
+let itemsPerPage = 100;
 let totalPages = 1;
 let currentSortBy = "original_scheduled_date";
 let currentSortOrder = "desc";
@@ -19,6 +143,8 @@ let fromDate = "";
 let toDate = "";
 let currentSearch = "";
 let currentAucNum = "";
+let currentProcessingZoneCode = "";
+let currentLiveBidsData = [];
 
 // 검색 디바운스 타이머
 let searchTimeout = null;
@@ -34,11 +160,12 @@ const defaultState = {
   search: "",
   status: "",
   aucNum: "",
+  zone: "",
 };
 
 // URL에서 상태 복원
 function initializeFromURL() {
-  const stateKeys = ["page", "sort", "order", "search", "status", "aucNum"];
+  const stateKeys = ["page", "sort", "order", "search", "status", "aucNum", "zone"];
   const state = urlStateManager.loadFromURL(defaultState, stateKeys);
 
   currentPage = state.page;
@@ -47,6 +174,7 @@ function initializeFromURL() {
   currentSearch = state.search;
   currentStatus = state.status;
   currentAucNum = state.aucNum;
+  currentProcessingZoneCode = state.zone;
 
   updateUIFromState();
 }
@@ -60,6 +188,7 @@ function updateURLState() {
     search: currentSearch,
     status: currentStatus,
     aucNum: currentAucNum,
+    zone: currentProcessingZoneCode,
   };
 
   urlStateManager.updateURL(state, defaultState);
@@ -80,6 +209,8 @@ function updateUIFromState() {
   aucNumButtons.forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.aucNum === currentAucNum);
   });
+
+  updateBulkShipButtonLabel();
 }
 
 // 페이지 로드 시 실행
@@ -125,6 +256,8 @@ document.addEventListener("DOMContentLoaded", function () {
     button.addEventListener("click", function () {
       const status = this.dataset.status;
       currentStatus = status;
+      if (currentStatus !== "processing") currentProcessingZoneCode = "";
+      updateBulkShipButtonLabel();
       currentPage = 1;
       updateURLState();
       loadLiveBids();
@@ -174,16 +307,21 @@ document.addEventListener("DOMContentLoaded", function () {
     .getElementById("submitCancel")
     .addEventListener("click", submitCancelBid);
 
-  // 일괄 작업 버튼 이벤트
-  document
-    .getElementById("bulkCompleteBtn")
-    .addEventListener("click", openBulkCompleteModal);
-  document
-    .getElementById("bulkCancelBtn")
-    .addEventListener("click", openBulkCancelModal);
+  // 일괄 작업 이벤트 (완료/낙찰실패는 토글에서 선택 후 일괄 변경으로 처리)
   document
     .getElementById("bulkShipBtn")
-    ?.addEventListener("click", bulkMarkAsShipped);
+    ?.addEventListener("click", function () {
+      const target = document.getElementById("bulkStatusTarget")?.value;
+      if (target === "cancelled") {
+        openBulkCancelModal();
+        return;
+      }
+      if (target === "completed") {
+        openBulkCompleteModal();
+        return;
+      }
+      bulkMarkAsShipped();
+    });
 
   // 일괄 작업 모달 제출 버튼
   document
@@ -237,6 +375,7 @@ document.addEventListener("DOMContentLoaded", function () {
       fromDate = document.getElementById("fromDate").value;
       toDate = document.getElementById("toDate").value;
       currentPage = 1;
+      document.querySelectorAll("[data-range]").forEach((b) => b.classList.remove("active"));
       loadLiveBids();
     });
 
@@ -249,6 +388,7 @@ document.addEventListener("DOMContentLoaded", function () {
       fromDate = "";
       toDate = "";
       currentPage = 1;
+      document.querySelectorAll("[data-range]").forEach((b) => b.classList.remove("active"));
       loadLiveBids();
     });
 
@@ -326,6 +466,8 @@ function handleQuickDateFilter(event) {
   fromDate = startDate;
   toDate = endDate;
   currentPage = 1;
+  document.querySelectorAll("[data-range]").forEach((b) => b.classList.remove("active"));
+  event.target.closest("[data-range]")?.classList.add("active");
   updateURLState();
   loadLiveBids();
 }
@@ -333,8 +475,25 @@ function handleQuickDateFilter(event) {
 // 필터 상태에 따라 데이터 로드
 async function filterByStatus(status) {
   currentStatus = status;
+  if (currentStatus !== "processing") currentProcessingZoneCode = "";
+  updateBulkShipButtonLabel();
   currentPage = 1;
   await loadLiveBids();
+}
+
+function updateBulkShipButtonLabel() {
+  const bulkShipBtn = document.getElementById("bulkShipBtn");
+  const bulkStatusTarget = document.getElementById("bulkStatusTarget");
+  if (bulkShipBtn) {
+    bulkShipBtn.textContent = "일괄 상태 변경";
+  }
+
+  if (
+    bulkStatusTarget &&
+    LIVE_WORKFLOW_STATUSES.includes(currentStatus)
+  ) {
+    bulkStatusTarget.value = currentStatus;
+  }
 }
 
 // 페이지 변경 함수
@@ -361,24 +520,41 @@ async function loadLiveBids() {
       currentSearch,
       currentAucNum,
     );
+    currentLiveBidsData = liveBids?.bids || [];
+    const filteredBids = filterLiveBidsByZone(currentLiveBidsData);
 
-    if (!liveBids?.bids || liveBids.count === 0) {
+    if (!currentLiveBidsData.length) {
       showNoData("liveBidsTableBody", "현장 경매 데이터가 없습니다.");
       renderPagination(0, 0, 0);
+      renderProcessingZoneSummary([]);
       return;
     }
 
-    renderLiveBidsTable(liveBids.bids);
+    if (!filteredBids.length) {
+      showNoData("liveBidsTableBody", "선택한 존의 작업중 데이터가 없습니다.");
+    } else {
+      renderLiveBidsTable(filteredBids);
+    }
+    renderProcessingZoneSummary(currentLiveBidsData);
     renderPagination(liveBids.currentPage, liveBids.totalPages, liveBids.total);
     totalPages = liveBids.totalPages;
   } catch (error) {
+    currentLiveBidsData = [];
     handleError(error, "현장 경매 데이터를 불러오는 중 오류가 발생했습니다.");
     showNoData(
       "liveBidsTableBody",
       "데이터를 불러오는 중 오류가 발생했습니다.",
     );
     renderPagination(0, 0, 0);
+    renderProcessingZoneSummary([]);
   }
+}
+
+function filterLiveBidsByZone(bids) {
+  if (currentStatus !== "processing" || !currentProcessingZoneCode) return bids || [];
+  return (bids || []).filter(
+    (bid) => (bid.wms_location_code || "UNKNOWN_ZONE") === currentProcessingZoneCode,
+  );
 }
 
 // 페이지네이션 렌더링 - 공통 함수 활용
@@ -429,6 +605,14 @@ function renderLiveBidsTable(liveBids) {
       case "completed":
         statusBadge = '<span class="badge badge-success">완료</span>';
         break;
+      case "domestic_arrived":
+        statusBadge = '<span class="badge badge-warning">국내도착</span>';
+        break;
+      case "processing":
+        statusBadge = `<span class="badge badge-dark">${getLiveProcessingStatusLabel(
+          bid,
+        )}</span>`;
+        break;
       case "shipped":
         statusBadge = '<span class="badge badge-primary">출고됨</span>';
         break;
@@ -449,7 +633,12 @@ function renderLiveBidsTable(liveBids) {
 
     // 수선 접수 버튼
     let repairButton = "";
-    if (bid.status === "completed" || bid.status === "shipped") {
+    if (
+      bid.status === "completed" ||
+      bid.status === "domestic_arrived" ||
+      bid.status === "processing" ||
+      bid.status === "shipped"
+    ) {
       if (bid.repair_requested_at) {
         // 수선 접수됨 - 클릭 시 수정 모달 열기
         repairButton = `<button class="btn btn-sm btn-success" 
@@ -467,21 +656,24 @@ function renderLiveBidsTable(liveBids) {
       repairButton = "-";
     }
 
-    // 작업 버튼 - 수정 버튼 추가
-    let actionButtons = `<button class="btn btn-sm btn-secondary" onclick="openEditBidModal(${bid.id})">수정</button>`;
+    // 작업 버튼 - 한 줄, 동일 크기(btn-sm)
+    let actionButtons = `<div class="action-buttons-row"><button class="btn btn-sm btn-secondary" onclick="openEditBidModal(${bid.id})">수정</button>`;
 
     if (bid.status === "first") {
-      actionButtons += `<button class="btn" onclick="openSecondPriceModal(${bid.id})">2차 가격 제안</button>`;
+      actionButtons += `<button class="btn btn-sm" onclick="openSecondPriceModal(${bid.id})">2차 가격 제안</button>`;
     } else if (bid.status === "final") {
       actionButtons += `
-        <button class="btn" onclick="openCompleteModal(${bid.id})">낙찰 완료</button>
-        <button class="btn btn-secondary" onclick="openCancelModal(${bid.id})">낙찰 실패</button>
+        <button class="btn btn-sm btn-secondary" onclick="openCancelModal(${bid.id})">낙찰 실패</button>
       `;
-    } else if (bid.status === "completed") {
+    } else if (LIVE_WORKFLOW_STATUSES.includes(bid.status)) {
       actionButtons += `
-        <button class="btn btn-info btn-sm" onclick="markAsShipped(${bid.id})">출고됨으로 변경</button>
+        <select class="form-control form-control-sm status-target-select" id="liveStatusTarget-${bid.id}" data-current-status="${bid.status}">
+          ${getLiveWorkflowStatusOptionsHtml(bid.status)}
+        </select>
+        <button class="btn btn-info btn-sm" onclick="moveLiveBidStatus(${bid.id})">상태 변경</button>
       `;
     }
+    actionButtons += `</div>`;
 
     // 날짜를 KST로 변환
     let scheduledDate = "-";
@@ -564,7 +756,7 @@ function renderLiveBidsTable(liveBids) {
       bid.id
     }" data-final-price="${bid.final_price || 0}" data-auc-num="${
       bid.item?.auc_num || 1
-    }" data-category="${bid.item?.category || "기타"}"></td>
+    }" data-category="${bid.item?.category || "기타"}" data-status="${bid.status}"></td>
     <td>${bid.id}</td>
     <td>
       <div class="item-info">
@@ -574,6 +766,7 @@ function renderLiveBidsTable(liveBids) {
         <div class="item-details">
           <div><a href="${itemUrl}" target="_blank">${bid.item_id}</a></div>
           <div class="item-meta">
+            <span>내부바코드: ${bid.internal_barcode || "-"}</span>
             ${itemNo ? `<span>품번: ${itemNo}</span>` : ""}
             <span>제목: ${bid.item?.original_title || "-"}</span>
             <span>경매번호: ${bid.item?.auc_num || "-"}</span>
@@ -653,13 +846,13 @@ function updateBulkActionButtons() {
   const checkedCount = document.querySelectorAll(
     ".bid-checkbox:checked",
   ).length;
-  const bulkCompleteBtn = document.getElementById("bulkCompleteBtn");
-  const bulkCancelBtn = document.getElementById("bulkCancelBtn");
+  const selectionHint = document.getElementById("bulkSelectionHint");
   const bulkShipBtn = document.getElementById("bulkShipBtn");
 
-  if (bulkCompleteBtn) bulkCompleteBtn.disabled = checkedCount === 0;
-  if (bulkCancelBtn) bulkCancelBtn.disabled = checkedCount === 0;
   if (bulkShipBtn) bulkShipBtn.disabled = checkedCount === 0;
+  if (selectionHint) {
+    selectionHint.textContent = `선택 ${checkedCount}건`;
+  }
 }
 
 // 2차 제안가 제안 모달 열기 - 공통 함수 활용
@@ -765,7 +958,6 @@ async function submitCompleteBid() {
   try {
     await completeBid(bidId, winningPrice);
     closeAllModals();
-    showAlert("입찰이 완료되었습니다.", "success");
     await loadLiveBids();
   } catch (error) {
     handleError(error, "입찰 완료 처리 중 오류가 발생했습니다.");
@@ -856,7 +1048,6 @@ async function submitBulkComplete() {
 
     await completeBid(bidIds, winningPrice);
     closeAllModals();
-    showAlert(`${bidIds.length}개 입찰이 완료되었습니다.`, "success");
     await loadLiveBids();
   } catch (error) {
     handleError(error, "일괄 입찰 완료 처리 중 오류가 발생했습니다.");
@@ -946,7 +1137,13 @@ function openEditBidModal(bidId) {
               ? "final"
               : statusText.includes("완료")
                 ? "completed"
-                : "cancelled",
+                : statusText.includes("국내도착")
+                  ? "domestic_arrived"
+                  : statusText.includes("작업중")
+                    ? "processing"
+                    : statusText.includes("출고됨")
+                      ? "shipped"
+                      : "cancelled",
       };
       break;
     }
@@ -1009,48 +1206,118 @@ async function submitEditBid() {
   }
 }
 
-// 완료 상태를 출고됨으로 변경
-async function markAsShipped(bidId) {
-  if (!confirm("이 입찰을 출고됨 상태로 변경하시겠습니까?")) {
+// 완료/국내도착/작업중 상태를 다음 단계로 변경
+async function advanceLiveBidStatus(bidId, currentStatus) {
+  const nextStatus = getLiveNextStatus(currentStatus);
+  if (!nextStatus) {
+    showAlert("이 상태는 다음 단계로 변경할 수 없습니다.", "warning");
+    return;
+  }
+
+  if (
+    !confirm(`이 입찰을 ${getLiveStatusLabel(nextStatus)} 상태로 변경하시겠습니까?`)
+  ) {
     return;
   }
 
   try {
-    await updateLiveBid(bidId, { status: "shipped" });
-    showAlert("상태가 출고됨으로 변경되었습니다.", "success");
+    await updateLiveBid(bidId, { status: nextStatus });
+    showAlert(
+      `상태가 ${getLiveStatusLabel(nextStatus)}으로 변경되었습니다.`,
+      "success",
+    );
     await loadLiveBids();
   } catch (error) {
     handleError(error, "상태 변경 중 오류가 발생했습니다.");
   }
 }
 
-// 선택 항목 일괄 출고됨 처리
-async function bulkMarkAsShipped() {
-  const checkedBoxes = document.querySelectorAll(".bid-checkbox:checked");
-  const bidIds = Array.from(checkedBoxes).map((cb) =>
-    parseInt(cb.dataset.bidId),
-  );
+async function moveLiveBidStatus(bidId) {
+  const select = document.getElementById(`liveStatusTarget-${bidId}`);
+  const targetStatus = select?.value;
+  const currentRowStatus = select?.dataset.currentStatus || "";
 
-  if (bidIds.length === 0) {
-    showAlert("선택된 항목이 없습니다.", "warning");
+  if (!targetStatus) {
+    showAlert("변경할 상태를 선택해주세요.", "warning");
+    return;
+  }
+
+  if (targetStatus === currentRowStatus) {
+    showAlert("현재 상태와 동일합니다.", "warning");
     return;
   }
 
   if (
-    !confirm(`선택된 ${bidIds.length}개 항목을 출고됨 상태로 변경하시겠습니까?`)
+    !confirm(
+      `이 입찰을 ${getLiveStatusLabel(targetStatus)} 상태로 변경하시겠습니까?`,
+    )
   ) {
     return;
   }
 
   try {
-    // 각 항목에 대해 개별적으로 상태 업데이트
-    const promises = bidIds.map((bidId) =>
-      updateLiveBid(bidId, { status: "shipped" }),
+    await updateLiveBid(bidId, { status: targetStatus });
+    showAlert(
+      `상태가 ${getLiveStatusLabel(targetStatus)}으로 변경되었습니다.`,
+      "success",
+    );
+    await loadLiveBids();
+  } catch (error) {
+    handleError(error, "상태 변경 중 오류가 발생했습니다.");
+  }
+}
+
+// 선택 항목 일괄 다음 단계 처리
+async function bulkMarkAsShipped() {
+  const checkedBoxes = document.querySelectorAll(".bid-checkbox:checked");
+  const bulkStatusTarget = document.getElementById("bulkStatusTarget");
+  const targetStatus = bulkStatusTarget?.value;
+  const bidUpdates = [];
+  const skippedSameStatus = [];
+
+  if (!targetStatus || !LIVE_WORKFLOW_STATUSES.includes(targetStatus)) {
+    showAlert("변경할 상태를 선택해주세요.", "warning");
+    return;
+  }
+
+  checkedBoxes.forEach((cb) => {
+    const bidId = parseInt(cb.dataset.bidId);
+    const currentBidStatus = cb.dataset.status || "";
+
+    if (!bidId) return;
+
+    if (currentBidStatus === targetStatus) {
+      skippedSameStatus.push(bidId);
+    } else {
+      bidUpdates.push({ bidId, nextStatus: targetStatus });
+    }
+  });
+
+  if (bidUpdates.length === 0) {
+    showAlert("선택된 항목이 없거나 이미 같은 상태입니다.", "warning");
+    return;
+  }
+
+  if (
+    !confirm(
+      `선택된 ${bidUpdates.length}개 항목을 ${getLiveStatusLabel(targetStatus)} 상태로 변경하시겠습니까?`,
+    )
+  ) {
+    return;
+  }
+
+  try {
+    const promises = bidUpdates.map(({ bidId, nextStatus }) =>
+      updateLiveBid(bidId, { status: nextStatus }),
     );
     await Promise.all(promises);
 
+    const skippedText =
+      skippedSameStatus.length > 0
+        ? ` (${skippedSameStatus.length}개는 이미 같은 상태여서 제외)`
+        : "";
     showAlert(
-      `${bidIds.length}개 항목이 출고됨으로 변경되었습니다.`,
+      `${bidUpdates.length}개 항목이 ${getLiveStatusLabel(targetStatus)} 상태로 변경되었습니다.${skippedText}`,
       "success",
     );
     await loadLiveBids();

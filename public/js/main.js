@@ -127,7 +127,11 @@ window.ProductListController = (function () {
         console.log("상품 페이지 - 현재 사용자 ID:", currentUser.login_id);
 
         // 특정 사용자 ID에 대한 임시 처리
-        if (currentUser.login_id === "admin") {
+        const role = String(currentUser.role || "").toLowerCase();
+        if (
+          currentUser.login_id === "admin" ||
+          (role && role.includes("admin"))
+        ) {
           // 임시 코드 실행
           document
             .querySelector("#aucNumFilters")

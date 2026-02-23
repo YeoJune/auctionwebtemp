@@ -2,10 +2,11 @@
 const express = require("express");
 const router = express.Router();
 const { pool } = require("../utils/DB");
+const { isAdminUser } = require("../utils/adminAuth");
 
 // 관리자 권한 확인 미들웨어
 const isAdmin = (req, res, next) => {
-  if (req.session.user && req.session.user.login_id === "admin") {
+  if (isAdminUser(req.session?.user)) {
     next();
   } else {
     res.status(403).json({ message: "Access denied. Admin only." });
@@ -362,6 +363,254 @@ router.get("/active-users", isAdmin, async (req, res) => {
   } catch (err) {
     console.error("Error fetching active users:", err);
     res.status(500).json({ message: "Error fetching active users" });
+  } finally {
+    connection.release();
+  }
+});
+
+// CEO 대시보드 요약 (완료 매출/VIP/이탈위험)
+router.get("/executive-summary", isAdmin, async (req, res) => {
+  const connection = await pool.getConnection();
+  const revenueStatuses = "'completed','shipped'";
+  const targetYear = 2026;
+
+  try {
+    const calcBusinessDays = (dateValue) => {
+      if (!dateValue) return 0;
+      const start = new Date(dateValue);
+      if (Number.isNaN(start.getTime())) return 0;
+      start.setHours(0, 0, 0, 0);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (start >= today) return 0;
+      let days = 0;
+      const cursor = new Date(start);
+      while (cursor < today) {
+        const day = cursor.getDay();
+        if (day !== 0 && day !== 6) days += 1;
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      return days;
+    };
+
+    const [countsRows] = await connection.query(`
+      SELECT
+        SUM(CASE WHEN src = 'live' THEN 1 ELSE 0 END) AS liveCount,
+        SUM(CASE WHEN src = 'direct' THEN 1 ELSE 0 END) AS directCount,
+        COUNT(*) AS totalCount
+      FROM (
+        SELECT 'live' AS src, COALESCE(l.completed_at, l.updated_at, l.created_at) AS event_at
+        FROM live_bids l
+        WHERE l.status IN (${revenueStatuses})
+          AND CAST(REPLACE(l.winning_price, ',', '') AS DECIMAL(18,2)) > 0
+          AND YEAR(COALESCE(l.completed_at, l.updated_at, l.created_at)) = ?
+        UNION ALL
+        SELECT 'direct' AS src, COALESCE(d.completed_at, d.updated_at, d.created_at) AS event_at
+        FROM direct_bids d
+        WHERE d.status IN (${revenueStatuses})
+          AND CAST(REPLACE(d.winning_price, ',', '') AS DECIMAL(18,2)) > 0
+          AND YEAR(COALESCE(d.completed_at, d.updated_at, d.created_at)) = ?
+      ) t
+    `, [targetYear, targetYear]);
+
+    const [settlementYearRows] = await connection.query(`
+      SELECT
+        COALESCE(SUM(ds.total_amount), 0) AS yearRevenueKrw,
+        COALESCE(MIN(ds.settlement_date), NULL) AS periodStart,
+        COALESCE(MAX(ds.settlement_date), NULL) AS periodEnd
+      FROM daily_settlements ds
+      WHERE YEAR(ds.settlement_date) = ?
+        AND ds.total_amount > 0
+    `, [targetYear]);
+
+    const [settlementCurrentMonthRows] = await connection.query(`
+      SELECT
+        COALESCE(SUM(ds.total_amount), 0) AS monthRevenueKrw
+      FROM daily_settlements ds
+      WHERE YEAR(ds.settlement_date) = YEAR(CURDATE())
+        AND MONTH(ds.settlement_date) = MONTH(CURDATE())
+        AND ds.total_amount > 0
+    `);
+
+    const [monthlyCountRows] = await connection.query(`
+      SELECT
+        COUNT(*) AS monthlyCompletedCount
+      FROM (
+        SELECT COALESCE(l.completed_at, l.updated_at, l.created_at) AS event_at
+        FROM live_bids l
+        WHERE l.status IN (${revenueStatuses})
+          AND CAST(REPLACE(l.winning_price, ',', '') AS DECIMAL(18,2)) > 0
+        UNION ALL
+        SELECT COALESCE(d.completed_at, d.updated_at, d.created_at) AS event_at
+        FROM direct_bids d
+        WHERE d.status IN (${revenueStatuses})
+          AND CAST(REPLACE(d.winning_price, ',', '') AS DECIMAL(18,2)) > 0
+      ) x
+      WHERE x.event_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)
+    `);
+
+    const [noBidRows] = await connection.query(`
+      SELECT
+        u.id AS user_id,
+        COALESCE(u.login_id, CONCAT('user#', u.id)) AS login_id,
+        COALESCE(u.company_name, '-') AS company_name,
+        DATE_FORMAT(u.created_at, '%Y-%m-%d') AS joined_at
+      FROM users u
+      LEFT JOIN (
+        SELECT DISTINCT user_id FROM live_bids WHERE user_id IS NOT NULL
+        UNION
+        SELECT DISTINCT user_id FROM direct_bids WHERE user_id IS NOT NULL
+      ) b ON b.user_id = u.id
+      WHERE u.role = 'normal'
+        AND u.created_at < DATE_SUB(NOW(), INTERVAL 30 DAY)
+        AND b.user_id IS NULL
+      ORDER BY u.created_at ASC
+      LIMIT 200
+    `);
+    const [vipRows] = await connection.query(`
+      SELECT
+        ds.user_id,
+        COALESCE(u.login_id, CONCAT('user#', ds.user_id)) AS login_id,
+        COALESCE(u.company_name, '-') AS company_name,
+        COUNT(*) AS completedCount,
+        COALESCE(SUM(ds.total_amount), 0) AS totalRevenueKrw
+      FROM daily_settlements ds
+      LEFT JOIN users u ON u.id = ds.user_id
+      WHERE ds.settlement_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        AND ds.total_amount > 0
+      GROUP BY ds.user_id, u.login_id, u.company_name
+      ORDER BY totalRevenueKrw DESC
+      LIMIT 10
+    `);
+
+    const [sixMonthRows] = await connection.query(`
+      SELECT
+        DATE_FORMAT(ds.settlement_date, '%Y-%m') AS ym,
+        COALESCE(SUM(ds.total_amount), 0) AS revenueKrw
+      FROM daily_settlements ds
+      WHERE ds.settlement_date >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 5 MONTH), '%Y-%m-01')
+      GROUP BY DATE_FORMAT(ds.settlement_date, '%Y-%m')
+      ORDER BY ym ASC
+    `);
+
+    const [pendingDomesticRows] = await connection.query(`
+      SELECT
+        DATE(z.completed_at) AS completed_date,
+        z.auc_num,
+        COUNT(*) AS item_count,
+        MAX(z.completed_at) AS completed_at
+      FROM (
+        SELECT
+          'live' AS bid_type,
+          l.id AS bid_id,
+          l.item_id,
+          i.auc_num,
+          COALESCE(l.completed_at, l.updated_at, l.created_at) AS completed_at
+        FROM live_bids l
+        LEFT JOIN crawled_items i
+          ON CONVERT(i.item_id USING utf8mb4) =
+             CONVERT(l.item_id USING utf8mb4)
+        WHERE l.status = 'completed'
+        UNION ALL
+        SELECT
+          'direct' AS bid_type,
+          d.id AS bid_id,
+          d.item_id,
+          i.auc_num,
+          COALESCE(d.completed_at, d.updated_at, d.created_at) AS completed_at
+        FROM direct_bids d
+        LEFT JOIN crawled_items i
+          ON CONVERT(i.item_id USING utf8mb4) =
+             CONVERT(d.item_id USING utf8mb4)
+        WHERE d.status = 'completed'
+      ) z
+      LEFT JOIN bid_workflow_stages bws
+        ON bws.bid_type = z.bid_type
+       AND bws.bid_id = z.bid_id
+      WHERE z.completed_at IS NOT NULL
+        AND (
+          bws.bid_id IS NULL
+          OR bws.stage NOT IN ('domestic_arrived', 'processing', 'shipped')
+        )
+      GROUP BY DATE(z.completed_at), z.auc_num
+      ORDER BY completed_date DESC, z.auc_num ASC
+      LIMIT 200
+    `);
+
+    const formatDate = (d) => {
+      if (!d) return null;
+      const date = new Date(d);
+      if (Number.isNaN(date.getTime())) return null;
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+        date.getDate(),
+      ).padStart(2, "0")}`;
+    };
+
+    const yearRevenueKrw = Number(settlementYearRows[0]?.yearRevenueKrw || 0);
+    const monthlyRevenueKrw = Number(settlementCurrentMonthRows[0]?.monthRevenueKrw || 0);
+    const completedCount = Number(countsRows[0]?.totalCount || 0);
+    const liveCount = Number(countsRows[0]?.liveCount || 0);
+    const directCount = Number(countsRows[0]?.directCount || 0);
+    const totalCountForSplit = completedCount > 0 ? completedCount : 1;
+    const liveRevenueEstimate = Math.round((yearRevenueKrw * liveCount) / totalCountForSplit);
+    const directRevenueEstimate = Math.max(0, Math.round(yearRevenueKrw - liveRevenueEstimate));
+
+    const sixMonthMap = new Map((sixMonthRows || []).map((r) => [r.ym, Number(r.revenueKrw || 0)]));
+    const sixMonthRevenue = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(1);
+      d.setMonth(d.getMonth() - i);
+      const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      sixMonthRevenue.push({
+        month: ym,
+        monthLabel: `${String(d.getMonth() + 1).padStart(2, "0")}월`,
+        revenueKrw: Number(sixMonthMap.get(ym) || 0),
+      });
+    }
+
+    const pendingDomestic = (pendingDomesticRows || []).map((row) => {
+      const completedDate = formatDate(row.completed_date || row.completed_at);
+      return {
+        aucNum: row.auc_num || "-",
+        itemCount: Number(row.item_count || 0),
+        completedAt: row.completed_at,
+        completedDate,
+        businessDaysElapsed: calcBusinessDays(row.completed_at),
+      };
+    });
+
+    res.status(200).json({
+      completedCount,
+      totalRevenueKrw: yearRevenueKrw,
+      targetYear,
+      yearCompletedCount: completedCount,
+      yearRevenueKrw,
+      monthlyCompletedCount: Number(monthlyCountRows[0]?.monthlyCompletedCount || 0),
+      monthlyRevenueKrw,
+      periodStart: formatDate(settlementYearRows[0]?.periodStart),
+      periodEnd: formatDate(settlementYearRows[0]?.periodEnd),
+      atRiskCount: noBidRows.length,
+      atRiskUsers: noBidRows,
+      vipTop5: (vipRows || []).slice(0, 5),
+      vipTop10: vipRows || [],
+      sixMonthRevenue,
+      pendingDomesticCount: pendingDomestic.length,
+      pendingDomestic,
+      sourceBreakdown: {
+        live: {
+          count: liveCount,
+          revenueKrw: liveRevenueEstimate,
+        },
+        direct: {
+          count: directCount,
+          revenueKrw: directRevenueEstimate,
+        },
+      },
+    });
+  } catch (err) {
+    console.error("Error fetching executive summary:", err);
+    res.status(500).json({ message: "Error fetching executive summary" });
   } finally {
     connection.release();
   }

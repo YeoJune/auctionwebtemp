@@ -2,57 +2,956 @@
 
 // 페이지 로드 시 실행
 document.addEventListener("DOMContentLoaded", function () {
-  // 회원 목록 로드
+  initMemberTabs();
+  initMemberFilters();
   loadUsers();
+  loadMemberGroups();
 
-  // 새 회원 등록 버튼 클릭 이벤트
-  document.getElementById("addUserBtn").addEventListener("click", function () {
-    openUserForm();
-  });
-
-  // 시트 동기화 버튼 클릭 이벤트
-  document
-    .getElementById("syncSheetsBtn")
-    .addEventListener("click", function () {
-      syncWithSheets();
-    });
-
-  // 저장 버튼 클릭 이벤트
-  document.getElementById("saveUserBtn").addEventListener("click", function () {
-    saveUser();
-  });
-
-  // 회원 구분 라디오 버튼 변경 이벤트
+  document.getElementById("addUserBtn").addEventListener("click", openUserForm);
+  document.getElementById("syncSheetsBtn").addEventListener("click", syncWithSheets);
+  document.getElementById("saveUserBtn").addEventListener("click", saveUser);
   document.querySelectorAll('input[name="accountType"]').forEach((radio) => {
     radio.addEventListener("change", handleAccountTypeChange);
   });
 
-  // 증빙 유형 라디오 버튼 변경 시 수동 콘트롤 플래그 설정
-  document.querySelectorAll('input[name="documentType"]').forEach((radio) => {
-    radio.addEventListener("change", () => {
-      window.documentTypeManuallySet = true;
-    });
+  document.getElementById("manageGroupsBtn")?.addEventListener("click", openManageGroupsModal);
+  document.getElementById("closeManageGroupsModal")?.addEventListener("click", closeManageGroupsModal);
+  document.getElementById("addGroupBtn")?.addEventListener("click", submitAddGroup);
+  document.getElementById("closeAddMemberToGroupModal")?.addEventListener("click", closeAddMemberToGroupModal);
+  document.getElementById("addMemberSearchInput")?.addEventListener("input", async function () {
+    const groupId = document.getElementById("addMemberTargetGroupId")?.value;
+    if (!groupId) return;
+    await populateAddMemberCandidates(parseInt(groupId, 10), this.value.trim());
   });
+  document.getElementById("addMemberSelectAll")?.addEventListener("change", handleAddMemberSelectAll);
+  document.getElementById("bulkAddMemberBtn")?.addEventListener("click", submitBulkAddMembersToGroup);
 });
+
+let usersCache = [];
 
 // 회원 목록 로드
 async function loadUsers() {
   try {
     showLoading("usersTableBody");
-    const response = await fetchUsers();
+    showLoading("deactivateCandidatesBody");
+    showLoading("vipTopTableBody");
+    const [response, executiveSummary] = await Promise.all([
+      fetchUsers(),
+      fetchExecutiveSummary().catch(() => ({ vipTop10: [] })),
+    ]);
 
-    // API 응답이 배열인지 확인
     const users = Array.isArray(response) ? response : response.users || [];
+    usersCache = users;
 
     if (users.length === 0) {
       showNoData("usersTableBody", "등록된 회원이 없습니다.");
+      showNoData("deactivateCandidatesBody", "비활성화 대상 회원이 없습니다.");
+      renderVipTop10(executiveSummary?.vipTop10 || []);
+      const countNode = document.getElementById("deactivateCandidateCount");
+      if (countNode) countNode.textContent = "0명";
       return;
     }
 
-    renderUsers(users);
+    applyMemberFiltersAndRender();
+    renderDeactivateCandidates(users);
+    renderVipTop10(executiveSummary?.vipTop10 || []);
   } catch (error) {
     handleError(error, "회원 목록을 불러오는 중 오류가 발생했습니다.");
   }
+}
+
+function initMemberFilters() {
+  ["memberStatusFilter", "memberSortField", "memberSortOrder"].forEach((id) => {
+    const node = document.getElementById(id);
+    if (!node) return;
+    node.addEventListener("change", () => applyMemberFiltersAndRender());
+  });
+}
+
+function applyMemberFiltersAndRender() {
+  const statusFilter = document.getElementById("memberStatusFilter")?.value || "all";
+  const sortField = document.getElementById("memberSortField")?.value || "registration_date";
+  const sortOrder = document.getElementById("memberSortOrder")?.value || "desc";
+
+  const filtered = (usersCache || []).filter((u) => {
+    if (statusFilter === "active") return !!u.is_active;
+    if (statusFilter === "inactive") return !u.is_active;
+    return true;
+  });
+
+  filtered.sort((a, b) => compareUsers(a, b, sortField, sortOrder));
+  renderUsers(filtered);
+}
+
+function compareUsers(a, b, sortField, sortOrder) {
+  const direction = sortOrder === "asc" ? 1 : -1;
+
+  if (sortField === "registration_date") {
+    const ad = toTime(a.registration_date || a.created_at);
+    const bd = toTime(b.registration_date || b.created_at);
+    return (ad - bd) * direction;
+  }
+
+  if (sortField === "total_bid_jpy") {
+    const av = Number(a.total_bid_jpy || 0);
+    const bv = Number(b.total_bid_jpy || 0);
+    return (av - bv) * direction;
+  }
+
+  if (sortField === "total_bid_count") {
+    const av = Number(a.total_bid_count || 0);
+    const bv = Number(b.total_bid_count || 0);
+    return (av - bv) * direction;
+  }
+
+  if (sortField === "last_bid_at") {
+    const ad = toTime(a.last_bid_at);
+    const bd = toTime(b.last_bid_at);
+    return (ad - bd) * direction;
+  }
+
+  const av = String(a[sortField] || "").toLowerCase();
+  const bv = String(b[sortField] || "").toLowerCase();
+  if (av < bv) return -1 * direction;
+  if (av > bv) return 1 * direction;
+  return 0;
+}
+
+function toTime(v) {
+  if (!v) return 0;
+  const dt = new Date(v);
+  if (Number.isNaN(dt.getTime())) return 0;
+  return dt.getTime();
+}
+
+function initMemberTabs() {
+  document.querySelector(".member-tabs")?.addEventListener("click", function (e) {
+    const btn = e.target.closest(".member-tab-btn[data-tab-target]");
+    if (!btn) return;
+    const target = btn.dataset.tabTarget;
+    document.querySelectorAll(".member-tab-btn[data-tab-target]").forEach((b) => b.classList.remove("active"));
+    document.querySelectorAll(".member-tab-panel").forEach((p) => p.classList.remove("active"));
+    btn.classList.add("active");
+    const targetPanel = document.getElementById(target);
+    if (targetPanel) {
+      targetPanel.classList.add("active");
+      const groupId = targetPanel.dataset?.groupId;
+      if (groupId) loadGroupMembers(parseInt(groupId, 10));
+    }
+  });
+}
+
+function formatLastBidDate(value) {
+  if (!value) return "입찰 이력 없음";
+  return formatDate(value, true);
+}
+
+function formatRecentBidText(user) {
+  if (!user?.last_bid_at) return "입찰 이력 없음";
+  const bidType = user.last_bid_type === "live" ? "현장" : "직접";
+  return `${bidType}#${user.last_bid_id || "-"} / ${
+    user.last_bid_item_id || "-"
+  }   (${formatDate(user.last_bid_at, true)})`;
+}
+
+// ========== 회원 그룹 ==========
+let memberGroupsCache = [];
+const groupMembersCache = new Map();
+const groupSelectionState = new Map();
+let addMemberSelectionState = new Set();
+
+function sanitizeUserIds(ids) {
+  if (!Array.isArray(ids)) return [];
+  return Array.from(
+    new Set(
+      ids
+        .map((id) => parseInt(id, 10))
+        .filter((id) => Number.isInteger(id) && id > 0),
+    ),
+  );
+}
+
+function getGroupSelectionSet(groupId) {
+  const gid = parseInt(groupId, 10);
+  if (!groupSelectionState.has(gid)) {
+    groupSelectionState.set(gid, new Set());
+  }
+  return groupSelectionState.get(gid);
+}
+
+function clearGroupSelection(groupId) {
+  const gid = parseInt(groupId, 10);
+  groupSelectionState.set(gid, new Set());
+}
+
+function updateGroupSelectionUI(groupId, totalRows = 0) {
+  const gid = parseInt(groupId, 10);
+  const selectedSet = getGroupSelectionSet(gid);
+  const selectedCount = selectedSet.size;
+
+  const countNode = document.getElementById(`groupSelectedCount-${gid}`);
+  if (countNode) {
+    countNode.textContent = `선택 ${selectedCount}명`;
+  }
+
+  const bulkRemoveBtn = document.getElementById(`groupBulkRemoveBtn-${gid}`);
+  if (bulkRemoveBtn) {
+    bulkRemoveBtn.disabled = selectedCount === 0;
+  }
+
+  const selectAll = document.getElementById(`groupSelectAll-${gid}`);
+  if (selectAll) {
+    if (totalRows <= 0) {
+      selectAll.checked = false;
+      selectAll.indeterminate = false;
+      selectAll.disabled = true;
+      return;
+    }
+    selectAll.disabled = false;
+    selectAll.checked = selectedCount > 0 && selectedCount === totalRows;
+    selectAll.indeterminate = selectedCount > 0 && selectedCount < totalRows;
+  }
+}
+
+function updateAddMemberSelectionUI() {
+  const list = document.getElementById("addMemberCandidateList");
+  const totalCandidates = Number(list?.dataset?.totalCandidates || 0);
+  const selectedCount = addMemberSelectionState.size;
+
+  const countNode = document.getElementById("addMemberSelectedCount");
+  if (countNode) countNode.textContent = `선택 ${selectedCount}명`;
+
+  const bulkAddBtn = document.getElementById("bulkAddMemberBtn");
+  if (bulkAddBtn) bulkAddBtn.disabled = selectedCount === 0;
+
+  const selectAll = document.getElementById("addMemberSelectAll");
+  if (selectAll) {
+    if (totalCandidates <= 0) {
+      selectAll.checked = false;
+      selectAll.indeterminate = false;
+      selectAll.disabled = true;
+      return;
+    }
+    selectAll.disabled = false;
+    selectAll.checked = selectedCount > 0 && selectedCount === totalCandidates;
+    selectAll.indeterminate = selectedCount > 0 && selectedCount < totalCandidates;
+  }
+}
+
+async function loadMemberGroups() {
+  try {
+    const groups = await fetchMemberGroups();
+    memberGroupsCache = Array.isArray(groups) ? groups : [];
+    const activeGroupIds = new Set(memberGroupsCache.map((g) => Number(g.id)));
+    Array.from(groupMembersCache.keys()).forEach((gid) => {
+      if (!activeGroupIds.has(Number(gid))) groupMembersCache.delete(gid);
+    });
+    Array.from(groupSelectionState.keys()).forEach((gid) => {
+      if (!activeGroupIds.has(Number(gid))) groupSelectionState.delete(gid);
+    });
+    renderGroupTabs();
+    renderGroupPanels();
+  } catch (error) {
+    console.error("그룹 목록 로드 실패:", error);
+    memberGroupsCache = [];
+    renderGroupTabs();
+    renderGroupPanels();
+  }
+}
+
+function renderGroupTabs() {
+  const container = document.getElementById("groupTabsContainer");
+  if (!container) return;
+  container.innerHTML = memberGroupsCache
+    .map(
+      (g) =>
+        `<button type="button" class="member-tab-btn" data-tab-target="groupPanel-${g.id}">${escapeHtml(g.name)}</button>`
+    )
+    .join("");
+}
+
+function renderGroupPanels() {
+  const container = document.getElementById("groupPanelsContainer");
+  if (!container) return;
+  container.innerHTML = memberGroupsCache
+    .map(
+      (g) => `
+        <div id="groupPanel-${g.id}" class="member-tab-panel" data-group-id="${g.id}">
+          <div class="card" style="margin-top: 16px">
+            <div class="section-header-row" style="flex-wrap: wrap; gap: 8px">
+              <h3>${escapeHtml(g.name)} 회원 관리</h3>
+              <div class="group-header-actions">
+                <span id="groupCount-${g.id}" class="candidate-count">0명</span>
+                <span id="groupSelectedCount-${g.id}" class="group-selected-count">선택 0명</span>
+                <button type="button" class="btn btn-sm btn-ghost btn-danger-ghost btn-group-bulk-remove" id="groupBulkRemoveBtn-${g.id}" data-group-id="${g.id}" disabled>선택 삭제</button>
+                <button type="button" class="btn btn-sm btn-add-group-member" data-group-id="${g.id}" data-group-name="${escapeHtml(g.name).replace(/'/g, "&#39;")}">회원 추가</button>
+              </div>
+            </div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="group-member-select-col"><input type="checkbox" id="groupSelectAll-${g.id}" /></th>
+                  <th>아이디</th>
+                  <th>업체명</th>
+                  <th>입찰현황</th>
+                  <th>최근입찰</th>
+                  <th>상태</th>
+                  <th>작업</th>
+                </tr>
+              </thead>
+              <tbody id="groupMemberBody-${g.id}">
+                <tr><td colspan="7" class="text-center">데이터를 불러오는 중입니다...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `
+    )
+    .join("");
+  container.querySelectorAll(".btn-add-group-member").forEach((btn) => {
+    const gid = parseInt(btn.dataset.groupId, 10);
+    const gname = btn.dataset.groupName || "";
+    btn.addEventListener("click", () => openAddMemberToGroupModal(gid, gname));
+  });
+  container.querySelectorAll(".btn-group-bulk-remove").forEach((btn) => {
+    const gid = parseInt(btn.dataset.groupId, 10);
+    btn.addEventListener("click", () => submitBulkRemoveMembersFromGroup(gid));
+  });
+}
+
+function escapeHtml(s) {
+  const div = document.createElement("div");
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+async function loadGroupMembers(groupId) {
+  const tbody = document.getElementById(`groupMemberBody-${groupId}`);
+  const countEl = document.getElementById(`groupCount-${groupId}`);
+  if (!tbody) return;
+  try {
+    const loadedMembers = await fetchGroupMembers(groupId);
+    const members = Array.isArray(loadedMembers) ? loadedMembers : [];
+    groupMembersCache.set(groupId, members);
+    clearGroupSelection(groupId);
+    renderGroupMembers(groupId, members);
+    if (countEl) countEl.textContent = `${members.length}명`;
+    updateGroupSelectionUI(groupId, members.length);
+  } catch (error) {
+    console.error("그룹 회원 로드 실패:", error);
+    groupMembersCache.set(groupId, []);
+    clearGroupSelection(groupId);
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center">로드 실패</td></tr>';
+    if (countEl) countEl.textContent = "0명";
+    updateGroupSelectionUI(groupId, 0);
+  }
+}
+
+function renderGroupMembers(groupId, members) {
+  const gid = parseInt(groupId, 10);
+  const tbody = document.getElementById(`groupMemberBody-${groupId}`);
+  const countEl = document.getElementById(`groupCount-${groupId}`);
+  if (!tbody) return;
+  if (countEl) countEl.textContent = `${members.length}명`;
+  if (!members.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center">이 그룹에 회원이 없습니다.</td></tr>';
+    updateGroupSelectionUI(gid, 0);
+    return;
+  }
+  clearGroupSelection(gid);
+  tbody.innerHTML = members
+    .map(
+      (u) => `
+        <tr>
+          <td class="group-member-select-col"><input type="checkbox" class="group-member-select" data-group-id="${gid}" data-user-id="${u.id}" /></td>
+          <td>${escapeHtml(u.login_id || u.id)}</td>
+          <td>${escapeHtml(u.company_name || "-")}</td>
+          <td>${Number(u.total_bid_count || 0).toLocaleString()}건 / ${formatCurrency(Number(u.total_bid_jpy || 0), "JPY")}</td>
+          <td>${formatRecentBidText(u)}</td>
+          <td><span class="status-badge ${u.is_active ? "active" : "inactive"}">${u.is_active ? "활성" : "비활성"}</span></td>
+          <td>
+            <div class="cell-actions">
+              <button class="btn btn-ghost btn-sm group-view-bids-btn" data-user-id="${u.id}">입찰내역</button>
+              <button class="btn btn-ghost btn-sm company-toggle-btn" data-id="${u.id}" data-login-id="${escapeHtml(u.login_id || u.id)}" data-next="${u.is_active ? "0" : "1"}">${u.is_active ? "비활성화" : "활성화"}</button>
+              <button class="btn btn-ghost btn-sm btn-danger-ghost group-remove-btn" data-user-id="${u.id}" data-group-id="${groupId}">그룹에서 제거</button>
+            </div>
+          </td>
+        </tr>
+      `
+    )
+    .join("");
+  tbody.querySelectorAll(".group-view-bids-btn").forEach((btn) => {
+    btn.addEventListener("click", function () {
+      openBidHistoryModal(this.dataset.userId);
+    });
+  });
+  tbody.querySelectorAll(".company-toggle-btn").forEach((btn) => {
+    btn.addEventListener("click", async function () {
+      const id = this.dataset.id;
+      const loginId = this.dataset.loginId;
+      const next = this.dataset.next === "1";
+      if (!confirm(`회원 '${loginId}'를 ${next ? "활성화" : "비활성화"}하시겠습니까?`)) return;
+      try {
+        await updateUser(id, { is_active: next });
+        showAlert(`회원 '${loginId}' ${next ? "활성화" : "비활성화"} 완료`, "success");
+        await loadGroupMembers(gid);
+      } catch (err) {
+        handleError(err, "회원 상태 변경 중 오류가 발생했습니다.");
+      }
+    });
+  });
+  tbody.querySelectorAll(".group-remove-btn").forEach((btn) => {
+    btn.addEventListener("click", async function () {
+      const userId = parseInt(this.dataset.userId, 10);
+      const gid = parseInt(this.dataset.groupId, 10);
+      if (!confirm("이 그룹에서 제거하시겠습니까?")) return;
+      try {
+        await removeMemberFromGroup(gid, userId);
+        showAlert("그룹에서 제거되었습니다.", "success");
+        await loadGroupMembers(gid);
+        const modalGroupId = parseInt(document.getElementById("addMemberTargetGroupId")?.value, 10);
+        if (modalGroupId === gid) {
+          await populateAddMemberCandidates(gid, document.getElementById("addMemberSearchInput")?.value || "");
+        }
+      } catch (err) {
+        handleError(err, "제거 중 오류가 발생했습니다.");
+      }
+    });
+  });
+
+  const selectAll = document.getElementById(`groupSelectAll-${gid}`);
+  if (selectAll) {
+    selectAll.checked = false;
+    selectAll.indeterminate = false;
+    selectAll.disabled = members.length === 0;
+    selectAll.onchange = () => {
+      const nextChecked = !!selectAll.checked;
+      const selectedSet = getGroupSelectionSet(gid);
+      selectedSet.clear();
+      tbody.querySelectorAll(".group-member-select").forEach((checkbox) => {
+        checkbox.checked = nextChecked;
+        if (nextChecked) selectedSet.add(parseInt(checkbox.dataset.userId, 10));
+      });
+      updateGroupSelectionUI(gid, members.length);
+    };
+  }
+
+  tbody.querySelectorAll(".group-member-select").forEach((checkbox) => {
+    checkbox.addEventListener("change", function () {
+      const userId = parseInt(this.dataset.userId, 10);
+      const selectedSet = getGroupSelectionSet(gid);
+      if (this.checked) selectedSet.add(userId);
+      else selectedSet.delete(userId);
+      updateGroupSelectionUI(gid, members.length);
+    });
+  });
+
+  updateGroupSelectionUI(gid, members.length);
+}
+
+async function submitBulkRemoveMembersFromGroup(groupId) {
+  const gid = parseInt(groupId, 10);
+  const selectedUserIds = sanitizeUserIds(Array.from(getGroupSelectionSet(gid)));
+  if (!selectedUserIds.length) {
+    showAlert("선택된 회원이 없습니다.", "warning");
+    return;
+  }
+  if (!confirm(`선택한 ${selectedUserIds.length}명을 그룹에서 제거하시겠습니까?`)) return;
+
+  try {
+    let removedCount = 0;
+    if (typeof removeMembersFromGroupBatch === "function") {
+      const result = await removeMembersFromGroupBatch(gid, selectedUserIds);
+      removedCount = Number(result?.removed || 0);
+    } else {
+      const settled = await Promise.allSettled(
+        selectedUserIds.map((userId) => removeMemberFromGroup(gid, userId)),
+      );
+      removedCount = settled.filter((item) => item.status === "fulfilled").length;
+    }
+    showAlert(`${removedCount}명 그룹에서 제거되었습니다.`, "success");
+    await loadGroupMembers(gid);
+    const modalGroupId = parseInt(document.getElementById("addMemberTargetGroupId")?.value, 10);
+    if (modalGroupId === gid) {
+      await populateAddMemberCandidates(gid, document.getElementById("addMemberSearchInput")?.value || "");
+    }
+  } catch (err) {
+    handleError(err, "회원 일괄 제거 중 오류가 발생했습니다.");
+  }
+}
+
+function openManageGroupsModal() {
+  const modal = document.getElementById("manageGroupsModal");
+  if (modal) {
+    modal.style.display = "flex";
+    refreshManageGroupsList();
+    document.getElementById("newGroupName").value = "";
+    modal.onclick = (e) => {
+      if (e.target === modal) closeManageGroupsModal();
+    };
+  }
+}
+
+function closeManageGroupsModal() {
+  const modal = document.getElementById("manageGroupsModal");
+  if (modal) modal.style.display = "none";
+}
+
+function refreshManageGroupsList() {
+  const list = document.getElementById("manageGroupsList");
+  if (!list) return;
+  if (!memberGroupsCache.length) {
+    list.innerHTML = '<p class="text-muted">등록된 그룹이 없습니다.</p>';
+    return;
+  }
+  list.innerHTML = memberGroupsCache
+    .map(
+      (g) => `
+        <div class="group-list-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--admin-border);">
+          <span>${escapeHtml(g.name)}</span>
+          <button type="button" class="btn btn-sm btn-ghost btn-danger-ghost" data-group-id="${g.id}" data-group-name="${escapeHtml(g.name)}">삭제</button>
+        </div>
+      `
+    )
+    .join("");
+  list.querySelectorAll("button[data-group-id]").forEach((btn) => {
+    btn.addEventListener("click", async function () {
+      const id = parseInt(this.dataset.groupId, 10);
+      const name = this.dataset.groupName;
+      if (!confirm(`그룹 '${name}'을(를) 삭제하시겠습니까? 소속 회원 연결만 해제됩니다.`)) return;
+      try {
+        await deleteMemberGroup(id);
+        showAlert("그룹이 삭제되었습니다.", "success");
+        await loadMemberGroups();
+        refreshManageGroupsList();
+      } catch (err) {
+        handleError(err, "그룹 삭제 중 오류가 발생했습니다.");
+      }
+    });
+  });
+}
+
+async function submitAddGroup() {
+  const input = document.getElementById("newGroupName");
+  const name = (input?.value || "").trim();
+  if (!name) {
+    showAlert("그룹명을 입력하세요.", "warning");
+    return;
+  }
+  try {
+    await createMemberGroup(name);
+    showAlert("그룹이 추가되었습니다.", "success");
+    input.value = "";
+    await loadMemberGroups();
+    refreshManageGroupsList();
+  } catch (err) {
+    handleError(err, "그룹 추가 중 오류가 발생했습니다.");
+  }
+}
+
+async function openAddMemberToGroupModal(groupId, groupName) {
+  const modal = document.getElementById("addMemberToGroupModal");
+  document.getElementById("addMemberTargetGroupId").value = groupId;
+  document.getElementById("addMemberToGroupTitle").textContent = `"${groupName}"에 회원 추가`;
+  document.getElementById("addMemberSearchInput").value = "";
+  addMemberSelectionState = new Set();
+  const selectAll = document.getElementById("addMemberSelectAll");
+  if (selectAll) {
+    selectAll.checked = false;
+    selectAll.indeterminate = false;
+    selectAll.disabled = true;
+  }
+  const bulkAddBtn = document.getElementById("bulkAddMemberBtn");
+  if (bulkAddBtn) bulkAddBtn.disabled = true;
+  updateAddMemberSelectionUI();
+  if (modal) {
+    modal.style.display = "flex";
+    modal.onclick = (e) => {
+      if (e.target === modal) closeAddMemberToGroupModal();
+    };
+  }
+  await loadGroupMembers(groupId);
+  await populateAddMemberCandidates(groupId, "");
+}
+
+function closeAddMemberToGroupModal() {
+  document.getElementById("addMemberToGroupModal").style.display = "none";
+  addMemberSelectionState = new Set();
+  updateAddMemberSelectionUI();
+}
+
+async function ensureGroupMembersCache(groupId) {
+  const gid = parseInt(groupId, 10);
+  if (!groupMembersCache.has(gid)) {
+    const members = await fetchGroupMembers(gid);
+    groupMembersCache.set(gid, Array.isArray(members) ? members : []);
+  }
+  return groupMembersCache.get(gid) || [];
+}
+
+async function populateAddMemberCandidates(groupId, searchTerm) {
+  const gid = parseInt(groupId, 10);
+  const list = document.getElementById("addMemberCandidateList");
+  if (!list) return;
+  const currentMembers = await ensureGroupMembersCache(gid);
+  const currentMemberIdSet = new Set(
+    (currentMembers || [])
+      .map((member) => parseInt(member.id, 10))
+      .filter((id) => Number.isInteger(id) && id > 0),
+  );
+  const term = (searchTerm || "").toLowerCase();
+  const users = (usersCache || []).filter((u) => {
+    const uid = parseInt(u.id, 10);
+    if (currentMemberIdSet.has(uid)) return false;
+    const login = String(u.login_id || "").toLowerCase();
+    const company = String(u.company_name || "").toLowerCase();
+    return !term || login.includes(term) || company.includes(term);
+  });
+  const validCandidateIds = new Set(users.map((u) => parseInt(u.id, 10)));
+  addMemberSelectionState = new Set(
+    Array.from(addMemberSelectionState).filter((id) => validCandidateIds.has(id)),
+  );
+  list.dataset.totalCandidates = String(users.length);
+  if (!users.length) {
+    const emptyMessage = term ? "검색 결과가 없습니다." : "추가 가능한 회원이 없습니다.";
+    list.innerHTML = `<p class="text-muted">${emptyMessage}</p>`;
+    updateAddMemberSelectionUI();
+    return;
+  }
+  list.innerHTML = users
+    .map(
+      (u) => `
+        <div class="add-member-candidate" data-user-id="${u.id}">
+          <label class="group-bulk-checkbox">
+            <input type="checkbox" class="add-member-select" data-user-id="${u.id}" ${
+              addMemberSelectionState.has(parseInt(u.id, 10)) ? "checked" : ""
+            } />
+          </label>
+          <span class="add-member-candidate-main">${escapeHtml(u.login_id || u.id)} / ${escapeHtml(
+            u.company_name || "-",
+          )}</span>
+          <button type="button" class="btn btn-sm add-member-single-btn" data-user-id="${u.id}">추가</button>
+        </div>
+      `
+    )
+    .join("");
+  list.querySelectorAll(".add-member-candidate").forEach((el) => {
+    el.addEventListener("click", function (e) {
+      if (e.target.closest("button") || e.target.closest("input[type='checkbox']")) return;
+      const checkbox = el.querySelector(".add-member-select");
+      if (!checkbox) return;
+      checkbox.checked = !checkbox.checked;
+      checkbox.dispatchEvent(new Event("change"));
+    });
+  });
+  list.querySelectorAll(".add-member-select").forEach((checkbox) => {
+    checkbox.addEventListener("change", function () {
+      const uid = parseInt(this.dataset.userId, 10);
+      if (this.checked) addMemberSelectionState.add(uid);
+      else addMemberSelectionState.delete(uid);
+      updateAddMemberSelectionUI();
+    });
+  });
+  list.querySelectorAll(".add-member-single-btn").forEach((btn) => {
+    btn.addEventListener("click", async function () {
+      const uid = parseInt(this.dataset.userId, 10);
+      if (!uid) return;
+      await submitAddMemberToGroup(gid, uid);
+    });
+  });
+  updateAddMemberSelectionUI();
+}
+
+async function submitAddMemberToGroup(groupId, userId) {
+  const gid = parseInt(groupId, 10);
+  const uid = parseInt(userId, 10);
+  if (!gid || !uid) {
+    showAlert("유효하지 않은 회원 정보입니다.", "warning");
+    return;
+  }
+  try {
+    const result = await addMemberToGroup(gid, uid);
+    if (result?.added === false) {
+      showAlert("이미 그룹에 등록된 회원입니다.", "warning");
+    } else {
+      showAlert("그룹에 추가되었습니다.", "success");
+    }
+    addMemberSelectionState.delete(uid);
+    await loadGroupMembers(gid);
+    await populateAddMemberCandidates(gid, document.getElementById("addMemberSearchInput")?.value || "");
+  } catch (err) {
+    handleError(err, "회원 추가 중 오류가 발생했습니다.");
+  }
+}
+
+function handleAddMemberSelectAll(event) {
+  const checked = !!event.target.checked;
+  const checkboxes = Array.from(document.querySelectorAll("#addMemberCandidateList .add-member-select"));
+  addMemberSelectionState = new Set();
+  checkboxes.forEach((checkbox) => {
+    checkbox.checked = checked;
+    if (checked) addMemberSelectionState.add(parseInt(checkbox.dataset.userId, 10));
+  });
+  updateAddMemberSelectionUI();
+}
+
+async function submitBulkAddMembersToGroup() {
+  const groupId = parseInt(document.getElementById("addMemberTargetGroupId")?.value, 10);
+  const userIds = sanitizeUserIds(Array.from(addMemberSelectionState));
+  if (!groupId || !userIds.length) {
+    showAlert("선택된 회원이 없습니다.", "warning");
+    return;
+  }
+
+  try {
+    let insertedCount = 0;
+    if (typeof addMembersToGroupBatch === "function") {
+      const result = await addMembersToGroupBatch(groupId, userIds);
+      insertedCount = Number(result?.inserted || 0);
+    } else {
+      const settled = await Promise.all(
+        userIds.map((userId) => addMemberToGroup(groupId, userId).catch(() => ({ added: false }))),
+      );
+      insertedCount = settled.filter((result) => result?.added !== false).length;
+    }
+    if (insertedCount === 0) {
+      showAlert("이미 그룹에 등록된 회원들입니다.", "warning");
+    } else {
+      showAlert(`${insertedCount}명 그룹에 추가되었습니다.`, "success");
+    }
+    addMemberSelectionState = new Set();
+    await loadGroupMembers(groupId);
+    await populateAddMemberCandidates(groupId, document.getElementById("addMemberSearchInput")?.value || "");
+  } catch (err) {
+    handleError(err, "회원 일괄 추가 중 오류가 발생했습니다.");
+  }
+}
+
+function formatBidTypeLabel(type) {
+  return type === "live" ? "현장" : "직접";
+}
+
+function formatBidStatusLabel(status) {
+  const map = {
+    completed: "완료",
+    domestic_arrived: "국내도착",
+    processing: "작업중",
+    shipped: "출고됨",
+  };
+  return map[String(status || "").toLowerCase()] || status || "-";
+}
+
+async function openBidHistoryModal(userId) {
+  try {
+    const modal = window.setupModal("bidHistoryModal");
+    if (!modal) return;
+
+    const body = document.getElementById("bidHistoryBody");
+    const title = document.getElementById("bidHistoryTitle");
+    const totalCountNode = document.getElementById("bhTotalCount");
+    const totalJpyNode = document.getElementById("bhTotalJpy");
+    const completedCountNode = document.getElementById("bhCompletedCount");
+
+    if (body) {
+      body.innerHTML =
+        '<tr><td colspan="8" class="text-center">데이터를 불러오는 중입니다...</td></tr>';
+    }
+    if (title) title.textContent = "입찰 내역";
+    if (totalCountNode) totalCountNode.textContent = "0건";
+    if (totalJpyNode) totalJpyNode.textContent = "¥0";
+    if (completedCountNode) completedCountNode.textContent = "0건";
+
+    modal.show();
+
+    const result = await fetchUserBidHistory(userId);
+    const user = result?.user || {};
+    const summary = result?.summary || {};
+    const history = Array.isArray(result?.history) ? result.history : [];
+
+    if (title) {
+      title.textContent = `입찰 내역 - ${user.company_name || "-"} (${user.login_id || user.id || userId})`;
+    }
+    if (totalCountNode) {
+      totalCountNode.textContent = `${Number(summary.totalBidCount || 0).toLocaleString()}건`;
+    }
+    if (totalJpyNode) {
+      totalJpyNode.textContent = formatCurrency(Number(summary.totalBidJpy || 0), "JPY");
+    }
+    if (completedCountNode) {
+      completedCountNode.textContent = `${Number(summary.completedCount || 0).toLocaleString()}건`;
+    }
+
+    if (!body) return;
+    if (!history.length) {
+      body.innerHTML = '<tr><td colspan="8" class="text-center">입찰 내역이 없습니다.</td></tr>';
+      return;
+    }
+
+    body.innerHTML = history
+      .map(
+        (row) => `
+          <tr>
+            <td>${formatDate(row.bid_at, true)}</td>
+            <td>${formatBidTypeLabel(row.bid_type)}</td>
+            <td>${row.bid_id || "-"}</td>
+            <td>${row.item_id || "-"}</td>
+            <td>${row.item_title || "-"}</td>
+            <td>${row.auc_num || "-"}</td>
+            <td>${formatBidStatusLabel(row.status)}</td>
+            <td>${formatCurrency(Number(row.bid_price_jpy || 0), "JPY")}</td>
+          </tr>
+        `,
+      )
+      .join("");
+  } catch (error) {
+    handleError(error, "회원 입찰 내역을 불러오는 중 오류가 발생했습니다.");
+  }
+}
+
+function renderDeactivateCandidates(users) {
+  const body = document.getElementById("deactivateCandidatesBody");
+  const countNode = document.getElementById("deactivateCandidateCount");
+  if (!body) return;
+
+  const candidates = (users || [])
+    .filter((u) => Number(u.deactivate_candidate) === 1)
+    .sort((a, b) => Number(b.no_bid_days || 0) - Number(a.no_bid_days || 0));
+
+  if (countNode) countNode.textContent = `${candidates.length}명`;
+
+  if (!candidates.length) {
+    body.innerHTML = `<tr><td colspan="8" class="text-center">비활성화 대상 회원이 없습니다.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = candidates
+    .map(
+      (u) => `
+      <tr>
+        <td>${u.login_id || u.id}</td>
+        <td>${u.company_name || "-"}</td>
+        <td>${formatLastBidDate(u.last_bid_at)}</td>
+        <td>${Number(u.no_bid_days || 0)}일</td>
+        <td>${u.deactivate_reason || "-"}</td>
+        <td>${u.deactivate_note || "-"}</td>
+        <td><span class="status-badge active">활성</span></td>
+        <td>
+          <button class="btn btn-action deactivate-candidate-btn" data-id="${u.id}" data-login-id="${u.login_id || u.id}">
+            비활성화
+          </button>
+        </td>
+      </tr>
+    `,
+    )
+    .join("");
+
+  document.querySelectorAll(".deactivate-candidate-btn").forEach((btn) => {
+    btn.addEventListener("click", async function () {
+      const id = this.dataset.id;
+      const loginId = this.dataset.loginId;
+      if (!confirm(`회원 '${loginId}'를 비활성화하시겠습니까?`)) return;
+      try {
+        await updateUser(id, { is_active: false });
+        alert(`회원 '${loginId}' 비활성화 완료`);
+        await loadUsers();
+      } catch (error) {
+        handleError(error, "회원 비활성화 중 오류가 발생했습니다.");
+      }
+    });
+  });
+}
+
+function renderVipTop10(vips) {
+  const body = document.getElementById("vipTopTableBody");
+  if (!body) return;
+
+  if (!vips || !vips.length) {
+    body.innerHTML = `<tr><td colspan="5" class="text-center">상위 고객 데이터가 없습니다.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = vips
+    .slice(0, 10)
+    .map(
+      (vip, index) => `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${vip.login_id || "-"}</td>
+          <td>${vip.company_name || "-"}</td>
+          <td>${Number(vip.completedCount || 0).toLocaleString()}건</td>
+          <td>${formatCurrency(Number(vip.totalRevenueKrw || 0), "KRW")}</td>
+        </tr>
+      `,
+    )
+    .join("");
+}
+
+function renderCompanyMembers(users, keyword, bodyId, countId) {
+  const body = document.getElementById(bodyId);
+  const countNode = document.getElementById(countId);
+  if (!body) return;
+
+  const targetUsers = (users || [])
+    .filter((u) =>
+      String(u.company_base_name || u.company_name || "")
+        .toLowerCase()
+        .includes(String(keyword).toLowerCase()),
+    )
+    .sort((a, b) => Number(b.total_bid_jpy || 0) - Number(a.total_bid_jpy || 0));
+
+  if (countNode) countNode.textContent = `${targetUsers.length}명`;
+
+  if (!targetUsers.length) {
+    body.innerHTML = `<tr><td colspan="6" class="text-center">${keyword} 회원이 없습니다.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = targetUsers
+    .map(
+      (u) => `
+        <tr>
+          <td>${u.login_id || u.id}</td>
+          <td>${u.company_name || "-"}</td>
+          <td>${Number(u.total_bid_count || 0).toLocaleString()}건 / ${formatCurrency(Number(u.total_bid_jpy || 0), "JPY")}</td>
+          <td>${formatRecentBidText(u)}</td>
+          <td><span class="status-badge ${u.is_active ? "active" : "inactive"}">${u.is_active ? "활성" : "비활성"}</span></td>
+          <td>
+            <button class="btn btn-action company-view-bids-btn" data-user-id="${u.id}">
+              입찰내역
+            </button>
+            <button class="btn btn-action company-toggle-btn" data-id="${u.id}" data-login-id="${u.login_id || u.id}" data-next="${u.is_active ? "0" : "1"}">
+              ${u.is_active ? "비활성화" : "활성화"}
+            </button>
+          </td>
+        </tr>
+      `,
+    )
+    .join("");
+
+  document.querySelectorAll(".company-toggle-btn").forEach((btn) => {
+    btn.addEventListener("click", async function () {
+      const id = this.dataset.id;
+      const loginId = this.dataset.loginId;
+      const next = this.dataset.next === "1";
+      const label = next ? "활성화" : "비활성화";
+      if (!confirm(`회원 '${loginId}'를 ${label}하시겠습니까?`)) return;
+      try {
+        await updateUser(id, { is_active: next });
+        alert(`회원 '${loginId}' ${label} 완료`);
+        await loadUsers();
+      } catch (error) {
+        handleError(error, "회원 상태 변경 중 오류가 발생했습니다.");
+      }
+    });
+  });
+
+  document.querySelectorAll(".company-view-bids-btn").forEach((btn) => {
+    btn.addEventListener("click", function () {
+      const userId = this.dataset.userId;
+      if (!userId) return;
+      openBidHistoryModal(userId);
+    });
+  });
 }
 
 // 회원 목록 렌더링
@@ -73,17 +972,6 @@ function renderUsers(users) {
         ? '<span class="badge badge-corporate">기업</span>'
         : '<span class="badge badge-individual">개인</span>';
 
-    // 증빙 유형 배지
-    const docType =
-      user.document_type ||
-      (accountType === "corporate" ? "taxinvoice" : "cashbill");
-    const docTypeText =
-      docType === "taxinvoice"
-        ? '<span class="badge badge-taxinvoice" style="font-size:10px;background:#e8f4f8;color:#2980b9;border:1px solid #aed6f1;">세금계산서</span>'
-        : '<span class="badge badge-cashbill" style="font-size:10px;background:#eafaf1;color:#27ae60;border:1px solid #a9dfbf;">현금영수증</span>';
-
-    const accountTypeDisplay = `${accountTypeText}<br/><small style="margin-top:2px;display:inline-block;">${docTypeText}</small>`;
-
     // 예치금/한도 표시
     let balanceInfo = "";
     if (accountType === "individual") {
@@ -102,10 +990,15 @@ function renderUsers(users) {
 
     row.innerHTML = `
       <td>${user.login_id || user.id}</td>
-      <td>${accountTypeDisplay}</td>
+      <td>${accountTypeText}</td>
       <td>${balanceInfo}</td>
       <td>${registrationDate}</td>
       <td>${user.company_name || "-"}</td>
+      <td>${Number(user.total_bid_count || 0).toLocaleString()}건 / ${formatCurrency(
+      Number(user.total_bid_jpy || 0),
+      "JPY",
+    )}</td>
+      <td>${user.address || "-"}</td>
       <td>${user.email || "-"}</td>
       <td>${user.phone || "-"}</td>
       <td>${
@@ -117,16 +1010,24 @@ function renderUsers(users) {
         </span>
       </td>
       <td>
-        <button class="btn btn-action edit-btn" data-id="${
-          user.id
-        }">수정</button>
-        <button class="btn btn-action delete-btn" data-id="${
-          user.id
-        }">삭제</button>
+        <div class="cell-actions">
+          <button class="btn btn-ghost btn-sm view-bids-btn" data-user-id="${user.id}">입찰내역</button>
+          <button class="btn btn-ghost btn-sm edit-btn" data-id="${user.id}">수정</button>
+          <button class="btn btn-ghost btn-sm btn-danger-ghost delete-btn" data-id="${user.id}">삭제</button>
+        </div>
       </td>
     `;
 
     tableBody.appendChild(row);
+  });
+
+  // 수정 버튼 이벤트
+  document.querySelectorAll(".view-bids-btn").forEach((button) => {
+    button.addEventListener("click", function () {
+      const userId = this.dataset.userId;
+      if (!userId) return;
+      openBidHistoryModal(userId);
+    });
   });
 
   // 수정 버튼 이벤트
@@ -247,15 +1148,6 @@ function openUserForm(user = null) {
     // 회원 구분 저장 (변경 확인용)
     window.currentEditingUserAccountType = accountType;
 
-    // 증빙 유형 설정
-    const docType =
-      user.document_type ||
-      (accountType === "corporate" ? "taxinvoice" : "cashbill");
-    document.querySelector(
-      `input[name="documentType"][value="${docType}"]`,
-    ).checked = true;
-    window.documentTypeManuallySet = false; // 수동 변경 첩기화
-
     // 예치금/한도 정보
     document.getElementById("depositBalance").value = user.deposit_balance || 0;
     document.getElementById("dailyLimit").value = user.daily_limit || 0;
@@ -283,12 +1175,6 @@ function openUserForm(user = null) {
 
     // 회원 구분 저장 초기화
     window.currentEditingUserAccountType = null;
-
-    // 증빙 유형 초기값: 현금영수증 (개인 기본)
-    document.querySelector(
-      'input[name="documentType"][value="cashbill"]',
-    ).checked = true;
-    window.documentTypeManuallySet = false;
 
     // 비밀번호 필드
     userPassword.placeholder = "비밀번호 입력";
@@ -329,15 +1215,6 @@ function handleAccountTypeChange() {
 
     document.getElementById("dailyLimit").required = true;
   }
-
-  // 수동으로 변경하지 않은 경우 증빙 유형 자동 전환
-  if (!window.documentTypeManuallySet) {
-    const autoDocType = accountType === "corporate" ? "taxinvoice" : "cashbill";
-    const docTypeRadio = document.querySelector(
-      `input[name="documentType"][value="${autoDocType}"]`,
-    );
-    if (docTypeRadio) docTypeRadio.checked = true;
-  }
 }
 
 // 회원 저장 (등록 또는 수정)
@@ -358,11 +1235,6 @@ async function saveUser() {
     const isActive =
       document.querySelector('input[name="userStatus"]:checked').value ===
       "true";
-
-    // 증빙 유형
-    const documentType = document.querySelector(
-      'input[name="documentType"]:checked',
-    ).value;
 
     // 회원 구분 및 한도 정보
     const accountType = document.querySelector(
@@ -425,7 +1297,6 @@ async function saveUser() {
       commission_rate: commissionRateValue
         ? parseFloat(commissionRateValue)
         : null,
-      document_type: documentType,
     };
 
     // 수정 모드일 때 login_id 변경 사항 추가

@@ -36,13 +36,13 @@
 }
 
 .badge-individual {
-  background: #d4edda;
-  color: #155724;
+  background: rgba(52, 199, 89, 0.15);
+  color: var(--accent-success);
 }
 
 .badge-corporate {
-  background: #d1ecf1;
-  color: #0c5460;
+  background: var(--accent-primary-soft);
+  color: var(--accent-primary);
 }
 
 /* ========================================
@@ -50,7 +50,7 @@
 ======================================== */
 .balance-info {
   font-weight: 600;
-  color: #2c5aa0;
+  color: var(--accent-primary);
 }
 
 .limit-info {
@@ -65,12 +65,12 @@
    상태
 ======================================== */
 .status-active {
-  color: #28a745;
+  color: var(--accent-success);
   font-weight: 600;
 }
 
 .status-inactive {
-  color: #dc3545;
+  color: var(--accent-danger);
   font-weight: 600;
 }
 
@@ -92,5 +92,243 @@
 ======================================== */
 .form-label i {
   margin-right: 6px;
-  color: #2c5aa0;
+  color: var(--accent-primary);
+}
+
+.member-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.member-tab-btn {
+  border: 1px solid #dbe3ef;
+  background: #fff;
+  color: #34495e;
+  padding: 9px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.member-tab-btn.active {
+  background: var(--accent-primary);
+  color: #fff;
+  border-color: var(--accent-primary);
+}
+
+.member-tab-panel {
+  display: none;
+}
+
+.member-tab-panel.active {
+  display: block;
+}
+
+.member-filter-card {
+  margin-bottom: 12px;
+}
+
+.member-filter-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.member-filter-item {
+  min-width: 180px;
+}
+
+.member-filter-item label {
+  display: block;
+  font-size: 12px;
+  color: #555;
+  margin-bottom: 4px;
+}
+
+.member-filter-item select {
+  width: 100%;
+  height: 36px;
+  border: 1px solid #dbe3ef;
+  border-radius: 6px;
+  padding: 0 10px;
+}
+
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.section-header-row h3 {
+  margin: 0;
+}
+
+.candidate-count {
+  font-size: 13px;
+  font-weight: 700;
+  color: #c0392b;
+  background: #fdecea;
+  border: 1px solid #f5c6cb;
+  border-radius: 12px;
+  padding: 4px 10px;
+}
+
+.bid-history-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.bid-history-stat {
+  border: 1px solid #e7edf6;
+  border-radius: 8px;
+  padding: 10px;
+  background: #f8fbff;
+}
+
+.bid-history-stat .label {
+  font-size: 12px;
+  color: #6b7785;
+  margin-bottom: 4px;
+}
+
+.bid-history-stat .value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f4f9a;
+}
+
+.member-tabs-groups {
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.member-tab-btn-ghost {
+  background: transparent !important;
+  color: var(--admin-text-secondary) !important;
+  border: 1px dashed var(--admin-border) !important;
+}
+
+.member-tab-btn-ghost:hover {
+  background: var(--admin-bg-subtle) !important;
+  color: var(--admin-text) !important;
+}
+
+#manageGroupsModal.modal-overlay,
+#addMemberToGroupModal.modal-overlay {
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+#manageGroupsModal.modal-overlay[style*="flex"],
+#addMemberToGroupModal.modal-overlay[style*="flex"] {
+  display: flex !important;
+}
+
+#addGroupBtn {
+  min-width: 72px;
+  white-space: nowrap;
+}
+
+.group-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.group-selected-count {
+  font-size: 12px;
+  font-weight: 700;
+  color: #4b5563;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+
+.group-bulk-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.group-bulk-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.group-member-select-col {
+  width: 42px;
+  text-align: center;
+}
+
+.group-member-select-col input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.add-member-candidate {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.add-member-candidate-main {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  color: #374151;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.add-member-candidate .btn {
+  min-width: 56px;
+  white-space: nowrap;
+}
+
+/* ========================================
+   테이블 셀 작업 버튼 - 가로 배치, 차분한 스타일
+======================================== */
+.cell-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.cell-actions .btn-ghost {
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+}
+
+.cell-actions .btn-ghost:hover {
+  background: var(--accent-primary-soft) !important;
+  color: var(--accent-primary) !important;
+  border-color: var(--accent-primary) !important;
+}
+
+.cell-actions .btn-danger-ghost:hover {
+  background: rgba(255, 59, 48, 0.1) !important;
+  color: var(--accent-danger) !important;
+  border-color: var(--accent-danger) !important;
 }

@@ -1,0 +1,100 @@
+.logs-filter-options {
+  gap: 12px;
+}
+
+.logs-path-group {
+  min-width: 260px;
+  flex: 1;
+}
+
+.logs-filter-options input,
+.logs-filter-options select {
+  min-width: 140px;
+  height: 36px;
+  border: 1px solid #d6e0ef;
+  border-radius: 8px;
+  padding: 0 10px;
+}
+
+.logs-btn-group {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.logs-btn-group .btn {
+  min-width: 80px;
+}
+
+.logs-summary {
+  font-size: 13px;
+  color: #55657c;
+  margin-bottom: 12px;
+}
+
+#logsTable td {
+  vertical-align: top;
+  font-size: 13px;
+}
+
+.log-path {
+  max-width: 300px;
+  word-break: break-all;
+}
+
+.log-detail {
+  max-width: 420px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.status-badge {
+  display: inline-block;
+  min-width: 44px;
+  text-align: center;
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.status-ok {
+  color: #176233;
+  background: #dcf9e7;
+}
+
+.status-err {
+  color: #8f1d1d;
+  background: #ffe2e2;
+}
+
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  padding-top: 10px;
+}
+
+.page-btn {
+  min-width: 34px;
+  height: 34px;
+  border: 1px solid #d4dfef;
+  border-radius: 8px;
+  background: #fff;
+  color: #244266;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.page-btn.active {
+  background: #0f4ea8;
+  border-color: #0f4ea8;
+  color: #fff;
+}
+
+.page-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

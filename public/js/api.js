@@ -19,6 +19,9 @@ async function fetchAPI(endpoint, options = {}) {
       ...options,
     });
 
+    const contentType = (response.headers.get("content-type") || "").toLowerCase();
+    const isJsonResponse = contentType.includes("application/json");
+
     if (!response.ok) {
       if (response.status === 401) {
         // 인증 실패 처리
@@ -27,13 +30,30 @@ async function fetchAPI(endpoint, options = {}) {
         }
         throw new Error("Unauthorized");
       }
-      const errorData = await response.json();
+
+      if (isJsonResponse) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.message || `HTTP error! status: ${response.status}`
+        );
+      }
+
+      const text = await response.text();
+      const snippet = String(text || "").replace(/\s+/g, " ").trim().slice(0, 200);
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        `HTTP error! status: ${response.status} (JSON이 아닌 응답: ${snippet || "empty"})`
       );
     }
 
-    return response.json();
+    if (isJsonResponse) {
+      return response.json();
+    }
+
+    const text = await response.text();
+    const snippet = String(text || "").replace(/\s+/g, " ").trim().slice(0, 200);
+    throw new Error(
+      `API 응답이 JSON 형식이 아닙니다. endpoint=${endpoint}, response=${snippet || "empty"}`
+    );
   } catch (error) {
     console.error("API request failed:", error);
     throw error;

@@ -15,10 +15,11 @@ const {
   deductLimit,
   refundLimit,
 } = require("../utils/deposit");
+const { isAdminUser } = require("../utils/adminAuth");
 
 // 미들웨어
 const isAdmin = (req, res, next) => {
-  if (req.session.user?.login_id === "admin") {
+  if (isAdminUser(req.session?.user)) {
     next();
   } else {
     res.status(403).json({ message: "Access denied. Admin only." });
@@ -39,7 +40,7 @@ router.get("/", async (req, res) => {
   }
 
   const userId = req.session.user.id;
-  const isAdminUser = req.session.user.login_id === "admin";
+  const isAdminUserRole = isAdminUser(req.session.user);
 
   const {
     dateRange = 30,
@@ -82,7 +83,7 @@ router.get("/", async (req, res) => {
     let dateQuery;
     let dateParams;
 
-    if (isAdminUser) {
+    if (isAdminUserRole) {
       // 관리자: 모든 사용자의 날짜
       dateQuery = `
         SELECT DISTINCT DATE(i.scheduled_date) as bid_date
@@ -134,7 +135,7 @@ router.get("/", async (req, res) => {
       let settlementQuery;
       let settlementParams;
 
-      if (isAdminUser) {
+      if (isAdminUserRole) {
         settlementQuery = `
           SELECT * FROM daily_settlements 
           WHERE settlement_date = ?
@@ -162,7 +163,7 @@ router.get("/", async (req, res) => {
       let liveBidsQuery;
       let liveBidsParams;
 
-      if (isAdminUser) {
+      if (isAdminUserRole) {
         liveBidsQuery = `
           SELECT 
             l.id, 'live' as type, l.status, l.user_id,
@@ -196,7 +197,7 @@ router.get("/", async (req, res) => {
       let directBidsQuery;
       let directBidsParams;
 
-      if (isAdminUser) {
+      if (isAdminUserRole) {
         directBidsQuery = `
           SELECT 
             d.id, 'direct' as type, d.status, d.user_id,
@@ -325,7 +326,7 @@ router.get("/", async (req, res) => {
       } else if (successItems.length > 0) {
         // ✅ 사용자 수수료율 조회 (일반 사용자만)
         let userCommissionRate = null;
-        if (!isAdminUser) {
+    if (!isAdminUserRole) {
           const [userRows] = await connection.query(
             "SELECT commission_rate FROM users WHERE id = ?",
             [userId],
@@ -369,7 +370,7 @@ router.get("/", async (req, res) => {
 
     // ✅ 관리자용 총 통계 (전체 기간)
     let totalStats = null;
-    if (isAdminUser) {
+    if (isAdminUserRole) {
       const [statsResult] = await connection.query(
         `SELECT 
           SUM(item_count) as itemCount,

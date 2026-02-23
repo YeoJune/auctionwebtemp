@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>사용자 활동기록</title>
+    <link rel="stylesheet" href="/styles/common.css" />
+    <link rel="stylesheet" href="/styles/admin/common.css" />
+    <link rel="stylesheet" href="/styles/admin/admin.css" />
+    <link rel="stylesheet" href="/styles/admin/activity-logs.css" />
+    <link rel="stylesheet" href="/styles/admin/unified.css" />
+  </head>
+  <body>
+    <div class="admin-layout">
+      <div class="sidebar">
+        <div class="sidebar-logo">
+          <h2>경매 관리자</h2>
+        </div>
+        <div class="sidebar-menu">
+          <a href="/admin">대시보드</a>
+          <a href="/admin/live-bids">현장 경매 관리</a>
+          <a href="/admin/direct-bids">직접 경매 관리</a>
+          <a href="/admin/all-bids">통합 경매 관리</a>
+          <a href="/admin/bid-results">입찰 결과 & 정산</a>
+          <a href="/admin/transactions">거래 내역 관리</a>
+          <a href="/admin/invoices">인보이스 관리</a>
+          <a href="/admin/users">회원 관리</a>
+          <a href="/admin/recommend-filters">추천 및 필터</a>
+          <a href="/admin/settings">관리자 설정</a>
+          <a href="/admin/wms">WMS(입고/수선/출고)</a>
+          <a href="/admin/repair-management">수선 관리</a>
+          <a href="/admin/activity-logs" class="active">사용자 활동기록</a>
+          <a href="/admin/admin-permissions">관리자 권한 관리</a>
+        </div>
+      </div>
+
+      <div class="main-content">
+        <div class="main-header">
+          <h1>사용자 활동기록</h1>
+          <div class="user-info">
+            관리자
+            <button id="logoutBtn" class="btn btn-secondary">로그아웃</button>
+          </div>
+        </div>
+
+        <div class="card filters-container">
+          <div class="filter-options logs-filter-options">
+            <div class="filter-group">
+              <label for="actorInput">담당자/아이디</label>
+              <input id="actorInput" type="text" placeholder="admin, 홍길동" />
+            </div>
+            <div class="filter-group">
+              <label for="menuSelect">메뉴</label>
+              <select id="menuSelect">
+                <option value="">전체</option>
+                <option value="WMS">WMS</option>
+                <option value="수선관리">수선관리</option>
+                <option value="현장경매">현장경매</option>
+                <option value="직접경매">직접경매</option>
+                <option value="입찰결과/정산">입찰결과/정산</option>
+                <option value="관리자설정">관리자설정</option>
+                <option value="입금/정산">입금/정산</option>
+              </select>
+            </div>
+            <div class="filter-group logs-path-group">
+              <label for="actionInput">작업/변경내용</label>
+              <input id="actionInput" type="text" placeholder="예: 관리자 계정 생성, 권한 변경, 수선 제안 등록" />
+            </div>
+            <div class="filter-group">
+              <label for="dateFromInput">시작일</label>
+              <input id="dateFromInput" type="date" />
+            </div>
+            <div class="filter-group">
+              <label for="dateToInput">종료일</label>
+              <input id="dateToInput" type="date" />
+            </div>
+            <div class="filter-group logs-btn-group">
+              <button id="searchBtn" class="btn">조회</button>
+              <button id="resetBtn" class="btn btn-secondary">초기화</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="logs-summary" id="summaryText">데이터를 불러오는 중입니다...</div>
+          <table class="data-table" id="logsTable">
+            <thead>
+              <tr>
+                <th>일시</th>
+                <th>담당자</th>
+                <th>메뉴</th>
+                <th>작업</th>
+                <th>변경내용</th>
+                <th>대상</th>
+                <th>상태</th>
+              </tr>
+            </thead>
+            <tbody id="logsTableBody">
+              <tr>
+                <td colspan="8" class="text-center">데이터를 불러오는 중입니다...</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="pagination-container" id="pagination"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/admin/common.js"></script>
+    <script src="/js/admin/activity-logs.js"></script>
+  </body>
+</html>

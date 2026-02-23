@@ -9,6 +9,8 @@ const {
   createCookieAgent,
 } = require("http-cookie-agent/http");
 
+let hasLoggedMissingProxyConfig = false;
+
 class ProxyManager {
   constructor(config = {}) {
     this.proxyIPs = this.loadProxyIPs();
@@ -24,11 +26,17 @@ class ProxyManager {
 
   loadProxyIPs() {
     const proxyIPsString = process.env.PROXY_IPS;
-    if (!proxyIPsString) {
-      console.log("No PROXY_IPS found, using direct connection only");
+    if (!proxyIPsString || !proxyIPsString.trim()) {
+      if (!hasLoggedMissingProxyConfig) {
+        console.log("No PROXY_IPS found, using direct connection only");
+        hasLoggedMissingProxyConfig = true;
+      }
       return [];
     }
-    return proxyIPsString.split(",").map((ip) => ip.trim());
+    return proxyIPsString
+      .split(",")
+      .map((ip) => ip.trim())
+      .filter(Boolean);
   }
 
   /**

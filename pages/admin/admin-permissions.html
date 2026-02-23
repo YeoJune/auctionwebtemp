@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>관리자 권한 관리</title>
+    <link rel="stylesheet" href="/styles/common.css" />
+    <link rel="stylesheet" href="/styles/admin/common.css" />
+    <link rel="stylesheet" href="/styles/admin/admin.css" />
+    <link rel="stylesheet" href="/styles/admin/admin-permissions.css" />
+    <link rel="stylesheet" href="/styles/admin/unified.css" />
+  </head>
+  <body>
+    <div class="admin-layout">
+      <div class="sidebar">
+        <div class="sidebar-logo"><h2>경매 관리자</h2></div>
+        <div class="sidebar-menu">
+          <a href="/admin">대시보드</a>
+          <a href="/admin/live-bids">현장 경매 관리</a>
+          <a href="/admin/direct-bids">직접 경매 관리</a>
+          <a href="/admin/all-bids">통합 경매 관리</a>
+          <a href="/admin/bid-results">입찰 결과 & 정산</a>
+          <a href="/admin/transactions">거래 내역 관리</a>
+          <a href="/admin/invoices">인보이스 관리</a>
+          <a href="/admin/users">회원 관리</a>
+          <a href="/admin/recommend-filters">추천 및 필터</a>
+          <a href="/admin/settings">관리자 설정</a>
+          <a href="/admin/wms">WMS(입고/수선/출고)</a>
+          <a href="/admin/repair-management">수선 관리</a>
+          <a href="/admin/activity-logs">사용자 활동기록</a>
+          <a href="/admin/admin-permissions" class="active">관리자 권한 관리</a>
+        </div>
+      </div>
+
+      <div class="main-content">
+        <div class="main-header">
+          <h1>관리자 계정/권한 관리</h1>
+          <div class="user-info">
+            superadmin 전용
+            <button id="logoutBtn" class="btn btn-secondary">로그아웃</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>관리자 계정 추가</h3>
+          <div class="create-form">
+            <input id="newLoginId" type="text" placeholder="아이디 (예: admin민수)" />
+            <input id="newName" type="text" placeholder="담당자명" />
+            <input id="newPassword" type="password" placeholder="비밀번호" />
+            <button id="createBtn" class="btn">관리자 추가</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>관리자 목록</h3>
+          <table class="data-table" id="adminTable">
+            <thead>
+              <tr>
+                <th>아이디</th>
+                <th>담당자명</th>
+                <th>상태</th>
+                <th>메뉴 권한</th>
+                <th>비밀번호</th>
+                <th>삭제</th>
+              </tr>
+            </thead>
+            <tbody id="adminTableBody">
+              <tr><td colspan="6" class="text-center">데이터를 불러오는 중입니다...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/admin/common.js"></script>
+    <script src="/js/admin/admin-permissions.js"></script>
+  </body>
+</html>

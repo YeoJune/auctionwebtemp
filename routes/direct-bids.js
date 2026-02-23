@@ -27,14 +27,31 @@ const {
 } = require("../utils/deposit");
 const { processItem } = require("../utils/processItem");
 const cron = require("node-cron");
+const { isAdminUser } = require("../utils/adminAuth");
+const { syncWmsByBidStatus } = require("../utils/wms-bid-sync");
 
 const isAdmin = (req, res, next) => {
-  if (req.session.user && req.session.user.login_id === "admin") {
+  if (isAdminUser(req.session?.user)) {
     next();
   } else {
     res.status(403).json({ message: "Access denied. Admin only." });
   }
 };
+
+async function ensureBidWorkflowStagesTable() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS bid_workflow_stages (
+      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+      bid_type VARCHAR(20) NOT NULL,
+      bid_id BIGINT NOT NULL,
+      stage VARCHAR(30) NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_bid_workflow_stage (bid_type, bid_id),
+      KEY idx_bid_workflow_stage (stage)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+}
 
 // STATUS -> 'active', 'completed', 'cancelled', 'shipped'
 // GET endpoint to retrieve all bids, with optional filtering
@@ -64,8 +81,11 @@ router.get("/", async (req, res) => {
   const connection = await pool.getConnection();
 
   try {
+    await ensureBidWorkflowStagesTable();
     let mainQuery, countQuery;
     let queryParams = [];
+    const effectiveStatusExpr =
+      "CASE WHEN d.status = 'shipped' THEN 'shipped' WHEN bws.stage IN ('domestic_arrived','processing') THEN bws.stage ELSE d.status END";
 
     // 기본 쿼리 준비
     if (highestOnly === "true") {
@@ -87,6 +107,9 @@ router.get("/", async (req, res) => {
       mainQuery = `
         SELECT 
           d.*,
+          ${effectiveStatusExpr} AS effective_status,
+          COALESCE(wms.internal_barcode, wmsi.internal_barcode) AS wms_internal_barcode,
+          COALESCE(wms.current_location_code, wmsi.current_location_code) AS wms_location_code,
           i.item_id, i.original_title, i.auc_num, i.category, i.brand, i.rank,
           i.starting_price, i.scheduled_date, i.image, i.original_scheduled_date, i.title, i.additional_info,
           u.company_name
@@ -99,6 +122,18 @@ router.get("/", async (req, res) => {
         ) m ON d.item_id = m.item_id AND d.current_price = m.max_price
         LEFT JOIN crawled_items i ON d.item_id = i.item_id
         LEFT JOIN users u ON d.user_id = u.id
+        LEFT JOIN (
+          SELECT source_bid_type, source_bid_id, MAX(internal_barcode) AS internal_barcode, MAX(current_location_code) AS current_location_code
+          FROM wms_items
+          GROUP BY source_bid_type, source_bid_id
+        ) wms ON wms.source_bid_type = 'direct' AND wms.source_bid_id = d.id
+        LEFT JOIN (
+          SELECT source_item_id, MAX(internal_barcode) AS internal_barcode, MAX(current_location_code) AS current_location_code
+          FROM wms_items
+          WHERE source_item_id IS NOT NULL
+          GROUP BY source_item_id
+        ) wmsi ON wmsi.source_item_id = d.item_id
+        LEFT JOIN bid_workflow_stages bws ON bws.bid_type = 'direct' AND bws.bid_id = d.id
         WHERE 1=1
       `;
     } else {
@@ -114,12 +149,27 @@ router.get("/", async (req, res) => {
       mainQuery = `
         SELECT 
           d.*,
+          ${effectiveStatusExpr} AS effective_status,
+          COALESCE(wms.internal_barcode, wmsi.internal_barcode) AS wms_internal_barcode,
+          COALESCE(wms.current_location_code, wmsi.current_location_code) AS wms_location_code,
           i.item_id, i.original_title, i.auc_num, i.category, i.brand, i.rank,
           i.starting_price, i.scheduled_date, i.image, i.original_scheduled_date, i.title, i.additional_info,
           u.company_name, u.login_id
         FROM direct_bids d
         LEFT JOIN crawled_items i ON d.item_id = i.item_id
         LEFT JOIN users u ON d.user_id = u.id
+        LEFT JOIN (
+          SELECT source_bid_type, source_bid_id, MAX(internal_barcode) AS internal_barcode, MAX(current_location_code) AS current_location_code
+          FROM wms_items
+          GROUP BY source_bid_type, source_bid_id
+        ) wms ON wms.source_bid_type = 'direct' AND wms.source_bid_id = d.id
+        LEFT JOIN (
+          SELECT source_item_id, MAX(internal_barcode) AS internal_barcode, MAX(current_location_code) AS current_location_code
+          FROM wms_items
+          WHERE source_item_id IS NOT NULL
+          GROUP BY source_item_id
+        ) wmsi ON wmsi.source_item_id = d.item_id
+        LEFT JOIN bid_workflow_stages bws ON bws.bid_type = 'direct' AND bws.bid_id = d.id
         WHERE 1=1
       `;
     }
@@ -127,16 +177,18 @@ router.get("/", async (req, res) => {
     // 검색 조건 추가
     if (search) {
       const searchTerm = `%${search}%`;
+      const compactSearchTerm = `%${String(search).replace(/\s+/g, "")}%`;
       countQuery +=
-        " AND (d.item_id LIKE ? OR i.original_title LIKE ? OR i.additional_info LIKE ? OR u.login_id LIKE ? OR u.company_name LIKE ?)";
+        " AND (CONVERT(d.item_id USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(i.original_title USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(i.additional_info USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(u.login_id USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(u.company_name USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR REPLACE(CONVERT(u.company_name USING utf8mb4), ' ', '') LIKE CONVERT(? USING utf8mb4))";
       mainQuery +=
-        " AND (d.item_id LIKE ? OR i.original_title LIKE ? OR i.additional_info LIKE ? OR u.login_id LIKE ? OR u.company_name LIKE ?)";
+        " AND (CONVERT(d.item_id USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(i.original_title USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(i.additional_info USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(u.login_id USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(u.company_name USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR REPLACE(CONVERT(u.company_name USING utf8mb4), ' ', '') LIKE CONVERT(? USING utf8mb4))";
       queryParams.push(
         searchTerm,
         searchTerm,
         searchTerm,
         searchTerm,
         searchTerm,
+        compactSearchTerm,
       );
     }
 
@@ -189,7 +241,7 @@ router.get("/", async (req, res) => {
     }
 
     // 일반 사용자는 자신의 입찰만 볼 수 있고, 관리자는 모든 입찰을 볼 수 있음
-    if (req.session.user.login_id !== "admin") {
+    if (!isAdminUser(req.session?.user)) {
       countQuery += " AND d.user_id = ?";
       mainQuery += " AND d.user_id = ?";
       queryParams.push(req.session.user.id);
@@ -234,6 +286,25 @@ router.get("/", async (req, res) => {
 
     // 데이터 쿼리 실행
     const [rows] = await connection.query(mainQuery, mainQueryParams);
+    await ensureBidWorkflowStagesTable();
+
+    const rowIds = rows.map((r) => r.id);
+    let stageMap = {};
+    if (rowIds.length > 0) {
+      const placeholders = rowIds.map(() => "?").join(",");
+      const [stages] = await connection.query(
+        `
+        SELECT bid_id, stage
+        FROM bid_workflow_stages
+        WHERE bid_type = 'direct' AND bid_id IN (${placeholders})
+        `,
+        rowIds,
+      );
+      stageMap = stages.reduce((acc, s) => {
+        acc[s.bid_id] = s.stage;
+        return acc;
+      }, {});
+    }
 
     // Format result to match expected structure
     const bidsWithItems = rows.map((row) => {
@@ -244,7 +315,10 @@ router.get("/", async (req, res) => {
         login_id: row.login_id,
         company_name: row.company_name,
         current_price: row.current_price,
-        status: row.status,
+        status:
+          row.status === "shipped"
+            ? "shipped"
+            : stageMap[row.id] || row.effective_status || row.status,
         submitted_to_platform: row.submitted_to_platform,
         created_at: row.created_at,
         updated_at: row.updated_at,
@@ -255,6 +329,8 @@ router.get("/", async (req, res) => {
         repair_requested_at: row.repair_requested_at,
         repair_details: row.repair_details,
         repair_fee: row.repair_fee,
+        internal_barcode: row.wms_internal_barcode || null,
+        wms_location_code: row.wms_location_code || null,
       };
 
       // Only include item if it exists
@@ -847,7 +923,7 @@ router.put("/complete", isAdmin, async (req, res) => {
            i.title, 
            i.scheduled_date 
          FROM direct_bids d 
-         JOIN crawled_items i ON d.item_id = i.item_id 
+         LEFT JOIN crawled_items i ON d.item_id = i.item_id 
          WHERE d.id IN (${placeholders}) 
            AND d.status = 'completed'`,
         bidIds,
@@ -858,6 +934,22 @@ router.put("/complete", isAdmin, async (req, res) => {
         `[COMPLETE] ${completedBids.length}건 낙찰 확정:`,
         completedBids.map((b) => `ID:${b.id} User:${b.user_id}`).join(", "),
       );
+
+      for (const completedBid of completedBids) {
+        const syncResult = await syncWmsByBidStatus(connection, {
+          bidType: "direct",
+          bidId: Number(completedBid.id),
+          itemId: completedBid.item_id || null,
+          nextStatus: "completed",
+        });
+        if (!syncResult?.updated && syncResult?.reason !== "already-synced") {
+          console.warn("[WMS sync][direct][complete] status update not applied:", {
+            bidId: Number(completedBid.id),
+            itemId: completedBid.item_id || null,
+            reason: syncResult?.reason || "unknown",
+          });
+        }
+      }
     }
 
     // ===== 3. 동일 상품의 다른 입찰 취소 및 예치금/한도 복구 =====
@@ -1265,7 +1357,7 @@ router.get("/:id", async (req, res) => {
     const bid = bids[0];
 
     // 인증 확인 - 관리자 또는 입찰 소유자만 볼 수 있음
-    if (req.session.user.login_id !== "admin" && bid.user_id !== userId) {
+    if (!isAdminUser(req.session?.user) && bid.user_id !== userId) {
       return res
         .status(403)
         .json({ message: "Not authorized to view this bid" });
@@ -1316,10 +1408,12 @@ router.put("/:id", isAdmin, async (req, res) => {
       await connection.rollback();
       return res.status(404).json({ message: "Bid not found" });
     }
+    const bid = bids[0];
 
     // 업데이트할 필드들과 값들을 동적으로 구성
     const updates = [];
     const params = [];
+    let workflowStageToSave = null;
 
     if (current_price !== undefined) {
       updates.push("current_price = ?");
@@ -1327,7 +1421,14 @@ router.put("/:id", isAdmin, async (req, res) => {
     }
     if (status !== undefined) {
       // 유효한 status 값 체크
-      const validStatuses = ["active", "completed", "cancelled", "shipped"];
+      const validStatuses = [
+        "active",
+        "completed",
+        "domestic_arrived",
+        "processing",
+        "cancelled",
+        "shipped",
+      ];
       if (!validStatuses.includes(status)) {
         await connection.rollback();
         return res.status(400).json({
@@ -1335,8 +1436,12 @@ router.put("/:id", isAdmin, async (req, res) => {
             "Invalid status. Must be one of: " + validStatuses.join(", "),
         });
       }
-      updates.push("status = ?");
-      params.push(status);
+      if (status === "domestic_arrived" || status === "processing") {
+        workflowStageToSave = status;
+      } else {
+        updates.push("status = ?");
+        params.push(status);
+      }
     }
     if (submitted_to_platform !== undefined) {
       // boolean 값 확인
@@ -1355,7 +1460,7 @@ router.put("/:id", isAdmin, async (req, res) => {
     }
 
     // 업데이트할 필드가 없으면 에러 반환
-    if (updates.length === 0) {
+    if (updates.length === 0 && !workflowStageToSave) {
       await connection.rollback();
       return res.status(400).json({
         message:
@@ -1363,21 +1468,59 @@ router.put("/:id", isAdmin, async (req, res) => {
       });
     }
 
-    // updated_at 자동 업데이트 추가
-    updates.push("updated_at = NOW()");
-    params.push(id);
+    if (updates.length > 0) {
+      // updated_at 자동 업데이트 추가
+      updates.push("updated_at = NOW()");
+      params.push(id);
 
-    const updateQuery = `UPDATE direct_bids SET ${updates.join(
-      ", ",
-    )} WHERE id = ?`;
+      const updateQuery = `UPDATE direct_bids SET ${updates.join(
+        ", ",
+      )} WHERE id = ?`;
 
-    const [updateResult] = await connection.query(updateQuery, params);
+      const [updateResult] = await connection.query(updateQuery, params);
 
-    if (updateResult.affectedRows === 0) {
-      await connection.rollback();
-      return res
-        .status(404)
-        .json({ message: "Bid not found or no changes made" });
+      if (updateResult.affectedRows === 0) {
+        await connection.rollback();
+        return res
+          .status(404)
+          .json({ message: "Bid not found or no changes made" });
+      }
+    }
+
+    if (workflowStageToSave) {
+      await ensureBidWorkflowStagesTable();
+      await connection.query(
+        `
+        INSERT INTO bid_workflow_stages (bid_type, bid_id, stage)
+        VALUES ('direct', ?, ?)
+        ON DUPLICATE KEY UPDATE
+          stage = VALUES(stage),
+          updated_at = NOW()
+        `,
+        [id, workflowStageToSave],
+      );
+    } else if (status !== undefined) {
+      await connection.query(
+        `DELETE FROM bid_workflow_stages WHERE bid_type = 'direct' AND bid_id = ?`,
+        [id],
+      );
+    }
+
+    if (status !== undefined) {
+      const syncResult = await syncWmsByBidStatus(connection, {
+        bidType: "direct",
+        bidId: Number(id),
+        itemId: bid.item_id || null,
+        nextStatus: status,
+      });
+      if (!syncResult?.updated && syncResult?.reason !== "already-synced") {
+        console.warn("[WMS sync][direct] status update not applied:", {
+          bidId: Number(id),
+          itemId: bid.item_id || null,
+          status,
+          reason: syncResult?.reason || "unknown",
+        });
+      }
     }
 
     await connection.commit();

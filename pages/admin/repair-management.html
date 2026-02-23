@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>수선 관리</title>
+    <link rel="stylesheet" href="/styles/common.css" />
+    <link rel="stylesheet" href="/styles/admin/common.css" />
+    <link rel="stylesheet" href="/styles/admin/repair-management.css" />
+    <link rel="stylesheet" href="/styles/admin/unified.css" />
+  </head>
+  <body>
+    <div class="admin-layout">
+      <div class="sidebar">
+        <div class="sidebar-logo"><h2>경매 관리자</h2></div>
+        <div class="sidebar-menu">
+          <a href="/admin">대시보드</a>
+          <a href="/admin/live-bids">현장 경매 관리</a>
+          <a href="/admin/direct-bids">직접 경매 관리</a>
+          <a href="/admin/all-bids">통합 경매 관리</a>
+          <a href="/admin/bid-results">입찰 결과 & 정산</a>
+          <a href="/admin/transactions">거래 내역 관리</a>
+          <a href="/admin/invoices">인보이스 관리</a>
+          <a href="/admin/users">회원 관리</a>
+          <a href="/admin/recommend-filters">추천 및 필터</a>
+          <a href="/admin/settings">관리자 설정</a>
+          <a href="/admin/wms">WMS(입고/수선/출고)</a>
+          <a href="/admin/repair-management" class="active">수선 관리</a>
+          <a href="/admin/activity-logs">사용자 활동기록</a>
+          <a href="/admin/admin-permissions">관리자 권한 관리</a>
+        </div>
+      </div>
+
+      <div class="main-content">
+        <div class="main-header">
+          <h1>수선 관리</h1>
+          <div class="user-info">
+            관리자
+            <button id="logoutBtn" class="btn btn-secondary">로그아웃</button>
+          </div>
+        </div>
+
+        <section class="card" style="margin-top: 16px">
+          <div class="section-header">
+            <h3>국내도착 물건</h3>
+            <div class="toolbar">
+              <input id="searchInput" placeholder="내부바코드/회원사/상품명 검색" />
+              <button id="btnReload" class="btn btn-secondary">새로고침</button>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>사진</th>
+                  <th>내부바코드</th>
+                  <th>회원사</th>
+                  <th>상품명</th>
+                  <th>예정일시</th>
+                  <th>현재위치</th>
+                  <th>상태</th>
+                  <th>작업</th>
+                </tr>
+              </thead>
+              <tbody id="arrivalsBody">
+                <tr><td colspan="9" class="text-center">데이터를 불러오는 중입니다...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card" style="margin-top: 16px">
+          <div class="section-header">
+            <h3>수선 제안 목록</h3>
+            <div class="toolbar">
+              <button id="btnExportCsv" class="btn btn-secondary">CSV 내보내기</button>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>내부바코드</th>
+                  <th>회원사</th>
+                  <th>상품명</th>
+                  <th>구분</th>
+                  <th>외주업체</th>
+                  <th>금액(원)</th>
+                  <th>수정자</th>
+                  <th>수정시각</th>
+                  <th>작업</th>
+                </tr>
+              </thead>
+              <tbody id="casesBody">
+                <tr><td colspan="9" class="text-center">데이터를 불러오는 중입니다...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div id="repairModal" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>수선 제안 등록</h3>
+          <button id="btnCloseModal" class="btn btn-secondary">닫기</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="meta-grid">
+            <div><strong>내부바코드</strong><p id="metaBarcode">-</p></div>
+            <div><strong>회원사</strong><p id="metaMember">-</p></div>
+            <div><strong>상품명</strong><p id="metaTitle">-</p></div>
+            <div><strong>예정일시</strong><p id="metaScheduledAt">-</p></div>
+          </div>
+
+          <div class="form-grid">
+            <label>수선 구분
+              <select id="decisionType">
+                <option value="INTERNAL">내부수선(내부수선중 존)</option>
+                <option value="EXTERNAL">외부수선(외부수선중 존)</option>
+              </select>
+            </label>
+            <label>외주 업체
+              <div class="inline-row">
+                <select id="vendorName"></select>
+                <button id="btnAddVendor" type="button" class="btn btn-secondary">업체추가</button>
+              </div>
+            </label>
+            <label>수선 금액(원)
+              <input id="repairAmount" type="number" min="0" step="100" placeholder="예: 35000" />
+            </label>
+            <label>내부 메모
+              <input id="internalNote" placeholder="내부 전용 메모" />
+            </label>
+          </div>
+
+          <label>수선 내용
+            <textarea id="repairNote" rows="4" placeholder="수선 내용을 입력하세요"></textarea>
+          </label>
+
+          <label>발송 템플릿 (복붙)
+            <textarea id="proposalText" rows="8" readonly></textarea>
+          </label>
+        </div>
+
+        <div class="modal-footer">
+          <button id="btnCopyTemplate" type="button" class="btn btn-secondary">템플릿 복사</button>
+          <button id="btnSaveRepair" type="button" class="btn btn-primary">저장 후 존 이동</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script src="/js/admin/common.js"></script>
+    <script src="/js/admin/repair-management.js"></script>
+  </body>
+</html>

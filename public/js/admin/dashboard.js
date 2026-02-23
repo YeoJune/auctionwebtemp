@@ -11,36 +11,153 @@ document.addEventListener("DOMContentLoaded", function () {
 // 대시보드 데이터 로드
 async function loadDashboardData() {
   try {
-    // 요약 정보 로드
-    const summary = await fetchDashboardSummary();
-    updateSummaryCards(summary);
-
-    // 최근 활동 로드
-    const activities = await fetchRecentActivities();
-    updateRecentActivities(activities);
-
-    // 사용자 통계 로드
-    const stats = await fetchUserStats();
-    updateUserStats(stats);
-
-    // 비즈니스 KPI 데이터 로드
-    const kpiData = await fetchBusinessKPI();
-    updateBusinessKPIs(
-      kpiData.successRate,
-      kpiData.avgBidPrice,
-      kpiData.todayBids,
-    );
-
-    // 활성 경매 데이터 로드
-    const auctions = await fetchActiveAuctions();
-    updateActiveAuctions(auctions.liveAuctions, auctions.directAuctions);
-
-    // 활성 사용자 데이터 로드
-    const users = await fetchActiveUsers();
-    updateActiveUsers(users);
+    // CEO 요약 로드
+    const executiveSummary = await fetchExecutiveSummary();
+    updateExecutiveSummary(executiveSummary);
   } catch (error) {
     console.error("대시보드 데이터를 불러오는 중 오류가 발생했습니다:", error);
   }
+}
+
+function updateExecutiveSummary(summary) {
+  if (!summary) return;
+  document.getElementById("completedRevenueJpy").textContent = formatCurrency(
+    Number(summary.yearRevenueKrw || 0),
+    "KRW",
+  );
+  document.getElementById("monthlyRevenueJpy").textContent = formatCurrency(
+    Number(summary.monthlyRevenueKrw || 0),
+    "KRW",
+  );
+  const periodEl = document.getElementById("completedRevenuePeriod");
+  if (periodEl)
+    periodEl.textContent =
+    summary.periodStart && summary.periodEnd
+      ? `${summary.targetYear || 2026}년 기간: ${summary.periodStart} ~ ${summary.periodEnd} | 현장 ${(
+          summary.sourceBreakdown?.live?.count || 0
+        ).toLocaleString()}건, 직접 ${(
+          summary.sourceBreakdown?.direct?.count || 0
+        ).toLocaleString()}건`
+      : "기준: 데이터 없음";
+
+  const vipList = document.getElementById("vipTop5List");
+  const vipTop = summary.vipTop10 || summary.vipTop5 || [];
+  if (!vipTop || vipTop.length === 0) {
+    vipList.innerHTML = '<div class="no-data">최근 30일 VIP 데이터가 없습니다.</div>';
+  } else {
+    vipList.innerHTML = vipTop
+      .slice(0, 10)
+      .map(
+        (vip, idx) => `
+        <div class="active-user">
+          <div class="user-id">${idx + 1}. ${vip.company_name || "-"} (${vip.login_id || "-"})</div>
+          <div class="activity-stats">
+            <span>완료건수: ${(vip.completedCount || 0).toLocaleString()}건</span>
+            <span>매출: ${formatCurrency(Number(vip.totalRevenueKrw || 0), "KRW")}</span>
+          </div>
+        </div>
+      `,
+      )
+      .join("");
+  }
+
+  renderSixMonthRevenueChart(summary.sixMonthRevenue || []);
+  renderPendingDomestic(summary.pendingDomestic || []);
+}
+
+function renderSixMonthRevenueChart(series) {
+  const chart = document.getElementById("sixMonthRevenueChart");
+  const note = document.getElementById("sixMonthRevenueNote");
+  if (!chart || !note) return;
+
+  const safeSeries = Array.isArray(series) ? series : [];
+  if (!safeSeries.length) {
+    note.textContent = "최근 6개월 데이터가 없습니다.";
+    chart.innerHTML = '<div class="no-data">데이터 없음</div>';
+    return;
+  }
+
+  const maxValue = Math.max(...safeSeries.map((m) => Number(m.revenueKrw || 0)), 1);
+  const firstMonth = safeSeries[0]?.month || "-";
+  const lastMonth = safeSeries[safeSeries.length - 1]?.month || "-";
+  note.textContent = `${firstMonth} ~ ${lastMonth}`;
+
+  chart.innerHTML = safeSeries
+    .map((m) => {
+      const revenue = Number(m.revenueKrw || 0);
+      const ratio = Math.max(0.04, revenue / maxValue);
+      const height = Math.round(ratio * 170);
+      return `
+        <div class="bar-item">
+          <div class="bar" style="height:${height}px"></div>
+          <div class="bar-label">${m.monthLabel || m.month || "-"}</div>
+          <div class="bar-value">${formatCurrency(revenue, "KRW")}</div>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function renderSimpleUserList(elementId, users) {
+  const container = document.getElementById(elementId);
+  if (!users || users.length === 0) {
+    container.innerHTML = '<div class="no-data">해당 회원이 없습니다.</div>';
+    return;
+  }
+
+  container.innerHTML = users
+    .map((u, idx) => {
+      return `
+      <div class="active-user">
+        <div class="user-id">${idx + 1}. ${u.company_name || "-"} (${u.login_id || "-"})</div>
+        <div class="activity-stats">
+          <span>가입일: ${u.joined_at || "-"}</span>
+        </div>
+      </div>
+    `;
+    })
+    .join("");
+}
+
+function renderPendingDomestic(items) {
+  const noteNode = document.getElementById("pendingDomesticNote");
+  const listNode = document.getElementById("pendingDomesticList");
+  if (!noteNode || !listNode) return;
+
+  const rows = Array.isArray(items) ? items : [];
+  noteNode.textContent = `실시간 목록: ${rows.length.toLocaleString()}건`;
+
+  if (!rows.length) {
+    listNode.innerHTML = '<div class="no-data">국내도착 미반영 건이 없습니다.</div>';
+    return;
+  }
+
+  listNode.innerHTML = `
+    <table class="pending-table">
+      <thead>
+        <tr>
+          <th>완료일</th>
+          <th>경매장</th>
+          <th>국내도착 미반영 물품수</th>
+          <th>경과(영업일)</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows
+          .map(
+            (r) => `
+            <tr>
+              <td>${r.completedDate || "-"}</td>
+              <td>경매${r.aucNum || "-"}</td>
+              <td>${Number(r.itemCount || 0).toLocaleString()}건</td>
+              <td><span class="pending-badge">${Number(r.businessDaysElapsed || 0)}일</span></td>
+            </tr>
+          `,
+          )
+          .join("")}
+      </tbody>
+    </table>
+  `;
 }
 
 // 요약 카드 업데이트

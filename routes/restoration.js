@@ -3,6 +3,7 @@ const express = require("express");
 const router = express.Router();
 const { pool } = require("../utils/DB");
 const { v4: uuidv4 } = require("uuid");
+const { isAdminUser } = require("../utils/adminAuth");
 
 // 미들웨어 (위 appraisal.js 또는 certificate.js 와 동일하게 사용)
 const isAuthenticated = (req, res, next) => {
@@ -17,7 +18,7 @@ const isAuthenticated = (req, res, next) => {
   }
 };
 const isAdmin = (req, res, next) => {
-  if (req.session.user && req.session.user.login_id === "admin") {
+  if (isAdminUser(req.session?.user)) {
     next();
   } else {
     res.status(403).json({

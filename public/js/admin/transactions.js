@@ -391,7 +391,7 @@ function renderSettlements() {
         <td>${st.settlement_date}</td>
         <td class="text-right">₩${st.final_amount.toLocaleString()}</td>
         <td class="text-right">₩${(st.completed_amount || 0).toLocaleString()}</td>
-        <td class="text-right ${remaining > 0 ? "text-danger" : ""}">₩${remaining.toLocaleString()}</td>
+        <td class="text-right text-danger">₩${remaining.toLocaleString()}</td>
         <td>${st.depositor_name || "-"}</td>
         <td>${statusBadge}</td>
         <td>${docBadge}</td>

@@ -1,4 +1,6 @@
 // utils/middleware.js
+const { isAdminUser } = require("./adminAuth");
+
 const isAuthenticated = (req, res, next) => {
   if (req.session.user && req.session.user.id) {
     next();
@@ -12,7 +14,7 @@ const isAuthenticated = (req, res, next) => {
 };
 
 const isAdmin = (req, res, next) => {
-  if (req.session.user && req.session.user.login_id === "admin") {
+  if (isAdminUser(req.session?.user)) {
     next();
   } else {
     res.status(403).json({

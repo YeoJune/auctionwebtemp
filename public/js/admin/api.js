@@ -23,6 +23,11 @@ async function fetchBusinessKPI() {
   return fetchAPI("/dashboard/kpi");
 }
 
+// CEO 요약 데이터 조회
+async function fetchExecutiveSummary() {
+  return fetchAPI("/dashboard/executive-summary");
+}
+
 // 활성 경매 정보 조회
 async function fetchActiveAuctions() {
   return fetchAPI("/dashboard/active-auctions");
@@ -72,10 +77,16 @@ async function fetchLiveBids(
   search = "",
   aucNum = ""
 ) {
+  const workflowOnlyStatuses = ["domestic_arrived", "processing"];
+  const queryStatus = workflowOnlyStatuses.includes(status)
+    ? "completed"
+    : status;
+  const queryPage = workflowOnlyStatuses.includes(status) ? 1 : page;
+  const queryLimit = workflowOnlyStatuses.includes(status) ? 0 : limit;
   const params = new URLSearchParams({
-    status: status,
-    page: page,
-    limit: limit,
+    status: queryStatus,
+    page: queryPage,
+    limit: queryLimit,
   });
 
   if (search) {
@@ -102,7 +113,19 @@ async function fetchLiveBids(
     params.append("aucNum", aucNum);
   }
 
-  return fetchAPI(`/live-bids?${params.toString()}`);
+  const data = await fetchAPI(`/live-bids?${params.toString()}`);
+  if (workflowOnlyStatuses.includes(status)) {
+    const filteredBids = (data.bids || []).filter((b) => b.status === status);
+    return {
+      ...data,
+      bids: filteredBids,
+      count: filteredBids.length,
+      total: filteredBids.length,
+      totalPages: 1,
+      currentPage: 1,
+    };
+  }
+  return data;
 }
 
 // 2차 입찰가 제안
@@ -165,11 +188,17 @@ async function fetchDirectBids(
   search = "",
   aucNum = ""
 ) {
+  const workflowOnlyStatuses = ["domestic_arrived", "processing"];
+  const queryStatus = workflowOnlyStatuses.includes(status)
+    ? "completed"
+    : status;
+  const queryPage = workflowOnlyStatuses.includes(status) ? 1 : page;
+  const queryLimit = workflowOnlyStatuses.includes(status) ? 0 : limit;
   const params = new URLSearchParams({
-    status: status,
+    status: queryStatus,
     highestOnly: highestOnly,
-    page: page,
-    limit: limit,
+    page: queryPage,
+    limit: queryLimit,
   });
 
   if (search) {
@@ -196,7 +225,19 @@ async function fetchDirectBids(
     params.append("aucNum", aucNum);
   }
 
-  return fetchAPI(`/direct-bids?${params.toString()}`);
+  const data = await fetchAPI(`/direct-bids?${params.toString()}`);
+  if (workflowOnlyStatuses.includes(status)) {
+    const filteredBids = (data.bids || []).filter((b) => b.status === status);
+    return {
+      ...data,
+      bids: filteredBids,
+      count: filteredBids.length,
+      total: filteredBids.length,
+      totalPages: 1,
+      currentPage: 1,
+    };
+  }
+  return data;
 }
 
 // 특정 직접 경매 조회
@@ -277,6 +318,13 @@ async function startValueCrawling(queryParams = "") {
     `/crawler/crawl-values${queryParams ? "?" + queryParams : ""}`,
     { method: "GET" }
   );
+}
+
+// 현장 경매 완료/출고 카테고리의 낙찰금액(winning_price)을 시세표 final_price로 덮어쓰기
+async function overwriteValuesFinalPrice() {
+  return fetchAPI("/crawler/overwrite-values-final-price", {
+    method: "POST",
+  });
 }
 
 // 크롤링 스케줄 설정
@@ -396,6 +444,11 @@ async function fetchUser(userId) {
   return fetchAPI(`/users/${encodeURIComponent(userId)}`);
 }
 
+// 특정 회원 입찰 내역 조회
+async function fetchUserBidHistory(userId) {
+  return fetchAPI(`/users/${encodeURIComponent(userId)}/bid-history`);
+}
+
 // 새 회원 생성
 async function createUser(userData) {
   // 날짜 필드가 있는 경우 서버에서 처리할 수 있도록 형식화
@@ -441,6 +494,53 @@ async function deleteUser(userId) {
 async function syncUsers() {
   return fetchAPI("/users/sync", {
     method: "POST",
+  });
+}
+
+// ---- 회원 그룹 API ----
+async function fetchMemberGroups() {
+  return fetchAPI("/admin/member-groups");
+}
+
+async function createMemberGroup(name) {
+  return fetchAPI("/admin/member-groups", {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+}
+
+async function deleteMemberGroup(groupId) {
+  return fetchAPI(`/admin/member-groups/${groupId}`, { method: "DELETE" });
+}
+
+async function fetchGroupMembers(groupId) {
+  return fetchAPI(`/admin/member-groups/${groupId}/members`);
+}
+
+async function addMemberToGroup(groupId, userId) {
+  return fetchAPI(`/admin/member-groups/${groupId}/members`, {
+    method: "POST",
+    body: JSON.stringify({ user_id: userId }),
+  });
+}
+
+async function removeMemberFromGroup(groupId, userId) {
+  return fetchAPI(`/admin/member-groups/${groupId}/members/${userId}`, {
+    method: "DELETE",
+  });
+}
+
+async function addMembersToGroupBatch(groupId, userIds) {
+  return fetchAPI(`/admin/member-groups/${groupId}/members/batch`, {
+    method: "POST",
+    body: JSON.stringify({ user_ids: userIds }),
+  });
+}
+
+async function removeMembersFromGroupBatch(groupId, userIds) {
+  return fetchAPI(`/admin/member-groups/${groupId}/members/batch-remove`, {
+    method: "POST",
+    body: JSON.stringify({ user_ids: userIds }),
   });
 }
 

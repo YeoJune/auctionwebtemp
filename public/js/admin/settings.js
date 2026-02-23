@@ -3,6 +3,7 @@
 // 전역 변수
 let isCrawlingProduct = false;
 let isCrawlingValue = false;
+let isOverwritingValuesFinalPrice = false;
 
 // 페이지 로드 시 실행
 document.addEventListener("DOMContentLoaded", function () {
@@ -30,6 +31,9 @@ document.addEventListener("DOMContentLoaded", function () {
   document
     .getElementById("valueCrawlBtn")
     .addEventListener("click", showValueCrawlOptions); // 수정됨
+  document
+    .getElementById("overwriteValuesFinalPriceBtn")
+    .addEventListener("click", overwriteValuesFinalPriceFromLive);
   document
     .getElementById("uploadLogoBtn")
     .addEventListener("click", uploadLogo);
@@ -127,7 +131,8 @@ function hideValueCrawlOptions() {
 
 // 시세표 크롤링 시작 함수 수정
 async function startValueCrawl() {
-  if (isCrawlingProduct || isCrawlingValue) return;
+  if (isCrawlingProduct || isCrawlingValue || isOverwritingValuesFinalPrice)
+    return;
 
   // 선택된 경매 플랫폼 확인
   const selectedAucNums = [];
@@ -274,10 +279,15 @@ async function checkCrawlStatus() {
 function updateCrawlingUI() {
   const productBtn = document.getElementById("productCrawlBtn");
   const valueBtn = document.getElementById("valueCrawlBtn");
+  const overwriteBtn = document.getElementById("overwriteValuesFinalPriceBtn");
   const statusText = document.getElementById("crawlStatus");
 
-  productBtn.disabled = isCrawlingProduct || isCrawlingValue;
-  valueBtn.disabled = isCrawlingProduct || isCrawlingValue;
+  const isBusy =
+    isCrawlingProduct || isCrawlingValue || isOverwritingValuesFinalPrice;
+
+  productBtn.disabled = isBusy;
+  valueBtn.disabled = isBusy;
+  overwriteBtn.disabled = isBusy;
 
   if (isCrawlingProduct) {
     statusText.textContent = "상품 크롤링 중...";
@@ -285,6 +295,8 @@ function updateCrawlingUI() {
   } else if (isCrawlingValue) {
     statusText.textContent = "시세표 크롤링 중...";
     valueBtn.textContent = "시세표 크롤링 중...";
+  } else if (isOverwritingValuesFinalPrice) {
+    statusText.textContent = "시세표 덮어쓰기 처리 중...";
   } else {
     statusText.textContent = "";
     productBtn.textContent = "상품 크롤링";
@@ -311,7 +323,8 @@ function startStatusCheck() {
 
 // 상품 크롤링 시작
 async function startProductCrawl() {
-  if (isCrawlingProduct || isCrawlingValue) return;
+  if (isCrawlingProduct || isCrawlingValue || isOverwritingValuesFinalPrice)
+    return;
 
   try {
     isCrawlingProduct = true;
@@ -326,6 +339,46 @@ async function startProductCrawl() {
     isCrawlingProduct = false;
     updateCrawlingUI();
     showAlert("상품 크롤링 시작 중 오류가 발생했습니다.");
+  }
+}
+
+// 현장 경매 완료/출고 카테고리 낙찰금액 -> 시세표 final_price 반영
+async function overwriteValuesFinalPriceFromLive() {
+  if (isCrawlingProduct || isCrawlingValue || isOverwritingValuesFinalPrice) {
+    showAlert("진행 중인 작업이 끝난 후 다시 시도해주세요.");
+    return;
+  }
+
+  if (
+    !confirmAction(
+      "현장 경매 완료/출고 카테고리 낙찰금액을 시세표(final_price)에 반영하시겠습니까?",
+    )
+  ) {
+    return;
+  }
+
+  const overwriteBtn = document.getElementById("overwriteValuesFinalPriceBtn");
+  const originalText = overwriteBtn.textContent;
+
+  try {
+    isOverwritingValuesFinalPrice = true;
+    overwriteBtn.textContent = "덮어쓰기 처리 중...";
+    updateCrawlingUI();
+
+    const result = await overwriteValuesFinalPrice();
+    const matchedCount = result?.stats?.matchedCount || 0;
+    const updatedCount = result?.stats?.updatedCount || 0;
+
+    showAlert(
+      `덮어쓰기 완료: 매칭 ${matchedCount}건, 업데이트 ${updatedCount}건`,
+      "success",
+    );
+  } catch (error) {
+    handleError(error, "시세표 덮어쓰기 중 오류가 발생했습니다.");
+  } finally {
+    isOverwritingValuesFinalPrice = false;
+    overwriteBtn.textContent = originalText;
+    updateCrawlingUI();
   }
 }
 

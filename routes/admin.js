@@ -28,6 +28,15 @@ const {
   syncRecommendSettingsToItems,
 } = require("../utils/dataUtils");
 const DBManager = require("../utils/DBManager");
+const { isAdminUser, requireAdmin } = require("../utils/adminAuth");
+const { ensureAdminActivityTable } = require("../utils/adminActivityLogger");
+const {
+  ADMIN_MENU_KEYS,
+  isSuperAdminUser,
+  parseAllowedMenus,
+  sanitizeAllowedMenus,
+  ensureAdminPermissionTable,
+} = require("../utils/adminAccess");
 const {
   createWorkbook,
   streamWorkbookToResponse,
@@ -38,13 +47,16 @@ const { calculateTotalPrice } = require("../utils/calculate-fee");
 const { getExchangeRate } = require("../utils/exchange-rate");
 
 // Middleware to check if user is admin
-const isAdmin = (req, res, next) => {
-  if (req.session.user && req.session.user.login_id === "admin") {
-    next();
-  } else {
-    res.status(403).json({ message: "Access denied. Admin only." });
-  }
-};
+const isAdmin = requireAdmin;
+
+function requireSuperAdmin(req, res, next) {
+  if (isSuperAdminUser(req.session?.user)) return next();
+  return res.status(403).json({
+    success: false,
+    message: "슈퍼어드민 권한이 필요합니다.",
+    code: "FORBIDDEN_SUPERADMIN",
+  });
+}
 
 // Multer configuration for image uploads
 const logoStorage = multer.diskStorage({
@@ -210,8 +222,295 @@ router.get("/public/notices/:id", async (req, res) => {
 });
 
 router.get("/check-status", async (req, res) => {
-  const isAdmin = req.session.user && req.session.user.login_id === "admin";
-  res.json({ isAdmin });
+  res.json({ isAdmin: isAdminUser(req.session?.user) });
+});
+
+router.get("/me/access", isAdmin, async (req, res) => {
+  try {
+    await ensureAdminPermissionTable(pool);
+    const user = req.session?.user || {};
+    const isSuper = isSuperAdminUser(user);
+    const allowedMenus = isSuper ? ADMIN_MENU_KEYS : parseAllowedMenus(user.allowed_menus);
+    return res.json({
+      isAdmin: true,
+      isSuperAdmin: isSuper,
+      allowedMenus,
+      menuKeys: ADMIN_MENU_KEYS,
+    });
+  } catch (error) {
+    console.error("접근 권한 조회 오류:", error);
+    return res.status(500).json({ message: "접근 권한 조회 실패" });
+  }
+});
+
+router.get("/admin-accounts", isAdmin, requireSuperAdmin, async (req, res) => {
+  let conn;
+  try {
+    await ensureAdminPermissionTable(pool);
+    conn = await pool.getConnection();
+
+    const [rows] = await conn.query(
+      `
+      SELECT
+        u.id,
+        u.login_id,
+        u.company_name,
+        u.is_active,
+        u.created_at,
+        ap.is_superadmin,
+        ap.allowed_menus
+      FROM users u
+      LEFT JOIN admin_panel_permissions ap ON ap.user_id = u.id
+      WHERE u.login_id = 'admin' OR ap.user_id IS NOT NULL
+      ORDER BY (u.login_id = 'admin') DESC, u.login_id ASC
+      `,
+    );
+
+    return res.json({
+      accounts: (rows || []).map((r) => ({
+        ...r,
+        allowedMenus: Number(r.is_superadmin || 0) === 1 ? ADMIN_MENU_KEYS : parseAllowedMenus(r.allowed_menus),
+      })),
+      menuKeys: ADMIN_MENU_KEYS,
+    });
+  } catch (error) {
+    console.error("관리자 계정 목록 조회 오류:", error);
+    return res.status(500).json({ message: "관리자 계정 목록 조회 실패" });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
+router.post("/admin-accounts", isAdmin, requireSuperAdmin, async (req, res) => {
+  let conn;
+  try {
+    await ensureAdminPermissionTable(pool);
+    const { loginId, password, name, allowedMenus = [] } = req.body || {};
+    const safeLoginId = String(loginId || "").trim();
+    const safePassword = String(password || "").trim();
+    const safeName = String(name || "").trim();
+
+    if (!safeLoginId || !safePassword) {
+      return res.status(400).json({ message: "아이디/비밀번호는 필수입니다." });
+    }
+    if (!safeLoginId.startsWith("admin")) {
+      return res.status(400).json({ message: "관리자 아이디는 admin으로 시작해야 합니다." });
+    }
+
+    conn = await pool.getConnection();
+    const crypto = require("crypto");
+    const hashedPassword = crypto.createHash("sha256").update(safePassword).digest("hex");
+    const menus = sanitizeAllowedMenus(allowedMenus);
+
+    await conn.beginTransaction();
+
+    const [exists] = await conn.query("SELECT id FROM users WHERE login_id = ? LIMIT 1", [safeLoginId]);
+    let userId;
+    if (exists.length > 0) {
+      userId = exists[0].id;
+      await conn.query(
+        "UPDATE users SET password = ?, company_name = ?, is_active = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        [hashedPassword, safeName || safeLoginId, userId],
+      );
+    } else {
+      const [ins] = await conn.query(
+        `INSERT INTO users
+         (login_id, registration_date, password, company_name, is_active, commission_rate, role)
+         VALUES (?, CURDATE(), ?, ?, 1, 0, 'normal')`,
+        [safeLoginId, hashedPassword, safeName || safeLoginId],
+      );
+      userId = ins.insertId;
+    }
+
+    await conn.query(
+      `INSERT INTO admin_panel_permissions (user_id, is_superadmin, allowed_menus)
+       VALUES (?, 0, ?)
+       ON DUPLICATE KEY UPDATE is_superadmin = 0, allowed_menus = VALUES(allowed_menus), updated_at = CURRENT_TIMESTAMP`,
+      [userId, JSON.stringify(menus)],
+    );
+
+    await conn.commit();
+    return res.json({ success: true, message: "관리자 계정 생성 완료" });
+  } catch (error) {
+    if (conn) await conn.rollback();
+    console.error("관리자 계정 생성 오류:", error);
+    return res.status(500).json({ message: "관리자 계정 생성 실패" });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
+router.put("/admin-accounts/:userId/permissions", isAdmin, requireSuperAdmin, async (req, res) => {
+  let conn;
+  try {
+    await ensureAdminPermissionTable(pool);
+    const userId = Number(req.params.userId);
+    if (!userId) return res.status(400).json({ message: "유효하지 않은 사용자입니다." });
+
+    conn = await pool.getConnection();
+    const [users] = await conn.query("SELECT login_id FROM users WHERE id = ? LIMIT 1", [userId]);
+    if (!users.length) return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
+    if (String(users[0].login_id).toLowerCase() === "admin") {
+      return res.status(400).json({ message: "superadmin 권한은 수정할 수 없습니다." });
+    }
+
+    const menus = sanitizeAllowedMenus(req.body?.allowedMenus || []);
+    await conn.query(
+      `INSERT INTO admin_panel_permissions (user_id, is_superadmin, allowed_menus)
+       VALUES (?, 0, ?)
+       ON DUPLICATE KEY UPDATE allowed_menus = VALUES(allowed_menus), is_superadmin = 0, updated_at = CURRENT_TIMESTAMP`,
+      [userId, JSON.stringify(menus)],
+    );
+    return res.json({ success: true, message: "권한 저장 완료" });
+  } catch (error) {
+    console.error("관리자 권한 저장 오류:", error);
+    return res.status(500).json({ message: "권한 저장 실패" });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
+router.put("/admin-accounts/:userId/password", isAdmin, requireSuperAdmin, async (req, res) => {
+  let conn;
+  try {
+    const userId = Number(req.params.userId);
+    const password = String(req.body?.password || "").trim();
+    if (!userId || !password) return res.status(400).json({ message: "요청값이 올바르지 않습니다." });
+
+    conn = await pool.getConnection();
+    const [users] = await conn.query("SELECT login_id FROM users WHERE id = ? LIMIT 1", [userId]);
+    if (!users.length) return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
+    if (String(users[0].login_id).toLowerCase() === "admin") {
+      return res.status(400).json({ message: "superadmin 비밀번호는 여기서 변경할 수 없습니다." });
+    }
+
+    const crypto = require("crypto");
+    const hashedPassword = crypto.createHash("sha256").update(password).digest("hex");
+    await conn.query("UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", [hashedPassword, userId]);
+    return res.json({ success: true, message: "비밀번호 변경 완료" });
+  } catch (error) {
+    console.error("관리자 비밀번호 변경 오류:", error);
+    return res.status(500).json({ message: "비밀번호 변경 실패" });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
+router.delete("/admin-accounts/:userId", isAdmin, requireSuperAdmin, async (req, res) => {
+  let conn;
+  try {
+    const userId = Number(req.params.userId);
+    if (!userId) return res.status(400).json({ message: "유효하지 않은 사용자입니다." });
+
+    conn = await pool.getConnection();
+    const [users] = await conn.query("SELECT login_id FROM users WHERE id = ? LIMIT 1", [userId]);
+    if (!users.length) return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
+    if (String(users[0].login_id).toLowerCase() === "admin") {
+      return res.status(400).json({ message: "superadmin 계정은 삭제할 수 없습니다." });
+    }
+
+    await conn.beginTransaction();
+    await conn.query("DELETE FROM admin_panel_permissions WHERE user_id = ?", [userId]);
+    await conn.query("DELETE FROM users WHERE id = ?", [userId]);
+    await conn.commit();
+
+    return res.json({ success: true, message: "관리자 계정 삭제 완료" });
+  } catch (error) {
+    if (conn) await conn.rollback();
+    console.error("관리자 계정 삭제 오류:", error);
+    return res.status(500).json({ message: "관리자 계정 삭제 실패" });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
+router.get("/activity-logs", isAdmin, async (req, res) => {
+  let conn;
+  try {
+    await ensureAdminActivityTable();
+    conn = await pool.getConnection();
+
+    const {
+      actor = "",
+      method = "",
+      path = "",
+      menu = "",
+      action = "",
+      dateFrom = "",
+      dateTo = "",
+      page = 1,
+      limit = 50,
+    } = req.query;
+
+    const safeLimit = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200);
+    const safePage = Math.max(parseInt(page, 10) || 1, 1);
+    const offset = (safePage - 1) * safeLimit;
+
+    const where = ["1=1"];
+    const params = [];
+
+    if (actor) {
+      where.push("(actor_login_id LIKE ? OR actor_name LIKE ?)");
+      params.push(`%${actor}%`, `%${actor}%`);
+    }
+    if (method) {
+      where.push("action_method = ?");
+      params.push(String(method).toUpperCase());
+    }
+    if (path) {
+      where.push("action_path LIKE ?");
+      params.push(`%${path}%`);
+    }
+    if (menu) {
+      where.push("action_menu LIKE ?");
+      params.push(`%${menu}%`);
+    }
+    if (action) {
+      where.push("(action_title LIKE ? OR action_summary LIKE ? OR action_label LIKE ?)");
+      params.push(`%${action}%`, `%${action}%`, `%${action}%`);
+    }
+    if (dateFrom) {
+      where.push("DATE(created_at) >= DATE(?)");
+      params.push(dateFrom);
+    }
+    if (dateTo) {
+      where.push("DATE(created_at) <= DATE(?)");
+      params.push(dateTo);
+    }
+
+    const whereSql = where.join(" AND ");
+    const [rows] = await conn.query(
+      `
+      SELECT
+        id, actor_user_id, actor_login_id, actor_name, actor_role,
+        action_method, action_path, action_menu, action_title, action_summary, action_label, target_type, target_id,
+        ip_address, user_agent, http_status, detail_json, created_at
+      FROM admin_activity_logs
+      WHERE ${whereSql}
+      ORDER BY created_at DESC, id DESC
+      LIMIT ? OFFSET ?
+      `,
+      [...params, safeLimit, offset],
+    );
+    const [countRows] = await conn.query(
+      `SELECT COUNT(*) AS total FROM admin_activity_logs WHERE ${whereSql}`,
+      params,
+    );
+
+    res.json({
+      logs: rows || [],
+      pagination: {
+        page: safePage,
+        limit: safeLimit,
+        total: Number(countRows?.[0]?.total || 0),
+      },
+    });
+  } catch (error) {
+    console.error("관리자 활동로그 조회 오류:", error);
+    res.status(500).json({ message: "활동로그 조회 중 오류가 발생했습니다." });
+  } finally {
+    if (conn) conn.release();
+  }
 });
 
 // Route to upload logo
@@ -770,6 +1069,268 @@ router.get("/users-list", isAdmin, async (req, res) => {
   } catch (error) {
     console.error("Error fetching users list:", error);
     res.status(500).json({ message: "Error fetching users list" });
+  }
+});
+
+// =====================================================
+// 회원 그룹 (member_groups, user_member_groups)
+// =====================================================
+
+const DEFAULT_MEMBER_GROUPS = ["artecasa", "doyakcasa"];
+let memberGroupTablesReady = false;
+
+async function ensureMemberGroupTables() {
+  if (!memberGroupTablesReady) {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS member_groups (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        sort_order INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_name (name)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS user_member_groups (
+        user_id INT NOT NULL,
+        group_id INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_id, group_id),
+        KEY idx_umg_group_id (group_id),
+        CONSTRAINT fk_umg_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        CONSTRAINT fk_umg_group_id FOREIGN KEY (group_id) REFERENCES member_groups (id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    memberGroupTablesReady = true;
+  }
+
+  for (let idx = 0; idx < DEFAULT_MEMBER_GROUPS.length; idx += 1) {
+    const groupName = DEFAULT_MEMBER_GROUPS[idx];
+    await pool.query(
+      `
+      INSERT INTO member_groups (name, sort_order)
+      VALUES (?, ?)
+      ON DUPLICATE KEY UPDATE
+        sort_order = VALUES(sort_order)
+      `,
+      [groupName, idx + 1],
+    );
+  }
+}
+
+/** GET /api/admin/member-groups - 그룹 목록 */
+router.get("/member-groups", isAdmin, async (req, res) => {
+  try {
+    await ensureMemberGroupTables();
+    const [rows] = await pool.query(
+      "SELECT id, name, sort_order, created_at FROM member_groups ORDER BY sort_order ASC, name ASC"
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error("member-groups list error:", error);
+    res.status(500).json({ message: "그룹 목록 조회 실패" });
+  }
+});
+
+/** POST /api/admin/member-groups - 그룹 생성 */
+router.post("/member-groups", isAdmin, async (req, res) => {
+  try {
+    await ensureMemberGroupTables();
+    const name = String(req.body?.name || "").trim();
+    if (!name) return res.status(400).json({ message: "그룹명을 입력하세요." });
+
+    const [maxRows] = await pool.query(
+      "SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM member_groups"
+    );
+    const nextOrder = maxRows[0]?.next_order ?? 1;
+    const [result] = await pool.query("INSERT INTO member_groups (name, sort_order) VALUES (?, ?)", [
+      name,
+      nextOrder,
+    ]);
+    const [rows] = await pool.query("SELECT id, name, sort_order, created_at FROM member_groups WHERE id = ?", [
+      result.insertId,
+    ]);
+    res.status(201).json(rows[0]);
+  } catch (error) {
+    if (error.code === "ER_DUP_ENTRY")
+      return res.status(400).json({ message: "이미 같은 이름의 그룹이 있습니다." });
+    console.error("member-groups create error:", error);
+    res.status(500).json({ message: "그룹 생성 실패" });
+  }
+});
+
+/** DELETE /api/admin/member-groups/:id - 그룹 삭제 */
+router.delete("/member-groups/:id", isAdmin, async (req, res) => {
+  try {
+    await ensureMemberGroupTables();
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ message: "유효하지 않은 그룹 ID입니다." });
+
+    const [result] = await pool.query("DELETE FROM member_groups WHERE id = ?", [id]);
+    if (result.affectedRows === 0) return res.status(404).json({ message: "그룹을 찾을 수 없습니다." });
+    res.json({ success: true });
+  } catch (error) {
+    console.error("member-groups delete error:", error);
+    res.status(500).json({ message: "그룹 삭제 실패" });
+  }
+});
+
+/** GET /api/admin/member-groups/:id/members - 그룹 소속 회원 목록 (users 정보 포함) */
+router.get("/member-groups/:id/members", isAdmin, async (req, res) => {
+  try {
+    await ensureMemberGroupTables();
+    const groupId = parseInt(req.params.id, 10);
+    if (!groupId) return res.status(400).json({ message: "유효하지 않은 그룹 ID입니다." });
+
+    const [rows] = await pool.query(
+      `SELECT u.id, u.login_id, u.company_name, u.registration_date, u.is_active,
+              COALESCE(bt.total_bid_count, 0) AS total_bid_count,
+              COALESCE(bt.total_bid_jpy, 0) AS total_bid_jpy,
+              lb.last_bid_at
+       FROM user_member_groups umg
+       JOIN users u ON u.id = umg.user_id
+       LEFT JOIN (
+         SELECT user_id, COUNT(*) AS total_bid_count, COALESCE(SUM(amount_jpy), 0) AS total_bid_jpy
+         FROM (
+           SELECT user_id, COALESCE(CAST(REPLACE(COALESCE(winning_price,final_price,second_price,first_price), ',', '') AS DECIMAL(18,2)), 0) AS amount_jpy
+           FROM live_bids WHERE user_id IS NOT NULL AND status IN ('completed','domestic_arrived','processing','shipped')
+           UNION ALL
+           SELECT user_id, COALESCE(CAST(REPLACE(COALESCE(winning_price,current_price), ',', '') AS DECIMAL(18,2)), 0) AS amount_jpy
+           FROM direct_bids WHERE user_id IS NOT NULL AND status IN ('completed','domestic_arrived','processing','shipped')
+         ) t GROUP BY user_id
+       ) bt ON bt.user_id = u.id
+       LEFT JOIN (
+         SELECT user_id, MAX(bid_at) AS last_bid_at FROM (
+           SELECT user_id, created_at AS bid_at FROM live_bids WHERE user_id IS NOT NULL
+           UNION ALL SELECT user_id, created_at AS bid_at FROM direct_bids WHERE user_id IS NOT NULL
+         ) t GROUP BY user_id
+       ) lb ON lb.user_id = u.id
+       WHERE umg.group_id = ?
+       ORDER BY bt.total_bid_jpy DESC, u.login_id ASC`,
+      [groupId]
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error("member-groups members list error:", error);
+    res.status(500).json({ message: "그룹 회원 목록 조회 실패" });
+  }
+});
+
+/** POST /api/admin/member-groups/:id/members - 그룹에 회원 추가 */
+router.post("/member-groups/:id/members", isAdmin, async (req, res) => {
+  try {
+    await ensureMemberGroupTables();
+    const groupId = parseInt(req.params.id, 10);
+    const userId = parseInt(req.body?.user_id, 10);
+    if (!groupId || !userId) return res.status(400).json({ message: "그룹 ID와 회원 ID가 필요합니다." });
+
+    const [result] = await pool.query("INSERT IGNORE INTO user_member_groups (user_id, group_id) VALUES (?, ?)", [
+      userId,
+      groupId,
+    ]);
+    res.status(201).json({ success: true, added: result.affectedRows > 0 });
+  } catch (error) {
+    console.error("member-groups add member error:", error);
+    res.status(500).json({ message: "회원 추가 실패" });
+  }
+});
+
+function normalizeUserIds(input) {
+  if (!Array.isArray(input)) return [];
+  const uniq = new Set();
+  for (const raw of input) {
+    const parsed = parseInt(raw, 10);
+    if (Number.isInteger(parsed) && parsed > 0) uniq.add(parsed);
+  }
+  return Array.from(uniq);
+}
+
+/** POST /api/admin/member-groups/:id/members/batch - 그룹에 회원 일괄 추가 */
+router.post("/member-groups/:id/members/batch", isAdmin, async (req, res) => {
+  try {
+    await ensureMemberGroupTables();
+    const groupId = parseInt(req.params.id, 10);
+    const userIds = normalizeUserIds(req.body?.user_ids);
+    if (!groupId || userIds.length === 0) {
+      return res.status(400).json({ message: "그룹 ID와 user_ids 배열이 필요합니다." });
+    }
+
+    const userPlaceholders = userIds.map(() => "?").join(", ");
+    const [existingUsers] = await pool.query(`SELECT id FROM users WHERE id IN (${userPlaceholders})`, userIds);
+    const existingUserIds = Array.isArray(existingUsers) ? existingUsers.map((r) => Number(r.id)).filter(Boolean) : [];
+
+    if (!existingUserIds.length) {
+      return res.status(400).json({ message: "추가 가능한 회원이 없습니다." });
+    }
+
+    const valuesSql = existingUserIds.map(() => "(?, ?)").join(", ");
+    const params = [];
+    existingUserIds.forEach((uid) => {
+      params.push(uid, groupId);
+    });
+
+    const [result] = await pool.query(
+      `INSERT IGNORE INTO user_member_groups (user_id, group_id) VALUES ${valuesSql}`,
+      params,
+    );
+
+    res.status(201).json({
+      success: true,
+      requested: userIds.length,
+      validUsers: existingUserIds.length,
+      inserted: result.affectedRows,
+    });
+  } catch (error) {
+    console.error("member-groups batch add members error:", error);
+    res.status(500).json({ message: "회원 일괄 추가 실패" });
+  }
+});
+
+/** POST /api/admin/member-groups/:id/members/batch-remove - 그룹에서 회원 일괄 제거 */
+router.post("/member-groups/:id/members/batch-remove", isAdmin, async (req, res) => {
+  try {
+    await ensureMemberGroupTables();
+    const groupId = parseInt(req.params.id, 10);
+    const userIds = normalizeUserIds(req.body?.user_ids);
+    if (!groupId || userIds.length === 0) {
+      return res.status(400).json({ message: "그룹 ID와 user_ids 배열이 필요합니다." });
+    }
+
+    const placeholders = userIds.map(() => "?").join(", ");
+    const [result] = await pool.query(
+      `DELETE FROM user_member_groups WHERE group_id = ? AND user_id IN (${placeholders})`,
+      [groupId, ...userIds],
+    );
+
+    res.json({
+      success: true,
+      requested: userIds.length,
+      removed: result.affectedRows || 0,
+    });
+  } catch (error) {
+    console.error("member-groups batch remove members error:", error);
+    res.status(500).json({ message: "회원 일괄 제거 실패" });
+  }
+});
+
+/** DELETE /api/admin/member-groups/:id/members/:userId - 그룹에서 회원 제거 */
+router.delete("/member-groups/:id/members/:userId", isAdmin, async (req, res) => {
+  try {
+    await ensureMemberGroupTables();
+    const groupId = parseInt(req.params.id, 10);
+    const userId = parseInt(req.params.userId, 10);
+    if (!groupId || !userId) return res.status(400).json({ message: "그룹 ID와 회원 ID가 필요합니다." });
+
+    const [result] = await pool.query("DELETE FROM user_member_groups WHERE group_id = ? AND user_id = ?", [
+      groupId,
+      userId,
+    ]);
+    res.json({ success: true, removed: result.affectedRows > 0 });
+  } catch (error) {
+    console.error("member-groups remove member error:", error);
+    res.status(500).json({ message: "회원 제거 실패" });
   }
 });
 

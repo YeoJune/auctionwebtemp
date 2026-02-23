@@ -7,8 +7,9 @@
     <link rel="stylesheet" href="/styles/common.css" />
     <link rel="stylesheet" href="/styles/admin/common.css" />
     <link rel="stylesheet" href="/styles/admin/bids.css" />
+    <link rel="stylesheet" href="/styles/admin/unified.css" />
   </head>
-  <body>
+  <body class="direct-bids-page">
     <div class="admin-layout">
       <!-- 사이드바 -->
       <div class="sidebar">
@@ -26,6 +27,10 @@
           <a href="/admin/users">회원 관리</a>
           <a href="/admin/recommend-filters">추천 및 필터</a>
           <a href="/admin/settings">관리자 설정</a>
+          <a href="/admin/wms">WMS(입고/수선/출고)</a>
+          <a href="/admin/repair-management">수선 관리</a>
+          <a href="/admin/activity-logs">사용자 활동기록</a>
+          <a href="/admin/admin-permissions">관리자 권한 관리</a>
         </div>
       </div>
 
@@ -47,125 +52,116 @@
           </div>
         </div>
 
-        <!-- 검색 영역 -->
-        <div class="search-section">
-          <div class="search-input-group">
-            <input
-              type="text"
-              id="searchInput"
-              placeholder="상품ID, 제목, 브랜드, 유저ID 검색..." />
-            <button id="searchBtn" class="btn">검색</button>
-            <button id="clearSearchBtn" class="btn btn-secondary">
-              초기화
-            </button>
+        <!-- 검색 + 필터 통합 영역 -->
+        <div class="search-filter-bar">
+          <div class="search-box">
+            <input type="text" id="searchInput" placeholder="상품ID, 제목, 브랜드, 유저ID 검색" />
+            <button id="searchBtn" class="btn btn-search">검색</button>
+            <button id="clearSearchBtn" class="btn btn-ghost">초기화</button>
+          </div>
+          <div class="filter-pills">
+            <span class="filter-label">상태</span>
+            <div class="filter-tabs">
+              <div class="filter-tab active" data-status="">전체</div>
+              <div class="filter-tab" data-status="active">활성</div>
+              <div class="filter-tab" data-status="completed">완료</div>
+              <div class="filter-tab" data-status="domestic_arrived">국내도착</div>
+              <div class="filter-tab" data-status="processing">작업중</div>
+              <div class="filter-tab" data-status="shipped">출고됨</div>
+              <div class="filter-tab" data-status="cancelled">낙찰실패</div>
+            </div>
           </div>
         </div>
 
-        <!-- 필터 탭 -->
-        <div class="filter-tabs">
-          <div class="filter-tab active" data-status="">전체</div>
-          <div class="filter-tab" data-status="active">활성</div>
-          <div class="filter-tab" data-status="completed">완료</div>
-          <div class="filter-tab" data-status="shipped">출고됨</div>
-          <div class="filter-tab" data-status="cancelled">낙찰 실패</div>
+        <!-- 일괄 작업 (선택 시에만 표시) -->
+        <div class="bulk-actions" id="bulkActionsBar">
+          <div class="bulk-left">
+            <span id="bulkSelectionHint" class="bulk-selection-hint">선택 0건</span>
+            <select id="bulkStatusTarget" class="form-control form-control-sm bulk-status-target">
+              <option value="completed">완료</option>
+              <option value="domestic_arrived">국내도착</option>
+              <option value="processing">작업중</option>
+              <option value="shipped">출고됨</option>
+              <option value="cancelled">낙찰 실패</option>
+            </select>
+            <button id="bulkShipBtn" class="btn btn-sm" disabled>일괄 변경</button>
+            <button id="bulkMarkSubmittedBtn" class="btn btn-sm btn-secondary" disabled>반영됨 표시</button>
+          </div>
         </div>
 
-        <!-- 일괄 작업 버튼 -->
-        <div class="bulk-actions">
-          <button id="bulkCompleteBtn" class="btn" disabled>
-            선택 항목 낙찰 완료
-          </button>
-          <button id="bulkCancelBtn" class="btn btn-secondary" disabled>
-            선택 항목 낙찰 실패
-          </button>
-          <button id="bulkShipBtn" class="btn btn-info" disabled>
-            선택 항목 출고됨으로 변경
-          </button>
-          <button id="bulkMarkSubmittedBtn" class="btn btn-secondary" disabled>
-            선택 항목 반영됨으로 표시
-          </button>
+        <div id="processingZoneSummary" class="processing-zone-summary" style="display: none">
+          <div class="title">작업중 존별 현황</div>
+          <div id="processingZoneGrid" class="processing-zone-grid"></div>
         </div>
 
-        <!-- 필터 및 정렬 옵션 -->
-        <div class="filter-options">
-          <label class="toggle-switch">
-            <input type="checkbox" id="toggleHighestOnly" />
-            <span class="toggle-slider"></span>
-            <span class="toggle-label">아이템별 최고가만 보기</span>
-          </label>
-
-          <!-- 정렬 옵션 -->
-          <div class="sort-options">
-            <div class="sort-field">
-              <label for="sortBy">정렬 기준:</label>
+        <!-- 고급 필터 (접이식) - 한 줄 배치 -->
+        <details class="advanced-filters" open>
+          <summary>정렬 · 기간 · 페이지 설정</summary>
+          <div class="filter-options filter-options-row">
+            <div class="filter-group">
+              <label for="sortBy">정렬 기준</label>
               <select id="sortBy" class="form-control form-control-sm">
                 <option value="original_scheduled_date">예정일</option>
                 <option value="updated_at">변경일</option>
                 <option value="original_title">제목</option>
               </select>
             </div>
-            <div class="sort-order">
-              <label for="sortOrder">정렬 방향:</label>
+            <div class="filter-group">
+              <label for="sortOrder">정렬 방향</label>
               <select id="sortOrder" class="form-control form-control-sm">
                 <option value="desc">내림차순</option>
                 <option value="asc">오름차순</option>
               </select>
             </div>
-          </div>
-
-          <!-- 개선된 날짜 필터 -->
-          <div class="date-filter">
-            <div class="quick-dates">
-              <button class="btn btn-sm" data-range="today">오늘</button>
-              <button class="btn btn-sm" data-range="week">이번주</button>
-              <button class="btn btn-sm" data-range="month">이번달</button>
-            </div>
-            <div class="date-inputs">
-              <div class="date-field">
-                <label for="fromDate">시작일:</label>
-                <input
-                  type="date"
-                  id="fromDate"
-                  class="form-control form-control-sm" />
-              </div>
-              <div class="date-field">
-                <label for="toDate">종료일:</label>
-                <input
-                  type="date"
-                  id="toDate"
-                  class="form-control form-control-sm" />
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggleHighestOnly" />
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">아이템별 최고가만</span>
+            </label>
+            <div class="filter-group">
+              <label>기간</label>
+              <div class="quick-dates-pill">
+                <button type="button" class="btn-pill" data-range="today">오늘</button>
+                <button type="button" class="btn-pill" data-range="week">이번주</button>
+                <button type="button" class="btn-pill" data-range="month">이번달</button>
               </div>
             </div>
-            <div class="date-buttons">
+            <div class="filter-group">
+              <label for="fromDate">시작일</label>
+              <input type="date" id="fromDate" class="form-control form-control-sm" />
+            </div>
+            <div class="filter-group">
+              <label for="toDate">종료일</label>
+              <input type="date" id="toDate" class="form-control form-control-sm" />
+            </div>
+            <div class="filter-group">
+              <label for="pageSize">페이지당</label>
+              <select id="pageSize" class="form-control form-control-sm">
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100" selected>100</option>
+                <option value="300">300</option>
+                <option value="500">500</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label for="aucNumFilter">출품사</label>
+              <select id="aucNumFilter" class="form-control form-control-sm">
+                <option value="">전체</option>
+                <option value="1">1번</option>
+                <option value="2">2번</option>
+                <option value="3">3번</option>
+                <option value="4">4번</option>
+                <option value="5">5번</option>
+              </select>
+            </div>
+            <div class="filter-actions">
               <button id="applyDateFilter" class="btn btn-sm">적용</button>
-              <button id="resetDateFilter" class="btn btn-sm btn-secondary">
-                초기화
-              </button>
+              <button id="resetDateFilter" class="btn btn-sm btn-ghost">초기화</button>
             </div>
           </div>
-
-          <div class="page-size-selector">
-            <label for="pageSize">페이지당 항목:</label>
-            <select id="pageSize" class="form-control form-control-sm">
-              <option value="10">10</option>
-              <option value="20">20</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-            </select>
-          </div>
-
-          <div class="auction-filter">
-            <label for="aucNumFilter">출품사:</label>
-            <select id="aucNumFilter" class="form-control form-control-sm">
-              <option value="">전체</option>
-              <option value="1">1번</option>
-              <option value="2">2번</option>
-              <option value="3">3번</option>
-              <option value="4">4번</option>
-              <option value="5">5번</option>
-            </select>
-          </div>
-        </div>
+        </details>
 
         <!-- 입찰 목록 테이블 -->
         <div class="card">
@@ -396,6 +392,8 @@
             <select id="editStatus" class="form-control">
               <option value="active">활성</option>
               <option value="completed">완료</option>
+              <option value="domestic_arrived">국내도착</option>
+              <option value="processing">작업중</option>
               <option value="shipped">출고됨</option>
               <option value="cancelled">낙찰 실패</option>
             </select>

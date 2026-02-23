@@ -4,12 +4,11 @@ const router = express.Router();
 const cron = require("node-cron");
 const { pool } = require("../utils/DB");
 const popbillService = require("../utils/popbill");
-
-const MAX_RETRY = 6 * 24; // 최대 재시도 횟수 (24시간)
+const { isAdminUser } = require("../utils/adminAuth");
 
 // 관리자 체크 미들웨어
 const isAdmin = (req, res, next) => {
-  if (req.session.user && req.session.user.login_id === "admin") {
+  if (isAdminUser(req.session?.user)) {
     next();
   } else {
     res.status(403).json({ message: "Access denied. Admin only." });
@@ -57,18 +56,12 @@ router.post("/check-payment", async (req, res) => {
     }
 
     // 3. 입금 확인 (팝빌 API)
-    const endDate = new Date();
-    const startDate = new Date(endDate);
-    startDate.setDate(startDate.getDate() - 3);
-    startDate.setHours(0, 0, 0, 0); // 3일 전 00:00부터 조회
+    const startDate = new Date(transaction.created_at);
+    startDate.setHours(0, 0, 0, 0); // 당일 00:00부터 조회
 
     let matched = null;
     try {
-      matched = await popbillService.checkPayment(
-        transaction,
-        startDate,
-        endDate,
-      );
+      matched = await popbillService.checkPayment(transaction, startDate);
     } catch (error) {
       console.error("[입금 확인 실패]", error);
       await conn.rollback();
@@ -135,8 +128,8 @@ router.post("/check-payment", async (req, res) => {
     // 5. 매칭 실패 → 재시도 카운트 증가
     const newRetryCount = transaction.retry_count + 1;
 
-    if (newRetryCount >= MAX_RETRY) {
-      // MAX_RETRY회 이상 실패 → 수동 확인 필요
+    if (newRetryCount >= 12) {
+      // 12회 이상 실패 → 수동 확인 필요
       await conn.query(
         "UPDATE deposit_transactions SET status = 'manual_review', retry_count = ? WHERE id = ?",
         [newRetryCount, transaction_id],
@@ -161,7 +154,7 @@ router.post("/check-payment", async (req, res) => {
         message:
           "아직 입금이 확인되지 않았습니다. 잠시 후 자동으로 다시 확인됩니다.",
         retry_count: newRetryCount,
-        max_retries: MAX_RETRY,
+        max_retries: 12,
       });
     }
   } catch (err) {
@@ -729,17 +722,17 @@ async function autoCheckPayments(type) {
   try {
     // pending 건수 조회
     const query = isDeposit
-      ? `SELECT dt.*, u.email, u.phone, u.company_name, u.document_type
+      ? `SELECT dt.*, u.email, u.phone, u.company_name
          FROM deposit_transactions dt
          JOIN users u ON dt.user_id = u.id
-         WHERE dt.status = 'pending' AND dt.retry_count < ${MAX_RETRY} 
+         WHERE dt.status = 'pending' AND dt.retry_count < 12 
            AND dt.depositor_name IS NOT NULL AND dt.depositor_name != ''
          ORDER BY dt.created_at ASC 
          LIMIT 100`
-      : `SELECT ds.*, u.business_number, u.company_name, u.email, u.phone, u.document_type
+      : `SELECT ds.*, u.business_number, u.company_name, u.email, u.phone
          FROM daily_settlements ds
          JOIN users u ON ds.user_id = u.id
-         WHERE ds.payment_status = 'pending' AND ds.retry_count < ${MAX_RETRY}
+         WHERE ds.payment_status = 'pending' AND ds.retry_count < 12
            AND ds.depositor_name IS NOT NULL AND ds.depositor_name != ''
          ORDER BY ds.settlement_date ASC
          LIMIT 100`;
@@ -751,14 +744,14 @@ async function autoCheckPayments(type) {
       try {
         await conn.beginTransaction();
 
-        const endDate = new Date();
-        const startDate = new Date(endDate);
-        startDate.setDate(startDate.getDate() - 3);
-        startDate.setHours(0, 0, 0, 0); // 3일 전 00:00부터 조회
+        const startDate = new Date(
+          isDeposit ? item.created_at : item.settlement_date,
+        );
+        startDate.setHours(0, 0, 0, 0);
 
         const matched = isDeposit
-          ? await popbillService.checkPayment(item, startDate, endDate)
-          : await popbillService.checkSettlement(item, startDate, endDate);
+          ? await popbillService.checkPayment(item, startDate)
+          : await popbillService.checkSettlement(item, startDate);
 
         if (matched) {
           const isUsed = await popbillService.isTransactionUsed(matched.tid);
@@ -766,7 +759,7 @@ async function autoCheckPayments(type) {
             console.log(`⚠️ 중복 거래 감지: ${label} #${item.id}`);
             if (isDeposit) {
               await conn.query(
-                `UPDATE deposit_transactions SET status = 'manual_review', retry_count = ${MAX_RETRY} WHERE id = ?`,
+                "UPDATE deposit_transactions SET status = 'manual_review', retry_count = 12 WHERE id = ?",
                 [item.id],
               );
             }
@@ -816,8 +809,7 @@ async function autoCheckPayments(type) {
             );
 
             if (existingDocs.length === 0) {
-              if (item.document_type === "taxinvoice" && item.business_number) {
-                // 세금계산서 발행
+              if (!isDeposit && item.business_number) {
                 const taxResult = await popbillService.issueTaxinvoice(
                   item,
                   {
@@ -879,9 +871,7 @@ async function autoCheckPayments(type) {
           } catch (docError) {
             console.error(`❌ 문서 발행 실패: ${label} #${item.id}`);
             const docType =
-              item.document_type === "taxinvoice" && item.business_number
-                ? "taxinvoice"
-                : "cashbill";
+              !isDeposit && item.business_number ? "taxinvoice" : "cashbill";
             const mgtKey = `${docType.toUpperCase()}-FAILED-${item.id}-${Date.now()}`;
 
             try {
@@ -906,7 +896,7 @@ async function autoCheckPayments(type) {
         } else {
           // 재시도 카운트 증가
           const newRetryCount = item.retry_count + 1;
-          const needsManual = newRetryCount >= MAX_RETRY;
+          const needsManual = newRetryCount >= 12;
 
           if (isDeposit) {
             await conn.query(
@@ -927,9 +917,7 @@ async function autoCheckPayments(type) {
           await conn.commit();
 
           if (needsManual) {
-            console.log(
-              `⚠️ ${label} #${item.id} 수동 확인 필요 (${MAX_RETRY}회 초과)`,
-            );
+            console.log(`⚠️ ${label} #${item.id} 수동 확인 필요 (12회 초과)`);
           }
         }
       } catch (error) {

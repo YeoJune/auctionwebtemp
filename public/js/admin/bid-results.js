@@ -293,7 +293,7 @@ function createDailyRow(dailyData, index) {
       </div>
       <div class="summary-item">
         <span class="label">미수금</span>
-        <span class="value ${summary.totalRemainingAmount > 0 ? "text-danger" : ""}">${formatCurrency(summary.totalRemainingAmount || 0)}</span>
+        <span class="value text-danger">${formatCurrency(summary.totalRemainingAmount || 0)}</span>
       </div>
     </div>
     <button class="toggle-btn" data-level="date">
@@ -379,7 +379,7 @@ function createUserRow(user, date) {
       </div>
       <div class="summary-item">
         <span class="label">미수금</span>
-        <span class="value ${user.remainingAmount > 0 ? "text-danger" : ""}">${formatCurrency(user.remainingAmount || 0)}</span>
+        <span class="value text-danger">${formatCurrency(user.remainingAmount || 0)}</span>
       </div>
       <div class="summary-item">
         <span class="label">입금자명</span>
@@ -617,7 +617,7 @@ function createItemsContent(user, detailData) {
           </div>
           <div class="settlement-detail-item highlight">
             <span class="label">미수금</span>
-            <span class="value">${formatCurrency(user.remainingAmount || 0)}</span>
+            <span class="value text-danger">${formatCurrency(user.remainingAmount || 0)}</span>
           </div>
         </div>
       </div>

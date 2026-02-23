@@ -3,6 +3,7 @@ const express = require("express");
 const router = express.Router();
 const { pool } = require("../utils/DB");
 const cron = require("node-cron");
+const { isAdminUser } = require("../utils/adminAuth");
 
 // 미들웨어
 const isAuthenticated = (req, res, next) => {
@@ -14,7 +15,7 @@ const isAuthenticated = (req, res, next) => {
 };
 
 const isAdmin = (req, res, next) => {
-  if (req.session.user?.login_id === "admin") {
+  if (isAdminUser(req.session?.user)) {
     next();
   } else {
     res.status(403).json({ message: "Access denied. Admin only." });

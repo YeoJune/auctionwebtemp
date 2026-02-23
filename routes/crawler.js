@@ -28,6 +28,7 @@ const {
   refundLimit,
   getBidDeductAmount,
 } = require("../utils/deposit");
+const { isAdminUser } = require("../utils/adminAuth");
 
 dotenv.config();
 
@@ -40,7 +41,7 @@ let isUpdateCrawling = false;
 let isUpdateCrawlingWithId = false;
 
 const isAdmin = (req, res, next) => {
-  if (req.session.user && req.session.user.login_id === "admin") {
+  if (isAdminUser(req.session?.user)) {
     next();
   } else {
     res.status(403).json({ message: "Access denied. Admin only." });
@@ -1063,6 +1064,57 @@ async function crawlAllInvoices() {
   }
 }
 
+// 현장 경매 완료/출고 카테고리의 낙찰금액(winning_price)을 values_items.final_price로 덮어쓰기
+async function overwriteValuesFinalPriceFromLiveBids() {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [matchedRows] = await conn.query(`
+      SELECT COUNT(*) AS matchedCount
+      FROM (
+        SELECT vi.item_id
+        FROM values_items vi
+        JOIN (
+          SELECT item_id, MAX(winning_price) AS winning_price
+          FROM live_bids
+          WHERE winning_price IS NOT NULL
+            AND winning_price > 0
+            AND status IN ('completed', 'shipped')
+          GROUP BY item_id
+        ) lb ON vi.item_id = lb.item_id
+      ) AS matched
+    `);
+
+    const [updateResult] = await conn.query(`
+      UPDATE values_items vi
+      JOIN (
+        SELECT item_id, MAX(winning_price) AS winning_price
+        FROM live_bids
+        WHERE winning_price IS NOT NULL
+          AND winning_price > 0
+          AND status IN ('completed', 'shipped')
+        GROUP BY item_id
+      ) lb ON vi.item_id = lb.item_id
+      SET vi.final_price = lb.winning_price
+      WHERE vi.final_price IS NULL
+         OR ABS(CAST(vi.final_price AS DECIMAL(15,2)) - lb.winning_price) > 0.01
+    `);
+
+    await conn.commit();
+
+    return {
+      matchedCount: matchedRows[0]?.matchedCount || 0,
+      updatedCount: updateResult.affectedRows || 0,
+    };
+  } catch (error) {
+    await conn.rollback();
+    throw error;
+  } finally {
+    conn.release();
+  }
+}
+
 // 실행 시간 포맷팅 함수
 function formatExecutionTime(milliseconds) {
   const seconds = Math.floor(milliseconds / 1000);
@@ -1184,6 +1236,34 @@ router.post("/migrate-to-s3", isAdmin, async (req, res) => {
     console.error("Migration error:", error);
     res.status(500).json({
       message: "Migration failed",
+      error: error.message,
+    });
+  }
+});
+
+router.post("/overwrite-values-final-price", isAdmin, async (req, res) => {
+  try {
+    if (isCrawling || isValueCrawling) {
+      return res.status(409).json({
+        message: "Crawling in progress. Please try again after crawling ends.",
+      });
+    }
+
+    const stats = await overwriteValuesFinalPriceFromLiveBids();
+
+    if (stats.updatedCount > 0) {
+      await reindexElasticsearch("values_items");
+    }
+
+    res.json({
+      message:
+        "values_items.final_price overwritten from live_bids.winning_price (completed/shipped)",
+      stats,
+    });
+  } catch (error) {
+    console.error("Overwrite values final_price error:", error);
+    res.status(500).json({
+      message: "Error overwriting values final_price",
       error: error.message,
     });
   }

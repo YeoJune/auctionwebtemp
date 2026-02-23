@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="/styles/admin/common.css" />
     <link rel="stylesheet" href="/styles/admin/admin.css" />
     <link rel="stylesheet" href="/styles/admin/users.css" />
+    <link rel="stylesheet" href="/styles/admin/unified.css" />
   </head>
   <body>
     <div class="admin-layout">
@@ -27,6 +28,10 @@
           <a href="/admin/users" class="active">회원 관리</a>
           <a href="/admin/recommend-filters">추천 및 필터</a>
           <a href="/admin/settings">관리자 설정</a>
+          <a href="/admin/wms">WMS(입고/수선/출고)</a>
+          <a href="/admin/repair-management">수선 관리</a>
+          <a href="/admin/activity-logs">사용자 활동기록</a>
+          <a href="/admin/admin-permissions">관리자 권한 관리</a>
         </div>
       </div>
 
@@ -56,37 +61,187 @@
           </button>
         </div>
 
-        <!-- 회원 목록 테이블 -->
-        <div class="card">
-          <table class="data-table" id="usersTable">
-            <thead>
-              <tr>
-                <th>아이디</th>
-                <th>회원 구분</th>
-                <th>예치금/한도</th>
-                <th>가입일</th>
-                <th>업체명</th>
-                <th>이메일</th>
-                <th>연락처</th>
-                <th>수수료율</th>
-                <th>상태</th>
-                <th>작업</th>
-              </tr>
-            </thead>
-            <tbody id="usersTableBody">
-              <tr>
-                <td colspan="10" class="text-center">
-                  데이터를 불러오는 중입니다...
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="member-tabs">
+          <button
+            type="button"
+            class="member-tab-btn active"
+            data-tab-target="membersPanel">
+            회원관리
+          </button>
+          <button
+            type="button"
+            class="member-tab-btn"
+            data-tab-target="deactivatePanel">
+            비활성화 해야할 회원 (보증금 환불 회원 이거나 / 아직 활성 회원인데 + 50일 이상 미입찰)
+          </button>
+          <span id="groupTabsContainer" class="member-tabs-groups"></span>
+          <button type="button" class="member-tab-btn member-tab-btn-ghost" id="manageGroupsBtn">
+            그룹 관리
+          </button>
+        </div>
+
+        <div id="membersPanel" class="member-tab-panel active">
+          <div class="card member-filter-card">
+            <div class="member-filter-row">
+              <div class="member-filter-item">
+                <label for="memberStatusFilter">상태</label>
+                <select id="memberStatusFilter">
+                  <option value="all">전체</option>
+                  <option value="active">활성</option>
+                  <option value="inactive">비활성</option>
+                </select>
+              </div>
+              <div class="member-filter-item">
+                <label for="memberSortField">정렬 기준</label>
+                <select id="memberSortField">
+                  <option value="registration_date">가입일</option>
+                  <option value="company_name">업체명</option>
+                  <option value="login_id">아이디</option>
+                  <option value="total_bid_count">입찰건수</option>
+                  <option value="total_bid_jpy">입찰금액</option>
+                  <option value="last_bid_at">최근입찰일</option>
+                </select>
+              </div>
+              <div class="member-filter-item">
+                <label for="memberSortOrder">정렬 방향</label>
+                <select id="memberSortOrder">
+                  <option value="desc">내림차순</option>
+                  <option value="asc">오름차순</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- 회원 목록 테이블 -->
+          <div class="card">
+            <table class="data-table" id="usersTable">
+              <thead>
+                <tr>
+                  <th>아이디</th>
+                  <th>회원 구분</th>
+                  <th>예치금/한도</th>
+                  <th>가입일</th>
+                  <th>업체명</th>
+                  <th>입찰현황</th>
+                  <th>주소</th>
+                  <th>이메일</th>
+                  <th>연락처</th>
+                  <th>수수료율</th>
+                  <th>상태</th>
+                  <th>작업</th>
+                </tr>
+              </thead>
+              <tbody id="usersTableBody">
+                <tr>
+                  <td colspan="12" class="text-center">
+                    데이터를 불러오는 중입니다...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="card" style="margin-top: 16px">
+            <div class="section-header-row">
+              <h3>상위 고객 TOP 10 (최근 30일 매출 기준)</h3>
+            </div>
+            <table class="data-table" id="vipTopTable">
+              <thead>
+                <tr>
+                  <th>순위</th>
+                  <th>아이디</th>
+                  <th>업체명</th>
+                  <th>완료 건수</th>
+                  <th>매출(원)</th>
+                </tr>
+              </thead>
+              <tbody id="vipTopTableBody">
+                <tr>
+                  <td colspan="5" class="text-center">데이터를 불러오는 중입니다...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 비활성화 대상 회원 -->
+        <div id="deactivatePanel" class="member-tab-panel">
+          <div class="card" style="margin-top: 16px">
+            <div class="section-header-row">
+              <h3>비활성화 해야할 회원 (보증금 환불 회원 이거나 / 아직 활성 회원인데 + 50일 이상 미입찰)</h3>
+              <span id="deactivateCandidateCount" class="candidate-count">0명</span>
+            </div>
+            <table class="data-table" id="deactivateCandidatesTable">
+              <thead>
+                <tr>
+                  <th>아이디</th>
+                  <th>업체명</th>
+                  <th>최근 입찰일</th>
+                  <th>미입찰 기간</th>
+                  <th>사유</th>
+                  <th>주의</th>
+                  <th>상태</th>
+                  <th>작업</th>
+                </tr>
+              </thead>
+              <tbody id="deactivateCandidatesBody">
+                <tr>
+                  <td colspan="8" class="text-center">데이터를 불러오는 중입니다...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="groupPanelsContainer"></div>
+      </div>
+    </div>
+
+    <!-- 그룹 관리 모달 -->
+    <div class="modal-overlay" id="manageGroupsModal" style="display: none">
+      <div class="modal-dialog" style="max-width: 420px">
+        <div class="modal-header">
+          <h3 class="modal-title">그룹 관리</h3>
+          <button type="button" class="close-modal" id="closeManageGroupsModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group" style="margin-bottom: 16px">
+            <label for="newGroupName">새 그룹명</label>
+            <div style="display: flex; gap: 8px">
+              <input type="text" id="newGroupName" class="form-control" placeholder="그룹 이름 입력" />
+              <button type="button" id="addGroupBtn" class="btn">추가</button>
+            </div>
+          </div>
+          <div class="group-list" id="manageGroupsList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 그룹에 회원 추가 모달 -->
+    <div class="modal-overlay" id="addMemberToGroupModal" style="display: none">
+      <div class="modal-dialog" style="max-width: 480px">
+        <div class="modal-header">
+          <h3 class="modal-title" id="addMemberToGroupTitle">회원 추가</h3>
+          <button type="button" class="close-modal" id="closeAddMemberToGroupModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="addMemberTargetGroupId" />
+          <input type="text" id="addMemberSearchInput" class="form-control" placeholder="아이디 또는 업체명 검색..." style="margin-bottom: 12px" />
+          <div class="group-bulk-toolbar" style="margin-bottom: 10px">
+            <label class="group-bulk-checkbox">
+              <input type="checkbox" id="addMemberSelectAll" />
+              <span>전체선택</span>
+            </label>
+            <span id="addMemberSelectedCount" class="group-selected-count">선택 0명</span>
+            <button type="button" id="bulkAddMemberBtn" class="btn btn-sm" disabled>선택 추가</button>
+          </div>
+          <div id="addMemberCandidateList" style="max-height: 280px; overflow-y: auto"></div>
         </div>
       </div>
     </div>
 
     <!-- 회원 추가/수정 모달 -->
-    <div class="modal-overlay" id="userFormModal">
+    <div class="modal-overlay" id="userFormModal" data-outside-close="false">
       <div class="modal-dialog">
         <div class="modal-header">
           <h3 class="modal-title" id="userFormTitle">새 회원 등록</h3>
@@ -232,29 +387,6 @@
               </small>
             </div>
 
-            <!-- 증빙 유형 -->
-            <div class="form-group">
-              <label class="form-label">증빙 유형 *</label>
-              <div class="radio-group">
-                <label class="radio-label">
-                  <input
-                    type="radio"
-                    name="documentType"
-                    value="cashbill"
-                    checked />
-                  <span>현금영수증</span>
-                </label>
-                <label class="radio-label">
-                  <input type="radio" name="documentType" value="taxinvoice" />
-                  <span>세금계산서</span>
-                </label>
-              </div>
-              <small class="form-text text-muted">
-                정산·충전 완료 시 자동 발행되는 증빙 유형 (개인: 현금영수증 기본
-                / 기업: 세금계산서 기본)
-              </small>
-            </div>
-
             <div class="form-group">
               <label class="form-label">상태</label>
               <div class="radio-group">
@@ -273,6 +405,55 @@
         <div class="modal-footer">
           <button class="btn btn-secondary close-modal">취소</button>
           <button class="btn" id="saveUserBtn">저장</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="bidHistoryModal" data-outside-close="false">
+      <div class="modal-dialog" style="max-width: 980px; width: 96%">
+        <div class="modal-header">
+          <h3 class="modal-title" id="bidHistoryTitle">입찰 내역</h3>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="bid-history-summary" id="bidHistorySummary">
+            <div class="bid-history-stat">
+              <div class="label">총 입찰 건수</div>
+              <div class="value" id="bhTotalCount">0건</div>
+            </div>
+            <div class="bid-history-stat">
+              <div class="label">총 입찰 금액(¥)</div>
+              <div class="value" id="bhTotalJpy">¥0</div>
+            </div>
+            <div class="bid-history-stat">
+              <div class="label">완료 건수</div>
+              <div class="value" id="bhCompletedCount">0건</div>
+            </div>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>입찰시각</th>
+                <th>구분</th>
+                <th>입찰ID</th>
+                <th>아이템ID</th>
+                <th>상품명</th>
+                <th>경매장</th>
+                <th>상태</th>
+                <th>금액(¥)</th>
+              </tr>
+            </thead>
+            <tbody id="bidHistoryBody">
+              <tr>
+                <td colspan="8" class="text-center">
+                  데이터를 불러오는 중입니다...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary close-modal">닫기</button>
         </div>
       </div>
     </div>

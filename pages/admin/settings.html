@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/styles/common.css" />
     <link rel="stylesheet" href="/styles/admin/common.css" />
     <link rel="stylesheet" href="/styles/admin/admin.css" />
+    <link rel="stylesheet" href="/styles/admin/unified.css" />
     <style>
       /* 내보내기 모달 스크롤 스타일 */
       #exportBidsUserList,
@@ -50,6 +51,10 @@
           <a href="/admin/users">회원 관리</a>
           <a href="/admin/recommend-filters">추천 및 필터</a>
           <a href="/admin/settings" class="active">관리자 설정</a>
+          <a href="/admin/wms">WMS(입고/수선/출고)</a>
+          <a href="/admin/repair-management">수선 관리</a>
+          <a href="/admin/activity-logs">사용자 활동기록</a>
+          <a href="/admin/admin-permissions">관리자 권한 관리</a>
         </div>
       </div>
 
@@ -167,7 +172,14 @@
             <div class="crawl-buttons">
               <button id="productCrawlBtn" class="btn">상품 크롤링</button>
               <button id="valueCrawlBtn" class="btn">시세표 크롤링</button>
+              <button id="overwriteValuesFinalPriceBtn" class="btn btn-primary">
+                완료/출고 낙찰금액 반영
+              </button>
             </div>
+            <p class="help-text mt-2">
+              현장 경매 관리의 완료/출고 카테고리 낙찰금액(winning_price)을 동일
+              item_id 기준으로 시세표(final_price)에 반영합니다.
+            </p>
 
             <!-- 시세표 크롤링 옵션 UI -->
             <div

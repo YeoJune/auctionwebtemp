@@ -10,6 +10,9 @@ const path = require("path");
 const { pool, sessionPool } = require("./utils/DB");
 const fs = require("fs");
 const { isAuthenticated } = require("./utils/middleware");
+const { isAdminUser } = require("./utils/adminAuth");
+const { canAccessAdminMenu, isSuperAdminUser, parseAllowedMenus } = require("./utils/adminAccess");
+const { adminActivityLogger } = require("./utils/adminActivityLogger");
 const { startExpiredSchedulers } = require("./utils/dataUtils");
 const esManager = require("./utils/elasticsearch");
 
@@ -32,6 +35,8 @@ const dashboardRoutes = require("./routes/dashboard");
 const bidResultsRouter = require("./routes/bid-results");
 const depositsRoutes = require("./routes/deposits");
 const popbillRoutes = require("./routes/popbill");
+const wmsRoutes = require("./routes/wms");
+const repairManagementRoutes = require("./routes/repair-management");
 
 // --- 감정 시스템 관련 라우트 ---
 const appraisalsApprRoutes = require("./routes/appr/appraisals");
@@ -129,6 +134,7 @@ const sessionMiddleware = session({
   },
 });
 app.use(sessionMiddleware);
+app.use(adminActivityLogger);
 
 app.use(metricsModule.metricsMiddleware);
 
@@ -150,6 +156,8 @@ app.post("/api/metrics/reset", metricsModule.resetMetrics);
 app.use("/api/bid-results", bidResultsRouter);
 app.use("/api/deposits", depositsRoutes);
 app.use("/api/popbill", popbillRoutes);
+app.use("/api/wms", wmsRoutes);
+app.use("/api/repair-management", repairManagementRoutes);
 
 app.use("/api/appr/appraisals", appraisalsApprRoutes);
 app.use("/api/appr/restorations", restorationsApprRoutes);
@@ -162,7 +170,17 @@ const publicPath = path.join(__dirname, "public");
 const mainPagesPath = path.join(__dirname, "pages");
 const apprPagesPath = path.join(__dirname, "pages", "appr");
 
-app.use(express.static(publicPath));
+app.use(
+  express.static(publicPath, {
+    setHeaders: (res) => {
+      if (process.env.NODE_ENV !== "production") {
+        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+      }
+    },
+  }),
+);
 
 // 메인 서비스 페이지
 app.use((req, res, next) => {
@@ -275,76 +293,61 @@ app.get("/bidGuidePage", (req, res) => {
 });
 
 // 메인 서비스 관리자 페이지 (제공해주신 원본 코드의 라우트들)
-app.get("/admin", (req, res) => {
-  if (req.session.user && req.session.user.login_id === "admin") {
-    res.sendFile(path.join(mainPagesPath, "admin", "index.html"));
-  } else {
-    res.redirect("/signinPage");
+const ADMIN_MENU_PATH_BY_KEY = {
+  dashboard: "/admin",
+  "live-bids": "/admin/live-bids",
+  "direct-bids": "/admin/direct-bids",
+  "all-bids": "/admin/all-bids",
+  "bid-results": "/admin/bid-results",
+  transactions: "/admin/transactions",
+  invoices: "/admin/invoices",
+  users: "/admin/users",
+  "recommend-filters": "/admin/recommend-filters",
+  settings: "/admin/settings",
+  wms: "/admin/wms",
+  "repair-management": "/admin/repair-management",
+  "activity-logs": "/admin/activity-logs",
+};
+
+function getFirstAllowedAdminPath(user) {
+  if (!isAdminUser(user)) return "/signinPage";
+  if (isSuperAdminUser(user)) return "/admin";
+
+  const allowedMenus = parseAllowedMenus(user.allowed_menus);
+  for (const key of Object.keys(ADMIN_MENU_PATH_BY_KEY)) {
+    if (allowedMenus.includes(key)) return ADMIN_MENU_PATH_BY_KEY[key];
   }
-});
-app.get("/admin/live-bids", (req, res) => {
-  if (req.session.user && req.session.user.login_id === "admin") {
-    res.sendFile(path.join(mainPagesPath, "admin", "live-bids.html"));
-  } else {
-    res.redirect("/signinPage");
-  }
-});
-app.get("/admin/direct-bids", (req, res) => {
-  if (req.session.user && req.session.user.login_id === "admin") {
-    res.sendFile(path.join(mainPagesPath, "admin", "direct-bids.html"));
-  } else {
-    res.redirect("/signinPage");
-  }
-});
-app.get("/admin/all-bids", (req, res) => {
-  if (req.session.user && req.session.user.login_id === "admin") {
-    res.sendFile(path.join(mainPagesPath, "admin", "all-bids.html"));
-  } else {
-    res.redirect("/signinPage");
-  }
-});
-app.get("/admin/bid-results", (req, res) => {
-  if (req.session.user && req.session.user.login_id === "admin") {
-    res.sendFile(path.join(mainPagesPath, "admin", "bid-results.html"));
-  } else {
-    res.redirect("/signinPage");
-  }
-});
-app.get("/admin/transactions", (req, res) => {
-  if (req.session.user && req.session.user.login_id === "admin") {
-    res.sendFile(path.join(mainPagesPath, "admin", "transactions.html"));
-  } else {
-    res.redirect("/signinPage");
-  }
-});
-app.get("/admin/invoices", (req, res) => {
-  if (req.session.user && req.session.user.login_id === "admin") {
-    res.sendFile(path.join(mainPagesPath, "admin", "invoices.html"));
-  } else {
-    res.redirect("/signinPage");
-  }
-});
-app.get("/admin/recommend-filters", (req, res) => {
-  if (req.session.user && req.session.user.login_id === "admin") {
-    res.sendFile(path.join(mainPagesPath, "admin", "recommend-filters.html"));
-  } else {
-    res.redirect("/signinPage");
-  }
-});
-app.get("/admin/settings", (req, res) => {
-  if (req.session.user && req.session.user.login_id === "admin") {
-    res.sendFile(path.join(mainPagesPath, "admin", "settings.html"));
-  } else {
-    res.redirect("/signinPage");
-  }
-});
-app.get("/admin/users", (req, res) => {
-  if (req.session.user && req.session.user.login_id === "admin") {
-    res.sendFile(path.join(mainPagesPath, "admin", "users.html"));
-  } else {
-    res.redirect("/signinPage");
-  }
-});
+  return "/signinPage";
+}
+
+function sendAdminPage(pageFile, menuKey) {
+  return (req, res) => {
+    const user = req.session.user;
+    if (!isAdminUser(user)) return res.redirect("/signinPage");
+    if (menuKey === "__superadmin__" && !isSuperAdminUser(user)) {
+      return res.redirect(getFirstAllowedAdminPath(user));
+    }
+    if (!canAccessAdminMenu(user, menuKey)) {
+      return res.redirect(getFirstAllowedAdminPath(user));
+    }
+    return res.sendFile(path.join(mainPagesPath, "admin", pageFile));
+  };
+}
+
+app.get("/admin", sendAdminPage("index.html", "dashboard"));
+app.get("/admin/live-bids", sendAdminPage("live-bids.html", "live-bids"));
+app.get("/admin/direct-bids", sendAdminPage("direct-bids.html", "direct-bids"));
+app.get("/admin/all-bids", sendAdminPage("all-bids.html", "all-bids"));
+app.get("/admin/bid-results", sendAdminPage("bid-results.html", "bid-results"));
+app.get("/admin/transactions", sendAdminPage("transactions.html", "transactions"));
+app.get("/admin/invoices", sendAdminPage("invoices.html", "invoices"));
+app.get("/admin/recommend-filters", sendAdminPage("recommend-filters.html", "recommend-filters"));
+app.get("/admin/settings", sendAdminPage("settings.html", "settings"));
+app.get("/admin/users", sendAdminPage("users.html", "users"));
+app.get("/admin/wms", sendAdminPage("wms.html", "wms"));
+app.get("/admin/repair-management", sendAdminPage("repair-management.html", "repair-management"));
+app.get("/admin/activity-logs", sendAdminPage("activity-logs.html", "activity-logs"));
+app.get("/admin/admin-permissions", sendAdminPage("admin-permissions.html", "__superadmin__"));
 
 // 감정 시스템 페이지
 app.get("/appr", (req, res) => {
@@ -444,7 +447,7 @@ app.get("/appr/mypage", (req, res) => {
 });
 app.get("/appr/admin", (req, res) => {
   // 감정 시스템 관리자 HTML 페이지
-  if (req.session.user && req.session.user.login_id === "admin") {
+  if (isAdminUser(req.session.user)) {
     res.sendFile(path.join(apprPagesPath, "admin.html")); // pages/appr/admin.html
   } else {
     res.redirect(req.session.user ? "/appr" : "/appr/signin");
@@ -469,8 +472,21 @@ async function initializeElasticsearch() {
   try {
     console.log("🔍 Initializing Elasticsearch...");
 
+    const elasticsearchUrl = (process.env.ELASTICSEARCH_URL || "").trim();
+    const runtimeEnv = (process.env.NODE_ENV || process.env.ENV || "")
+      .trim()
+      .toLowerCase();
+
+    // 개발 환경에서는 URL 미설정 시 ES를 건너뛰고 DB LIKE fallback 사용
+    if (!elasticsearchUrl && runtimeEnv === "development") {
+      console.log(
+        "ℹ️  ELASTICSEARCH_URL not set in development - skipping Elasticsearch and using DB LIKE fallback",
+      );
+      return;
+    }
+
     // 1. ES 연결
-    const connected = await esManager.connect();
+    const connected = await esManager.connect(elasticsearchUrl || undefined);
 
     if (!connected) {
       console.log(
@@ -569,17 +585,16 @@ async function initializeElasticsearch() {
 metricsModule.setupMetricsJobs();
 const PORT = process.env.PORT || 3000;
 
-// 비동기 초기화 후 서버 시작
-(async () => {
-  // ES 초기화 (병렬로 실행, 실패해도 서버는 시작)
-  await initializeElasticsearch();
+// 서버는 즉시 시작하고, ES 초기화는 백그라운드에서 진행한다.
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`✓ Server is running on port ${PORT}`);
+  console.log(`✓ Frontend URL for QR/Links: ${process.env.FRONTEND_URL}`);
 
-  // 서버 시작
-  server.listen(PORT, "0.0.0.0", () => {
-    console.log(`✓ Server is running on port ${PORT}`);
-    console.log(`✓ Frontend URL for QR/Links: ${process.env.FRONTEND_URL}`);
+  // 만료 상태 자동 동기화 시작
+  startExpiredSchedulers();
 
-    // 만료 상태 자동 동기화 시작
-    startExpiredSchedulers();
+  // ES 초기화 (실패해도 서버는 유지)
+  initializeElasticsearch().catch((error) => {
+    console.error("✗ Elasticsearch background init failed:", error.message);
   });
-})();
+});

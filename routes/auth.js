@@ -3,6 +3,7 @@ const express = require("express");
 const router = express.Router();
 const { pool } = require("../utils/DB");
 const crypto = require("crypto");
+const { ensureAdminPermissionTable } = require("../utils/adminAccess");
 
 function hashPassword(password) {
   if (!password) return "";
@@ -15,11 +16,18 @@ router.post("/login", async (req, res) => {
     const { id, password } = req.body;
 
     conn = await pool.getConnection();
+    await ensureAdminPermissionTable(pool);
     const hashedPassword = hashPassword(password);
 
     // login_id로 조회 - id(INT)와 login_id(VARCHAR) 모두 가져오기
     const [users] = await conn.query(
-      "SELECT id, login_id, email, is_active, password, role FROM users WHERE login_id = ?",
+      `SELECT
+        u.id, u.login_id, u.email, u.company_name, u.is_active, u.password, u.role,
+        app.is_superadmin, app.allowed_menus
+      FROM users u
+      LEFT JOIN admin_panel_permissions app ON app.user_id = u.id
+      WHERE u.login_id = ?
+      LIMIT 1`,
       [id],
     );
 
@@ -43,11 +51,20 @@ router.post("/login", async (req, res) => {
     }
 
     // 로그인 성공 - id(INT)와 login_id(VARCHAR) 모두 세션에 저장
+    const isSuperAdmin =
+      String(user.login_id || "").toLowerCase() === "admin" ||
+      Number(user.is_superadmin || 0) === 1;
+    const isAdminPanel = isSuperAdmin || !!user.allowed_menus;
+
     req.session.user = {
       id: user.id, // INT - DB JOIN용
       login_id: user.login_id, // VARCHAR - 화면 표시용
       email: user.email,
+      company_name: user.company_name,
       role: user.role,
+      is_superadmin: isSuperAdmin ? 1 : 0,
+      is_admin_panel: isAdminPanel ? 1 : 0,
+      allowed_menus: user.allowed_menus || null,
     };
 
     res.json({ message: "로그인 성공", user: req.session.user });
