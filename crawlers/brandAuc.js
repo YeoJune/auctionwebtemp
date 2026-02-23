@@ -498,6 +498,11 @@ class BrandAucCrawler extends AxiosCrawler {
     const category =
       this.config.categoryTable[item[genreField]] || item[genreField];
 
+    // Coin 카테고리 필터링
+    if (item[genreField] === "Coin") {
+      return null;
+    }
+
     // lighter 포함된 아이템 필터링
     const title = item[titleField] || "";
     if (title.toLowerCase().includes("lighter")) {
@@ -1614,7 +1619,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
 
         // 기본 정보 추출하여 아이템 생성
         const processedItem = this.extractBasicItemInfo(item);
-        pageItems.push(processedItem);
+        if (processedItem) pageItems.push(processedItem);
       }
 
       let finalItems;
@@ -1650,7 +1655,7 @@ class BrandAucValueCrawler extends AxiosCrawler {
 
       // 기본 정보 추출하여 아이템 생성
       const processedItem = this.extractBasicItemInfo(item);
-      filteredItems.push(processedItem);
+      if (processedItem) filteredItems.push(processedItem);
     }
 
     // 이미지 처리 등 추가 로직
@@ -1669,6 +1674,11 @@ class BrandAucValueCrawler extends AxiosCrawler {
     const category = this.config.categoryTable[item.genreEn] || item.genreEn;
     const scheduledDate =
       this.extractDate(this.convertToKST(item.kaisaiYmd)) || null;
+
+    // Coin 카테고리 필터링
+    if (item.genreEn === "Coin") {
+      return null;
+    }
 
     const original_title = this.convertFullWidthToAscii(item.shohinEn || "");
 
