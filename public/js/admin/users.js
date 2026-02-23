@@ -8,23 +8,49 @@ document.addEventListener("DOMContentLoaded", function () {
   loadMemberGroups();
 
   document.getElementById("addUserBtn").addEventListener("click", openUserForm);
-  document.getElementById("syncSheetsBtn").addEventListener("click", syncWithSheets);
+  document
+    .getElementById("syncSheetsBtn")
+    .addEventListener("click", syncWithSheets);
   document.getElementById("saveUserBtn").addEventListener("click", saveUser);
   document.querySelectorAll('input[name="accountType"]').forEach((radio) => {
     radio.addEventListener("change", handleAccountTypeChange);
   });
 
-  document.getElementById("manageGroupsBtn")?.addEventListener("click", openManageGroupsModal);
-  document.getElementById("closeManageGroupsModal")?.addEventListener("click", closeManageGroupsModal);
-  document.getElementById("addGroupBtn")?.addEventListener("click", submitAddGroup);
-  document.getElementById("closeAddMemberToGroupModal")?.addEventListener("click", closeAddMemberToGroupModal);
-  document.getElementById("addMemberSearchInput")?.addEventListener("input", async function () {
-    const groupId = document.getElementById("addMemberTargetGroupId")?.value;
-    if (!groupId) return;
-    await populateAddMemberCandidates(parseInt(groupId, 10), this.value.trim());
+  // 증빙 유형 수동 변경 감지
+  document.querySelectorAll('input[name="documentType"]').forEach((radio) => {
+    radio.addEventListener("change", () => {
+      window.documentTypeManuallySet = true;
+    });
   });
-  document.getElementById("addMemberSelectAll")?.addEventListener("change", handleAddMemberSelectAll);
-  document.getElementById("bulkAddMemberBtn")?.addEventListener("click", submitBulkAddMembersToGroup);
+
+  document
+    .getElementById("manageGroupsBtn")
+    ?.addEventListener("click", openManageGroupsModal);
+  document
+    .getElementById("closeManageGroupsModal")
+    ?.addEventListener("click", closeManageGroupsModal);
+  document
+    .getElementById("addGroupBtn")
+    ?.addEventListener("click", submitAddGroup);
+  document
+    .getElementById("closeAddMemberToGroupModal")
+    ?.addEventListener("click", closeAddMemberToGroupModal);
+  document
+    .getElementById("addMemberSearchInput")
+    ?.addEventListener("input", async function () {
+      const groupId = document.getElementById("addMemberTargetGroupId")?.value;
+      if (!groupId) return;
+      await populateAddMemberCandidates(
+        parseInt(groupId, 10),
+        this.value.trim(),
+      );
+    });
+  document
+    .getElementById("addMemberSelectAll")
+    ?.addEventListener("change", handleAddMemberSelectAll);
+  document
+    .getElementById("bulkAddMemberBtn")
+    ?.addEventListener("click", submitBulkAddMembersToGroup);
 });
 
 let usersCache = [];
@@ -69,8 +95,10 @@ function initMemberFilters() {
 }
 
 function applyMemberFiltersAndRender() {
-  const statusFilter = document.getElementById("memberStatusFilter")?.value || "all";
-  const sortField = document.getElementById("memberSortField")?.value || "registration_date";
+  const statusFilter =
+    document.getElementById("memberStatusFilter")?.value || "all";
+  const sortField =
+    document.getElementById("memberSortField")?.value || "registration_date";
   const sortOrder = document.getElementById("memberSortOrder")?.value || "desc";
 
   const filtered = (usersCache || []).filter((u) => {
@@ -125,20 +153,26 @@ function toTime(v) {
 }
 
 function initMemberTabs() {
-  document.querySelector(".member-tabs")?.addEventListener("click", function (e) {
-    const btn = e.target.closest(".member-tab-btn[data-tab-target]");
-    if (!btn) return;
-    const target = btn.dataset.tabTarget;
-    document.querySelectorAll(".member-tab-btn[data-tab-target]").forEach((b) => b.classList.remove("active"));
-    document.querySelectorAll(".member-tab-panel").forEach((p) => p.classList.remove("active"));
-    btn.classList.add("active");
-    const targetPanel = document.getElementById(target);
-    if (targetPanel) {
-      targetPanel.classList.add("active");
-      const groupId = targetPanel.dataset?.groupId;
-      if (groupId) loadGroupMembers(parseInt(groupId, 10));
-    }
-  });
+  document
+    .querySelector(".member-tabs")
+    ?.addEventListener("click", function (e) {
+      const btn = e.target.closest(".member-tab-btn[data-tab-target]");
+      if (!btn) return;
+      const target = btn.dataset.tabTarget;
+      document
+        .querySelectorAll(".member-tab-btn[data-tab-target]")
+        .forEach((b) => b.classList.remove("active"));
+      document
+        .querySelectorAll(".member-tab-panel")
+        .forEach((p) => p.classList.remove("active"));
+      btn.classList.add("active");
+      const targetPanel = document.getElementById(target);
+      if (targetPanel) {
+        targetPanel.classList.add("active");
+        const groupId = targetPanel.dataset?.groupId;
+        if (groupId) loadGroupMembers(parseInt(groupId, 10));
+      }
+    });
 }
 
 function formatLastBidDate(value) {
@@ -234,7 +268,8 @@ function updateAddMemberSelectionUI() {
     }
     selectAll.disabled = false;
     selectAll.checked = selectedCount > 0 && selectedCount === totalCandidates;
-    selectAll.indeterminate = selectedCount > 0 && selectedCount < totalCandidates;
+    selectAll.indeterminate =
+      selectedCount > 0 && selectedCount < totalCandidates;
   }
 }
 
@@ -265,7 +300,7 @@ function renderGroupTabs() {
   container.innerHTML = memberGroupsCache
     .map(
       (g) =>
-        `<button type="button" class="member-tab-btn" data-tab-target="groupPanel-${g.id}">${escapeHtml(g.name)}</button>`
+        `<button type="button" class="member-tab-btn" data-tab-target="groupPanel-${g.id}">${escapeHtml(g.name)}</button>`,
     )
     .join("");
 }
@@ -305,7 +340,7 @@ function renderGroupPanels() {
             </table>
           </div>
         </div>
-      `
+      `,
     )
     .join("");
   container.querySelectorAll(".btn-add-group-member").forEach((btn) => {
@@ -341,7 +376,8 @@ async function loadGroupMembers(groupId) {
     console.error("그룹 회원 로드 실패:", error);
     groupMembersCache.set(groupId, []);
     clearGroupSelection(groupId);
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center">로드 실패</td></tr>';
+    tbody.innerHTML =
+      '<tr><td colspan="7" class="text-center">로드 실패</td></tr>';
     if (countEl) countEl.textContent = "0명";
     updateGroupSelectionUI(groupId, 0);
   }
@@ -354,7 +390,8 @@ function renderGroupMembers(groupId, members) {
   if (!tbody) return;
   if (countEl) countEl.textContent = `${members.length}명`;
   if (!members.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center">이 그룹에 회원이 없습니다.</td></tr>';
+    tbody.innerHTML =
+      '<tr><td colspan="7" class="text-center">이 그룹에 회원이 없습니다.</td></tr>';
     updateGroupSelectionUI(gid, 0);
     return;
   }
@@ -377,7 +414,7 @@ function renderGroupMembers(groupId, members) {
             </div>
           </td>
         </tr>
-      `
+      `,
     )
     .join("");
   tbody.querySelectorAll(".group-view-bids-btn").forEach((btn) => {
@@ -390,10 +427,18 @@ function renderGroupMembers(groupId, members) {
       const id = this.dataset.id;
       const loginId = this.dataset.loginId;
       const next = this.dataset.next === "1";
-      if (!confirm(`회원 '${loginId}'를 ${next ? "활성화" : "비활성화"}하시겠습니까?`)) return;
+      if (
+        !confirm(
+          `회원 '${loginId}'를 ${next ? "활성화" : "비활성화"}하시겠습니까?`,
+        )
+      )
+        return;
       try {
         await updateUser(id, { is_active: next });
-        showAlert(`회원 '${loginId}' ${next ? "활성화" : "비활성화"} 완료`, "success");
+        showAlert(
+          `회원 '${loginId}' ${next ? "활성화" : "비활성화"} 완료`,
+          "success",
+        );
         await loadGroupMembers(gid);
       } catch (err) {
         handleError(err, "회원 상태 변경 중 오류가 발생했습니다.");
@@ -409,9 +454,15 @@ function renderGroupMembers(groupId, members) {
         await removeMemberFromGroup(gid, userId);
         showAlert("그룹에서 제거되었습니다.", "success");
         await loadGroupMembers(gid);
-        const modalGroupId = parseInt(document.getElementById("addMemberTargetGroupId")?.value, 10);
+        const modalGroupId = parseInt(
+          document.getElementById("addMemberTargetGroupId")?.value,
+          10,
+        );
         if (modalGroupId === gid) {
-          await populateAddMemberCandidates(gid, document.getElementById("addMemberSearchInput")?.value || "");
+          await populateAddMemberCandidates(
+            gid,
+            document.getElementById("addMemberSearchInput")?.value || "",
+          );
         }
       } catch (err) {
         handleError(err, "제거 중 오류가 발생했습니다.");
@@ -451,12 +502,17 @@ function renderGroupMembers(groupId, members) {
 
 async function submitBulkRemoveMembersFromGroup(groupId) {
   const gid = parseInt(groupId, 10);
-  const selectedUserIds = sanitizeUserIds(Array.from(getGroupSelectionSet(gid)));
+  const selectedUserIds = sanitizeUserIds(
+    Array.from(getGroupSelectionSet(gid)),
+  );
   if (!selectedUserIds.length) {
     showAlert("선택된 회원이 없습니다.", "warning");
     return;
   }
-  if (!confirm(`선택한 ${selectedUserIds.length}명을 그룹에서 제거하시겠습니까?`)) return;
+  if (
+    !confirm(`선택한 ${selectedUserIds.length}명을 그룹에서 제거하시겠습니까?`)
+  )
+    return;
 
   try {
     let removedCount = 0;
@@ -467,13 +523,21 @@ async function submitBulkRemoveMembersFromGroup(groupId) {
       const settled = await Promise.allSettled(
         selectedUserIds.map((userId) => removeMemberFromGroup(gid, userId)),
       );
-      removedCount = settled.filter((item) => item.status === "fulfilled").length;
+      removedCount = settled.filter(
+        (item) => item.status === "fulfilled",
+      ).length;
     }
     showAlert(`${removedCount}명 그룹에서 제거되었습니다.`, "success");
     await loadGroupMembers(gid);
-    const modalGroupId = parseInt(document.getElementById("addMemberTargetGroupId")?.value, 10);
+    const modalGroupId = parseInt(
+      document.getElementById("addMemberTargetGroupId")?.value,
+      10,
+    );
     if (modalGroupId === gid) {
-      await populateAddMemberCandidates(gid, document.getElementById("addMemberSearchInput")?.value || "");
+      await populateAddMemberCandidates(
+        gid,
+        document.getElementById("addMemberSearchInput")?.value || "",
+      );
     }
   } catch (err) {
     handleError(err, "회원 일괄 제거 중 오류가 발생했습니다.");
@@ -511,14 +575,19 @@ function refreshManageGroupsList() {
           <span>${escapeHtml(g.name)}</span>
           <button type="button" class="btn btn-sm btn-ghost btn-danger-ghost" data-group-id="${g.id}" data-group-name="${escapeHtml(g.name)}">삭제</button>
         </div>
-      `
+      `,
     )
     .join("");
   list.querySelectorAll("button[data-group-id]").forEach((btn) => {
     btn.addEventListener("click", async function () {
       const id = parseInt(this.dataset.groupId, 10);
       const name = this.dataset.groupName;
-      if (!confirm(`그룹 '${name}'을(를) 삭제하시겠습니까? 소속 회원 연결만 해제됩니다.`)) return;
+      if (
+        !confirm(
+          `그룹 '${name}'을(를) 삭제하시겠습니까? 소속 회원 연결만 해제됩니다.`,
+        )
+      )
+        return;
       try {
         await deleteMemberGroup(id);
         showAlert("그룹이 삭제되었습니다.", "success");
@@ -552,7 +621,8 @@ async function submitAddGroup() {
 async function openAddMemberToGroupModal(groupId, groupName) {
   const modal = document.getElementById("addMemberToGroupModal");
   document.getElementById("addMemberTargetGroupId").value = groupId;
-  document.getElementById("addMemberToGroupTitle").textContent = `"${groupName}"에 회원 추가`;
+  document.getElementById("addMemberToGroupTitle").textContent =
+    `"${groupName}"에 회원 추가`;
   document.getElementById("addMemberSearchInput").value = "";
   addMemberSelectionState = new Set();
   const selectAll = document.getElementById("addMemberSelectAll");
@@ -609,11 +679,15 @@ async function populateAddMemberCandidates(groupId, searchTerm) {
   });
   const validCandidateIds = new Set(users.map((u) => parseInt(u.id, 10)));
   addMemberSelectionState = new Set(
-    Array.from(addMemberSelectionState).filter((id) => validCandidateIds.has(id)),
+    Array.from(addMemberSelectionState).filter((id) =>
+      validCandidateIds.has(id),
+    ),
   );
   list.dataset.totalCandidates = String(users.length);
   if (!users.length) {
-    const emptyMessage = term ? "검색 결과가 없습니다." : "추가 가능한 회원이 없습니다.";
+    const emptyMessage = term
+      ? "검색 결과가 없습니다."
+      : "추가 가능한 회원이 없습니다.";
     list.innerHTML = `<p class="text-muted">${emptyMessage}</p>`;
     updateAddMemberSelectionUI();
     return;
@@ -632,12 +706,16 @@ async function populateAddMemberCandidates(groupId, searchTerm) {
           )}</span>
           <button type="button" class="btn btn-sm add-member-single-btn" data-user-id="${u.id}">추가</button>
         </div>
-      `
+      `,
     )
     .join("");
   list.querySelectorAll(".add-member-candidate").forEach((el) => {
     el.addEventListener("click", function (e) {
-      if (e.target.closest("button") || e.target.closest("input[type='checkbox']")) return;
+      if (
+        e.target.closest("button") ||
+        e.target.closest("input[type='checkbox']")
+      )
+        return;
       const checkbox = el.querySelector(".add-member-select");
       if (!checkbox) return;
       checkbox.checked = !checkbox.checked;
@@ -678,7 +756,10 @@ async function submitAddMemberToGroup(groupId, userId) {
     }
     addMemberSelectionState.delete(uid);
     await loadGroupMembers(gid);
-    await populateAddMemberCandidates(gid, document.getElementById("addMemberSearchInput")?.value || "");
+    await populateAddMemberCandidates(
+      gid,
+      document.getElementById("addMemberSearchInput")?.value || "",
+    );
   } catch (err) {
     handleError(err, "회원 추가 중 오류가 발생했습니다.");
   }
@@ -686,17 +767,23 @@ async function submitAddMemberToGroup(groupId, userId) {
 
 function handleAddMemberSelectAll(event) {
   const checked = !!event.target.checked;
-  const checkboxes = Array.from(document.querySelectorAll("#addMemberCandidateList .add-member-select"));
+  const checkboxes = Array.from(
+    document.querySelectorAll("#addMemberCandidateList .add-member-select"),
+  );
   addMemberSelectionState = new Set();
   checkboxes.forEach((checkbox) => {
     checkbox.checked = checked;
-    if (checked) addMemberSelectionState.add(parseInt(checkbox.dataset.userId, 10));
+    if (checked)
+      addMemberSelectionState.add(parseInt(checkbox.dataset.userId, 10));
   });
   updateAddMemberSelectionUI();
 }
 
 async function submitBulkAddMembersToGroup() {
-  const groupId = parseInt(document.getElementById("addMemberTargetGroupId")?.value, 10);
+  const groupId = parseInt(
+    document.getElementById("addMemberTargetGroupId")?.value,
+    10,
+  );
   const userIds = sanitizeUserIds(Array.from(addMemberSelectionState));
   if (!groupId || !userIds.length) {
     showAlert("선택된 회원이 없습니다.", "warning");
@@ -710,9 +797,13 @@ async function submitBulkAddMembersToGroup() {
       insertedCount = Number(result?.inserted || 0);
     } else {
       const settled = await Promise.all(
-        userIds.map((userId) => addMemberToGroup(groupId, userId).catch(() => ({ added: false }))),
+        userIds.map((userId) =>
+          addMemberToGroup(groupId, userId).catch(() => ({ added: false })),
+        ),
       );
-      insertedCount = settled.filter((result) => result?.added !== false).length;
+      insertedCount = settled.filter(
+        (result) => result?.added !== false,
+      ).length;
     }
     if (insertedCount === 0) {
       showAlert("이미 그룹에 등록된 회원들입니다.", "warning");
@@ -721,7 +812,10 @@ async function submitBulkAddMembersToGroup() {
     }
     addMemberSelectionState = new Set();
     await loadGroupMembers(groupId);
-    await populateAddMemberCandidates(groupId, document.getElementById("addMemberSearchInput")?.value || "");
+    await populateAddMemberCandidates(
+      groupId,
+      document.getElementById("addMemberSearchInput")?.value || "",
+    );
   } catch (err) {
     handleError(err, "회원 일괄 추가 중 오류가 발생했습니다.");
   }
@@ -775,7 +869,10 @@ async function openBidHistoryModal(userId) {
       totalCountNode.textContent = `${Number(summary.totalBidCount || 0).toLocaleString()}건`;
     }
     if (totalJpyNode) {
-      totalJpyNode.textContent = formatCurrency(Number(summary.totalBidJpy || 0), "JPY");
+      totalJpyNode.textContent = formatCurrency(
+        Number(summary.totalBidJpy || 0),
+        "JPY",
+      );
     }
     if (completedCountNode) {
       completedCountNode.textContent = `${Number(summary.completedCount || 0).toLocaleString()}건`;
@@ -783,7 +880,8 @@ async function openBidHistoryModal(userId) {
 
     if (!body) return;
     if (!history.length) {
-      body.innerHTML = '<tr><td colspan="8" class="text-center">입찰 내역이 없습니다.</td></tr>';
+      body.innerHTML =
+        '<tr><td colspan="8" class="text-center">입찰 내역이 없습니다.</td></tr>';
       return;
     }
 
@@ -897,7 +995,9 @@ function renderCompanyMembers(users, keyword, bodyId, countId) {
         .toLowerCase()
         .includes(String(keyword).toLowerCase()),
     )
-    .sort((a, b) => Number(b.total_bid_jpy || 0) - Number(a.total_bid_jpy || 0));
+    .sort(
+      (a, b) => Number(b.total_bid_jpy || 0) - Number(a.total_bid_jpy || 0),
+    );
 
   if (countNode) countNode.textContent = `${targetUsers.length}명`;
 
@@ -972,6 +1072,16 @@ function renderUsers(users) {
         ? '<span class="badge badge-corporate">기업</span>'
         : '<span class="badge badge-individual">개인</span>';
 
+    // 증빙 유형 배지
+    const docType =
+      user.document_type ||
+      (accountType === "corporate" ? "taxinvoice" : "cashbill");
+    const docTypeBadge =
+      docType === "taxinvoice"
+        ? '<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:#e8f4f8;color:#2980b9;border:1px solid #aed6f1;">세금계산서</span>'
+        : '<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:#eafaf1;color:#27ae60;border:1px solid #a9dfbf;">현금영수증</span>';
+    const accountTypeDisplay = `${accountTypeText}<br/><small style="margin-top:2px;display:inline-block;">${docTypeBadge}</small>`;
+
     // 예치금/한도 표시
     let balanceInfo = "";
     if (accountType === "individual") {
@@ -990,14 +1100,14 @@ function renderUsers(users) {
 
     row.innerHTML = `
       <td>${user.login_id || user.id}</td>
-      <td>${accountTypeText}</td>
+      <td>${accountTypeDisplay}</td>
       <td>${balanceInfo}</td>
       <td>${registrationDate}</td>
       <td>${user.company_name || "-"}</td>
       <td>${Number(user.total_bid_count || 0).toLocaleString()}건 / ${formatCurrency(
-      Number(user.total_bid_jpy || 0),
-      "JPY",
-    )}</td>
+        Number(user.total_bid_jpy || 0),
+        "JPY",
+      )}</td>
       <td>${user.address || "-"}</td>
       <td>${user.email || "-"}</td>
       <td>${user.phone || "-"}</td>
@@ -1148,6 +1258,16 @@ function openUserForm(user = null) {
     // 회원 구분 저장 (변경 확인용)
     window.currentEditingUserAccountType = accountType;
 
+    // 증빙 유형 설정
+    const docType =
+      user.document_type ||
+      (accountType === "corporate" ? "taxinvoice" : "cashbill");
+    const docTypeRadio = document.querySelector(
+      `input[name="documentType"][value="${docType}"]`,
+    );
+    if (docTypeRadio) docTypeRadio.checked = true;
+    window.documentTypeManuallySet = false;
+
     // 예치금/한도 정보
     document.getElementById("depositBalance").value = user.deposit_balance || 0;
     document.getElementById("dailyLimit").value = user.daily_limit || 0;
@@ -1175,6 +1295,13 @@ function openUserForm(user = null) {
 
     // 회원 구분 저장 초기화
     window.currentEditingUserAccountType = null;
+
+    // 증빙 유형 초기값: 현금영수증 (개인 기본)
+    const defaultDocRadio = document.querySelector(
+      'input[name="documentType"][value="cashbill"]',
+    );
+    if (defaultDocRadio) defaultDocRadio.checked = true;
+    window.documentTypeManuallySet = false;
 
     // 비밀번호 필드
     userPassword.placeholder = "비밀번호 입력";
@@ -1215,6 +1342,15 @@ function handleAccountTypeChange() {
 
     document.getElementById("dailyLimit").required = true;
   }
+
+  // 수동으로 증빙 유형을 바꾼 적 없으면 회원 구분에 맞게 자동 전환
+  if (!window.documentTypeManuallySet) {
+    const autoDocType = accountType === "corporate" ? "taxinvoice" : "cashbill";
+    const radio = document.querySelector(
+      `input[name="documentType"][value="${autoDocType}"]`,
+    );
+    if (radio) radio.checked = true;
+  }
 }
 
 // 회원 저장 (등록 또는 수정)
@@ -1235,6 +1371,14 @@ async function saveUser() {
     const isActive =
       document.querySelector('input[name="userStatus"]:checked').value ===
       "true";
+
+    // 증빙 유형
+    const documentTypeRadio = document.querySelector(
+      'input[name="documentType"]:checked',
+    );
+    const documentType = documentTypeRadio
+      ? documentTypeRadio.value
+      : "cashbill";
 
     // 회원 구분 및 한도 정보
     const accountType = document.querySelector(
@@ -1297,6 +1441,7 @@ async function saveUser() {
       commission_rate: commissionRateValue
         ? parseFloat(commissionRateValue)
         : null,
+      document_type: documentType,
     };
 
     // 수정 모드일 때 login_id 변경 사항 추가

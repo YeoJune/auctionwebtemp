@@ -72,10 +72,14 @@
             type="button"
             class="member-tab-btn"
             data-tab-target="deactivatePanel">
-            비활성화 해야할 회원 (보증금 환불 회원 이거나 / 아직 활성 회원인데 + 50일 이상 미입찰)
+            비활성화 해야할 회원 (보증금 환불 회원 이거나 / 아직 활성 회원인데 +
+            50일 이상 미입찰)
           </button>
           <span id="groupTabsContainer" class="member-tabs-groups"></span>
-          <button type="button" class="member-tab-btn member-tab-btn-ghost" id="manageGroupsBtn">
+          <button
+            type="button"
+            class="member-tab-btn member-tab-btn-ghost"
+            id="manageGroupsBtn">
             그룹 관리
           </button>
         </div>
@@ -157,7 +161,9 @@
               </thead>
               <tbody id="vipTopTableBody">
                 <tr>
-                  <td colspan="5" class="text-center">데이터를 불러오는 중입니다...</td>
+                  <td colspan="5" class="text-center">
+                    데이터를 불러오는 중입니다...
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -168,8 +174,13 @@
         <div id="deactivatePanel" class="member-tab-panel">
           <div class="card" style="margin-top: 16px">
             <div class="section-header-row">
-              <h3>비활성화 해야할 회원 (보증금 환불 회원 이거나 / 아직 활성 회원인데 + 50일 이상 미입찰)</h3>
-              <span id="deactivateCandidateCount" class="candidate-count">0명</span>
+              <h3>
+                비활성화 해야할 회원 (보증금 환불 회원 이거나 / 아직 활성
+                회원인데 + 50일 이상 미입찰)
+              </h3>
+              <span id="deactivateCandidateCount" class="candidate-count"
+                >0명</span
+              >
             </div>
             <table class="data-table" id="deactivateCandidatesTable">
               <thead>
@@ -186,7 +197,9 @@
               </thead>
               <tbody id="deactivateCandidatesBody">
                 <tr>
-                  <td colspan="8" class="text-center">데이터를 불러오는 중입니다...</td>
+                  <td colspan="8" class="text-center">
+                    데이터를 불러오는 중입니다...
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -202,13 +215,19 @@
       <div class="modal-dialog" style="max-width: 420px">
         <div class="modal-header">
           <h3 class="modal-title">그룹 관리</h3>
-          <button type="button" class="close-modal" id="closeManageGroupsModal">&times;</button>
+          <button type="button" class="close-modal" id="closeManageGroupsModal">
+            &times;
+          </button>
         </div>
         <div class="modal-body">
           <div class="form-group" style="margin-bottom: 16px">
             <label for="newGroupName">새 그룹명</label>
             <div style="display: flex; gap: 8px">
-              <input type="text" id="newGroupName" class="form-control" placeholder="그룹 이름 입력" />
+              <input
+                type="text"
+                id="newGroupName"
+                class="form-control"
+                placeholder="그룹 이름 입력" />
               <button type="button" id="addGroupBtn" class="btn">추가</button>
             </div>
           </div>
@@ -222,20 +241,40 @@
       <div class="modal-dialog" style="max-width: 480px">
         <div class="modal-header">
           <h3 class="modal-title" id="addMemberToGroupTitle">회원 추가</h3>
-          <button type="button" class="close-modal" id="closeAddMemberToGroupModal">&times;</button>
+          <button
+            type="button"
+            class="close-modal"
+            id="closeAddMemberToGroupModal">
+            &times;
+          </button>
         </div>
         <div class="modal-body">
           <input type="hidden" id="addMemberTargetGroupId" />
-          <input type="text" id="addMemberSearchInput" class="form-control" placeholder="아이디 또는 업체명 검색..." style="margin-bottom: 12px" />
+          <input
+            type="text"
+            id="addMemberSearchInput"
+            class="form-control"
+            placeholder="아이디 또는 업체명 검색..."
+            style="margin-bottom: 12px" />
           <div class="group-bulk-toolbar" style="margin-bottom: 10px">
             <label class="group-bulk-checkbox">
               <input type="checkbox" id="addMemberSelectAll" />
               <span>전체선택</span>
             </label>
-            <span id="addMemberSelectedCount" class="group-selected-count">선택 0명</span>
-            <button type="button" id="bulkAddMemberBtn" class="btn btn-sm" disabled>선택 추가</button>
+            <span id="addMemberSelectedCount" class="group-selected-count"
+              >선택 0명</span
+            >
+            <button
+              type="button"
+              id="bulkAddMemberBtn"
+              class="btn btn-sm"
+              disabled>
+              선택 추가
+            </button>
           </div>
-          <div id="addMemberCandidateList" style="max-height: 280px; overflow-y: auto"></div>
+          <div
+            id="addMemberCandidateList"
+            style="max-height: 280px; overflow-y: auto"></div>
         </div>
       </div>
     </div>
@@ -384,6 +423,29 @@
                 readonly />
               <small class="form-text text-muted">
                 오늘 사용한 금액 (읽기 전용)
+              </small>
+            </div>
+
+            <!-- 증빙 유형 -->
+            <div class="form-group">
+              <label class="form-label">증빙 유형 *</label>
+              <div class="radio-group">
+                <label class="radio-label">
+                  <input
+                    type="radio"
+                    name="documentType"
+                    value="cashbill"
+                    checked />
+                  <span>현금영수증</span>
+                </label>
+                <label class="radio-label">
+                  <input type="radio" name="documentType" value="taxinvoice" />
+                  <span>세금계산서</span>
+                </label>
+              </div>
+              <small class="form-text text-muted">
+                정산·충전 완료 시 자동 발행되는 증빙 유형 (개인 기본: 현금영수증
+                / 기업 기본: 세금계산서)
               </small>
             </div>
 
