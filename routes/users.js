@@ -62,7 +62,7 @@ router.get("/", requireAuth, async (req, res) => {
     // 회원 목록 조회 - normal 사용자만, 예치금/한도 + 최근 입찰/누적 입찰 통계 포함
     const [users] = await conn.query(
       `SELECT u.id, u.login_id, u.registration_date, u.email, u.business_number, u.company_name, 
-       u.phone, u.address, u.created_at, u.is_active, u.commission_rate,
+       u.phone, u.address, u.created_at, u.is_active, u.commission_rate, u.document_type,
        ua.account_type, ua.deposit_balance, ua.daily_limit, ua.daily_used,
        COALESCE(bt.total_bid_count, 0) AS total_bid_count,
        COALESCE(bt.total_bid_jpy, 0) AS total_bid_jpy,
@@ -308,7 +308,9 @@ router.get("/:id/bid-history", requireAuth, async (req, res) => {
     });
   } catch (error) {
     console.error("회원 입찰 내역 조회 오류:", error);
-    res.status(500).json({ message: "회원 입찰 내역 조회 중 오류가 발생했습니다." });
+    res
+      .status(500)
+      .json({ message: "회원 입찰 내역 조회 중 오류가 발생했습니다." });
   } finally {
     if (conn) conn.release();
   }
@@ -324,7 +326,7 @@ router.get("/:id", requireAuth, async (req, res) => {
     // 회원 정보 조회 - normal 사용자만
     const [users] = await conn.query(
       `SELECT id, login_id, registration_date, email, business_number, company_name, 
-       phone, address, is_active, created_at, commission_rate 
+       phone, address, is_active, created_at, commission_rate, document_type 
        FROM users WHERE id = ? AND role = 'normal'`,
       [id],
     );
@@ -360,6 +362,7 @@ router.post("/", requireAuth, async (req, res) => {
       phone,
       address,
       commission_rate,
+      document_type,
     } = req.body;
 
     // 필수 필드 검증
@@ -395,6 +398,10 @@ router.post("/", requireAuth, async (req, res) => {
     // 비밀번호 해싱
     const hashedPassword = hashPassword(password);
 
+    // 유효한 document_type 검증 (기본값: cashbill)
+    const validDocumentType =
+      document_type === "taxinvoice" ? "taxinvoice" : "cashbill";
+
     // 회원 추가 - normal role로 설정, login_id 사용
     const [result] = await conn.query(
       `INSERT INTO users (
@@ -408,8 +415,9 @@ router.post("/", requireAuth, async (req, res) => {
         address,
         is_active,
         commission_rate,
+        document_type,
         role
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         formattedDate,
@@ -421,6 +429,7 @@ router.post("/", requireAuth, async (req, res) => {
         address || null,
         is_active === false ? 0 : 1,
         commission_rate || null,
+        validDocumentType,
         "normal", // normal role로 설정
       ],
     );
@@ -457,6 +466,7 @@ router.put("/:id", requireAuth, async (req, res) => {
       phone,
       address,
       commission_rate,
+      document_type,
     } = req.body;
 
     // 회원 존재 확인 - normal 사용자만
@@ -547,6 +557,13 @@ router.put("/:id", requireAuth, async (req, res) => {
     if (commission_rate !== undefined) {
       updateFields.push("commission_rate = ?");
       updateValues.push(commission_rate);
+    }
+
+    if (document_type !== undefined) {
+      const validDocType =
+        document_type === "taxinvoice" ? "taxinvoice" : "cashbill";
+      updateFields.push("document_type = ?");
+      updateValues.push(validDocType);
     }
 
     if (updateFields.length === 0) {
