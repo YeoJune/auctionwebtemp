@@ -57,12 +57,18 @@ router.post("/check-payment", async (req, res) => {
     }
 
     // 3. 입금 확인 (팝빌 API)
-    const startDate = new Date(transaction.created_at);
-    startDate.setHours(0, 0, 0, 0); // 당일 00:00부터 조회
+    const endDate = new Date();
+    const startDate = new Date(endDate);
+    startDate.setDate(startDate.getDate() - 3);
+    startDate.setHours(0, 0, 0, 0); // 3일 전 00:00부터 조회
 
     let matched = null;
     try {
-      matched = await popbillService.checkPayment(transaction, startDate);
+      matched = await popbillService.checkPayment(
+        transaction,
+        startDate,
+        endDate,
+      );
     } catch (error) {
       console.error("[입금 확인 실패]", error);
       await conn.rollback();
@@ -745,14 +751,14 @@ async function autoCheckPayments(type) {
       try {
         await conn.beginTransaction();
 
-        const startDate = new Date(
-          isDeposit ? item.created_at : item.settlement_date,
-        );
-        startDate.setHours(0, 0, 0, 0);
+        const endDate = new Date();
+        const startDate = new Date(endDate);
+        startDate.setDate(startDate.getDate() - 3);
+        startDate.setHours(0, 0, 0, 0); // 3일 전 00:00부터 조회
 
         const matched = isDeposit
-          ? await popbillService.checkPayment(item, startDate)
-          : await popbillService.checkSettlement(item, startDate);
+          ? await popbillService.checkPayment(item, startDate, endDate)
+          : await popbillService.checkSettlement(item, startDate, endDate);
 
         if (matched) {
           const isUsed = await popbillService.isTransactionUsed(matched.tid);

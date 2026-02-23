@@ -32,14 +32,11 @@ class PopbillService {
    * @param {String} type - 'deposit' 또는 'settlement'
    * @returns {Object|null} 매칭된 거래 또는 null
    */
-  async checkTransaction(data, type) {
+  async checkTransaction(data, type, startDate, endDate) {
     try {
       const today = new Date();
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
-
-      const start = this.formatDate(yesterday);
-      const end = this.formatDate(today);
+      const start = this.formatDate(startDate ?? today);
+      const end = this.formatDate(endDate ?? today);
 
       const amount = type === "deposit" ? data.amount : data.final_amount;
       const depositorName = data.depositor_name && data.depositor_name.trim();
@@ -68,12 +65,12 @@ class PopbillService {
   }
 
   // 하위 호환성을 위한 alias
-  async checkPayment(transaction, startDate) {
-    return this.checkTransaction(transaction, "deposit");
+  async checkPayment(transaction, startDate, endDate) {
+    return this.checkTransaction(transaction, "deposit", startDate, endDate);
   }
 
-  async checkSettlement(settlement, startDate) {
-    return this.checkTransaction(settlement, "settlement");
+  async checkSettlement(settlement, startDate, endDate) {
+    return this.checkTransaction(settlement, "settlement", startDate, endDate);
   }
 
   /**
