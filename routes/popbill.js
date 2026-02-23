@@ -5,6 +5,8 @@ const cron = require("node-cron");
 const { pool } = require("../utils/DB");
 const popbillService = require("../utils/popbill");
 
+const MAX_RETRY = 6 * 24; // 최대 재시도 횟수 (24시간)
+
 // 관리자 체크 미들웨어
 const isAdmin = (req, res, next) => {
   if (req.session.user && req.session.user.login_id === "admin") {
@@ -127,8 +129,8 @@ router.post("/check-payment", async (req, res) => {
     // 5. 매칭 실패 → 재시도 카운트 증가
     const newRetryCount = transaction.retry_count + 1;
 
-    if (newRetryCount >= 12) {
-      // 12회 이상 실패 → 수동 확인 필요
+    if (newRetryCount >= MAX_RETRY) {
+      // MAX_RETRY회 이상 실패 → 수동 확인 필요
       await conn.query(
         "UPDATE deposit_transactions SET status = 'manual_review', retry_count = ? WHERE id = ?",
         [newRetryCount, transaction_id],
@@ -153,7 +155,7 @@ router.post("/check-payment", async (req, res) => {
         message:
           "아직 입금이 확인되지 않았습니다. 잠시 후 자동으로 다시 확인됩니다.",
         retry_count: newRetryCount,
-        max_retries: 12,
+        max_retries: MAX_RETRY,
       });
     }
   } catch (err) {
@@ -724,14 +726,14 @@ async function autoCheckPayments(type) {
       ? `SELECT dt.*, u.email, u.phone, u.company_name
          FROM deposit_transactions dt
          JOIN users u ON dt.user_id = u.id
-         WHERE dt.status = 'pending' AND dt.retry_count < 12 
+         WHERE dt.status = 'pending' AND dt.retry_count < ${MAX_RETRY} 
            AND dt.depositor_name IS NOT NULL AND dt.depositor_name != ''
          ORDER BY dt.created_at ASC 
          LIMIT 100`
       : `SELECT ds.*, u.business_number, u.company_name, u.email, u.phone
          FROM daily_settlements ds
          JOIN users u ON ds.user_id = u.id
-         WHERE ds.payment_status = 'pending' AND ds.retry_count < 12
+         WHERE ds.payment_status = 'pending' AND ds.retry_count < ${MAX_RETRY}
            AND ds.depositor_name IS NOT NULL AND ds.depositor_name != ''
          ORDER BY ds.settlement_date ASC
          LIMIT 100`;
@@ -758,7 +760,7 @@ async function autoCheckPayments(type) {
             console.log(`⚠️ 중복 거래 감지: ${label} #${item.id}`);
             if (isDeposit) {
               await conn.query(
-                "UPDATE deposit_transactions SET status = 'manual_review', retry_count = 12 WHERE id = ?",
+                `UPDATE deposit_transactions SET status = 'manual_review', retry_count = ${MAX_RETRY} WHERE id = ?`,
                 [item.id],
               );
             }
@@ -895,7 +897,7 @@ async function autoCheckPayments(type) {
         } else {
           // 재시도 카운트 증가
           const newRetryCount = item.retry_count + 1;
-          const needsManual = newRetryCount >= 12;
+          const needsManual = newRetryCount >= MAX_RETRY;
 
           if (isDeposit) {
             await conn.query(
@@ -916,7 +918,9 @@ async function autoCheckPayments(type) {
           await conn.commit();
 
           if (needsManual) {
-            console.log(`⚠️ ${label} #${item.id} 수동 확인 필요 (12회 초과)`);
+            console.log(
+              `⚠️ ${label} #${item.id} 수동 확인 필요 (${MAX_RETRY}회 초과)`,
+            );
           }
         }
       } catch (error) {
