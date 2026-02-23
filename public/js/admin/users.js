@@ -1078,8 +1078,8 @@ function renderUsers(users) {
       (accountType === "corporate" ? "taxinvoice" : "cashbill");
     const docTypeBadge =
       docType === "taxinvoice"
-        ? '<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:#e8f4f8;color:#2980b9;border:1px solid #aed6f1;">세금계산서</span>'
-        : '<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:#eafaf1;color:#27ae60;border:1px solid #a9dfbf;">현금영수증</span>';
+        ? '<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:#e8f4f8;color:#2980b9;border:1px solid #aed6f1;">세금</span>'
+        : '<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:#eafaf1;color:#27ae60;border:1px solid #a9dfbf;">현금</span>';
     const accountTypeDisplay = `${accountTypeText}<br/><small style="margin-top:2px;display:inline-block;">${docTypeBadge}</small>`;
 
     // 예치금/한도 표시
