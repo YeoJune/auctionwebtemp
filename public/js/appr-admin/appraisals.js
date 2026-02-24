@@ -620,6 +620,16 @@ function displayAppraisalDetail(appraisal) {
     appraisal.components_included = [];
   }
 
+  // delivery_info가 문자열인 경우 파싱
+  if (appraisal.delivery_info && typeof appraisal.delivery_info === "string") {
+    try {
+      appraisal.delivery_info = JSON.parse(appraisal.delivery_info);
+    } catch (e) {
+      console.warn("delivery_info 파싱 실패:", e);
+      appraisal.delivery_info = null;
+    }
+  }
+
   // 기존 HTML 생성 로직 완전히 동일하게 유지
   const container = document.getElementById("appraisal-detail-content");
 
