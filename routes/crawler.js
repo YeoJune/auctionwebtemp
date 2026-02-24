@@ -1093,7 +1093,7 @@ async function overwriteValuesFinalPriceFromLiveBids() {
         FROM live_bids
         WHERE winning_price IS NOT NULL
           AND winning_price > 0
-          AND status IN ('completed', 'shipped')
+          AND status = 'completed'
         GROUP BY item_id
       ) lb ON vi.item_id = lb.item_id
       SET vi.final_price = lb.winning_price

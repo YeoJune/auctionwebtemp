@@ -426,7 +426,7 @@ router.post("/live/:id/request-appraisal", async (req, res) => {
       `SELECT l.*, i.brand, i.title, i.category, i.image, i.additional_images, i.scheduled_date
        FROM live_bids l 
        JOIN crawled_items i ON l.item_id = i.item_id 
-       WHERE l.id = ? AND l.status IN ('completed', 'shipped') AND l.winning_price > 0`,
+       WHERE l.id = ? AND l.status = 'completed' AND l.winning_price > 0`,
       [bidId],
     );
 
@@ -604,7 +604,7 @@ router.post("/direct/:id/request-appraisal", async (req, res) => {
       `SELECT d.*, i.brand, i.title, i.category, i.image, i.additional_images, i.scheduled_date
        FROM direct_bids d 
        JOIN crawled_items i ON d.item_id = i.item_id 
-       WHERE d.id = ? AND d.status IN ('completed', 'shipped') AND d.winning_price > 0`,
+       WHERE d.id = ? AND d.status = 'completed' AND d.winning_price > 0`,
       [bidId],
     );
 
@@ -791,7 +791,7 @@ router.post("/live/:id/request-repair", async (req, res) => {
       `SELECT l.*, i.brand, i.title, i.scheduled_date
        FROM live_bids l 
        JOIN crawled_items i ON l.item_id = i.item_id 
-       WHERE l.id = ? AND l.status IN ('completed', 'shipped') AND l.winning_price > 0`,
+       WHERE l.id = ? AND l.status = 'completed' AND l.winning_price > 0`,
       [bidId],
     );
 
@@ -976,7 +976,7 @@ router.post("/direct/:id/request-repair", async (req, res) => {
       `SELECT d.*, i.brand, i.title, i.scheduled_date
        FROM direct_bids d 
        JOIN crawled_items i ON d.item_id = i.item_id 
-       WHERE d.id = ? AND d.status IN ('completed', 'shipped') AND d.winning_price > 0`,
+       WHERE d.id = ? AND d.status = 'completed' AND d.winning_price > 0`,
       [bidId],
     );
 
@@ -1838,7 +1838,7 @@ router.get("/debug/settlement-mismatch", isAdmin, async (req, res) => {
          LEFT JOIN crawled_items i ON l.item_id = i.item_id
          WHERE l.user_id = ? 
            AND DATE(i.scheduled_date) = ?
-           AND l.status IN ('completed', 'shipped')
+           AND l.status = 'completed'
            AND l.winning_price > 0
            AND l.final_price >= l.winning_price`,
         [settlement.user_id, settlement.settlement_date],
@@ -1850,7 +1850,7 @@ router.get("/debug/settlement-mismatch", isAdmin, async (req, res) => {
          LEFT JOIN crawled_items i ON d.item_id = i.item_id
          WHERE d.user_id = ? 
            AND DATE(i.scheduled_date) = ?
-           AND d.status IN ('completed', 'shipped')
+           AND d.status = 'completed'
            AND d.winning_price > 0
            AND d.current_price >= d.winning_price`,
         [settlement.user_id, settlement.settlement_date],
@@ -1939,7 +1939,7 @@ router.get("/debug/settlement-mismatch", isAdmin, async (req, res) => {
          JOIN crawled_items i ON l.item_id = i.item_id
          WHERE l.user_id = s.user_id 
            AND DATE(i.scheduled_date) = s.settlement_date
-           AND l.status IN ('completed', 'shipped')
+           AND l.status = 'completed'
            AND l.winning_price > 0
        )
        AND NOT EXISTS (
@@ -1947,7 +1947,7 @@ router.get("/debug/settlement-mismatch", isAdmin, async (req, res) => {
          JOIN crawled_items i ON d.item_id = i.item_id
          WHERE d.user_id = s.user_id 
            AND DATE(i.scheduled_date) = s.settlement_date
-           AND d.status IN ('completed', 'shipped')
+           AND d.status = 'completed'
            AND d.winning_price > 0
        )`,
     );
@@ -1957,7 +1957,7 @@ router.get("/debug/settlement-mismatch", isAdmin, async (req, res) => {
       `SELECT DISTINCT l.user_id, DATE(i.scheduled_date) as settlement_date, COUNT(*) as item_count
        FROM live_bids l
        JOIN crawled_items i ON l.item_id = i.item_id
-       WHERE l.status IN ('completed', 'shipped')
+       WHERE l.status = 'completed'
          AND l.winning_price > 0
          AND l.final_price >= l.winning_price
          AND NOT EXISTS (
@@ -1972,7 +1972,7 @@ router.get("/debug/settlement-mismatch", isAdmin, async (req, res) => {
        SELECT DISTINCT d.user_id, DATE(i.scheduled_date) as settlement_date, COUNT(*) as item_count
        FROM direct_bids d
        JOIN crawled_items i ON d.item_id = i.item_id
-       WHERE d.status IN ('completed', 'shipped')
+       WHERE d.status = 'completed'
          AND d.winning_price > 0
          AND d.current_price >= d.winning_price
          AND NOT EXISTS (
@@ -2024,7 +2024,7 @@ router.post("/debug/fix-settlement-mismatch", isAdmin, async (req, res) => {
       `SELECT DISTINCT l.user_id, DATE(i.scheduled_date) as settlement_date
        FROM live_bids l
        JOIN crawled_items i ON l.item_id = i.item_id
-       WHERE l.status IN ('completed', 'shipped')
+       WHERE l.status = 'completed'
          AND l.winning_price > 0
          AND l.final_price >= l.winning_price
          AND NOT EXISTS (
@@ -2038,7 +2038,7 @@ router.post("/debug/fix-settlement-mismatch", isAdmin, async (req, res) => {
        SELECT DISTINCT d.user_id, DATE(i.scheduled_date) as settlement_date
        FROM direct_bids d
        JOIN crawled_items i ON d.item_id = i.item_id
-       WHERE d.status IN ('completed', 'shipped')
+       WHERE d.status = 'completed'
          AND d.winning_price > 0
          AND d.current_price >= d.winning_price
          AND NOT EXISTS (
@@ -2076,7 +2076,7 @@ router.post("/debug/fix-settlement-mismatch", isAdmin, async (req, res) => {
          JOIN crawled_items i ON l.item_id = i.item_id
          WHERE l.user_id = s.user_id 
            AND DATE(i.scheduled_date) = s.settlement_date
-           AND l.status IN ('completed', 'shipped')
+           AND l.status = 'completed'
            AND l.winning_price > 0
        )
        AND NOT EXISTS (
@@ -2084,7 +2084,7 @@ router.post("/debug/fix-settlement-mismatch", isAdmin, async (req, res) => {
          JOIN crawled_items i ON d.item_id = i.item_id
          WHERE d.user_id = s.user_id 
            AND DATE(i.scheduled_date) = s.settlement_date
-           AND d.status IN ('completed', 'shipped')
+           AND d.status = 'completed'
            AND d.winning_price > 0
        )`,
     );
@@ -2131,7 +2131,7 @@ router.post("/debug/fix-settlement-mismatch", isAdmin, async (req, res) => {
            LEFT JOIN crawled_items i ON l.item_id = i.item_id
            WHERE l.user_id = ? 
              AND DATE(i.scheduled_date) = ?
-             AND l.status IN ('completed', 'shipped')
+             AND l.status = 'completed'
              AND l.winning_price > 0
              AND l.final_price >= l.winning_price`,
           [settlement.user_id, settlement.settlement_date],
@@ -2143,7 +2143,7 @@ router.post("/debug/fix-settlement-mismatch", isAdmin, async (req, res) => {
            LEFT JOIN crawled_items i ON d.item_id = i.item_id
            WHERE d.user_id = ? 
              AND DATE(i.scheduled_date) = ?
-             AND d.status IN ('completed', 'shipped')
+             AND d.status = 'completed'
              AND d.winning_price > 0
              AND d.current_price >= d.winning_price`,
           [settlement.user_id, settlement.settlement_date],
@@ -2511,7 +2511,7 @@ router.get("/admin/bid-results/detail", isAdmin, async (req, res) => {
          i.image
        FROM live_bids lb
        JOIN crawled_items i ON lb.item_id = i.item_id
-       WHERE lb.user_id = ? AND DATE(i.scheduled_date) = ? AND lb.status IN ('completed', 'shipped')`,
+       WHERE lb.user_id = ? AND DATE(i.scheduled_date) = ? AND lb.status = 'completed'`,
       [userId, date],
     );
 
@@ -2533,7 +2533,7 @@ router.get("/admin/bid-results/detail", isAdmin, async (req, res) => {
          i.image
        FROM direct_bids db
        JOIN crawled_items i ON db.item_id = i.item_id
-       WHERE db.user_id = ? AND DATE(i.scheduled_date) = ? AND db.status IN ('completed', 'shipped')`,
+       WHERE db.user_id = ? AND DATE(i.scheduled_date) = ? AND db.status = 'completed'`,
       [userId, date],
     );
 
