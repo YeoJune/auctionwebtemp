@@ -1389,12 +1389,12 @@ router.post("/auction-labels", isAdmin, async (req, res) => {
         }
       }
 
-      // 라벨 생성 시점: bid 테이블 shipping_status = 'completed' 로 전환
-      // (WMS 아이템 등록 완료, 물리적 도착 전)
+      // 라벨 생성 시점: bid 테이블 shipping_status = 'domestic_arrived' 로 전환
+      // (WMS 아이템이 DOMESTIC_ARRIVAL_ZONE에 등록됨 = 국내 도착 처리)
       const bidTableForLabel =
         bidType === "direct" ? "direct_bids" : "live_bids";
       await conn.query(
-        `UPDATE ${bidTableForLabel} SET shipping_status = 'completed', updated_at = NOW() WHERE id = ? AND status = 'completed'`,
+        `UPDATE ${bidTableForLabel} SET shipping_status = 'domestic_arrived', updated_at = NOW() WHERE id = ? AND status = 'completed'`,
         [bidId],
       );
 
