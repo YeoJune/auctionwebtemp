@@ -53,7 +53,7 @@ function requireSuperAdmin(req, res, next) {
   if (isSuperAdminUser(req.session?.user)) return next();
   return res.status(403).json({
     success: false,
-    message: "?�퍼?�드�?권한???�요?�니??",
+    message: "슈퍼어드민 권한이 필요합니다.",
     code: "FORBIDDEN_SUPERADMIN",
   });
 }
@@ -86,7 +86,7 @@ const uploadNoticeImage = multer({
   },
 });
 
-// guide.html???�한 multer ?�정
+// guide.html을 위한 multer 설정
 const guideStorage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, "pages/");
@@ -99,16 +99,16 @@ const guideStorage = multer.diskStorage({
 const uploadGuide = multer({
   storage: guideStorage,
   fileFilter: (req, file, cb) => {
-    // HTML ?�일�??�용
+    // HTML 파일만 허용
     if (file.mimetype === "text/html") {
       cb(null, true);
     } else {
-      cb(new Error("HTML ?�일�??�로??가?�합?�다."), false);
+      cb(new Error("HTML 파일만 업로드 가능합니다."), false);
     }
   },
 });
 
-// inquiry.html???�한 multer ?�정 추�?
+// inquiry.html을 위한 multer 설정 추가
 const inquiryStorage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, "pages/");
@@ -121,11 +121,11 @@ const inquiryStorage = multer.diskStorage({
 const uploadInquiry = multer({
   storage: inquiryStorage,
   fileFilter: (req, file, cb) => {
-    // HTML ?�일�??�용
+    // HTML 파일만 허용
     if (file.mimetype === "text/html") {
       cb(null, true);
     } else {
-      cb(new Error("HTML ?�일�??�로??가?�합?�다."), false);
+      cb(new Error("HTML 파일만 업로드 가능합니다."), false);
     }
   },
 });
@@ -142,60 +142,60 @@ const bidGuideStorage = multer.diskStorage({
 const uploadBidGuide = multer({
   storage: bidGuideStorage,
   fileFilter: (req, file, cb) => {
-    // HTML ?�일�??�용
+    // HTML 파일만 허용
     if (file.mimetype === "text/html") {
       cb(null, true);
     } else {
-      cb(new Error("HTML ?�일�??�로??가?�합?�다."), false);
+      cb(new Error("HTML 파일만 업로드 가능합니다."), false);
     }
   },
 });
 
-// guide.html ?�로???�우??
+// guide.html 업로드 라우트
 router.post(
   "/upload-guide",
   isAdmin,
   uploadGuide.single("guide"),
   (req, res) => {
     if (req.file) {
-      res.json({ message: "guide.html???�공?�으�??�로?�되?�습?�다." });
+      res.json({ message: "guide.html이 성공적으로 업로드되었습니다." });
     } else {
-      res.status(400).json({ message: "guide.html ?�로?�에 ?�패?�습?�다." });
+      res.status(400).json({ message: "guide.html 업로드에 실패했습니다." });
     }
   },
 );
 
-// inquiry.html ?�로???�우??추�?
+// inquiry.html 업로드 라우트 추가
 router.post(
   "/upload-inquiry",
   isAdmin,
   uploadInquiry.single("inquiry"),
   (req, res) => {
     if (req.file) {
-      res.json({ message: "inquiry.html???�공?�으�??�로?�되?�습?�다." });
+      res.json({ message: "inquiry.html이 성공적으로 업로드되었습니다." });
     } else {
-      res.status(400).json({ message: "inquiry.html ?�로?�에 ?�패?�습?�다." });
+      res.status(400).json({ message: "inquiry.html 업로드에 실패했습니다." });
     }
   },
 );
 
-// bid-guide.html ?�로???�우??
+// bid-guide.html 업로드 라우트
 router.post(
   "/upload-bid-guide",
   isAdmin,
   uploadBidGuide.single("bidGuide"),
   (req, res) => {
     if (req.file) {
-      res.json({ message: "bid-guide.html???�공?�으�??�로?�되?�습?�다." });
+      res.json({ message: "bid-guide.html이 성공적으로 업로드되었습니다." });
     } else {
       res
         .status(400)
-        .json({ message: "bid-guide.html ?�로?�에 ?�패?�습?�다." });
+        .json({ message: "bid-guide.html 업로드에 실패했습니다." });
     }
   },
 );
 
-// ?�라?�언??�?공�??�항 조회 API (?�근 ?�한 ?�음)
+// 클라이언트 측 공지사항 조회 API (접근 제한 없음)
 router.get("/public/notices", async (req, res) => {
   try {
     const notices = await getNotices();
@@ -206,7 +206,7 @@ router.get("/public/notices", async (req, res) => {
   }
 });
 
-// ?�정 공�??�항 조회 API (?�근 ?�한 ?�음)
+// 특정 공지사항 조회 API (접근 제한 없음)
 router.get("/public/notices/:id", async (req, res) => {
   try {
     const notice = await getNoticeById(req.params.id);
@@ -230,7 +230,9 @@ router.get("/me/access", isAdmin, async (req, res) => {
     await ensureAdminPermissionTable(pool);
     const user = req.session?.user || {};
     const isSuper = isSuperAdminUser(user);
-    const allowedMenus = isSuper ? ADMIN_MENU_KEYS : parseAllowedMenus(user.allowed_menus);
+    const allowedMenus = isSuper
+      ? ADMIN_MENU_KEYS
+      : parseAllowedMenus(user.allowed_menus);
     return res.json({
       isAdmin: true,
       isSuperAdmin: isSuper,
@@ -238,8 +240,8 @@ router.get("/me/access", isAdmin, async (req, res) => {
       menuKeys: ADMIN_MENU_KEYS,
     });
   } catch (error) {
-    console.error("?�근 권한 조회 ?�류:", error);
-    return res.status(500).json({ message: "?�근 권한 조회 ?�패" });
+    console.error("접근 권한 조회 오류:", error);
+    return res.status(500).json({ message: "접근 권한 조회 실패" });
   }
 });
 
@@ -269,13 +271,16 @@ router.get("/admin-accounts", isAdmin, requireSuperAdmin, async (req, res) => {
     return res.json({
       accounts: (rows || []).map((r) => ({
         ...r,
-        allowedMenus: Number(r.is_superadmin || 0) === 1 ? ADMIN_MENU_KEYS : parseAllowedMenus(r.allowed_menus),
+        allowedMenus:
+          Number(r.is_superadmin || 0) === 1
+            ? ADMIN_MENU_KEYS
+            : parseAllowedMenus(r.allowed_menus),
       })),
       menuKeys: ADMIN_MENU_KEYS,
     });
   } catch (error) {
-    console.error("관리자 계정 목록 조회 ?�류:", error);
-    return res.status(500).json({ message: "관리자 계정 목록 조회 ?�패" });
+    console.error("관리자 계정 목록 조회 오류:", error);
+    return res.status(500).json({ message: "관리자 계정 목록 조회 실패" });
   } finally {
     if (conn) conn.release();
   }
@@ -291,20 +296,28 @@ router.post("/admin-accounts", isAdmin, requireSuperAdmin, async (req, res) => {
     const safeName = String(name || "").trim();
 
     if (!safeLoginId || !safePassword) {
-      return res.status(400).json({ message: "?�이??비�?번호???�수?�니??" });
+      return res.status(400).json({ message: "아이디/비밀번호는 필수입니다." });
     }
     if (!safeLoginId.startsWith("admin")) {
-      return res.status(400).json({ message: "관리자 ?�이?�는 admin?�로 ?�작?�야 ?�니??" });
+      return res
+        .status(400)
+        .json({ message: "관리자 아이디는 admin으로 시작해야 합니다." });
     }
 
     conn = await pool.getConnection();
     const crypto = require("crypto");
-    const hashedPassword = crypto.createHash("sha256").update(safePassword).digest("hex");
+    const hashedPassword = crypto
+      .createHash("sha256")
+      .update(safePassword)
+      .digest("hex");
     const menus = sanitizeAllowedMenus(allowedMenus);
 
     await conn.beginTransaction();
 
-    const [exists] = await conn.query("SELECT id FROM users WHERE login_id = ? LIMIT 1", [safeLoginId]);
+    const [exists] = await conn.query(
+      "SELECT id FROM users WHERE login_id = ? LIMIT 1",
+      [safeLoginId],
+    );
     let userId;
     if (exists.length > 0) {
       userId = exists[0].id;
@@ -330,99 +343,144 @@ router.post("/admin-accounts", isAdmin, requireSuperAdmin, async (req, res) => {
     );
 
     await conn.commit();
-    return res.json({ success: true, message: "관리자 계정 ?�성 ?�료" });
+    return res.json({ success: true, message: "관리자 계정 생성 완료" });
   } catch (error) {
     if (conn) await conn.rollback();
-    console.error("관리자 계정 ?�성 ?�류:", error);
-    return res.status(500).json({ message: "관리자 계정 ?�성 ?�패" });
+    console.error("관리자 계정 생성 오류:", error);
+    return res.status(500).json({ message: "관리자 계정 생성 실패" });
   } finally {
     if (conn) conn.release();
   }
 });
 
-router.put("/admin-accounts/:userId/permissions", isAdmin, requireSuperAdmin, async (req, res) => {
-  let conn;
-  try {
-    await ensureAdminPermissionTable(pool);
-    const userId = Number(req.params.userId);
-    if (!userId) return res.status(400).json({ message: "?�효?��? ?��? ?�용?�입?�다." });
+router.put(
+  "/admin-accounts/:userId/permissions",
+  isAdmin,
+  requireSuperAdmin,
+  async (req, res) => {
+    let conn;
+    try {
+      await ensureAdminPermissionTable(pool);
+      const userId = Number(req.params.userId);
+      if (!userId)
+        return res.status(400).json({ message: "유효하지 않은 사용자입니다." });
 
-    conn = await pool.getConnection();
-    const [users] = await conn.query("SELECT login_id FROM users WHERE id = ? LIMIT 1", [userId]);
-    if (!users.length) return res.status(404).json({ message: "?�용?��? 찾을 ???�습?�다." });
-    if (String(users[0].login_id).toLowerCase() === "admin") {
-      return res.status(400).json({ message: "superadmin 권한?� ?�정?????�습?�다." });
-    }
+      conn = await pool.getConnection();
+      const [users] = await conn.query(
+        "SELECT login_id FROM users WHERE id = ? LIMIT 1",
+        [userId],
+      );
+      if (!users.length)
+        return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
+      if (String(users[0].login_id).toLowerCase() === "admin") {
+        return res
+          .status(400)
+          .json({ message: "superadmin 권한은 수정할 수 없습니다." });
+      }
 
-    const menus = sanitizeAllowedMenus(req.body?.allowedMenus || []);
-    await conn.query(
-      `INSERT INTO admin_panel_permissions (user_id, is_superadmin, allowed_menus)
+      const menus = sanitizeAllowedMenus(req.body?.allowedMenus || []);
+      await conn.query(
+        `INSERT INTO admin_panel_permissions (user_id, is_superadmin, allowed_menus)
        VALUES (?, 0, ?)
        ON DUPLICATE KEY UPDATE allowed_menus = VALUES(allowed_menus), is_superadmin = 0, updated_at = CURRENT_TIMESTAMP`,
-      [userId, JSON.stringify(menus)],
-    );
-    return res.json({ success: true, message: "권한 ?�???�료" });
-  } catch (error) {
-    console.error("관리자 권한 ?�???�류:", error);
-    return res.status(500).json({ message: "권한 ?�???�패" });
-  } finally {
-    if (conn) conn.release();
-  }
-});
-
-router.put("/admin-accounts/:userId/password", isAdmin, requireSuperAdmin, async (req, res) => {
-  let conn;
-  try {
-    const userId = Number(req.params.userId);
-    const password = String(req.body?.password || "").trim();
-    if (!userId || !password) return res.status(400).json({ message: "?�청값이 ?�바르�? ?�습?�다." });
-
-    conn = await pool.getConnection();
-    const [users] = await conn.query("SELECT login_id FROM users WHERE id = ? LIMIT 1", [userId]);
-    if (!users.length) return res.status(404).json({ message: "?�용?��? 찾을 ???�습?�다." });
-    if (String(users[0].login_id).toLowerCase() === "admin") {
-      return res.status(400).json({ message: "superadmin 비�?번호???�기??변경할 ???�습?�다." });
+        [userId, JSON.stringify(menus)],
+      );
+      return res.json({ success: true, message: "권한 저장 완료" });
+    } catch (error) {
+      console.error("관리자 권한 저장 오류:", error);
+      return res.status(500).json({ message: "권한 저장 실패" });
+    } finally {
+      if (conn) conn.release();
     }
+  },
+);
 
-    const crypto = require("crypto");
-    const hashedPassword = crypto.createHash("sha256").update(password).digest("hex");
-    await conn.query("UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", [hashedPassword, userId]);
-    return res.json({ success: true, message: "비�?번호 변�??�료" });
-  } catch (error) {
-    console.error("관리자 비�?번호 변�??�류:", error);
-    return res.status(500).json({ message: "비�?번호 변�??�패" });
-  } finally {
-    if (conn) conn.release();
-  }
-});
+router.put(
+  "/admin-accounts/:userId/password",
+  isAdmin,
+  requireSuperAdmin,
+  async (req, res) => {
+    let conn;
+    try {
+      const userId = Number(req.params.userId);
+      const password = String(req.body?.password || "").trim();
+      if (!userId || !password)
+        return res.status(400).json({ message: "요청값이 올바르지 않습니다." });
 
-router.delete("/admin-accounts/:userId", isAdmin, requireSuperAdmin, async (req, res) => {
-  let conn;
-  try {
-    const userId = Number(req.params.userId);
-    if (!userId) return res.status(400).json({ message: "?�효?��? ?��? ?�용?�입?�다." });
+      conn = await pool.getConnection();
+      const [users] = await conn.query(
+        "SELECT login_id FROM users WHERE id = ? LIMIT 1",
+        [userId],
+      );
+      if (!users.length)
+        return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
+      if (String(users[0].login_id).toLowerCase() === "admin") {
+        return res.status(400).json({
+          message: "superadmin 비밀번호는 여기서 변경할 수 없습니다.",
+        });
+      }
 
-    conn = await pool.getConnection();
-    const [users] = await conn.query("SELECT login_id FROM users WHERE id = ? LIMIT 1", [userId]);
-    if (!users.length) return res.status(404).json({ message: "?�용?��? 찾을 ???�습?�다." });
-    if (String(users[0].login_id).toLowerCase() === "admin") {
-      return res.status(400).json({ message: "superadmin 계정?� ??��?????�습?�다." });
+      const crypto = require("crypto");
+      const hashedPassword = crypto
+        .createHash("sha256")
+        .update(password)
+        .digest("hex");
+      await conn.query(
+        "UPDATE users SET password = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        [hashedPassword, userId],
+      );
+      return res.json({ success: true, message: "비밀번호 변경 완료" });
+    } catch (error) {
+      console.error("관리자 비밀번호 변경 오류:", error);
+      return res.status(500).json({ message: "비밀번호 변경 실패" });
+    } finally {
+      if (conn) conn.release();
     }
+  },
+);
 
-    await conn.beginTransaction();
-    await conn.query("DELETE FROM admin_panel_permissions WHERE user_id = ?", [userId]);
-    await conn.query("DELETE FROM users WHERE id = ?", [userId]);
-    await conn.commit();
+router.delete(
+  "/admin-accounts/:userId",
+  isAdmin,
+  requireSuperAdmin,
+  async (req, res) => {
+    let conn;
+    try {
+      const userId = Number(req.params.userId);
+      if (!userId)
+        return res.status(400).json({ message: "유효하지 않은 사용자입니다." });
 
-    return res.json({ success: true, message: "관리자 계정 ??�� ?�료" });
-  } catch (error) {
-    if (conn) await conn.rollback();
-    console.error("관리자 계정 ??�� ?�류:", error);
-    return res.status(500).json({ message: "관리자 계정 ??�� ?�패" });
-  } finally {
-    if (conn) conn.release();
-  }
-});
+      conn = await pool.getConnection();
+      const [users] = await conn.query(
+        "SELECT login_id FROM users WHERE id = ? LIMIT 1",
+        [userId],
+      );
+      if (!users.length)
+        return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
+      if (String(users[0].login_id).toLowerCase() === "admin") {
+        return res
+          .status(400)
+          .json({ message: "superadmin 계정은 삭제할 수 없습니다." });
+      }
+
+      await conn.beginTransaction();
+      await conn.query(
+        "DELETE FROM admin_panel_permissions WHERE user_id = ?",
+        [userId],
+      );
+      await conn.query("DELETE FROM users WHERE id = ?", [userId]);
+      await conn.commit();
+
+      return res.json({ success: true, message: "관리자 계정 삭제 완료" });
+    } catch (error) {
+      if (conn) await conn.rollback();
+      console.error("관리자 계정 삭제 오류:", error);
+      return res.status(500).json({ message: "관리자 계정 삭제 실패" });
+    } finally {
+      if (conn) conn.release();
+    }
+  },
+);
 
 router.get("/activity-logs", isAdmin, async (req, res) => {
   let conn;
@@ -466,7 +524,9 @@ router.get("/activity-logs", isAdmin, async (req, res) => {
       params.push(`%${menu}%`);
     }
     if (action) {
-      where.push("(action_title LIKE ? OR action_summary LIKE ? OR action_label LIKE ?)");
+      where.push(
+        "(action_title LIKE ? OR action_summary LIKE ? OR action_label LIKE ?)",
+      );
       params.push(`%${action}%`, `%${action}%`, `%${action}%`);
     }
     if (dateFrom) {
@@ -506,8 +566,8 @@ router.get("/activity-logs", isAdmin, async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("관리자 ?�동로그 조회 ?�류:", error);
-    res.status(500).json({ message: "?�동로그 조회 �??�류가 발생?�습?�다." });
+    console.error("관리자 활동로그 조회 오류:", error);
+    res.status(500).json({ message: "활동로그 조회 중 오류가 발생했습니다." });
   } finally {
     if (conn) conn.release();
   }
@@ -574,7 +634,7 @@ router.get("/notices/:id", async (req, res) => {
   }
 });
 
-// ?��?지-URL 기반 공�? ?�스?�을 ?�한 ?�정???�우?�들
+// 이미지-URL 기반 공지 시스템을 위한 수정된 라우트들
 router.post(
   "/notices",
   isAdmin,
@@ -583,7 +643,7 @@ router.post(
     try {
       const { title, targetUrl } = req.body;
 
-      // ?�목�??��?지 ?�수 검�?
+      // 제목과 이미지 필수 검증
       if (!title) {
         return res.status(400).json({ message: "Title is required" });
       }
@@ -592,7 +652,7 @@ router.post(
         return res.status(400).json({ message: "Image is required" });
       }
 
-      // ?��?지 처리
+      // 이미지 처리
       const uniqueSuffix = Date.now() + "-" + uuidv4();
       const filename = `notice-${uniqueSuffix}.webp`;
       const outputPath = path.join(
@@ -605,7 +665,7 @@ router.post(
 
       const imageUrl = `/images/notices/${filename}`;
 
-      // 공�??�항 ?�??
+      // 공지사항 저장
       const newNotice = await addNotice(title, imageUrl, targetUrl || null);
       res.status(201).json(newNotice);
     } catch (error) {
@@ -624,14 +684,14 @@ router.put(
       const { id } = req.params;
       const { title, targetUrl, keepExistingImage } = req.body;
 
-      // ?�목 ?�수 검�?
+      // 제목 필수 검증
       if (!title) {
         return res.status(400).json({ message: "Title is required" });
       }
 
       let imageUrl;
 
-      // ???��?지가 ?�로?�된 경우
+      // 새 이미지가 업로드된 경우
       if (req.file) {
         const uniqueSuffix = Date.now() + "-" + uuidv4();
         const filename = `notice-${uniqueSuffix}.webp`;
@@ -645,7 +705,7 @@ router.put(
 
         imageUrl = `/images/notices/${filename}`;
       }
-      // 기존 ?��?지 ?��??�는 경우
+      // 기존 이미지 유지하는 경우
       else if (keepExistingImage === "true") {
         const existingNotice = await getNoticeById(id);
         if (!existingNotice) {
@@ -653,12 +713,12 @@ router.put(
         }
         imageUrl = existingNotice.imageUrl;
       }
-      // ???��?지???�고 기존 ?��?지???��??��? ?�는 경우
+      // 새 이미지도 없고 기존 이미지도 유지하지 않는 경우
       else {
         return res.status(400).json({ message: "Image is required" });
       }
 
-      // 공�??�항 ?�데?�트
+      // 공지사항 업데이트
       const updatedNotice = await updateNotice(
         id,
         title,
@@ -730,7 +790,7 @@ router.post("/filter-settings/initialize", isAdmin, async (req, res) => {
   try {
     await initializeFilterSettings();
 
-    // 초기????즉시 ?�기??
+    // 초기화 후 즉시 동기화
     await syncFilterSettingsToItems();
     res.json({ message: "Filter settings initialized successfully" });
   } catch (error) {
@@ -768,7 +828,7 @@ router.put("/filter-settings/batch", isAdmin, async (req, res) => {
       results.push(result);
     }
 
-    // 배치 ?�데?�트 ?�료 ??즉시 ?�기??
+    // 배치 업데이트 완료 후 즉시 동기화
     await initializeFilterSettings();
 
     res.json({
@@ -783,11 +843,11 @@ router.put("/filter-settings/batch", isAdmin, async (req, res) => {
 
 // Recommendation Settings Routes
 
-// 모든 추천 ?�정 조회
+// 모든 추천 설정 조회
 router.get("/recommend-settings", isAdmin, async (req, res) => {
   try {
     const settings = await getRecommendSettings();
-    // conditions가 JSON 문자?�이므�??�싱?�서 보내줍니??
+    // conditions가 JSON 문자열이므로 파싱해서 보내줍니다.
     const parsedSettings = settings.map((s) => ({
       ...s,
       conditions: JSON.parse(s.conditions),
@@ -799,7 +859,7 @@ router.get("/recommend-settings", isAdmin, async (req, res) => {
   }
 });
 
-// ??추천 ?�정 추�?
+// 새 추천 설정 추가
 router.post("/recommend-settings", isAdmin, async (req, res) => {
   try {
     const { ruleName, conditions, recommendScore } = req.body;
@@ -814,7 +874,7 @@ router.post("/recommend-settings", isAdmin, async (req, res) => {
       recommendScore,
     );
 
-    // ??규칙 추�? ??즉시 ?�기??
+    // 새 규칙 추가 후 즉시 동기화
     await syncRecommendSettingsToItems();
 
     res.status(201).json(newSetting);
@@ -824,14 +884,14 @@ router.post("/recommend-settings", isAdmin, async (req, res) => {
   }
 });
 
-// 배치 ?�데?�트 ?�우??
+// 배치 업데이트 라우트
 router.put("/recommend-settings/batch", isAdmin, async (req, res) => {
   try {
     const { settings } = req.body;
 
     const results = await updateRecommendSettingsBatch(settings);
 
-    // 배치 ?�데?�트 ?�료 ??즉시 ?�기??
+    // 배치 업데이트 완료 후 즉시 동기화
     await syncRecommendSettingsToItems();
 
     res.json({
@@ -847,7 +907,7 @@ router.put("/recommend-settings/batch", isAdmin, async (req, res) => {
   }
 });
 
-// 기존 추천 ?�정 ?�데?�트
+// 기존 추천 설정 업데이트
 router.put("/recommend-settings/:id", isAdmin, async (req, res) => {
   try {
     const { id } = req.params;
@@ -870,7 +930,7 @@ router.put("/recommend-settings/:id", isAdmin, async (req, res) => {
       isEnabled,
     );
 
-    // 규칙 ?�정 ??즉시 ?�기??
+    // 규칙 수정 후 즉시 동기화
     await syncRecommendSettingsToItems();
 
     res.json(updatedSetting);
@@ -880,7 +940,7 @@ router.put("/recommend-settings/:id", isAdmin, async (req, res) => {
   }
 });
 
-// 추천 ?�정 ??��
+// 추천 설정 삭제
 router.delete("/recommend-settings/:id", isAdmin, async (req, res) => {
   try {
     const { id } = req.params;
@@ -889,7 +949,7 @@ router.delete("/recommend-settings/:id", isAdmin, async (req, res) => {
       return res.status(404).json({ message: "Setting not found" });
     }
 
-    // 규칙 ??�� ??즉시 ?�기??
+    // 규칙 삭제 후 즉시 동기화
     await syncRecommendSettingsToItems();
 
     res.json({ message: "Recommend setting deleted successfully" });
@@ -904,42 +964,42 @@ router.put("/values/:itemId/price", isAdmin, async (req, res) => {
     const { itemId } = req.params;
     const { final_price } = req.body;
 
-    // ?�력�?검�?
+    // 입력값 검증
     if (!final_price || isNaN(parseFloat(final_price))) {
       return res.status(400).json({
         success: false,
-        message: "?�효??가격을 ?�력?�주?�요",
+        message: "유효한 가격을 입력해주세요",
       });
     }
 
-    // 가�??�이???�데?�트
+    // 가격 데이터 업데이트
     await DBManager.updateItemDetails(
       itemId,
       {
-        final_price: parseFloat(final_price).toFixed(2), // ?�수??2?�리까�? ?�??
+        final_price: parseFloat(final_price).toFixed(2), // 소수점 2자리까지 저장
       },
       "values_items",
     );
 
     res.json({
       success: true,
-      message: "가격이 ?�공?�으�??�데?�트?�었?�니??,
+      message: "가격이 성공적으로 업데이트되었습니다",
     });
   } catch (error) {
     console.error("Error updating item price:", error);
     res.status(500).json({
       success: false,
-      message: "가�??�데?�트 �??�류가 발생?�습?�다",
+      message: "가격 업데이트 중 오류가 발생했습니다",
     });
   }
 });
 
-// 관리자 거래 ?�역 ?�이지 ?�더�?
+// 관리자 거래 내역 페이지 렌더링
 router.get("/transactions", isAdmin, (req, res) => {
   res.sendFile(path.join(__dirname, "../pages/admin/transactions.html"));
 });
 
-// ?�보?�스 목록 조회
+// 인보이스 목록 조회
 router.get("/invoices", isAdmin, async (req, res) => {
   try {
     const {
@@ -951,12 +1011,12 @@ router.get("/invoices", isAdmin, async (req, res) => {
       endDate,
     } = req.query;
 
-    // ?�이지?� ?�한 검�?
+    // 페이지와 제한 검증
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
     const offset = (pageNum - 1) * limitNum;
 
-    // 쿼리 매개변??
+    // 쿼리 매개변수
     const queryParams = [];
 
     // 기본 쿼리 구성
@@ -971,19 +1031,19 @@ router.get("/invoices", isAdmin, async (req, res) => {
       WHERE 1=1
     `;
 
-    // 경매???�터
+    // 경매사 필터
     if (auc_num) {
       query += ` AND auc_num = ?`;
       queryParams.push(auc_num);
     }
 
-    // ?�태 ?�터
+    // 상태 필터
     if (status) {
       query += ` AND status = ?`;
       queryParams.push(status);
     }
 
-    // ?�짜 범위 ?�터
+    // 날짜 범위 필터
     if (startDate) {
       query += ` AND date >= ?`;
       queryParams.push(startDate);
@@ -994,21 +1054,21 @@ router.get("/invoices", isAdmin, async (req, res) => {
       queryParams.push(endDate);
     }
 
-    // ?�짜???�렬 (최신??
+    // 날짜순 정렬 (최신순)
     query += ` ORDER BY date DESC`;
 
-    // ?�이지?�이??추�?
+    // 페이지네이션 추가
     query += ` LIMIT ? OFFSET ?`;
     queryParams.push(limitNum, offset);
 
-    // �??�코????쿼리
+    // 총 레코드 수 쿼리
     let countQuery = `
       SELECT COUNT(*) as total
       FROM invoices
       WHERE 1=1
     `;
 
-    // ?�일???�터 조건 ?�용
+    // 동일한 필터 조건 적용
     if (auc_num) {
       countQuery += ` AND auc_num = ?`;
     }
@@ -1022,10 +1082,10 @@ router.get("/invoices", isAdmin, async (req, res) => {
       countQuery += ` AND date <= ?`;
     }
 
-    // 카운??쿼리???�용???�라미터 (LIMIT, OFFSET ?�외)
+    // 카운트 쿼리에 사용할 파라미터 (LIMIT, OFFSET 제외)
     const countParams = queryParams.slice(0, queryParams.length - 2);
 
-    // DB ?�결 �?쿼리 ?�행
+    // DB 연결 및 쿼리 실행
     const [rows] = await pool.query(query, queryParams);
     const [countResult] = await pool.query(countQuery, countParams);
 
@@ -1045,17 +1105,17 @@ router.get("/invoices", isAdmin, async (req, res) => {
     console.error("Error fetching invoices:", error);
     res
       .status(500)
-      .json({ message: "?�보?�스 목록??불러?�는 �??�류가 발생?�습?�다." });
+      .json({ message: "인보이스 목록을 불러오는 중 오류가 발생했습니다." });
   }
 });
 
 // =====================================================
-// ?��? ?�보?�기 API
+// 엑셀 내보내기 API
 // =====================================================
 
 /**
  * GET /api/admin/users-list
- * ?��? 목록 조회 (?��? ?�보?�기 ?�터??
+ * 유저 목록 조회 (엑셀 내보내기 필터용)
  */
 router.get("/users-list", isAdmin, async (req, res) => {
   try {
@@ -1073,7 +1133,7 @@ router.get("/users-list", isAdmin, async (req, res) => {
 });
 
 // =====================================================
-// ?�원 그룹 (member_groups, user_member_groups)
+// 회원 그룹 (member_groups, user_member_groups)
 // =====================================================
 
 const DEFAULT_MEMBER_GROUPS = ["artecasa", "doyakcasa"];
@@ -1125,64 +1185,73 @@ router.get("/member-groups", isAdmin, async (req, res) => {
   try {
     await ensureMemberGroupTables();
     const [rows] = await pool.query(
-      "SELECT id, name, sort_order, created_at FROM member_groups ORDER BY sort_order ASC, name ASC"
+      "SELECT id, name, sort_order, created_at FROM member_groups ORDER BY sort_order ASC, name ASC",
     );
     res.json(rows);
   } catch (error) {
     console.error("member-groups list error:", error);
-    res.status(500).json({ message: "그룹 목록 조회 ?�패" });
+    res.status(500).json({ message: "그룹 목록 조회 실패" });
   }
 });
 
-/** POST /api/admin/member-groups - 그룹 ?�성 */
+/** POST /api/admin/member-groups - 그룹 생성 */
 router.post("/member-groups", isAdmin, async (req, res) => {
   try {
     await ensureMemberGroupTables();
     const name = String(req.body?.name || "").trim();
-    if (!name) return res.status(400).json({ message: "그룹명을 ?�력?�세??" });
+    if (!name) return res.status(400).json({ message: "그룹명을 입력하세요." });
 
     const [maxRows] = await pool.query(
-      "SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM member_groups"
+      "SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM member_groups",
     );
     const nextOrder = maxRows[0]?.next_order ?? 1;
-    const [result] = await pool.query("INSERT INTO member_groups (name, sort_order) VALUES (?, ?)", [
-      name,
-      nextOrder,
-    ]);
-    const [rows] = await pool.query("SELECT id, name, sort_order, created_at FROM member_groups WHERE id = ?", [
-      result.insertId,
-    ]);
+    const [result] = await pool.query(
+      "INSERT INTO member_groups (name, sort_order) VALUES (?, ?)",
+      [name, nextOrder],
+    );
+    const [rows] = await pool.query(
+      "SELECT id, name, sort_order, created_at FROM member_groups WHERE id = ?",
+      [result.insertId],
+    );
     res.status(201).json(rows[0]);
   } catch (error) {
     if (error.code === "ER_DUP_ENTRY")
-      return res.status(400).json({ message: "?��? 같�? ?�름??그룹???�습?�다." });
+      return res
+        .status(400)
+        .json({ message: "이미 같은 이름의 그룹이 있습니다." });
     console.error("member-groups create error:", error);
-    res.status(500).json({ message: "그룹 ?�성 ?�패" });
+    res.status(500).json({ message: "그룹 생성 실패" });
   }
 });
 
-/** DELETE /api/admin/member-groups/:id - 그룹 ??�� */
+/** DELETE /api/admin/member-groups/:id - 그룹 삭제 */
 router.delete("/member-groups/:id", isAdmin, async (req, res) => {
   try {
     await ensureMemberGroupTables();
     const id = parseInt(req.params.id, 10);
-    if (!id) return res.status(400).json({ message: "?�효?��? ?��? 그룹 ID?�니??" });
+    if (!id)
+      return res.status(400).json({ message: "유효하지 않은 그룹 ID입니다." });
 
-    const [result] = await pool.query("DELETE FROM member_groups WHERE id = ?", [id]);
-    if (result.affectedRows === 0) return res.status(404).json({ message: "그룹??찾을 ???�습?�다." });
+    const [result] = await pool.query(
+      "DELETE FROM member_groups WHERE id = ?",
+      [id],
+    );
+    if (result.affectedRows === 0)
+      return res.status(404).json({ message: "그룹을 찾을 수 없습니다." });
     res.json({ success: true });
   } catch (error) {
     console.error("member-groups delete error:", error);
-    res.status(500).json({ message: "그룹 ??�� ?�패" });
+    res.status(500).json({ message: "그룹 삭제 실패" });
   }
 });
 
-/** GET /api/admin/member-groups/:id/members - 그룹 ?�속 ?�원 목록 (users ?�보 ?�함) */
+/** GET /api/admin/member-groups/:id/members - 그룹 소속 회원 목록 (users 정보 포함) */
 router.get("/member-groups/:id/members", isAdmin, async (req, res) => {
   try {
     await ensureMemberGroupTables();
     const groupId = parseInt(req.params.id, 10);
-    if (!groupId) return res.status(400).json({ message: "?�효?��? ?��? 그룹 ID?�니??" });
+    if (!groupId)
+      return res.status(400).json({ message: "유효하지 않은 그룹 ID입니다." });
 
     const [rows] = await pool.query(
       `SELECT u.id, u.login_id, u.company_name, u.registration_date, u.is_active,
@@ -1195,10 +1264,10 @@ router.get("/member-groups/:id/members", isAdmin, async (req, res) => {
          SELECT user_id, COUNT(*) AS total_bid_count, COALESCE(SUM(amount_jpy), 0) AS total_bid_jpy
          FROM (
            SELECT user_id, COALESCE(CAST(REPLACE(COALESCE(winning_price,final_price,second_price,first_price), ',', '') AS DECIMAL(18,2)), 0) AS amount_jpy
-           FROM live_bids WHERE user_id IS NOT NULL AND status = 'completed'
+           FROM live_bids WHERE user_id IS NOT NULL AND status IN ('completed','domestic_arrived','processing','shipped')
            UNION ALL
            SELECT user_id, COALESCE(CAST(REPLACE(COALESCE(winning_price,current_price), ',', '') AS DECIMAL(18,2)), 0) AS amount_jpy
-           FROM direct_bids WHERE user_id IS NOT NULL AND status = 'completed'
+           FROM direct_bids WHERE user_id IS NOT NULL AND status IN ('completed','domestic_arrived','processing','shipped')
          ) t GROUP BY user_id
        ) bt ON bt.user_id = u.id
        LEFT JOIN (
@@ -1209,31 +1278,34 @@ router.get("/member-groups/:id/members", isAdmin, async (req, res) => {
        ) lb ON lb.user_id = u.id
        WHERE umg.group_id = ?
        ORDER BY bt.total_bid_jpy DESC, u.login_id ASC`,
-      [groupId]
+      [groupId],
     );
     res.json(rows);
   } catch (error) {
     console.error("member-groups members list error:", error);
-    res.status(500).json({ message: "그룹 ?�원 목록 조회 ?�패" });
+    res.status(500).json({ message: "그룹 회원 목록 조회 실패" });
   }
 });
 
-/** POST /api/admin/member-groups/:id/members - 그룹???�원 추�? */
+/** POST /api/admin/member-groups/:id/members - 그룹에 회원 추가 */
 router.post("/member-groups/:id/members", isAdmin, async (req, res) => {
   try {
     await ensureMemberGroupTables();
     const groupId = parseInt(req.params.id, 10);
     const userId = parseInt(req.body?.user_id, 10);
-    if (!groupId || !userId) return res.status(400).json({ message: "그룹 ID?� ?�원 ID가 ?�요?�니??" });
+    if (!groupId || !userId)
+      return res
+        .status(400)
+        .json({ message: "그룹 ID와 회원 ID가 필요합니다." });
 
-    const [result] = await pool.query("INSERT IGNORE INTO user_member_groups (user_id, group_id) VALUES (?, ?)", [
-      userId,
-      groupId,
-    ]);
+    const [result] = await pool.query(
+      "INSERT IGNORE INTO user_member_groups (user_id, group_id) VALUES (?, ?)",
+      [userId, groupId],
+    );
     res.status(201).json({ success: true, added: result.affectedRows > 0 });
   } catch (error) {
     console.error("member-groups add member error:", error);
-    res.status(500).json({ message: "?�원 추�? ?�패" });
+    res.status(500).json({ message: "회원 추가 실패" });
   }
 });
 
@@ -1247,22 +1319,29 @@ function normalizeUserIds(input) {
   return Array.from(uniq);
 }
 
-/** POST /api/admin/member-groups/:id/members/batch - 그룹???�원 ?�괄 추�? */
+/** POST /api/admin/member-groups/:id/members/batch - 그룹에 회원 일괄 추가 */
 router.post("/member-groups/:id/members/batch", isAdmin, async (req, res) => {
   try {
     await ensureMemberGroupTables();
     const groupId = parseInt(req.params.id, 10);
     const userIds = normalizeUserIds(req.body?.user_ids);
     if (!groupId || userIds.length === 0) {
-      return res.status(400).json({ message: "그룹 ID?� user_ids 배열???�요?�니??" });
+      return res
+        .status(400)
+        .json({ message: "그룹 ID와 user_ids 배열이 필요합니다." });
     }
 
     const userPlaceholders = userIds.map(() => "?").join(", ");
-    const [existingUsers] = await pool.query(`SELECT id FROM users WHERE id IN (${userPlaceholders})`, userIds);
-    const existingUserIds = Array.isArray(existingUsers) ? existingUsers.map((r) => Number(r.id)).filter(Boolean) : [];
+    const [existingUsers] = await pool.query(
+      `SELECT id FROM users WHERE id IN (${userPlaceholders})`,
+      userIds,
+    );
+    const existingUserIds = Array.isArray(existingUsers)
+      ? existingUsers.map((r) => Number(r.id)).filter(Boolean)
+      : [];
 
     if (!existingUserIds.length) {
-      return res.status(400).json({ message: "추�? 가?�한 ?�원???�습?�다." });
+      return res.status(400).json({ message: "추가 가능한 회원이 없습니다." });
     }
 
     const valuesSql = existingUserIds.map(() => "(?, ?)").join(", ");
@@ -1284,62 +1363,75 @@ router.post("/member-groups/:id/members/batch", isAdmin, async (req, res) => {
     });
   } catch (error) {
     console.error("member-groups batch add members error:", error);
-    res.status(500).json({ message: "?�원 ?�괄 추�? ?�패" });
+    res.status(500).json({ message: "회원 일괄 추가 실패" });
   }
 });
 
-/** POST /api/admin/member-groups/:id/members/batch-remove - 그룹?�서 ?�원 ?�괄 ?�거 */
-router.post("/member-groups/:id/members/batch-remove", isAdmin, async (req, res) => {
-  try {
-    await ensureMemberGroupTables();
-    const groupId = parseInt(req.params.id, 10);
-    const userIds = normalizeUserIds(req.body?.user_ids);
-    if (!groupId || userIds.length === 0) {
-      return res.status(400).json({ message: "그룹 ID?� user_ids 배열???�요?�니??" });
+/** POST /api/admin/member-groups/:id/members/batch-remove - 그룹에서 회원 일괄 제거 */
+router.post(
+  "/member-groups/:id/members/batch-remove",
+  isAdmin,
+  async (req, res) => {
+    try {
+      await ensureMemberGroupTables();
+      const groupId = parseInt(req.params.id, 10);
+      const userIds = normalizeUserIds(req.body?.user_ids);
+      if (!groupId || userIds.length === 0) {
+        return res
+          .status(400)
+          .json({ message: "그룹 ID와 user_ids 배열이 필요합니다." });
+      }
+
+      const placeholders = userIds.map(() => "?").join(", ");
+      const [result] = await pool.query(
+        `DELETE FROM user_member_groups WHERE group_id = ? AND user_id IN (${placeholders})`,
+        [groupId, ...userIds],
+      );
+
+      res.json({
+        success: true,
+        requested: userIds.length,
+        removed: result.affectedRows || 0,
+      });
+    } catch (error) {
+      console.error("member-groups batch remove members error:", error);
+      res.status(500).json({ message: "회원 일괄 제거 실패" });
     }
+  },
+);
 
-    const placeholders = userIds.map(() => "?").join(", ");
-    const [result] = await pool.query(
-      `DELETE FROM user_member_groups WHERE group_id = ? AND user_id IN (${placeholders})`,
-      [groupId, ...userIds],
-    );
+/** DELETE /api/admin/member-groups/:id/members/:userId - 그룹에서 회원 제거 */
+router.delete(
+  "/member-groups/:id/members/:userId",
+  isAdmin,
+  async (req, res) => {
+    try {
+      await ensureMemberGroupTables();
+      const groupId = parseInt(req.params.id, 10);
+      const userId = parseInt(req.params.userId, 10);
+      if (!groupId || !userId)
+        return res
+          .status(400)
+          .json({ message: "그룹 ID와 회원 ID가 필요합니다." });
 
-    res.json({
-      success: true,
-      requested: userIds.length,
-      removed: result.affectedRows || 0,
-    });
-  } catch (error) {
-    console.error("member-groups batch remove members error:", error);
-    res.status(500).json({ message: "?�원 ?�괄 ?�거 ?�패" });
-  }
-});
-
-/** DELETE /api/admin/member-groups/:id/members/:userId - 그룹?�서 ?�원 ?�거 */
-router.delete("/member-groups/:id/members/:userId", isAdmin, async (req, res) => {
-  try {
-    await ensureMemberGroupTables();
-    const groupId = parseInt(req.params.id, 10);
-    const userId = parseInt(req.params.userId, 10);
-    if (!groupId || !userId) return res.status(400).json({ message: "그룹 ID?� ?�원 ID가 ?�요?�니??" });
-
-    const [result] = await pool.query("DELETE FROM user_member_groups WHERE group_id = ? AND user_id = ?", [
-      groupId,
-      userId,
-    ]);
-    res.json({ success: true, removed: result.affectedRows > 0 });
-  } catch (error) {
-    console.error("member-groups remove member error:", error);
-    res.status(500).json({ message: "?�원 ?�거 ?�패" });
-  }
-});
+      const [result] = await pool.query(
+        "DELETE FROM user_member_groups WHERE group_id = ? AND user_id = ?",
+        [groupId, userId],
+      );
+      res.json({ success: true, removed: result.affectedRows > 0 });
+    } catch (error) {
+      console.error("member-groups remove member error:", error);
+      res.status(500).json({ message: "회원 제거 실패" });
+    }
+  },
+);
 
 /**
  * GET /api/admin/export/bids
- * ?�찰 ??�� ?��? ?�보?�기 (?�장 + 직접 ?�합)
+ * 입찰 항목 엑셀 내보내기 (현장 + 직접 통합)
  */
 router.get("/export/bids", isAdmin, async (req, res) => {
-  // ?�?�아???�정: 5�?(?�?�량 ?�이??처리�??�해)
+  // 타임아웃 설정: 5분 (대용량 데이터 처리를 위해)
   req.setTimeout(300000);
   res.setTimeout(300000);
 
@@ -1359,16 +1451,16 @@ router.get("/export/bids", isAdmin, async (req, res) => {
   const connection = await pool.getConnection();
 
   try {
-    console.log("?�찰 ??�� ?��? ?�보?�기 ?�작:", req.query);
+    console.log("입찰 항목 엑셀 내보내기 시작:", req.query);
 
-    // ?�율 가?�오�?
+    // 환율 가져오기
     const exchangeRate = await getExchangeRate();
 
     // 쿼리 조건 구성
     const queryConditions = ["1=1"];
     const queryParams = [];
 
-    // ?��? ?�터 (�?문자??= ?�체 ?��?)
+    // 유저 필터 (빈 문자열 = 전체 유저)
     if (userId) {
       const userIdArray = userId.split(",");
       if (userIdArray.length === 1) {
@@ -1381,7 +1473,7 @@ router.get("/export/bids", isAdmin, async (req, res) => {
       }
     }
 
-    // 브랜???�터 (�?문자??= ?�체 브랜??
+    // 브랜드 필터 (빈 문자열 = 전체 브랜드)
     if (brands) {
       const brandArray = brands.split(",");
       if (brandArray.length === 1) {
@@ -1394,7 +1486,7 @@ router.get("/export/bids", isAdmin, async (req, res) => {
       }
     }
 
-    // 카테고리 ?�터 (�?문자??= ?�체 카테고리)
+    // 카테고리 필터 (빈 문자열 = 전체 카테고리)
     if (categories) {
       const categoryArray = categories.split(",");
       if (categoryArray.length === 1) {
@@ -1407,7 +1499,7 @@ router.get("/export/bids", isAdmin, async (req, res) => {
       }
     }
 
-    // ?�태 ?�터 (�?문자??= ?�체 ?�태)
+    // 상태 필터 (빈 문자열 = 전체 상태)
     if (status) {
       const statusArray = status.split(",");
       if (statusArray.length === 1) {
@@ -1420,7 +1512,7 @@ router.get("/export/bids", isAdmin, async (req, res) => {
       }
     }
 
-    // 출품???�터
+    // 출품사 필터
     if (aucNum) {
       const aucNumArray = aucNum.split(",");
       if (aucNumArray.length === 1) {
@@ -1433,7 +1525,7 @@ router.get("/export/bids", isAdmin, async (req, res) => {
       }
     }
 
-    // ?�짜 ?�터
+    // 날짜 필터
     if (fromDate) {
       queryConditions.push("i.scheduled_date >= ?");
       queryParams.push(fromDate);
@@ -1445,7 +1537,7 @@ router.get("/export/bids", isAdmin, async (req, res) => {
 
     const whereClause = queryConditions.join(" AND ");
 
-    // ?�렬 ?�정
+    // 정렬 설정
     let orderByColumn;
     switch (sortBy) {
       case "original_scheduled_date":
@@ -1463,10 +1555,10 @@ router.get("/export/bids", isAdmin, async (req, res) => {
     }
     const direction = sortOrder.toUpperCase() === "ASC" ? "ASC" : "DESC";
 
-    // ?�이???�집
+    // 데이터 수집
     const allRows = [];
 
-    // ?�장 경매 ?�이??(type??비어?�거??'live'??경우)
+    // 현장 경매 데이터 (type이 비어있거나 'live'인 경우)
     if (!type || type === "live") {
       const liveQuery = `
         SELECT 
@@ -1489,7 +1581,7 @@ router.get("/export/bids", isAdmin, async (req, res) => {
       allRows.push(...liveRows);
     }
 
-    // 직접 경매 ?�이??(type??비어?�거??'direct'??경우)
+    // 직접 경매 데이터 (type이 비어있거나 'direct'인 경우)
     if (!type || type === "direct") {
       const directQuery = `
         SELECT 
@@ -1514,41 +1606,41 @@ router.get("/export/bids", isAdmin, async (req, res) => {
       allRows.push(...directRows);
     }
 
-    console.log(`�?${allRows.length}�??�찰 ??�� 조회 ?�료`);
+    console.log(`총 ${allRows.length}개 입찰 항목 조회 완료`);
 
-    // ?��? 컬럼 ?�의
+    // 엑셀 컬럼 정의
     const columns = [
       { header: "구분", key: "type", width: 10 },
-      { header: "?�찰ID", key: "bid_id", width: 10 },
-      { header: "?�태", key: "status", width: 12 },
-      { header: "?��?ID", key: "user_login", width: 15 },
-      { header: "?�사�?, key: "company_name", width: 20 },
-      { header: "?�품ID", key: "item_id", width: 15 },
-      { header: "?�목", key: "title", width: 40 },
-      { header: "브랜??, key: "brand", width: 15 },
+      { header: "입찰ID", key: "bid_id", width: 10 },
+      { header: "상태", key: "status", width: 12 },
+      { header: "유저ID", key: "user_login", width: 15 },
+      { header: "회사명", key: "company_name", width: 20 },
+      { header: "상품ID", key: "item_id", width: 15 },
+      { header: "제목", key: "title", width: 40 },
+      { header: "브랜드", key: "brand", width: 15 },
       { header: "카테고리", key: "category", width: 12 },
-      { header: "?�급", key: "rank", width: 10 },
-      { header: "출품??, key: "auc_num", width: 10 },
-      { header: "?�정?�시", key: "scheduled_date", width: 20 },
-      { header: "?�시?��?(¥)", key: "starting_price", width: 15 },
-      { header: "1차입찰�?(¥)", key: "first_price", width: 15 },
-      { header: "2차제?��?(¥)", key: "second_price", width: 15 },
-      { header: "최종?�찰가(¥)", key: "final_price", width: 15 },
-      { header: "?�찰금액(¥)", key: "winning_price", width: 15 },
-      { header: "관부가?�포????", key: "krw_total", width: 18 },
-      { header: "감정?�ID", key: "appr_id", width: 12 },
-      { header: "?�선?�청??, key: "repair_requested_at", width: 20 },
-      { header: "?�선비용(??", key: "repair_fee", width: 15 },
-      { header: "?�랫?�반??, key: "submitted_to_platform", width: 12 },
-      { header: "?�성??, key: "created_at", width: 20 },
-      { header: "?�정??, key: "updated_at", width: 20 },
-      { header: "?�료??, key: "completed_at", width: 20 },
-      { header: "?��?지", key: "image", width: 15 },
+      { header: "등급", key: "rank", width: 10 },
+      { header: "출품사", key: "auc_num", width: 10 },
+      { header: "예정일시", key: "scheduled_date", width: 20 },
+      { header: "원시작가(¥)", key: "starting_price", width: 15 },
+      { header: "1차입찰가(¥)", key: "first_price", width: 15 },
+      { header: "2차제안가(¥)", key: "second_price", width: 15 },
+      { header: "최종입찰가(¥)", key: "final_price", width: 15 },
+      { header: "낙찰금액(¥)", key: "winning_price", width: 15 },
+      { header: "관부가세포함(₩)", key: "krw_total", width: 18 },
+      { header: "감정서ID", key: "appr_id", width: 12 },
+      { header: "수선신청일", key: "repair_requested_at", width: 20 },
+      { header: "수선비용(₩)", key: "repair_fee", width: 15 },
+      { header: "플랫폼반영", key: "submitted_to_platform", width: 12 },
+      { header: "생성일", key: "created_at", width: 20 },
+      { header: "수정일", key: "updated_at", width: 20 },
+      { header: "완료일", key: "completed_at", width: 20 },
+      { header: "이미지", key: "image", width: 15 },
     ];
 
-    // ?�이????변??
+    // 데이터 행 변환
     const rows = allRows.map((row) => {
-      // 관부가???�함 가�?계산
+      // 관부가세 포함 가격 계산
       let krw_total = "";
       const priceToUse = row.winning_price || row.final_price || 0;
       if (priceToUse && row.auc_num && row.category) {
@@ -1560,12 +1652,12 @@ router.get("/export/bids", isAdmin, async (req, res) => {
             exchangeRate,
           );
         } catch (error) {
-          console.error("관부가??계산 ?�류:", error);
+          console.error("관부가세 계산 오류:", error);
         }
       }
 
       return {
-        type: row.type === "live" ? "?�장" : "직접",
+        type: row.type === "live" ? "현장" : "직접",
         bid_id: row.id,
         status: getStatusText(row.status, row.type),
         user_login: row.login_id || "",
@@ -1596,9 +1688,9 @@ router.get("/export/bids", isAdmin, async (req, res) => {
       };
     });
 
-    // ?�크�??�성
+    // 워크북 생성
     const workbook = await createWorkbook({
-      sheetName: "?�찰 ??��",
+      sheetName: "입찰 항목",
       columns,
       rows,
       imageColumns: ["image"],
@@ -1607,7 +1699,7 @@ router.get("/export/bids", isAdmin, async (req, res) => {
       maxConcurrency: 5,
     });
 
-    // ?�일�??�성 (?�짜 ?�함)
+    // 파일명 생성 (날짜 포함)
     const now = new Date();
     const dateStr = now
       .toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })
@@ -1615,19 +1707,19 @@ router.get("/export/bids", isAdmin, async (req, res) => {
       .replace(/\./g, "")
       .replace(/:/g, "")
       .replace(/ /g, "_");
-    const filename = `?�찰??��_${dateStr}.xlsx`;
+    const filename = `입찰항목_${dateStr}.xlsx`;
 
-    // ?�답 ?�트�?
+    // 응답 스트림
     await streamWorkbookToResponse(workbook, res, filename);
 
-    console.log(`?�찰 ??�� ?��? ?�보?�기 ?�료: ${filename}`);
+    console.log(`입찰 항목 엑셀 내보내기 완료: ${filename}`);
   } catch (error) {
-    console.error("?�찰 ??�� ?��? ?�보?�기 ?�류:", error);
-    console.error("?�류 ?�택:", error.stack);
-    console.error("?�청 ?�라미터:", req.query);
+    console.error("입찰 항목 엑셀 내보내기 오류:", error);
+    console.error("오류 스택:", error.stack);
+    console.error("요청 파라미터:", req.query);
     if (!res.headersSent) {
       res.status(500).json({
-        message: "?��? ?�보?�기 �??�류가 발생?�습?�다.",
+        message: "엑셀 내보내기 중 오류가 발생했습니다.",
         error:
           process.env.NODE_ENV === "development" ? error.message : undefined,
       });
@@ -1639,10 +1731,10 @@ router.get("/export/bids", isAdmin, async (req, res) => {
 
 /**
  * GET /api/admin/export/bid-results
- * ?�찰 결과(?�산) ?��? ?�보?�기
+ * 입찰 결과(정산) 엑셀 내보내기
  */
 router.get("/export/bid-results", isAdmin, async (req, res) => {
-  // ?�?�아???�정: 5�?(?�?�량 ?�이??처리�??�해)
+  // 타임아웃 설정: 5분 (대용량 데이터 처리를 위해)
   req.setTimeout(300000);
   res.setTimeout(300000);
 
@@ -1658,16 +1750,16 @@ router.get("/export/bid-results", isAdmin, async (req, res) => {
   const connection = await pool.getConnection();
 
   try {
-    console.log("?�찰 결과 ?��? ?�보?�기 ?�작:", req.query);
+    console.log("입찰 결과 엑셀 내보내기 시작:", req.query);
 
-    // ?�율 가?�오�?
+    // 환율 가져오기
     const exchangeRate = await getExchangeRate();
 
     // 쿼리 조건 구성
     let whereConditions = ["1=1"];
     let queryParams = [];
 
-    // ?�짜 범위 ?�터 (�?문자??= ?�체 ?�짜)
+    // 날짜 범위 필터 (빈 문자열 = 전체 날짜)
     if (fromDate) {
       whereConditions.push("ds.settlement_date >= ?");
       queryParams.push(fromDate);
@@ -1677,7 +1769,7 @@ router.get("/export/bid-results", isAdmin, async (req, res) => {
       queryParams.push(toDate);
     }
 
-    // ?��? ?�터 (�?문자??= ?�체 ?��?)
+    // 유저 필터 (빈 문자열 = 전체 유저)
     if (userId) {
       const userIdArray = userId.split(",");
       if (userIdArray.length === 1) {
@@ -1690,7 +1782,7 @@ router.get("/export/bid-results", isAdmin, async (req, res) => {
       }
     }
 
-    // ?�산 ?�태 ?�터 (�?문자??= ?�체 ?�태)
+    // 정산 상태 필터 (빈 문자열 = 전체 상태)
     if (status) {
       const statusArray = status.split(",");
       if (statusArray.length === 1) {
@@ -1705,7 +1797,7 @@ router.get("/export/bid-results", isAdmin, async (req, res) => {
 
     const whereClause = whereConditions.join(" AND ");
 
-    // ?�렬 ?�정
+    // 정렬 설정
     let orderByClause = "ds.settlement_date DESC";
     if (sortBy === "total_price") {
       orderByClause = `ds.final_amount ${sortOrder.toUpperCase()}`;
@@ -1713,7 +1805,7 @@ router.get("/export/bid-results", isAdmin, async (req, res) => {
       orderByClause = `ds.item_count ${sortOrder.toUpperCase()}`;
     }
 
-    // ?�산 ?�이??조회
+    // 정산 데이터 조회
     const [settlements] = await connection.query(
       `SELECT 
          ds.id as settlement_id,
@@ -1739,15 +1831,15 @@ router.get("/export/bid-results", isAdmin, async (req, res) => {
       queryParams,
     );
 
-    console.log(`�?${settlements.length}�??�산 ?�이??조회 ?�료`);
+    console.log(`총 ${settlements.length}개 정산 데이터 조회 완료`);
 
-    // �??�산???�???�세 ?�이??조회
+    // 각 정산에 대한 상세 아이템 조회
     const allRows = [];
 
     for (const settlement of settlements) {
       const { user_id, settlement_date } = settlement;
 
-      // ?�찰 ?�료??live_bids 조회
+      // 낙찰 완료된 live_bids 조회
       const [liveBids] = await connection.query(
         `SELECT 
            lb.id,
@@ -1769,11 +1861,11 @@ router.get("/export/bid-results", isAdmin, async (req, res) => {
            i.image
          FROM live_bids lb
          JOIN crawled_items i ON lb.item_id = i.item_id
-         WHERE lb.user_id = ? AND DATE(i.scheduled_date) = ? AND lb.status = 'completed'`,
+         WHERE lb.user_id = ? AND DATE(i.scheduled_date) = ? AND lb.status IN ('completed', 'shipped')`,
         [user_id, settlement_date],
       );
 
-      // ?�찰 ?�료??direct_bids 조회
+      // 낙찰 완료된 direct_bids 조회
       const [directBids] = await connection.query(
         `SELECT 
            db.id,
@@ -1795,13 +1887,13 @@ router.get("/export/bid-results", isAdmin, async (req, res) => {
            i.image
          FROM direct_bids db
          JOIN crawled_items i ON db.item_id = i.item_id
-         WHERE db.user_id = ? AND DATE(i.scheduled_date) = ? AND db.status = 'completed'`,
+         WHERE db.user_id = ? AND DATE(i.scheduled_date) = ? AND db.status IN ('completed', 'shipped')`,
         [user_id, settlement_date],
       );
 
       const items = [...liveBids, ...directBids];
 
-      // ?�이?�이 ?�어???�산 ?�약 ?��? 추�? (?�이?�별 ??구조)
+      // 아이템이 없어도 정산 요약 행은 추가 (아이템별 행 구조)
       if (items.length === 0) {
         allRows.push({
           settlement_date: settlement.settlement_date,
@@ -1834,7 +1926,7 @@ router.get("/export/bid-results", isAdmin, async (req, res) => {
           image: "",
         });
       } else {
-        // �??�이?�을 ?�으�?추�?
+        // 각 아이템을 행으로 추가
         items.forEach((item) => {
           let koreanPrice = 0;
           const price = parseInt(item.winning_price) || 0;
@@ -1847,7 +1939,7 @@ router.get("/export/bid-results", isAdmin, async (req, res) => {
                 settlement.exchange_rate || exchangeRate,
               );
             } catch (error) {
-              console.error("관부가??계산 ?�류:", error);
+              console.error("관부가세 계산 오류:", error);
             }
           }
 
@@ -1885,41 +1977,41 @@ router.get("/export/bid-results", isAdmin, async (req, res) => {
       }
     }
 
-    console.log(`�?${allRows.length}�??�이?????�성 ?�료`);
+    console.log(`총 ${allRows.length}개 아이템 행 생성 완료`);
 
-    // ?��? 컬럼 ?�의
+    // 엑셀 컬럼 정의
     const columns = [
-      { header: "?�산??, key: "settlement_date", width: 15 },
-      { header: "?��?ID", key: "user_login", width: 15 },
-      { header: "?�사�?, key: "company_name", width: 20 },
-      { header: "?�산?�태", key: "payment_status", width: 12 },
-      { header: "?�금?�명", key: "depositor_name", width: 15 },
-      { header: "?�품ID", key: "item_id", width: 15 },
-      { header: "?�목", key: "title", width: 40 },
-      { header: "브랜??, key: "brand", width: 15 },
+      { header: "정산일", key: "settlement_date", width: 15 },
+      { header: "유저ID", key: "user_login", width: 15 },
+      { header: "회사명", key: "company_name", width: 20 },
+      { header: "정산상태", key: "payment_status", width: 12 },
+      { header: "입금자명", key: "depositor_name", width: 15 },
+      { header: "상품ID", key: "item_id", width: 15 },
+      { header: "제목", key: "title", width: 40 },
+      { header: "브랜드", key: "brand", width: 15 },
       { header: "카테고리", key: "category", width: 12 },
-      { header: "출품??, key: "auc_num", width: 10 },
-      { header: "?�작가(¥)", key: "start_price", width: 15 },
-      { header: "1차입찰�?(¥)", key: "first_price", width: 15 },
-      { header: "2차제?��?(¥)", key: "second_price", width: 15 },
-      { header: "최종?�찰가(¥)", key: "final_price", width: 15 },
-      { header: "?�찰금액(¥)", key: "winning_price", width: 15 },
-      { header: "관부가?�포????", key: "korean_price", width: 18 },
-      { header: "감정?�ID", key: "appr_id", width: 12 },
-      { header: "?�선비용(??", key: "repair_fee", width: 15 },
-      { header: "?�수�???", key: "fee_amount", width: 15 },
-      { header: "VAT(??", key: "vat_amount", width: 15 },
-      { header: "감정?�수?�료(??", key: "appraisal_fee", width: 15 },
-      { header: "감정?�VAT(??", key: "appraisal_vat", width: 15 },
-      { header: "총청구액(??", key: "grand_total", width: 18 },
-      { header: "기결?�액(??", key: "completed_amount", width: 18 },
-      { header: "미수�???", key: "remaining_amount", width: 18 },
-      { header: "?��?지", key: "image", width: 15 },
+      { header: "출품사", key: "auc_num", width: 10 },
+      { header: "시작가(¥)", key: "start_price", width: 15 },
+      { header: "1차입찰가(¥)", key: "first_price", width: 15 },
+      { header: "2차제안가(¥)", key: "second_price", width: 15 },
+      { header: "최종입찰가(¥)", key: "final_price", width: 15 },
+      { header: "낙찰금액(¥)", key: "winning_price", width: 15 },
+      { header: "관부가세포함(₩)", key: "korean_price", width: 18 },
+      { header: "감정서ID", key: "appr_id", width: 12 },
+      { header: "수선비용(₩)", key: "repair_fee", width: 15 },
+      { header: "수수료(₩)", key: "fee_amount", width: 15 },
+      { header: "VAT(₩)", key: "vat_amount", width: 15 },
+      { header: "감정서수수료(₩)", key: "appraisal_fee", width: 15 },
+      { header: "감정서VAT(₩)", key: "appraisal_vat", width: 15 },
+      { header: "총청구액(₩)", key: "grand_total", width: 18 },
+      { header: "기결제액(₩)", key: "completed_amount", width: 18 },
+      { header: "미수금(₩)", key: "remaining_amount", width: 18 },
+      { header: "이미지", key: "image", width: 15 },
     ];
 
-    // ?�크�??�성
+    // 워크북 생성
     const workbook = await createWorkbook({
-      sheetName: "?�찰 결과",
+      sheetName: "입찰 결과",
       columns,
       rows: allRows,
       imageColumns: ["image"],
@@ -1928,7 +2020,7 @@ router.get("/export/bid-results", isAdmin, async (req, res) => {
       maxConcurrency: 5,
     });
 
-    // ?�일�??�성
+    // 파일명 생성
     const now = new Date();
     const dateStr = now
       .toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })
@@ -1936,19 +2028,19 @@ router.get("/export/bid-results", isAdmin, async (req, res) => {
       .replace(/\./g, "")
       .replace(/:/g, "")
       .replace(/ /g, "_");
-    const filename = `?�찰결과_${dateStr}.xlsx`;
+    const filename = `입찰결과_${dateStr}.xlsx`;
 
-    // ?�답 ?�트�?
+    // 응답 스트림
     await streamWorkbookToResponse(workbook, res, filename);
 
-    console.log(`?�찰 결과 ?��? ?�보?�기 ?�료: ${filename}`);
+    console.log(`입찰 결과 엑셀 내보내기 완료: ${filename}`);
   } catch (error) {
-    console.error("?�찰 결과 ?��? ?�보?�기 ?�류:", error);
-    console.error("?�류 ?�택:", error.stack);
-    console.error("?�청 ?�라미터:", req.query);
+    console.error("입찰 결과 엑셀 내보내기 오류:", error);
+    console.error("오류 스택:", error.stack);
+    console.error("요청 파라미터:", req.query);
     if (!res.headersSent) {
       res.status(500).json({
-        message: "?��? ?�보?�기 �??�류가 발생?�습?�다.",
+        message: "엑셀 내보내기 중 오류가 발생했습니다.",
         error:
           process.env.NODE_ENV === "development" ? error.message : undefined,
       });
@@ -1959,26 +2051,26 @@ router.get("/export/bid-results", isAdmin, async (req, res) => {
 });
 
 // =====================================================
-// ?�퍼 ?�수
+// 헬퍼 함수
 // =====================================================
 
 function getStatusText(status, type) {
   if (type === "live") {
     const statusMap = {
-      first: "1�??�찰",
-      second: "2�??�안",
-      final: "최종 ?�찰",
-      completed: "?�료",
-      shipped: "출고??,
-      cancelled: "?�찰 ?�패",
+      first: "1차 입찰",
+      second: "2차 제안",
+      final: "최종 입찰",
+      completed: "완료",
+      shipped: "출고됨",
+      cancelled: "낙찰 실패",
     };
     return statusMap[status] || status;
   } else {
     const statusMap = {
-      active: "?�성",
-      completed: "?�료",
-      shipped: "출고??,
-      cancelled: "?�찰 ?�패",
+      active: "활성",
+      completed: "완료",
+      shipped: "출고됨",
+      cancelled: "낙찰 실패",
     };
     return statusMap[status] || status;
   }
@@ -1986,9 +2078,9 @@ function getStatusText(status, type) {
 
 function getPaymentStatusText(status) {
   const statusMap = {
-    unpaid: "결제 ?�요",
-    pending: "?�금 ?�인 �?,
-    paid: "?�산 ?�료",
+    unpaid: "결제 필요",
+    pending: "입금 확인 중",
+    paid: "정산 완료",
   };
   return statusMap[status] || status;
 }
