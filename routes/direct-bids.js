@@ -101,6 +101,17 @@ router.get("/", async (req, res) => {
         ) m ON d.item_id = m.item_id AND d.current_price = m.max_price
         LEFT JOIN crawled_items i ON d.item_id = i.item_id
         LEFT JOIN users u ON d.user_id = u.id
+        LEFT JOIN (
+          SELECT source_bid_type, source_bid_id, MAX(internal_barcode) AS internal_barcode
+          FROM wms_items
+          GROUP BY source_bid_type, source_bid_id
+        ) wms ON wms.source_bid_type = 'direct' AND wms.source_bid_id = d.id
+        LEFT JOIN (
+          SELECT source_item_id, MAX(internal_barcode) AS internal_barcode
+          FROM wms_items
+          WHERE source_item_id IS NOT NULL
+          GROUP BY source_item_id
+        ) wmsi ON wmsi.source_item_id = d.item_id
         LEFT JOIN bid_workflow_stages bws ON bws.bid_type = 'direct' AND bws.bid_id = d.id
         WHERE 1=1
       `;
@@ -144,6 +155,17 @@ router.get("/", async (req, res) => {
         FROM direct_bids d
         LEFT JOIN crawled_items i ON d.item_id = i.item_id
         LEFT JOIN users u ON d.user_id = u.id
+        LEFT JOIN (
+          SELECT source_bid_type, source_bid_id, MAX(internal_barcode) AS internal_barcode
+          FROM wms_items
+          GROUP BY source_bid_type, source_bid_id
+        ) wms ON wms.source_bid_type = 'direct' AND wms.source_bid_id = d.id
+        LEFT JOIN (
+          SELECT source_item_id, MAX(internal_barcode) AS internal_barcode
+          FROM wms_items
+          WHERE source_item_id IS NOT NULL
+          GROUP BY source_item_id
+        ) wmsi ON wmsi.source_item_id = d.item_id
         LEFT JOIN bid_workflow_stages bws ON bws.bid_type = 'direct' AND bws.bid_id = d.id
         WHERE 1=1
       `;
@@ -181,9 +203,9 @@ router.get("/", async (req, res) => {
       const searchTerm = `%${search}%`;
       const compactSearchTerm = `%${String(search).replace(/\s+/g, "")}%`;
       countQuery +=
-        " AND (CONVERT(d.item_id USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(i.original_title USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(i.additional_info USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(u.login_id USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(u.company_name USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR REPLACE(CONVERT(u.company_name USING utf8mb4), ' ', '') LIKE CONVERT(? USING utf8mb4))";
+        " AND (CONVERT(d.item_id USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(i.original_title USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(i.additional_info USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(u.login_id USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(u.company_name USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR REPLACE(CONVERT(u.company_name USING utf8mb4), ' ', '') LIKE CONVERT(? USING utf8mb4) OR COALESCE(wms.internal_barcode, wmsi.internal_barcode) LIKE CONVERT(? USING utf8mb4))";
       mainQuery +=
-        " AND (CONVERT(d.item_id USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(i.original_title USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(i.additional_info USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(u.login_id USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(u.company_name USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR REPLACE(CONVERT(u.company_name USING utf8mb4), ' ', '') LIKE CONVERT(? USING utf8mb4))";
+        " AND (CONVERT(d.item_id USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(i.original_title USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(i.additional_info USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(u.login_id USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(u.company_name USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR REPLACE(CONVERT(u.company_name USING utf8mb4), ' ', '') LIKE CONVERT(? USING utf8mb4) OR COALESCE(wms.internal_barcode, wmsi.internal_barcode) LIKE CONVERT(? USING utf8mb4))";
       queryParams.push(
         searchTerm,
         searchTerm,
@@ -191,6 +213,7 @@ router.get("/", async (req, res) => {
         searchTerm,
         searchTerm,
         compactSearchTerm,
+        searchTerm,
       );
     }
 
