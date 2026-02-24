@@ -100,18 +100,38 @@ router.get("/", async (req, res) => {
 
   // Add status filter if provided
   if (status) {
-    // 콤마로 구분된 상태 값 처리
     const statusArray = status.split(",");
+    const bwsStatuses = statusArray.filter(
+      (s) => s === "domestic_arrived" || s === "processing",
+    );
+    const bidStatuses = statusArray.filter(
+      (s) => s !== "domestic_arrived" && s !== "processing",
+    );
 
-    if (statusArray.length === 1) {
-      // 단일 상태
-      queryConditions.push("b.status = ?");
-      queryParams.push(status);
+    if (bwsStatuses.length > 0 && bidStatuses.length === 0) {
+      // domestic_arrived / processing 만 필터 → bid_workflow_stages 기준
+      const placeholders = bwsStatuses.map(() => "?").join(",");
+      queryConditions.push(
+        `bws.stage IN (${placeholders}) AND b.status = 'completed'`,
+      );
+      queryParams.push(...bwsStatuses);
+    } else if (bwsStatuses.length > 0) {
+      // 혼합: bws.stage 또는 b.status
+      const bwsPlaceholders = bwsStatuses.map(() => "?").join(",");
+      const bidPlaceholders = bidStatuses.map(() => "?").join(",");
+      queryConditions.push(
+        `(bws.stage IN (${bwsPlaceholders}) OR b.status IN (${bidPlaceholders}))`,
+      );
+      queryParams.push(...bwsStatuses, ...bidStatuses);
     } else {
-      // 복수 상태
-      const placeholders = statusArray.map(() => "?").join(",");
-      queryConditions.push(`b.status IN (${placeholders})`);
-      queryParams.push(...statusArray);
+      // bid 테이블 status 만
+      if (bidStatuses.length === 1) {
+        queryConditions.push("b.status = ?");
+      } else {
+        const placeholders = bidStatuses.map(() => "?").join(",");
+        queryConditions.push(`b.status IN (${placeholders})`);
+      }
+      queryParams.push(...bidStatuses);
     }
   }
 
@@ -154,6 +174,7 @@ router.get("/", async (req, res) => {
     FROM live_bids b
     LEFT JOIN crawled_items i ON b.item_id = i.item_id
     LEFT JOIN users u ON b.user_id = u.id
+    LEFT JOIN bid_workflow_stages bws ON bws.bid_type = 'live' AND bws.bid_id = b.id
     WHERE ${whereClause}
   `;
 
@@ -180,6 +201,7 @@ router.get("/", async (req, res) => {
       WHERE source_item_id IS NOT NULL
       GROUP BY source_item_id
     ) wmsi ON wmsi.source_item_id = b.item_id
+    LEFT JOIN bid_workflow_stages bws ON bws.bid_type = 'live' AND bws.bid_id = b.id
     WHERE ${whereClause}
   `;
 
@@ -260,9 +282,7 @@ router.get("/", async (req, res) => {
         second_price: row.second_price,
         final_price: row.final_price,
         status:
-          row.status === "shipped"
-            ? "shipped"
-            : stageMap[row.id] || row.status,
+          row.status === "shipped" ? "shipped" : stageMap[row.id] || row.status,
         created_at: row.created_at,
         updated_at: row.updated_at,
         completed_at: row.completed_at,
@@ -845,11 +865,14 @@ router.put("/complete", isAdmin, async (req, res) => {
           nextStatus: "completed",
         });
         if (!syncResult?.updated && syncResult?.reason !== "already-synced") {
-          console.warn("[WMS sync][live][complete] status update not applied:", {
-            bidId: Number(completedBid.id),
-            itemId: completedBid.item_id || null,
-            reason: syncResult?.reason || "unknown",
-          });
+          console.warn(
+            "[WMS sync][live][complete] status update not applied:",
+            {
+              bidId: Number(completedBid.id),
+              itemId: completedBid.item_id || null,
+              reason: syncResult?.reason || "unknown",
+            },
+          );
         }
       }
     }

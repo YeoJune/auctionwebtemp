@@ -1,7 +1,9 @@
 const express = require("express");
 const { pool } = require("../utils/DB");
 const { requireAdmin } = require("../utils/adminAuth");
-const { backfillCompletedWmsItemsByBidStatus } = require("../utils/wms-bid-sync");
+const {
+  backfillCompletedWmsItemsByBidStatus,
+} = require("../utils/wms-bid-sync");
 
 const router = express.Router();
 
@@ -114,7 +116,7 @@ async function resolveSourceBid(conn, item) {
     SELECT id, updated_at
     FROM direct_bids
     WHERE item_id = ?
-      AND status IN ('completed', 'domestic_arrived', 'processing', 'shipped')
+      AND status IN ('completed', 'shipped')
     ORDER BY updated_at DESC, id DESC
     LIMIT 1
     `,
@@ -125,7 +127,7 @@ async function resolveSourceBid(conn, item) {
     SELECT id, updated_at
     FROM live_bids
     WHERE item_id = ?
-      AND status IN ('completed', 'domestic_arrived', 'processing', 'shipped')
+      AND status IN ('completed', 'shipped')
     ORDER BY updated_at DESC, id DESC
     LIMIT 1
     `,
@@ -146,7 +148,10 @@ async function resolveSourceBid(conn, item) {
 async function syncBidStatusByLocation(conn, item, toLocationCode) {
   const normalizedToLocationCode = normalizeLocationCode(toLocationCode);
   let nextBidStatus = null;
-  if (normalizedToLocationCode === "DOMESTIC_ARRIVAL_ZONE" || normalizedToLocationCode === "INBOUND_ZONE") {
+  if (
+    normalizedToLocationCode === "DOMESTIC_ARRIVAL_ZONE" ||
+    normalizedToLocationCode === "INBOUND_ZONE"
+  ) {
     nextBidStatus = "domestic_arrived";
   } else if (
     normalizedToLocationCode === "REPAIR_ZONE" ||
@@ -164,24 +169,10 @@ async function syncBidStatusByLocation(conn, item, toLocationCode) {
   if (!resolved) return;
   const { bidType, bidId } = resolved;
 
-  const tableName = bidType === "direct" ? "direct_bids" : "live_bids";
-  const [colRows] = await conn.query(
-    `
-    SELECT COLUMN_TYPE
-    FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME = ?
-      AND COLUMN_NAME = 'status'
-    LIMIT 1
-    `,
-    [tableName],
-  );
-  const columnType = colRows?.[0]?.COLUMN_TYPE || "";
-  const enumValues = Array.from(columnType.matchAll(/'([^']+)'/g)).map((m) => m[1]);
-  const statusUpdatable = enumValues.includes(nextBidStatus);
-
-  // status enum에 없는 값이면 bid_workflow_stages만 갱신한다.
-  if (statusUpdatable) {
+  // shipped만 bid 테이블에 직접 반영한다.
+  // domestic_arrived / processing 은 bid_workflow_stages 에만 기록하여
+  // 원본 bid 테이블의 status 를 completed / shipped 두 값만 사용한다.
+  if (nextBidStatus === "shipped") {
     if (bidType === "direct") {
       await conn.query(
         `UPDATE direct_bids SET status = ?, updated_at = NOW() WHERE id = ?`,
@@ -220,7 +211,8 @@ async function syncBidStatusByLocation(conn, item, toLocationCode) {
 }
 
 function inferAuctionSource(crawledRow) {
-  const raw = `${crawledRow?.auc_num || ""} ${crawledRow?.additional_info || ""}`.toLowerCase();
+  const raw =
+    `${crawledRow?.auc_num || ""} ${crawledRow?.additional_info || ""}`.toLowerCase();
   if (raw.includes("eco")) return "ecoring";
   if (raw.includes("oak")) return "oaknet";
   return null;
@@ -690,12 +682,20 @@ async function ensureTables() {
     `);
   }
 
-  await pool.query(`
+  await pool
+    .query(
+      `
     CREATE INDEX idx_wms_source_bid ON wms_items (source_bid_type, source_bid_id)
-  `).catch(() => {});
-  await pool.query(`
+  `,
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      `
     CREATE INDEX idx_wms_source_item ON wms_items (source_item_id)
-  `).catch(() => {});
+  `,
+    )
+    .catch(() => {});
 }
 
 function formatDatePart(dateInput) {
@@ -706,14 +706,15 @@ function formatDatePart(dateInput) {
       now.getMonth() + 1,
     ).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
   }
-  return `${String(d.getFullYear()).slice(-2)}${String(d.getMonth() + 1).padStart(
-    2,
-    "0",
-  )}${String(d.getDate()).padStart(2, "0")}`;
+  return `${String(d.getFullYear()).slice(-2)}${String(
+    d.getMonth() + 1,
+  ).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function normalizeAuctionCode(aucNum) {
-  const raw = String(aucNum || "00").replace(/[^0-9A-Za-z]/g, "").toUpperCase();
+  const raw = String(aucNum || "00")
+    .replace(/[^0-9A-Za-z]/g, "")
+    .toUpperCase();
   return (raw || "00").slice(0, 3);
 }
 
@@ -823,13 +824,19 @@ router.post("/items", isAdmin, async (req, res) => {
   if (!externalBarcode && !internalBarcode) {
     return res
       .status(400)
-      .json({ ok: false, message: "externalBarcode or internalBarcode required" });
+      .json({
+        ok: false,
+        message: "externalBarcode or internalBarcode required",
+      });
   }
 
   try {
     await ensureTables();
     const uid = `WMS-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
-    const status = statusByLocation(normalizedLocationCode, Number(requestType));
+    const status = statusByLocation(
+      normalizedLocationCode,
+      Number(requestType),
+    );
     const metadataText =
       metadata === undefined ? null : JSON.stringify(metadata);
 
@@ -947,10 +954,15 @@ router.post("/scan", isAdmin, async (req, res) => {
           await conn.rollback();
           return res.status(400).json({
             ok: false,
-            message: "유효한 물건 바코드만 자동등록됩니다. 숫자가 포함된 물건 바코드를 다시 스캔하세요.",
+            message:
+              "유효한 물건 바코드만 자동등록됩니다. 숫자가 포함된 물건 바코드를 다시 스캔하세요.",
           });
         }
-        item = await autoCreateItemByScan(conn, barcode, normalizedToLocationCode);
+        item = await autoCreateItemByScan(
+          conn,
+          barcode,
+          normalizedToLocationCode,
+        );
       } else {
         await conn.rollback();
         return res.status(404).json({
@@ -960,8 +972,12 @@ router.post("/scan", isAdmin, async (req, res) => {
         });
       }
     }
-    const nextStatus = statusByLocation(normalizedToLocationCode, Number(item.request_type));
-    const nextHoldReason = normalizedToLocationCode === "HOLD_ZONE" ? holdReason || null : null;
+    const nextStatus = statusByLocation(
+      normalizedToLocationCode,
+      Number(item.request_type),
+    );
+    const nextHoldReason =
+      normalizedToLocationCode === "HOLD_ZONE" ? holdReason || null : null;
 
     await conn.query(
       `
@@ -1000,9 +1016,10 @@ router.post("/scan", isAdmin, async (req, res) => {
 
     await conn.commit();
 
-    const [updatedRows] = await pool.query(`SELECT * FROM wms_items WHERE id = ?`, [
-      item.id,
-    ]);
+    const [updatedRows] = await pool.query(
+      `SELECT * FROM wms_items WHERE id = ?`,
+      [item.id],
+    );
 
     const moved = updatedRows[0] || {};
     const fromCode = item.current_location_code || null;
@@ -1239,7 +1256,7 @@ router.get("/auction-completed", isAdmin, async (req, res) => {
         ON w.source_bid_type = 'live' AND w.source_bid_id = l.id
       WHERE DATE(COALESCE(i.original_scheduled_date, i.scheduled_date)) = ?
         ${aucCondition}
-        AND l.status IN ('completed', 'domestic_arrived', 'processing', 'shipped')
+        AND l.status IN ('completed', 'shipped')
       ORDER BY i.auc_num ASC, i.original_scheduled_date ASC, l.id ASC
       `,
       params,
@@ -1268,7 +1285,7 @@ router.get("/auction-completed", isAdmin, async (req, res) => {
         ON w.source_bid_type = 'direct' AND w.source_bid_id = d.id
       WHERE DATE(COALESCE(i.original_scheduled_date, i.scheduled_date)) = ?
         ${aucCondition}
-        AND d.status IN ('completed', 'domestic_arrived', 'processing', 'shipped')
+        AND d.status IN ('completed', 'shipped')
       ORDER BY i.auc_num ASC, i.original_scheduled_date ASC, d.id ASC
       `,
       params,
@@ -1332,7 +1349,11 @@ router.post("/auction-labels", isAdmin, async (req, res) => {
       let internalBarcode = wmsItem?.internal_barcode || null;
 
       if (!internalBarcode) {
-        internalBarcode = await generateInternalBarcode(conn, scheduledAt, aucNum);
+        internalBarcode = await generateInternalBarcode(
+          conn,
+          scheduledAt,
+          aucNum,
+        );
       }
 
       if (!wmsItem) {

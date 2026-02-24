@@ -1,11 +1,19 @@
 const express = require("express");
 const { pool } = require("../utils/DB");
 const { requireAdmin } = require("../utils/adminAuth");
-const { backfillCompletedWmsItemsByBidStatus } = require("../utils/wms-bid-sync");
+const {
+  backfillCompletedWmsItemsByBidStatus,
+} = require("../utils/wms-bid-sync");
 
 const router = express.Router();
 
-const DEFAULT_VENDORS = ["리리", "크리뉴", "성신사(종로)", "연희", "까사(내부)"];
+const DEFAULT_VENDORS = [
+  "리리",
+  "크리뉴",
+  "성신사(종로)",
+  "연희",
+  "까사(내부)",
+];
 
 function isAdmin(req, res, next) {
   return requireAdmin(req, res, next);
@@ -59,28 +67,44 @@ async function ensureRepairTables(conn) {
 
   const caseCols = await getTableColumns(conn, "wms_repair_cases");
   if (!caseCols.has("decision_type")) {
-    await conn.query(`ALTER TABLE wms_repair_cases ADD COLUMN decision_type VARCHAR(30) NULL`);
+    await conn.query(
+      `ALTER TABLE wms_repair_cases ADD COLUMN decision_type VARCHAR(30) NULL`,
+    );
   }
   if (!caseCols.has("vendor_name")) {
-    await conn.query(`ALTER TABLE wms_repair_cases ADD COLUMN vendor_name VARCHAR(120) NULL`);
+    await conn.query(
+      `ALTER TABLE wms_repair_cases ADD COLUMN vendor_name VARCHAR(120) NULL`,
+    );
   }
   if (!caseCols.has("repair_note")) {
-    await conn.query(`ALTER TABLE wms_repair_cases ADD COLUMN repair_note TEXT NULL`);
+    await conn.query(
+      `ALTER TABLE wms_repair_cases ADD COLUMN repair_note TEXT NULL`,
+    );
   }
   if (!caseCols.has("repair_amount")) {
-    await conn.query(`ALTER TABLE wms_repair_cases ADD COLUMN repair_amount DECIMAL(14,2) NULL`);
+    await conn.query(
+      `ALTER TABLE wms_repair_cases ADD COLUMN repair_amount DECIMAL(14,2) NULL`,
+    );
   }
   if (!caseCols.has("proposal_text")) {
-    await conn.query(`ALTER TABLE wms_repair_cases ADD COLUMN proposal_text LONGTEXT NULL`);
+    await conn.query(
+      `ALTER TABLE wms_repair_cases ADD COLUMN proposal_text LONGTEXT NULL`,
+    );
   }
   if (!caseCols.has("internal_note")) {
-    await conn.query(`ALTER TABLE wms_repair_cases ADD COLUMN internal_note TEXT NULL`);
+    await conn.query(
+      `ALTER TABLE wms_repair_cases ADD COLUMN internal_note TEXT NULL`,
+    );
   }
   if (!caseCols.has("created_by")) {
-    await conn.query(`ALTER TABLE wms_repair_cases ADD COLUMN created_by VARCHAR(100) NULL`);
+    await conn.query(
+      `ALTER TABLE wms_repair_cases ADD COLUMN created_by VARCHAR(100) NULL`,
+    );
   }
   if (!caseCols.has("updated_by")) {
-    await conn.query(`ALTER TABLE wms_repair_cases ADD COLUMN updated_by VARCHAR(100) NULL`);
+    await conn.query(
+      `ALTER TABLE wms_repair_cases ADD COLUMN updated_by VARCHAR(100) NULL`,
+    );
   }
 
   for (const name of DEFAULT_VENDORS) {
@@ -124,7 +148,10 @@ function buildProposalText({
   const safeTitle = productTitle || "상품명 미확인";
   const safeBarcode = barcode || "내부바코드 없음";
   const safeNote = repairNote || "(수선내용 입력 필요)";
-  const safeAmount = repairAmount != null ? `${Number(repairAmount).toLocaleString()}원 (vat 별도)` : "(금액 입력 필요)";
+  const safeAmount =
+    repairAmount != null
+      ? `${Number(repairAmount).toLocaleString()}원 (vat 별도)`
+      : "(금액 입력 필요)";
   const safeVendor = vendorName || "(외주업체 선택 필요)";
 
   return [
@@ -183,7 +210,7 @@ async function resolveSourceBid(conn, item) {
     SELECT id, updated_at
     FROM direct_bids
     WHERE item_id = ?
-      AND status IN ('completed', 'domestic_arrived', 'processing', 'shipped')
+      AND status IN ('completed', 'shipped')
     ORDER BY updated_at DESC, id DESC
     LIMIT 1
     `,
@@ -194,7 +221,7 @@ async function resolveSourceBid(conn, item) {
     SELECT id, updated_at
     FROM live_bids
     WHERE item_id = ?
-      AND status IN ('completed', 'domestic_arrived', 'processing', 'shipped')
+      AND status IN ('completed', 'shipped')
     ORDER BY updated_at DESC, id DESC
     LIMIT 1
     `,
@@ -261,7 +288,10 @@ async function hideInvalidDomesticArrivals(conn) {
 async function syncBidStatusByLocation(conn, item, toLocationCode) {
   const normalizedToLocationCode = normalizeLocationCode(toLocationCode);
   let nextBidStatus = null;
-  if (normalizedToLocationCode === "DOMESTIC_ARRIVAL_ZONE" || normalizedToLocationCode === "INBOUND_ZONE") {
+  if (
+    normalizedToLocationCode === "DOMESTIC_ARRIVAL_ZONE" ||
+    normalizedToLocationCode === "INBOUND_ZONE"
+  ) {
     nextBidStatus = "domestic_arrived";
   } else if (
     normalizedToLocationCode === "REPAIR_ZONE" ||
@@ -292,14 +322,23 @@ async function syncBidStatusByLocation(conn, item, toLocationCode) {
     [tableName],
   );
   const columnType = colRows?.[0]?.COLUMN_TYPE || "";
-  const enumValues = Array.from(columnType.matchAll(/'([^']+)'/g)).map((m) => m[1]);
-  const statusUpdatable = enumValues.includes(nextBidStatus);
+  const enumValues = Array.from(columnType.matchAll(/'([^']+)'/g)).map(
+    (m) => m[1],
+  );
 
-  if (statusUpdatable) {
+  // shipped만 bid 테이블에 직접 반영한다.
+  // domestic_arrived / processing 은 bid_workflow_stages 에만 기록한다.
+  if (nextBidStatus === "shipped" && enumValues.includes(nextBidStatus)) {
     if (bidType === "direct") {
-      await conn.query(`UPDATE direct_bids SET status = ?, updated_at = NOW() WHERE id = ?`, [nextBidStatus, bidId]);
+      await conn.query(
+        `UPDATE direct_bids SET status = ?, updated_at = NOW() WHERE id = ?`,
+        [nextBidStatus, bidId],
+      );
     } else {
-      await conn.query(`UPDATE live_bids SET status = ?, updated_at = NOW() WHERE id = ?`, [nextBidStatus, bidId]);
+      await conn.query(
+        `UPDATE live_bids SET status = ?, updated_at = NOW() WHERE id = ?`,
+        [nextBidStatus, bidId],
+      );
     }
   }
 
@@ -352,7 +391,10 @@ router.post("/vendors", isAdmin, async (req, res) => {
   try {
     await ensureRepairTables(conn);
     const name = String(req.body?.name || "").trim();
-    if (!name) return res.status(400).json({ ok: false, message: "업체명을 입력하세요." });
+    if (!name)
+      return res
+        .status(400)
+        .json({ ok: false, message: "업체명을 입력하세요." });
 
     await conn.query(
       `
@@ -528,22 +570,35 @@ router.post("/cases", isAdmin, async (req, res) => {
     await ensureRepairTables(conn);
 
     const itemId = Number(req.body?.itemId);
-    const decisionType = String(req.body?.decisionType || "").trim().toUpperCase();
+    const decisionType = String(req.body?.decisionType || "")
+      .trim()
+      .toUpperCase();
     const vendorNameInput = String(req.body?.vendorName || "").trim();
     const repairNote = String(req.body?.repairNote || "").trim();
     const internalNote = String(req.body?.internalNote || "").trim();
     const repairAmount = toAmount(req.body?.repairAmount);
 
-    if (!itemId) return res.status(400).json({ ok: false, message: "itemId가 필요합니다." });
+    if (!itemId)
+      return res
+        .status(400)
+        .json({ ok: false, message: "itemId가 필요합니다." });
     if (!["INTERNAL", "EXTERNAL"].includes(decisionType)) {
-      return res.status(400).json({ ok: false, message: "수선 구분은 INTERNAL/EXTERNAL만 가능합니다." });
+      return res
+        .status(400)
+        .json({
+          ok: false,
+          message: "수선 구분은 INTERNAL/EXTERNAL만 가능합니다.",
+        });
     }
 
     if (decisionType === "EXTERNAL" && !vendorNameInput) {
-      return res.status(400).json({ ok: false, message: "외부수선은 외주업체 선택이 필요합니다." });
+      return res
+        .status(400)
+        .json({ ok: false, message: "외부수선은 외주업체 선택이 필요합니다." });
     }
 
-    const vendorName = decisionType === "EXTERNAL" ? vendorNameInput : "까사(내부)";
+    const vendorName =
+      decisionType === "EXTERNAL" ? vendorNameInput : "까사(내부)";
 
     await conn.beginTransaction();
 
@@ -573,7 +628,9 @@ router.post("/cases", isAdmin, async (req, res) => {
     const item = itemRows[0];
     if (!item) {
       await conn.rollback();
-      return res.status(404).json({ ok: false, message: "물건을 찾을 수 없습니다." });
+      return res
+        .status(404)
+        .json({ ok: false, message: "물건을 찾을 수 없습니다." });
     }
 
     if (decisionType === "EXTERNAL") {
@@ -637,7 +694,8 @@ router.post("/cases", isAdmin, async (req, res) => {
       ],
     );
 
-    const { zoneCode, statusCode, actionType } = zoneAndStatusByDecision(decisionType);
+    const { zoneCode, statusCode, actionType } =
+      zoneAndStatusByDecision(decisionType);
 
     await conn.query(
       `
@@ -673,7 +731,9 @@ router.post("/cases", isAdmin, async (req, res) => {
         statusCode,
         actionType,
         loginId,
-        decisionType === "EXTERNAL" ? `외주업체: ${vendorName}` : "내부수선 배정",
+        decisionType === "EXTERNAL"
+          ? `외주업체: ${vendorName}`
+          : "내부수선 배정",
       ],
     );
 
@@ -752,16 +812,15 @@ router.get("/export.csv", isAdmin, async (req, res) => {
     const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const lines = [headers.join(",")];
     for (const row of rows) {
-      lines.push(
-        headers
-          .map((key) => esc(row[key]))
-          .join(","),
-      );
+      lines.push(headers.map((key) => esc(row[key])).join(","));
     }
 
     const csv = `\uFEFF${lines.join("\n")}`;
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
-    res.setHeader("Content-Disposition", `attachment; filename=repair_cases_${Date.now()}.csv`);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=repair_cases_${Date.now()}.csv`,
+    );
     res.send(csv);
   } catch (error) {
     console.error("repair export error:", error);

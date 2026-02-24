@@ -101,6 +101,7 @@ router.get("/", async (req, res) => {
         ) m ON d.item_id = m.item_id AND d.current_price = m.max_price
         LEFT JOIN crawled_items i ON d.item_id = i.item_id
         LEFT JOIN users u ON d.user_id = u.id
+        LEFT JOIN bid_workflow_stages bws ON bws.bid_type = 'direct' AND bws.bid_id = d.id
         WHERE 1=1
       `;
 
@@ -143,6 +144,7 @@ router.get("/", async (req, res) => {
         FROM direct_bids d
         LEFT JOIN crawled_items i ON d.item_id = i.item_id
         LEFT JOIN users u ON d.user_id = u.id
+        LEFT JOIN bid_workflow_stages bws ON bws.bid_type = 'direct' AND bws.bid_id = d.id
         WHERE 1=1
       `;
 
@@ -194,20 +196,38 @@ router.get("/", async (req, res) => {
 
     // 상태 필터 추가
     if (status) {
-      // 콤마로 구분된 상태 값 처리
       const statusArray = status.split(",");
+      const bwsStatuses = statusArray.filter(
+        (s) => s === "domestic_arrived" || s === "processing",
+      );
+      const bidStatuses = statusArray.filter(
+        (s) => s !== "domestic_arrived" && s !== "processing",
+      );
 
-      if (statusArray.length === 1) {
-        // 단일 상태
-        countQuery += " AND d.status = ?";
-        mainQuery += " AND d.status = ?";
-        queryParams.push(status);
+      if (bwsStatuses.length > 0 && bidStatuses.length === 0) {
+        // domestic_arrived / processing 만 필터 → bid_workflow_stages 기준
+        const placeholders = bwsStatuses.map(() => "?").join(",");
+        countQuery += ` AND bws.stage IN (${placeholders}) AND d.status = 'completed'`;
+        mainQuery += ` AND bws.stage IN (${placeholders}) AND d.status = 'completed'`;
+        queryParams.push(...bwsStatuses);
+      } else if (bwsStatuses.length > 0) {
+        // 혼합: bws.stage 또는 d.status
+        const bwsPlaceholders = bwsStatuses.map(() => "?").join(",");
+        const bidPlaceholders = bidStatuses.map(() => "?").join(",");
+        countQuery += ` AND (bws.stage IN (${bwsPlaceholders}) OR d.status IN (${bidPlaceholders}))`;
+        mainQuery += ` AND (bws.stage IN (${bwsPlaceholders}) OR d.status IN (${bidPlaceholders}))`;
+        queryParams.push(...bwsStatuses, ...bidStatuses);
       } else {
-        // 복수 상태
-        const placeholders = statusArray.map(() => "?").join(",");
-        countQuery += ` AND d.status IN (${placeholders})`;
-        mainQuery += ` AND d.status IN (${placeholders})`;
-        queryParams.push(...statusArray);
+        // bid 테이블 status 만
+        if (bidStatuses.length === 1) {
+          countQuery += " AND d.status = ?";
+          mainQuery += " AND d.status = ?";
+        } else {
+          const placeholders = bidStatuses.map(() => "?").join(",");
+          countQuery += ` AND d.status IN (${placeholders})`;
+          mainQuery += ` AND d.status IN (${placeholders})`;
+        }
+        queryParams.push(...bidStatuses);
       }
     }
 
@@ -943,11 +963,14 @@ router.put("/complete", isAdmin, async (req, res) => {
           nextStatus: "completed",
         });
         if (!syncResult?.updated && syncResult?.reason !== "already-synced") {
-          console.warn("[WMS sync][direct][complete] status update not applied:", {
-            bidId: Number(completedBid.id),
-            itemId: completedBid.item_id || null,
-            reason: syncResult?.reason || "unknown",
-          });
+          console.warn(
+            "[WMS sync][direct][complete] status update not applied:",
+            {
+              bidId: Number(completedBid.id),
+              itemId: completedBid.item_id || null,
+              reason: syncResult?.reason || "unknown",
+            },
+          );
         }
       }
     }
