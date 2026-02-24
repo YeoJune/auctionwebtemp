@@ -5,10 +5,10 @@ const cron = require("node-cron");
 require("dotenv").config();
 
 const MAX_PARAM_LENGTH = 40;
-const ACCOUNT_TEXT = `�???�??024801-04-544857
-?�승??까사?�랫??`;
+const ACCOUNT_TEXT = `국민은행 024801-04-544857
+황승하(까사플랫폼)`;
 
-// ?��? ?�화번호 조회 ?�수
+// 유저 전화번호 조회 함수
 async function getUsersWithPhone(userIds) {
   if (!userIds || userIds.length === 0) return [];
 
@@ -17,7 +17,7 @@ async function getUsersWithPhone(userIds) {
     const placeholders = userIds.map(() => "?").join(",");
     const [users] = await connection.query(
       `SELECT id, phone FROM users WHERE id IN (${placeholders}) AND phone IS NOT NULL AND phone != ''`,
-      userIds
+      userIds,
     );
     return users;
   } catch (error) {
@@ -28,7 +28,7 @@ async function getUsersWithPhone(userIds) {
   }
 }
 
-// ?�전??메시지 발송 ?�수
+// 안전한 메시지 발송 함수
 async function safeSendMessage(messageService, method, messages, context = "") {
   if (!messages || messages.length === 0) {
     console.log(`No messages to send for ${context}`);
@@ -88,24 +88,24 @@ class MessageService {
         formData.append(`subject_${num}`, config.subject);
         formData.append(
           `emtitle_${num}`,
-          this.formatMessage(config.emtitle, params)
+          this.formatMessage(config.emtitle, params),
         );
         formData.append(
           `message_${num}`,
-          this.formatMessage(config.message, params)
+          this.formatMessage(config.message, params),
         );
 
         if (config.fmessage) {
           formData.append(
             `fmessage_${num}`,
-            this.formatMessage(config.fmessage, params)
+            this.formatMessage(config.fmessage, params),
           );
         }
 
         if (config.buttons) {
           formData.append(
             `button_${num}`,
-            JSON.stringify({ button: config.buttons })
+            JSON.stringify({ button: config.buttons }),
           );
         }
       });
@@ -129,28 +129,28 @@ class MessageService {
     }
   }
 
-  // ?�찰 ?�료 ?�림
+  // 낙찰 완료 알림
   async sendWinningNotification(messages) {
     const config = {
       templateCode: "UC_2621",
-      subject: "?�찰?�료",
-      emtitle: "#{?�짜} 경매 #{건수}�??�찰",
-      message: `#{고객�???#{?�짜}?�찰?�신 ?�품�?#{건수}�??�찰?�었?�니??
+      subject: "낙찰완료",
+      emtitle: "#{날짜} 경매 #{건수}건 낙찰",
+      message: `#{고객명}님 #{날짜}입찰하신 상품중 #{건수}건 낙찰되었습니다.
 
-#{계좌?�스??`,
-      fmessage: `#{고객�???#{?�짜}?�찰?�신 ?�품�?#{건수}�??�찰?�었?�니??
+#{계좌텍스트}`,
+      fmessage: `#{고객명}님 #{날짜}입찰하신 상품중 #{건수}건 낙찰되었습니다.
 
-#{계좌?�스??`,
+#{계좌텍스트}`,
       buttons: [
         {
-          name: "채널추�?",
+          name: "채널추가",
           linkType: "AC",
-          linkTypeName: "채널 추�?",
+          linkTypeName: "채널 추가",
         },
         {
-          name: "?�찰결과 ?�이지",
+          name: "입찰결과 페이지",
           linkType: "WL",
-          linkTypeName: "?�링??,
+          linkTypeName: "웹링크",
           linkPc: "https://casastrade.com/bidResultsPage",
           linkMo: "https://casastrade.com/bidResultsPage",
         },
@@ -160,35 +160,35 @@ class MessageService {
     return this.sendKakaoMessage(messages, config);
   }
 
-  // 최종 ?�찰 ?�청
+  // 최종 입찰 요청
   async sendFinalBidRequest(messages) {
     const config = {
       templateCode: "UB_8707",
-      subject: "2차제?�금??,
-      emtitle: "최종금액 ?�찰 ?�청",
-      message: `#{고객�????�찰?�신 ?�장경매 모든?�품???�???�안금액???�데?�트 ?�었?�니??
+      subject: "2차제안금액",
+      emtitle: "최종금액 입찰 요청",
+      message: `#{고객명}님 입찰하신 현장경매 모든상품에 대한 제안금액이 업데이트 되었습니다.
 
-?�찰?�실 ?�품???�하??최종?�찰 부?�드립니??)
-감사?�니??)`,
-      fmessage: `2�??�안가 ?�록 ?�료
-최종금액 ?�찰 ?�청
+입찰하실 상품에 한하여 최종입찰 부탁드립니다:)
+감사합니다:)`,
+      fmessage: `2차 제안가 등록 완료
+최종금액 입찰 요청
 
-#{고객�????�찰?�신 ?�장경매 모든?�품???�???�안금액???�데?�트 ?�었?�니??
+#{고객명}님 입찰하신 현장경매 모든상품에 대한 제안금액이 업데이트 되었습니다.
 
-?�찰?�실 ?�품???�하??최종?�찰 부?�드립니??)
-감사?�니??)
+입찰하실 상품에 한하여 최종입찰 부탁드립니다:)
+감사합니다:)
 
-?�당 ?�안 금액 ?�데?�트 ?�림 메시지??고객?�의 ?�림 ?�청???�해 발송?�니??`,
+해당 제안 금액 업데이트 알림 메시지는 고객님의 알림 신청에 의해 발송됩니다.`,
       buttons: [
         {
-          name: "채널추�?",
+          name: "채널추가",
           linkType: "AC",
-          linkTypeName: "채널 추�?",
+          linkTypeName: "채널 추가",
         },
         {
-          name: "?�찰",
+          name: "입찰",
           linkType: "WL",
-          linkTypeName: "?�링??,
+          linkTypeName: "웹링크",
           linkPc: "https://casastrade.com/bidProductsPage?bidType=live",
           linkMo: "https://casastrade.com/bidProductsPage?bidType=live",
         },
@@ -198,19 +198,19 @@ class MessageService {
     return this.sendKakaoMessage(messages, config);
   }
 
-  // ???��? ?�찰 ?�림
+  // 더 높은 입찰 알림
   async sendHigherBidAlert(messages) {
     const config = {
       templateCode: "UB_8489",
-      subject: "?�높?�?�찰",
-      emtitle: "#{?�품�?",
+      subject: "더높은입찰",
+      emtitle: "#{상품명}",
       message:
-        "?�찰?�신 #{?�품�????�찰?�신 금액보다 ?��? ?�찰??발생?��??�니??",
+        "입찰하신 #{상품명}에 입찰하신 금액보다 높은 입찰이 발생하였습니다.",
       buttons: [
         {
-          name: "?�찰 ??��",
+          name: "입찰 항목",
           linkType: "WL",
-          linkTypeName: "?�링??,
+          linkTypeName: "웹링크",
           linkPc: "https://casastrade.com/bidProductsPage",
           linkMo: "https://casastrade.com/bidProductsPage",
         },
@@ -221,7 +221,7 @@ class MessageService {
   }
 }
 
-// ?�스?�스 ?�성 ?�토�??�수
+// 인스턴스 생성 팩토리 함수
 function createMessageService() {
   return new MessageService({
     apiKey: process.env.SMS_API_KEY,
@@ -231,9 +231,9 @@ function createMessageService() {
   });
 }
 
-// 비즈?�스 로직�?메시지 발송 ?�수??
+// 비즈니스 로직별 메시지 발송 함수들
 
-// ?�찰 ?�료 ?�림 발송
+// 낙찰 완료 알림 발송
 async function sendWinningNotifications(completedBids) {
   const messageService = createMessageService();
   const userIds = [...new Set(completedBids.map((bid) => bid.user_id))];
@@ -243,11 +243,11 @@ async function sendWinningNotifications(completedBids) {
 
   const messages = [];
 
-  // ?��?�? ?�짜별로 그룹??
+  // 유저별, 날짜별로 그룹핑
   users.forEach((user) => {
     const userBids = completedBids.filter((bid) => bid.user_id === user.id);
 
-    // ?�짜별로 그룹??
+    // 날짜별로 그룹핑
     const bidsByDate = userBids.reduce((acc, bid) => {
       const bidDate = bid.scheduled_date
         ? new Date(bid.scheduled_date).toISOString().split("T")[0]
@@ -260,17 +260,17 @@ async function sendWinningNotifications(completedBids) {
       return acc;
     }, {});
 
-    // �??�짜별로 메시지 ?�성
+    // 각 날짜별로 메시지 생성
     Object.entries(bidsByDate).forEach(([date, dateBids]) => {
       const bidCount = dateBids.length;
 
       messages.push({
         phone: user.phone,
         params: {
-          ?�짜: date,
-          고객�? user.id,
+          날짜: date,
+          고객명: user.id,
           건수: bidCount.toString(),
-          계좌?�스?? ACCOUNT_TEXT,
+          계좌텍스트: ACCOUNT_TEXT,
         },
       });
     });
@@ -280,11 +280,11 @@ async function sendWinningNotifications(completedBids) {
     messageService,
     "sendWinningNotification",
     messages,
-    "winning notification"
+    "winning notification",
   );
 }
 
-// 최종 ?�찰 ?�청 발송
+// 최종 입찰 요청 발송
 async function sendFinalBidRequests(secondBids) {
   const messageService = createMessageService();
   const userIds = [...new Set(secondBids.map((bid) => bid.user_id))];
@@ -295,7 +295,7 @@ async function sendFinalBidRequests(secondBids) {
   const messages = users.map((user) => ({
     phone: user.phone,
     params: {
-      고객�? user.id,
+      고객명: user.id,
     },
   }));
 
@@ -303,11 +303,11 @@ async function sendFinalBidRequests(secondBids) {
     messageService,
     "sendFinalBidRequest",
     messages,
-    "final bid request"
+    "final bid request",
   );
 }
 
-// ???��? ?�찰 ?�림 발송
+// 더 높은 입찰 알림 발송
 async function sendHigherBidAlerts(cancelledBids) {
   const messageService = createMessageService();
   const userIds = [...new Set(cancelledBids.map((bid) => bid.user_id))];
@@ -320,7 +320,7 @@ async function sendHigherBidAlerts(cancelledBids) {
     return {
       phone: user.phone,
       params: {
-        ?�품�? userBid.title || userBid.item_id,
+        상품명: userBid.title || userBid.item_id,
       },
     };
   });
@@ -329,7 +329,7 @@ async function sendHigherBidAlerts(cancelledBids) {
     messageService,
     "sendHigherBidAlert",
     messages,
-    "higher bid alert"
+    "higher bid alert",
   );
 }
 
@@ -337,24 +337,24 @@ async function sendDailyWinningNotifications() {
   const connection = await pool.getConnection();
 
   try {
-    // 발송?��? ?��? ?�료??live ?�찰??조회
+    // 발송되지 않은 완료된 live 입찰들 조회
     const [liveBids] = await connection.query(`
       SELECT 'live' as bid_type, l.id as bid_id, l.user_id, 
              i.title, i.scheduled_date
       FROM live_bids l
       JOIN crawled_items i ON l.item_id = i.item_id
-      WHERE l.status = 'completed'
+      WHERE l.status IN ('completed', 'shipped')
         AND l.notification_sent_at IS NULL
         AND COALESCE(l.winning_price, l.final_price) > 0
     `);
 
-    // 발송?��? ?��? ?�료??direct ?�찰??조회
+    // 발송되지 않은 완료된 direct 입찰들 조회
     const [directBids] = await connection.query(`
       SELECT 'direct' as bid_type, d.id as bid_id, d.user_id,
              i.title, i.scheduled_date
       FROM direct_bids d
       JOIN crawled_items i ON d.item_id = i.item_id
-      WHERE d.status = 'completed'
+      WHERE d.status IN ('completed', 'shipped')
         AND d.notification_sent_at IS NULL
         AND d.winning_price > 0
     `);
@@ -366,11 +366,11 @@ async function sendDailyWinningNotifications() {
       return;
     }
 
-    // 기존 sendWinningNotifications ?�수 ?�사??(?�드�??�일???�이?�로)
+    // 기존 sendWinningNotifications 함수 재사용 (필드명 통일된 데이터로)
     const result = await sendWinningNotifications(completedBids);
 
     if (result && result.success) {
-      // 발송 ?�료 ?�래�??�데?�트 (?��??�으�?live/direct 구분)
+      // 발송 완료 플래그 업데이트 (내부적으로 live/direct 구분)
       await updateNotificationTimestamp(connection, completedBids);
     }
   } catch (error) {
@@ -391,7 +391,7 @@ async function updateNotificationTimestamp(connection, bids) {
     const placeholders = liveIds.map(() => "?").join(",");
     await connection.query(
       `UPDATE live_bids SET notification_sent_at = ? WHERE id IN (${placeholders})`,
-      [now, ...liveIds]
+      [now, ...liveIds],
     );
   }
 
@@ -400,7 +400,7 @@ async function updateNotificationTimestamp(connection, bids) {
     const placeholders = directIds.map(() => "?").join(",");
     await connection.query(
       `UPDATE direct_bids SET notification_sent_at = ? WHERE id IN (${placeholders})`,
-      [now, ...directIds]
+      [now, ...directIds],
     );
   }
 
@@ -411,7 +411,7 @@ async function sendDailyFinalBidReminders() {
   const connection = await pool.getConnection();
 
   try {
-    // ?�일 경매?�데 ?�직 final_price가 ?�는 second ?�태 ?�찰??조회
+    // 내일 경매인데 아직 final_price가 없는 second 상태 입찰들 조회
     const [secondBids] = await connection.query(`
       SELECT l.id as bid_id, l.user_id
       FROM live_bids l
@@ -427,18 +427,18 @@ async function sendDailyFinalBidReminders() {
       return;
     }
 
-    // 기존 sendFinalBidRequests ?�수 ?�사??
+    // 기존 sendFinalBidRequests 함수 재사용
     const result = await sendFinalBidRequests(secondBids);
 
     if (result && result.success) {
-      // 발송 ?�료 ?�래�??�데?�트
+      // 발송 완료 플래그 업데이트
       const bidIds = secondBids.map((b) => b.bid_id);
       const placeholders = bidIds.map(() => "?").join(",");
       const now = new Date();
 
       await connection.query(
         `UPDATE live_bids SET request_sent_at = ? WHERE id IN (${placeholders})`,
-        [now, ...bidIds]
+        [now, ...bidIds],
       );
 
       console.log(`Updated request_sent_at for ${bidIds.length} second bids`);
@@ -450,13 +450,13 @@ async function sendDailyFinalBidReminders() {
   }
 }
 
-// ?�일(??�? 16?�에 ?�행
+// 평일(월-금) 16시에 실행
 cron.schedule("0 16 * * 1-5", async () => {
   console.log("Starting daily winning notifications...");
   await sendDailyWinningNotifications();
 });
 
-// 매일 18?�에 ?�행
+// 매일 18시에 실행
 cron.schedule("0 18 * * *", async () => {
   console.log("Starting daily final bid reminders...");
   await sendDailyFinalBidReminders();
