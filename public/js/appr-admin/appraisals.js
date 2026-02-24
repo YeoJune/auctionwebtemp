@@ -602,6 +602,24 @@ function displayAppraisalDetail(appraisal) {
   // 기존 캐시 정리
   cleanupImageCache();
 
+  // components_included가 문자열인 경우 파싱
+  if (
+    appraisal.components_included &&
+    typeof appraisal.components_included === "string"
+  ) {
+    try {
+      appraisal.components_included = JSON.parse(appraisal.components_included);
+    } catch (e) {
+      console.warn("components_included 파싱 실패:", e);
+      appraisal.components_included = [];
+    }
+  }
+
+  // components_included가 배열이 아니면 빈 배열로 초기화
+  if (!Array.isArray(appraisal.components_included)) {
+    appraisal.components_included = [];
+  }
+
   // 기존 HTML 생성 로직 완전히 동일하게 유지
   const container = document.getElementById("appraisal-detail-content");
 
