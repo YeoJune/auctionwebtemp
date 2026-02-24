@@ -527,103 +527,23 @@ async function backfillMissingInternalBarcodesByBidLink(connection) {
 }
 
 async function backfillCompletedWmsItemsByBidStatus(connection) {
-  // direct_bids: source_bid_id로 연결된 WMS 아이템 중 아직 COMPLETED 처리 안 된 것 백필
-  // shipping_status가 'completed'인 경우 WMS도 COMPLETED로 맞춤
+  // ========== shipping_status → WMS 동기화 ==========
+
+  // 1. shipping_status = 'domestic_arrived' → WMS를 DOMESTIC_ARRIVAL_ZONE으로
   await connection.query(
     `
     UPDATE wms_items wi
     INNER JOIN direct_bids d
       ON wi.source_bid_type = 'direct' AND wi.source_bid_id = d.id
     SET wi.current_location_code = 'DOMESTIC_ARRIVAL_ZONE',
-        wi.current_status = 'COMPLETED',
+        wi.current_status = 'DOMESTIC_ARRIVED',
         wi.updated_at = NOW()
     WHERE d.status = 'completed'
-      AND d.shipping_status = 'completed'
-      AND wi.current_status <> 'COMPLETED'
-    `,
-  );
-
-  // direct_bids: source_bid_id 없이 source_item_id로 연결된 것 백필
-  await connection.query(
-    `
-    UPDATE wms_items wi
-    INNER JOIN (
-      SELECT item_id, MAX(id) AS bid_id
-      FROM direct_bids
-      WHERE status = 'completed'
-        AND shipping_status = 'completed'
-      GROUP BY item_id
-    ) d
-      ON CONVERT(wi.source_item_id USING utf8mb4) = CONVERT(d.item_id USING utf8mb4)
-    SET wi.current_location_code = 'DOMESTIC_ARRIVAL_ZONE',
-        wi.current_status = 'COMPLETED',
-        wi.source_bid_type = 'direct',
-        wi.source_bid_id = d.bid_id,
-        wi.updated_at = NOW()
-    WHERE wi.current_status <> 'COMPLETED'
-      AND NULLIF(TRIM(wi.source_item_id), '') IS NOT NULL
+      AND d.shipping_status = 'domestic_arrived'
       AND (
-        wi.source_bid_id IS NULL
-        OR wi.source_bid_type IS NULL
-        OR wi.source_bid_type = ''
+        wi.current_location_code NOT IN ('DOMESTIC_ARRIVAL_ZONE', 'INBOUND_ZONE', 'HOLD_ZONE')
+        OR wi.current_status = 'COMPLETED'
       )
-    `,
-  );
-
-  // live_bids: source_bid_id로 연결된 WMS 아이템 백필
-  await connection.query(
-    `
-    UPDATE wms_items wi
-    INNER JOIN live_bids l
-      ON wi.source_bid_type = 'live' AND wi.source_bid_id = l.id
-    SET wi.current_location_code = 'DOMESTIC_ARRIVAL_ZONE',
-        wi.current_status = 'COMPLETED',
-        wi.updated_at = NOW()
-    WHERE l.status = 'completed'
-      AND l.shipping_status = 'completed'
-      AND wi.current_status <> 'COMPLETED'
-    `,
-  );
-
-  // live_bids: source_item_id로 연결된 것 백필
-  await connection.query(
-    `
-    UPDATE wms_items wi
-    INNER JOIN (
-      SELECT item_id, MAX(id) AS bid_id
-      FROM live_bids
-      WHERE status = 'completed'
-        AND shipping_status = 'completed'
-      GROUP BY item_id
-    ) l
-      ON CONVERT(wi.source_item_id USING utf8mb4) = CONVERT(l.item_id USING utf8mb4)
-    SET wi.current_location_code = 'DOMESTIC_ARRIVAL_ZONE',
-        wi.current_status = 'COMPLETED',
-        wi.source_bid_type = 'live',
-        wi.source_bid_id = l.bid_id,
-        wi.updated_at = NOW()
-    WHERE wi.current_status <> 'COMPLETED'
-      AND NULLIF(TRIM(wi.source_item_id), '') IS NOT NULL
-      AND (
-        wi.source_bid_id IS NULL
-        OR wi.source_bid_type IS NULL
-        OR wi.source_bid_type = ''
-      )
-    `,
-  );
-
-  // 역방향 동기화: WMS가 'COMPLETED' 아닌데 shipping_status가 'completed'면 WMS도 맞춤
-  await connection.query(
-    `
-    UPDATE wms_items wi
-    INNER JOIN direct_bids d
-      ON wi.source_bid_type = 'direct' AND wi.source_bid_id = d.id
-    SET wi.current_location_code = 'DOMESTIC_ARRIVAL_ZONE',
-        wi.current_status = 'COMPLETED',
-        wi.updated_at = NOW()
-    WHERE d.status = 'completed'
-      AND d.shipping_status = 'completed'
-      AND wi.current_status <> 'COMPLETED'
     `,
   );
 
@@ -633,7 +553,113 @@ async function backfillCompletedWmsItemsByBidStatus(connection) {
     INNER JOIN live_bids l
       ON wi.source_bid_type = 'live' AND wi.source_bid_id = l.id
     SET wi.current_location_code = 'DOMESTIC_ARRIVAL_ZONE',
-        wi.current_status = 'COMPLETED',
+        wi.current_status = 'DOMESTIC_ARRIVED',
+        wi.updated_at = NOW()
+    WHERE l.status = 'completed'
+      AND l.shipping_status = 'domestic_arrived'
+      AND (
+        wi.current_location_code NOT IN ('DOMESTIC_ARRIVAL_ZONE', 'INBOUND_ZONE', 'HOLD_ZONE')
+        OR wi.current_status = 'COMPLETED'
+      )
+    `,
+  );
+
+  // 2. shipping_status = 'processing' → WMS를 수선존으로 (이미 수선존이면 유지)
+  await connection.query(
+    `
+    UPDATE wms_items wi
+    INNER JOIN direct_bids d
+      ON wi.source_bid_type = 'direct' AND wi.source_bid_id = d.id
+    SET wi.current_location_code = 
+          IF(wi.current_location_code IN ('INTERNAL_REPAIR_ZONE', 'EXTERNAL_REPAIR_ZONE', 'REPAIR_DONE_ZONE'),
+             wi.current_location_code,
+             'INTERNAL_REPAIR_ZONE'),
+        wi.current_status = 'INTERNAL_REPAIR_IN_PROGRESS',
+        wi.updated_at = NOW()
+    WHERE d.status = 'completed'
+      AND d.shipping_status = 'processing'
+      AND (
+        wi.current_location_code NOT IN ('INTERNAL_REPAIR_ZONE', 'EXTERNAL_REPAIR_ZONE', 'REPAIR_DONE_ZONE')
+        OR wi.current_status = 'COMPLETED'
+      )
+    `,
+  );
+
+  await connection.query(
+    `
+    UPDATE wms_items wi
+    INNER JOIN live_bids l
+      ON wi.source_bid_type = 'live' AND wi.source_bid_id = l.id
+    SET wi.current_location_code = 
+          IF(wi.current_location_code IN ('INTERNAL_REPAIR_ZONE', 'EXTERNAL_REPAIR_ZONE', 'REPAIR_DONE_ZONE'),
+             wi.current_location_code,
+             'INTERNAL_REPAIR_ZONE'),
+        wi.current_status = 'INTERNAL_REPAIR_IN_PROGRESS',
+        wi.updated_at = NOW()
+    WHERE l.status = 'completed'
+      AND l.shipping_status = 'processing'
+      AND (
+        wi.current_location_code NOT IN ('INTERNAL_REPAIR_ZONE', 'EXTERNAL_REPAIR_ZONE', 'REPAIR_DONE_ZONE')
+        OR wi.current_status = 'COMPLETED'
+      )
+    `,
+  );
+
+  // 3. shipping_status = 'shipped' → WMS를 OUTBOUND_ZONE으로
+  await connection.query(
+    `
+    UPDATE wms_items wi
+    INNER JOIN direct_bids d
+      ON wi.source_bid_type = 'direct' AND wi.source_bid_id = d.id
+    SET wi.current_location_code = 'OUTBOUND_ZONE',
+        wi.current_status = 'OUTBOUND_READY',
+        wi.updated_at = NOW()
+    WHERE d.status = 'completed'
+      AND d.shipping_status = 'shipped'
+      AND (
+        wi.current_location_code <> 'OUTBOUND_ZONE'
+        OR wi.current_status = 'COMPLETED'
+      )
+    `,
+  );
+
+  await connection.query(
+    `
+    UPDATE wms_items wi
+    INNER JOIN live_bids l
+      ON wi.source_bid_type = 'live' AND wi.source_bid_id = l.id
+    SET wi.current_location_code = 'OUTBOUND_ZONE',
+        wi.current_status = 'OUTBOUND_READY',
+        wi.updated_at = NOW()
+    WHERE l.status = 'completed'
+      AND l.shipping_status = 'shipped'
+      AND (
+        wi.current_location_code <> 'OUTBOUND_ZONE'
+        OR wi.current_status = 'COMPLETED'
+      )
+    `,
+  );
+
+  // 4. shipping_status = 'completed' → WMS를 COMPLETED로
+  await connection.query(
+    `
+    UPDATE wms_items wi
+    INNER JOIN direct_bids d
+      ON wi.source_bid_type = 'direct' AND wi.source_bid_id = d.id
+    SET wi.current_status = 'COMPLETED',
+        wi.updated_at = NOW()
+    WHERE d.status = 'completed'
+      AND d.shipping_status = 'completed'
+      AND wi.current_status <> 'COMPLETED'
+    `,
+  );
+
+  await connection.query(
+    `
+    UPDATE wms_items wi
+    INNER JOIN live_bids l
+      ON wi.source_bid_type = 'live' AND wi.source_bid_id = l.id
+    SET wi.current_status = 'COMPLETED',
         wi.updated_at = NOW()
     WHERE l.status = 'completed'
       AND l.shipping_status = 'completed'
@@ -641,7 +667,8 @@ async function backfillCompletedWmsItemsByBidStatus(connection) {
     `,
   );
 
-  // 반대 방향: WMS current_status가 'COMPLETED'가 아닌데 shipping_status가 잘못된 경우 수정
+  // ========== WMS → shipping_status 동기화 (역방향) ==========
+
   await connection.query(
     `
     UPDATE direct_bids d
@@ -649,6 +676,7 @@ async function backfillCompletedWmsItemsByBidStatus(connection) {
       ON wi.source_bid_type = 'direct' AND wi.source_bid_id = d.id
     SET d.shipping_status = 
         CASE 
+          WHEN wi.current_status = 'COMPLETED' THEN 'completed'
           WHEN wi.current_location_code IN ('DOMESTIC_ARRIVAL_ZONE', 'INBOUND_ZONE', 'HOLD_ZONE') 
             THEN 'domestic_arrived'
           WHEN wi.current_location_code IN ('INTERNAL_REPAIR_ZONE', 'EXTERNAL_REPAIR_ZONE', 'REPAIR_DONE_ZONE')
@@ -659,8 +687,8 @@ async function backfillCompletedWmsItemsByBidStatus(connection) {
         END,
         d.updated_at = NOW()
     WHERE d.status = 'completed'
-      AND wi.current_status <> 'COMPLETED'
       AND d.shipping_status <> CASE 
+          WHEN wi.current_status = 'COMPLETED' THEN 'completed'
           WHEN wi.current_location_code IN ('DOMESTIC_ARRIVAL_ZONE', 'INBOUND_ZONE', 'HOLD_ZONE') 
             THEN 'domestic_arrived'
           WHEN wi.current_location_code IN ('INTERNAL_REPAIR_ZONE', 'EXTERNAL_REPAIR_ZONE', 'REPAIR_DONE_ZONE')
@@ -679,6 +707,7 @@ async function backfillCompletedWmsItemsByBidStatus(connection) {
       ON wi.source_bid_type = 'live' AND wi.source_bid_id = l.id
     SET l.shipping_status = 
         CASE 
+          WHEN wi.current_status = 'COMPLETED' THEN 'completed'
           WHEN wi.current_location_code IN ('DOMESTIC_ARRIVAL_ZONE', 'INBOUND_ZONE', 'HOLD_ZONE') 
             THEN 'domestic_arrived'
           WHEN wi.current_location_code IN ('INTERNAL_REPAIR_ZONE', 'EXTERNAL_REPAIR_ZONE', 'REPAIR_DONE_ZONE')
@@ -689,8 +718,8 @@ async function backfillCompletedWmsItemsByBidStatus(connection) {
         END,
         l.updated_at = NOW()
     WHERE l.status = 'completed'
-      AND wi.current_status <> 'COMPLETED'
       AND l.shipping_status <> CASE 
+          WHEN wi.current_status = 'COMPLETED' THEN 'completed'
           WHEN wi.current_location_code IN ('DOMESTIC_ARRIVAL_ZONE', 'INBOUND_ZONE', 'HOLD_ZONE') 
             THEN 'domestic_arrived'
           WHEN wi.current_location_code IN ('INTERNAL_REPAIR_ZONE', 'EXTERNAL_REPAIR_ZONE', 'REPAIR_DONE_ZONE')
