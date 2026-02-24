@@ -1264,10 +1264,10 @@ router.get("/member-groups/:id/members", isAdmin, async (req, res) => {
          SELECT user_id, COUNT(*) AS total_bid_count, COALESCE(SUM(amount_jpy), 0) AS total_bid_jpy
          FROM (
            SELECT user_id, COALESCE(CAST(REPLACE(COALESCE(winning_price,final_price,second_price,first_price), ',', '') AS DECIMAL(18,2)), 0) AS amount_jpy
-           FROM live_bids WHERE user_id IS NOT NULL AND status IN ('completed','domestic_arrived','processing','shipped')
+           FROM live_bids WHERE user_id IS NOT NULL AND status = 'completed'
            UNION ALL
            SELECT user_id, COALESCE(CAST(REPLACE(COALESCE(winning_price,current_price), ',', '') AS DECIMAL(18,2)), 0) AS amount_jpy
-           FROM direct_bids WHERE user_id IS NOT NULL AND status IN ('completed','domestic_arrived','processing','shipped')
+           FROM direct_bids WHERE user_id IS NOT NULL AND status = 'completed'
          ) t GROUP BY user_id
        ) bt ON bt.user_id = u.id
        LEFT JOIN (
@@ -1861,7 +1861,7 @@ router.get("/export/bid-results", isAdmin, async (req, res) => {
            i.image
          FROM live_bids lb
          JOIN crawled_items i ON lb.item_id = i.item_id
-         WHERE lb.user_id = ? AND DATE(i.scheduled_date) = ? AND lb.status IN ('completed', 'shipped')`,
+         WHERE lb.user_id = ? AND DATE(i.scheduled_date) = ? AND lb.status = 'completed'`,
         [user_id, settlement_date],
       );
 
@@ -1887,7 +1887,7 @@ router.get("/export/bid-results", isAdmin, async (req, res) => {
            i.image
          FROM direct_bids db
          JOIN crawled_items i ON db.item_id = i.item_id
-         WHERE db.user_id = ? AND DATE(i.scheduled_date) = ? AND db.status IN ('completed', 'shipped')`,
+         WHERE db.user_id = ? AND DATE(i.scheduled_date) = ? AND db.status = 'completed'`,
         [user_id, settlement_date],
       );
 
@@ -2061,7 +2061,6 @@ function getStatusText(status, type) {
       second: "2차 제안",
       final: "최종 입찰",
       completed: "완료",
-      shipped: "출고됨",
       cancelled: "낙찰 실패",
     };
     return statusMap[status] || status;
@@ -2069,7 +2068,6 @@ function getStatusText(status, type) {
     const statusMap = {
       active: "활성",
       completed: "완료",
-      shipped: "출고됨",
       cancelled: "낙찰 실패",
     };
     return statusMap[status] || status;
