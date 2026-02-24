@@ -41,6 +41,11 @@ function statusByLocation(locationCode) {
 
 function targetLocationByBidStatus(nextStatus, currentLocationCode) {
   if (nextStatus === "completed" || nextStatus === "domestic_arrived") {
+    // domestic_arrived는 DOMESTIC_ARRIVAL_ZONE 또는 HOLD_ZONE일 수 있음
+    // 현재 HOLD_ZONE에 있다면 유지, 아니면 DOMESTIC_ARRIVAL_ZONE으로
+    if (currentLocationCode === "HOLD_ZONE") {
+      return "HOLD_ZONE";
+    }
     return "DOMESTIC_ARRIVAL_ZONE";
   }
   if (nextStatus === "processing") {
@@ -523,6 +528,7 @@ async function backfillMissingInternalBarcodesByBidLink(connection) {
 
 async function backfillCompletedWmsItemsByBidStatus(connection) {
   // direct_bids: source_bid_id로 연결된 WMS 아이템 중 아직 COMPLETED 처리 안 된 것 백필
+  // shipping_status가 'completed'인 경우 WMS도 COMPLETED로 맞춤
   await connection.query(
     `
     UPDATE wms_items wi
@@ -532,7 +538,7 @@ async function backfillCompletedWmsItemsByBidStatus(connection) {
         wi.current_status = 'COMPLETED',
         wi.updated_at = NOW()
     WHERE d.status = 'completed'
-      AND d.shipping_status = 'pending'
+      AND d.shipping_status = 'completed'
       AND wi.current_status <> 'COMPLETED'
     `,
   );
@@ -545,7 +551,7 @@ async function backfillCompletedWmsItemsByBidStatus(connection) {
       SELECT item_id, MAX(id) AS bid_id
       FROM direct_bids
       WHERE status = 'completed'
-        AND shipping_status = 'pending'
+        AND shipping_status = 'completed'
       GROUP BY item_id
     ) d
       ON CONVERT(wi.source_item_id USING utf8mb4) = CONVERT(d.item_id USING utf8mb4)
@@ -574,7 +580,7 @@ async function backfillCompletedWmsItemsByBidStatus(connection) {
         wi.current_status = 'COMPLETED',
         wi.updated_at = NOW()
     WHERE l.status = 'completed'
-      AND l.shipping_status = 'pending'
+      AND l.shipping_status = 'completed'
       AND wi.current_status <> 'COMPLETED'
     `,
   );
@@ -587,7 +593,7 @@ async function backfillCompletedWmsItemsByBidStatus(connection) {
       SELECT item_id, MAX(id) AS bid_id
       FROM live_bids
       WHERE status = 'completed'
-        AND shipping_status = 'pending'
+        AND shipping_status = 'completed'
       GROUP BY item_id
     ) l
       ON CONVERT(wi.source_item_id USING utf8mb4) = CONVERT(l.item_id USING utf8mb4)
@@ -606,17 +612,63 @@ async function backfillCompletedWmsItemsByBidStatus(connection) {
     `,
   );
 
-  // 위 WMS 업데이트 대상이 된 bid들의 shipping_status를 'completed'로 전환
+  // 역방향 동기화: WMS가 'COMPLETED' 아닌데 shipping_status가 'completed'면 WMS도 맞춤
+  await connection.query(
+    `
+    UPDATE wms_items wi
+    INNER JOIN direct_bids d
+      ON wi.source_bid_type = 'direct' AND wi.source_bid_id = d.id
+    SET wi.current_location_code = 'DOMESTIC_ARRIVAL_ZONE',
+        wi.current_status = 'COMPLETED',
+        wi.updated_at = NOW()
+    WHERE d.status = 'completed'
+      AND d.shipping_status = 'completed'
+      AND wi.current_status <> 'COMPLETED'
+    `,
+  );
+
+  await connection.query(
+    `
+    UPDATE wms_items wi
+    INNER JOIN live_bids l
+      ON wi.source_bid_type = 'live' AND wi.source_bid_id = l.id
+    SET wi.current_location_code = 'DOMESTIC_ARRIVAL_ZONE',
+        wi.current_status = 'COMPLETED',
+        wi.updated_at = NOW()
+    WHERE l.status = 'completed'
+      AND l.shipping_status = 'completed'
+      AND wi.current_status <> 'COMPLETED'
+    `,
+  );
+
+  // 반대 방향: WMS current_status가 'COMPLETED'가 아닌데 shipping_status가 잘못된 경우 수정
   await connection.query(
     `
     UPDATE direct_bids d
     INNER JOIN wms_items wi
       ON wi.source_bid_type = 'direct' AND wi.source_bid_id = d.id
-    SET d.shipping_status = 'completed',
+    SET d.shipping_status = 
+        CASE 
+          WHEN wi.current_location_code IN ('DOMESTIC_ARRIVAL_ZONE', 'INBOUND_ZONE', 'HOLD_ZONE') 
+            THEN 'domestic_arrived'
+          WHEN wi.current_location_code IN ('INTERNAL_REPAIR_ZONE', 'EXTERNAL_REPAIR_ZONE', 'REPAIR_DONE_ZONE')
+            THEN 'processing'
+          WHEN wi.current_location_code = 'OUTBOUND_ZONE'
+            THEN 'shipped'
+          ELSE d.shipping_status
+        END,
         d.updated_at = NOW()
     WHERE d.status = 'completed'
-      AND d.shipping_status = 'pending'
-      AND wi.current_status = 'COMPLETED'
+      AND wi.current_status <> 'COMPLETED'
+      AND d.shipping_status <> CASE 
+          WHEN wi.current_location_code IN ('DOMESTIC_ARRIVAL_ZONE', 'INBOUND_ZONE', 'HOLD_ZONE') 
+            THEN 'domestic_arrived'
+          WHEN wi.current_location_code IN ('INTERNAL_REPAIR_ZONE', 'EXTERNAL_REPAIR_ZONE', 'REPAIR_DONE_ZONE')
+            THEN 'processing'
+          WHEN wi.current_location_code = 'OUTBOUND_ZONE'
+            THEN 'shipped'
+          ELSE d.shipping_status
+        END
     `,
   );
 
@@ -625,11 +677,28 @@ async function backfillCompletedWmsItemsByBidStatus(connection) {
     UPDATE live_bids l
     INNER JOIN wms_items wi
       ON wi.source_bid_type = 'live' AND wi.source_bid_id = l.id
-    SET l.shipping_status = 'completed',
+    SET l.shipping_status = 
+        CASE 
+          WHEN wi.current_location_code IN ('DOMESTIC_ARRIVAL_ZONE', 'INBOUND_ZONE', 'HOLD_ZONE') 
+            THEN 'domestic_arrived'
+          WHEN wi.current_location_code IN ('INTERNAL_REPAIR_ZONE', 'EXTERNAL_REPAIR_ZONE', 'REPAIR_DONE_ZONE')
+            THEN 'processing'
+          WHEN wi.current_location_code = 'OUTBOUND_ZONE'
+            THEN 'shipped'
+          ELSE l.shipping_status
+        END,
         l.updated_at = NOW()
     WHERE l.status = 'completed'
-      AND l.shipping_status = 'pending'
-      AND wi.current_status = 'COMPLETED'
+      AND wi.current_status <> 'COMPLETED'
+      AND l.shipping_status <> CASE 
+          WHEN wi.current_location_code IN ('DOMESTIC_ARRIVAL_ZONE', 'INBOUND_ZONE', 'HOLD_ZONE') 
+            THEN 'domestic_arrived'
+          WHEN wi.current_location_code IN ('INTERNAL_REPAIR_ZONE', 'EXTERNAL_REPAIR_ZONE', 'REPAIR_DONE_ZONE')
+            THEN 'processing'
+          WHEN wi.current_location_code = 'OUTBOUND_ZONE'
+            THEN 'shipped'
+          ELSE l.shipping_status
+        END
     `,
   );
 

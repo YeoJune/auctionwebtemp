@@ -283,6 +283,33 @@ async function hideInvalidDomesticArrivals(conn) {
       )
     `,
   );
+
+  // WMS를 COMPLETED로 바꾼 것들의 shipping_status도 동기화
+  await conn.query(
+    `
+    UPDATE direct_bids d
+    INNER JOIN wms_items wi
+      ON wi.source_bid_type = 'direct' AND wi.source_bid_id = d.id
+    SET d.shipping_status = 'completed',
+        d.updated_at = NOW()
+    WHERE d.status = 'completed'
+      AND wi.current_status = 'COMPLETED'
+      AND d.shipping_status <> 'completed'
+    `,
+  );
+
+  await conn.query(
+    `
+    UPDATE live_bids l
+    INNER JOIN wms_items wi
+      ON wi.source_bid_type = 'live' AND wi.source_bid_id = l.id
+    SET l.shipping_status = 'completed',
+        l.updated_at = NOW()
+    WHERE l.status = 'completed'
+      AND wi.current_status = 'COMPLETED'
+      AND l.shipping_status <> 'completed'
+    `,
+  );
 }
 
 async function syncBidStatusByLocation(conn, item, toLocationCode) {

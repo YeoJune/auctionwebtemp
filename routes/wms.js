@@ -77,6 +77,7 @@ function workflowStageByLocation(locationCode) {
   switch (normalizedLocationCode) {
     case "DOMESTIC_ARRIVAL_ZONE":
     case "INBOUND_ZONE":
+    case "HOLD_ZONE":
       return "domestic_arrived";
     case "REPAIR_ZONE":
     case "INTERNAL_REPAIR_ZONE":
@@ -150,8 +151,10 @@ async function syncBidStatusByLocation(conn, item, toLocationCode) {
   let nextBidStatus = null;
   if (
     normalizedToLocationCode === "DOMESTIC_ARRIVAL_ZONE" ||
-    normalizedToLocationCode === "INBOUND_ZONE"
+    normalizedToLocationCode === "INBOUND_ZONE" ||
+    normalizedToLocationCode === "HOLD_ZONE"
   ) {
+    // HOLD_ZONE도 domestic_arrived로 분류 (국내 도착했지만 보류된 상태)
     nextBidStatus = "domestic_arrived";
   } else if (
     normalizedToLocationCode === "REPAIR_ZONE" ||
@@ -1047,15 +1050,6 @@ router.get("/board", isAdmin, async (req, res) => {
       `
       SELECT i.current_location_code AS code, COUNT(DISTINCT i.id) AS cnt
       FROM wms_items i
-      LEFT JOIN direct_bids d
-        ON i.source_bid_type = 'direct'
-       AND i.source_bid_id = d.id
-      LEFT JOIN live_bids l
-        ON i.source_bid_type = 'live'
-       AND i.source_bid_id = l.id
-      LEFT JOIN crawled_items ci
-        ON CONVERT(ci.item_id USING utf8mb4) =
-           CONVERT(COALESCE(i.source_item_id, d.item_id, l.item_id) USING utf8mb4)
       WHERE i.current_status <> 'COMPLETED'
         AND (
           NULLIF(TRIM(i.internal_barcode), '') IS NOT NULL
@@ -1071,10 +1065,6 @@ router.get("/board", isAdmin, async (req, res) => {
           NULLIF(TRIM(i.internal_barcode), ''),
           NULLIF(TRIM(i.external_barcode), '')
         ) REGEXP '[0-9]'
-        AND (
-          COALESCE(d.id, l.id) IS NOT NULL
-          OR ci.item_id IS NOT NULL
-        )
       GROUP BY i.current_location_code
       `,
     );
@@ -1156,10 +1146,6 @@ router.get("/board", isAdmin, async (req, res) => {
           NULLIF(TRIM(i.internal_barcode), ''),
           NULLIF(TRIM(i.external_barcode), '')
         ) REGEXP '[0-9]'
-        AND (
-          COALESCE(d.id, l.id) IS NOT NULL
-          OR ci.item_id IS NOT NULL
-        )
       ORDER BY i.updated_at DESC
       LIMIT 200
       `,
