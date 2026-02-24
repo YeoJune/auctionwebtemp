@@ -75,18 +75,12 @@ async function fetchLiveBids(
   fromDate = "",
   toDate = "",
   search = "",
-  aucNum = ""
+  aucNum = "",
 ) {
-  const workflowOnlyStatuses = ["domestic_arrived", "processing"];
-  const queryStatus = workflowOnlyStatuses.includes(status)
-    ? "completed"
-    : status;
-  const queryPage = workflowOnlyStatuses.includes(status) ? 1 : page;
-  const queryLimit = workflowOnlyStatuses.includes(status) ? 0 : limit;
   const params = new URLSearchParams({
-    status: queryStatus,
-    page: queryPage,
-    limit: queryLimit,
+    status: status,
+    page: page,
+    limit: limit,
   });
 
   if (search) {
@@ -114,17 +108,6 @@ async function fetchLiveBids(
   }
 
   const data = await fetchAPI(`/live-bids?${params.toString()}`);
-  if (workflowOnlyStatuses.includes(status)) {
-    const filteredBids = (data.bids || []).filter((b) => b.status === status);
-    return {
-      ...data,
-      bids: filteredBids,
-      count: filteredBids.length,
-      total: filteredBids.length,
-      totalPages: 1,
-      currentPage: 1,
-    };
-  }
   return data;
 }
 
@@ -186,19 +169,13 @@ async function fetchDirectBids(
   fromDate = "",
   toDate = "",
   search = "",
-  aucNum = ""
+  aucNum = "",
 ) {
-  const workflowOnlyStatuses = ["domestic_arrived", "processing"];
-  const queryStatus = workflowOnlyStatuses.includes(status)
-    ? "completed"
-    : status;
-  const queryPage = workflowOnlyStatuses.includes(status) ? 1 : page;
-  const queryLimit = workflowOnlyStatuses.includes(status) ? 0 : limit;
   const params = new URLSearchParams({
-    status: queryStatus,
+    status: status,
     highestOnly: highestOnly,
-    page: queryPage,
-    limit: queryLimit,
+    page: page,
+    limit: limit,
   });
 
   if (search) {
@@ -226,17 +203,6 @@ async function fetchDirectBids(
   }
 
   const data = await fetchAPI(`/direct-bids?${params.toString()}`);
-  if (workflowOnlyStatuses.includes(status)) {
-    const filteredBids = (data.bids || []).filter((b) => b.status === status);
-    return {
-      ...data,
-      bids: filteredBids,
-      count: filteredBids.length,
-      total: filteredBids.length,
-      totalPages: 1,
-      currentPage: 1,
-    };
-  }
   return data;
 }
 
@@ -316,7 +282,7 @@ async function startProductCrawling() {
 async function startValueCrawling(queryParams = "") {
   return fetchAPI(
     `/crawler/crawl-values${queryParams ? "?" + queryParams : ""}`,
-    { method: "GET" }
+    { method: "GET" },
   );
 }
 
