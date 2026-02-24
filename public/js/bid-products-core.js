@@ -16,17 +16,9 @@ window.BidProductsCore = (function () {
   // 상태 그룹 - API 요청용
   const STATUS_GROUPS = {
     ACTIVE: ["active", "first", "second", "final"],
-    COMPLETED: ["completed", "shipped"], // shipped도 completed와 동일하게 처리
+    COMPLETED: ["completed"], // shipping_status는 별도 필드로 관리됨
     CANCELLED: ["cancelled"],
-    ALL: [
-      "active",
-      "first",
-      "second",
-      "final",
-      "completed",
-      "shipped",
-      "cancelled",
-    ],
+    ALL: ["active", "first", "second", "final", "completed", "cancelled"],
   };
 
   // 상태 표시 텍스트
@@ -122,7 +114,7 @@ window.BidProductsCore = (function () {
 
         case "completed":
           // 낙찰 완료
-          return ["completed", "shipped"].includes(product.status);
+          return product.status === "completed";
 
         case "all":
           return true;
@@ -146,7 +138,7 @@ window.BidProductsCore = (function () {
           );
 
         case "completed":
-          return ["completed", "shipped"].includes(product.status);
+          return product.status === "completed";
 
         case "all":
           return true;

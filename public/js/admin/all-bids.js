@@ -186,7 +186,8 @@ class UnifiedAuctionManager {
 
       const totalCount =
         (liveToday.bids?.length || 0) + (directToday.bids?.length || 0);
-      const todayDeadlineCountEl = document.getElementById("todayDeadlineCount");
+      const todayDeadlineCountEl =
+        document.getElementById("todayDeadlineCount");
       if (todayDeadlineCountEl) todayDeadlineCountEl.textContent = totalCount;
       const quickTodayCountEl = document.getElementById("quickTodayCount");
       if (quickTodayCountEl) quickTodayCountEl.textContent = totalCount;
@@ -200,7 +201,8 @@ class UnifiedAuctionManager {
       console.error("오늘 마감 데이터 로드 실패:", error);
       const todayDeadlineListEl = document.getElementById("todayDeadlineList");
       if (todayDeadlineListEl) {
-        todayDeadlineListEl.innerHTML = '<div class="error">데이터 로드 실패</div>';
+        todayDeadlineListEl.innerHTML =
+          '<div class="error">데이터 로드 실패</div>';
       }
     }
   }
@@ -220,9 +222,13 @@ class UnifiedAuctionManager {
         directCompleted.bids?.filter((bid) => !bid.submitted_to_platform) || [];
 
       const unsubmittedCountEl = document.getElementById("unsubmittedCount");
-      if (unsubmittedCountEl) unsubmittedCountEl.textContent = unsubmitted.length;
-      const quickUnsubmittedCountEl = document.getElementById("quickUnsubmittedCount");
-      if (quickUnsubmittedCountEl) quickUnsubmittedCountEl.textContent = unsubmitted.length;
+      if (unsubmittedCountEl)
+        unsubmittedCountEl.textContent = unsubmitted.length;
+      const quickUnsubmittedCountEl = document.getElementById(
+        "quickUnsubmittedCount",
+      );
+      if (quickUnsubmittedCountEl)
+        quickUnsubmittedCountEl.textContent = unsubmitted.length;
 
       this.renderUrgentList(
         "unsubmittedList",
@@ -233,7 +239,8 @@ class UnifiedAuctionManager {
       console.error("미반영 데이터 로드 실패:", error);
       const unsubmittedListEl = document.getElementById("unsubmittedList");
       if (unsubmittedListEl) {
-        unsubmittedListEl.innerHTML = '<div class="error">데이터 로드 실패</div>';
+        unsubmittedListEl.innerHTML =
+          '<div class="error">데이터 로드 실패</div>';
       }
     }
   }
@@ -331,7 +338,8 @@ class UnifiedAuctionManager {
     try {
       const liveSecond = await fetchLiveBids("first", 1, 0);
       const quickSecondCountEl = document.getElementById("quickSecondCount");
-      if (quickSecondCountEl) quickSecondCountEl.textContent = liveSecond.total || 0;
+      if (quickSecondCountEl)
+        quickSecondCountEl.textContent = liveSecond.total || 0;
     } catch (error) {
       console.error("2차 제안 카운트 로드 실패:", error);
     }
@@ -341,7 +349,9 @@ class UnifiedAuctionManager {
   async updateHighValueCount() {
     try {
       // 이 부분은 실제 구현 시 가격 조건을 추가해야 함
-      const quickHighValueCountEl = document.getElementById("quickHighValueCount");
+      const quickHighValueCountEl = document.getElementById(
+        "quickHighValueCount",
+      );
       if (quickHighValueCountEl) quickHighValueCountEl.textContent = "0";
     } catch (error) {
       console.error("고액 입찰 카운트 로드 실패:", error);
@@ -603,7 +613,7 @@ class UnifiedAuctionManager {
     if (!wrap || !grid) return;
 
     const allProcessing = [...(liveBids || []), ...(directBids || [])].filter(
-      (bid) => bid.status === "processing",
+      (bid) => bid.shipping_status === "processing",
     );
 
     if (!allProcessing.length) {
@@ -637,12 +647,14 @@ class UnifiedAuctionManager {
     grid.innerHTML = allCard + zoneCards;
     wrap.style.display = "block";
 
-    grid.querySelectorAll(".processing-zone-item[data-zone-code]").forEach((el) => {
-      el.addEventListener("click", () => {
-        this.currentProcessingZoneCode = el.dataset.zoneCode || "";
-        this.renderUnifiedResults();
+    grid
+      .querySelectorAll(".processing-zone-item[data-zone-code]")
+      .forEach((el) => {
+        el.addEventListener("click", () => {
+          this.currentProcessingZoneCode = el.dataset.zoneCode || "";
+          this.renderUnifiedResults();
+        });
       });
-    });
   }
 
   // 통합 결과 렌더링
@@ -661,7 +673,9 @@ class UnifiedAuctionManager {
     this.renderProcessingZoneSummary(liveToShow, directToShow);
     if (this.currentProcessingZoneCode) {
       const zoneCode = this.currentProcessingZoneCode;
-      const zoneFilterFn = (bid) => bid.status === "processing" && (bid.wms_location_code || "UNKNOWN_ZONE") === zoneCode;
+      const zoneFilterFn = (bid) =>
+        bid.shipping_status === "processing" &&
+        (bid.wms_location_code || "UNKNOWN_ZONE") === zoneCode;
       liveToShow = liveToShow.filter(zoneFilterFn);
       directToShow = directToShow.filter(zoneFilterFn);
     }
@@ -956,9 +970,10 @@ class UnifiedAuctionManager {
       "mark-submitted",
     ];
     const shouldExecuteHere = executeHereActions.includes(action);
-    document.getElementById("quickActionMessage").textContent = shouldExecuteHere
-      ? `${actionNames[action]}을 현재 화면에서 바로 처리할까요?`
-      : `${actionNames[action]}을 위해 상세 관리 페이지로 이동하시겠습니까?`;
+    document.getElementById("quickActionMessage").textContent =
+      shouldExecuteHere
+        ? `${actionNames[action]}을 현재 화면에서 바로 처리할까요?`
+        : `${actionNames[action]}을 위해 상세 관리 페이지로 이동하시겠습니까?`;
 
     document.getElementById("confirmQuickAction").onclick = async () => {
       this.closeModal();
@@ -979,28 +994,51 @@ class UnifiedAuctionManager {
   async executeQuickAction(action, bidId) {
     try {
       if (action === "complete-live") {
-        const bid = (this.liveData || []).find((b) => Number(b.id) === Number(bidId));
+        const bid = (this.liveData || []).find(
+          (b) => Number(b.id) === Number(bidId),
+        );
         const defaultPrice =
-          Number(bid?.winning_price || bid?.final_price || bid?.second_price || bid?.first_price || 0) || "";
-        const input = prompt("낙찰가(엔)를 입력하세요. 비워두면 현재 값으로 처리됩니다.", defaultPrice);
+          Number(
+            bid?.winning_price ||
+              bid?.final_price ||
+              bid?.second_price ||
+              bid?.first_price ||
+              0,
+          ) || "";
+        const input = prompt(
+          "낙찰가(엔)를 입력하세요. 비워두면 현재 값으로 처리됩니다.",
+          defaultPrice,
+        );
         if (input === null) return;
         const winningPrice = String(input).trim()
           ? Number(String(input).replace(/,/g, ""))
           : undefined;
-        if (winningPrice !== undefined && (!Number.isFinite(winningPrice) || winningPrice < 0)) {
+        if (
+          winningPrice !== undefined &&
+          (!Number.isFinite(winningPrice) || winningPrice < 0)
+        ) {
           alert("낙찰가는 숫자로 입력해주세요.");
           return;
         }
         await completeBid(Number(bidId), winningPrice);
       } else if (action === "complete-direct") {
-        const bid = (this.directData || []).find((b) => Number(b.id) === Number(bidId));
-        const defaultPrice = Number(bid?.winning_price || bid?.current_price || 0) || "";
-        const input = prompt("낙찰가(엔)를 입력하세요. 비워두면 현재 값으로 처리됩니다.", defaultPrice);
+        const bid = (this.directData || []).find(
+          (b) => Number(b.id) === Number(bidId),
+        );
+        const defaultPrice =
+          Number(bid?.winning_price || bid?.current_price || 0) || "";
+        const input = prompt(
+          "낙찰가(엔)를 입력하세요. 비워두면 현재 값으로 처리됩니다.",
+          defaultPrice,
+        );
         if (input === null) return;
         const winningPrice = String(input).trim()
           ? Number(String(input).replace(/,/g, ""))
           : undefined;
-        if (winningPrice !== undefined && (!Number.isFinite(winningPrice) || winningPrice < 0)) {
+        if (
+          winningPrice !== undefined &&
+          (!Number.isFinite(winningPrice) || winningPrice < 0)
+        ) {
           alert("낙찰가는 숫자로 입력해주세요.");
           return;
         }

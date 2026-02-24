@@ -79,14 +79,15 @@ function formatDatePart(dateInput) {
       now.getMonth() + 1,
     ).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
   }
-  return `${String(d.getFullYear()).slice(-2)}${String(d.getMonth() + 1).padStart(
-    2,
-    "0",
-  )}${String(d.getDate()).padStart(2, "0")}`;
+  return `${String(d.getFullYear()).slice(-2)}${String(
+    d.getMonth() + 1,
+  ).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function normalizeAuctionCode(aucNum) {
-  const raw = String(aucNum || "00").replace(/[^0-9A-Za-z]/g, "").toUpperCase();
+  const raw = String(aucNum || "00")
+    .replace(/[^0-9A-Za-z]/g, "")
+    .toUpperCase();
   return (raw || "00").slice(0, 3);
 }
 
@@ -171,7 +172,11 @@ async function createWmsItemForBid(
   connection,
   { bidType, bidId, itemId, nextStatus, targetLocationCode, targetStatusCode },
 ) {
-  const bidMeta = await fetchBidMetaForWms(connection, { bidType, bidId, itemId });
+  const bidMeta = await fetchBidMetaForWms(connection, {
+    bidType,
+    bidId,
+    itemId,
+  });
   if (!bidMeta) return null;
 
   const sourceItemId = String(bidMeta.item_id || itemId || "").trim() || null;
@@ -248,21 +253,6 @@ async function createWmsItemForBid(
     [insertId],
   );
   return rows[0] || null;
-}
-
-async function ensureBidWorkflowStagesTable(connection) {
-  await connection.query(`
-    CREATE TABLE IF NOT EXISTS bid_workflow_stages (
-      id BIGINT AUTO_INCREMENT PRIMARY KEY,
-      bid_type VARCHAR(20) NOT NULL,
-      bid_id BIGINT NOT NULL,
-      stage VARCHAR(30) NOT NULL,
-      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-      UNIQUE KEY uq_bid_workflow_stage (bid_type, bid_id),
-      KEY idx_bid_workflow_stage (stage)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-  `);
 }
 
 async function findWmsItemByBid(connection, { bidType, bidId, itemId }) {
@@ -345,7 +335,11 @@ async function assignInternalBarcodeIfMissing(
     return current;
   }
 
-  const bidMeta = await fetchBidMetaForWms(connection, { bidType, bidId, itemId });
+  const bidMeta = await fetchBidMetaForWms(connection, {
+    bidType,
+    bidId,
+    itemId,
+  });
   if (!bidMeta) {
     return current;
   }
@@ -398,19 +392,22 @@ async function assignInternalBarcodeIfMissing(
   return rows[0] || current;
 }
 
-async function syncWmsByBidStatus(connection, { bidType, bidId, itemId, nextStatus }) {
+async function syncWmsByBidStatus(
+  connection,
+  { bidType, bidId, itemId, nextStatus },
+) {
   if (!WORKFLOW_BID_STATUSES.has(nextStatus)) {
     return { updated: false, reason: "unsupported-status" };
   }
 
-  const targetLocationCode = targetLocationByBidStatus(
-    nextStatus,
-    null,
-  );
+  const targetLocationCode = targetLocationByBidStatus(nextStatus, null);
   if (!targetLocationCode) {
     return { updated: false, reason: "target-location-not-found" };
   }
-  const provisionalStatusCode = targetStatusByBidStatus(nextStatus, targetLocationCode);
+  const provisionalStatusCode = targetStatusByBidStatus(
+    nextStatus,
+    targetLocationCode,
+  );
 
   let wmsItem = await findWmsItemByBid(connection, { bidType, bidId, itemId });
   if (!wmsItem) {
@@ -445,11 +442,21 @@ async function syncWmsByBidStatus(connection, { bidType, bidId, itemId, nextStat
     return { updated: false, reason: "target-location-not-found" };
   }
 
-  const targetStatusCode = targetStatusByBidStatus(nextStatus, resolvedTargetLocationCode);
-  const noLocationChange = wmsItem.current_location_code === resolvedTargetLocationCode;
-  const noStatusChange = String(wmsItem.current_status || "") === targetStatusCode;
+  const targetStatusCode = targetStatusByBidStatus(
+    nextStatus,
+    resolvedTargetLocationCode,
+  );
+  const noLocationChange =
+    wmsItem.current_location_code === resolvedTargetLocationCode;
+  const noStatusChange =
+    String(wmsItem.current_status || "") === targetStatusCode;
 
-  if (noLocationChange && noStatusChange && wmsItem.source_bid_type === bidType && Number(wmsItem.source_bid_id) === Number(bidId)) {
+  if (
+    noLocationChange &&
+    noStatusChange &&
+    wmsItem.source_bid_type === bidType &&
+    Number(wmsItem.source_bid_id) === Number(bidId)
+  ) {
     return { updated: false, reason: "already-synced", wmsItemId: wmsItem.id };
   }
 
@@ -515,24 +522,22 @@ async function backfillMissingInternalBarcodesByBidLink(connection) {
 }
 
 async function backfillCompletedWmsItemsByBidStatus(connection) {
-  await ensureBidWorkflowStagesTable(connection);
-
+  // direct_bids: source_bid_id로 연결된 WMS 아이템 중 아직 COMPLETED 처리 안 된 것 백필
   await connection.query(
     `
     UPDATE wms_items wi
     INNER JOIN direct_bids d
       ON wi.source_bid_type = 'direct' AND wi.source_bid_id = d.id
-    LEFT JOIN bid_workflow_stages bws
-      ON bws.bid_type = 'direct' AND bws.bid_id = d.id
     SET wi.current_location_code = 'DOMESTIC_ARRIVAL_ZONE',
         wi.current_status = 'COMPLETED',
         wi.updated_at = NOW()
     WHERE d.status = 'completed'
-      AND COALESCE(bws.stage, 'completed') = 'completed'
+      AND d.shipping_status = 'pending'
       AND wi.current_status <> 'COMPLETED'
     `,
   );
 
+  // direct_bids: source_bid_id 없이 source_item_id로 연결된 것 백필
   await connection.query(
     `
     UPDATE wms_items wi
@@ -540,18 +545,16 @@ async function backfillCompletedWmsItemsByBidStatus(connection) {
       SELECT item_id, MAX(id) AS bid_id
       FROM direct_bids
       WHERE status = 'completed'
+        AND shipping_status = 'pending'
       GROUP BY item_id
     ) d
       ON CONVERT(wi.source_item_id USING utf8mb4) = CONVERT(d.item_id USING utf8mb4)
-    LEFT JOIN bid_workflow_stages bws
-      ON bws.bid_type = 'direct' AND bws.bid_id = d.bid_id
     SET wi.current_location_code = 'DOMESTIC_ARRIVAL_ZONE',
         wi.current_status = 'COMPLETED',
         wi.source_bid_type = 'direct',
         wi.source_bid_id = d.bid_id,
         wi.updated_at = NOW()
-    WHERE COALESCE(bws.stage, 'completed') = 'completed'
-      AND wi.current_status <> 'COMPLETED'
+    WHERE wi.current_status <> 'COMPLETED'
       AND NULLIF(TRIM(wi.source_item_id), '') IS NOT NULL
       AND (
         wi.source_bid_id IS NULL
@@ -561,22 +564,22 @@ async function backfillCompletedWmsItemsByBidStatus(connection) {
     `,
   );
 
+  // live_bids: source_bid_id로 연결된 WMS 아이템 백필
   await connection.query(
     `
     UPDATE wms_items wi
     INNER JOIN live_bids l
       ON wi.source_bid_type = 'live' AND wi.source_bid_id = l.id
-    LEFT JOIN bid_workflow_stages bws
-      ON bws.bid_type = 'live' AND bws.bid_id = l.id
     SET wi.current_location_code = 'DOMESTIC_ARRIVAL_ZONE',
         wi.current_status = 'COMPLETED',
         wi.updated_at = NOW()
     WHERE l.status = 'completed'
-      AND COALESCE(bws.stage, 'completed') = 'completed'
+      AND l.shipping_status = 'pending'
       AND wi.current_status <> 'COMPLETED'
     `,
   );
 
+  // live_bids: source_item_id로 연결된 것 백필
   await connection.query(
     `
     UPDATE wms_items wi
@@ -584,24 +587,49 @@ async function backfillCompletedWmsItemsByBidStatus(connection) {
       SELECT item_id, MAX(id) AS bid_id
       FROM live_bids
       WHERE status = 'completed'
+        AND shipping_status = 'pending'
       GROUP BY item_id
     ) l
       ON CONVERT(wi.source_item_id USING utf8mb4) = CONVERT(l.item_id USING utf8mb4)
-    LEFT JOIN bid_workflow_stages bws
-      ON bws.bid_type = 'live' AND bws.bid_id = l.bid_id
     SET wi.current_location_code = 'DOMESTIC_ARRIVAL_ZONE',
         wi.current_status = 'COMPLETED',
         wi.source_bid_type = 'live',
         wi.source_bid_id = l.bid_id,
         wi.updated_at = NOW()
-    WHERE COALESCE(bws.stage, 'completed') = 'completed'
-      AND wi.current_status <> 'COMPLETED'
+    WHERE wi.current_status <> 'COMPLETED'
       AND NULLIF(TRIM(wi.source_item_id), '') IS NOT NULL
       AND (
         wi.source_bid_id IS NULL
         OR wi.source_bid_type IS NULL
         OR wi.source_bid_type = ''
       )
+    `,
+  );
+
+  // 위 WMS 업데이트 대상이 된 bid들의 shipping_status를 'completed'로 전환
+  await connection.query(
+    `
+    UPDATE direct_bids d
+    INNER JOIN wms_items wi
+      ON wi.source_bid_type = 'direct' AND wi.source_bid_id = d.id
+    SET d.shipping_status = 'completed',
+        d.updated_at = NOW()
+    WHERE d.status = 'completed'
+      AND d.shipping_status = 'pending'
+      AND wi.current_status = 'COMPLETED'
+    `,
+  );
+
+  await connection.query(
+    `
+    UPDATE live_bids l
+    INNER JOIN wms_items wi
+      ON wi.source_bid_type = 'live' AND wi.source_bid_id = l.id
+    SET l.shipping_status = 'completed',
+        l.updated_at = NOW()
+    WHERE l.status = 'completed'
+      AND l.shipping_status = 'pending'
+      AND wi.current_status = 'COMPLETED'
     `,
   );
 

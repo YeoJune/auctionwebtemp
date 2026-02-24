@@ -128,7 +128,7 @@ router.get("/", requireAuth, async (req, res) => {
              ) AS amount_jpy
            FROM live_bids
            WHERE user_id IS NOT NULL
-             AND status IN ('completed', 'shipped')
+             AND status = 'completed'
            UNION ALL
            SELECT
              user_id,
@@ -138,7 +138,7 @@ router.get("/", requireAuth, async (req, res) => {
              ) AS amount_jpy
            FROM direct_bids
            WHERE user_id IS NOT NULL
-             AND status IN ('completed', 'shipped')
+             AND status = 'completed'
          ) t
          GROUP BY user_id
        ) bt ON bt.user_id = u.id
@@ -214,7 +214,7 @@ router.get("/:id/bid-history", requireAuth, async (req, res) => {
         COALESCE(
           SUM(
             CASE
-              WHEN t.status IN ('completed', 'shipped') THEN 1
+              WHEN t.status = 'completed' THEN 1
               ELSE 0
             END
           ),
@@ -229,7 +229,7 @@ router.get("/:id/bid-history", requireAuth, async (req, res) => {
           ) AS bid_price_jpy
         FROM live_bids l
         WHERE l.user_id = ?
-          AND l.status IN ('completed', 'shipped')
+          AND l.status = 'completed'
         UNION ALL
         SELECT
           d.status,
@@ -239,7 +239,7 @@ router.get("/:id/bid-history", requireAuth, async (req, res) => {
           ) AS bid_price_jpy
         FROM direct_bids d
         WHERE d.user_id = ?
-          AND d.status IN ('completed', 'shipped')
+          AND d.status = 'completed'
       ) t
       `,
       [userId, userId],
@@ -265,7 +265,7 @@ router.get("/:id/bid-history", requireAuth, async (req, res) => {
         LEFT JOIN crawled_items ci
           ON CONVERT(ci.item_id USING utf8mb4) = CONVERT(l.item_id USING utf8mb4)
         WHERE l.user_id = ?
-          AND l.status IN ('completed', 'shipped')
+          AND l.status = 'completed'
         UNION ALL
         SELECT
           'direct' AS bid_type,
@@ -283,7 +283,7 @@ router.get("/:id/bid-history", requireAuth, async (req, res) => {
         LEFT JOIN crawled_items ci
           ON CONVERT(ci.item_id USING utf8mb4) = CONVERT(d.item_id USING utf8mb4)
         WHERE d.user_id = ?
-          AND d.status IN ('completed', 'shipped')
+          AND d.status = 'completed'
       ) h
       ORDER BY h.bid_at DESC, h.bid_id DESC
       LIMIT 200

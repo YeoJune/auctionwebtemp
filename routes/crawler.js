@@ -32,7 +32,7 @@ const { isAdminUser } = require("../utils/adminAuth");
 
 dotenv.config();
 
-// Elasticsearch 재인덱싱 배치 크기
+// Elasticsearch ?�인?�싱 배치 ?�기
 const ES_REINDEX_BATCH_SIZE = 10000;
 
 let isCrawling = false;
@@ -88,7 +88,7 @@ class AdaptiveScheduler {
   }
 }
 
-// 경매사 설정
+// 경매???�정
 const AUCTION_CONFIG = {
   1: {
     name: "EcoAuc",
@@ -132,7 +132,7 @@ const AUCTION_CONFIG = {
   },
 };
 
-// 경매사별 스케줄러 인스턴스 생성
+// 경매?�별 ?��?줄러 ?�스?�스 ?�성
 const updateSchedulers = {};
 const updateWithIdSchedulers = {};
 const crawlingStatus = {
@@ -142,12 +142,12 @@ const crawlingStatus = {
 
 Object.entries(AUCTION_CONFIG).forEach(([aucNum, config]) => {
   if (config.enabled) {
-    // updateInterval이 0이 아닐 때만 스케줄러 생성
+    // updateInterval??0???�닐 ?�만 ?��?줄러 ?�성
     if (config.updateInterval > 0) {
       updateSchedulers[aucNum] = new AdaptiveScheduler(config.updateInterval);
       crawlingStatus.update[aucNum] = false;
     }
-    // updateWithIdInterval이 0이 아닐 때만 스케줄러 생성
+    // updateWithIdInterval??0???�닐 ?�만 ?��?줄러 ?�성
     if (config.updateWithIdInterval > 0) {
       updateWithIdSchedulers[aucNum] = new AdaptiveScheduler(
         config.updateWithIdInterval,
@@ -160,7 +160,7 @@ Object.entries(AUCTION_CONFIG).forEach(([aucNum, config]) => {
 async function loginAll() {
   const crawlers = [];
 
-  // Config에서 활성화된 모든 크롤러 수집
+  // Config?�서 ?�성?�된 모든 ?�롤???�집
   Object.values(AUCTION_CONFIG).forEach((config) => {
     if (config.enabled) {
       if (config.crawler) crawlers.push(config.crawler);
@@ -171,7 +171,7 @@ async function loginAll() {
   await Promise.all(crawlers.map((crawler) => crawler.login()));
 }
 
-// Elasticsearch 전체 재인덱싱 함수
+// Elasticsearch ?�체 ?�인?�싱 ?�수
 async function reindexElasticsearch(tableName) {
   try {
     if (!esManager.isHealthy()) {
@@ -179,21 +179,21 @@ async function reindexElasticsearch(tableName) {
       return;
     }
 
-    console.log(`\n🔄 Starting Elasticsearch reindexing for ${tableName}...`);
+    console.log(`\n?�� Starting Elasticsearch reindexing for ${tableName}...`);
 
-    // 1. 인덱스 삭제
+    // 1. ?�덱????��
     try {
       await esManager.deleteIndex(tableName);
-      console.log(`✓ Deleted index: ${tableName}`);
+      console.log(`??Deleted index: ${tableName}`);
     } catch (error) {
-      console.log(`→ Index ${tableName} does not exist or already deleted`);
+      console.log(`??Index ${tableName} does not exist or already deleted`);
     }
 
-    // 2. 인덱스 재생성
+    // 2. ?�덱???�생??
     await esManager.createIndex(tableName);
-    console.log(`✓ Created index: ${tableName}`);
+    console.log(`??Created index: ${tableName}`);
 
-    // 3. 데이터 조회
+    // 3. ?�이??조회
     const whereClause =
       tableName === "crawled_items"
         ? "WHERE is_enabled = 1 AND title IS NOT NULL"
@@ -213,7 +213,7 @@ async function reindexElasticsearch(tableName) {
 
     console.log(`Found ${items.length} items to reindex`);
 
-    // 4. 배치로 인덱싱
+    // 4. 배치�??�덱??
     let totalIndexed = 0;
     let totalErrors = 0;
 
@@ -230,21 +230,21 @@ async function reindexElasticsearch(tableName) {
         `  Batch ${batchNum}/${totalBatches}: indexed ${result.indexed}, errors ${result.errors}`,
       );
 
-      // 배치 간 짧은 대기
+      // 배치 �?짧�? ?��?
       if (i + ES_REINDEX_BATCH_SIZE < items.length) {
         await new Promise((resolve) => setTimeout(resolve, 300));
       }
     }
 
     console.log(
-      `✓ Elasticsearch reindexing complete: ${totalIndexed} indexed, ${totalErrors} errors\n`,
+      `??Elasticsearch reindexing complete: ${totalIndexed} indexed, ${totalErrors} errors\n`,
     );
   } catch (error) {
     console.error(
-      `✗ Elasticsearch reindexing failed for ${tableName}:`,
+      `??Elasticsearch reindexing failed for ${tableName}:`,
       error.message,
     );
-    // 실패해도 크롤링은 계속 진행
+    // ?�패?�도 ?�롤링�? 계속 진행
   }
 }
 
@@ -257,7 +257,7 @@ async function crawlAll() {
         "SELECT item_id, auc_num FROM crawled_items",
       );
 
-      // Config 기반으로 기존 아이템 ID 그룹화
+      // Config 기반?�로 기존 ?�이??ID 그룹??
       const existingIdsByAuction = {};
       Object.keys(AUCTION_CONFIG).forEach((aucNum) => {
         existingIdsByAuction[aucNum] = new Set(
@@ -269,7 +269,7 @@ async function crawlAll() {
 
       isCrawling = true;
 
-      // 활성화된 모든 경매사 크롤링 (직렬)
+      // ?�성?�된 모든 경매???�롤�?(직렬)
       const allItems = [];
       for (const [aucNum, config] of Object.entries(AUCTION_CONFIG)) {
         if (config.enabled && config.crawler) {
@@ -288,7 +288,7 @@ async function crawlAll() {
 
       await DBManager.saveItems(allItems, "crawled_items");
 
-      // existing 아이템 업데이트 (title 없는 아이템)
+      // existing ?�이???�데?�트 (title ?�는 ?�이??
       const itemsToUpdate = allItems.filter(
         (item) => !item.title && item.item_id,
       );
@@ -303,7 +303,7 @@ async function crawlAll() {
       await DBManager.cleanupUnusedImages("products");
       await syncAllData();
 
-      // Elasticsearch 전체 재인덱싱
+      // Elasticsearch ?�체 ?�인?�싱
       await reindexElasticsearch("crawled_items");
     } catch (error) {
       throw error;
@@ -317,16 +317,16 @@ async function crawlAll() {
 async function crawlAllValues(options = {}) {
   const { aucNums = [], months = [] } = options;
 
-  // 선택된 크롤러가 없으면 모두 실행
+  // ?�택???�롤?��? ?�으�?모두 ?�행
   const runAll = aucNums.length === 0;
 
-  // 각 크롤러 실행 여부 결정
+  // �??�롤???�행 ?��? 결정
   const runEcoAuc = runAll || aucNums.includes(1);
   const runBrandAuc = runAll || aucNums.includes(2);
   const runStarAuc = runAll || aucNums.includes(3);
   const runMekikiAuc = runAll || aucNums.includes(4);
 
-  // 각 크롤러별 개월 수 매핑 (기본값: 1개월)
+  // �??�롤?�별 개월 ??매핑 (기본�? 1개월)
   const monthsMap = {
     1: 1, // EcoAuc
     2: 1, // BrandAuc
@@ -334,7 +334,7 @@ async function crawlAllValues(options = {}) {
     4: 1, // MekikiAuc
   };
 
-  // 입력받은 months 배열이 있으면, aucNums와 매핑하여 설정
+  // ?�력받�? months 배열???�으�? aucNums?� 매핑?�여 ?�정
   if (aucNums.length > 0 && months.length > 0) {
     for (let i = 0; i < Math.min(aucNums.length, months.length); i++) {
       monthsMap[aucNums[i]] = months[i];
@@ -358,12 +358,12 @@ async function crawlAllValues(options = {}) {
       runMekikiAuc,
     });
 
-    // DB에서 기존 아이템 ID 조회
+    // DB?�서 기존 ?�이??ID 조회
     const [existingItems] = await pool.query(
       "SELECT item_id, auc_num FROM values_items",
     );
 
-    // auc_num별로 기존 아이템 ID 그룹화
+    // auc_num별로 기존 ?�이??ID 그룹??
     const existingIdsByAuction = {
       1: new Set(
         existingItems
@@ -387,7 +387,7 @@ async function crawlAllValues(options = {}) {
       ),
     };
 
-    // 크롤러별 설정
+    // ?�롤?�별 ?�정
     const crawlerConfigs = [
       {
         enabled: runEcoAuc,
@@ -437,7 +437,7 @@ async function crawlAllValues(options = {}) {
 
     const results = {};
 
-    // 각 크롤러 순차 실행
+    // �??�롤???�차 ?�행
     for (const config of crawlerConfigs) {
       if (!config.enabled) {
         results[config.name] = 0;
@@ -451,7 +451,7 @@ async function crawlAllValues(options = {}) {
       console.log("=".repeat(60));
 
       try {
-        // 1. 메타데이터 수집
+        // 1. 메�??�이???�집
         const metadata = await config.crawler.getStreamingMetadata(
           config.months,
         );
@@ -460,7 +460,7 @@ async function crawlAllValues(options = {}) {
         let processedChunks = 0;
         let totalItems = 0;
 
-        // 2. 청크별 스트리밍 처리
+        // 2. �?���??�트리밍 처리
         for (const chunk of metadata.chunks) {
           processedChunks++;
           console.log(
@@ -492,7 +492,7 @@ async function crawlAllValues(options = {}) {
       }
     }
 
-    // 3. 최종 정리
+    // 3. 최종 ?�리
     console.log("\n=== Finalizing value crawling ===");
     await DBManager.cleanupOldValueItems(999);
     await processBidsAfterCrawl();
@@ -510,7 +510,7 @@ async function crawlAllValues(options = {}) {
       )}`,
     );
 
-    // Elasticsearch 전체 재인덱싱
+    // Elasticsearch ?�체 ?�인?�싱
     await reindexElasticsearch("values_items");
 
     return {
@@ -535,7 +535,7 @@ async function crawlAllValues(options = {}) {
 }
 
 /**
- * 단일 청크 처리: 크롤링 → 이미지 → DB → S3
+ * ?�일 �?�� 처리: ?�롤�????��?지 ??DB ??S3
  */
 async function processChunk(crawler, chunk, existingIds, options) {
   const { folderName, priority, cropType, tableName } = options;
@@ -550,7 +550,7 @@ async function processChunk(crawler, chunk, existingIds, options) {
   }
 
   try {
-    // Step 1: 크롤링 (병렬)
+    // Step 1: ?�롤�?(병렬)
     const items = await crawler.crawlChunkPages(chunk, existingIds);
 
     if (items.length === 0) {
@@ -560,7 +560,7 @@ async function processChunk(crawler, chunk, existingIds, options) {
 
     console.log(`Crawled ${items.length} items`);
 
-    // Step 2: 로컬 이미지 저장
+    // Step 2: 로컬 ?��?지 ?�??
     const itemsWithLocalImages = await processImagesInChunks(
       items,
       folderName,
@@ -570,17 +570,17 @@ async function processChunk(crawler, chunk, existingIds, options) {
 
     console.log(`Processed images for ${itemsWithLocalImages.length} items`);
 
-    // Step 3: DB 저장
+    // Step 3: DB ?�??
     await DBManager.saveItems(itemsWithLocalImages, tableName);
     console.log("Saved to DB");
 
-    // Step 4: S3 마이그레이션 (values만)
+    // Step 4: S3 마이그레?�션 (values�?
     if (folderName === "values") {
       await migrateChunkToS3(itemsWithLocalImages);
       console.log("Migrated to S3 and cleaned local files");
     }
 
-    // 메모리 정리
+    // 메모�??�리
     const itemCount = itemsWithLocalImages.length;
     items.length = 0;
     itemsWithLocalImages.length = 0;
@@ -588,13 +588,13 @@ async function processChunk(crawler, chunk, existingIds, options) {
     return itemCount;
   } catch (error) {
     console.error(`Chunk processing failed:`, error.message);
-    // 실패해도 계속 진행
+    // ?�패?�도 계속 진행
     return 0;
   }
 }
 
 /**
- * 청크 단위 S3 마이그레이션
+ * �?�� ?�위 S3 마이그레?�션
  */
 async function migrateChunkToS3(items) {
   const { ValuesImageMigration } = require("../utils/s3Migration");
@@ -603,18 +603,18 @@ async function migrateChunkToS3(items) {
   try {
     const result = await migration.processItemsBatch(items);
 
-    // 로컬 파일 즉시 삭제
+    // 로컬 ?�일 즉시 ??��
     await migration.cleanupLocalFiles(result.success);
 
     return result;
   } catch (error) {
     console.error("S3 migration failed:", error.message);
-    // 마이그레이션 실패해도 계속 진행
+    // 마이그레?�션 ?�패?�도 계속 진행
     return { success: [], failed: items };
   }
 }
 
-// 개별 경매사 업데이트 크롤링
+// 개별 경매???�데?�트 ?�롤�?
 async function crawlUpdateForAuction(aucNum) {
   const config = AUCTION_CONFIG[aucNum];
 
@@ -623,12 +623,12 @@ async function crawlUpdateForAuction(aucNum) {
     return null;
   }
 
-  // 전역 크롤링 체크
+  // ?�역 ?�롤�?체크
   if (isCrawling || isValueCrawling) {
     throw new Error("Another global crawling in progress");
   }
 
-  // 해당 경매사 크롤링 체크
+  // ?�당 경매???�롤�?체크
   if (crawlingStatus.update[aucNum]) {
     throw new Error(`Auction ${config.name} update already in progress`);
   }
@@ -640,7 +640,7 @@ async function crawlUpdateForAuction(aucNum) {
   );
 
   try {
-    // 크롤링 실행
+    // ?�롤�??�행
     let updates = await config.crawler.crawlUpdates();
     if (!updates) updates = [];
 
@@ -655,14 +655,14 @@ async function crawlUpdateForAuction(aucNum) {
       };
     }
 
-    // DB에서 기존 데이터 가져오기
+    // DB?�서 기존 ?�이??가?�오�?
     const itemIds = updates.map((item) => item.item_id);
     const [existingItems] = await pool.query(
       "SELECT item_id, scheduled_date, starting_price FROM crawled_items WHERE item_id IN (?) AND bid_type = 'direct' AND auc_num = ?",
       [itemIds, aucNum],
     );
 
-    // 변경된 아이템 필터링
+    // 변경된 ?�이???�터�?
     const changedItems = updates.filter((newItem) => {
       const existingItem = existingItems.find(
         (item) => item.item_id === newItem.item_id,
@@ -689,7 +689,7 @@ async function crawlUpdateForAuction(aucNum) {
       return dateChanged || priceChanged;
     });
 
-    // 변경된 아이템이 있으면 DB 업데이트 비동기로 실행
+    // 변경된 ?�이?�이 ?�으�?DB ?�데?�트 비동기로 ?�행
     if (changedItems.length > 0) {
       console.log(
         `[${config.name}] Found ${changedItems.length} changed items`,
@@ -723,7 +723,7 @@ async function crawlUpdateForAuction(aucNum) {
   }
 }
 
-// 개별 경매사 ID 기반 업데이트 크롤링
+// 개별 경매??ID 기반 ?�데?�트 ?�롤�?
 async function crawlUpdateWithIdForAuction(aucNum, itemIds, originalItems) {
   const config = AUCTION_CONFIG[aucNum];
 
@@ -732,12 +732,12 @@ async function crawlUpdateWithIdForAuction(aucNum, itemIds, originalItems) {
     return null;
   }
 
-  // 전역 크롤링 체크
+  // ?�역 ?�롤�?체크
   if (isCrawling || isValueCrawling) {
     throw new Error("Another global crawling in progress");
   }
 
-  // 해당 경매사 크롤링 체크
+  // ?�당 경매???�롤�?체크
   if (crawlingStatus.updateWithId[aucNum]) {
     throw new Error(`Auction ${config.name} updateWithId already in progress`);
   }
@@ -758,18 +758,18 @@ async function crawlUpdateWithIdForAuction(aucNum, itemIds, originalItems) {
   );
 
   try {
-    // 크롤링 실행
+    // ?�롤�??�행
     let updates = await config.crawler.crawlUpdateWithIds(itemIds);
     if (!updates) updates = [];
 
-    // 변경된 항목 필터링
+    // 변경된 ??�� ?�터�?
     const changedItems = updates.filter((newItem) => {
       const originalItem = originalItems[newItem.item_id];
       if (!originalItem) {
         return false;
       }
 
-      // 날짜 변경 확인
+      // ?�짜 변�??�인
       let dateChanged = false;
       if (newItem.scheduled_date) {
         const newDate = new Date(newItem.scheduled_date);
@@ -777,7 +777,7 @@ async function crawlUpdateWithIdForAuction(aucNum, itemIds, originalItems) {
         dateChanged = newDate.getTime() !== originalDate.getTime();
       }
 
-      // 가격 변경 확인
+      // 가�?변�??�인
       let priceChanged = false;
       if (newItem.starting_price) {
         const newPrice = parseFloat(newItem.starting_price) || 0;
@@ -788,7 +788,7 @@ async function crawlUpdateWithIdForAuction(aucNum, itemIds, originalItems) {
       return dateChanged || priceChanged;
     });
 
-    // 변경된 아이템이 있으면 DB 업데이트 비동기로 실행
+    // 변경된 ?�이?�이 ?�으�?DB ?�데?�트 비동기로 ?�행
     if (changedItems.length > 0) {
       console.log(
         `[${config.name}] Found ${changedItems.length} changed items`,
@@ -822,13 +822,13 @@ async function crawlUpdateWithIdForAuction(aucNum, itemIds, originalItems) {
   }
 }
 
-// live_bids의 winning_price 자동 업데이트 처리
+// live_bids??winning_price ?�동 ?�데?�트 처리
 async function processBidsAfterCrawl() {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
 
-    // 1. 이미 cancelled 상태인 입찰들의 winning_price 업데이트
+    // 1. ?��? cancelled ?�태???�찰?�의 winning_price ?�데?�트
     await conn.query(
       `UPDATE live_bids lb
        JOIN values_items vi ON lb.item_id = vi.item_id
@@ -836,7 +836,7 @@ async function processBidsAfterCrawl() {
        WHERE lb.status = 'cancelled' AND (lb.winning_price IS NULL OR lb.winning_price < vi.final_price)`,
     );
 
-    // 우선 final_price로 업데이트
+    // ?�선 final_price�??�데?�트
     await conn.query(
       `UPDATE direct_bids db
        JOIN values_items vi ON db.item_id = vi.item_id
@@ -844,7 +844,7 @@ async function processBidsAfterCrawl() {
        WHERE db.status = 'cancelled' AND (db.winning_price IS NULL OR db.winning_price < vi.final_price)`,
     );
 
-    // 2. final 상태이면서 final_price < vi.final_price인 입찰들 조회
+    // 2. final ?�태?�면??final_price < vi.final_price???�찰??조회
     const [bidsToCancel] = await conn.query(
       `SELECT lb.id, lb.user_id, vi.final_price, u.account_type
        FROM live_bids lb
@@ -857,7 +857,7 @@ async function processBidsAfterCrawl() {
       const bidIds = bidsToCancel.map((bid) => bid.id);
       const placeholders = bidIds.map(() => "?").join(",");
 
-      // 각 입찰에 대해 예치금/한도 복구
+      // �??�찰???�???�치�??�도 복구
       for (const bid of bidsToCancel) {
         const deductAmount = await getBidDeductAmount(conn, bid.id, "live_bid");
 
@@ -869,7 +869,7 @@ async function processBidsAfterCrawl() {
               deductAmount,
               "live_bid",
               bid.id,
-              "낙찰가 초과로 인한 취소 환불",
+              "?�찰가 초과�??�한 취소 ?�불",
             );
           } else {
             await refundLimit(
@@ -878,13 +878,13 @@ async function processBidsAfterCrawl() {
               deductAmount,
               "live_bid",
               bid.id,
-              "낙찰가 초과로 인한 취소 환불",
+              "?�찰가 초과�??�한 취소 ?�불",
             );
           }
         }
       }
 
-      // status를 cancelled로 변경하고 winning_price 설정
+      // status�?cancelled�?변경하�?winning_price ?�정
       await conn.query(
         `UPDATE live_bids lb
          JOIN values_items vi ON lb.item_id = vi.item_id
@@ -904,12 +904,12 @@ async function processBidsAfterCrawl() {
   }
 }
 
-// 가격 변경에 따른 입찰 취소 처리
+// 가�?변경에 ?�른 ?�찰 취소 처리
 async function processChangedBids(changedItems) {
-  // 처리할 것이 없으면 빠르게 종료
+  // 처리??것이 ?�으�?빠르�?종료
   if (!changedItems || changedItems.length === 0) return;
 
-  // 가격이 변경된 아이템만 필터링
+  // 가격이 변경된 ?�이?�만 ?�터�?
   const priceChangedItems = changedItems.filter((item) => item.starting_price);
   if (priceChangedItems.length === 0) return;
 
@@ -917,7 +917,7 @@ async function processChangedBids(changedItems) {
   try {
     await conn.beginTransaction();
 
-    // 관련된 모든 active 입찰 조회 (account_type 포함)
+    // 관?�된 모든 active ?�찰 조회 (account_type ?�함)
     const [activeBids] = await conn.query(
       "SELECT db.id, db.item_id, db.user_id, db.current_price, ci.starting_price, u.account_type " +
         "FROM direct_bids db " +
@@ -926,7 +926,7 @@ async function processChangedBids(changedItems) {
         "WHERE db.current_price < ci.starting_price AND db.status = 'active'",
     );
 
-    // 취소해야 할 입찰 ID 찾기
+    // 취소?�야 ???�찰 ID 찾기
     const bidsToCancel = activeBids.map((bid) => bid.id);
 
     let cancelledBidsData = [];
@@ -940,12 +940,12 @@ async function processChangedBids(changedItems) {
       );
     }
 
-    // 예치금/한도 복구 및 취소 처리 - 100개씩 배치 처리
+    // ?�치�??�도 복구 �?취소 처리 - 100개씩 배치 처리
     for (let i = 0; i < activeBids.length; i += 100) {
       const batch = activeBids.slice(i, i + 100);
 
       if (batch.length > 0) {
-        // 각 입찰에 대해 예치금/한도 복구
+        // �??�찰???�???�치�??�도 복구
         for (const bid of batch) {
           const deductAmount = await getBidDeductAmount(
             conn,
@@ -961,7 +961,7 @@ async function processChangedBids(changedItems) {
                 deductAmount,
                 "direct_bid",
                 bid.id,
-                "가격 변경으로 인한 취소 환불",
+                "가�?변경으�??�한 취소 ?�불",
               );
             } else {
               await refundLimit(
@@ -970,13 +970,13 @@ async function processChangedBids(changedItems) {
                 deductAmount,
                 "direct_bid",
                 bid.id,
-                "가격 변경으로 인한 취소 환불",
+                "가�?변경으�??�한 취소 ?�불",
               );
             }
           }
         }
 
-        // 입찰 상태 변경
+        // ?�찰 ?�태 변�?
         const batchIds = batch.map((b) => b.id);
         await conn.query(
           "UPDATE direct_bids SET status = 'cancelled' WHERE id IN (?) AND status = 'active'",
@@ -993,7 +993,7 @@ async function processChangedBids(changedItems) {
 
     await conn.commit();
 
-    // 취소된 입찰자들에게 알림 발송 (비동기)
+    // 취소???�찰?�들?�게 ?�림 발송 (비동�?
     if (cancelledBidsData.length > 0) {
       sendHigherBidAlerts(cancelledBidsData);
     }
@@ -1009,13 +1009,13 @@ async function processChangedBids(changedItems) {
   }
 }
 
-// 인보이스 크롤링 함수
+// ?�보?�스 ?�롤�??�수
 async function crawlAllInvoices() {
   try {
     console.log(`Starting invoice crawl at ${new Date().toISOString()}`);
     const startTime = Date.now();
 
-    // Config 기반으로 활성화된 크롤러에서 인보이스 크롤링
+    // Config 기반?�로 ?�성?�된 ?�롤?�에???�보?�스 ?�롤�?
     const invoicePromises = [];
     const resultsByAucNum = {};
 
@@ -1040,7 +1040,7 @@ async function crawlAllInvoices() {
     const results = await Promise.all(invoicePromises);
     const allInvoices = results.flat();
 
-    // DB에 저장
+    // DB???�??
     await DBManager.saveItems(allInvoices, "invoices");
 
     const endTime = Date.now();
@@ -1064,7 +1064,7 @@ async function crawlAllInvoices() {
   }
 }
 
-// 현장 경매 완료/출고 카테고리의 낙찰금액(winning_price)을 values_items.final_price로 덮어쓰기
+// ?�장 경매 ?�료/출고 카테고리???�찰금액(winning_price)??values_items.final_price�???��?�기
 async function overwriteValuesFinalPriceFromLiveBids() {
   const conn = await pool.getConnection();
   try {
@@ -1080,7 +1080,7 @@ async function overwriteValuesFinalPriceFromLiveBids() {
           FROM live_bids
           WHERE winning_price IS NOT NULL
             AND winning_price > 0
-            AND status IN ('completed', 'shipped')
+            AND status = 'completed'
           GROUP BY item_id
         ) lb ON vi.item_id = lb.item_id
       ) AS matched
@@ -1093,7 +1093,7 @@ async function overwriteValuesFinalPriceFromLiveBids() {
         FROM live_bids
         WHERE winning_price IS NOT NULL
           AND winning_price > 0
-          AND status IN ('completed', 'shipped')
+          AND status = 'completed'
         GROUP BY item_id
       ) lb ON vi.item_id = lb.item_id
       SET vi.final_price = lb.winning_price
@@ -1115,7 +1115,7 @@ async function overwriteValuesFinalPriceFromLiveBids() {
   }
 }
 
-// 실행 시간 포맷팅 함수
+// ?�행 ?�간 ?�맷???�수
 function formatExecutionTime(milliseconds) {
   const seconds = Math.floor(milliseconds / 1000);
   const minutes = Math.floor(seconds / 60);
@@ -1142,17 +1142,17 @@ router.get("/crawl", isAdmin, async (req, res) => {
 
 router.get("/crawl-values", isAdmin, async (req, res) => {
   try {
-    // auc_num 파라미터 파싱 (auc_num=1,2,3 형태로 받음)
+    // auc_num ?�라미터 ?�싱 (auc_num=1,2,3 ?�태�?받음)
     const aucNums = req.query.auc_num
       ? req.query.auc_num.split(",").map((num) => parseInt(num.trim()))
       : [];
 
-    // months 파라미터 파싱 (months=3,6,12 형태로 받음)
+    // months ?�라미터 ?�싱 (months=3,6,12 ?�태�?받음)
     const monthsInput = req.query.months
       ? req.query.months.split(",").map((m) => parseInt(m.trim()))
       : [];
 
-    // 결과 및 실행 정보
+    // 결과 �??�행 ?�보
     const result = await crawlAllValues({
       aucNums,
       months: monthsInput,
@@ -1172,7 +1172,7 @@ router.get("/crawl-values", isAdmin, async (req, res) => {
 
 router.get("/crawl-status", isAdmin, (req, res) => {
   try {
-    // 각 경매사별 스케줄러 상태
+    // �?경매?�별 ?��?줄러 ?�태
     const auctionStatuses = {};
     Object.keys(AUCTION_CONFIG).forEach((aucNum) => {
       const config = AUCTION_CONFIG[aucNum];
@@ -1205,7 +1205,7 @@ router.get("/crawl-status", isAdmin, (req, res) => {
   }
 });
 
-// 인보이스 크롤링 라우팅 추가
+// ?�보?�스 ?�롤�??�우??추�?
 router.get("/crawl-invoices", isAdmin, async (req, res) => {
   try {
     const result = await crawlAllInvoices();
@@ -1299,14 +1299,14 @@ const scheduleCrawling = async () => {
       async () => {
         console.log("Running scheduled crawling task");
         try {
-          // 기본 상품 크롤링 실행
+          // 기본 ?�품 ?�롤�??�행
           await crawlAll();
 
-          // 시세표 크롤링도 실행
+          // ?�세???�롤링도 ?�행
           console.log("Running value crawling");
           await crawlAllValues();
 
-          // 인보이스 크롤링도 실행
+          // ?�보?�스 ?�롤링도 ?�행
           console.log("Running invoice crawling");
           await crawlAllInvoices();
 
@@ -1323,7 +1323,7 @@ const scheduleCrawling = async () => {
   }
 };
 
-// 개별 경매사별 업데이트 크롤링 스케줄링
+// 개별 경매?�별 ?�데?�트 ?�롤�??��?줄링
 const scheduleUpdateCrawlingForAuction = (aucNum) => {
   const config = AUCTION_CONFIG[aucNum];
   const scheduler = updateSchedulers[aucNum];
@@ -1365,13 +1365,13 @@ const scheduleUpdateCrawlingForAuction = (aucNum) => {
     }
   };
 
-  // 첫 딜레이 후 실행
+  // �??�레?????�행
   timeoutId = setTimeout(runUpdateCrawl, scheduler.base * 1000);
 
   return () => clearTimeout(timeoutId);
 };
 
-// 모든 활성화된 경매사의 업데이트 크롤링 스케줄링
+// 모든 ?�성?�된 경매?�의 ?�데?�트 ?�롤�??��?줄링
 const scheduleUpdateCrawling = () => {
   const cancelFunctions = [];
 
@@ -1384,13 +1384,13 @@ const scheduleUpdateCrawling = () => {
     }
   });
 
-  // 모든 스케줄 취소 함수 반환
+  // 모든 ?��?�?취소 ?�수 반환
   return () => {
     cancelFunctions.forEach((fn) => fn());
   };
 };
 
-// 개별 경매사별 ID 기반 업데이트 크롤링 스케줄링
+// 개별 경매?�별 ID 기반 ?�데?�트 ?�롤�??��?줄링
 const scheduleUpdateCrawlingWithIdForAuction = (aucNum) => {
   const config = AUCTION_CONFIG[aucNum];
   const scheduler = updateWithIdSchedulers[aucNum];
@@ -1411,7 +1411,7 @@ const scheduleUpdateCrawlingWithIdForAuction = (aucNum) => {
 
     try {
       if (!isCrawling && !isValueCrawling) {
-        // active bids를 조회하고 해당 경매사 아이템만 필터링
+        // active bids�?조회?�고 ?�당 경매???�이?�만 ?�터�?
         const [activeBids] = await pool.query(
           `SELECT DISTINCT db.item_id, ci.scheduled_date, ci.starting_price
            FROM direct_bids db
@@ -1463,13 +1463,13 @@ const scheduleUpdateCrawlingWithIdForAuction = (aucNum) => {
     }
   };
 
-  // 첫 딜레이 후 실행
+  // �??�레?????�행
   timeoutId = setTimeout(runUpdateCrawlWithId, scheduler.base * 1000);
 
   return () => clearTimeout(timeoutId);
 };
 
-// 모든 활성화된 경매사의 ID 기반 업데이트 크롤링 스케줄링
+// 모든 ?�성?�된 경매?�의 ID 기반 ?�데?�트 ?�롤�??��?줄링
 const scheduleUpdateCrawlingWithId = () => {
   const cancelFunctions = [];
 
@@ -1482,17 +1482,17 @@ const scheduleUpdateCrawlingWithId = () => {
     }
   });
 
-  // 모든 스케줄 취소 함수 반환
+  // 모든 ?��?�?취소 ?�수 반환
   return () => {
     cancelFunctions.forEach((fn) => fn());
   };
 };
 
-// Socket.IO 초기화 (server.js에서 불러옴)
+// Socket.IO 초기??(server.js?�서 불러??
 function initializeSocket(server) {
   const io = socketIO(server);
 
-  // 클라이언트 연결 이벤트
+  // ?�라?�언???�결 ?�벤??
   io.on("connection", (socket) => {
     console.log("Client connected:", socket.id);
 
@@ -1504,11 +1504,11 @@ function initializeSocket(server) {
   return io;
 }
 
-// 서버에서 데이터 변경 감지 시 알림 전송
+// ?�버?�서 ?�이??변�?감�? ???�림 ?�송
 async function notifyClientsOfChanges(changedItems) {
   if (!global.io || changedItems.length === 0) return;
 
-  // 변경된 아이템 ID만 전송
+  // 변경된 ?�이??ID�??�송
   const changedItemIds = changedItems.map((item) => item.item_id);
   global.io.emit("data-updated", {
     itemIds: changedItemIds,
@@ -1518,7 +1518,7 @@ async function notifyClientsOfChanges(changedItems) {
   console.log(`Notified clients about ${changedItemIds.length} updated items`);
 }
 
-// product 환경에서 실행되도록 추가
+// product ?�경?�서 ?�행?�도�?추�?
 if (process.env.ENV === "development") {
   console.log("development env");
 } else {

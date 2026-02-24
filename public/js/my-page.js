@@ -804,7 +804,6 @@ class MyPageManager {
       second: "2차 제안",
       final: "최종 입찰",
       completed: "낙찰 완료",
-      shipped: "출고됨",
     };
     return statusMap[bid.status] || "알 수 없음";
   }
@@ -817,7 +816,6 @@ class MyPageManager {
       second: "second",
       final: "final",
       completed: "completed",
-      shipped: "shipped",
       cancelled: "cancelled",
     };
     return statusMap[bid.status] || "unknown";

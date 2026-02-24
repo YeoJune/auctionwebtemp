@@ -79,7 +79,39 @@ async function testConnection() {
     console.log("Successfully connected to the database");
 
     // 연결 상태 확인 쿼리들
-    const queries = [`SHOW INDEX FROM crawled_items`];
+    const queries = [
+      `ALTER TABLE live_bids
+  ADD COLUMN shipping_status VARCHAR(30) NOT NULL DEFAULT 'pending'
+  AFTER status;`,
+      `ALTER TABLE direct_bids
+  ADD COLUMN shipping_status VARCHAR(30) NOT NULL DEFAULT 'pending'
+  AFTER status;`,
+      `UPDATE live_bids
+  SET status = 'completed', shipping_status = 'shipped'
+  WHERE status = 'shipped';`,
+      `UPDATE direct_bids
+  SET status = 'completed', shipping_status = 'shipped'
+  WHERE status = 'shipped';`,
+      `UPDATE live_bids l
+  LEFT JOIN bid_workflow_stages bws
+    ON bws.bid_type = 'live' AND bws.bid_id = l.id
+  SET l.shipping_status = COALESCE(bws.stage, 'completed')
+  WHERE l.status = 'completed';`,
+      `UPDATE direct_bids d
+  LEFT JOIN bid_workflow_stages bws
+    ON bws.bid_type = 'direct' AND bws.bid_id = d.id
+  SET d.shipping_status = COALESCE(bws.stage, 'completed')
+  WHERE d.status = 'completed';`,
+      `SELECT 'live_bids' AS tbl, shipping_status, COUNT(*) AS cnt
+  FROM live_bids GROUP BY shipping_status
+UNION ALL
+SELECT 'direct_bids', shipping_status, COUNT(*) AS cnt
+  FROM direct_bids GROUP BY shipping_status;`,
+      `SELECT COUNT(*) AS anomaly_count FROM live_bids
+  WHERE status = 'completed' AND shipping_status = 'pending';`,
+      `SELECT COUNT(*) AS anomaly_count FROM direct_bids
+  WHERE status = 'completed' AND shipping_status = 'pending';`,
+    ];
 
     // 각 쿼리 순차 실행
     for (const query of queries) {

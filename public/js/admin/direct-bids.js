@@ -17,6 +17,26 @@ const DIRECT_STATUS_LABELS = {
   cancelled: "낙찰 실패",
 };
 
+// shipping_status 값 (bid.status가 아닌 별도 필드로 전달해야 함)
+const DIRECT_SHIPPING_STATUSES = new Set([
+  "domestic_arrived",
+  "processing",
+  "shipped",
+]);
+
+/**
+ * 상태 값에 따라 올바른 API body 필드를 결정한다.
+ */
+function buildDirectBidUpdate(valueOrObj) {
+  if (typeof valueOrObj === "object" && valueOrObj !== null) {
+    return valueOrObj;
+  }
+  if (DIRECT_SHIPPING_STATUSES.has(valueOrObj)) {
+    return { shipping_status: valueOrObj };
+  }
+  return { status: valueOrObj };
+}
+
 const DIRECT_NEXT_STATUS = {
   completed: "domestic_arrived",
   domestic_arrived: "processing",
@@ -82,7 +102,7 @@ function renderProcessingZoneSummary(bids) {
   }
 
   const zoneCountMap = (bids || []).reduce((acc, bid) => {
-    if (bid.status !== "processing") return acc;
+    if (bid.shipping_status !== "processing") return acc;
     const code = bid.wms_location_code || "UNKNOWN_ZONE";
     acc[code] = (acc[code] || 0) + 1;
     return acc;
@@ -673,20 +693,19 @@ function renderDirectBidsTable(directBids) {
       case "active":
         statusBadge = '<span class="badge badge-info">활성</span>';
         break;
-      case "completed":
-        statusBadge = '<span class="badge badge-success">완료</span>';
+      case "completed": {
+        const ss = bid.shipping_status || "pending";
+        if (ss === "domestic_arrived") {
+          statusBadge = '<span class="badge badge-warning">국내도착</span>';
+        } else if (ss === "processing") {
+          statusBadge = `<span class="badge badge-dark">${getDirectProcessingStatusLabel(bid)}</span>`;
+        } else if (ss === "shipped") {
+          statusBadge = '<span class="badge badge-primary">출고됨</span>';
+        } else {
+          statusBadge = '<span class="badge badge-success">완료</span>';
+        }
         break;
-      case "domestic_arrived":
-        statusBadge = '<span class="badge badge-warning">국내도착</span>';
-        break;
-      case "processing":
-        statusBadge = `<span class="badge badge-dark">${getDirectProcessingStatusLabel(
-          bid,
-        )}</span>`;
-        break;
-      case "shipped":
-        statusBadge = '<span class="badge badge-primary">출고됨</span>';
-        break;
+      }
       case "cancelled":
         statusBadge = '<span class="badge badge-secondary">낙찰 실패</span>';
         break;
@@ -706,15 +725,10 @@ function renderDirectBidsTable(directBids) {
     let repairButton = "";
     if (
       bid.status === "completed" ||
-      bid.status === "domestic_arrived" ||
-      bid.status === "processing" ||
-      bid.status === "shipped"
+      bid.shipping_status === "domestic_arrived" ||
+      bid.shipping_status === "processing" ||
+      bid.shipping_status === "shipped"
     ) {
-      if (bid.repair_requested_at) {
-        // 수선 접수됨 - 클릭 시 수정 모달 열기
-        repairButton = `<button class="btn btn-sm btn-success" 
-          data-bid-id="${bid.id}" 
-          data-bid-type="direct"
           data-repair-details="${escapeHtml(bid.repair_details || "")}"
           data-repair-fee="${bid.repair_fee || 0}"
           data-repair-requested-at="${bid.repair_requested_at || ""}"
@@ -742,10 +756,10 @@ function renderDirectBidsTable(directBids) {
       actionButtons += `
         <button class="btn btn-sm btn-secondary" onclick="openCancelModal(${bid.id})">낙찰 실패</button>
       `;
-    } else if (DIRECT_WORKFLOW_STATUSES.includes(bid.status)) {
+    } else if (bid.status === "completed") {
       actionButtons += `
-        <select class="form-control form-control-sm status-target-select" id="directStatusTarget-${bid.id}" data-current-status="${bid.status}">
-          ${getDirectWorkflowStatusOptionsHtml(bid.status)}
+        <select class="form-control form-control-sm status-target-select" id="directStatusTarget-${bid.id}" data-current-status="${bid.shipping_status || "completed"}">
+          ${getDirectWorkflowStatusOptionsHtml(bid.shipping_status || "completed")}
         </select>
         <button class="btn btn-info btn-sm" onclick="moveDirectBidStatus(${bid.id})">상태 변경</button>
       `;
@@ -1290,7 +1304,7 @@ async function submitEditBid() {
 
     if (currentPriceValue)
       updateData.current_price = parseInt(currentPriceValue);
-    if (status) updateData.status = status;
+    if (status) Object.assign(updateData, buildDirectBidUpdate(status));
     updateData.submitted_to_platform = submittedToPlatform;
     if (winningPriceValue)
       updateData.winning_price = parseInt(winningPriceValue);
@@ -1322,7 +1336,7 @@ async function advanceDirectBidStatus(bidId, currentStatus) {
   }
 
   try {
-    await updateDirectBid(bidId, { status: nextStatus });
+    await updateDirectBid(bidId, buildDirectBidUpdate(nextStatus));
     showAlert(
       `상태가 ${getDirectStatusLabel(nextStatus)}으로 변경되었습니다.`,
       "success",
@@ -1357,7 +1371,7 @@ async function moveDirectBidStatus(bidId) {
   }
 
   try {
-    await updateDirectBid(bidId, { status: targetStatus });
+    await updateDirectBid(bidId, buildDirectBidUpdate(targetStatus));
     showAlert(
       `상태가 ${getDirectStatusLabel(targetStatus)}으로 변경되었습니다.`,
       "success",
@@ -1409,7 +1423,7 @@ async function bulkMarkAsShipped() {
 
   try {
     const promises = bidUpdates.map(({ bidId, nextStatus }) =>
-      updateDirectBid(bidId, { status: nextStatus }),
+      updateDirectBid(bidId, buildDirectBidUpdate(nextStatus)),
     );
     await Promise.all(promises);
 

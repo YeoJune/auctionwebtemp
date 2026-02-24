@@ -714,7 +714,7 @@ window.BidResultsCore = (function () {
   function createShippingStatus(item) {
     const statusSpan = createElement("span", "shipping-status");
 
-    if (item.status === "shipped") {
+    if (item.shipping_status === "shipped") {
       statusSpan.textContent = "출고됨";
       statusSpan.classList.add("status-shipped");
     } else if (item.status === "completed") {

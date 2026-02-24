@@ -116,7 +116,7 @@ async function resolveSourceBid(conn, item) {
     SELECT id, updated_at
     FROM direct_bids
     WHERE item_id = ?
-      AND status IN ('completed', 'shipped')
+      AND status = 'completed'
     ORDER BY updated_at DESC, id DESC
     LIMIT 1
     `,
@@ -127,7 +127,7 @@ async function resolveSourceBid(conn, item) {
     SELECT id, updated_at
     FROM live_bids
     WHERE item_id = ?
-      AND status IN ('completed', 'shipped')
+      AND status = 'completed'
     ORDER BY updated_at DESC, id DESC
     LIMIT 1
     `,
@@ -169,32 +169,12 @@ async function syncBidStatusByLocation(conn, item, toLocationCode) {
   if (!resolved) return;
   const { bidType, bidId } = resolved;
 
-  // shipped만 bid 테이블에 직접 반영한다.
-  // domestic_arrived / processing 은 bid_workflow_stages 에만 기록하여
-  // 원본 bid 테이블의 status 를 completed / shipped 두 값만 사용한다.
-  if (nextBidStatus === "shipped") {
-    if (bidType === "direct") {
-      await conn.query(
-        `UPDATE direct_bids SET status = ?, updated_at = NOW() WHERE id = ?`,
-        [nextBidStatus, bidId],
-      );
-    } else if (bidType === "live") {
-      await conn.query(
-        `UPDATE live_bids SET status = ?, updated_at = NOW() WHERE id = ?`,
-        [nextBidStatus, bidId],
-      );
-    }
-  }
-
+  // WMS 스캔 위치에 따라 bid 테이블의 shipping_status를 직접 업데이트한다.
+  // status = 'completed'인 경우에만 허용 (불변성 보장)
+  const bidTable = bidType === "direct" ? "direct_bids" : "live_bids";
   await conn.query(
-    `
-    INSERT INTO bid_workflow_stages (bid_type, bid_id, stage)
-    VALUES (?, ?, ?)
-    ON DUPLICATE KEY UPDATE
-      stage = VALUES(stage),
-      updated_at = NOW()
-    `,
-    [bidType, bidId, nextBidStatus],
+    `UPDATE ${bidTable} SET shipping_status = ?, updated_at = NOW() WHERE id = ? AND status = 'completed'`,
+    [nextBidStatus, bidId],
   );
 
   // 소스 연결이 비어 있던 기존 WMS 데이터는 여기서 백필한다.
@@ -764,21 +744,6 @@ function toMysqlDatetime(value) {
   return `${y}-${m}-${day} ${hh}:${mm}:${ss}`;
 }
 
-async function ensureBidWorkflowStagesTable() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS bid_workflow_stages (
-      id BIGINT AUTO_INCREMENT PRIMARY KEY,
-      bid_type VARCHAR(20) NOT NULL,
-      bid_id BIGINT NOT NULL,
-      stage VARCHAR(30) NOT NULL,
-      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-      UNIQUE KEY uq_bid_workflow_stage (bid_type, bid_id),
-      KEY idx_bid_workflow_stage (stage)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-  `);
-}
-
 router.post("/init", isAdmin, async (req, res) => {
   try {
     await ensureTables();
@@ -822,12 +787,10 @@ router.post("/items", isAdmin, async (req, res) => {
   const normalizedLocationCode = normalizeLocationCode(locationCode);
 
   if (!externalBarcode && !internalBarcode) {
-    return res
-      .status(400)
-      .json({
-        ok: false,
-        message: "externalBarcode or internalBarcode required",
-      });
+    return res.status(400).json({
+      ok: false,
+      message: "externalBarcode or internalBarcode required",
+    });
   }
 
   try {
@@ -929,7 +892,6 @@ router.post("/scan", isAdmin, async (req, res) => {
   let conn;
   try {
     await ensureTables();
-    await ensureBidWorkflowStagesTable();
     conn = await pool.getConnection();
     await conn.beginTransaction();
 
@@ -1256,7 +1218,7 @@ router.get("/auction-completed", isAdmin, async (req, res) => {
         ON w.source_bid_type = 'live' AND w.source_bid_id = l.id
       WHERE DATE(COALESCE(i.original_scheduled_date, i.scheduled_date)) = ?
         ${aucCondition}
-        AND l.status IN ('completed', 'shipped')
+        AND l.status = 'completed'
       ORDER BY i.auc_num ASC, i.original_scheduled_date ASC, l.id ASC
       `,
       params,
@@ -1285,7 +1247,7 @@ router.get("/auction-completed", isAdmin, async (req, res) => {
         ON w.source_bid_type = 'direct' AND w.source_bid_id = d.id
       WHERE DATE(COALESCE(i.original_scheduled_date, i.scheduled_date)) = ?
         ${aucCondition}
-        AND d.status IN ('completed', 'shipped')
+        AND d.status = 'completed'
       ORDER BY i.auc_num ASC, i.original_scheduled_date ASC, d.id ASC
       `,
       params,
@@ -1308,7 +1270,6 @@ router.post("/auction-labels", isAdmin, async (req, res) => {
   let conn;
   try {
     await ensureTables();
-    await ensureBidWorkflowStagesTable();
     conn = await pool.getConnection();
     await conn.beginTransaction();
 
@@ -1428,16 +1389,13 @@ router.post("/auction-labels", isAdmin, async (req, res) => {
         }
       }
 
-      // 라벨 생성 시점부터 경매관리 상태를 국내도착으로 본다.
+      // 라벨 생성 시점: bid 테이블 shipping_status = 'completed' 로 전환
+      // (WMS 아이템 등록 완료, 물리적 도착 전)
+      const bidTableForLabel =
+        bidType === "direct" ? "direct_bids" : "live_bids";
       await conn.query(
-        `
-        INSERT INTO bid_workflow_stages (bid_type, bid_id, stage)
-        VALUES (?, ?, 'domestic_arrived')
-        ON DUPLICATE KEY UPDATE
-          stage = VALUES(stage),
-          updated_at = NOW()
-        `,
-        [bidType, bidId],
+        `UPDATE ${bidTableForLabel} SET shipping_status = 'completed', updated_at = NOW() WHERE id = ? AND status = 'completed'`,
+        [bidId],
       );
 
       labels.push({

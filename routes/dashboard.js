@@ -371,7 +371,7 @@ router.get("/active-users", isAdmin, async (req, res) => {
 // CEO 대시보드 요약 (완료 매출/VIP/이탈위험)
 router.get("/executive-summary", isAdmin, async (req, res) => {
   const connection = await pool.getConnection();
-  const revenueStatuses = "'completed','shipped'";
+  const revenueStatuses = "'completed'";
   const targetYear = 2026;
 
   try {
@@ -393,7 +393,8 @@ router.get("/executive-summary", isAdmin, async (req, res) => {
       return days;
     };
 
-    const [countsRows] = await connection.query(`
+    const [countsRows] = await connection.query(
+      `
       SELECT
         SUM(CASE WHEN src = 'live' THEN 1 ELSE 0 END) AS liveCount,
         SUM(CASE WHEN src = 'direct' THEN 1 ELSE 0 END) AS directCount,
@@ -411,9 +412,12 @@ router.get("/executive-summary", isAdmin, async (req, res) => {
           AND CAST(REPLACE(d.winning_price, ',', '') AS DECIMAL(18,2)) > 0
           AND YEAR(COALESCE(d.completed_at, d.updated_at, d.created_at)) = ?
       ) t
-    `, [targetYear, targetYear]);
+    `,
+      [targetYear, targetYear],
+    );
 
-    const [settlementYearRows] = await connection.query(`
+    const [settlementYearRows] = await connection.query(
+      `
       SELECT
         COALESCE(SUM(ds.total_amount), 0) AS yearRevenueKrw,
         COALESCE(MIN(ds.settlement_date), NULL) AS periodStart,
@@ -421,7 +425,9 @@ router.get("/executive-summary", isAdmin, async (req, res) => {
       FROM daily_settlements ds
       WHERE YEAR(ds.settlement_date) = ?
         AND ds.total_amount > 0
-    `, [targetYear]);
+    `,
+      [targetYear],
+    );
 
     const [settlementCurrentMonthRows] = await connection.query(`
       SELECT
@@ -511,6 +517,7 @@ router.get("/executive-summary", isAdmin, async (req, res) => {
           ON CONVERT(i.item_id USING utf8mb4) =
              CONVERT(l.item_id USING utf8mb4)
         WHERE l.status = 'completed'
+          AND l.shipping_status = 'completed'
         UNION ALL
         SELECT
           'direct' AS bid_type,
@@ -523,15 +530,9 @@ router.get("/executive-summary", isAdmin, async (req, res) => {
           ON CONVERT(i.item_id USING utf8mb4) =
              CONVERT(d.item_id USING utf8mb4)
         WHERE d.status = 'completed'
+          AND d.shipping_status = 'completed'
       ) z
-      LEFT JOIN bid_workflow_stages bws
-        ON bws.bid_type = z.bid_type
-       AND bws.bid_id = z.bid_id
       WHERE z.completed_at IS NOT NULL
-        AND (
-          bws.bid_id IS NULL
-          OR bws.stage NOT IN ('domestic_arrived', 'processing', 'shipped')
-        )
       GROUP BY DATE(z.completed_at), z.auc_num
       ORDER BY completed_date DESC, z.auc_num ASC
       LIMIT 200
@@ -547,15 +548,24 @@ router.get("/executive-summary", isAdmin, async (req, res) => {
     };
 
     const yearRevenueKrw = Number(settlementYearRows[0]?.yearRevenueKrw || 0);
-    const monthlyRevenueKrw = Number(settlementCurrentMonthRows[0]?.monthRevenueKrw || 0);
+    const monthlyRevenueKrw = Number(
+      settlementCurrentMonthRows[0]?.monthRevenueKrw || 0,
+    );
     const completedCount = Number(countsRows[0]?.totalCount || 0);
     const liveCount = Number(countsRows[0]?.liveCount || 0);
     const directCount = Number(countsRows[0]?.directCount || 0);
     const totalCountForSplit = completedCount > 0 ? completedCount : 1;
-    const liveRevenueEstimate = Math.round((yearRevenueKrw * liveCount) / totalCountForSplit);
-    const directRevenueEstimate = Math.max(0, Math.round(yearRevenueKrw - liveRevenueEstimate));
+    const liveRevenueEstimate = Math.round(
+      (yearRevenueKrw * liveCount) / totalCountForSplit,
+    );
+    const directRevenueEstimate = Math.max(
+      0,
+      Math.round(yearRevenueKrw - liveRevenueEstimate),
+    );
 
-    const sixMonthMap = new Map((sixMonthRows || []).map((r) => [r.ym, Number(r.revenueKrw || 0)]));
+    const sixMonthMap = new Map(
+      (sixMonthRows || []).map((r) => [r.ym, Number(r.revenueKrw || 0)]),
+    );
     const sixMonthRevenue = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date();
@@ -586,7 +596,9 @@ router.get("/executive-summary", isAdmin, async (req, res) => {
       targetYear,
       yearCompletedCount: completedCount,
       yearRevenueKrw,
-      monthlyCompletedCount: Number(monthlyCountRows[0]?.monthlyCompletedCount || 0),
+      monthlyCompletedCount: Number(
+        monthlyCountRows[0]?.monthlyCompletedCount || 0,
+      ),
       monthlyRevenueKrw,
       periodStart: formatDate(settlementYearRows[0]?.periodStart),
       periodEnd: formatDate(settlementYearRows[0]?.periodEnd),

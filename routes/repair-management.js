@@ -210,7 +210,7 @@ async function resolveSourceBid(conn, item) {
     SELECT id, updated_at
     FROM direct_bids
     WHERE item_id = ?
-      AND status IN ('completed', 'shipped')
+      AND status = 'completed'
     ORDER BY updated_at DESC, id DESC
     LIMIT 1
     `,
@@ -221,7 +221,7 @@ async function resolveSourceBid(conn, item) {
     SELECT id, updated_at
     FROM live_bids
     WHERE item_id = ?
-      AND status IN ('completed', 'shipped')
+      AND status = 'completed'
     ORDER BY updated_at DESC, id DESC
     LIMIT 1
     `,
@@ -309,48 +309,12 @@ async function syncBidStatusByLocation(conn, item, toLocationCode) {
   if (!resolved) return;
   const { bidType, bidId } = resolved;
 
-  const tableName = bidType === "direct" ? "direct_bids" : "live_bids";
-  const [colRows] = await conn.query(
-    `
-    SELECT COLUMN_TYPE
-    FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME = ?
-      AND COLUMN_NAME = 'status'
-    LIMIT 1
-    `,
-    [tableName],
-  );
-  const columnType = colRows?.[0]?.COLUMN_TYPE || "";
-  const enumValues = Array.from(columnType.matchAll(/'([^']+)'/g)).map(
-    (m) => m[1],
-  );
-
-  // shipped만 bid 테이블에 직접 반영한다.
-  // domestic_arrived / processing 은 bid_workflow_stages 에만 기록한다.
-  if (nextBidStatus === "shipped" && enumValues.includes(nextBidStatus)) {
-    if (bidType === "direct") {
-      await conn.query(
-        `UPDATE direct_bids SET status = ?, updated_at = NOW() WHERE id = ?`,
-        [nextBidStatus, bidId],
-      );
-    } else {
-      await conn.query(
-        `UPDATE live_bids SET status = ?, updated_at = NOW() WHERE id = ?`,
-        [nextBidStatus, bidId],
-      );
-    }
-  }
-
+  // WMS 스캔 위치에 따라 bid 테이블의 shipping_status를 직접 업데이트한다.
+  // status = 'completed'인 경우에만 허용 (불변성 보장)
+  const bidTable = bidType === "direct" ? "direct_bids" : "live_bids";
   await conn.query(
-    `
-    INSERT INTO bid_workflow_stages (bid_type, bid_id, stage)
-    VALUES (?, ?, ?)
-    ON DUPLICATE KEY UPDATE
-      stage = VALUES(stage),
-      updated_at = NOW()
-    `,
-    [bidType, bidId, nextBidStatus],
+    `UPDATE ${bidTable} SET shipping_status = ?, updated_at = NOW() WHERE id = ? AND status = 'completed'`,
+    [nextBidStatus, bidId],
   );
 
   if (!item.source_bid_type || !item.source_bid_id) {
@@ -583,12 +547,10 @@ router.post("/cases", isAdmin, async (req, res) => {
         .status(400)
         .json({ ok: false, message: "itemId가 필요합니다." });
     if (!["INTERNAL", "EXTERNAL"].includes(decisionType)) {
-      return res
-        .status(400)
-        .json({
-          ok: false,
-          message: "수선 구분은 INTERNAL/EXTERNAL만 가능합니다.",
-        });
+      return res.status(400).json({
+        ok: false,
+        message: "수선 구분은 INTERNAL/EXTERNAL만 가능합니다.",
+      });
     }
 
     if (decisionType === "EXTERNAL" && !vendorNameInput) {

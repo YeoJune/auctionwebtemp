@@ -19,6 +19,28 @@ const LIVE_STATUS_LABELS = {
   cancelled: "낙찰 실패",
 };
 
+// shipping_status 값 (bid.status가 아닌 별도 필드로 전달해야 함)
+const LIVE_SHIPPING_STATUSES = new Set([
+  "domestic_arrived",
+  "processing",
+  "shipped",
+]);
+
+/**
+ * 상태 값에 따라 올바른 API body 필드를 결정한다.
+ * shipping_status 값이면 { shipping_status: value }로,
+ * bid status 값이면 { status: value }로 반환한다.
+ */
+function buildLiveBidUpdate(valueOrObj) {
+  if (typeof valueOrObj === "object" && valueOrObj !== null) {
+    return valueOrObj;
+  }
+  if (LIVE_SHIPPING_STATUSES.has(valueOrObj)) {
+    return { shipping_status: valueOrObj };
+  }
+  return { status: valueOrObj };
+}
+
 const LIVE_NEXT_STATUS = {
   completed: "domestic_arrived",
   domestic_arrived: "processing",
@@ -92,7 +114,7 @@ function renderProcessingZoneSummary(bids) {
   }
 
   const zoneCountMap = (bids || []).reduce((acc, bid) => {
-    if (bid.status !== "processing") return acc;
+    if (bid.shipping_status !== "processing") return acc;
     const code = bid.wms_location_code || "UNKNOWN_ZONE";
     acc[code] = (acc[code] || 0) + 1;
     return acc;
@@ -121,14 +143,16 @@ function renderProcessingZoneSummary(bids) {
     })
     .join("");
   grid.innerHTML = allCard + zoneCards;
-  grid.querySelectorAll(".processing-zone-item[data-zone-code]").forEach((el) => {
-    el.addEventListener("click", () => {
-      currentProcessingZoneCode = el.dataset.zoneCode || "";
-      updateURLState();
-      renderProcessingZoneSummary(currentLiveBidsData);
-      renderLiveBidsTable(filterLiveBidsByZone(currentLiveBidsData));
+  grid
+    .querySelectorAll(".processing-zone-item[data-zone-code]")
+    .forEach((el) => {
+      el.addEventListener("click", () => {
+        currentProcessingZoneCode = el.dataset.zoneCode || "";
+        updateURLState();
+        renderProcessingZoneSummary(currentLiveBidsData);
+        renderLiveBidsTable(filterLiveBidsByZone(currentLiveBidsData));
+      });
     });
-  });
   wrap.style.display = "block";
 }
 
@@ -165,7 +189,15 @@ const defaultState = {
 
 // URL에서 상태 복원
 function initializeFromURL() {
-  const stateKeys = ["page", "sort", "order", "search", "status", "aucNum", "zone"];
+  const stateKeys = [
+    "page",
+    "sort",
+    "order",
+    "search",
+    "status",
+    "aucNum",
+    "zone",
+  ];
   const state = urlStateManager.loadFromURL(defaultState, stateKeys);
 
   currentPage = state.page;
@@ -375,7 +407,9 @@ document.addEventListener("DOMContentLoaded", function () {
       fromDate = document.getElementById("fromDate").value;
       toDate = document.getElementById("toDate").value;
       currentPage = 1;
-      document.querySelectorAll("[data-range]").forEach((b) => b.classList.remove("active"));
+      document
+        .querySelectorAll("[data-range]")
+        .forEach((b) => b.classList.remove("active"));
       loadLiveBids();
     });
 
@@ -388,7 +422,9 @@ document.addEventListener("DOMContentLoaded", function () {
       fromDate = "";
       toDate = "";
       currentPage = 1;
-      document.querySelectorAll("[data-range]").forEach((b) => b.classList.remove("active"));
+      document
+        .querySelectorAll("[data-range]")
+        .forEach((b) => b.classList.remove("active"));
       loadLiveBids();
     });
 
@@ -466,7 +502,9 @@ function handleQuickDateFilter(event) {
   fromDate = startDate;
   toDate = endDate;
   currentPage = 1;
-  document.querySelectorAll("[data-range]").forEach((b) => b.classList.remove("active"));
+  document
+    .querySelectorAll("[data-range]")
+    .forEach((b) => b.classList.remove("active"));
   event.target.closest("[data-range]")?.classList.add("active");
   updateURLState();
   loadLiveBids();
@@ -488,10 +526,7 @@ function updateBulkShipButtonLabel() {
     bulkShipBtn.textContent = "일괄 상태 변경";
   }
 
-  if (
-    bulkStatusTarget &&
-    LIVE_WORKFLOW_STATUSES.includes(currentStatus)
-  ) {
+  if (bulkStatusTarget && LIVE_WORKFLOW_STATUSES.includes(currentStatus)) {
     bulkStatusTarget.value = currentStatus;
   }
 }
@@ -551,9 +586,11 @@ async function loadLiveBids() {
 }
 
 function filterLiveBidsByZone(bids) {
-  if (currentStatus !== "processing" || !currentProcessingZoneCode) return bids || [];
+  if (currentStatus !== "processing" || !currentProcessingZoneCode)
+    return bids || [];
   return (bids || []).filter(
-    (bid) => (bid.wms_location_code || "UNKNOWN_ZONE") === currentProcessingZoneCode,
+    (bid) =>
+      (bid.wms_location_code || "UNKNOWN_ZONE") === currentProcessingZoneCode,
   );
 }
 
@@ -602,20 +639,19 @@ function renderLiveBidsTable(liveBids) {
       case "final":
         statusBadge = '<span class="badge badge-danger">최종 입찰</span>';
         break;
-      case "completed":
-        statusBadge = '<span class="badge badge-success">완료</span>';
+      case "completed": {
+        const ss = bid.shipping_status || "pending";
+        if (ss === "domestic_arrived") {
+          statusBadge = '<span class="badge badge-warning">국내도착</span>';
+        } else if (ss === "processing") {
+          statusBadge = `<span class="badge badge-dark">${getLiveProcessingStatusLabel(bid)}</span>`;
+        } else if (ss === "shipped") {
+          statusBadge = '<span class="badge badge-primary">출고됨</span>';
+        } else {
+          statusBadge = '<span class="badge badge-success">완료</span>';
+        }
         break;
-      case "domestic_arrived":
-        statusBadge = '<span class="badge badge-warning">국내도착</span>';
-        break;
-      case "processing":
-        statusBadge = `<span class="badge badge-dark">${getLiveProcessingStatusLabel(
-          bid,
-        )}</span>`;
-        break;
-      case "shipped":
-        statusBadge = '<span class="badge badge-primary">출고됨</span>';
-        break;
+      }
       case "cancelled":
         statusBadge = '<span class="badge badge-secondary">낙찰 실패</span>';
         break;
@@ -635,9 +671,9 @@ function renderLiveBidsTable(liveBids) {
     let repairButton = "";
     if (
       bid.status === "completed" ||
-      bid.status === "domestic_arrived" ||
-      bid.status === "processing" ||
-      bid.status === "shipped"
+      bid.shipping_status === "domestic_arrived" ||
+      bid.shipping_status === "processing" ||
+      bid.shipping_status === "shipped"
     ) {
       if (bid.repair_requested_at) {
         // 수선 접수됨 - 클릭 시 수정 모달 열기
@@ -665,10 +701,10 @@ function renderLiveBidsTable(liveBids) {
       actionButtons += `
         <button class="btn btn-sm btn-secondary" onclick="openCancelModal(${bid.id})">낙찰 실패</button>
       `;
-    } else if (LIVE_WORKFLOW_STATUSES.includes(bid.status)) {
+    } else if (bid.status === "completed") {
       actionButtons += `
-        <select class="form-control form-control-sm status-target-select" id="liveStatusTarget-${bid.id}" data-current-status="${bid.status}">
-          ${getLiveWorkflowStatusOptionsHtml(bid.status)}
+        <select class="form-control form-control-sm status-target-select" id="liveStatusTarget-${bid.id}" data-current-status="${bid.shipping_status || "completed"}">
+          ${getLiveWorkflowStatusOptionsHtml(bid.shipping_status || "completed")}
         </select>
         <button class="btn btn-info btn-sm" onclick="moveLiveBidStatus(${bid.id})">상태 변경</button>
       `;
@@ -1192,7 +1228,7 @@ async function submitEditBid() {
     if (firstPriceValue) updateData.first_price = parseInt(firstPriceValue);
     if (secondPriceValue) updateData.second_price = parseInt(secondPriceValue);
     if (finalPriceValue) updateData.final_price = parseInt(finalPriceValue);
-    if (status) updateData.status = status;
+    if (status) Object.assign(updateData, buildLiveBidUpdate(status));
     if (winningPriceValue)
       updateData.winning_price = parseInt(winningPriceValue);
 
@@ -1215,13 +1251,15 @@ async function advanceLiveBidStatus(bidId, currentStatus) {
   }
 
   if (
-    !confirm(`이 입찰을 ${getLiveStatusLabel(nextStatus)} 상태로 변경하시겠습니까?`)
+    !confirm(
+      `이 입찰을 ${getLiveStatusLabel(nextStatus)} 상태로 변경하시겠습니까?`,
+    )
   ) {
     return;
   }
 
   try {
-    await updateLiveBid(bidId, { status: nextStatus });
+    await updateLiveBid(bidId, buildLiveBidUpdate(nextStatus));
     showAlert(
       `상태가 ${getLiveStatusLabel(nextStatus)}으로 변경되었습니다.`,
       "success",
@@ -1256,7 +1294,7 @@ async function moveLiveBidStatus(bidId) {
   }
 
   try {
-    await updateLiveBid(bidId, { status: targetStatus });
+    await updateLiveBid(bidId, buildLiveBidUpdate(targetStatus));
     showAlert(
       `상태가 ${getLiveStatusLabel(targetStatus)}으로 변경되었습니다.`,
       "success",
@@ -1308,7 +1346,7 @@ async function bulkMarkAsShipped() {
 
   try {
     const promises = bidUpdates.map(({ bidId, nextStatus }) =>
-      updateLiveBid(bidId, { status: nextStatus }),
+      updateLiveBid(bidId, buildLiveBidUpdate(nextStatus)),
     );
     await Promise.all(promises);
 

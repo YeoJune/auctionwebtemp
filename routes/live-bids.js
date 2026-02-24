@@ -35,22 +35,9 @@ const isAdmin = (req, res, next) => {
   }
 };
 
-async function ensureBidWorkflowStagesTable() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS bid_workflow_stages (
-      id BIGINT AUTO_INCREMENT PRIMARY KEY,
-      bid_type VARCHAR(20) NOT NULL,
-      bid_id BIGINT NOT NULL,
-      stage VARCHAR(30) NOT NULL,
-      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-      UNIQUE KEY uq_bid_workflow_stage (bid_type, bid_id),
-      KEY idx_bid_workflow_stage (stage)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-  `);
-}
-
-// STATUS -> 'first', 'second', 'final', 'completed', 'cancelled', 'shipped'
+// live_bids.status: 'first', 'second', 'final', 'completed', 'cancelled'
+// live_bids.shipping_status (status='completed'일 때만 유효): 'completed', 'domestic_arrived', 'processing', 'shipped'
+//                 (status!='completed'일 때): 항상 'pending'
 
 // Updated GET endpoint for live-bids.js
 router.get("/", async (req, res) => {
@@ -102,37 +89,40 @@ router.get("/", async (req, res) => {
   // Add status filter if provided
   if (status) {
     const statusArray = status.split(",");
-    const bwsStatuses = statusArray.filter(
-      (s) => s === "domestic_arrived" || s === "processing",
-    );
-    const bidStatuses = statusArray.filter(
-      (s) => s !== "domestic_arrived" && s !== "processing",
-    );
+    const SHIPPING_STATUSES = new Set([
+      "pending",
+      "completed",
+      "domestic_arrived",
+      "processing",
+      "shipped",
+    ]);
+    const shippingFilters = statusArray.filter((s) => SHIPPING_STATUSES.has(s));
+    const bidFilters = statusArray.filter((s) => !SHIPPING_STATUSES.has(s));
 
-    if (bwsStatuses.length > 0 && bidStatuses.length === 0) {
-      // domestic_arrived / processing 만 필터 → bid_workflow_stages 기준
-      const placeholders = bwsStatuses.map(() => "?").join(",");
+    if (shippingFilters.length > 0 && bidFilters.length === 0) {
+      // shipping_status 필터만: status='completed'+ shipping_status IN (...)
+      const placeholders = shippingFilters.map(() => "?").join(",");
       queryConditions.push(
-        `bws.stage IN (${placeholders}) AND b.status = 'completed'`,
+        `b.status = 'completed' AND b.shipping_status IN (${placeholders})`,
       );
-      queryParams.push(...bwsStatuses);
-    } else if (bwsStatuses.length > 0) {
-      // 혼합: bws.stage 또는 b.status
-      const bwsPlaceholders = bwsStatuses.map(() => "?").join(",");
-      const bidPlaceholders = bidStatuses.map(() => "?").join(",");
+      queryParams.push(...shippingFilters);
+    } else if (shippingFilters.length > 0) {
+      // 혼합: bid status 또는 shipping_status
+      const shippingPlaceholders = shippingFilters.map(() => "?").join(",");
+      const bidPlaceholders = bidFilters.map(() => "?").join(",");
       queryConditions.push(
-        `(bws.stage IN (${bwsPlaceholders}) OR b.status IN (${bidPlaceholders}))`,
+        `(b.status IN (${bidPlaceholders}) OR (b.status = 'completed' AND b.shipping_status IN (${shippingPlaceholders})))`,
       );
-      queryParams.push(...bwsStatuses, ...bidStatuses);
+      queryParams.push(...bidFilters, ...shippingFilters);
     } else {
-      // bid 테이블 status 만
-      if (bidStatuses.length === 1) {
+      // bid status 필터만
+      if (bidFilters.length === 1) {
         queryConditions.push("b.status = ?");
       } else {
-        const placeholders = bidStatuses.map(() => "?").join(",");
+        const placeholders = bidFilters.map(() => "?").join(",");
         queryConditions.push(`b.status IN (${placeholders})`);
       }
-      queryParams.push(...bidStatuses);
+      queryParams.push(...bidFilters);
     }
   }
 
@@ -186,7 +176,6 @@ router.get("/", async (req, res) => {
       WHERE source_item_id IS NOT NULL
       GROUP BY source_item_id
     ) wmsi ON wmsi.source_item_id = b.item_id
-    LEFT JOIN bid_workflow_stages bws ON bws.bid_type = 'live' AND bws.bid_id = b.id
     WHERE ${whereClause}
   `;
 
@@ -213,7 +202,6 @@ router.get("/", async (req, res) => {
       WHERE source_item_id IS NOT NULL
       GROUP BY source_item_id
     ) wmsi ON wmsi.source_item_id = b.item_id
-    LEFT JOIN bid_workflow_stages bws ON bws.bid_type = 'live' AND bws.bid_id = b.id
     WHERE ${whereClause}
   `;
 
@@ -262,25 +250,6 @@ router.get("/", async (req, res) => {
 
     // Get bids with item details in a single query
     const [rows] = await connection.query(finalQuery, finalQueryParams);
-    await ensureBidWorkflowStagesTable();
-
-    const rowIds = rows.map((r) => r.id);
-    let stageMap = {};
-    if (rowIds.length > 0) {
-      const placeholders = rowIds.map(() => "?").join(",");
-      const [stages] = await connection.query(
-        `
-        SELECT bid_id, stage
-        FROM bid_workflow_stages
-        WHERE bid_type = 'live' AND bid_id IN (${placeholders})
-        `,
-        rowIds,
-      );
-      stageMap = stages.reduce((acc, s) => {
-        acc[s.bid_id] = s.stage;
-        return acc;
-      }, {});
-    }
 
     // Format result to match expected structure
     const bidsWithItems = rows.map((row) => {
@@ -293,8 +262,8 @@ router.get("/", async (req, res) => {
         first_price: row.first_price,
         second_price: row.second_price,
         final_price: row.final_price,
-        status:
-          row.status === "shipped" ? "shipped" : stageMap[row.id] || row.status,
+        status: row.status,
+        shipping_status: row.shipping_status || "pending",
         created_at: row.created_at,
         updated_at: row.updated_at,
         completed_at: row.completed_at,
@@ -841,7 +810,7 @@ router.put("/complete", isAdmin, async (req, res) => {
 
       // 완료 처리: winningPrice <= final_price
       const [completeResult] = await connection.query(
-        `UPDATE live_bids SET status = 'completed', winning_price = ?, completed_at = NOW() WHERE id IN (${placeholders}) AND status = 'final' AND final_price >= ?`,
+        `UPDATE live_bids SET status = 'completed', shipping_status = 'completed', winning_price = ?, completed_at = NOW() WHERE id IN (${placeholders}) AND status = 'final' AND final_price >= ?`,
         [winningPrice, ...bidIds, winningPrice],
       );
       completedCount = completeResult.affectedRows;
@@ -852,7 +821,7 @@ router.put("/complete", isAdmin, async (req, res) => {
     } else {
       // 낙찰 금액이 없을 경우 기존 최종 입찰가를 winning_price로 설정하여 완료 처리
       [updateResult] = await connection.query(
-        `UPDATE live_bids SET status = 'completed', winning_price = final_price, completed_at = NOW() WHERE id IN (${placeholders}) AND status = 'final'`,
+        `UPDATE live_bids SET status = 'completed', shipping_status = 'completed', winning_price = final_price, completed_at = NOW() WHERE id IN (${placeholders}) AND status = 'final'`,
         bidIds,
       );
       completedCount = updateResult.affectedRows;
@@ -1134,11 +1103,17 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// live_bids 수정 라우터 - 기존 라우터에 추가할 코드
+// live_bids 수정 라우터
 router.put("/:id", isAdmin, async (req, res) => {
   const { id } = req.params;
-  const { first_price, second_price, final_price, status, winning_price } =
-    req.body;
+  const {
+    first_price,
+    second_price,
+    final_price,
+    status,
+    winning_price,
+    shipping_status,
+  } = req.body;
 
   if (!id) {
     return res.status(400).json({ message: "Bid ID is required" });
@@ -1164,7 +1139,6 @@ router.put("/:id", isAdmin, async (req, res) => {
     // 업데이트할 필드들과 값들을 동적으로 구성
     const updates = [];
     const params = [];
-    let workflowStageToSave = null;
 
     if (first_price !== undefined) {
       updates.push("first_price = ?");
@@ -1179,30 +1153,57 @@ router.put("/:id", isAdmin, async (req, res) => {
       params.push(final_price);
     }
     if (status !== undefined) {
-      // 유효한 status 값 체크
-      const validStatuses = [
+      // 유효한 bid status 값 체크 (물류 상태 제외)
+      const validBidStatuses = [
         "first",
         "second",
         "final",
         "completed",
-        "domestic_arrived",
-        "processing",
         "cancelled",
-        "shipped",
       ];
-      if (!validStatuses.includes(status)) {
+      if (!validBidStatuses.includes(status)) {
         await connection.rollback();
         return res.status(400).json({
           message:
-            "Invalid status. Must be one of: " + validStatuses.join(", "),
+            "Invalid status. Must be one of: " + validBidStatuses.join(", "),
         });
       }
-      if (status === "domestic_arrived" || status === "processing") {
-        workflowStageToSave = status;
-      } else {
-        updates.push("status = ?");
-        params.push(status);
+      updates.push("status = ?");
+      params.push(status);
+      // status 연동 shipping_status 자동 설정 (명시적 shipping_status 값이 없는 경우)
+      if (shipping_status === undefined) {
+        if (status === "completed") {
+          updates.push("shipping_status = 'completed'");
+        } else {
+          updates.push("shipping_status = 'pending'");
+        }
       }
+    }
+    if (shipping_status !== undefined) {
+      // shipping_status 독립 설정: status='completed'인 상태여야만 허용
+      const validShippingStatuses = [
+        "completed",
+        "domestic_arrived",
+        "processing",
+        "shipped",
+      ];
+      if (!validShippingStatuses.includes(shipping_status)) {
+        await connection.rollback();
+        return res.status(400).json({
+          message:
+            "Invalid shipping_status. Must be one of: " +
+            validShippingStatuses.join(", "),
+        });
+      }
+      const currentStatus = status !== undefined ? status : bid.status;
+      if (currentStatus !== "completed") {
+        await connection.rollback();
+        return res.status(400).json({
+          message: "shipping_status can only be set when status is 'completed'",
+        });
+      }
+      updates.push("shipping_status = ?");
+      params.push(shipping_status);
     }
     if (winning_price !== undefined) {
       updates.push("winning_price = ?");
@@ -1210,11 +1211,11 @@ router.put("/:id", isAdmin, async (req, res) => {
     }
 
     // 업데이트할 필드가 없으면 에러 반환
-    if (updates.length === 0 && !workflowStageToSave) {
+    if (updates.length === 0) {
       await connection.rollback();
       return res.status(400).json({
         message:
-          "No valid fields to update. Allowed fields: first_price, second_price, final_price, status, winning_price",
+          "No valid fields to update. Allowed fields: first_price, second_price, final_price, status, shipping_status, winning_price",
       });
     }
 
@@ -1237,25 +1238,7 @@ router.put("/:id", isAdmin, async (req, res) => {
       }
     }
 
-    if (workflowStageToSave) {
-      await ensureBidWorkflowStagesTable();
-      await connection.query(
-        `
-        INSERT INTO bid_workflow_stages (bid_type, bid_id, stage)
-        VALUES ('live', ?, ?)
-        ON DUPLICATE KEY UPDATE
-          stage = VALUES(stage),
-          updated_at = NOW()
-        `,
-        [id, workflowStageToSave],
-      );
-    } else if (status !== undefined) {
-      await connection.query(
-        `DELETE FROM bid_workflow_stages WHERE bid_type = 'live' AND bid_id = ?`,
-        [id],
-      );
-    }
-
+    // bid status 변경 시 WMS 동기화
     if (status !== undefined) {
       const syncResult = await syncWmsByBidStatus(connection, {
         bidType: "live",
@@ -1268,6 +1251,24 @@ router.put("/:id", isAdmin, async (req, res) => {
           bidId: Number(id),
           itemId: bid.item_id || null,
           status,
+          reason: syncResult?.reason || "unknown",
+        });
+      }
+    }
+
+    // shipping_status 변경 시 WMS 동기화
+    if (shipping_status !== undefined) {
+      const syncResult = await syncWmsByBidStatus(connection, {
+        bidType: "live",
+        bidId: Number(id),
+        itemId: bid.item_id || null,
+        nextStatus: shipping_status,
+      });
+      if (!syncResult?.updated && syncResult?.reason !== "already-synced") {
+        console.warn("[WMS sync][live] shipping_status update not applied:", {
+          bidId: Number(id),
+          itemId: bid.item_id || null,
+          shipping_status,
           reason: syncResult?.reason || "unknown",
         });
       }
