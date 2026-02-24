@@ -188,9 +188,9 @@ router.get("/", async (req, res) => {
       const searchTerm = `%${search}%`;
       const compactSearchTerm = `%${String(search).replace(/\s+/g, "")}%`;
       countQuery +=
-        " AND (CONVERT(d.item_id USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(i.original_title USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(i.additional_info USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(u.login_id USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(u.company_name USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR REPLACE(CONVERT(u.company_name USING utf8mb4), ' ', '') LIKE CONVERT(? USING utf8mb4) OR COALESCE(wms.internal_barcode, wmsi.internal_barcode) LIKE CONVERT(? USING utf8mb4))";
+        " AND (CONVERT(d.item_id USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(i.original_title USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(i.additional_info USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(u.login_id USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(u.company_name USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR REPLACE(CONVERT(u.company_name USING utf8mb4), ' ', '') LIKE CONVERT(? USING utf8mb4))";
       mainQuery +=
-        " AND (CONVERT(d.item_id USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(i.original_title USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(i.additional_info USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(u.login_id USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(u.company_name USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR REPLACE(CONVERT(u.company_name USING utf8mb4), ' ', '') LIKE CONVERT(? USING utf8mb4) OR COALESCE(wms.internal_barcode, wmsi.internal_barcode) LIKE CONVERT(? USING utf8mb4))";
+        " AND (CONVERT(d.item_id USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(i.original_title USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(i.additional_info USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(u.login_id USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR CONVERT(u.company_name USING utf8mb4) LIKE CONVERT(? USING utf8mb4) OR REPLACE(CONVERT(u.company_name USING utf8mb4), ' ', '') LIKE CONVERT(? USING utf8mb4))";
       queryParams.push(
         searchTerm,
         searchTerm,
@@ -198,7 +198,6 @@ router.get("/", async (req, res) => {
         searchTerm,
         searchTerm,
         compactSearchTerm,
-        searchTerm,
       );
     }
 

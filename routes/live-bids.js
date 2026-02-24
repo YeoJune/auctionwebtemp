@@ -72,7 +72,7 @@ router.get("/", async (req, res) => {
     const searchTerm = `%${search}%`;
     const compactSearchTerm = `%${String(search).replace(/\s+/g, "")}%`;
     queryConditions.push(
-      "((CONVERT(b.item_id USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(i.original_title USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(i.brand USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(i.additional_info USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(u.login_id USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(u.company_name USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR REPLACE((CONVERT(u.company_name USING utf8mb4) COLLATE utf8mb4_unicode_ci), _utf8mb4' ' COLLATE utf8mb4_unicode_ci, _utf8mb4'' COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR COALESCE(wms.internal_barcode, wmsi.internal_barcode) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci))",
+      "((CONVERT(b.item_id USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(i.original_title USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(i.brand USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(i.additional_info USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(u.login_id USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(u.company_name USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR REPLACE((CONVERT(u.company_name USING utf8mb4) COLLATE utf8mb4_unicode_ci), _utf8mb4' ' COLLATE utf8mb4_unicode_ci, _utf8mb4'' COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci))",
     );
     queryParams.push(
       searchTerm,
@@ -82,7 +82,6 @@ router.get("/", async (req, res) => {
       searchTerm,
       searchTerm,
       compactSearchTerm,
-      searchTerm,
     );
   }
 
