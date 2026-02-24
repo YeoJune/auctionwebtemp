@@ -131,14 +131,16 @@ function renderProcessingZoneSummary(bids) {
     })
     .join("");
   grid.innerHTML = allCard + zoneCards;
-  grid.querySelectorAll(".processing-zone-item[data-zone-code]").forEach((el) => {
-    el.addEventListener("click", () => {
-      currentProcessingZoneCode = el.dataset.zoneCode || "";
-      updateURLState();
-      renderProcessingZoneSummary(currentDirectBidsData);
-      renderDirectBidsTable(filterDirectBidsByZone(currentDirectBidsData));
+  grid
+    .querySelectorAll(".processing-zone-item[data-zone-code]")
+    .forEach((el) => {
+      el.addEventListener("click", () => {
+        currentProcessingZoneCode = el.dataset.zoneCode || "";
+        updateURLState();
+        renderProcessingZoneSummary(currentDirectBidsData);
+        renderDirectBidsTable(filterDirectBidsByZone(currentDirectBidsData));
+      });
     });
-  });
   wrap.style.display = "block";
 }
 
@@ -167,10 +169,7 @@ function updateBulkShipButtonLabel() {
   if (bulkShipBtn) {
     bulkShipBtn.textContent = "일괄 상태 변경";
   }
-  if (
-    bulkStatusTarget &&
-    DIRECT_WORKFLOW_STATUSES.includes(currentStatus)
-  ) {
+  if (bulkStatusTarget && DIRECT_WORKFLOW_STATUSES.includes(currentStatus)) {
     bulkStatusTarget.value = currentStatus;
   }
 }
@@ -291,7 +290,15 @@ const defaultState = {
 
 // URL에서 상태 복원
 function initializeFromURL() {
-  const stateKeys = ["page", "sort", "order", "search", "status", "aucNum", "zone"];
+  const stateKeys = [
+    "page",
+    "sort",
+    "order",
+    "search",
+    "status",
+    "aucNum",
+    "zone",
+  ];
   const state = urlStateManager.loadFromURL(defaultState, stateKeys);
 
   currentPage = state.page;
@@ -464,7 +471,9 @@ document.addEventListener("DOMContentLoaded", function () {
       fromDate = document.getElementById("fromDate").value;
       toDate = document.getElementById("toDate").value;
       currentPage = 1;
-      document.querySelectorAll("[data-range]").forEach((b) => b.classList.remove("active"));
+      document
+        .querySelectorAll("[data-range]")
+        .forEach((b) => b.classList.remove("active"));
       loadDirectBids();
     });
 
@@ -477,7 +486,9 @@ document.addEventListener("DOMContentLoaded", function () {
       fromDate = "";
       toDate = "";
       currentPage = 1;
-      document.querySelectorAll("[data-range]").forEach((b) => b.classList.remove("active"));
+      document
+        .querySelectorAll("[data-range]")
+        .forEach((b) => b.classList.remove("active"));
       loadDirectBids();
     });
 
@@ -586,7 +597,9 @@ function handleQuickDateFilter(event) {
   toDate = endDate;
   currentPage = 1;
 
-  document.querySelectorAll("[data-range]").forEach((b) => b.classList.remove("active"));
+  document
+    .querySelectorAll("[data-range]")
+    .forEach((b) => b.classList.remove("active"));
   event.target.closest("[data-range]")?.classList.add("active");
 
   loadDirectBids();
@@ -623,7 +636,10 @@ async function loadDirectBids() {
     currentDirectBidsData = directBids.bids;
 
     if (!filteredBids.length) {
-      showNoData("directBidsTableBody", "선택한 존의 작업중 데이터가 없습니다.");
+      showNoData(
+        "directBidsTableBody",
+        "선택한 존의 작업중 데이터가 없습니다.",
+      );
     } else {
       renderDirectBidsTable(filteredBids);
     }
@@ -647,9 +663,11 @@ async function loadDirectBids() {
 }
 
 function filterDirectBidsByZone(bids) {
-  if (currentStatus !== "processing" || !currentProcessingZoneCode) return bids || [];
+  if (currentStatus !== "processing" || !currentProcessingZoneCode)
+    return bids || [];
   return (bids || []).filter(
-    (bid) => (bid.wms_location_code || "UNKNOWN_ZONE") === currentProcessingZoneCode,
+    (bid) =>
+      (bid.wms_location_code || "UNKNOWN_ZONE") === currentProcessingZoneCode,
   );
 }
 
@@ -729,6 +747,11 @@ function renderDirectBidsTable(directBids) {
       bid.shipping_status === "processing" ||
       bid.shipping_status === "shipped"
     ) {
+      if (bid.repair_requested_at) {
+        // 수선 접수됨 - 클릭 시 수정 모달 열기
+        repairButton = `<button class="btn btn-sm btn-success" 
+          data-bid-id="${bid.id}" 
+          data-bid-type="direct"
           data-repair-details="${escapeHtml(bid.repair_details || "")}"
           data-repair-fee="${bid.repair_fee || 0}"
           data-repair-requested-at="${bid.repair_requested_at || ""}"
