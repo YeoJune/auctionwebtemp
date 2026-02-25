@@ -2,10 +2,8 @@
 
 // 페이지 로드 시 실행
 document.addEventListener("DOMContentLoaded", function () {
+  bindPendingDomesticModalEvents();
   loadDashboardData();
-
-  // 1분마다 갱신
-  setInterval(loadDashboardData, 60000);
 });
 
 // 대시보드 데이터 로드
@@ -16,6 +14,20 @@ async function loadDashboardData() {
     updateExecutiveSummary(executiveSummary);
   } catch (error) {
     console.error("대시보드 데이터를 불러오는 중 오류가 발생했습니다:", error);
+    const message = error?.message || "데이터 조회 실패";
+    const periodEl = document.getElementById("completedRevenuePeriod");
+    const vipListEl = document.getElementById("vipTop5List");
+    const sixMonthNoteEl = document.getElementById("sixMonthRevenueNote");
+    const pendingNoteEl = document.getElementById("pendingDomesticNote");
+    const pendingListEl = document.getElementById("pendingDomesticList");
+
+    if (periodEl) periodEl.textContent = `기준: ${message}`;
+    if (vipListEl) vipListEl.innerHTML = '<div class="no-data">VIP 데이터를 불러오지 못했습니다.</div>';
+    if (sixMonthNoteEl) sixMonthNoteEl.textContent = "매출 데이터를 불러오지 못했습니다.";
+    if (pendingNoteEl) pendingNoteEl.textContent = "국내도착 미반영 데이터를 불러오지 못했습니다.";
+    if (pendingListEl) {
+      pendingListEl.innerHTML = `<div class="no-data">${message}</div>`;
+    }
   }
 }
 
@@ -146,7 +158,7 @@ function renderPendingDomestic(items) {
         ${rows
           .map(
             (r) => `
-            <tr>
+            <tr class="pending-row js-pending-row" data-completed-date="${r.completedDate || ""}" data-auc-num="${r.aucNum || "-"}">
               <td>${r.completedDate || "-"}</td>
               <td>경매${r.aucNum || "-"}</td>
               <td>${Number(r.itemCount || 0).toLocaleString()}건</td>
@@ -158,6 +170,84 @@ function renderPendingDomestic(items) {
       </tbody>
     </table>
   `;
+
+  listNode.querySelectorAll(".js-pending-row").forEach((rowEl) => {
+    rowEl.addEventListener("click", async () => {
+      await openPendingDomesticModal({
+        completedDate: rowEl.dataset.completedDate || "",
+        aucNum: rowEl.dataset.aucNum || "-",
+      });
+    });
+  });
+}
+
+function bindPendingDomesticModalEvents() {
+  const modal = document.getElementById("pendingDomesticModal");
+  const closeBtn = document.getElementById("pendingDomesticModalCloseBtn");
+  if (!modal || !closeBtn) return;
+
+  const close = () => {
+    modal.classList.remove("show");
+  };
+
+  closeBtn.addEventListener("click", close);
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) close();
+  });
+}
+
+async function openPendingDomesticModal(row) {
+  const modal = document.getElementById("pendingDomesticModal");
+  const title = document.getElementById("pendingDomesticModalTitle");
+  const sub = document.getElementById("pendingDomesticModalSub");
+  const body = document.getElementById("pendingDomesticModalBody");
+  if (!modal || !title || !sub || !body) return;
+
+  const date = row?.completedDate || "-";
+  const aucNum = row?.aucNum || "-";
+  title.textContent = `국내도착 미반영 상세 · ${date} · 경매${aucNum}`;
+  sub.textContent = "데이터를 불러오는 중입니다...";
+  body.innerHTML = '<tr><td colspan="7" class="text-center">데이터를 불러오는 중입니다...</td></tr>';
+  modal.classList.add("show");
+
+  try {
+    const query = new URLSearchParams({
+      date: String(date || ""),
+      aucNum: String(aucNum || ""),
+    });
+    const data = await window.API.fetchAPI(
+      `/dashboard/pending-domestic-items?${query.toString()}`,
+    );
+    const items = Array.isArray(data?.items) ? data.items : [];
+    sub.textContent = `총 ${items.length.toLocaleString()}건`;
+
+    if (!items.length) {
+      body.innerHTML = '<tr><td colspan="7" class="text-center">해당 조건의 아이템이 없습니다.</td></tr>';
+      return;
+    }
+
+    body.innerHTML = items
+      .map((item) => {
+        const bidType = item.bidType === "live" ? "현장" : "직접";
+        const completedAt = formatDateTime(item.completedAt);
+        return `
+          <tr>
+            <td>${bidType}</td>
+            <td>${item.bidId || "-"}</td>
+            <td>${item.itemId || "-"}</td>
+            <td>${item.internalBarcode || "-"}</td>
+            <td>${item.companyName || "-"}</td>
+            <td>${item.productTitle || "-"}</td>
+            <td>${completedAt}</td>
+          </tr>
+        `;
+      })
+      .join("");
+  } catch (error) {
+    console.error("국내도착 미반영 상세 조회 실패:", error);
+    sub.textContent = "상세 조회 실패";
+    body.innerHTML = `<tr><td colspan="7" class="text-center">${error.message || "상세 조회 중 오류가 발생했습니다."}</td></tr>`;
+  }
 }
 
 // 요약 카드 업데이트

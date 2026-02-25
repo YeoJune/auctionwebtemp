@@ -170,6 +170,96 @@
         width: auto;
         padding: 8px 12px;
       }
+      .recent-domestic-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+      .domestic-day-tabs {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .domestic-day-tab {
+        width: auto;
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid #d5dfef;
+        background: #f6f9ff;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .domestic-day-tab.active {
+        background: #2c6ecb;
+        border-color: #2c6ecb;
+        color: #fff;
+      }
+      .domestic-prefix-chips {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .domestic-prefix-chip {
+        width: auto;
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid #d8e1f0;
+        background: #fff;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .domestic-prefix-chip.active {
+        border-color: #2c6ecb;
+        background: #eaf2ff;
+        color: #184ea0;
+      }
+      .recent-domestic-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 12px;
+      }
+      .recent-domestic-item {
+        border: 1px solid #e5ecf8;
+        border-radius: 10px;
+        background: #fff;
+        overflow: hidden;
+      }
+      .recent-domestic-photo {
+        width: 100%;
+        height: 220px;
+        object-fit: cover;
+        background: #f4f7fd;
+        border-bottom: 1px solid #e5ecf8;
+      }
+      .recent-domestic-meta {
+        padding: 10px;
+        display: grid;
+        gap: 6px;
+      }
+      .recent-domestic-title {
+        font-size: 14px;
+        font-weight: 800;
+        line-height: 1.35;
+        color: #19202e;
+      }
+      .recent-domestic-line {
+        font-size: 13px;
+        color: #39465f;
+      }
+      .recent-domestic-empty {
+        border: 1px dashed #d7dfef;
+        background: #f9fbff;
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+        color: #667089;
+        font-weight: 600;
+      }
       @media (max-width: 1200px) {
         .wms-grid {
           grid-template-columns: 1fr;
@@ -286,6 +376,14 @@
             <button id="btnClearBoardFilter" type="button">존 필터 해제</button>
           </div>
           <div id="boardGrid" class="board-grid"></div>
+        </div>
+
+        <div class="card" style="margin-top: 16px">
+          <h3>3-1단계. 바코드별 국내도착 (바코드 부착용)</h3>
+          <div class="recent-domestic-toolbar">
+            <div id="domesticPrefixChips" class="domestic-prefix-chips"></div>
+          </div>
+          <div id="recentDomesticList" class="recent-domestic-grid"></div>
         </div>
 
         <div class="card" style="margin-top: 16px">

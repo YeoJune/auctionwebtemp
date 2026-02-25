@@ -6,6 +6,9 @@ const {
 } = require("../utils/wms-bid-sync");
 
 const router = express.Router();
+const BOARD_BACKFILL_INTERVAL_MS = 60 * 1000;
+let boardBackfillRunning = false;
+let boardBackfillLastRunAt = 0;
 
 const LOCATION_SEEDS = [
   { code: "DOMESTIC_ARRIVAL_ZONE", name: "국내도착존", sort: 10 },
@@ -31,6 +34,22 @@ function normalizeLocationCode(locationCode) {
 
 function isAdmin(req, res, next) {
   return requireAdmin(req, res, next);
+}
+
+async function triggerBoardBackfill() {
+  const now = Date.now();
+  if (boardBackfillRunning) return;
+  if (now - boardBackfillLastRunAt < BOARD_BACKFILL_INTERVAL_MS) return;
+
+  boardBackfillRunning = true;
+  boardBackfillLastRunAt = now;
+  try {
+    await backfillCompletedWmsItemsByBidStatus(pool);
+  } catch (error) {
+    console.error("WMS board backfill error:", error.message);
+  } finally {
+    boardBackfillRunning = false;
+  }
 }
 
 function statusByLocation(locationCode, requestType) {
@@ -1035,7 +1054,7 @@ router.post("/scan", isAdmin, async (req, res) => {
 router.get("/board", isAdmin, async (req, res) => {
   try {
     await ensureTables();
-    await backfillCompletedWmsItemsByBidStatus(pool);
+    triggerBoardBackfill().catch(() => {});
     const [locations] = await pool.query(
       `
       SELECT code, name, sort_order
@@ -1118,6 +1137,11 @@ router.get("/board", isAdmin, async (req, res) => {
         COALESCE(ci.image, '') AS product_image,
         COALESCE(ci.original_title, ci.title) AS product_title,
         COALESCE(u.company_name, i.member_name) AS company_name,
+        CASE
+          WHEN JSON_VALID(ci.additional_info)
+          THEN NULLIF(JSON_UNQUOTE(JSON_EXTRACT(ci.additional_info, '$.itemNo')), '')
+          ELSE NULL
+        END AS product_item_no,
         COALESCE(ci.auc_num, i.auction_lot_no) AS auc_num
       FROM wms_items i
       LEFT JOIN direct_bids d

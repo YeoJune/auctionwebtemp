@@ -7,10 +7,9 @@ document.addEventListener("DOMContentLoaded", function () {
   loadUsers();
   loadMemberGroups();
 
-  document.getElementById("addUserBtn").addEventListener("click", openUserForm);
   document
-    .getElementById("syncSheetsBtn")
-    .addEventListener("click", syncWithSheets);
+    .getElementById("addUserBtn")
+    .addEventListener("click", () => openUserForm());
   document.getElementById("saveUserBtn").addEventListener("click", saveUser);
   document.querySelectorAll('input[name="accountType"]').forEach((radio) => {
     radio.addEventListener("change", handleAccountTypeChange);
@@ -61,10 +60,10 @@ async function loadUsers() {
     showLoading("usersTableBody");
     showLoading("deactivateCandidatesBody");
     showLoading("vipTopTableBody");
-    const [response, executiveSummary] = await Promise.all([
-      fetchUsers(),
-      fetchExecutiveSummary().catch(() => ({ vipTop10: [] })),
-    ]);
+    const vipTopPromise = fetchUsersVipTop10().catch(() => ({
+      users: [],
+    }));
+    const response = await fetchUsers();
 
     const users = Array.isArray(response) ? response : response.users || [];
     usersCache = users;
@@ -72,15 +71,15 @@ async function loadUsers() {
     if (users.length === 0) {
       showNoData("usersTableBody", "등록된 회원이 없습니다.");
       showNoData("deactivateCandidatesBody", "비활성화 대상 회원이 없습니다.");
-      renderVipTop10(executiveSummary?.vipTop10 || []);
       const countNode = document.getElementById("deactivateCandidateCount");
       if (countNode) countNode.textContent = "0명";
-      return;
+    } else {
+      applyMemberFiltersAndRender();
+      renderDeactivateCandidates(users);
     }
 
-    applyMemberFiltersAndRender();
-    renderDeactivateCandidates(users);
-    renderVipTop10(executiveSummary?.vipTop10 || []);
+    const vipTopData = await vipTopPromise;
+    renderVipTop10(vipTopData?.users || []);
   } catch (error) {
     handleError(error, "회원 목록을 불러오는 중 오류가 발생했습니다.");
   }
@@ -92,6 +91,13 @@ function initMemberFilters() {
     if (!node) return;
     node.addEventListener("change", () => applyMemberFiltersAndRender());
   });
+  ["deactivateStatusFilter", "deactivateSortField", "deactivateSortOrder"].forEach(
+    (id) => {
+      const node = document.getElementById(id);
+      if (!node) return;
+      node.addEventListener("change", () => renderDeactivateCandidates(usersCache));
+    },
+  );
 }
 
 function applyMemberFiltersAndRender() {
@@ -312,6 +318,36 @@ function renderGroupPanels() {
     .map(
       (g) => `
         <div id="groupPanel-${g.id}" class="member-tab-panel" data-group-id="${g.id}">
+          <div class="card member-filter-card" style="margin-top: 16px">
+            <div class="member-filter-row">
+              <div class="member-filter-item">
+                <label for="groupStatusFilter-${g.id}">상태</label>
+                <select id="groupStatusFilter-${g.id}">
+                  <option value="all">전체</option>
+                  <option value="active">활성</option>
+                  <option value="inactive">비활성</option>
+                </select>
+              </div>
+              <div class="member-filter-item">
+                <label for="groupSortField-${g.id}">정렬 기준</label>
+                <select id="groupSortField-${g.id}">
+                  <option value="registration_date">가입일</option>
+                  <option value="company_name">업체명</option>
+                  <option value="login_id">아이디</option>
+                  <option value="total_bid_count">입찰건수</option>
+                  <option value="total_bid_jpy">입찰금액</option>
+                  <option value="last_bid_at">최근입찰일</option>
+                </select>
+              </div>
+              <div class="member-filter-item">
+                <label for="groupSortOrder-${g.id}">정렬 방향</label>
+                <select id="groupSortOrder-${g.id}">
+                  <option value="desc">내림차순</option>
+                  <option value="asc">오름차순</option>
+                </select>
+              </div>
+            </div>
+          </div>
           <div class="card" style="margin-top: 16px">
             <div class="section-header-row" style="flex-wrap: wrap; gap: 8px">
               <h3>${escapeHtml(g.name)} 회원 관리</h3>
@@ -352,6 +388,14 @@ function renderGroupPanels() {
     const gid = parseInt(btn.dataset.groupId, 10);
     btn.addEventListener("click", () => submitBulkRemoveMembersFromGroup(gid));
   });
+  container.querySelectorAll("[id^='groupStatusFilter-'], [id^='groupSortField-'], [id^='groupSortOrder-']").forEach((node) => {
+    node.addEventListener("change", () => {
+      const gid = parseInt(String(node.id).split("-").pop(), 10);
+      if (Number.isInteger(gid) && gid > 0) {
+        applyGroupFiltersAndRender(gid);
+      }
+    });
+  });
 }
 
 function escapeHtml(s) {
@@ -369,9 +413,8 @@ async function loadGroupMembers(groupId) {
     const members = Array.isArray(loadedMembers) ? loadedMembers : [];
     groupMembersCache.set(groupId, members);
     clearGroupSelection(groupId);
-    renderGroupMembers(groupId, members);
+    applyGroupFiltersAndRender(groupId);
     if (countEl) countEl.textContent = `${members.length}명`;
-    updateGroupSelectionUI(groupId, members.length);
   } catch (error) {
     console.error("그룹 회원 로드 실패:", error);
     groupMembersCache.set(groupId, []);
@@ -381,6 +424,38 @@ async function loadGroupMembers(groupId) {
     if (countEl) countEl.textContent = "0명";
     updateGroupSelectionUI(groupId, 0);
   }
+}
+
+function getGroupFilterValues(groupId) {
+  const gid = parseInt(groupId, 10);
+  const statusFilter =
+    document.getElementById(`groupStatusFilter-${gid}`)?.value || "all";
+  const sortField =
+    document.getElementById(`groupSortField-${gid}`)?.value || "registration_date";
+  const sortOrder =
+    document.getElementById(`groupSortOrder-${gid}`)?.value || "desc";
+  return { statusFilter, sortField, sortOrder };
+}
+
+function getFilteredSortedGroupMembers(groupId) {
+  const gid = parseInt(groupId, 10);
+  const members = [...(groupMembersCache.get(gid) || [])];
+  const { statusFilter, sortField, sortOrder } = getGroupFilterValues(gid);
+
+  const filtered = members.filter((u) => {
+    if (statusFilter === "active") return !!u.is_active;
+    if (statusFilter === "inactive") return !u.is_active;
+    return true;
+  });
+
+  filtered.sort((a, b) => compareUsers(a, b, sortField, sortOrder));
+  return filtered;
+}
+
+function applyGroupFiltersAndRender(groupId) {
+  const gid = parseInt(groupId, 10);
+  const filtered = getFilteredSortedGroupMembers(gid);
+  renderGroupMembers(gid, filtered);
 }
 
 function renderGroupMembers(groupId, members) {
@@ -911,9 +986,28 @@ function renderDeactivateCandidates(users) {
   const countNode = document.getElementById("deactivateCandidateCount");
   if (!body) return;
 
+  const statusFilter =
+    document.getElementById("deactivateStatusFilter")?.value || "all";
+  const sortField =
+    document.getElementById("deactivateSortField")?.value || "no_bid_days";
+  const sortOrder =
+    document.getElementById("deactivateSortOrder")?.value || "desc";
+
   const candidates = (users || [])
     .filter((u) => Number(u.deactivate_candidate) === 1)
-    .sort((a, b) => Number(b.no_bid_days || 0) - Number(a.no_bid_days || 0));
+    .filter((u) => {
+      if (statusFilter === "active") return !!u.is_active;
+      if (statusFilter === "inactive") return !u.is_active;
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortField === "no_bid_days") {
+        const av = Number(a.no_bid_days || 0);
+        const bv = Number(b.no_bid_days || 0);
+        return sortOrder === "asc" ? av - bv : bv - av;
+      }
+      return compareUsers(a, b, sortField, sortOrder);
+    });
 
   if (countNode) countNode.textContent = `${candidates.length}명`;
 
@@ -1067,20 +1161,13 @@ function renderUsers(users) {
 
     // 회원 구분
     const accountType = user.account_type || "individual";
-    const accountTypeText =
-      accountType === "corporate"
-        ? '<span class="badge badge-corporate">기업</span>'
-        : '<span class="badge badge-individual">개인</span>';
-
-    // 증빙 유형 배지
     const docType =
       user.document_type ||
       (accountType === "corporate" ? "taxinvoice" : "cashbill");
-    const docTypeBadge =
-      docType === "taxinvoice"
-        ? '<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:#e8f4f8;color:#2980b9;border:1px solid #aed6f1;">세금</span>'
-        : '<span style="font-size:10px;padding:1px 5px;border-radius:3px;background:#eafaf1;color:#27ae60;border:1px solid #a9dfbf;">현금</span>';
-    const accountTypeDisplay = `${accountTypeText}<br/><small style="margin-top:2px;display:inline-block;">${docTypeBadge}</small>`;
+    const accountTypeDisplay =
+      accountType === "corporate"
+        ? `기업(${docType === "taxinvoice" ? "세금" : "현금"})`
+        : `개인(${docType === "taxinvoice" ? "세금" : "현금"})`;
 
     // 예치금/한도 표시
     let balanceInfo = "";
@@ -1215,6 +1302,9 @@ function formatDateForInput(dateString) {
 
 // 회원 등록/수정 모달 열기
 function openUserForm(user = null) {
+  if (user && typeof user.preventDefault === "function") {
+    user = null;
+  }
   const form = document.getElementById("userForm");
   form.reset();
 

@@ -4,27 +4,81 @@ const router = express.Router();
 const { pool } = require("../utils/DB");
 const crypto = require("crypto");
 const GoogleSheetsManager = require("../utils/googleSheets");
+const { isAdminUser } = require("../utils/adminAuth");
 
 // 비밀번호 해싱 함수
 function hashPassword(password) {
   return crypto.createHash("sha256").update(password).digest("hex");
 }
 
-// 인증 미들웨어 - normal 권한 사용자만 접근 가능하도록
-const requireAuth = (req, res, next) => {
+// 인증 미들웨어
+const requireLoggedIn = (req, res, next) => {
   if (!req.session.user) {
     return res.status(401).json({ message: "로그인이 필요합니다." });
   }
-
-  // normal role 체크 추가
-  if (req.session.user.role !== "normal") {
-    return res.status(403).json({ message: "접근 권한이 없습니다." });
-  }
-
   next();
 };
 
-router.get("/current", requireAuth, async (req, res) => {
+const requireNormalUser = (req, res, next) => {
+  if (!req.session.user) {
+    return res.status(401).json({ message: "로그인이 필요합니다." });
+  }
+  if (req.session.user.role !== "normal") {
+    return res.status(403).json({ message: "접근 권한이 없습니다." });
+  }
+  next();
+};
+
+const requireAdminUser = (req, res, next) => {
+  if (!req.session.user) {
+    return res.status(401).json({ message: "로그인이 필요합니다." });
+  }
+  if (!isAdminUser(req.session.user)) {
+    return res.status(403).json({ message: "관리자 권한이 필요합니다." });
+  }
+  next();
+};
+
+const requireSelfOrAdmin = (req, res, next) => {
+  const sessionUser = req.session?.user;
+  if (!sessionUser) {
+    return res.status(401).json({ message: "로그인이 필요합니다." });
+  }
+  if (isAdminUser(sessionUser)) return next();
+  if (
+    String(sessionUser.role || "").toLowerCase() === "normal" &&
+    String(sessionUser.id) === String(req.params.id)
+  ) {
+    return next();
+  }
+  return res.status(403).json({ message: "접근 권한이 없습니다." });
+};
+
+const USERS_LIST_CACHE_TTL_MS = 3 * 60 * 1000;
+let usersListCache = {
+  data: null,
+  expiresAt: 0,
+};
+let usersListInFlight = null;
+const USERS_VIP_CACHE_TTL_MS = 3 * 60 * 1000;
+let usersVipTopCache = {
+  data: null,
+  expiresAt: 0,
+};
+
+function invalidateUsersListCache() {
+  usersListCache = {
+    data: null,
+    expiresAt: 0,
+  };
+  usersListInFlight = null;
+  usersVipTopCache = {
+    data: null,
+    expiresAt: 0,
+  };
+}
+
+router.get("/current", requireNormalUser, async (req, res) => {
   let conn;
   try {
     conn = await pool.getConnection();
@@ -53,142 +107,210 @@ router.get("/current", requireAuth, async (req, res) => {
   }
 });
 
-// 회원 목록 조회 - normal 사용자만
-router.get("/", requireAuth, async (req, res) => {
-  let conn;
+// 회원 목록 조회 - 관리자 전용
+router.get("/", requireAdminUser, async (req, res) => {
   try {
-    conn = await pool.getConnection();
+    const now = Date.now();
+    if (usersListCache.data && usersListCache.expiresAt > now) {
+      return res.json(usersListCache.data);
+    }
 
-    // 회원 목록 조회 - normal 사용자만, 예치금/한도 + 최근 입찰/누적 입찰 통계 포함
-    const [users] = await conn.query(
-      `SELECT u.id, u.login_id, u.registration_date, u.email, u.business_number, u.company_name, 
-       u.phone, u.address, u.created_at, u.is_active, u.commission_rate, u.document_type,
-       ua.account_type, ua.deposit_balance, ua.daily_limit, ua.daily_used,
-       COALESCE(bt.total_bid_count, 0) AS total_bid_count,
-       COALESCE(bt.total_bid_jpy, 0) AS total_bid_jpy,
-       lb.last_bid_at,
-       lb.last_bid_type,
-       lb.last_bid_id,
-       lb.last_bid_item_id,
-       CASE
-         WHEN u.company_name REGEXP '-[A-Za-z0-9]+$' THEN 1
-         ELSE 0
-       END AS company_has_code,
-       CASE
-         WHEN u.company_name REGEXP '-[A-Za-z0-9]+$'
-           THEN SUBSTRING_INDEX(u.company_name, '-', -1)
-         ELSE NULL
-       END AS company_code,
-       CASE
-         WHEN u.company_name REGEXP '-[A-Za-z0-9]+$'
-           THEN SUBSTRING(
-             u.company_name,
-             1,
-             CHAR_LENGTH(u.company_name) - CHAR_LENGTH(SUBSTRING_INDEX(u.company_name, '-', -1)) - 1
-           )
-         ELSE u.company_name
-       END AS company_base_name,
-       CASE
-         WHEN lb.last_bid_at IS NOT NULL THEN TIMESTAMPDIFF(DAY, lb.last_bid_at, NOW())
-         ELSE TIMESTAMPDIFF(DAY, COALESCE(u.registration_date, u.created_at), NOW())
-       END AS no_bid_days,
-       CASE
-         WHEN u.is_active = 1
-           AND (
-             (lb.last_bid_at IS NOT NULL AND TIMESTAMPDIFF(DAY, lb.last_bid_at, NOW()) >= 50)
-             OR
-             (lb.last_bid_at IS NULL AND TIMESTAMPDIFF(DAY, COALESCE(u.registration_date, u.created_at), NOW()) >= 50)
-           )
-         THEN 1
-         ELSE 0
-       END AS deactivate_candidate,
-       CASE
-         WHEN lb.last_bid_at IS NULL
-           THEN CONCAT('가입 후 ', TIMESTAMPDIFF(DAY, COALESCE(u.registration_date, u.created_at), NOW()), '일 무입찰')
-         ELSE CONCAT('최근 입찰 후 ', TIMESTAMPDIFF(DAY, lb.last_bid_at, NOW()), '일 경과')
-       END AS deactivate_reason,
-       CASE
-         WHEN YEAR(COALESCE(u.registration_date, u.created_at)) <= 2025
-           THEN '주의: 구회원(보증금 환불/비활성 처리 여부 확인 필요)'
-         ELSE ''
-       END AS deactivate_note
-       FROM users u
-       LEFT JOIN user_accounts ua ON u.id = ua.user_id
-       LEFT JOIN (
-         SELECT
-           user_id,
-           COUNT(*) AS total_bid_count,
-           COALESCE(SUM(amount_jpy), 0) AS total_bid_jpy
-         FROM (
-           SELECT
-             user_id,
-             COALESCE(
-               CAST(REPLACE(COALESCE(winning_price, final_price, second_price, first_price), ',', '') AS DECIMAL(18,2)),
-               0
-             ) AS amount_jpy
-           FROM live_bids
-           WHERE user_id IS NOT NULL
-             AND status = 'completed'
-           UNION ALL
-           SELECT
-             user_id,
-             COALESCE(
-               CAST(REPLACE(COALESCE(winning_price, current_price), ',', '') AS DECIMAL(18,2)),
-               0
-             ) AS amount_jpy
-           FROM direct_bids
-           WHERE user_id IS NOT NULL
-             AND status = 'completed'
-         ) t
-         GROUP BY user_id
-       ) bt ON bt.user_id = u.id
-       LEFT JOIN (
-         SELECT
-           t.user_id,
-           MAX(t.bid_at) AS last_bid_at,
-           SUBSTRING_INDEX(
-             GROUP_CONCAT(t.bid_type ORDER BY t.bid_at DESC, t.bid_id DESC SEPARATOR ','),
-             ',',
-             1
-           ) AS last_bid_type,
-           SUBSTRING_INDEX(
-             GROUP_CONCAT(t.bid_id ORDER BY t.bid_at DESC, t.bid_id DESC SEPARATOR ','),
-             ',',
-             1
-           ) AS last_bid_id,
-           SUBSTRING_INDEX(
-             GROUP_CONCAT(t.item_id ORDER BY t.bid_at DESC, t.bid_id DESC SEPARATOR ','),
-             ',',
-             1
-           ) AS last_bid_item_id
-         FROM (
-           SELECT user_id, 'live' AS bid_type, id AS bid_id, item_id, created_at AS bid_at
-           FROM live_bids
-           WHERE user_id IS NOT NULL
-           UNION ALL
-           SELECT user_id, 'direct' AS bid_type, id AS bid_id, item_id, created_at AS bid_at
-           FROM direct_bids
-           WHERE user_id IS NOT NULL
-         ) t
-         GROUP BY t.user_id
-       ) lb ON lb.user_id = u.id
-       WHERE u.role = 'normal' 
-       ORDER BY u.created_at DESC`,
-    );
+    if (usersListInFlight) {
+      const result = await usersListInFlight;
+      return res.json(result);
+    }
 
+    usersListInFlight = (async () => {
+      let conn;
+      try {
+        conn = await pool.getConnection();
+
+        // 회원 목록 조회 - normal 사용자만, 예치금/한도 + 최근 입찰/누적 입찰 통계 포함
+        const [users] = await conn.query(
+          `SELECT u.id, u.login_id, u.registration_date, u.email, u.business_number, u.company_name, 
+           u.phone, u.address, u.created_at, u.is_active, u.commission_rate, u.document_type,
+           ua.account_type, ua.deposit_balance, ua.daily_limit, ua.daily_used,
+           COALESCE(bt.total_bid_count, 0) AS total_bid_count,
+           COALESCE(bt.total_bid_jpy, 0) AS total_bid_jpy,
+           lb.last_bid_at,
+           lb.last_bid_type,
+           lb.last_bid_id,
+           lb.last_bid_item_id,
+           CASE
+             WHEN u.company_name REGEXP '-[A-Za-z0-9]+$' THEN 1
+             ELSE 0
+           END AS company_has_code,
+           CASE
+             WHEN u.company_name REGEXP '-[A-Za-z0-9]+$'
+               THEN SUBSTRING_INDEX(u.company_name, '-', -1)
+             ELSE NULL
+           END AS company_code,
+           CASE
+             WHEN u.company_name REGEXP '-[A-Za-z0-9]+$'
+               THEN SUBSTRING(
+                 u.company_name,
+                 1,
+                 CHAR_LENGTH(u.company_name) - CHAR_LENGTH(SUBSTRING_INDEX(u.company_name, '-', -1)) - 1
+               )
+             ELSE u.company_name
+           END AS company_base_name,
+           CASE
+             WHEN lb.last_bid_at IS NOT NULL THEN TIMESTAMPDIFF(DAY, lb.last_bid_at, NOW())
+             ELSE TIMESTAMPDIFF(DAY, COALESCE(u.registration_date, u.created_at), NOW())
+           END AS no_bid_days,
+           CASE
+             WHEN u.is_active = 1
+               AND (
+                 (lb.last_bid_at IS NOT NULL AND TIMESTAMPDIFF(DAY, lb.last_bid_at, NOW()) >= 50)
+                 OR
+                 (lb.last_bid_at IS NULL AND TIMESTAMPDIFF(DAY, COALESCE(u.registration_date, u.created_at), NOW()) >= 50)
+               )
+             THEN 1
+             ELSE 0
+           END AS deactivate_candidate,
+           CASE
+             WHEN lb.last_bid_at IS NULL
+               THEN CONCAT('가입 후 ', TIMESTAMPDIFF(DAY, COALESCE(u.registration_date, u.created_at), NOW()), '일 무입찰')
+             ELSE CONCAT('최근 입찰 후 ', TIMESTAMPDIFF(DAY, lb.last_bid_at, NOW()), '일 경과')
+           END AS deactivate_reason,
+           CASE
+             WHEN YEAR(COALESCE(u.registration_date, u.created_at)) <= 2025
+               THEN '주의: 구회원(보증금 환불/비활성 처리 여부 확인 필요)'
+             ELSE ''
+           END AS deactivate_note
+           FROM users u
+           LEFT JOIN user_accounts ua ON u.id = ua.user_id
+           LEFT JOIN (
+             SELECT
+               user_id,
+               COUNT(*) AS total_bid_count,
+               COALESCE(SUM(amount_jpy), 0) AS total_bid_jpy
+             FROM (
+               SELECT
+                 user_id,
+                 COALESCE(
+                   CAST(REPLACE(COALESCE(winning_price, final_price, second_price, first_price), ',', '') AS DECIMAL(18,2)),
+                   0
+                 ) AS amount_jpy
+               FROM live_bids
+               WHERE user_id IS NOT NULL
+                 AND status = 'completed'
+               UNION ALL
+               SELECT
+                 user_id,
+                 COALESCE(
+                   CAST(REPLACE(COALESCE(winning_price, current_price), ',', '') AS DECIMAL(18,2)),
+                   0
+                 ) AS amount_jpy
+               FROM direct_bids
+               WHERE user_id IS NOT NULL
+                 AND status = 'completed'
+             ) t
+             GROUP BY user_id
+           ) bt ON bt.user_id = u.id
+           LEFT JOIN (
+             SELECT
+               t.user_id,
+               MAX(t.bid_at) AS last_bid_at,
+               SUBSTRING_INDEX(
+                 GROUP_CONCAT(t.bid_type ORDER BY t.bid_at DESC, t.bid_id DESC SEPARATOR ','),
+                 ',',
+                 1
+               ) AS last_bid_type,
+               SUBSTRING_INDEX(
+                 GROUP_CONCAT(t.bid_id ORDER BY t.bid_at DESC, t.bid_id DESC SEPARATOR ','),
+                 ',',
+                 1
+               ) AS last_bid_id,
+               SUBSTRING_INDEX(
+                 GROUP_CONCAT(t.item_id ORDER BY t.bid_at DESC, t.bid_id DESC SEPARATOR ','),
+                 ',',
+                 1
+               ) AS last_bid_item_id
+             FROM (
+               SELECT user_id, 'live' AS bid_type, id AS bid_id, item_id, created_at AS bid_at
+               FROM live_bids
+               WHERE user_id IS NOT NULL
+               UNION ALL
+               SELECT user_id, 'direct' AS bid_type, id AS bid_id, item_id, created_at AS bid_at
+               FROM direct_bids
+               WHERE user_id IS NOT NULL
+             ) t
+             GROUP BY t.user_id
+           ) lb ON lb.user_id = u.id
+           WHERE u.role = 'normal' 
+           ORDER BY u.created_at DESC`,
+        );
+
+        usersListCache = {
+          data: users,
+          expiresAt: Date.now() + USERS_LIST_CACHE_TTL_MS,
+        };
+        return users;
+      } finally {
+        if (conn) conn.release();
+      }
+    })();
+
+    const users = await usersListInFlight;
     res.json(users);
   } catch (error) {
     console.error("회원 목록 조회 오류:", error);
+    if (usersListCache.data) {
+      return res.json(usersListCache.data);
+    }
     res
       .status(500)
       .json({ message: "회원 목록을 불러오는 중 오류가 발생했습니다." });
   } finally {
-    if (conn) conn.release();
+    usersListInFlight = null;
+  }
+});
+
+// 회원관리 페이지 VIP TOP 10 (최근 30일 매출 기준) - 대시보드 전체 요약 호출 분리
+router.get("/vip-top10", requireAdminUser, async (req, res) => {
+  try {
+    const now = Date.now();
+    if (usersVipTopCache.data && usersVipTopCache.expiresAt > now) {
+      return res.json({ users: usersVipTopCache.data });
+    }
+
+    const [rows] = await pool.query(
+      `
+      SELECT
+        ds.user_id,
+        COALESCE(u.login_id, CONCAT('user#', ds.user_id)) AS login_id,
+        COALESCE(u.company_name, '-') AS company_name,
+        COUNT(*) AS completedCount,
+        COALESCE(SUM(ds.total_amount), 0) AS totalRevenueKrw
+      FROM daily_settlements ds
+      LEFT JOIN users u ON u.id = ds.user_id
+      WHERE ds.settlement_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        AND ds.total_amount > 0
+      GROUP BY ds.user_id, u.login_id, u.company_name
+      ORDER BY totalRevenueKrw DESC
+      LIMIT 10
+      `,
+    );
+
+    usersVipTopCache = {
+      data: rows || [],
+      expiresAt: Date.now() + USERS_VIP_CACHE_TTL_MS,
+    };
+    return res.json({ users: rows || [] });
+  } catch (error) {
+    console.error("VIP TOP10 조회 오류:", error);
+    if (usersVipTopCache.data) {
+      return res.json({ users: usersVipTopCache.data });
+    }
+    return res.status(500).json({
+      message: "VIP TOP10을 불러오는 중 오류가 발생했습니다.",
+    });
   }
 });
 
 // 특정 회원 입찰 내역 조회
-router.get("/:id/bid-history", requireAuth, async (req, res) => {
+router.get("/:id/bid-history", requireAdminUser, async (req, res) => {
   let conn;
   try {
     conn = await pool.getConnection();
@@ -316,8 +438,8 @@ router.get("/:id/bid-history", requireAuth, async (req, res) => {
   }
 });
 
-// 특정 회원 조회 - normal 사용자만
-router.get("/:id", requireAuth, async (req, res) => {
+// 특정 회원 조회 - 본인 또는 관리자
+router.get("/:id", requireSelfOrAdmin, async (req, res) => {
   let conn;
   try {
     conn = await pool.getConnection();
@@ -346,8 +468,8 @@ router.get("/:id", requireAuth, async (req, res) => {
   }
 });
 
-// 회원 추가 - normal 사용자로 등록
-router.post("/", requireAuth, async (req, res) => {
+// 회원 추가 - 관리자 전용
+router.post("/", requireAdminUser, async (req, res) => {
   let conn;
   try {
     conn = await pool.getConnection();
@@ -437,6 +559,8 @@ router.post("/", requireAuth, async (req, res) => {
     // 생성된 사용자의 auto-increment ID 반환
     const newUserId = result.insertId;
 
+    invalidateUsersListCache();
+
     res.status(201).json({
       message: "회원이 등록되었습니다.",
       userId: newUserId,
@@ -449,11 +573,13 @@ router.post("/", requireAuth, async (req, res) => {
   }
 });
 
-// 회원 수정 - normal 사용자만
-router.put("/:id", requireAuth, async (req, res) => {
+// 회원 수정 - 본인 또는 관리자 (권한별 필드 제한)
+router.put("/:id", requireSelfOrAdmin, async (req, res) => {
   let conn;
   try {
     conn = await pool.getConnection();
+    const sessionUser = req.session?.user || {};
+    const isAdminRequest = isAdminUser(sessionUser);
     const id = req.params.id;
     const {
       new_login_id,
@@ -468,6 +594,21 @@ router.put("/:id", requireAuth, async (req, res) => {
       commission_rate,
       document_type,
     } = req.body;
+
+    // 일반 회원은 본인 정보 중 제한된 항목만 수정 가능
+    if (!isAdminRequest) {
+      if (
+        new_login_id !== undefined ||
+        is_active !== undefined ||
+        commission_rate !== undefined ||
+        document_type !== undefined ||
+        registration_date !== undefined
+      ) {
+        return res.status(403).json({
+          message: "해당 항목은 관리자만 수정할 수 있습니다.",
+        });
+      }
+    }
 
     // 회원 존재 확인 - normal 사용자만
     const [existing] = await conn.query(
@@ -578,6 +719,7 @@ router.put("/:id", requireAuth, async (req, res) => {
       [...updateValues, id],
     );
 
+    invalidateUsersListCache();
     res.json({ message: "회원 정보가 수정되었습니다." });
   } catch (error) {
     console.error("회원 수정 오류:", error);
@@ -587,8 +729,8 @@ router.put("/:id", requireAuth, async (req, res) => {
   }
 });
 
-// 회원 삭제 - normal 사용자만
-router.delete("/:id", requireAuth, async (req, res) => {
+// 회원 삭제 - 관리자 전용
+router.delete("/:id", requireAdminUser, async (req, res) => {
   let conn;
   try {
     conn = await pool.getConnection();
@@ -608,6 +750,7 @@ router.delete("/:id", requireAuth, async (req, res) => {
       id,
     ]);
 
+    invalidateUsersListCache();
     res.json({ message: "회원이 삭제되었습니다." });
   } catch (error) {
     console.error("회원 삭제 오류:", error);
@@ -618,10 +761,11 @@ router.delete("/:id", requireAuth, async (req, res) => {
 });
 
 // 스프레드시트와 동기화 - DB 우선으로 변경
-router.post("/sync", requireAuth, async (req, res) => {
+router.post("/sync", requireAdminUser, async (req, res) => {
   try {
     // DB 정보를 우선으로 하는 동기화 메서드 호출
     await GoogleSheetsManager.syncUsersWithDB();
+    invalidateUsersListCache();
     res.json({ message: "DB에서 스프레드시트로 동기화가 완료되었습니다." });
   } catch (error) {
     console.error("동기화 오류:", error);

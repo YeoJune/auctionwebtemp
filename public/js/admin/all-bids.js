@@ -1,5 +1,12 @@
 // public/js/admin/all-bids.js
 
+function escapeHtml(text) {
+  if (!text) return "";
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 class UnifiedAuctionManager {
   constructor() {
     this.liveData = [];
@@ -610,26 +617,28 @@ class UnifiedAuctionManager {
   renderProcessingZoneSummary(liveBids, directBids) {
     const wrap = document.getElementById("processingZoneSummary");
     const grid = document.getElementById("processingZoneGrid");
+    const title = wrap?.querySelector(".title");
     if (!wrap || !grid) return;
 
-    const allProcessing = [...(liveBids || []), ...(directBids || [])].filter(
-      (bid) => bid.shipping_status === "processing",
-    );
+    const allVisible = [...(liveBids || []), ...(directBids || [])];
+    if (title) {
+      title.textContent = "존별 현황";
+    }
 
-    if (!allProcessing.length) {
+    if (!allVisible.length) {
       this.currentProcessingZoneCode = "";
       wrap.style.display = "none";
       grid.innerHTML = "";
       return;
     }
 
-    const zoneCountMap = allProcessing.reduce((acc, bid) => {
+    const zoneCountMap = allVisible.reduce((acc, bid) => {
       const code = bid.wms_location_code || "UNKNOWN_ZONE";
       acc[code] = (acc[code] || 0) + 1;
       return acc;
     }, {});
     const entries = Object.entries(zoneCountMap).sort((a, b) => b[1] - a[1]);
-    const totalCount = allProcessing.length;
+    const totalCount = allVisible.length;
 
     const allCard = `<div class="processing-zone-item ${
       !this.currentProcessingZoneCode ? "is-active" : ""
@@ -674,7 +683,6 @@ class UnifiedAuctionManager {
     if (this.currentProcessingZoneCode) {
       const zoneCode = this.currentProcessingZoneCode;
       const zoneFilterFn = (bid) =>
-        bid.shipping_status === "processing" &&
         (bid.wms_location_code || "UNKNOWN_ZONE") === zoneCode;
       liveToShow = liveToShow.filter(zoneFilterFn);
       directToShow = directToShow.filter(zoneFilterFn);
@@ -754,6 +762,9 @@ class UnifiedAuctionManager {
   renderItemInfo(bid) {
     const imageUrl = bid.item?.image || "/images/no-image.png";
     const itemUrl = this.getItemUrl(bid);
+    const scheduled = this.formatScheduledDate(
+      bid.item?.original_scheduled_date || bid.item?.scheduled_date,
+    );
 
     return `
       <div class="item-info">
@@ -762,7 +773,25 @@ class UnifiedAuctionManager {
         }" class="item-thumbnail" />
         <div class="item-details">
           <div class="item-id">
-            <a href="${itemUrl}" target="_blank">${bid.item_id}</a>
+            <a
+              href="${escapeHtml(itemUrl)}"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="item-id-link"
+              onclick="return openAllProductDetail(event, this);"
+              data-item-id="${escapeHtml(bid.item_id || "")}"
+              data-bid-type="${escapeHtml(bid.bid_type || "")}"
+              data-bid-status="${escapeHtml(bid.status || "")}"
+              data-auc-num="${escapeHtml(bid.item?.auc_num || "")}"
+              data-image="${escapeHtml(imageUrl)}"
+              data-title="${escapeHtml(bid.item?.original_title || "-")}"
+              data-brand="${escapeHtml(bid.item?.brand || "-")}"
+              data-category="${escapeHtml(bid.item?.category || "-")}"
+              data-rank="${escapeHtml(bid.item?.rank || "-")}"
+              data-accessory-code="${escapeHtml(bid.item?.accessory_code || "-")}"
+              data-scheduled="${escapeHtml(scheduled || "-")}"
+              data-origin-url="${escapeHtml(itemUrl || "#")}"
+            >${escapeHtml(bid.item_id || "-")}</a>
           </div>
           <div class="item-title">${bid.item?.original_title || "-"}</div>
           <div class="item-meta">
@@ -787,8 +816,17 @@ class UnifiedAuctionManager {
       5: (itemId) => `https://penguin-auction.jp/product/detail/${itemId}/`,
     };
 
+    let additionalInfo = bid.item?.additional_info || {};
+    if (typeof additionalInfo === "string") {
+      try {
+        additionalInfo = JSON.parse(additionalInfo);
+      } catch (e) {
+        additionalInfo = {};
+      }
+    }
+
     if (bid.item?.auc_num && linkFunc[bid.item.auc_num]) {
-      return linkFunc[bid.item.auc_num](bid.item_id, bid.item?.additional_info);
+      return linkFunc[bid.item.auc_num](bid.item_id, additionalInfo);
     }
     return "#";
   }
@@ -1161,11 +1199,205 @@ class UnifiedAuctionManager {
   }
 }
 
+let allDetailImages = [];
+let allDetailImageIndex = 0;
+
+function setAllDetailText(id, value) {
+  const node = document.getElementById(id);
+  if (!node) return;
+  node.textContent = value || "-";
+}
+
+function setAllDetailImage(src) {
+  const img = document.getElementById("allDetailMainImage");
+  if (!img) return;
+  img.classList.remove("zoom-active");
+  img.style.transformOrigin = "center center";
+  img.src = src || "/images/no-image.png";
+}
+
+function setAllDetailOrigin(url) {
+  const link = document.getElementById("allDetailOriginLink");
+  if (!link) return;
+  const safeUrl = url && url !== "#" ? url : "";
+  link.href = safeUrl || "#";
+  link.style.pointerEvents = safeUrl ? "auto" : "none";
+  link.style.opacity = safeUrl ? "1" : "0.5";
+}
+
+function applyAllDetailData(data = {}) {
+  setAllDetailText("allDetailItemId", data.itemId || "-");
+  setAllDetailText("allDetailTitle", data.title || "-");
+  setAllDetailText("allDetailBrand", data.brand || "-");
+  setAllDetailText("allDetailCategory", data.category || "-");
+  setAllDetailText("allDetailRank", data.rank || "-");
+  setAllDetailText("allDetailScheduled", data.scheduled || "-");
+  setAllDetailText("allDetailAccessoryCode", data.accessoryCode || "-");
+  setAllDetailText("allDetailDescription", data.description || "-");
+  setAllDetailOrigin(data.originUrl || "#");
+  setAllDetailImage(data.image || "/images/no-image.png");
+}
+
+function renderAllDetailThumbs() {
+  const wrap = document.getElementById("allDetailThumbs");
+  if (!wrap) return;
+  wrap.innerHTML = "";
+  allDetailImages.forEach((src, idx) => {
+    const activeClass = idx === allDetailImageIndex ? "active" : "";
+    wrap.insertAdjacentHTML(
+      "beforeend",
+      `
+        <button type="button" class="live-detail-thumb ${activeClass}" data-index="${idx}">
+          <img src="${escapeHtml(src)}" alt="썸네일 ${idx + 1}" />
+        </button>
+      `,
+    );
+  });
+  wrap.querySelectorAll(".live-detail-thumb").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const idx = Number(btn.dataset.index || 0);
+      showAllDetailImageAt(idx);
+    });
+  });
+}
+
+function updateAllDetailNavState() {
+  const prevBtn = document.getElementById("allDetailPrevBtn");
+  const nextBtn = document.getElementById("allDetailNextBtn");
+  if (prevBtn) prevBtn.disabled = allDetailImageIndex <= 0;
+  if (nextBtn) nextBtn.disabled = allDetailImageIndex >= allDetailImages.length - 1;
+}
+
+function showAllDetailImageAt(index) {
+  if (!allDetailImages.length) return;
+  if (index < 0 || index >= allDetailImages.length) return;
+  allDetailImageIndex = index;
+  setAllDetailImage(allDetailImages[allDetailImageIndex]);
+  renderAllDetailThumbs();
+  updateAllDetailNavState();
+}
+
+function setAllDetailImages(images) {
+  const normalized = Array.isArray(images)
+    ? images.filter((x) => String(x || "").trim())
+    : [];
+  allDetailImages = normalized.length ? normalized : ["/images/no-image.png"];
+  allDetailImageIndex = 0;
+  showAllDetailImageAt(0);
+}
+
+function bindAllDetailGalleryControls() {
+  document.getElementById("allDetailPrevBtn")?.addEventListener("click", () => {
+    showAllDetailImageAt(allDetailImageIndex - 1);
+  });
+  document.getElementById("allDetailNextBtn")?.addEventListener("click", () => {
+    showAllDetailImageAt(allDetailImageIndex + 1);
+  });
+}
+
+function bindAllDetailImageZoomControls() {
+  const wrap = document.getElementById("allDetailMainImageWrap");
+  const img = document.getElementById("allDetailMainImage");
+  if (!wrap || !img) return;
+
+  const setZoomByPointer = (event) => {
+    const rect = wrap.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const x = Math.max(0, Math.min(event.clientX - rect.left, rect.width));
+    const y = Math.max(0, Math.min(event.clientY - rect.top, rect.height));
+    const xPct = (x / rect.width) * 100;
+    const yPct = (y / rect.height) * 100;
+    img.style.transformOrigin = `${xPct}% ${yPct}%`;
+  };
+
+  wrap.addEventListener("mouseenter", () => {
+    if (!window.matchMedia("(hover: hover)").matches) return;
+    img.classList.add("zoom-active");
+  });
+
+  wrap.addEventListener("mousemove", (event) => {
+    if (!img.classList.contains("zoom-active")) return;
+    setZoomByPointer(event);
+  });
+
+  wrap.addEventListener("mouseleave", () => {
+    img.classList.remove("zoom-active");
+    img.style.transformOrigin = "center center";
+  });
+}
+
+async function openAllProductDetail(event, anchorEl) {
+  if (event) event.preventDefault();
+  const anchor = anchorEl;
+  if (!anchor) return false;
+
+  const itemId = String(anchor.dataset.itemId || "").trim();
+  const aucNum = String(anchor.dataset.aucNum || "").trim();
+  const modal = window.setupModal("allProductDetailModal");
+  if (!modal || !itemId) return false;
+
+  applyAllDetailData({
+    itemId,
+    title: anchor.dataset.title || "-",
+    brand: anchor.dataset.brand || "-",
+    category: anchor.dataset.category || "-",
+    rank: anchor.dataset.rank || "-",
+    accessoryCode: anchor.dataset.accessoryCode || "-",
+    scheduled: anchor.dataset.scheduled || "-",
+    description: "상세 정보를 불러오는 중입니다...",
+    image: anchor.dataset.image || "/images/no-image.png",
+    originUrl: anchor.dataset.originUrl || "#",
+  });
+  setAllDetailImages([anchor.dataset.image || "/images/no-image.png"]);
+  modal.show();
+
+  try {
+    const detail = await window.API.fetchAPI(`/detail/item-details/${encodeURIComponent(itemId)}`, {
+      method: "POST",
+      body: JSON.stringify({ aucNum, translateDescription: "ko" }),
+    });
+
+    let detailImage = detail?.image || anchor.dataset.image || "/images/no-image.png";
+    let detailImages = [detailImage];
+    if (detail?.additional_images) {
+      try {
+        const extra = JSON.parse(detail.additional_images);
+        if (Array.isArray(extra) && extra.length > 0 && extra[0]) {
+          detailImage = extra[0];
+          detailImages = [detailImage, ...extra.slice(1)];
+        }
+      } catch (e) {
+        // ignore json parse error
+      }
+    }
+    setAllDetailImages(detailImages);
+
+    applyAllDetailData({
+      itemId,
+      title: detail?.title || anchor.dataset.title || "-",
+      brand: detail?.brand || anchor.dataset.brand || "-",
+      category: detail?.category || anchor.dataset.category || "-",
+      rank: detail?.rank || anchor.dataset.rank || "-",
+      accessoryCode: detail?.accessory_code || anchor.dataset.accessoryCode || "-",
+      scheduled: detail?.scheduled_date ? formatDateTime(detail.scheduled_date, true) : anchor.dataset.scheduled || "-",
+      description: detail?.description_ko || detail?.description || "설명 정보가 없습니다.",
+      image: detailImage,
+      originUrl: anchor.dataset.originUrl || "#",
+    });
+  } catch (error) {
+    console.error("상품 상세 조회 실패:", error);
+    setAllDetailText("allDetailDescription", "상세 정보를 불러오지 못했습니다.");
+  }
+  return false;
+}
+
 // 전역 변수로 매니저 인스턴스 생성
 let unifiedManager;
 
 // 페이지 로드 시 초기화
 document.addEventListener("DOMContentLoaded", function () {
+  bindAllDetailGalleryControls();
+  bindAllDetailImageZoomControls();
   unifiedManager = new UnifiedAuctionManager();
   unifiedManager.init();
 });

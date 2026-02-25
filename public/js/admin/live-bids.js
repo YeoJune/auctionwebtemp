@@ -57,6 +57,10 @@ const LIVE_WORKFLOW_STATUSES = [
   "processing",
   "shipped",
 ];
+const LIVE_ZONE_SUMMARY_VISIBLE_STATUSES = new Set([
+  "domestic_arrived",
+  "processing",
+]);
 
 function getLiveNextStatus(status) {
   return LIVE_NEXT_STATUS[status] || null;
@@ -105,16 +109,22 @@ function getLiveProcessingStatusLabel(bid) {
 function renderProcessingZoneSummary(bids) {
   const wrap = document.getElementById("processingZoneSummary");
   const grid = document.getElementById("processingZoneGrid");
+  const title = wrap?.querySelector(".title");
   if (!wrap || !grid) return;
 
-  if (currentStatus !== "processing") {
+  if (!LIVE_ZONE_SUMMARY_VISIBLE_STATUSES.has(currentStatus)) {
+    currentProcessingZoneCode = "";
     wrap.style.display = "none";
     grid.innerHTML = "";
     return;
   }
 
+  if (title) {
+    const label = currentStatus ? getLiveStatusLabel(currentStatus) : "전체";
+    title.textContent = `${label} 존별 현황`;
+  }
+
   const zoneCountMap = (bids || []).reduce((acc, bid) => {
-    if (bid.shipping_status !== "processing") return acc;
     const code = bid.wms_location_code || "UNKNOWN_ZONE";
     acc[code] = (acc[code] || 0) + 1;
     return acc;
@@ -123,7 +133,7 @@ function renderProcessingZoneSummary(bids) {
   const entries = Object.entries(zoneCountMap).sort((a, b) => b[1] - a[1]);
   if (!entries.length) {
     wrap.style.display = "block";
-    grid.innerHTML = `<div class="processing-zone-item"><div class="name">작업중 데이터 없음</div><div class="count">0</div></div>`;
+    grid.innerHTML = `<div class="processing-zone-item"><div class="name">존 데이터 없음</div><div class="count">0</div></div>`;
     return;
   }
 
@@ -165,10 +175,13 @@ let currentSortBy = "original_scheduled_date";
 let currentSortOrder = "desc";
 let fromDate = "";
 let toDate = "";
+let currentFirstDate = "";
 let currentSearch = "";
 let currentAucNum = "";
 let currentProcessingZoneCode = "";
 let currentLiveBidsData = [];
+let liveDetailImages = [];
+let liveDetailImageIndex = 0;
 
 // 검색 디바운스 타이머
 let searchTimeout = null;
@@ -181,6 +194,7 @@ const defaultState = {
   page: 1,
   sort: "original_scheduled_date",
   order: "desc",
+  firstDate: "",
   search: "",
   status: "",
   aucNum: "",
@@ -193,6 +207,7 @@ function initializeFromURL() {
     "page",
     "sort",
     "order",
+    "firstDate",
     "search",
     "status",
     "aucNum",
@@ -203,6 +218,7 @@ function initializeFromURL() {
   currentPage = state.page;
   currentSortBy = state.sort;
   currentSortOrder = state.order;
+  currentFirstDate = state.firstDate;
   currentSearch = state.search;
   currentStatus = state.status;
   currentAucNum = state.aucNum;
@@ -217,6 +233,7 @@ function updateURLState() {
     page: currentPage,
     sort: currentSortBy,
     order: currentSortOrder,
+    firstDate: currentFirstDate,
     search: currentSearch,
     status: currentStatus,
     aucNum: currentAucNum,
@@ -230,9 +247,11 @@ function updateUIFromState() {
   const sortBySelect = document.getElementById("sortBy");
   const statusButtons = document.querySelectorAll(".filter-tab");
   const aucNumButtons = document.querySelectorAll(".auc-num-filter");
+  const firstDateFilter = document.getElementById("firstDateFilter");
 
   if (searchInput) searchInput.value = currentSearch;
   if (sortBySelect) sortBySelect.value = currentSortBy;
+  if (firstDateFilter) firstDateFilter.value = currentFirstDate || "";
 
   statusButtons.forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.status === currentStatus);
@@ -245,13 +264,89 @@ function updateUIFromState() {
   updateBulkShipButtonLabel();
 }
 
+function normalizeDateKey(value) {
+  if (!value) return "";
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) return "";
+  const yyyy = dt.getFullYear();
+  const mm = String(dt.getMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function formatMonthDay(dateKey) {
+  const parts = String(dateKey || "").split("-");
+  if (parts.length !== 3) return dateKey;
+  return `${parts[1]}-${parts[2]}`;
+}
+
+function toggleFirstDateFilterVisibility() {
+  const group = document.getElementById("firstDateFilterGroup");
+  if (!group) return;
+  group.style.display = currentStatus === "first" ? "block" : "none";
+}
+
+async function refreshFirstDateFilterOptions() {
+  const select = document.getElementById("firstDateFilter");
+  if (!select) return;
+  toggleFirstDateFilterVisibility();
+  if (currentStatus !== "first") return;
+
+  try {
+    const response = await fetchLiveBids(
+      "first",
+      1,
+      0,
+      "original_scheduled_date",
+      "asc",
+      "",
+      "",
+      currentSearch,
+      currentAucNum,
+    );
+    const bids = Array.isArray(response?.bids) ? response.bids : [];
+    const map = bids.reduce((acc, bid) => {
+      const dateKey = normalizeDateKey(
+        bid.item?.original_scheduled_date || bid.item?.scheduled_date,
+      );
+      if (!dateKey) return acc;
+      acc[dateKey] = (acc[dateKey] || 0) + 1;
+      return acc;
+    }, {});
+    const options = Object.entries(map).sort((a, b) => a[0].localeCompare(b[0]));
+    select.innerHTML = [
+      '<option value="">전체</option>',
+      ...options.map(
+        ([dateKey, count]) =>
+          `<option value="${dateKey}">${formatMonthDay(dateKey)} (${count})</option>`,
+      ),
+    ].join("");
+    if (currentFirstDate && map[currentFirstDate]) {
+      select.value = currentFirstDate;
+    } else {
+      currentFirstDate = "";
+      select.value = "";
+    }
+  } catch (error) {
+    console.error("1차 예정일 옵션 로드 실패:", error);
+  }
+}
+
 // 페이지 로드 시 실행
 document.addEventListener("DOMContentLoaded", function () {
   // URL에서 상태 복원
   initializeFromURL();
+  toggleFirstDateFilterVisibility();
+  if (currentFirstDate) {
+    fromDate = currentFirstDate;
+    toDate = currentFirstDate;
+    document.getElementById("fromDate").value = currentFirstDate;
+    document.getElementById("toDate").value = currentFirstDate;
+  }
 
   // 초기 데이터 로드
   loadLiveBids();
+  refreshFirstDateFilterOptions();
 
   // 브라우저 뒤로가기/앞으로가기 처리
   window.addEventListener("popstate", function () {
@@ -288,11 +383,16 @@ document.addEventListener("DOMContentLoaded", function () {
     button.addEventListener("click", function () {
       const status = this.dataset.status;
       currentStatus = status;
-      if (currentStatus !== "processing") currentProcessingZoneCode = "";
+      if (currentStatus !== "first") {
+        currentFirstDate = "";
+        const firstDateFilter = document.getElementById("firstDateFilter");
+        if (firstDateFilter) firstDateFilter.value = "";
+      }
       updateBulkShipButtonLabel();
       currentPage = 1;
       updateURLState();
       loadLiveBids();
+      refreshFirstDateFilterOptions();
     });
   });
 
@@ -312,7 +412,26 @@ document.addEventListener("DOMContentLoaded", function () {
       currentPage = 1;
       updateURLState();
       loadLiveBids();
+      refreshFirstDateFilterOptions();
     });
+  });
+
+  document.getElementById("firstDateFilter")?.addEventListener("change", function () {
+    currentFirstDate = this.value || "";
+    if (currentFirstDate) {
+      fromDate = currentFirstDate;
+      toDate = currentFirstDate;
+      document.getElementById("fromDate").value = currentFirstDate;
+      document.getElementById("toDate").value = currentFirstDate;
+    } else {
+      fromDate = "";
+      toDate = "";
+      document.getElementById("fromDate").value = "";
+      document.getElementById("toDate").value = "";
+    }
+    currentPage = 1;
+    updateURLState();
+    loadLiveBids();
   });
 
   // 빠른 날짜 필터 이벤트
@@ -344,6 +463,17 @@ document.addEventListener("DOMContentLoaded", function () {
     .getElementById("bulkShipBtn")
     ?.addEventListener("click", function () {
       const target = document.getElementById("bulkStatusTarget")?.value;
+      const isWorkflowContext = LIVE_WORKFLOW_STATUSES.includes(currentStatus);
+
+      if (isWorkflowContext) {
+        if (!LIVE_WORKFLOW_STATUSES.includes(target)) {
+          showAlert("작업흐름 상태에서는 완료/국내도착/작업중/출고됨만 선택 가능합니다.");
+          return;
+        }
+        bulkMarkAsShipped();
+        return;
+      }
+
       if (target === "cancelled") {
         openBulkCancelModal();
         return;
@@ -352,7 +482,7 @@ document.addEventListener("DOMContentLoaded", function () {
         openBulkCompleteModal();
         return;
       }
-      bulkMarkAsShipped();
+      showAlert("선택한 상태에서는 일괄 처리를 지원하지 않습니다.");
     });
 
   // 일괄 작업 모달 제출 버튼
@@ -384,6 +514,7 @@ document.addEventListener("DOMContentLoaded", function () {
       currentAucNum = this.value;
       currentPage = 1;
       loadLiveBids();
+      refreshFirstDateFilterOptions();
     });
 
   // 정렬 옵션 변경 이벤트
@@ -406,6 +537,9 @@ document.addEventListener("DOMContentLoaded", function () {
     ?.addEventListener("click", function () {
       fromDate = document.getElementById("fromDate").value;
       toDate = document.getElementById("toDate").value;
+      currentFirstDate = "";
+      const firstDateFilter = document.getElementById("firstDateFilter");
+      if (firstDateFilter) firstDateFilter.value = "";
       currentPage = 1;
       document
         .querySelectorAll("[data-range]")
@@ -421,6 +555,9 @@ document.addEventListener("DOMContentLoaded", function () {
       document.getElementById("toDate").value = "";
       fromDate = "";
       toDate = "";
+      currentFirstDate = "";
+      const firstDateFilter = document.getElementById("firstDateFilter");
+      if (firstDateFilter) firstDateFilter.value = "";
       currentPage = 1;
       document
         .querySelectorAll("[data-range]")
@@ -445,6 +582,7 @@ function handleSearchInput() {
       currentPage = 1;
       updateURLState();
       loadLiveBids();
+      refreshFirstDateFilterOptions();
     }
   }, 300);
 }
@@ -456,6 +594,7 @@ function handleSearchSubmit() {
     currentPage = 1;
     updateURLState();
     loadLiveBids();
+    refreshFirstDateFilterOptions();
   }
 }
 
@@ -466,6 +605,7 @@ function handleSearchClear() {
     currentPage = 1;
     updateURLState();
     loadLiveBids();
+    refreshFirstDateFilterOptions();
   }
 }
 
@@ -501,6 +641,9 @@ function handleQuickDateFilter(event) {
   document.getElementById("toDate").value = endDate;
   fromDate = startDate;
   toDate = endDate;
+  currentFirstDate = "";
+  const firstDateFilter = document.getElementById("firstDateFilter");
+  if (firstDateFilter) firstDateFilter.value = "";
   currentPage = 1;
   document
     .querySelectorAll("[data-range]")
@@ -513,7 +656,6 @@ function handleQuickDateFilter(event) {
 // 필터 상태에 따라 데이터 로드
 async function filterByStatus(status) {
   currentStatus = status;
-  if (currentStatus !== "processing") currentProcessingZoneCode = "";
   updateBulkShipButtonLabel();
   currentPage = 1;
   await loadLiveBids();
@@ -526,9 +668,28 @@ function updateBulkShipButtonLabel() {
     bulkShipBtn.textContent = "일괄 상태 변경";
   }
 
-  if (bulkStatusTarget && LIVE_WORKFLOW_STATUSES.includes(currentStatus)) {
-    bulkStatusTarget.value = currentStatus;
+  if (!bulkStatusTarget) return;
+
+  const isWorkflowContext = LIVE_WORKFLOW_STATUSES.includes(currentStatus);
+  const prevValue = bulkStatusTarget.value;
+  const optionValues = isWorkflowContext
+    ? LIVE_WORKFLOW_STATUSES
+    : ["completed", "cancelled"];
+
+  bulkStatusTarget.innerHTML = optionValues
+    .map((status) => `<option value="${status}">${getLiveStatusLabel(status)}</option>`)
+    .join("");
+
+  if (isWorkflowContext) {
+    bulkStatusTarget.value = optionValues.includes(currentStatus)
+      ? currentStatus
+      : "completed";
+    return;
   }
+
+  bulkStatusTarget.value = optionValues.includes(prevValue)
+    ? prevValue
+    : "completed";
 }
 
 // 페이지 변경 함수
@@ -542,6 +703,7 @@ function changePage(page) {
 // 현장 경매 데이터 로드
 async function loadLiveBids() {
   try {
+    toggleFirstDateFilterVisibility();
     showLoading("liveBidsTableBody");
 
     const liveBids = await fetchLiveBids(
@@ -566,7 +728,7 @@ async function loadLiveBids() {
     }
 
     if (!filteredBids.length) {
-      showNoData("liveBidsTableBody", "선택한 존의 작업중 데이터가 없습니다.");
+      showNoData("liveBidsTableBody", "선택한 존의 데이터가 없습니다.");
     } else {
       renderLiveBidsTable(filteredBids);
     }
@@ -586,8 +748,7 @@ async function loadLiveBids() {
 }
 
 function filterLiveBidsByZone(bids) {
-  if (currentStatus !== "processing" || !currentProcessingZoneCode)
-    return bids || [];
+  if (!currentProcessingZoneCode) return bids || [];
   return (bids || []).filter(
     (bid) =>
       (bid.wms_location_code || "UNKNOWN_ZONE") === currentProcessingZoneCode,
@@ -696,7 +857,7 @@ function renderLiveBidsTable(liveBids) {
     let actionButtons = `<div class="action-buttons-row"><button class="btn btn-sm btn-secondary" onclick="openEditBidModal(${bid.id})">수정</button>`;
 
     if (bid.status === "first") {
-      actionButtons += `<button class="btn btn-sm" onclick="openSecondPriceModal(${bid.id})">2차 가격 제안</button>`;
+      actionButtons += `<button class="btn btn-sm" data-bid-id="${bid.id}" data-item-id="${escapeHtml(bid.item_id || "")}" onclick="openSecondPriceModalFromButton(this)">2차 가격 제안</button>`;
     } else if (bid.status === "final") {
       actionButtons += `
         <button class="btn btn-sm btn-secondary" onclick="openCancelModal(${bid.id})">낙찰 실패</button>
@@ -723,14 +884,24 @@ function renderLiveBidsTable(liveBids) {
       scheduledDate = formatDateTime(date, true);
     }
 
-    // auc_num을 이용한, 적절한 URL 생성
+    // auc_num을 이용한 원본 URL 생성
+    let additionalInfo = {};
+    if (bid.item?.additional_info) {
+      try {
+        additionalInfo = JSON.parse(bid.item.additional_info);
+      } catch (e) {
+        additionalInfo = {};
+      }
+    }
+
     let itemUrl = "#";
     if (bid.item && bid.item.auc_num && linkFunc[bid.item.auc_num]) {
-      itemUrl = linkFunc[bid.item.auc_num](
-        bid.item_id,
-        JSON.parse(bid.item.additional_info),
-      );
+      itemUrl = linkFunc[bid.item.auc_num](bid.item_id, additionalInfo);
     }
+
+    // 1차입찰에서는 관리자 화면 내부 상세 모달을 연다
+    const itemPrimaryUrl = itemUrl;
+    const originLinkHtml = "";
 
     // 이미지 경로
     const imagePath =
@@ -792,7 +963,11 @@ function renderLiveBidsTable(liveBids) {
       bid.id
     }" data-final-price="${bid.final_price || 0}" data-auc-num="${
       bid.item?.auc_num || 1
-    }" data-category="${bid.item?.category || "기타"}" data-status="${bid.status}"></td>
+    }" data-category="${bid.item?.category || "기타"}" data-status="${
+      bid.status
+    }" data-workflow-status="${
+      bid.status === "completed" ? bid.shipping_status || "completed" : bid.status
+    }"></td>
     <td>${bid.id}</td>
     <td>
       <div class="item-info">
@@ -800,7 +975,28 @@ function renderLiveBidsTable(liveBids) {
           bid.item?.title || ""
         }" class="item-thumbnail" />
         <div class="item-details">
-          <div><a href="${itemUrl}" target="_blank">${bid.item_id}</a></div>
+          <div>
+            <a
+              href="${escapeHtml(itemPrimaryUrl)}"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="item-id-link"
+              onclick="return openLiveProductDetail(event, this);"
+              data-bid-id="${bid.id}"
+              data-item-id="${escapeHtml(bid.item_id || "")}"
+              data-bid-status="${escapeHtml(bid.status || "")}"
+              data-auc-num="${escapeHtml(bid.item?.auc_num || "")}"
+              data-image="${escapeHtml(imagePath)}"
+              data-title="${escapeHtml(bid.item?.original_title || "-")}"
+              data-brand="${escapeHtml(bid.item?.brand || "-")}"
+              data-category="${escapeHtml(bid.item?.category || "-")}"
+              data-rank="${escapeHtml(bid.item?.rank || "-")}"
+              data-accessory-code="${escapeHtml(bid.item?.accessory_code || "-")}"
+              data-scheduled="${escapeHtml(scheduledDate || "-")}"
+              data-origin-url="${escapeHtml(itemUrl || "#")}"
+            >${escapeHtml(bid.item_id || "-")}</a>
+            ${originLinkHtml}
+          </div>
           <div class="item-meta">
             <span>내부바코드: ${bid.internal_barcode || "-"}</span>
             ${itemNo ? `<span>품번: ${itemNo}</span>` : ""}
@@ -860,6 +1056,269 @@ function renderLiveBidsTable(liveBids) {
   addCheckboxEventListeners();
 }
 
+function setLiveDetailText(id, value) {
+  const node = document.getElementById(id);
+  if (!node) return;
+  node.textContent = value || "-";
+}
+
+function setLiveDetailImage(src) {
+  const img = document.getElementById("liveDetailMainImage");
+  if (!img) return;
+  img.classList.remove("zoom-active");
+  img.style.transformOrigin = "center center";
+  img.src = src || "/images/no-image.png";
+}
+
+function setLiveDetailOrigin(url) {
+  const link = document.getElementById("liveDetailOriginLink");
+  if (!link) return;
+  const safeUrl = url && url !== "#" ? url : "";
+  link.href = safeUrl || "#";
+  link.style.pointerEvents = safeUrl ? "auto" : "none";
+  link.style.opacity = safeUrl ? "1" : "0.5";
+}
+
+function setLiveDetailQuickProposeContext(bidId, itemId, bidStatus = "") {
+  const bidInput = document.getElementById("liveDetailBidId");
+  const itemInput = document.getElementById("liveDetailQuickItemId");
+  const priceInput = document.getElementById("liveDetailSecondPrice");
+  const targetText = document.getElementById("liveDetailQuickTargetText");
+  const actionBtn = document.getElementById("liveDetailSubmitSecondPrice");
+  const box = document.getElementById("liveDetailQuickProposeBox");
+
+  if (bidInput) bidInput.value = bidId ? String(bidId) : "";
+  if (itemInput) itemInput.value = itemId || "";
+  if (priceInput) priceInput.value = "";
+
+  const isFirstStage = String(bidStatus || "") === "first";
+  if (box) box.style.display = isFirstStage ? "block" : "none";
+
+  const enabled = Boolean(isFirstStage && bidId && itemId);
+  if (targetText) {
+    targetText.textContent = enabled
+      ? `상품ID ${itemId} 전체 고객에게 동일한 2차 제안가가 적용됩니다.`
+      : "1차입찰 상태에서만 2차 제안이 가능합니다.";
+  }
+  if (actionBtn) actionBtn.disabled = !enabled;
+}
+
+function applyLiveDetailData(data = {}) {
+  setLiveDetailText("liveDetailItemId", data.itemId || "-");
+  setLiveDetailText("liveDetailTitle", data.title || "-");
+  setLiveDetailText("liveDetailBrand", data.brand || "-");
+  setLiveDetailText("liveDetailCategory", data.category || "-");
+  setLiveDetailText("liveDetailRank", data.rank || "-");
+  setLiveDetailText("liveDetailScheduled", data.scheduled || "-");
+  setLiveDetailText("liveDetailAccessoryCode", data.accessoryCode || "-");
+  setLiveDetailText("liveDetailDescription", data.description || "-");
+  setLiveDetailOrigin(data.originUrl || "#");
+  setLiveDetailImage(data.image || "/images/no-image.png");
+}
+
+function renderLiveDetailThumbs() {
+  const wrap = document.getElementById("liveDetailThumbs");
+  if (!wrap) return;
+  wrap.innerHTML = "";
+  liveDetailImages.forEach((src, idx) => {
+    const activeClass = idx === liveDetailImageIndex ? "active" : "";
+    wrap.insertAdjacentHTML(
+      "beforeend",
+      `
+        <button type="button" class="live-detail-thumb ${activeClass}" data-index="${idx}">
+          <img src="${escapeHtml(src)}" alt="썸네일 ${idx + 1}" />
+        </button>
+      `,
+    );
+  });
+  wrap.querySelectorAll(".live-detail-thumb").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const idx = Number(btn.dataset.index || 0);
+      showLiveDetailImageAt(idx);
+    });
+  });
+}
+
+function updateLiveDetailNavState() {
+  const prevBtn = document.getElementById("liveDetailPrevBtn");
+  const nextBtn = document.getElementById("liveDetailNextBtn");
+  if (prevBtn) prevBtn.disabled = liveDetailImageIndex <= 0;
+  if (nextBtn) nextBtn.disabled = liveDetailImageIndex >= liveDetailImages.length - 1;
+}
+
+function showLiveDetailImageAt(index) {
+  if (!liveDetailImages.length) return;
+  if (index < 0 || index >= liveDetailImages.length) return;
+  liveDetailImageIndex = index;
+  setLiveDetailImage(liveDetailImages[liveDetailImageIndex]);
+  renderLiveDetailThumbs();
+  updateLiveDetailNavState();
+}
+
+function setLiveDetailImages(images) {
+  const normalized = Array.isArray(images)
+    ? images.filter((x) => String(x || "").trim())
+    : [];
+  liveDetailImages = normalized.length ? normalized : ["/images/no-image.png"];
+  liveDetailImageIndex = 0;
+  showLiveDetailImageAt(0);
+}
+
+function bindLiveDetailGalleryControls() {
+  document.getElementById("liveDetailPrevBtn")?.addEventListener("click", () => {
+    showLiveDetailImageAt(liveDetailImageIndex - 1);
+  });
+  document.getElementById("liveDetailNextBtn")?.addEventListener("click", () => {
+    showLiveDetailImageAt(liveDetailImageIndex + 1);
+  });
+}
+
+function bindLiveDetailImageZoomControls() {
+  const wrap = document.getElementById("liveDetailMainImageWrap");
+  const img = document.getElementById("liveDetailMainImage");
+  if (!wrap || !img) return;
+
+  const setZoomByPointer = (event) => {
+    const rect = wrap.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const x = Math.max(0, Math.min(event.clientX - rect.left, rect.width));
+    const y = Math.max(0, Math.min(event.clientY - rect.top, rect.height));
+    const xPct = (x / rect.width) * 100;
+    const yPct = (y / rect.height) * 100;
+    img.style.transformOrigin = `${xPct}% ${yPct}%`;
+  };
+
+  wrap.addEventListener("mouseenter", () => {
+    if (!window.matchMedia("(hover: hover)").matches) return;
+    img.classList.add("zoom-active");
+  });
+
+  wrap.addEventListener("mousemove", (event) => {
+    if (!img.classList.contains("zoom-active")) return;
+    setZoomByPointer(event);
+  });
+
+  wrap.addEventListener("mouseleave", () => {
+    img.classList.remove("zoom-active");
+    img.style.transformOrigin = "center center";
+  });
+}
+
+async function submitSecondPriceFromDetailModal() {
+  const bidId = parseInt(document.getElementById("liveDetailBidId")?.value || "", 10);
+  const itemId = String(
+    document.getElementById("liveDetailQuickItemId")?.value || "",
+  ).trim();
+  const secondPrice = parseFloat(
+    document.getElementById("liveDetailSecondPrice")?.value || "",
+  );
+  const actionBtn = document.getElementById("liveDetailSubmitSecondPrice");
+
+  if (!bidId || !itemId || !secondPrice) {
+    showAlert("2차 제안가를 입력해주세요.");
+    return;
+  }
+
+  if (actionBtn) actionBtn.disabled = true;
+  try {
+    const result = await proposeSecondPrice(bidId, secondPrice, itemId);
+    const updatedCount = Number(result?.updatedCount || 0);
+    showAlert(
+      updatedCount > 0
+        ? `2차 제안가가 상품 단위로 적용되었습니다. (${updatedCount}건)`
+        : "2차 제안가가 적용되었습니다.",
+      "success",
+    );
+    await loadLiveBids();
+  } catch (error) {
+    handleError(error, "2차 제안 등록 중 오류가 발생했습니다.");
+  } finally {
+    if (actionBtn) actionBtn.disabled = false;
+  }
+}
+
+function bindLiveDetailQuickProposeControls() {
+  document
+    .getElementById("liveDetailSubmitSecondPrice")
+    ?.addEventListener("click", submitSecondPriceFromDetailModal);
+  document
+    .getElementById("liveDetailSecondPrice")
+    ?.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        submitSecondPriceFromDetailModal();
+      }
+    });
+}
+
+async function openLiveProductDetail(event, anchorEl) {
+  if (event) event.preventDefault();
+  const anchor = anchorEl;
+  if (!anchor) return false;
+
+  const bidStatus = String(anchor.dataset.bidStatus || "");
+  const itemId = String(anchor.dataset.itemId || "").trim();
+  const bidId = parseInt(anchor.dataset.bidId || "", 10);
+  const aucNum = String(anchor.dataset.aucNum || "").trim();
+  const modal = window.setupModal("liveProductDetailModal");
+  if (!modal || !itemId) return false;
+
+  applyLiveDetailData({
+    itemId,
+    title: anchor.dataset.title || "-",
+    brand: anchor.dataset.brand || "-",
+    category: anchor.dataset.category || "-",
+    rank: anchor.dataset.rank || "-",
+    accessoryCode: anchor.dataset.accessoryCode || "-",
+    scheduled: anchor.dataset.scheduled || "-",
+    description: "상세 정보를 불러오는 중입니다...",
+    image: anchor.dataset.image || "/images/no-image.png",
+    originUrl: anchor.dataset.originUrl || "#",
+  });
+  setLiveDetailImages([anchor.dataset.image || "/images/no-image.png"]);
+  setLiveDetailQuickProposeContext(bidId, itemId, bidStatus);
+  modal.show();
+
+  try {
+    const detail = await window.API.fetchAPI(`/detail/item-details/${encodeURIComponent(itemId)}`, {
+      method: "POST",
+      body: JSON.stringify({ aucNum, translateDescription: "ko" }),
+    });
+
+    let detailImage = detail?.image || anchor.dataset.image || "/images/no-image.png";
+    let detailImages = [detailImage];
+    if (detail?.additional_images) {
+      try {
+        const extra = JSON.parse(detail.additional_images);
+        if (Array.isArray(extra) && extra.length > 0 && extra[0]) {
+          detailImage = extra[0];
+          detailImages = [detailImage, ...extra.slice(1)];
+        }
+      } catch (e) {
+        // ignore json parse error
+      }
+    }
+    setLiveDetailImages(detailImages);
+
+    applyLiveDetailData({
+      itemId,
+      title: detail?.title || anchor.dataset.title || "-",
+      brand: detail?.brand || anchor.dataset.brand || "-",
+      category: detail?.category || anchor.dataset.category || "-",
+      rank: detail?.rank || anchor.dataset.rank || "-",
+      accessoryCode: detail?.accessory_code || anchor.dataset.accessoryCode || "-",
+      scheduled: detail?.scheduled_date ? formatDateTime(detail.scheduled_date, true) : anchor.dataset.scheduled || "-",
+      description: detail?.description_ko || detail?.description || "설명 정보가 없습니다.",
+      image: detailImage,
+      originUrl: anchor.dataset.originUrl || "#",
+    });
+  } catch (error) {
+    console.error("상품 상세 조회 실패:", error);
+    setLiveDetailText("liveDetailDescription", "상세 정보를 불러오지 못했습니다.");
+  }
+  return false;
+}
+
 // 체크박스 이벤트 리스너 추가 함수
 function addCheckboxEventListeners() {
   document
@@ -892,9 +1351,16 @@ function updateBulkActionButtons() {
 }
 
 // 2차 제안가 제안 모달 열기 - 공통 함수 활용
-function openSecondPriceModal(bidId) {
+function openSecondPriceModal(bidId, itemId = "") {
   document.getElementById("bidId").value = bidId;
+  document.getElementById("secondPriceItemId").value = itemId || "";
   document.getElementById("secondPrice").value = "";
+  const targetInfo = document.getElementById("secondPriceTargetInfo");
+  if (targetInfo) {
+    targetInfo.textContent = itemId
+      ? `상품ID ${itemId} 전체 고객에게 동일한 2차 제안가가 적용됩니다.`
+      : "상품 단위로 일괄 제안됩니다.";
+  }
 
   const modal = window.setupModal("secondPriceModal");
   if (modal) {
@@ -902,20 +1368,36 @@ function openSecondPriceModal(bidId) {
   }
 }
 
+function openSecondPriceModalFromButton(button) {
+  if (!button) return;
+  const bidId = parseInt(button.dataset.bidId || "", 10);
+  const itemId = String(button.dataset.itemId || "").trim();
+  openSecondPriceModal(bidId, itemId);
+}
+
 // 2차 제안가 제안 제출
 async function submitSecondPrice() {
   const bidId = parseInt(document.getElementById("bidId").value);
+  const itemId = String(
+    document.getElementById("secondPriceItemId")?.value || "",
+  ).trim();
   const secondPrice = parseFloat(document.getElementById("secondPrice").value);
 
-  if (!bidId || !secondPrice) {
-    showAlert("입찰 ID와 2차 제안가를 입력해주세요.");
+  if (!bidId || !itemId || !secondPrice) {
+    showAlert("상품 정보와 2차 제안가를 확인해주세요.");
     return;
   }
 
   try {
-    await proposeSecondPrice(bidId, secondPrice);
+    const result = await proposeSecondPrice(bidId, secondPrice, itemId);
     closeAllModals();
-    showAlert("2차 제안가가 제안되었습니다.", "success");
+    const updatedCount = Number(result?.updatedCount || 0);
+    showAlert(
+      updatedCount > 0
+        ? `2차 제안가가 상품 단위로 적용되었습니다. (${updatedCount}건)`
+        : "2차 제안가가 적용되었습니다.",
+      "success",
+    );
     await loadLiveBids();
   } catch (error) {
     handleError(error, "2차 제안가 제안 중 오류가 발생했습니다.");
@@ -1320,7 +1802,7 @@ async function bulkMarkAsShipped() {
 
   checkedBoxes.forEach((cb) => {
     const bidId = parseInt(cb.dataset.bidId);
-    const currentBidStatus = cb.dataset.status || "";
+    const currentBidStatus = cb.dataset.workflowStatus || cb.dataset.status || "";
 
     if (!bidId) return;
 
@@ -1513,3 +1995,7 @@ document
 document
   .getElementById("cancelRepair")
   ?.addEventListener("click", cancelRepair);
+
+bindLiveDetailGalleryControls();
+bindLiveDetailImageZoomControls();
+bindLiveDetailQuickProposeControls();

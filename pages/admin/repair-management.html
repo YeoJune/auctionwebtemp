@@ -42,29 +42,146 @@
 
         <section class="card" style="margin-top: 16px">
           <div class="section-header">
-            <h3>국내도착 물건</h3>
+            <h3>공통 검색</h3>
             <div class="toolbar">
               <input id="searchInput" placeholder="내부바코드/회원사/상품명 검색" />
               <button id="btnReload" class="btn btn-secondary">새로고침</button>
+              <button id="btnExportCsv" class="btn btn-secondary">CSV 내보내기</button>
             </div>
           </div>
+        </section>
 
+        <section class="card" style="margin-top: 16px">
+          <div class="section-header">
+            <h3>외주업체 관리(시트 연결)</h3>
+            <div class="toolbar">
+              <button id="btnToggleVendorManagement" class="btn btn-secondary">펼치기</button>
+              <button id="btnAddVendor" type="button" class="btn btn-secondary">외주업체추가</button>
+              <button id="btnPushExternalBatch" class="btn btn-secondary">외부건 일괄전송</button>
+            </div>
+          </div>
+          <div id="vendorManagementBody" style="display: none">
+            <p class="sheet-guide">
+              외부수선 흐름: <strong>외주시트전송</strong>으로 행 생성/갱신 → 업체 회신 입력 → <strong>외주시트동기화</strong>.
+              동기화 기준은 <strong>내부바코드(또는 바코드)</strong>, <strong>견적금액(또는 수선금액)</strong> 컬럼입니다.
+            </p>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>업체명</th>
+                    <th>구글시트 링크</th>
+                    <th>sheet_id</th>
+                    <th>gid</th>
+                    <th>저장</th>
+                  </tr>
+                </thead>
+                <tbody id="vendorsBody">
+                  <tr><td colspan="5" class="text-center">외주업체 정보를 불러오는 중입니다...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="card" style="margin-top: 16px">
+          <div class="section-header">
+            <h3>1) 국내도착(분기/견적등록)</h3>
+          </div>
           <div class="table-wrap">
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>ID</th>
                   <th>사진</th>
                   <th>내부바코드</th>
                   <th>회원사</th>
                   <th>상품명</th>
                   <th>예정일시</th>
-                  <th>현재위치</th>
                   <th>상태</th>
                   <th>작업</th>
                 </tr>
               </thead>
-              <tbody id="arrivalsBody">
+              <tbody id="domesticArrivalsBody">
+                <tr><td colspan="7" class="text-center">데이터를 불러오는 중입니다...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card" style="margin-top: 16px">
+          <div class="section-header">
+            <h3>2) 시트전송완료 / 견적대기(외부)</h3>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>사진</th>
+                  <th>내부바코드</th>
+                  <th>회원사</th>
+                  <th>상품명</th>
+                  <th>예정일시</th>
+                  <th>처리구분</th>
+                  <th>외주업체</th>
+                  <th>외주시트상태</th>
+                  <th>상태</th>
+                  <th>작업</th>
+                </tr>
+              </thead>
+              <tbody id="draftCasesBody">
+                <tr><td colspan="10" class="text-center">데이터를 불러오는 중입니다...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card" style="margin-top: 16px">
+          <div class="section-header">
+            <h3>3) 견적완료 / 고객전송대기</h3>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>사진</th>
+                  <th>내부바코드</th>
+                  <th>회원사</th>
+                  <th>상품명</th>
+                  <th>구분</th>
+                  <th>견적금액</th>
+                  <th>예상일</th>
+                  <th>상태</th>
+                  <th>위치</th>
+                  <th>작업</th>
+                </tr>
+              </thead>
+              <tbody id="readyToSendCasesBody">
+                <tr><td colspan="10" class="text-center">데이터를 불러오는 중입니다...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card" style="margin-top: 16px">
+          <div class="section-header">
+            <h3>4) 고객응답대기(PROPOSED)</h3>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>사진</th>
+                  <th>내부바코드</th>
+                  <th>회원사</th>
+                  <th>상품명</th>
+                  <th>구분</th>
+                  <th>제안금액</th>
+                  <th>제안일</th>
+                  <th>위치</th>
+                  <th>작업</th>
+                </tr>
+              </thead>
+              <tbody id="proposedCasesBody">
                 <tr><td colspan="9" class="text-center">데이터를 불러오는 중입니다...</td></tr>
               </tbody>
             </table>
@@ -73,28 +190,24 @@
 
         <section class="card" style="margin-top: 16px">
           <div class="section-header">
-            <h3>수선 제안 목록</h3>
-            <div class="toolbar">
-              <button id="btnExportCsv" class="btn btn-secondary">CSV 내보내기</button>
-            </div>
+            <h3>5) 진행중(내부/외부 수선중)</h3>
           </div>
-
           <div class="table-wrap">
             <table class="data-table">
               <thead>
                 <tr>
+                  <th>사진</th>
                   <th>내부바코드</th>
                   <th>회원사</th>
                   <th>상품명</th>
                   <th>구분</th>
-                  <th>외주업체</th>
-                  <th>금액(원)</th>
-                  <th>수정자</th>
-                  <th>수정시각</th>
+                  <th>금액</th>
+                  <th>수선상태</th>
+                  <th>위치</th>
                   <th>작업</th>
                 </tr>
               </thead>
-              <tbody id="casesBody">
+              <tbody id="inProgressCasesBody">
                 <tr><td colspan="9" class="text-center">데이터를 불러오는 중입니다...</td></tr>
               </tbody>
             </table>
@@ -106,56 +219,63 @@
     <div id="repairModal" class="modal-overlay hidden">
       <div class="modal-card">
         <div class="modal-header">
-          <h3>수선 제안 등록</h3>
+          <h3 id="repairModalTitle">수선 정보 등록</h3>
           <button id="btnCloseModal" class="btn btn-secondary">닫기</button>
         </div>
-
         <div class="modal-body">
-          <div class="meta-grid">
-            <div><strong>내부바코드</strong><p id="metaBarcode">-</p></div>
-            <div><strong>회원사</strong><p id="metaMember">-</p></div>
-            <div><strong>상품명</strong><p id="metaTitle">-</p></div>
-            <div><strong>예정일시</strong><p id="metaScheduledAt">-</p></div>
+          <div class="modal-item-header">
+            <img id="metaImage" class="modal-item-image" src="/images/no-image.png" alt="상품 사진" />
+            <div class="meta-grid">
+              <div><strong>내부바코드</strong><p id="metaBarcode">-</p></div>
+              <div><strong>회원사</strong><p id="metaMember">-</p></div>
+              <div><strong>상품명</strong><p id="metaTitle">-</p></div>
+              <div><strong>예정일시</strong><p id="metaScheduledAt">-</p></div>
+            </div>
           </div>
 
           <div class="form-grid">
-            <label>수선 구분
+            <label>처리구분
               <select id="decisionType">
-                <option value="INTERNAL">내부수선(내부수선중 존)</option>
-                <option value="EXTERNAL">외부수선(외부수선중 존)</option>
+                <option value="INTERNAL">내부</option>
+                <option value="EXTERNAL">외부</option>
               </select>
             </label>
-            <label>외주 업체
+            <label id="vendorField">외주업체
               <div class="inline-row">
                 <select id="vendorName"></select>
-                <button id="btnAddVendor" type="button" class="btn btn-secondary">업체추가</button>
               </div>
             </label>
-            <label>수선 금액(원)
+            <label id="amountField">견적금액(원)
               <input id="repairAmount" type="number" min="0" step="100" placeholder="예: 35000" />
             </label>
-            <label>내부 메모
+            <label id="etaField">예상일
+              <input id="repairEta" placeholder="예: 3일 / 2026-03-01" />
+            </label>
+            <label id="internalNoteField">내부메모
               <input id="internalNote" placeholder="내부 전용 메모" />
             </label>
           </div>
 
-          <label>수선 내용
+          <p id="externalGuide" class="sheet-guide" style="display: none; margin-top: 0">
+            외부수선은 금액을 직접 입력하지 않습니다. 외주시트전송 후 업체가 입력한 견적을 외주시트동기화로 반영하세요.
+          </p>
+
+          <label>수선요청내용
             <textarea id="repairNote" rows="4" placeholder="수선 내용을 입력하세요"></textarea>
           </label>
-
-          <label>발송 템플릿 (복붙)
+          <label>발송템플릿(복붙)
             <textarea id="proposalText" rows="8" readonly></textarea>
           </label>
         </div>
-
         <div class="modal-footer">
-          <button id="btnCopyTemplate" type="button" class="btn btn-secondary">템플릿 복사</button>
-          <button id="btnSaveRepair" type="button" class="btn btn-primary">저장 후 존 이동</button>
+          <button id="btnCopyTemplate" type="button" class="btn btn-secondary">템플릿복사</button>
+          <button id="btnSaveDraft" type="button" class="btn btn-secondary">수선정보저장</button>
         </div>
       </div>
     </div>
 
     <script src="/js/common.js"></script>
+    <script src="/js/api.js"></script>
     <script src="/js/admin/common.js"></script>
     <script src="/js/admin/repair-management.js"></script>
   </body>

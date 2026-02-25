@@ -112,10 +112,13 @@ async function fetchLiveBids(
 }
 
 // 2차 입찰가 제안
-async function proposeSecondPrice(bidId, secondPrice) {
+async function proposeSecondPrice(bidId, secondPrice, itemId = "") {
+  const payload = { secondPrice };
+  if (itemId) payload.itemId = itemId;
+
   return fetchAPI(`/live-bids/${bidId}/second`, {
     method: "PUT",
-    body: JSON.stringify({ secondPrice }),
+    body: JSON.stringify(payload),
   });
 }
 
@@ -403,6 +406,11 @@ async function updateRecommendSettingsBatch(settings) {
 // 회원 목록 조회
 async function fetchUsers(status = "") {
   return fetchAPI(`/users?status=${status}`);
+}
+
+// 회원관리 VIP TOP 10 조회
+async function fetchUsersVipTop10() {
+  return fetchAPI("/users/vip-top10");
 }
 
 // 특정 회원 조회

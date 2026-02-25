@@ -56,9 +56,6 @@
         <!-- 회원 추가 버튼 -->
         <div class="action-buttons mb-3">
           <button id="addUserBtn" class="btn">새 회원 등록</button>
-          <button id="syncSheetsBtn" class="btn btn-secondary">
-            시트 동기화
-          </button>
         </div>
 
         <div class="member-tabs">
@@ -122,7 +119,7 @@
               <thead>
                 <tr>
                   <th>아이디</th>
-                  <th>회원 구분</th>
+                  <th>회원구분/증빙</th>
                   <th>예치금/한도</th>
                   <th>가입일</th>
                   <th>업체명</th>
@@ -172,6 +169,35 @@
 
         <!-- 비활성화 대상 회원 -->
         <div id="deactivatePanel" class="member-tab-panel">
+          <div class="card member-filter-card" style="margin-top: 16px">
+            <div class="member-filter-row">
+              <div class="member-filter-item">
+                <label for="deactivateStatusFilter">상태</label>
+                <select id="deactivateStatusFilter">
+                  <option value="all">전체</option>
+                  <option value="active" selected>활성</option>
+                  <option value="inactive">비활성</option>
+                </select>
+              </div>
+              <div class="member-filter-item">
+                <label for="deactivateSortField">정렬 기준</label>
+                <select id="deactivateSortField">
+                  <option value="no_bid_days" selected>미입찰 기간</option>
+                  <option value="registration_date">가입일</option>
+                  <option value="company_name">업체명</option>
+                  <option value="login_id">아이디</option>
+                  <option value="last_bid_at">최근입찰일</option>
+                </select>
+              </div>
+              <div class="member-filter-item">
+                <label for="deactivateSortOrder">정렬 방향</label>
+                <select id="deactivateSortOrder">
+                  <option value="desc" selected>내림차순</option>
+                  <option value="asc">오름차순</option>
+                </select>
+              </div>
+            </div>
+          </div>
           <div class="card" style="margin-top: 16px">
             <div class="section-header-row">
               <h3>

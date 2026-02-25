@@ -37,7 +37,9 @@ let boardItems = [];
 let selectedBoardZoneCode = "";
 let boardPollingInFlight = false;
 let boardPollingTimer = null;
-const BOARD_POLL_INTERVAL_MS = 2000;
+let lastBoardRenderSignature = "";
+let selectedDomesticPrefix = "";
+const BOARD_POLL_INTERVAL_MS = 8000;
 const LEADING_ITEM_CODE_RE =
   /^(?:\(\s*\d+(?:[_-]\d+)+\s*\)|\[\s*\d+(?:[_-]\d+)+\s*\]|\d+(?:[_-]\d+)+)\s*/;
 
@@ -233,6 +235,143 @@ function formatDateTimeText(value) {
   return dt.toLocaleString();
 }
 
+function formatYmd(dateLike) {
+  const dt = dateLike instanceof Date ? dateLike : new Date(dateLike);
+  if (Number.isNaN(dt.getTime())) return "";
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, "0");
+  const d = String(dt.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function addDays(base, offset) {
+  const dt = new Date(base);
+  dt.setDate(dt.getDate() + offset);
+  return dt;
+}
+
+function extractBarcodePrefix(barcode) {
+  const raw = String(barcode || "").trim();
+  if (!raw) return "";
+  const noCb = raw.toUpperCase().startsWith("CB-") ? raw.slice(3) : raw;
+  const parts = noCb.split("-").filter(Boolean);
+  if (parts.length >= 2) return `${parts[0]}-${parts[1]}`;
+  return parts[0] || "";
+}
+
+function getRecentDomesticItems() {
+  return (boardItems || []).filter(
+    (item) => normalizeZoneCode(item.current_location_code) === "DOMESTIC_ARRIVAL_ZONE",
+  );
+}
+
+function getFilteredRecentDomesticItems() {
+  const base = getRecentDomesticItems();
+  if (!selectedDomesticPrefix) return base;
+  return base.filter(
+    (item) =>
+      extractBarcodePrefix(item.internal_barcode || item.external_barcode) ===
+      selectedDomesticPrefix,
+  );
+}
+
+function renderDomesticPrefixChips(items) {
+  const node = el("domesticPrefixChips");
+  if (!node) return;
+  const countMap = new Map();
+  items.forEach((item) => {
+    const prefix = extractBarcodePrefix(item.internal_barcode || item.external_barcode);
+    if (!prefix) return;
+    countMap.set(prefix, (countMap.get(prefix) || 0) + 1);
+  });
+  const chips = Array.from(countMap.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([prefix, count]) => ({ prefix, count }));
+
+  if (!chips.length) {
+    node.innerHTML = "";
+    selectedDomesticPrefix = "";
+    return;
+  }
+  if (
+    selectedDomesticPrefix &&
+    !chips.some((chip) => chip.prefix === selectedDomesticPrefix)
+  ) {
+    selectedDomesticPrefix = "";
+  }
+
+  node.innerHTML = `
+    <button
+      type="button"
+      class="domestic-prefix-chip ${selectedDomesticPrefix ? "" : "active"}"
+      data-prefix=""
+    >
+      전체
+    </button>
+    ${chips
+      .map(
+        (chip) => `
+      <button
+        type="button"
+        class="domestic-prefix-chip ${selectedDomesticPrefix === chip.prefix ? "active" : ""}"
+        data-prefix="${escapeHtmlText(chip.prefix)}"
+      >
+        ${escapeHtmlText(chip.prefix)}- (${chip.count})
+      </button>
+    `,
+      )
+      .join("")}
+  `;
+
+  node.querySelectorAll(".domestic-prefix-chip").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      selectedDomesticPrefix = btn.dataset.prefix || "";
+      renderRecentDomesticSection();
+    });
+  });
+}
+
+function renderRecentDomesticList(items) {
+  const node = el("recentDomesticList");
+  if (!node) return;
+  if (!items.length) {
+    node.innerHTML = '<div class="recent-domestic-empty">해당 조건의 국내도착 물건이 없습니다.</div>';
+    return;
+  }
+  const sorted = [...items].sort(
+    (a, b) =>
+      new Date(b.domestic_arrived_at || b.updated_at || 0).getTime() -
+      new Date(a.domestic_arrived_at || a.updated_at || 0).getTime(),
+  );
+  node.innerHTML = sorted
+    .map((item) => {
+      const barcode = item.internal_barcode || item.external_barcode || "-";
+      const lotNo = item.product_item_no || "-";
+      return `
+      <div class="recent-domestic-item">
+        <img
+          class="recent-domestic-photo"
+          src="${escapeHtmlText(item.product_image || "/images/no-image.png")}"
+          alt="상품 사진"
+          loading="lazy"
+        />
+        <div class="recent-domestic-meta">
+          <div class="recent-domestic-title">${escapeHtmlText(item.product_title || "-")}</div>
+          <div class="recent-domestic-line"><strong>내부바코드:</strong> ${escapeHtmlText(barcode)}</div>
+          <div class="recent-domestic-line"><strong>품번:</strong> ${escapeHtmlText(lotNo)}</div>
+        </div>
+      </div>
+      `;
+    })
+    .join("");
+}
+
+function renderRecentDomesticSection() {
+  const baseItems = getRecentDomesticItems();
+  renderDomesticPrefixChips(baseItems);
+  renderRecentDomesticList(getFilteredRecentDomesticItems());
+}
+
 function formatElapsedHours(value) {
   if (!value) return "-";
   const dt = new Date(value);
@@ -314,20 +453,42 @@ function updateBoardFilterHint() {
 
 async function loadBoard() {
   const data = await api(`/api/wms/board?_ts=${Date.now()}`);
-  boardItems = data.items || [];
+  const nextBoardItems = data.items || [];
   const board = data.board || [];
+  const nextSignature = JSON.stringify({
+    board: board.map((z) => [z.code, Number(z.count || 0)]),
+    items: nextBoardItems.map((i) => [
+      i.id,
+      i.current_location_code,
+      i.current_status,
+      i.internal_barcode || i.external_barcode || "",
+      i.updated_at || "",
+      i.last_scan_at || "",
+      i.domestic_arrived_at || "",
+    ]),
+  });
+
+  boardItems = nextBoardItems;
   if (
     selectedBoardZoneCode &&
     !board.some((z) => z.code === selectedBoardZoneCode)
   ) {
     selectedBoardZoneCode = "";
   }
+
+  if (nextSignature === lastBoardRenderSignature) {
+    return;
+  }
+  lastBoardRenderSignature = nextSignature;
+
   renderBoard(board);
   renderItems(getFilteredBoardItems());
   updateBoardFilterHint();
+  renderRecentDomesticSection();
 }
 
 async function refreshBoardSafely() {
+  if (document.hidden) return;
   if (boardPollingInFlight) return;
   boardPollingInFlight = true;
   try {
@@ -807,6 +968,7 @@ async function scanItem() {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
+  renderRecentDomesticSection();
   if (el("searchScheduledDate")) {
     el("searchScheduledDate").value = todayYmd();
   }

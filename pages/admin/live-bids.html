@@ -91,7 +91,7 @@
         </div>
 
         <div id="processingZoneSummary" class="processing-zone-summary" style="display: none">
-          <div class="title">작업중 존별 현황</div>
+          <div class="title">존별 현황</div>
           <div id="processingZoneGrid" class="processing-zone-grid"></div>
         </div>
 
@@ -152,6 +152,12 @@
                 <option value="5">5번</option>
               </select>
             </div>
+            <div class="filter-group" id="firstDateFilterGroup" style="display: none">
+              <label for="firstDateFilter">1차 예정일</label>
+              <select id="firstDateFilter" class="form-control form-control-sm">
+                <option value="">전체</option>
+              </select>
+            </div>
             <div class="filter-actions">
               <button id="applyDateFilter" class="btn btn-sm">적용</button>
               <button id="resetDateFilter" class="btn btn-sm btn-ghost">초기화</button>
@@ -204,6 +210,8 @@
         </div>
         <div class="modal-body">
           <input type="hidden" id="bidId" />
+          <input type="hidden" id="secondPriceItemId" />
+          <p class="form-help" id="secondPriceTargetInfo">상품 단위로 일괄 제안됩니다.</p>
           <div class="form-group">
             <label class="form-label" for="secondPrice">2차 제안가</label>
             <input
@@ -467,6 +475,53 @@
             신청 취소
           </button>
           <button class="btn" id="submitRepair">접수하기</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="liveProductDetailModal">
+      <div class="modal-dialog live-detail-modal">
+        <div class="modal-header">
+          <h3 class="modal-title">상품 상세</h3>
+          <button class="close-modal">&times;</button>
+        </div>
+        <div class="modal-body live-detail-body">
+          <div class="live-detail-left">
+            <div class="live-detail-main-image-wrap" id="liveDetailMainImageWrap">
+              <button type="button" class="live-detail-nav prev" id="liveDetailPrevBtn">&lt;</button>
+              <img id="liveDetailMainImage" class="live-detail-main-image" src="/images/no-image.png" alt="상품 이미지" />
+              <button type="button" class="live-detail-nav next" id="liveDetailNextBtn">&gt;</button>
+            </div>
+            <div id="liveDetailThumbs" class="live-detail-thumbs"></div>
+          </div>
+          <div class="live-detail-info">
+            <input type="hidden" id="liveDetailBidId" />
+            <input type="hidden" id="liveDetailQuickItemId" />
+            <div class="live-detail-row"><strong>상품ID</strong><span id="liveDetailItemId">-</span></div>
+            <div class="live-detail-row"><strong>제목</strong><span id="liveDetailTitle">-</span></div>
+            <div class="live-detail-row"><strong>브랜드</strong><span id="liveDetailBrand">-</span></div>
+            <div class="live-detail-row"><strong>카테고리</strong><span id="liveDetailCategory">-</span></div>
+            <div class="live-detail-row"><strong>등급</strong><span id="liveDetailRank">-</span></div>
+            <div class="live-detail-row"><strong>예정일시</strong><span id="liveDetailScheduled">-</span></div>
+            <div class="live-detail-row"><strong>액세서리코드</strong><span id="liveDetailAccessoryCode">-</span></div>
+            <div class="live-detail-row"><strong>설명</strong><span id="liveDetailDescription">-</span></div>
+            <div class="live-detail-row"><strong>원본링크</strong><a id="liveDetailOriginLink" href="#" target="_blank" rel="noopener noreferrer">열기</a></div>
+            <div class="live-detail-quick-propose" id="liveDetailQuickProposeBox">
+              <div class="live-detail-quick-title">2차 제안 바로 등록</div>
+              <p class="live-detail-quick-target" id="liveDetailQuickTargetText">상품 단위로 일괄 적용됩니다.</p>
+              <div class="live-detail-quick-controls">
+                <input
+                  type="number"
+                  id="liveDetailSecondPrice"
+                  class="form-control form-control-sm"
+                  placeholder="2차 제안가 입력" />
+                <button type="button" class="btn btn-sm" id="liveDetailSubmitSecondPrice">2차 제안</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary close-modal">닫기</button>
         </div>
       </div>
     </div>

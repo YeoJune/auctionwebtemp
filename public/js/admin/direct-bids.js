@@ -49,6 +49,10 @@ const DIRECT_WORKFLOW_STATUSES = [
   "processing",
   "shipped",
 ];
+const DIRECT_ZONE_SUMMARY_VISIBLE_STATUSES = new Set([
+  "domestic_arrived",
+  "processing",
+]);
 
 function getDirectNextStatus(status) {
   return DIRECT_NEXT_STATUS[status] || null;
@@ -93,16 +97,22 @@ function getDirectProcessingStatusLabel(bid) {
 function renderProcessingZoneSummary(bids) {
   const wrap = document.getElementById("processingZoneSummary");
   const grid = document.getElementById("processingZoneGrid");
+  const title = wrap?.querySelector(".title");
   if (!wrap || !grid) return;
 
-  if (currentStatus !== "processing") {
+  if (!DIRECT_ZONE_SUMMARY_VISIBLE_STATUSES.has(currentStatus)) {
+    currentProcessingZoneCode = "";
     wrap.style.display = "none";
     grid.innerHTML = "";
     return;
   }
 
+  if (title) {
+    const label = currentStatus ? getDirectStatusLabel(currentStatus) : "전체";
+    title.textContent = `${label} 존별 현황`;
+  }
+
   const zoneCountMap = (bids || []).reduce((acc, bid) => {
-    if (bid.shipping_status !== "processing") return acc;
     const code = bid.wms_location_code || "UNKNOWN_ZONE";
     acc[code] = (acc[code] || 0) + 1;
     return acc;
@@ -111,7 +121,7 @@ function renderProcessingZoneSummary(bids) {
   const entries = Object.entries(zoneCountMap).sort((a, b) => b[1] - a[1]);
   if (!entries.length) {
     wrap.style.display = "block";
-    grid.innerHTML = `<div class="processing-zone-item"><div class="name">작업중 데이터 없음</div><div class="count">0</div></div>`;
+    grid.innerHTML = `<div class="processing-zone-item"><div class="name">존 데이터 없음</div><div class="count">0</div></div>`;
     return;
   }
 
@@ -156,7 +166,6 @@ let currentProcessingZoneCode = "";
 let from; // 필터 상태에 따라 데이터 로드
 async function filterByStatus(status) {
   currentStatus = status;
-  if (currentStatus !== "processing") currentProcessingZoneCode = "";
   updateBulkShipButtonLabel();
   currentPage = 1;
   updateURLState();
@@ -192,6 +201,8 @@ let searchTimeout = null;
 
 // 현재 표시된 직접경매 데이터 저장 (실시간 업데이트용)
 let currentDirectBidsData = [];
+let directDetailImages = [];
+let directDetailImageIndex = 0;
 
 // 실시간 업데이트 매니저 (products.js RealtimeManager 패턴 참고)
 const DirectBidsRealtimeManager = (function () {
@@ -384,7 +395,6 @@ document.addEventListener("DOMContentLoaded", function () {
     button.addEventListener("click", function () {
       const status = this.dataset.status;
       currentStatus = status;
-      if (currentStatus !== "processing") currentProcessingZoneCode = "";
       updateBulkShipButtonLabel();
       currentPage = 1;
       updateURLState();
@@ -638,7 +648,7 @@ async function loadDirectBids() {
     if (!filteredBids.length) {
       showNoData(
         "directBidsTableBody",
-        "선택한 존의 작업중 데이터가 없습니다.",
+        "선택한 존의 데이터가 없습니다.",
       );
     } else {
       renderDirectBidsTable(filteredBids);
@@ -663,8 +673,7 @@ async function loadDirectBids() {
 }
 
 function filterDirectBidsByZone(bids) {
-  if (currentStatus !== "processing" || !currentProcessingZoneCode)
-    return bids || [];
+  if (!currentProcessingZoneCode) return bids || [];
   return (bids || []).filter(
     (bid) =>
       (bid.wms_location_code || "UNKNOWN_ZONE") === currentProcessingZoneCode,
@@ -836,11 +845,16 @@ function renderDirectBidsTable(directBids) {
 
     // auc_num을 이용한, 적절한 URL 생성
     let itemUrl = "#";
+    let additionalInfo = {};
+    if (bid.item?.additional_info) {
+      try {
+        additionalInfo = JSON.parse(bid.item.additional_info);
+      } catch (e) {
+        additionalInfo = {};
+      }
+    }
     if (bid.item && bid.item.auc_num && linkFunc[bid.item.auc_num]) {
-      itemUrl = linkFunc[bid.item.auc_num](
-        bid.item_id,
-        JSON.parse(bid.item.additional_info),
-      );
+      itemUrl = linkFunc[bid.item.auc_num](bid.item_id, additionalInfo);
     }
 
     // additional_info에서 itemNo 추출 (1번 경매장인 경우)
@@ -888,7 +902,26 @@ function renderDirectBidsTable(directBids) {
       <div class="item-info">
         <img src="${imageUrl}" alt="${itemTitle}" class="item-thumbnail" />
         <div class="item-details">
-          <div><a href="${itemUrl}" target="_blank">${bid.item_id}</a></div>
+          <div>
+            <a
+              href="${escapeHtml(itemUrl)}"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="item-id-link"
+              onclick="return openDirectProductDetail(event, this);"
+              data-item-id="${escapeHtml(bid.item_id || "")}"
+              data-bid-status="${escapeHtml(bid.status || "")}"
+              data-auc-num="${escapeHtml(bid.item?.auc_num || "")}"
+              data-image="${escapeHtml(imageUrl)}"
+              data-title="${escapeHtml(itemTitle || "-")}"
+              data-brand="${escapeHtml(itemBrand || "-")}"
+              data-category="${escapeHtml(itemCategory || "-")}"
+              data-rank="${escapeHtml(itemRank || "-")}"
+              data-accessory-code="${escapeHtml(bid.item?.accessory_code || "-")}"
+              data-scheduled="${escapeHtml(scheduledDate || "-")}"
+              data-origin-url="${escapeHtml(itemUrl || "#")}"
+            >${escapeHtml(bid.item_id || "-")}</a>
+          </div>
           <div class="item-meta">
             <span>내부바코드: ${bid.internal_barcode || "-"}</span>
             ${itemNo ? `<span>품번: ${itemNo}</span>` : ""}
@@ -939,6 +972,195 @@ function renderDirectBidsTable(directBids) {
 
   tableBody.innerHTML = html;
   addCheckboxEventListeners();
+}
+
+function setDirectDetailText(id, value) {
+  const node = document.getElementById(id);
+  if (!node) return;
+  node.textContent = value || "-";
+}
+
+function setDirectDetailImage(src) {
+  const img = document.getElementById("directDetailMainImage");
+  if (!img) return;
+  img.classList.remove("zoom-active");
+  img.style.transformOrigin = "center center";
+  img.src = src || "/images/no-image.png";
+}
+
+function setDirectDetailOrigin(url) {
+  const link = document.getElementById("directDetailOriginLink");
+  if (!link) return;
+  const safeUrl = url && url !== "#" ? url : "";
+  link.href = safeUrl || "#";
+  link.style.pointerEvents = safeUrl ? "auto" : "none";
+  link.style.opacity = safeUrl ? "1" : "0.5";
+}
+
+function applyDirectDetailData(data = {}) {
+  setDirectDetailText("directDetailItemId", data.itemId || "-");
+  setDirectDetailText("directDetailTitle", data.title || "-");
+  setDirectDetailText("directDetailBrand", data.brand || "-");
+  setDirectDetailText("directDetailCategory", data.category || "-");
+  setDirectDetailText("directDetailRank", data.rank || "-");
+  setDirectDetailText("directDetailScheduled", data.scheduled || "-");
+  setDirectDetailText("directDetailAccessoryCode", data.accessoryCode || "-");
+  setDirectDetailText("directDetailDescription", data.description || "-");
+  setDirectDetailOrigin(data.originUrl || "#");
+  setDirectDetailImage(data.image || "/images/no-image.png");
+}
+
+function renderDirectDetailThumbs() {
+  const wrap = document.getElementById("directDetailThumbs");
+  if (!wrap) return;
+  wrap.innerHTML = "";
+  directDetailImages.forEach((src, idx) => {
+    const activeClass = idx === directDetailImageIndex ? "active" : "";
+    wrap.insertAdjacentHTML(
+      "beforeend",
+      `
+        <button type="button" class="live-detail-thumb ${activeClass}" data-index="${idx}">
+          <img src="${escapeHtml(src)}" alt="썸네일 ${idx + 1}" />
+        </button>
+      `,
+    );
+  });
+  wrap.querySelectorAll(".live-detail-thumb").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const idx = Number(btn.dataset.index || 0);
+      showDirectDetailImageAt(idx);
+    });
+  });
+}
+
+function updateDirectDetailNavState() {
+  const prevBtn = document.getElementById("directDetailPrevBtn");
+  const nextBtn = document.getElementById("directDetailNextBtn");
+  if (prevBtn) prevBtn.disabled = directDetailImageIndex <= 0;
+  if (nextBtn) nextBtn.disabled = directDetailImageIndex >= directDetailImages.length - 1;
+}
+
+function showDirectDetailImageAt(index) {
+  if (!directDetailImages.length) return;
+  if (index < 0 || index >= directDetailImages.length) return;
+  directDetailImageIndex = index;
+  setDirectDetailImage(directDetailImages[directDetailImageIndex]);
+  renderDirectDetailThumbs();
+  updateDirectDetailNavState();
+}
+
+function setDirectDetailImages(images) {
+  const normalized = Array.isArray(images)
+    ? images.filter((x) => String(x || "").trim())
+    : [];
+  directDetailImages = normalized.length ? normalized : ["/images/no-image.png"];
+  directDetailImageIndex = 0;
+  showDirectDetailImageAt(0);
+}
+
+function bindDirectDetailGalleryControls() {
+  document.getElementById("directDetailPrevBtn")?.addEventListener("click", () => {
+    showDirectDetailImageAt(directDetailImageIndex - 1);
+  });
+  document.getElementById("directDetailNextBtn")?.addEventListener("click", () => {
+    showDirectDetailImageAt(directDetailImageIndex + 1);
+  });
+}
+
+function bindDirectDetailImageZoomControls() {
+  const wrap = document.getElementById("directDetailMainImageWrap");
+  const img = document.getElementById("directDetailMainImage");
+  if (!wrap || !img) return;
+
+  const setZoomByPointer = (event) => {
+    const rect = wrap.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const x = Math.max(0, Math.min(event.clientX - rect.left, rect.width));
+    const y = Math.max(0, Math.min(event.clientY - rect.top, rect.height));
+    const xPct = (x / rect.width) * 100;
+    const yPct = (y / rect.height) * 100;
+    img.style.transformOrigin = `${xPct}% ${yPct}%`;
+  };
+
+  wrap.addEventListener("mouseenter", () => {
+    if (!window.matchMedia("(hover: hover)").matches) return;
+    img.classList.add("zoom-active");
+  });
+
+  wrap.addEventListener("mousemove", (event) => {
+    if (!img.classList.contains("zoom-active")) return;
+    setZoomByPointer(event);
+  });
+
+  wrap.addEventListener("mouseleave", () => {
+    img.classList.remove("zoom-active");
+    img.style.transformOrigin = "center center";
+  });
+}
+
+async function openDirectProductDetail(event, anchorEl) {
+  if (event) event.preventDefault();
+  const anchor = anchorEl;
+  if (!anchor) return false;
+
+  const itemId = String(anchor.dataset.itemId || "").trim();
+  const aucNum = String(anchor.dataset.aucNum || "").trim();
+  const modal = window.setupModal("directProductDetailModal");
+  if (!modal || !itemId) return false;
+
+  applyDirectDetailData({
+    itemId,
+    title: anchor.dataset.title || "-",
+    brand: anchor.dataset.brand || "-",
+    category: anchor.dataset.category || "-",
+    rank: anchor.dataset.rank || "-",
+    accessoryCode: anchor.dataset.accessoryCode || "-",
+    scheduled: anchor.dataset.scheduled || "-",
+    description: "상세 정보를 불러오는 중입니다...",
+    image: anchor.dataset.image || "/images/no-image.png",
+    originUrl: anchor.dataset.originUrl || "#",
+  });
+  setDirectDetailImages([anchor.dataset.image || "/images/no-image.png"]);
+  modal.show();
+
+  try {
+    const detail = await window.API.fetchAPI(`/detail/item-details/${encodeURIComponent(itemId)}`, {
+      method: "POST",
+      body: JSON.stringify({ aucNum, translateDescription: "ko" }),
+    });
+
+    let detailImage = detail?.image || anchor.dataset.image || "/images/no-image.png";
+    let detailImages = [detailImage];
+    if (detail?.additional_images) {
+      try {
+        const extra = JSON.parse(detail.additional_images);
+        if (Array.isArray(extra) && extra.length > 0 && extra[0]) {
+          detailImage = extra[0];
+          detailImages = [detailImage, ...extra.slice(1)];
+        }
+      } catch (e) {
+        // ignore json parse error
+      }
+    }
+    setDirectDetailImages(detailImages);
+
+    applyDirectDetailData({
+      itemId,
+      title: detail?.title || anchor.dataset.title || "-",
+      brand: detail?.brand || anchor.dataset.brand || "-",
+      category: detail?.category || anchor.dataset.category || "-",
+      rank: detail?.rank || anchor.dataset.rank || "-",
+      accessoryCode: detail?.accessory_code || anchor.dataset.accessoryCode || "-",
+      scheduled: detail?.scheduled_date ? formatDateTime(detail.scheduled_date, true) : anchor.dataset.scheduled || "-",
+      description: detail?.description_ko || detail?.description || "설명 정보가 없습니다.",
+      image: detailImage,
+      originUrl: anchor.dataset.originUrl || "#",
+    });
+  } catch (error) {
+    console.error("상품 상세 조회 실패:", error);
+    setDirectDetailText("directDetailDescription", "상세 정보를 불러오지 못했습니다.");
+  }
+  return false;
 }
 
 function addCheckboxEventListeners() {
@@ -1613,3 +1835,6 @@ document
 document
   .getElementById("cancelRepair")
   ?.addEventListener("click", cancelRepair);
+
+bindDirectDetailGalleryControls();
+bindDirectDetailImageZoomControls();

@@ -4,6 +4,21 @@ const router = express.Router();
 const { pool } = require("../utils/DB");
 const { isAdminUser } = require("../utils/adminAuth");
 
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+let executiveSummaryCache = {
+  data: null,
+  expiresAt: 0,
+};
+let executiveSummaryInFlight = null;
+
+function getNextKstMidnightTimestamp(baseTs = Date.now()) {
+  const kstNow = new Date(baseTs + KST_OFFSET_MS);
+  const y = kstNow.getUTCFullYear();
+  const m = kstNow.getUTCMonth();
+  const d = kstNow.getUTCDate();
+  return Date.UTC(y, m, d + 1, 0, 0, 0) - KST_OFFSET_MS;
+}
+
 // 관리자 권한 확인 미들웨어
 const isAdmin = (req, res, next) => {
   if (isAdminUser(req.session?.user)) {
@@ -370,11 +385,45 @@ router.get("/active-users", isAdmin, async (req, res) => {
 
 // CEO 대시보드 요약 (완료 매출/VIP/이탈위험)
 router.get("/executive-summary", isAdmin, async (req, res) => {
-  const connection = await pool.getConnection();
+  const now = Date.now();
+  if (executiveSummaryCache.data && executiveSummaryCache.expiresAt > now) {
+    return res.status(200).json(executiveSummaryCache.data);
+  }
+
+  if (executiveSummaryInFlight) {
+    try {
+      await executiveSummaryInFlight;
+    } catch (_) {
+      // ignore and try rebuilding below
+    }
+    if (
+      executiveSummaryCache.data &&
+      executiveSummaryCache.expiresAt > Date.now()
+    ) {
+      return res.status(200).json(executiveSummaryCache.data);
+    }
+  }
+
+  let releaseInFlight = null;
+  executiveSummaryInFlight = new Promise((resolve) => {
+    releaseInFlight = resolve;
+  });
+
+  let connection;
   const revenueStatuses = "'completed'";
   const targetYear = 2026;
 
   try {
+    connection = await pool.getConnection();
+    const safeQuery = async (sql, params = []) => {
+      try {
+        return await connection.query(sql, params);
+      } catch (error) {
+        console.error("[executive-summary] query failed:", error.message);
+        return [[]];
+      }
+    };
+
     const calcBusinessDays = (dateValue) => {
       if (!dateValue) return 0;
       const start = new Date(dateValue);
@@ -393,7 +442,7 @@ router.get("/executive-summary", isAdmin, async (req, res) => {
       return days;
     };
 
-    const [countsRows] = await connection.query(
+    const [countsRows] = await safeQuery(
       `
       SELECT
         SUM(CASE WHEN src = 'live' THEN 1 ELSE 0 END) AS liveCount,
@@ -416,7 +465,7 @@ router.get("/executive-summary", isAdmin, async (req, res) => {
       [targetYear, targetYear],
     );
 
-    const [settlementYearRows] = await connection.query(
+    const [settlementYearRows] = await safeQuery(
       `
       SELECT
         COALESCE(SUM(ds.total_amount), 0) AS yearRevenueKrw,
@@ -429,7 +478,7 @@ router.get("/executive-summary", isAdmin, async (req, res) => {
       [targetYear],
     );
 
-    const [settlementCurrentMonthRows] = await connection.query(`
+    const [settlementCurrentMonthRows] = await safeQuery(`
       SELECT
         COALESCE(SUM(ds.total_amount), 0) AS monthRevenueKrw
       FROM daily_settlements ds
@@ -438,7 +487,7 @@ router.get("/executive-summary", isAdmin, async (req, res) => {
         AND ds.total_amount > 0
     `);
 
-    const [monthlyCountRows] = await connection.query(`
+    const [monthlyCountRows] = await safeQuery(`
       SELECT
         COUNT(*) AS monthlyCompletedCount
       FROM (
@@ -455,7 +504,7 @@ router.get("/executive-summary", isAdmin, async (req, res) => {
       WHERE x.event_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)
     `);
 
-    const [noBidRows] = await connection.query(`
+    const [noBidRows] = await safeQuery(`
       SELECT
         u.id AS user_id,
         COALESCE(u.login_id, CONCAT('user#', u.id)) AS login_id,
@@ -473,7 +522,7 @@ router.get("/executive-summary", isAdmin, async (req, res) => {
       ORDER BY u.created_at ASC
       LIMIT 200
     `);
-    const [vipRows] = await connection.query(`
+    const [vipRows] = await safeQuery(`
       SELECT
         ds.user_id,
         COALESCE(u.login_id, CONCAT('user#', ds.user_id)) AS login_id,
@@ -489,7 +538,7 @@ router.get("/executive-summary", isAdmin, async (req, res) => {
       LIMIT 10
     `);
 
-    const [sixMonthRows] = await connection.query(`
+    const [sixMonthRows] = await safeQuery(`
       SELECT
         DATE_FORMAT(ds.settlement_date, '%Y-%m') AS ym,
         COALESCE(SUM(ds.total_amount), 0) AS revenueKrw
@@ -499,7 +548,7 @@ router.get("/executive-summary", isAdmin, async (req, res) => {
       ORDER BY ym ASC
     `);
 
-    const [pendingDomesticRows] = await connection.query(`
+    const [pendingDomesticRows] = await safeQuery(`
       SELECT
         DATE(z.completed_at) AS completed_date,
         z.auc_num,
@@ -590,7 +639,7 @@ router.get("/executive-summary", isAdmin, async (req, res) => {
       };
     });
 
-    res.status(200).json({
+    const payload = {
       completedCount,
       totalRevenueKrw: yearRevenueKrw,
       targetYear,
@@ -619,10 +668,119 @@ router.get("/executive-summary", isAdmin, async (req, res) => {
           revenueKrw: directRevenueEstimate,
         },
       },
-    });
+    };
+
+    executiveSummaryCache = {
+      data: payload,
+      expiresAt: getNextKstMidnightTimestamp(Date.now()),
+    };
+
+    res.status(200).json(payload);
   } catch (err) {
     console.error("Error fetching executive summary:", err);
+    if (executiveSummaryCache.data) {
+      return res.status(200).json(executiveSummaryCache.data);
+    }
     res.status(500).json({ message: "Error fetching executive summary" });
+  } finally {
+    if (connection) connection.release();
+    if (typeof releaseInFlight === "function") {
+      releaseInFlight();
+    }
+    executiveSummaryInFlight = null;
+  }
+});
+
+// 완료됨 기준 국내도착 미반영 상세 아이템 조회
+router.get("/pending-domestic-items", isAdmin, async (req, res) => {
+  const connection = await pool.getConnection();
+  try {
+    const completedDate = String(req.query?.date || "").trim();
+    const aucNumRaw = String(req.query?.aucNum || "").trim();
+
+    if (!completedDate) {
+      return res
+        .status(400)
+        .json({ message: "date(YYYY-MM-DD) 파라미터가 필요합니다." });
+    }
+
+    const where = ["DATE(z.completed_at) = DATE(?)"];
+    const params = [completedDate];
+
+    if (aucNumRaw && aucNumRaw !== "-" && aucNumRaw.toLowerCase() !== "null") {
+      where.push("CAST(z.auc_num AS CHAR) = ?");
+      params.push(aucNumRaw);
+    }
+
+    const [rows] = await connection.query(
+      `
+      SELECT
+        z.bid_type AS bidType,
+        z.bid_id AS bidId,
+        z.item_id AS itemId,
+        z.auc_num AS aucNum,
+        z.completed_at AS completedAt,
+        COALESCE(ci.original_title, ci.title) AS productTitle,
+        COALESCE(u.company_name, '-') AS companyName,
+        COALESCE(
+          NULLIF(TRIM(wi.internal_barcode), ''),
+          NULLIF(TRIM(wi.external_barcode), ''),
+          '-'
+        ) AS internalBarcode
+      FROM (
+        SELECT
+          'live' AS bid_type,
+          l.id AS bid_id,
+          l.item_id,
+          l.user_id,
+          i.auc_num,
+          COALESCE(l.completed_at, l.updated_at, l.created_at) AS completed_at
+        FROM live_bids l
+        LEFT JOIN crawled_items i
+          ON CONVERT(i.item_id USING utf8mb4) = CONVERT(l.item_id USING utf8mb4)
+        WHERE l.status = 'completed'
+          AND l.shipping_status = 'completed'
+        UNION ALL
+        SELECT
+          'direct' AS bid_type,
+          d.id AS bid_id,
+          d.item_id,
+          d.user_id,
+          i.auc_num,
+          COALESCE(d.completed_at, d.updated_at, d.created_at) AS completed_at
+        FROM direct_bids d
+        LEFT JOIN crawled_items i
+          ON CONVERT(i.item_id USING utf8mb4) = CONVERT(d.item_id USING utf8mb4)
+        WHERE d.status = 'completed'
+          AND d.shipping_status = 'completed'
+      ) z
+      LEFT JOIN users u
+        ON u.id = z.user_id
+      LEFT JOIN crawled_items ci
+        ON CONVERT(ci.item_id USING utf8mb4) = CONVERT(z.item_id USING utf8mb4)
+      LEFT JOIN wms_items wi
+        ON (
+          (wi.source_bid_type = z.bid_type AND wi.source_bid_id = z.bid_id)
+          OR CONVERT(wi.source_item_id USING utf8mb4) = CONVERT(z.item_id USING utf8mb4)
+        )
+      WHERE ${where.join(" AND ")}
+      ORDER BY z.completed_at DESC, z.bid_type ASC, z.bid_id DESC
+      LIMIT 500
+      `,
+      params,
+    );
+
+    res.status(200).json({
+      items: rows || [],
+      summary: {
+        date: completedDate,
+        aucNum: aucNumRaw || "-",
+        total: Number(rows?.length || 0),
+      },
+    });
+  } catch (err) {
+    console.error("Error fetching pending domestic detail items:", err);
+    res.status(500).json({ message: "상세 목록 조회 중 오류가 발생했습니다." });
   } finally {
     connection.release();
   }
