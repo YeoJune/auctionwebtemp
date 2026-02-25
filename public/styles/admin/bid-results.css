@@ -903,6 +903,11 @@
   color: #dc3545 !important;
 }
 
+.text-primary {
+  color: #0071e3 !important;
+  font-weight: 600;
+}
+
 /* 배지 스타일 */
 .badge {
   display: inline-block;

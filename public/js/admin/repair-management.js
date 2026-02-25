@@ -1,4 +1,5 @@
 const CASE_STATE = {
+  ARRIVED: "ARRIVED",
   DRAFT: "DRAFT",
   READY_TO_SEND: "READY_TO_SEND",
   PROPOSED: "PROPOSED",
@@ -8,12 +9,29 @@ const CASE_STATE = {
 };
 
 const CASE_STATE_LABEL = {
+  ARRIVED: "국내도착/분기대기",
   DRAFT: "시트전송완료/견적대기",
   READY_TO_SEND: "견적완료/고객전송대기",
   PROPOSED: "고객응답대기",
   ACCEPTED: "진행중",
   REJECTED: "거절",
   DONE: "완료",
+};
+
+const REPAIR_STAGE = {
+  DOMESTIC: "DOMESTIC",
+  EXTERNAL_WAITING: "EXTERNAL_WAITING",
+  READY_TO_SEND: "READY_TO_SEND",
+  PROPOSED: "PROPOSED",
+  IN_PROGRESS: "IN_PROGRESS",
+};
+
+const REPAIR_STAGE_LABEL = {
+  [REPAIR_STAGE.DOMESTIC]: "1) 국내도착",
+  [REPAIR_STAGE.EXTERNAL_WAITING]: "2) 시트전송완료/견적대기",
+  [REPAIR_STAGE.READY_TO_SEND]: "3) 견적완료/고객전송대기",
+  [REPAIR_STAGE.PROPOSED]: "4) 고객응답대기",
+  [REPAIR_STAGE.IN_PROGRESS]: "5) 진행중",
 };
 
 const LOCATION_LABEL = {
@@ -35,6 +53,8 @@ const state = {
 let autoQuoteSyncInFlight = false;
 let autoQuoteSyncTimer = null;
 const AUTO_QUOTE_SYNC_INTERVAL_MS = 8000;
+let detailImages = [];
+let detailImageIndex = 0;
 
 function el(id) {
   return document.getElementById(id);
@@ -139,6 +159,64 @@ function imageTag(src, title) {
   return `<img class="table-thumb" src="${escapeHtml(safeSrc)}" alt="${escapeHtml(title || "상품")}">`;
 }
 
+function parseAdditionalInfo(raw) {
+  if (!raw) return {};
+  if (typeof raw === "object") return raw;
+  try {
+    return JSON.parse(raw);
+  } catch (_) {
+    return {};
+  }
+}
+
+function buildOriginLink(itemId, aucNum, additionalInfoRaw) {
+  const item = String(itemId || "").trim();
+  const auctionNo = Number(aucNum);
+  if (!item || !auctionNo) return "#";
+  const additionalInfo = parseAdditionalInfo(additionalInfoRaw);
+  if (auctionNo === 1) {
+    return `https://www.ecoauc.com/client/auction-items/view/${item}`;
+  }
+  if (auctionNo === 2) {
+    return `https://bid.brand-auc.com/items/detail?uketsukeBng=${item}`;
+  }
+  if (auctionNo === 3) {
+    return `https://www.starbuyers-global-auction.com/item/${item}`;
+  }
+  if (auctionNo === 4) {
+    return `https://auction.mekiki.ai/en/auction/${additionalInfo?.event_id || ""}/${item}`;
+  }
+  if (auctionNo === 5) {
+    return `https://penguin-auction.jp/product/detail/${item}/`;
+  }
+  return "#";
+}
+
+function renderItemOpenButton(row, text) {
+  const sourceItemId = String(row?.source_item_id || "").trim();
+  const label = escapeHtml(text || "-");
+  if (!sourceItemId) return label;
+  const originUrl = buildOriginLink(sourceItemId, row?.auc_num, row?.additional_info);
+  return `
+    <button
+      type="button"
+      class="item-open-link js-open-item-detail"
+      data-item-id="${escapeHtml(sourceItemId)}"
+      data-auc-num="${escapeHtml(row?.auc_num || "")}"
+      data-title="${escapeHtml(row?.product_title || "-")}"
+      data-brand="${escapeHtml(row?.brand || "-")}"
+      data-category="${escapeHtml(row?.category || "-")}"
+      data-rank="${escapeHtml(row?.rank || "-")}"
+      data-accessory-code="${escapeHtml(row?.accessory_code || "-")}"
+      data-scheduled="${escapeHtml(formatDateTime(row?.scheduled_at))}"
+      data-image="${escapeHtml(row?.product_image || "/images/no-image.png")}"
+      data-origin-url="${escapeHtml(originUrl)}"
+    >
+      ${label}
+    </button>
+  `;
+}
+
 const LEADING_ITEM_CODE_RE =
   /^(?:\(\s*\d+(?:[_-]\d+)+\s*\)|\[\s*\d+(?:[_-]\d+)+\s*\]|\d+(?:[_-]\d+)+)\s*/;
 
@@ -173,6 +251,53 @@ function getArrivalCaseInfo(row) {
   return getCaseByItemId(row.id) || row;
 }
 
+function getRepairStageCode(row = {}) {
+  const caseState = String(row.case_state || "").trim().toUpperCase();
+  const decisionType = String(row.decision_type || "").trim().toUpperCase();
+  const zoneCode = String(row.current_location_code || "").trim().toUpperCase();
+
+  if (
+    ["INTERNAL_REPAIR_ZONE", "EXTERNAL_REPAIR_ZONE", "REPAIR_DONE_ZONE", "OUTBOUND_ZONE"].includes(zoneCode) ||
+    [CASE_STATE.ACCEPTED, CASE_STATE.DONE].includes(caseState)
+  ) {
+    return REPAIR_STAGE.IN_PROGRESS;
+  }
+  if (caseState === CASE_STATE.PROPOSED) return REPAIR_STAGE.PROPOSED;
+  if ([CASE_STATE.READY_TO_SEND, CASE_STATE.REJECTED].includes(caseState)) {
+    return REPAIR_STAGE.READY_TO_SEND;
+  }
+  if (decisionType === "EXTERNAL" && caseState === CASE_STATE.DRAFT) {
+    return REPAIR_STAGE.EXTERNAL_WAITING;
+  }
+  return REPAIR_STAGE.DOMESTIC;
+}
+
+function renderStageChangeControl(itemId, currentStage) {
+  const numericItemId = Number(itemId || 0);
+  if (!numericItemId) return "";
+  const options = [
+    REPAIR_STAGE.DOMESTIC,
+    REPAIR_STAGE.EXTERNAL_WAITING,
+    REPAIR_STAGE.READY_TO_SEND,
+    REPAIR_STAGE.PROPOSED,
+    REPAIR_STAGE.IN_PROGRESS,
+  ]
+    .map(
+      (stage) =>
+        `<option value="${stage}"${stage === currentStage ? " selected" : ""}>${REPAIR_STAGE_LABEL[stage]}</option>`,
+    )
+    .join("");
+
+  return `
+    <div class="stage-change-inline">
+      <select class="js-stage-select" data-item-id="${numericItemId}">
+        ${options}
+      </select>
+      <button class="btn btn-sm btn-secondary js-stage-change" data-item-id="${numericItemId}">단계변경</button>
+    </div>
+  `;
+}
+
 function getArrivalCaseState(row) {
   return String(getArrivalCaseInfo(row)?.case_state || "")
     .trim()
@@ -205,6 +330,22 @@ function bindArrivalActions(tbody) {
   });
 }
 
+function bindCommonRowActions(tbody) {
+  tbody.querySelectorAll(".js-open-item-detail").forEach((btn) => {
+    btn.addEventListener("click", () => openRepairItemDetail(btn));
+  });
+  tbody.querySelectorAll(".js-stage-change").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const itemId = Number(btn.dataset.itemId || 0);
+      const select = tbody.querySelector(
+        `.js-stage-select[data-item-id="${itemId}"]`,
+      );
+      const nextStage = select?.value || "";
+      changeRepairStage(itemId, nextStage, btn);
+    });
+  });
+}
+
 function renderArrivalRows(tbody, rows, emptyText, options = {}) {
   const isDraftSection = options?.isDraftSection === true;
   const mode = options?.mode === "draft" ? "draft" : "domestic";
@@ -221,6 +362,10 @@ function renderArrivalRows(tbody, rows, emptyText, options = {}) {
       const isInternal = caseInfo.decision_type === "INTERNAL";
       const caseId = caseInfo.repair_case_id || caseInfo.id;
       const sheetState = externalSheetStateLabel(caseInfo);
+      const stageControl = renderStageChangeControl(
+        row.id,
+        getRepairStageCode(caseInfo),
+      );
 
       const actionButtons = [];
 
@@ -252,9 +397,9 @@ function renderArrivalRows(tbody, rows, emptyText, options = {}) {
 
       const commonCols = `
         <td>${imageTag(row.product_image, row.product_title)}</td>
-        <td>${escapeHtml(row.internal_barcode || "-")}</td>
+        <td>${renderItemOpenButton(row, row.internal_barcode || "-")}</td>
         <td>${escapeHtml(row.member_name || "-")}</td>
-        <td>${escapeHtml(row.product_title || "-")}</td>
+        <td>${renderItemOpenButton(row, row.product_title || "-")}</td>
         <td>${escapeHtml(formatDateTime(row.scheduled_at))}</td>
       `;
 
@@ -276,6 +421,7 @@ function renderArrivalRows(tbody, rows, emptyText, options = {}) {
           <div class="cell-actions">
             ${actionButtons.join("")}
           </div>
+          ${stageControl}
         </td>
       </tr>
     `;
@@ -283,13 +429,15 @@ function renderArrivalRows(tbody, rows, emptyText, options = {}) {
     .join("");
 
   bindArrivalActions(tbody);
+  bindCommonRowActions(tbody);
 }
 
 function renderDomesticArrivals() {
   const tbody = el("domesticArrivalsBody");
-  const rows = getSearchFilteredRows(state.arrivals || []).filter(
-    (row) => !getArrivalCaseState(row),
-  );
+  const rows = getSearchFilteredRows(state.arrivals || []).filter((row) => {
+    const caseInfo = getArrivalCaseInfo(row);
+    return getRepairStageCode(caseInfo) === REPAIR_STAGE.DOMESTIC;
+  });
   renderArrivalRows(tbody, rows, "국내도착(미작성) 데이터가 없습니다.", {
     mode: "domestic",
   });
@@ -299,10 +447,7 @@ function renderDraftCases() {
   const tbody = el("draftCasesBody");
   const rows = getSearchFilteredRows(state.arrivals || []).filter((row) => {
     const caseInfo = getArrivalCaseInfo(row);
-    return (
-      caseInfo?.decision_type === "EXTERNAL" &&
-      getArrivalCaseState(row) === CASE_STATE.DRAFT
-    );
+    return getRepairStageCode(caseInfo) === REPAIR_STAGE.EXTERNAL_WAITING;
   });
   renderArrivalRows(tbody, rows, "시트전송완료/견적대기 데이터가 없습니다.", {
     isDraftSection: true,
@@ -312,8 +457,8 @@ function renderDraftCases() {
 
 function renderReadyToSendCases() {
   const tbody = el("readyToSendCasesBody");
-  const rows = getSearchFilteredRows(state.cases || []).filter((row) =>
-    [CASE_STATE.READY_TO_SEND, CASE_STATE.REJECTED].includes(row.case_state),
+  const rows = getSearchFilteredRows(state.cases || []).filter(
+    (row) => getRepairStageCode(row) === REPAIR_STAGE.READY_TO_SEND,
   );
 
   if (!rows.length) {
@@ -323,13 +468,17 @@ function renderReadyToSendCases() {
   }
 
   tbody.innerHTML = rows
-    .map(
-      (row) => `
+    .map((row) => {
+      const stageControl = renderStageChangeControl(
+        row.item_id,
+        getRepairStageCode(row),
+      );
+      return `
       <tr>
         <td>${imageTag(row.product_image, row.product_title)}</td>
-        <td>${escapeHtml(row.internal_barcode || "-")}</td>
+        <td>${renderItemOpenButton(row, row.internal_barcode || "-")}</td>
         <td>${escapeHtml(row.member_name || "-")}</td>
-        <td>${escapeHtml(row.product_title || "-")}</td>
+        <td>${renderItemOpenButton(row, row.product_title || "-")}</td>
         <td>${renderDecisionCell(row.decision_type, row.vendor_name)}</td>
         <td>${escapeHtml(formatAmount(row.repair_amount))}</td>
         <td>${escapeHtml(row.repair_eta || "-")}</td>
@@ -341,10 +490,11 @@ function renderReadyToSendCases() {
             <button class="btn btn-sm btn-secondary js-copy-template-case" data-case-id="${row.id}">템플릿복사</button>
             <button class="btn btn-sm btn-primary js-mark-sent" data-case-id="${row.id}">전송완료</button>
           </div>
+          ${stageControl}
         </td>
       </tr>
-    `,
-    )
+    `;
+    })
     .join("");
 
   tbody.querySelectorAll(".js-open-ready-edit").forEach((btn) => {
@@ -356,12 +506,13 @@ function renderReadyToSendCases() {
   tbody.querySelectorAll(".js-mark-sent").forEach((btn) => {
     btn.addEventListener("click", () => markSentCase(btn.dataset.caseId));
   });
+  bindCommonRowActions(tbody);
 }
 
 function renderProposedCases() {
   const tbody = el("proposedCasesBody");
   const rows = getSearchFilteredRows(state.cases || []).filter(
-    (row) => row.case_state === CASE_STATE.PROPOSED,
+    (row) => getRepairStageCode(row) === REPAIR_STAGE.PROPOSED,
   );
   if (!rows.length) {
     tbody.innerHTML =
@@ -370,13 +521,17 @@ function renderProposedCases() {
   }
 
   tbody.innerHTML = rows
-    .map(
-      (row) => `
+    .map((row) => {
+      const stageControl = renderStageChangeControl(
+        row.item_id,
+        getRepairStageCode(row),
+      );
+      return `
       <tr>
         <td>${imageTag(row.product_image, row.product_title)}</td>
-        <td>${escapeHtml(row.internal_barcode || "-")}</td>
+        <td>${renderItemOpenButton(row, row.internal_barcode || "-")}</td>
         <td>${escapeHtml(row.member_name || "-")}</td>
-        <td>${escapeHtml(row.product_title || "-")}</td>
+        <td>${renderItemOpenButton(row, row.product_title || "-")}</td>
         <td>${renderDecisionCell(row.decision_type, row.vendor_name)}</td>
         <td>${escapeHtml(formatAmount(row.repair_amount))}</td>
         <td>${escapeHtml(formatDateTime(row.proposed_at || row.updated_at))}</td>
@@ -386,10 +541,11 @@ function renderProposedCases() {
             <button class="btn btn-sm btn-primary js-accept" data-case-id="${row.id}">수락처리</button>
             <button class="btn btn-sm btn-secondary js-reject" data-case-id="${row.id}">거절</button>
           </div>
+          ${stageControl}
         </td>
       </tr>
-    `,
-    )
+    `;
+    })
     .join("");
 
   tbody.querySelectorAll(".js-accept").forEach((btn) => {
@@ -398,20 +554,14 @@ function renderProposedCases() {
   tbody.querySelectorAll(".js-reject").forEach((btn) => {
     btn.addEventListener("click", () => rejectCase(btn.dataset.caseId));
   });
+  bindCommonRowActions(tbody);
 }
 
 function renderInProgressCases() {
   const tbody = el("inProgressCasesBody");
-  const progressZones = new Set([
-    "INTERNAL_REPAIR_ZONE",
-    "EXTERNAL_REPAIR_ZONE",
-    "REPAIR_DONE_ZONE",
-    "OUTBOUND_ZONE",
-  ]);
-  const rows = getSearchFilteredRows(state.cases || []).filter((row) => {
-    const zoneCode = String(row.current_location_code || "").toUpperCase();
-    return progressZones.has(zoneCode) || [CASE_STATE.ACCEPTED, CASE_STATE.DONE].includes(row.case_state);
-  });
+  const rows = getSearchFilteredRows(state.cases || []).filter(
+    (row) => getRepairStageCode(row) === REPAIR_STAGE.IN_PROGRESS,
+  );
   if (!rows.length) {
     tbody.innerHTML =
       '<tr><td colspan="9" class="text-center">진행중 데이터가 없습니다.</td></tr>';
@@ -424,13 +574,17 @@ function renderInProgressCases() {
         row.case_state === CASE_STATE.ACCEPTED &&
         !["REPAIR_DONE_ZONE", "OUTBOUND_ZONE"].includes(row.current_location_code);
       const allowShip = row.current_location_code !== "OUTBOUND_ZONE";
+      const stageControl = renderStageChangeControl(
+        row.item_id,
+        getRepairStageCode(row),
+      );
 
       return `
       <tr>
         <td>${imageTag(row.product_image, row.product_title)}</td>
-        <td>${escapeHtml(row.internal_barcode || "-")}</td>
+        <td>${renderItemOpenButton(row, row.internal_barcode || "-")}</td>
         <td>${escapeHtml(row.member_name || "-")}</td>
-        <td>${escapeHtml(row.product_title || "-")}</td>
+        <td>${renderItemOpenButton(row, row.product_title || "-")}</td>
         <td>${renderDecisionCell(row.decision_type, row.vendor_name)}</td>
         <td>${escapeHtml(formatAmount(row.repair_amount))}</td>
         <td>${escapeHtml(CASE_STATE_LABEL[row.case_state] || "-")}</td>
@@ -448,6 +602,7 @@ function renderInProgressCases() {
                 : '<span class="muted">출고완료</span>'
             }
           </div>
+          ${stageControl}
         </td>
       </tr>
     `;
@@ -460,6 +615,7 @@ function renderInProgressCases() {
   tbody.querySelectorAll(".js-ship-done").forEach((btn) => {
     btn.addEventListener("click", () => markShipped(btn.dataset.caseId));
   });
+  bindCommonRowActions(tbody);
 }
 
 function renderAll() {
@@ -908,6 +1064,184 @@ async function markShipped(caseId) {
   await loadAll();
 }
 
+async function changeRepairStage(itemId, stage, triggerBtn = null) {
+  if (!itemId || !stage) return;
+  if (!confirm("수선 단계를 변경할까요?")) return;
+  const prevText = triggerBtn?.textContent;
+  if (triggerBtn) {
+    triggerBtn.disabled = true;
+    triggerBtn.textContent = "변경중...";
+  }
+  try {
+    const result = await api(`/api/repair-management/items/${itemId}/stage`, {
+      method: "POST",
+      body: JSON.stringify({ stage }),
+    });
+    alert(result.message || "수선 단계가 변경되었습니다.");
+    await loadAll();
+  } catch (error) {
+    alert(error.message || "수선 단계 변경 중 오류가 발생했습니다.");
+  } finally {
+    if (triggerBtn) {
+      triggerBtn.disabled = false;
+      triggerBtn.textContent = prevText || "단계변경";
+    }
+  }
+}
+
+function setRepairDetailText(id, value) {
+  const node = el(id);
+  if (!node) return;
+  node.textContent = value || "-";
+}
+
+function setRepairDetailOrigin(url) {
+  const link = el("repairDetailOriginLink");
+  if (!link) return;
+  const safe = url && url !== "#" ? url : "";
+  link.href = safe || "#";
+  link.style.pointerEvents = safe ? "auto" : "none";
+  link.style.opacity = safe ? "1" : "0.5";
+}
+
+function setRepairDetailImage(src) {
+  const img = el("repairDetailMainImage");
+  if (!img) return;
+  img.src = src || "/images/no-image.png";
+}
+
+function updateRepairDetailNav() {
+  const prevBtn = el("repairDetailPrevBtn");
+  const nextBtn = el("repairDetailNextBtn");
+  if (prevBtn) prevBtn.disabled = detailImageIndex <= 0;
+  if (nextBtn) nextBtn.disabled = detailImageIndex >= detailImages.length - 1;
+}
+
+function renderRepairDetailThumbs() {
+  const wrap = el("repairDetailThumbs");
+  if (!wrap) return;
+  wrap.innerHTML = "";
+  detailImages.forEach((src, idx) => {
+    wrap.insertAdjacentHTML(
+      "beforeend",
+      `
+      <button type="button" class="repair-detail-thumb ${idx === detailImageIndex ? "active" : ""}" data-index="${idx}">
+        <img src="${escapeHtml(src)}" alt="썸네일 ${idx + 1}">
+      </button>
+      `,
+    );
+  });
+  wrap.querySelectorAll(".repair-detail-thumb").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const idx = Number(btn.dataset.index || 0);
+      showRepairDetailImageAt(idx);
+    });
+  });
+}
+
+function showRepairDetailImageAt(index) {
+  if (!detailImages.length) return;
+  if (index < 0 || index >= detailImages.length) return;
+  detailImageIndex = index;
+  setRepairDetailImage(detailImages[detailImageIndex]);
+  renderRepairDetailThumbs();
+  updateRepairDetailNav();
+}
+
+function setRepairDetailImages(images) {
+  const normalized = Array.isArray(images)
+    ? images.filter((x) => String(x || "").trim())
+    : [];
+  detailImages = normalized.length ? normalized : ["/images/no-image.png"];
+  detailImageIndex = 0;
+  showRepairDetailImageAt(0);
+}
+
+function applyRepairDetailData(data = {}) {
+  setRepairDetailText("repairDetailItemId", data.itemId || "-");
+  setRepairDetailText("repairDetailTitle", data.title || "-");
+  setRepairDetailText("repairDetailBrand", data.brand || "-");
+  setRepairDetailText("repairDetailCategory", data.category || "-");
+  setRepairDetailText("repairDetailRank", data.rank || "-");
+  setRepairDetailText("repairDetailScheduled", data.scheduled || "-");
+  setRepairDetailText("repairDetailAccessoryCode", data.accessoryCode || "-");
+  setRepairDetailText("repairDetailDescription", data.description || "-");
+  setRepairDetailOrigin(data.originUrl || "#");
+  setRepairDetailImage(data.image || "/images/no-image.png");
+}
+
+function openRepairDetailModal() {
+  el("repairItemDetailModal")?.classList.remove("hidden");
+}
+
+function closeRepairDetailModal() {
+  el("repairItemDetailModal")?.classList.add("hidden");
+}
+
+async function openRepairItemDetail(button) {
+  if (!button) return;
+  const itemId = String(button.dataset.itemId || "").trim();
+  const aucNum = String(button.dataset.aucNum || "").trim();
+  const initialImage = button.dataset.image || "/images/no-image.png";
+  const initialOrigin = button.dataset.originUrl || "#";
+
+  applyRepairDetailData({
+    itemId: itemId || "-",
+    title: button.dataset.title || "-",
+    brand: button.dataset.brand || "-",
+    category: button.dataset.category || "-",
+    rank: button.dataset.rank || "-",
+    accessoryCode: button.dataset.accessoryCode || "-",
+    scheduled: button.dataset.scheduled || "-",
+    description: "상세 정보를 불러오는 중입니다...",
+    image: initialImage,
+    originUrl: initialOrigin,
+  });
+  setRepairDetailImages([initialImage]);
+  openRepairDetailModal();
+
+  if (!itemId || !aucNum) return;
+  try {
+    const detail = await api(`/detail/item-details/${encodeURIComponent(itemId)}`, {
+      method: "POST",
+      body: JSON.stringify({ aucNum, translateDescription: "ko" }),
+    });
+    let detailImage = detail?.image || initialImage;
+    let detailImages = [detailImage];
+    if (detail?.additional_images) {
+      try {
+        const extra = JSON.parse(detail.additional_images);
+        if (Array.isArray(extra) && extra.length > 0) {
+          detailImage = extra[0] || detailImage;
+          detailImages = [detailImage, ...extra.slice(1)];
+        }
+      } catch (_) {}
+    }
+
+    const originUrl = initialOrigin !== "#" ? initialOrigin : buildOriginLink(
+      itemId,
+      aucNum,
+      detail?.additional_info,
+    );
+
+    setRepairDetailImages(detailImages);
+    applyRepairDetailData({
+      itemId,
+      title: detail?.title || button.dataset.title || "-",
+      brand: detail?.brand || button.dataset.brand || "-",
+      category: detail?.category || button.dataset.category || "-",
+      rank: detail?.rank || button.dataset.rank || "-",
+      accessoryCode: detail?.accessory_code || button.dataset.accessoryCode || "-",
+      scheduled: detail?.scheduled_date ? formatDateTime(detail.scheduled_date) : button.dataset.scheduled || "-",
+      description: detail?.description_ko || detail?.description || "설명 정보가 없습니다.",
+      image: detailImage,
+      originUrl,
+    });
+  } catch (error) {
+    setRepairDetailText("repairDetailDescription", "상세 정보를 불러오지 못했습니다.");
+  }
+}
+
 async function copyTemplateByCase(caseId) {
   const row = state.cases.find((c) => Number(c.id) === Number(caseId));
   if (!row?.proposal_text) {
@@ -1084,6 +1418,16 @@ function bindEvents() {
   el("btnCloseModal").addEventListener("click", closeModal);
   el("repairModal").addEventListener("click", (e) => {
     if (e.target.id === "repairModal") closeModal();
+  });
+  el("btnCloseRepairDetailModal")?.addEventListener("click", closeRepairDetailModal);
+  el("repairItemDetailModal")?.addEventListener("click", (e) => {
+    if (e.target.id === "repairItemDetailModal") closeRepairDetailModal();
+  });
+  el("repairDetailPrevBtn")?.addEventListener("click", () => {
+    showRepairDetailImageAt(detailImageIndex - 1);
+  });
+  el("repairDetailNextBtn")?.addEventListener("click", () => {
+    showRepairDetailImageAt(detailImageIndex + 1);
   });
   el("decisionType").addEventListener("change", () => {
     toggleVendorField();

@@ -274,6 +274,36 @@
       </div>
     </div>
 
+    <div id="repairItemDetailModal" class="modal-overlay hidden">
+      <div class="modal-card repair-detail-modal-card">
+        <div class="modal-header">
+          <h3>상품 상세</h3>
+          <button id="btnCloseRepairDetailModal" class="btn btn-secondary">닫기</button>
+        </div>
+        <div class="modal-body repair-detail-body">
+          <div class="repair-detail-left">
+            <div class="repair-detail-main-image-wrap" id="repairDetailMainImageWrap">
+              <button type="button" class="repair-detail-nav prev" id="repairDetailPrevBtn">&lt;</button>
+              <img id="repairDetailMainImage" class="repair-detail-main-image" src="/images/no-image.png" alt="상품 이미지" />
+              <button type="button" class="repair-detail-nav next" id="repairDetailNextBtn">&gt;</button>
+            </div>
+            <div id="repairDetailThumbs" class="repair-detail-thumbs"></div>
+          </div>
+          <div class="repair-detail-info">
+            <div class="repair-detail-row"><strong>상품ID</strong><span id="repairDetailItemId">-</span></div>
+            <div class="repair-detail-row"><strong>제목</strong><span id="repairDetailTitle">-</span></div>
+            <div class="repair-detail-row"><strong>브랜드</strong><span id="repairDetailBrand">-</span></div>
+            <div class="repair-detail-row"><strong>카테고리</strong><span id="repairDetailCategory">-</span></div>
+            <div class="repair-detail-row"><strong>등급</strong><span id="repairDetailRank">-</span></div>
+            <div class="repair-detail-row"><strong>예정일시</strong><span id="repairDetailScheduled">-</span></div>
+            <div class="repair-detail-row"><strong>액세서리코드</strong><span id="repairDetailAccessoryCode">-</span></div>
+            <div class="repair-detail-row"><strong>설명</strong><span id="repairDetailDescription">-</span></div>
+            <div class="repair-detail-row"><strong>원본링크</strong><a id="repairDetailOriginLink" href="#" target="_blank" rel="noopener noreferrer">열기</a></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script src="/js/common.js"></script>
     <script src="/js/api.js"></script>
     <script src="/js/admin/common.js"></script>

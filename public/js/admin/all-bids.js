@@ -13,7 +13,6 @@ class UnifiedAuctionManager {
     this.directData = [];
     this.currentFilter = "all";
     this.currentResultType = "all";
-    this.currentProcessingZoneCode = "";
     this.searchTimeout = null;
     this.highValueThreshold = 100000; // 10만엔 이상을 고액으로 설정
     this.itemsPerPage = 100;
@@ -579,14 +578,12 @@ class UnifiedAuctionManager {
 
   resetFilters() {
     this.currentFilter = "all";
-    this.currentProcessingZoneCode = "";
     this.loadDefaultResults();
   }
 
   // 결과 탭 전환
   switchResultTab(type) {
     this.currentResultType = type;
-    this.currentProcessingZoneCode = "";
 
     // 탭 활성화 상태 변경
     document.querySelectorAll(".result-tab").forEach((tab) => {
@@ -595,75 +592,6 @@ class UnifiedAuctionManager {
     document.querySelector(`[data-type="${type}"]`).classList.add("active");
 
     this.renderUnifiedResults();
-  }
-
-  getZoneDisplayNameByCode(code) {
-    const map = {
-      DOMESTIC_ARRIVAL_ZONE: "국내도착존",
-      REPAIR_TEAM_CHECK_ZONE: "수선팀검수중존",
-      INTERNAL_REPAIR_ZONE: "내부수선존",
-      EXTERNAL_REPAIR_ZONE: "외부수선존",
-      REPAIR_DONE_ZONE: "수선완료존",
-      AUTH_ZONE: "감정출력존",
-      HOLD_ZONE: "HOLD존",
-      OUTBOUND_ZONE: "출고존",
-      REPAIR_ZONE: "수선존",
-      INSPECT_ZONE: "검수존",
-      SHIPPED_ZONE: "출고존",
-    };
-    return map[code] || code || "존 미지정";
-  }
-
-  renderProcessingZoneSummary(liveBids, directBids) {
-    const wrap = document.getElementById("processingZoneSummary");
-    const grid = document.getElementById("processingZoneGrid");
-    const title = wrap?.querySelector(".title");
-    if (!wrap || !grid) return;
-
-    const allVisible = [...(liveBids || []), ...(directBids || [])];
-    if (title) {
-      title.textContent = "존별 현황";
-    }
-
-    if (!allVisible.length) {
-      this.currentProcessingZoneCode = "";
-      wrap.style.display = "none";
-      grid.innerHTML = "";
-      return;
-    }
-
-    const zoneCountMap = allVisible.reduce((acc, bid) => {
-      const code = bid.wms_location_code || "UNKNOWN_ZONE";
-      acc[code] = (acc[code] || 0) + 1;
-      return acc;
-    }, {});
-    const entries = Object.entries(zoneCountMap).sort((a, b) => b[1] - a[1]);
-    const totalCount = allVisible.length;
-
-    const allCard = `<div class="processing-zone-item ${
-      !this.currentProcessingZoneCode ? "is-active" : ""
-    }" data-zone-code=""><div class="name">전체</div><div class="count">${totalCount}</div></div>`;
-    const zoneCards = entries
-      .map(
-        ([code, count]) =>
-          `<div class="processing-zone-item ${
-            this.currentProcessingZoneCode === code ? "is-active" : ""
-          }" data-zone-code="${code}"><div class="name">${this.getZoneDisplayNameByCode(
-            code === "UNKNOWN_ZONE" ? "" : code,
-          )}</div><div class="count">${count}</div></div>`,
-      )
-      .join("");
-    grid.innerHTML = allCard + zoneCards;
-    wrap.style.display = "block";
-
-    grid
-      .querySelectorAll(".processing-zone-item[data-zone-code]")
-      .forEach((el) => {
-        el.addEventListener("click", () => {
-          this.currentProcessingZoneCode = el.dataset.zoneCode || "";
-          this.renderUnifiedResults();
-        });
-      });
   }
 
   // 통합 결과 렌더링
@@ -677,15 +605,6 @@ class UnifiedAuctionManager {
       directToShow = [];
     } else if (this.currentResultType === "direct") {
       liveToShow = [];
-    }
-
-    this.renderProcessingZoneSummary(liveToShow, directToShow);
-    if (this.currentProcessingZoneCode) {
-      const zoneCode = this.currentProcessingZoneCode;
-      const zoneFilterFn = (bid) =>
-        (bid.wms_location_code || "UNKNOWN_ZONE") === zoneCode;
-      liveToShow = liveToShow.filter(zoneFilterFn);
-      directToShow = directToShow.filter(zoneFilterFn);
     }
 
     let html = "";

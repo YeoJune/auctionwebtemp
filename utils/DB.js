@@ -79,10 +79,7 @@ async function testConnection() {
     console.log("Successfully connected to the database");
 
     // 연결 상태 확인 쿼리들
-    const queries = [
-      `SELECT * FROM live_bids WHERE shipping_status = 'shipping'
-`,
-    ];
+    const queries = [`SHOW INDEX FROM crawled_items`];
 
     // 각 쿼리 순차 실행
     for (const query of queries) {

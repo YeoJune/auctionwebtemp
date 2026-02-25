@@ -18,12 +18,21 @@ const DEFAULT_VENDORS = [
 ];
 
 const REPAIR_CASE_STATES = {
+  ARRIVED: "ARRIVED",
   DRAFT: "DRAFT",
   READY_TO_SEND: "READY_TO_SEND",
   PROPOSED: "PROPOSED",
   ACCEPTED: "ACCEPTED",
   REJECTED: "REJECTED",
   DONE: "DONE",
+};
+
+const REPAIR_STAGE_CODES = {
+  DOMESTIC: "DOMESTIC",
+  EXTERNAL_WAITING: "EXTERNAL_WAITING",
+  READY_TO_SEND: "READY_TO_SEND",
+  PROPOSED: "PROPOSED",
+  IN_PROGRESS: "IN_PROGRESS",
 };
 
 let sheetsClientPromise = null;
@@ -854,6 +863,62 @@ function normalizeLocationCode(locationCode) {
   return locationCode;
 }
 
+function normalizeRepairStage(stage) {
+  const raw = String(stage || "")
+    .trim()
+    .toUpperCase();
+  if (raw === "1" || raw === REPAIR_STAGE_CODES.DOMESTIC) {
+    return REPAIR_STAGE_CODES.DOMESTIC;
+  }
+  if (raw === "2" || raw === REPAIR_STAGE_CODES.EXTERNAL_WAITING) {
+    return REPAIR_STAGE_CODES.EXTERNAL_WAITING;
+  }
+  if (raw === "3" || raw === REPAIR_STAGE_CODES.READY_TO_SEND) {
+    return REPAIR_STAGE_CODES.READY_TO_SEND;
+  }
+  if (raw === "4" || raw === REPAIR_STAGE_CODES.PROPOSED) {
+    return REPAIR_STAGE_CODES.PROPOSED;
+  }
+  if (raw === "5" || raw === REPAIR_STAGE_CODES.IN_PROGRESS) {
+    return REPAIR_STAGE_CODES.IN_PROGRESS;
+  }
+  return "";
+}
+
+function deriveRepairStage(caseState, decisionType, currentLocationCode) {
+  const stageCaseState = String(caseState || "")
+    .trim()
+    .toUpperCase();
+  const stageDecisionType = String(decisionType || "")
+    .trim()
+    .toUpperCase();
+  const zoneCode = String(currentLocationCode || "")
+    .trim()
+    .toUpperCase();
+
+  if (
+    ["INTERNAL_REPAIR_ZONE", "EXTERNAL_REPAIR_ZONE", "REPAIR_DONE_ZONE", "OUTBOUND_ZONE"].includes(
+      zoneCode,
+    ) ||
+    [REPAIR_CASE_STATES.ACCEPTED, REPAIR_CASE_STATES.DONE].includes(stageCaseState)
+  ) {
+    return REPAIR_STAGE_CODES.IN_PROGRESS;
+  }
+  if (stageCaseState === REPAIR_CASE_STATES.PROPOSED) {
+    return REPAIR_STAGE_CODES.PROPOSED;
+  }
+  if ([REPAIR_CASE_STATES.READY_TO_SEND, REPAIR_CASE_STATES.REJECTED].includes(stageCaseState)) {
+    return REPAIR_STAGE_CODES.READY_TO_SEND;
+  }
+  if (
+    stageDecisionType === "EXTERNAL" &&
+    stageCaseState === REPAIR_CASE_STATES.DRAFT
+  ) {
+    return REPAIR_STAGE_CODES.EXTERNAL_WAITING;
+  }
+  return REPAIR_STAGE_CODES.DOMESTIC;
+}
+
 async function hideInvalidDomesticArrivals(conn) {
   // 잘못 스캔되어 생성된 잡음 데이터는 운영 목록에서 제외한다.
   await conn.query(
@@ -1267,6 +1332,7 @@ router.get("/domestic-arrivals", isAdmin, async (req, res) => {
         ) AS source_bid_type,
         COALESCE(i.source_bid_id, d.id, l.id) AS source_bid_id,
         COALESCE(i.source_item_id, d.item_id, l.item_id) AS source_item_id,
+        ci.auc_num AS auc_num,
         i.auction_lot_no,
         i.current_status,
         i.current_location_code,
@@ -1275,6 +1341,11 @@ router.get("/domestic-arrivals", isAdmin, async (req, res) => {
         COALESCE(ci.image, '') AS product_image,
         COALESCE(ci.original_scheduled_date, ci.scheduled_date, i.source_scheduled_date) AS scheduled_at,
         COALESCE(ci.original_title, ci.title) AS product_title,
+        ci.brand,
+        ci.category,
+        ci.rank,
+        ci.accessory_code,
+        ci.additional_info,
         rc.id AS repair_case_id,
         rc.case_state,
         rc.decision_type,
@@ -1348,6 +1419,8 @@ router.get("/cases", isAdmin, async (req, res) => {
         rc.external_synced_at,
         rc.updated_by,
         rc.updated_at,
+        COALESCE(i.source_item_id, d.item_id, l.item_id) AS source_item_id,
+        ci.auc_num AS auc_num,
         COALESCE(NULLIF(i.internal_barcode, ''), NULLIF(i.external_barcode, '')) AS internal_barcode,
         COALESCE(u.company_name, i.member_name) AS member_name,
         i.current_location_code,
@@ -1355,6 +1428,11 @@ router.get("/cases", isAdmin, async (req, res) => {
         COALESCE(ci.original_title, ci.title) AS product_title,
         COALESCE(ci.image, '') AS product_image,
         COALESCE(ci.original_scheduled_date, ci.scheduled_date, i.source_scheduled_date) AS scheduled_at,
+        ci.brand,
+        ci.category,
+        ci.rank,
+        ci.accessory_code,
+        ci.additional_info,
         rv.sheet_url AS vendor_sheet_url
       FROM wms_repair_cases rc
       INNER JOIN wms_items i
@@ -2661,6 +2739,281 @@ router.post("/cases/:id/ship", isAdmin, async (req, res) => {
     } catch (_) {}
     console.error("repair ship error:", error);
     res.status(500).json({ ok: false, message: "출고완료 처리 실패" });
+  } finally {
+    conn.release();
+  }
+});
+
+router.post("/items/:itemId/stage", isAdmin, async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    await ensureRepairTables(conn);
+    const itemId = Number(req.params?.itemId);
+    const targetStage = normalizeRepairStage(req.body?.stage);
+    if (!itemId) {
+      return res.status(400).json({ ok: false, message: "item id가 필요합니다." });
+    }
+    if (!targetStage) {
+      return res.status(400).json({ ok: false, message: "유효한 단계값이 필요합니다." });
+    }
+
+    const stageLabelMap = {
+      [REPAIR_STAGE_CODES.DOMESTIC]: "1) 국내도착(분기/견적등록)",
+      [REPAIR_STAGE_CODES.EXTERNAL_WAITING]: "2) 시트전송완료 / 견적대기(외부)",
+      [REPAIR_STAGE_CODES.READY_TO_SEND]: "3) 견적완료 / 고객전송대기",
+      [REPAIR_STAGE_CODES.PROPOSED]: "4) 고객응답대기(PROPOSED)",
+      [REPAIR_STAGE_CODES.IN_PROGRESS]: "5) 진행중(내부/외부 수선중)",
+    };
+
+    await conn.beginTransaction();
+    const [itemRows] = await conn.query(
+      `
+      SELECT
+        id,
+        internal_barcode,
+        external_barcode,
+        current_location_code,
+        current_status,
+        source_bid_type,
+        source_bid_id,
+        source_item_id
+      FROM wms_items
+      WHERE id = ?
+      LIMIT 1
+      FOR UPDATE
+      `,
+      [itemId],
+    );
+    const item = itemRows[0];
+    if (!item) {
+      await conn.rollback();
+      return res.status(404).json({ ok: false, message: "물건을 찾을 수 없습니다." });
+    }
+
+    const [caseRows] = await conn.query(
+      `
+      SELECT *
+      FROM wms_repair_cases
+      WHERE item_id = ?
+      LIMIT 1
+      FOR UPDATE
+      `,
+      [itemId],
+    );
+    const existingCase = caseRows[0] || null;
+    const currentStage = deriveRepairStage(
+      existingCase?.case_state,
+      existingCase?.decision_type,
+      item.current_location_code,
+    );
+    const loginId = String(req.session?.user?.login_id || "admin");
+
+    let targetCaseState = null;
+    let targetDecisionType =
+      String(existingCase?.decision_type || "")
+        .trim()
+        .toUpperCase() || "INTERNAL";
+    let targetVendorName = String(existingCase?.vendor_name || "").trim();
+    let targetZoneCode = "DOMESTIC_ARRIVAL_ZONE";
+
+    switch (targetStage) {
+      case REPAIR_STAGE_CODES.DOMESTIC:
+        targetCaseState = existingCase ? REPAIR_CASE_STATES.ARRIVED : null;
+        targetDecisionType = targetDecisionType || "INTERNAL";
+        targetZoneCode = "DOMESTIC_ARRIVAL_ZONE";
+        break;
+      case REPAIR_STAGE_CODES.EXTERNAL_WAITING:
+        targetCaseState = REPAIR_CASE_STATES.DRAFT;
+        targetDecisionType = "EXTERNAL";
+        targetZoneCode = "DOMESTIC_ARRIVAL_ZONE";
+        break;
+      case REPAIR_STAGE_CODES.READY_TO_SEND:
+        targetCaseState = REPAIR_CASE_STATES.READY_TO_SEND;
+        targetDecisionType =
+          targetDecisionType === "EXTERNAL" ? "EXTERNAL" : "INTERNAL";
+        targetZoneCode = "DOMESTIC_ARRIVAL_ZONE";
+        break;
+      case REPAIR_STAGE_CODES.PROPOSED:
+        targetCaseState = REPAIR_CASE_STATES.PROPOSED;
+        targetDecisionType =
+          targetDecisionType === "EXTERNAL" ? "EXTERNAL" : "INTERNAL";
+        targetZoneCode = "DOMESTIC_ARRIVAL_ZONE";
+        break;
+      case REPAIR_STAGE_CODES.IN_PROGRESS:
+        targetCaseState = REPAIR_CASE_STATES.ACCEPTED;
+        targetDecisionType =
+          targetDecisionType === "EXTERNAL" ? "EXTERNAL" : "INTERNAL";
+        targetZoneCode =
+          targetDecisionType === "EXTERNAL"
+            ? "EXTERNAL_REPAIR_ZONE"
+            : "INTERNAL_REPAIR_ZONE";
+        break;
+      default:
+        await conn.rollback();
+        return res.status(400).json({ ok: false, message: "지원하지 않는 단계입니다." });
+    }
+
+    if (targetDecisionType === "EXTERNAL") {
+      if (!targetVendorName || targetVendorName === "까사(내부)") {
+        targetVendorName = "업체미지정";
+      }
+    } else if (targetDecisionType === "NONE") {
+      targetVendorName = "무수선";
+    } else {
+      targetVendorName = "까사(내부)";
+    }
+
+    if (
+      targetDecisionType === "EXTERNAL" &&
+      targetVendorName &&
+      targetVendorName !== "업체미지정"
+    ) {
+      await conn.query(
+        `
+        INSERT INTO wms_repair_vendors (name, is_active)
+        VALUES (?, 1)
+        ON DUPLICATE KEY UPDATE
+          is_active = 1,
+          updated_at = NOW()
+        `,
+        [targetVendorName],
+      );
+    }
+
+    if (targetCaseState) {
+      const itemMeta = await fetchRepairItemWithMeta(conn, itemId);
+      const proposalText =
+        targetDecisionType === "NONE"
+          ? null
+          : buildProposalText({
+              companyName: itemMeta?.company_name || itemMeta?.member_name,
+              productTitle: itemMeta?.product_title,
+              barcode: itemMeta?.internal_barcode || itemMeta?.external_barcode,
+              repairNote:
+                String(existingCase?.repair_note || "").trim() || "수선 내용 미입력",
+              repairAmount: toAmount(existingCase?.repair_amount),
+              repairEta: String(existingCase?.repair_eta || "").trim(),
+              vendorName: targetVendorName,
+              scheduledAt: itemMeta?.scheduled_at,
+            });
+
+      if (!existingCase) {
+        await conn.query(
+          `
+          INSERT INTO wms_repair_cases (
+            item_id,
+            case_state,
+            decision_type,
+            vendor_name,
+            repair_note,
+            repair_amount,
+            repair_eta,
+            proposal_text,
+            internal_note,
+            proposed_at,
+            accepted_at,
+            rejected_at,
+            completed_at,
+            created_by,
+            updated_by
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?)
+          `,
+          [
+            itemId,
+            targetCaseState,
+            targetDecisionType,
+            targetVendorName || null,
+            String(existingCase?.repair_note || "").trim() || null,
+            toAmount(existingCase?.repair_amount),
+            String(existingCase?.repair_eta || "").trim() || null,
+            proposalText,
+            String(existingCase?.internal_note || "").trim() || null,
+            targetCaseState === REPAIR_CASE_STATES.PROPOSED ? new Date() : null,
+            targetCaseState === REPAIR_CASE_STATES.ACCEPTED ? new Date() : null,
+            loginId,
+            loginId,
+          ],
+        );
+      } else {
+        await conn.query(
+          `
+          UPDATE wms_repair_cases
+          SET case_state = ?,
+              decision_type = ?,
+              vendor_name = ?,
+              proposal_text = ?,
+              proposed_at = ?,
+              accepted_at = ?,
+              rejected_at = NULL,
+              completed_at = NULL,
+              updated_by = ?,
+              updated_at = NOW()
+          WHERE id = ?
+          `,
+          [
+            targetCaseState,
+            targetDecisionType,
+            targetVendorName || null,
+            proposalText,
+            targetCaseState === REPAIR_CASE_STATES.PROPOSED
+              ? new Date()
+              : null,
+            targetCaseState === REPAIR_CASE_STATES.ACCEPTED
+              ? new Date()
+              : null,
+            loginId,
+            existingCase.id,
+          ],
+        );
+      }
+    }
+
+    const normalizedCurrentZone = normalizeLocationCode(item.current_location_code);
+    if (
+      normalizedCurrentZone !== targetZoneCode ||
+      String(item.current_status || "") !== statusByZone(targetZoneCode)
+    ) {
+      await moveItemToZone({
+        conn,
+        item,
+        toZoneCode: targetZoneCode,
+        actionType: "REPAIR_STAGE_MANUAL_CHANGE",
+        staffName: loginId,
+        note: `수선 단계 수동 변경: ${stageLabelMap[targetStage] || targetStage}`,
+      });
+    } else {
+      await conn.query(
+        `
+        UPDATE wms_items
+        SET current_status = ?,
+            updated_at = NOW()
+        WHERE id = ?
+        `,
+        [statusByZone(targetZoneCode), item.id],
+      );
+    }
+
+    await syncBidStatusByLocation(conn, item, targetZoneCode);
+    await conn.commit();
+
+    return res.json({
+      ok: true,
+      message: `수선 단계를 ${stageLabelMap[targetStage] || targetStage}(으)로 변경했습니다.`,
+      result: {
+        itemId,
+        previousStage: currentStage,
+        nextStage: targetStage,
+        caseState: targetCaseState,
+        decisionType: targetDecisionType,
+        zoneCode: targetZoneCode,
+      },
+    });
+  } catch (error) {
+    try {
+      await conn.rollback();
+    } catch (_) {}
+    console.error("repair stage change error:", error);
+    return res.status(500).json({ ok: false, message: "수선 단계 변경 실패" });
   } finally {
     conn.release();
   }

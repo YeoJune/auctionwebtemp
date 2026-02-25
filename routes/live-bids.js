@@ -72,7 +72,7 @@ router.get("/", async (req, res) => {
     const searchTerm = `%${search}%`;
     const compactSearchTerm = `%${String(search).replace(/\s+/g, "")}%`;
     queryConditions.push(
-      "((CONVERT(b.item_id USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(i.original_title USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(i.brand USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(i.additional_info USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(u.login_id USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(u.company_name USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR REPLACE((CONVERT(u.company_name USING utf8mb4) COLLATE utf8mb4_unicode_ci), _utf8mb4' ' COLLATE utf8mb4_unicode_ci, _utf8mb4'' COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci))",
+      "((CONVERT(b.item_id USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(i.original_title USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(i.brand USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(i.additional_info USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(u.login_id USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(u.company_name USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR REPLACE((CONVERT(u.company_name USING utf8mb4) COLLATE utf8mb4_unicode_ci), _utf8mb4' ' COLLATE utf8mb4_unicode_ci, _utf8mb4'' COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(wms.internal_barcode USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(wms.external_barcode USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(wmsi.internal_barcode USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci) OR (CONVERT(wmsi.external_barcode USING utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE (CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci))",
     );
     queryParams.push(
       searchTerm,
@@ -82,6 +82,10 @@ router.get("/", async (req, res) => {
       searchTerm,
       searchTerm,
       compactSearchTerm,
+      searchTerm,
+      searchTerm,
+      searchTerm,
+      searchTerm,
     );
   }
 
@@ -165,12 +169,19 @@ router.get("/", async (req, res) => {
     LEFT JOIN crawled_items i ON b.item_id = i.item_id
     LEFT JOIN users u ON b.user_id = u.id
     LEFT JOIN (
-      SELECT source_bid_type, source_bid_id, MAX(internal_barcode) AS internal_barcode
+      SELECT
+        source_bid_type,
+        source_bid_id,
+        MAX(internal_barcode) AS internal_barcode,
+        MAX(external_barcode) AS external_barcode
       FROM wms_items
       GROUP BY source_bid_type, source_bid_id
     ) wms ON wms.source_bid_type = 'live' AND wms.source_bid_id = b.id
     LEFT JOIN (
-      SELECT source_item_id, MAX(internal_barcode) AS internal_barcode
+      SELECT
+        source_item_id,
+        MAX(internal_barcode) AS internal_barcode,
+        MAX(external_barcode) AS external_barcode
       FROM wms_items
       WHERE source_item_id IS NOT NULL
       GROUP BY source_item_id
@@ -191,12 +202,21 @@ router.get("/", async (req, res) => {
     LEFT JOIN crawled_items i ON b.item_id = i.item_id
     LEFT JOIN users u ON b.user_id = u.id
     LEFT JOIN (
-      SELECT source_bid_type, source_bid_id, MAX(internal_barcode) AS internal_barcode, MAX(current_location_code) AS current_location_code
+      SELECT
+        source_bid_type,
+        source_bid_id,
+        MAX(internal_barcode) AS internal_barcode,
+        MAX(external_barcode) AS external_barcode,
+        MAX(current_location_code) AS current_location_code
       FROM wms_items
       GROUP BY source_bid_type, source_bid_id
     ) wms ON wms.source_bid_type = 'live' AND wms.source_bid_id = b.id
     LEFT JOIN (
-      SELECT source_item_id, MAX(internal_barcode) AS internal_barcode, MAX(current_location_code) AS current_location_code
+      SELECT
+        source_item_id,
+        MAX(internal_barcode) AS internal_barcode,
+        MAX(external_barcode) AS external_barcode,
+        MAX(current_location_code) AS current_location_code
       FROM wms_items
       WHERE source_item_id IS NOT NULL
       GROUP BY source_item_id
