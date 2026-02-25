@@ -840,7 +840,204 @@ input:checked + .toggle-slider::before {
   font-size: 11px;
 }
 
+/* ========== 상품 상세 모달 (현장/직접/통합 공통) ========== */
+.live-detail-modal {
+  width: min(1040px, 96vw);
+  max-width: min(1040px, 96vw);
+  max-height: 92vh;
+}
+
+.live-detail-modal .modal-body {
+  padding: 18px 20px;
+}
+
+.live-detail-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.live-detail-left {
+  min-width: 0;
+}
+
+.live-detail-main-image-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: var(--admin-bg-subtle);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.live-detail-main-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  background: #fff;
+  transition: transform 0.25s ease, transform-origin 0.2s ease;
+}
+
+.live-detail-main-image.zoom-active {
+  transform: scale(1.65);
+  cursor: zoom-in;
+}
+
+.live-detail-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.live-detail-nav.prev {
+  left: 10px;
+}
+
+.live-detail-nav.next {
+  right: 10px;
+}
+
+.live-detail-nav:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.live-detail-nav:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.live-detail-thumbs {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.live-detail-thumb {
+  width: 74px;
+  height: 74px;
+  min-width: 74px;
+  padding: 0;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  cursor: pointer;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.live-detail-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.live-detail-thumb.active {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.16);
+}
+
+.live-detail-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.live-detail-row {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.live-detail-row strong {
+  color: var(--admin-text-secondary);
+  font-weight: 600;
+}
+
+.live-detail-row span,
+.live-detail-row a {
+  color: var(--admin-text);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.live-detail-row a {
+  color: var(--accent-primary);
+  text-decoration: none;
+}
+
+.live-detail-row a:hover {
+  text-decoration: underline;
+}
+
+.live-detail-quick-propose {
+  margin-top: 10px;
+  border: 1px solid var(--admin-border);
+  background: var(--admin-bg-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px;
+}
+
+.live-detail-quick-title {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.live-detail-quick-target {
+  margin: 0 0 10px;
+  color: var(--admin-text-secondary);
+  font-size: 12px;
+}
+
+.live-detail-quick-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.live-detail-quick-controls .form-control {
+  min-width: 0;
+  flex: 1;
+}
+
+.live-detail-quick-controls .btn {
+  white-space: nowrap;
+}
+
 /* ========== 반응형 ========== */
+@media (max-width: 1100px) {
+  .live-detail-body {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .live-detail-modal {
+    width: min(720px, 96vw);
+  }
+}
+
 @media (max-width: 768px) {
   .search-filter-bar {
     padding: 16px;
@@ -864,5 +1061,31 @@ input:checked + .toggle-slider::before {
 
   .filter-options {
     grid-template-columns: 1fr;
+  }
+
+  .live-detail-modal {
+    width: 96vw;
+    max-height: 94vh;
+  }
+
+  .live-detail-modal .modal-header,
+  .live-detail-modal .modal-footer {
+    padding: 14px 16px;
+  }
+
+  .live-detail-modal .modal-body {
+    padding: 14px 16px;
+  }
+
+  .live-detail-row {
+    grid-template-columns: 86px minmax(0, 1fr);
+    font-size: 12px;
+    gap: 6px;
+  }
+
+  .live-detail-thumb {
+    width: 62px;
+    height: 62px;
+    min-width: 62px;
   }
 }
