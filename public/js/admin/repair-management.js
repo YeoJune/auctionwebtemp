@@ -41,6 +41,7 @@ const LOCATION_LABEL = {
   REPAIR_DONE_ZONE: "수선완료존",
   OUTBOUND_ZONE: "출고존",
 };
+const INTERNAL_VENDOR_NAME = "까사(내부)";
 
 const state = {
   vendors: [],
@@ -55,6 +56,7 @@ let autoQuoteSyncTimer = null;
 const AUTO_QUOTE_SYNC_INTERVAL_MS = 8000;
 let detailImages = [];
 let detailImageIndex = 0;
+let selectedDomesticPrefix = "";
 
 function el(id) {
   return document.getElementById(id);
@@ -128,11 +130,9 @@ function locationLabel(value) {
 function renderDecisionCell(decisionType, vendorName = "") {
   const type = String(decisionType || "").toUpperCase();
   if (type === "EXTERNAL") {
-    const vendor = String(vendorName || "").trim() || "업체미지정";
     return `
       <div class="decision-cell">
         <span class="decision-badge decision-external">외부</span>
-        <div class="decision-vendor">${escapeHtml(vendor)}</div>
       </div>
     `;
   }
@@ -247,6 +247,90 @@ function getSearchFilteredRows(rows) {
   });
 }
 
+function extractBarcodePrefix(barcode) {
+  const raw = String(barcode || "").trim();
+  if (!raw) return "";
+  const noCb = raw.toUpperCase().startsWith("CB-") ? raw.slice(3) : raw;
+  const parts = noCb.split("-").filter(Boolean);
+  if (parts.length >= 2) return `${parts[0]}-${parts[1]}`;
+  return parts[0] || "";
+}
+
+function compareBarcodePrefix(a, b) {
+  const [aLeft = "", aRight = ""] = String(a || "").split("-");
+  const [bLeft = "", bRight = ""] = String(b || "").split("-");
+  const aLeftNum = Number(aLeft);
+  const bLeftNum = Number(bLeft);
+  const aRightNum = Number(aRight);
+  const bRightNum = Number(bRight);
+
+  if (Number.isFinite(aLeftNum) && Number.isFinite(bLeftNum) && aLeftNum !== bLeftNum) {
+    return aLeftNum - bLeftNum;
+  }
+  if (Number.isFinite(aRightNum) && Number.isFinite(bRightNum) && aRightNum !== bRightNum) {
+    return aRightNum - bRightNum;
+  }
+  return String(a || "").localeCompare(String(b || ""));
+}
+
+function renderDomesticPrefixChips(rows) {
+  const node = el("domesticPrefixChips");
+  if (!node) return;
+  if (!Array.isArray(rows) || !rows.length) {
+    node.innerHTML = "";
+    selectedDomesticPrefix = "";
+    return;
+  }
+
+  const countMap = new Map();
+  rows.forEach((row) => {
+    const prefix = extractBarcodePrefix(row.internal_barcode || row.external_barcode);
+    if (!prefix) return;
+    countMap.set(prefix, (countMap.get(prefix) || 0) + 1);
+  });
+
+  const chips = [...countMap.entries()]
+    .sort((a, b) => compareBarcodePrefix(a[0], b[0]))
+    .map(([prefix, count]) => ({ prefix, count }));
+
+  if (
+    selectedDomesticPrefix &&
+    !chips.some((chip) => chip.prefix === selectedDomesticPrefix)
+  ) {
+    selectedDomesticPrefix = "";
+  }
+
+  node.innerHTML = `
+    <button
+      type="button"
+      class="domestic-prefix-chip ${selectedDomesticPrefix ? "" : "active"}"
+      data-prefix=""
+    >
+      전체
+    </button>
+    ${chips
+      .map(
+        (chip) => `
+      <button
+        type="button"
+        class="domestic-prefix-chip ${selectedDomesticPrefix === chip.prefix ? "active" : ""}"
+        data-prefix="${escapeHtml(chip.prefix)}"
+      >
+        ${escapeHtml(chip.prefix)}- (${chip.count})
+      </button>
+    `,
+      )
+      .join("")}
+  `;
+
+  node.querySelectorAll(".domestic-prefix-chip").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      selectedDomesticPrefix = btn.dataset.prefix || "";
+      renderDomesticArrivals();
+    });
+  });
+}
+
 function getArrivalCaseInfo(row) {
   return getCaseByItemId(row.id) || row;
 }
@@ -257,8 +341,8 @@ function getRepairStageCode(row = {}) {
   const zoneCode = String(row.current_location_code || "").trim().toUpperCase();
 
   if (
-    ["INTERNAL_REPAIR_ZONE", "EXTERNAL_REPAIR_ZONE", "REPAIR_DONE_ZONE", "OUTBOUND_ZONE"].includes(zoneCode) ||
-    [CASE_STATE.ACCEPTED, CASE_STATE.DONE].includes(caseState)
+    ["INTERNAL_REPAIR_ZONE", "EXTERNAL_REPAIR_ZONE"].includes(zoneCode) ||
+    caseState === CASE_STATE.ACCEPTED
   ) {
     return REPAIR_STAGE.IN_PROGRESS;
   }
@@ -304,12 +388,23 @@ function getArrivalCaseState(row) {
     .toUpperCase();
 }
 
-function externalSheetStateLabel(caseInfo) {
-  if (caseInfo?.decision_type !== "EXTERNAL") return "-";
-  if (caseInfo.external_synced_at) return "견적동기화완료";
-  if (caseInfo.external_sent_at) return "시트전송완료/견적대기";
-  if (caseInfo.vendor_sheet_url) return "시트연결됨/미전송";
-  return "시트미연결";
+function repairSheetStateLabel(caseInfo) {
+  const decisionType = String(caseInfo?.decision_type || "")
+    .trim()
+    .toUpperCase();
+  if (decisionType === "EXTERNAL") {
+    if (caseInfo.external_synced_at) return "견적동기화완료";
+    if (caseInfo.external_sent_at) return "외주시트전송완료/견적대기";
+    if (caseInfo.vendor_sheet_url) return "외주시트연결됨/미전송";
+    return "외주시트미연결";
+  }
+  if (decisionType === "INTERNAL") {
+    if (caseInfo.internal_synced_at) return "내부시트동기화완료";
+    if (caseInfo.internal_sent_at) return "내부시트전송완료";
+    if (caseInfo.vendor_sheet_url) return "내부시트연결됨/미전송";
+    return "내부시트미연결";
+  }
+  return "-";
 }
 
 function bindArrivalActions(tbody) {
@@ -360,18 +455,26 @@ function renderArrivalRows(tbody, rows, emptyText, options = {}) {
       const caseInfo = getArrivalCaseInfo(row);
       const isExternal = caseInfo.decision_type === "EXTERNAL";
       const isInternal = caseInfo.decision_type === "INTERNAL";
-      const caseId = caseInfo.repair_case_id || caseInfo.id;
-      const sheetState = externalSheetStateLabel(caseInfo);
-      const stageControl = renderStageChangeControl(
-        row.id,
-        getRepairStageCode(caseInfo),
-      );
+      const sheetState = repairSheetStateLabel(caseInfo);
+      const stageControl =
+        mode === "domestic"
+          ? ""
+          : renderStageChangeControl(row.id, getRepairStageCode(caseInfo));
 
       const actionButtons = [];
-
-      if (isExternal) {
+      if (mode === "domestic") {
+        actionButtons.push(
+          `<button class="btn btn-sm btn-secondary js-open-internal" data-item-id="${row.id}">내부수선등록</button>`,
+        );
+        actionButtons.push(
+          `<button class="btn btn-sm btn-secondary js-open-external" data-item-id="${row.id}">외부수선등록</button>`,
+        );
+      } else if (isExternal) {
         actionButtons.push(
           `<button class="btn btn-sm btn-secondary js-open-external" data-item-id="${row.id}">외부수선수정</button>`,
+        );
+        actionButtons.push(
+          `<button class="btn btn-sm btn-secondary js-open-internal" data-item-id="${row.id}">내부로변경</button>`,
         );
         if (!caseInfo.external_sent_at || !isDraftSection) {
           actionButtons.push(
@@ -386,12 +489,15 @@ function renderArrivalRows(tbody, rows, emptyText, options = {}) {
         actionButtons.push(
           `<button class="btn btn-sm btn-secondary js-open-internal" data-item-id="${row.id}">내부수선수정</button>`,
         );
+        actionButtons.push(
+          `<button class="btn btn-sm btn-secondary js-open-external" data-item-id="${row.id}">외부로변경</button>`,
+        );
       } else {
         actionButtons.push(
-          `<button class="btn btn-sm btn-secondary js-open-internal" data-item-id="${row.id}">내부수선</button>`,
+          `<button class="btn btn-sm btn-secondary js-open-internal" data-item-id="${row.id}">내부수선등록</button>`,
         );
         actionButtons.push(
-          `<button class="btn btn-sm btn-secondary js-open-external" data-item-id="${row.id}">외부수선</button>`,
+          `<button class="btn btn-sm btn-secondary js-open-external" data-item-id="${row.id}">외부수선등록</button>`,
         );
       }
 
@@ -407,7 +513,7 @@ function renderArrivalRows(tbody, rows, emptyText, options = {}) {
         mode === "draft"
           ? `
         <td>${renderDecisionCell(caseInfo.decision_type, caseInfo.vendor_name)}</td>
-        <td>${escapeHtml(caseInfo.decision_type === "EXTERNAL" ? caseInfo.vendor_name || "-" : "-")}</td>
+        <td>${escapeHtml(caseInfo.decision_type === "EXTERNAL" || caseInfo.decision_type === "INTERNAL" ? caseInfo.vendor_name || "-" : "-")}</td>
         <td>${escapeHtml(sheetState)}</td>
       `
           : "";
@@ -434,10 +540,20 @@ function renderArrivalRows(tbody, rows, emptyText, options = {}) {
 
 function renderDomesticArrivals() {
   const tbody = el("domesticArrivalsBody");
-  const rows = getSearchFilteredRows(state.arrivals || []).filter((row) => {
+  const domesticRows = getSearchFilteredRows(state.arrivals || []).filter((row) => {
     const caseInfo = getArrivalCaseInfo(row);
     return getRepairStageCode(caseInfo) === REPAIR_STAGE.DOMESTIC;
   });
+
+  renderDomesticPrefixChips(domesticRows);
+  const rows = selectedDomesticPrefix
+    ? domesticRows.filter(
+        (row) =>
+          extractBarcodePrefix(row.internal_barcode || row.external_barcode) ===
+          selectedDomesticPrefix,
+      )
+    : domesticRows;
+
   renderArrivalRows(tbody, rows, "국내도착(미작성) 데이터가 없습니다.", {
     mode: "domestic",
   });
@@ -651,15 +767,20 @@ function renderVendors() {
   const tbody = el("vendorsBody");
   if (!tbody) return;
 
-  const vendors = (state.vendors || []).filter((v) => v.name !== "까사(내부)");
+  const vendors = [...(state.vendors || [])].sort((a, b) => {
+    if (a.name === INTERNAL_VENDOR_NAME) return -1;
+    if (b.name === INTERNAL_VENDOR_NAME) return 1;
+    return String(a.name || "").localeCompare(String(b.name || ""));
+  });
   if (!vendors.length) {
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center">등록된 외주업체가 없습니다.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center">등록된 수선업체가 없습니다.</td></tr>';
     return;
   }
 
   tbody.innerHTML = vendors
     .map((v) => {
       const vendorId = Number(v.id || 0);
+      const isInternalVendor = String(v.name || "") === INTERNAL_VENDOR_NAME;
       const sheetUrl = v.sheet_url || "";
       const sheetId = v.sheet_id || extractSheetId(sheetUrl);
       const sheetGid = v.sheet_gid || extractSheetGid(sheetUrl);
@@ -672,6 +793,8 @@ function renderVendors() {
               data-vendor-id="${vendorId}"
               value="${escapeHtml(v.name || "")}"
               placeholder="업체명"
+              ${isInternalVendor ? "readonly" : ""}
+              ${isInternalVendor ? 'title="내부업체명은 변경할 수 없습니다."' : ""}
             />
           </td>
           <td>
@@ -695,8 +818,10 @@ function renderVendors() {
             <button
               class="btn btn-sm btn-secondary js-delete-vendor"
               data-vendor-id="${vendorId}"
+              ${isInternalVendor ? "disabled" : ""}
+              ${isInternalVendor ? 'title="내부업체는 삭제할 수 없습니다."' : ""}
             >
-              삭제
+              ${isInternalVendor ? "삭제불가" : "삭제"}
             </button>
           </td>
         </tr>
@@ -725,9 +850,9 @@ function renderVendors() {
           body: JSON.stringify({ name: vendorName, sheetUrl }),
         });
         await loadAll();
-        alert(`외주업체 [${vendorName}]가 저장되었습니다.`);
+        alert(`수선업체 [${vendorName}]가 저장되었습니다.`);
       } catch (error) {
-        alert(error.message || "외주업체 저장 중 오류가 발생했습니다.");
+        alert(error.message || "수선업체 저장 중 오류가 발생했습니다.");
       } finally {
         btn.disabled = false;
       }
@@ -739,7 +864,7 @@ function renderVendors() {
       const vendorId = Number(btn.dataset.vendorId || 0);
       const nameInput = tbody.querySelector(`.js-vendor-name[data-vendor-id="${vendorId}"]`);
       const vendorName = nameInput?.value?.trim() || "해당 업체";
-      if (!confirm(`외주업체 [${vendorName}]를 삭제할까요?`)) return;
+      if (!confirm(`수선업체 [${vendorName}]를 삭제할까요?`)) return;
 
       btn.disabled = true;
       try {
@@ -747,9 +872,9 @@ function renderVendors() {
           method: "DELETE",
         });
         await loadAll();
-        alert(`외주업체 [${vendorName}]가 삭제되었습니다.`);
+        alert(`수선업체 [${vendorName}]가 삭제되었습니다.`);
       } catch (error) {
-        alert(error.message || "외주업체 삭제 중 오류가 발생했습니다.");
+        alert(error.message || "수선업체 삭제 중 오류가 발생했습니다.");
       } finally {
         btn.disabled = false;
       }
@@ -759,11 +884,11 @@ function renderVendors() {
 
 function fillVendorOptions(selected = "") {
   const sel = el("vendorName");
-  const vendors = state.vendors.filter((v) => v.name !== "까사(내부)");
+  const vendors = state.vendors.filter((v) => v.name !== INTERNAL_VENDOR_NAME);
   const hasSelected = selected && vendors.some((v) => v.name === selected);
   const options = hasSelected ? vendors : selected ? [...vendors, { name: selected }] : vendors;
   if (!options.length) {
-    sel.innerHTML = '<option value="">외주업체 없음</option>';
+    sel.innerHTML = '<option value="">외부업체 없음</option>';
     return;
   }
   sel.innerHTML = options
@@ -842,19 +967,30 @@ function openModal(item, caseRow = null, forceDecision = "") {
   state.currentItem = item;
   state.currentCase = caseRow;
 
-  el("repairModalTitle").textContent = caseRow ? "수선 제안 수정" : "수선 정보 등록";
+  const sourceRow = caseRow || item || {};
+  const stageCode = getRepairStageCode(sourceRow);
+  // 1단계(국내도착)에서는 과거 수선 데이터를 모두 초기화한 상태로 시작한다.
+  const shouldResetForDomestic = stageCode === REPAIR_STAGE.DOMESTIC;
+
+  el("repairModalTitle").textContent =
+    caseRow && !shouldResetForDomestic ? "수선 제안 수정" : "수선 정보 등록";
   el("metaImage").src = item.product_image || "/images/no-image.png";
   el("metaBarcode").textContent = item.internal_barcode || "-";
   el("metaMember").textContent = item.member_name || "-";
   el("metaTitle").textContent = item.product_title || "-";
   el("metaScheduledAt").textContent = formatDateTime(item.scheduled_at);
 
-  fillVendorOptions(caseRow?.vendor_name || item.vendor_name || "");
-  el("decisionType").value = forceDecision || caseRow?.decision_type || item.decision_type || "INTERNAL";
-  el("repairAmount").value = caseRow?.repair_amount ?? item.repair_amount ?? "";
-  el("repairEta").value = caseRow?.repair_eta || item.repair_eta || "";
-  el("repairNote").value = caseRow?.repair_note || item.repair_note || "";
-  el("internalNote").value = caseRow?.internal_note || item.internal_note || "";
+  const selectedVendor = shouldResetForDomestic
+    ? ""
+    : caseRow?.vendor_name || item.vendor_name || "";
+  fillVendorOptions(selectedVendor);
+  el("decisionType").value =
+    forceDecision ||
+    (shouldResetForDomestic ? "INTERNAL" : caseRow?.decision_type || item.decision_type || "INTERNAL");
+  el("repairAmount").value = shouldResetForDomestic ? "" : caseRow?.repair_amount ?? item.repair_amount ?? "";
+  el("repairEta").value = shouldResetForDomestic ? "" : caseRow?.repair_eta || item.repair_eta || "";
+  el("repairNote").value = shouldResetForDomestic ? "" : caseRow?.repair_note || item.repair_note || "";
+  el("internalNote").value = shouldResetForDomestic ? "" : caseRow?.internal_note || item.internal_note || "";
 
   toggleVendorField();
   buildProposalPreview();
@@ -869,6 +1005,11 @@ function closeModal() {
 
 async function saveCase(action = "save") {
   if (!state.currentItem) return;
+  const saveBtn = el("btnSaveDraft");
+  const proposeBtn = el("btnSaveProposal");
+  const targetBtn = action === "propose" ? proposeBtn : saveBtn;
+  const prevText = targetBtn?.textContent || "";
+
   const payload = {
     itemId: state.currentItem.item_id || state.currentItem.id,
     decisionType: el("decisionType").value,
@@ -890,13 +1031,26 @@ async function saveCase(action = "save") {
     return;
   }
 
-  const response = await api("/api/repair-management/cases", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-  alert(response.message || "저장되었습니다.");
-  closeModal();
-  await loadAll();
+  if (targetBtn) {
+    targetBtn.disabled = true;
+    targetBtn.textContent = action === "propose" ? "제안등록중..." : "저장중...";
+  }
+  try {
+    const response = await api("/api/repair-management/cases", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    alert(response.message || "저장되었습니다.");
+    closeModal();
+    await loadAll();
+  } catch (error) {
+    alert(error.message || "수선 저장 중 오류가 발생했습니다.");
+  } finally {
+    if (targetBtn) {
+      targetBtn.disabled = false;
+      targetBtn.textContent = prevText || (action === "propose" ? "제안등록" : "수선정보저장");
+    }
+  }
 }
 
 async function registerProposalByItem(itemId) {
@@ -963,6 +1117,47 @@ async function sendExternalByItem(itemId, triggerBtn = null) {
       triggerBtn.textContent = prevText || "외주시트전송";
     }
   }
+}
+
+async function sendInternalByCase(caseId, triggerBtn = null) {
+  const normalizedCaseId = Number(caseId || 0);
+  if (!normalizedCaseId) return;
+  const prevText = triggerBtn?.textContent;
+  if (triggerBtn) {
+    triggerBtn.disabled = true;
+    triggerBtn.textContent = "전송중...";
+  }
+  try {
+    const result = await api(`/api/repair-management/cases/${normalizedCaseId}/push-internal-sheet`, {
+      method: "POST",
+    });
+    alert(result.message || "내부시트 전송 완료");
+    await loadAll();
+  } catch (error) {
+    alert(error.message || "내부시트 전송 중 오류가 발생했습니다.");
+  } finally {
+    if (triggerBtn) {
+      triggerBtn.disabled = false;
+      triggerBtn.textContent = prevText || "내부시트전송";
+    }
+  }
+}
+
+async function sendInternalByItem(itemId, triggerBtn = null) {
+  const item = state.arrivals.find((r) => Number(r.id) === Number(itemId));
+  const caseRow = getCaseByItemId(itemId) || item;
+  if (!caseRow?.repair_case_id && !caseRow?.id) {
+    openModal(item, caseRow, "INTERNAL");
+    alert("내부시트 전송을 위해 먼저 내부수선 정보를 저장하세요.");
+    return;
+  }
+  if (String(caseRow?.decision_type || "").toUpperCase() !== "INTERNAL") {
+    openModal(item, caseRow, "INTERNAL");
+    alert("내부시트 전송은 처리구분이 '내부'인 건에서만 가능합니다.");
+    return;
+  }
+  const caseId = caseRow.repair_case_id || caseRow.id;
+  await sendInternalByCase(caseId, triggerBtn);
 }
 
 async function syncExternalByItem(itemId, triggerBtn = null) {

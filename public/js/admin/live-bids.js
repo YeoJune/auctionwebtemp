@@ -346,7 +346,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // 초기 데이터 로드
   loadLiveBids();
-  refreshFirstDateFilterOptions();
 
   // 브라우저 뒤로가기/앞으로가기 처리
   window.addEventListener("popstate", function () {
@@ -392,7 +391,6 @@ document.addEventListener("DOMContentLoaded", function () {
       currentPage = 1;
       updateURLState();
       loadLiveBids();
-      refreshFirstDateFilterOptions();
     });
   });
 
@@ -412,7 +410,6 @@ document.addEventListener("DOMContentLoaded", function () {
       currentPage = 1;
       updateURLState();
       loadLiveBids();
-      refreshFirstDateFilterOptions();
     });
   });
 
@@ -514,7 +511,6 @@ document.addEventListener("DOMContentLoaded", function () {
       currentAucNum = this.value;
       currentPage = 1;
       loadLiveBids();
-      refreshFirstDateFilterOptions();
     });
 
   // 정렬 옵션 변경 이벤트
@@ -582,7 +578,6 @@ function handleSearchInput() {
       currentPage = 1;
       updateURLState();
       loadLiveBids();
-      refreshFirstDateFilterOptions();
     }
   }, 300);
 }
@@ -594,7 +589,6 @@ function handleSearchSubmit() {
     currentPage = 1;
     updateURLState();
     loadLiveBids();
-    refreshFirstDateFilterOptions();
   }
 }
 
@@ -605,7 +599,6 @@ function handleSearchClear() {
     currentPage = 1;
     updateURLState();
     loadLiveBids();
-    refreshFirstDateFilterOptions();
   }
 }
 
@@ -724,6 +717,7 @@ async function loadLiveBids() {
       showNoData("liveBidsTableBody", "현장 경매 데이터가 없습니다.");
       renderPagination(0, 0, 0);
       renderProcessingZoneSummary([]);
+      await refreshFirstDateFilterOptions();
       return;
     }
 
@@ -735,6 +729,7 @@ async function loadLiveBids() {
     renderProcessingZoneSummary(currentLiveBidsData);
     renderPagination(liveBids.currentPage, liveBids.totalPages, liveBids.total);
     totalPages = liveBids.totalPages;
+    await refreshFirstDateFilterOptions();
   } catch (error) {
     currentLiveBidsData = [];
     handleError(error, "현장 경매 데이터를 불러오는 중 오류가 발생했습니다.");

@@ -53,7 +53,7 @@
 
         <section class="card" style="margin-top: 16px">
           <div class="section-header">
-            <h3>외주업체 관리(시트 연결)</h3>
+            <h3>수선업체 관리(시트 연결)</h3>
             <div class="toolbar">
               <button id="btnToggleVendorManagement" class="btn btn-secondary">펼치기</button>
               <button id="btnAddVendor" type="button" class="btn btn-secondary">외주업체추가</button>
@@ -62,8 +62,8 @@
           </div>
           <div id="vendorManagementBody" style="display: none">
             <p class="sheet-guide">
-              외부수선 흐름: <strong>외주시트전송</strong>으로 행 생성/갱신 → 업체 회신 입력 → <strong>외주시트동기화</strong>.
-              동기화 기준은 <strong>내부바코드(또는 바코드)</strong>, <strong>견적금액(또는 수선금액)</strong> 컬럼입니다.
+              외부수선은 <strong>외주시트전송</strong> → 업체 회신 → <strong>외주시트동기화</strong>로 운영합니다.
+              내부수선도 <strong>내부시트전송</strong>으로 연결되며, 메인시트(<strong>수선_전체현황</strong>)에 내부/외부 전체 건이 통합 목록으로 자동 갱신됩니다.
             </p>
             <div class="table-wrap">
               <table class="data-table">
@@ -77,7 +77,7 @@
                   </tr>
                 </thead>
                 <tbody id="vendorsBody">
-                  <tr><td colspan="5" class="text-center">외주업체 정보를 불러오는 중입니다...</td></tr>
+                  <tr><td colspan="5" class="text-center">수선업체 정보를 불러오는 중입니다...</td></tr>
                 </tbody>
               </table>
             </div>
@@ -88,6 +88,7 @@
           <div class="section-header">
             <h3>1) 국내도착(분기/견적등록)</h3>
           </div>
+          <div id="domesticPrefixChips" class="domestic-prefix-chips"></div>
           <div class="table-wrap">
             <table class="data-table">
               <thead>
