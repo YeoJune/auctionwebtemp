@@ -52,6 +52,22 @@ async function triggerBoardBackfill() {
   }
 }
 
+async function reconcileDoneCasesToRepairDoneZone() {
+  await pool.query(
+    `
+    UPDATE wms_items i
+    INNER JOIN wms_repair_cases rc
+      ON rc.item_id = i.id
+    SET i.current_location_code = 'REPAIR_DONE_ZONE',
+        i.current_status = 'REPAIR_DONE',
+        i.updated_at = NOW()
+    WHERE UPPER(TRIM(COALESCE(rc.case_state, ''))) = 'DONE'
+      AND i.current_status <> 'COMPLETED'
+      AND i.current_location_code NOT IN ('REPAIR_DONE_ZONE', 'OUTBOUND_ZONE')
+    `,
+  );
+}
+
 function statusByLocation(locationCode, requestType) {
   const normalizedLocationCode = normalizeLocationCode(locationCode);
   switch (locationCode) {
@@ -1055,6 +1071,7 @@ router.get("/board", isAdmin, async (req, res) => {
   try {
     await ensureTables();
     triggerBoardBackfill().catch(() => {});
+    await reconcileDoneCasesToRepairDoneZone();
     const [locations] = await pool.query(
       `
       SELECT code, name, sort_order
@@ -1134,7 +1151,15 @@ router.get("/board", isAdmin, async (req, res) => {
           FROM wms_scan_events se
           WHERE se.item_id = i.id
         ) AS last_scan_at,
-        COALESCE(ci.image, '') AS product_image,
+        COALESCE(
+          NULLIF(TRIM(ci.image), ''),
+          CASE
+            WHEN JSON_VALID(ci.additional_images) THEN
+              NULLIF(TRIM(JSON_UNQUOTE(JSON_EXTRACT(ci.additional_images, '$[0]'))), '')
+            ELSE NULL
+          END,
+          ''
+        ) AS product_image,
         COALESCE(ci.original_title, ci.title) AS product_title,
         COALESCE(u.company_name, i.member_name) AS company_name,
         CASE

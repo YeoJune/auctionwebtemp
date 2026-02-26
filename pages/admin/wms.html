@@ -13,6 +13,12 @@
         grid-template-columns: 1fr 1fr;
         gap: 16px;
       }
+      .wms-step12-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-top: 16px;
+      }
       .card {
         background: #fff;
         border-radius: 8px;
@@ -264,6 +270,9 @@
         .wms-grid {
           grid-template-columns: 1fr;
         }
+        .wms-step12-grid {
+          grid-template-columns: 1fr;
+        }
         .board-grid {
           grid-template-columns: repeat(2, 1fr);
         }
@@ -301,72 +310,74 @@
           </div>
         </div>
 
-        <div class="card" style="margin-top: 16px">
-          <h3>1단계. 낙찰완료 조회 → 내부바코드 생성/출력</h3>
-          <div class="form-row">
-            <input id="searchScheduledDate" type="date" />
-            <input id="searchAucNum" placeholder="경매번호(예: 1,2,4)" />
+        <div class="wms-step12-grid">
+          <div class="card">
+            <h3>1단계. 낙찰완료 조회 → 내부바코드 생성/출력</h3>
+            <div class="form-row">
+              <input id="searchScheduledDate" type="date" />
+              <input id="searchAucNum" placeholder="경매번호(예: 1,2,4)" />
+            </div>
+            <div class="form-row">
+              <button id="btnSearchCompleted" class="primary">낙찰완료 조회</button>
+              <button id="btnGenerateLabels" class="primary">
+                선택 바코드 생성 + 라벨 출력
+              </button>
+            </div>
+            <div class="hint">
+              국내에 도착한 박스를 보고 1) 경매 진행 날짜 확인 2) 날짜/경매번호 선택 3) 낙찰완료 조회 후 전체 선택 출력하면 국내도착존으로 자동 반영됩니다.
+            </div>
+            <div class="auction-wrap" style="margin-top: 10px">
+              <table class="items-table">
+                <thead>
+                  <tr>
+                    <th><input type="checkbox" id="selectAllAuctionRows" /></th>
+                    <th>유형</th>
+                    <th>입찰ID</th>
+                    <th>경매번호</th>
+                    <th>아이템ID</th>
+                    <th>상품명</th>
+                    <th>회원사</th>
+                    <th>상태</th>
+                    <th>내부바코드</th>
+                  </tr>
+                </thead>
+                <tbody id="auctionItemsBody"></tbody>
+              </table>
+            </div>
           </div>
-          <div class="form-row">
-            <button id="btnSearchCompleted" class="primary">낙찰완료 조회</button>
-            <button id="btnGenerateLabels" class="primary">
-              선택 바코드 생성 + 라벨 출력
-            </button>
-          </div>
-          <div class="hint">
-            국내에 도착한 박스를 보고 1) 경매 진행 날짜 확인 2) 날짜/경매번호 선택 3) 낙찰완료 조회 후 전체 선택 출력하면 국내도착존으로 자동 반영됩니다.
-          </div>
-          <div class="auction-wrap" style="margin-top: 10px">
-            <table class="items-table">
-              <thead>
-                <tr>
-                  <th><input type="checkbox" id="selectAllAuctionRows" /></th>
-                  <th>유형</th>
-                  <th>입찰ID</th>
-                  <th>경매번호</th>
-                  <th>아이템ID</th>
-                  <th>상품명</th>
-                  <th>회원사</th>
-                  <th>상태</th>
-                  <th>내부바코드</th>
-                </tr>
-              </thead>
-              <tbody id="auctionItemsBody"></tbody>
-            </table>
-          </div>
-        </div>
 
-        <div class="card" style="margin-top: 16px">
-          <h3>2단계. 스캔 처리</h3>
-          <div class="scan-mode-row">
-            <select id="scanMode">
-              <option value="two_step">바코드 리더기 모드(존코드 → 물건바코드)</option>
-              <option value="manual">수동모드(존 선택 + 물건바코드)</option>
-            </select>
-            <button id="btnPrintZoneBarcodes" type="button" class="primary">존 바코드 출력</button>
-            <button id="btnClearStation" type="button">현재 존 초기화</button>
+          <div class="card">
+            <h3>2단계. 스캔 처리</h3>
+            <div class="scan-mode-row">
+              <select id="scanMode">
+                <option value="two_step">바코드 리더기 모드(존코드 → 물건바코드)</option>
+                <option value="manual">수동모드(존 선택 + 물건바코드)</option>
+              </select>
+              <button id="btnPrintZoneBarcodes" type="button" class="primary">존 바코드 출력</button>
+              <button id="btnClearStation" type="button">현재 존 초기화</button>
+            </div>
+            <div id="stationStatus" class="status-box">
+              현재 존: <strong>미설정</strong> (직원모드에서는 먼저 존 코드를 스캔하세요)
+            </div>
+            <div class="hint" style="margin-top: 6px">
+              입력창 클릭 후 영문(ABC) 상태에서 1) 존 바코드 스캔 2) 물건 바코드 연속 스캔
+            </div>
+            <hr />
+            <div class="form-row single">
+              <input id="scanBarcode" placeholder="바코드 입력 후 엔터 또는 버튼 클릭" />
+            </div>
+            <div class="form-row">
+              <select id="toLocationCode"></select>
+              <input id="staffName" placeholder="담당자명" />
+            </div>
+            <div class="form-row single">
+              <textarea id="scanNote" rows="2" placeholder="메모(선택)"></textarea>
+            </div>
+            <div class="form-row single">
+              <button id="btnScan" class="primary">스캔 기록</button>
+            </div>
+            <div id="scanResult" class="hint"></div>
           </div>
-          <div id="stationStatus" class="status-box">
-            현재 존: <strong>미설정</strong> (직원모드에서는 먼저 존 코드를 스캔하세요)
-          </div>
-          <div class="hint" style="margin-top: 6px">
-            입력창 클릭 후 영문(ABC) 상태에서 1) 존 바코드 스캔 2) 물건 바코드 연속 스캔
-          </div>
-          <hr />
-          <div class="form-row single">
-            <input id="scanBarcode" placeholder="바코드 입력 후 엔터 또는 버튼 클릭" />
-          </div>
-          <div class="form-row">
-            <select id="toLocationCode"></select>
-            <input id="staffName" placeholder="담당자명" />
-          </div>
-          <div class="form-row single">
-            <textarea id="scanNote" rows="2" placeholder="메모(선택)"></textarea>
-          </div>
-          <div class="form-row single">
-            <button id="btnScan" class="primary">스캔 기록</button>
-          </div>
-          <div id="scanResult" class="hint"></div>
         </div>
 
         <div class="card" style="margin-top: 16px">

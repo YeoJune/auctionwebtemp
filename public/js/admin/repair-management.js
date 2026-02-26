@@ -24,6 +24,7 @@ const REPAIR_STAGE = {
   READY_TO_SEND: "READY_TO_SEND",
   PROPOSED: "PROPOSED",
   IN_PROGRESS: "IN_PROGRESS",
+  DONE: "DONE",
 };
 
 const REPAIR_STAGE_LABEL = {
@@ -32,6 +33,7 @@ const REPAIR_STAGE_LABEL = {
   [REPAIR_STAGE.READY_TO_SEND]: "3) 견적완료/고객전송대기",
   [REPAIR_STAGE.PROPOSED]: "4) 고객응답대기",
   [REPAIR_STAGE.IN_PROGRESS]: "5) 진행중",
+  [REPAIR_STAGE.DONE]: "6) 수선완료존",
 };
 
 const LOCATION_LABEL = {
@@ -340,6 +342,10 @@ function getRepairStageCode(row = {}) {
   const decisionType = String(row.decision_type || "").trim().toUpperCase();
   const zoneCode = String(row.current_location_code || "").trim().toUpperCase();
 
+  if (zoneCode === "OUTBOUND_ZONE") return "";
+  if (zoneCode === "REPAIR_DONE_ZONE" || caseState === CASE_STATE.DONE) {
+    return REPAIR_STAGE.DONE;
+  }
   if (
     ["INTERNAL_REPAIR_ZONE", "EXTERNAL_REPAIR_ZONE"].includes(zoneCode) ||
     caseState === CASE_STATE.ACCEPTED
@@ -365,6 +371,7 @@ function renderStageChangeControl(itemId, currentStage) {
     REPAIR_STAGE.READY_TO_SEND,
     REPAIR_STAGE.PROPOSED,
     REPAIR_STAGE.IN_PROGRESS,
+    REPAIR_STAGE.DONE,
   ]
     .map(
       (stage) =>
@@ -734,6 +741,56 @@ function renderInProgressCases() {
   bindCommonRowActions(tbody);
 }
 
+function renderCompletedCases() {
+  const tbody = el("completedCasesBody");
+  if (!tbody) return;
+  const rows = getSearchFilteredRows(state.cases || []).filter(
+    (row) => getRepairStageCode(row) === REPAIR_STAGE.DONE,
+  );
+  if (!rows.length) {
+    tbody.innerHTML =
+      '<tr><td colspan="9" class="text-center">수선완료존 데이터가 없습니다.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rows
+    .map((row) => {
+      const stageControl = renderStageChangeControl(
+        row.item_id,
+        getRepairStageCode(row),
+      );
+      const allowShip = String(row.current_location_code || "").toUpperCase() !== "OUTBOUND_ZONE";
+      return `
+      <tr>
+        <td>${imageTag(row.product_image, row.product_title)}</td>
+        <td>${renderItemOpenButton(row, row.internal_barcode || "-")}</td>
+        <td>${escapeHtml(row.member_name || "-")}</td>
+        <td>${renderItemOpenButton(row, row.product_title || "-")}</td>
+        <td>${renderDecisionCell(row.decision_type, row.vendor_name)}</td>
+        <td>${escapeHtml(formatAmount(row.repair_amount))}</td>
+        <td>${escapeHtml(CASE_STATE_LABEL[row.case_state] || "-")}</td>
+        <td>${escapeHtml(locationLabel(row.current_location_code))}</td>
+        <td>
+          <div class="cell-actions">
+            ${
+              allowShip
+                ? `<button class="btn btn-sm btn-primary js-ship-done" data-case-id="${row.id}">출고완료</button>`
+                : '<span class="muted">출고완료</span>'
+            }
+          </div>
+          ${stageControl}
+        </td>
+      </tr>
+    `;
+    })
+    .join("");
+
+  tbody.querySelectorAll(".js-ship-done").forEach((btn) => {
+    btn.addEventListener("click", () => markShipped(btn.dataset.caseId));
+  });
+  bindCommonRowActions(tbody);
+}
+
 function renderAll() {
   renderVendors();
   renderDomesticArrivals();
@@ -741,6 +798,7 @@ function renderAll() {
   renderReadyToSendCases();
   renderProposedCases();
   renderInProgressCases();
+  renderCompletedCases();
 }
 
 function setVendorManagementCollapsed(collapsed) {

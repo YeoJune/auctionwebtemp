@@ -10,6 +10,7 @@ const {
 const router = express.Router();
 const INTERNAL_VENDOR_NAME = "까사(내부)";
 const DEFAULT_REPAIR_MAIN_SHEET_NAME = "수선_전체현황";
+const DEFAULT_REPAIR_COMPLETED_SHEET_NAME = "수선_완료내역";
 
 const DEFAULT_VENDORS = [
   "리리",
@@ -35,6 +36,7 @@ const REPAIR_STAGE_CODES = {
   READY_TO_SEND: "READY_TO_SEND",
   PROPOSED: "PROPOSED",
   IN_PROGRESS: "IN_PROGRESS",
+  DONE: "DONE",
 };
 
 let sheetsClientPromise = null;
@@ -427,9 +429,41 @@ function normalizeBarcode(value) {
     .toUpperCase();
 }
 
+function extractFirstImageValue(rawValue) {
+  const text = String(rawValue || "").trim();
+  if (!text) return "";
+
+  if (/^=IMAGE\s*\(/i.test(text)) {
+    return text;
+  }
+
+  if (text.startsWith("[") || text.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(text);
+      if (Array.isArray(parsed)) {
+        const first = parsed.find(
+          (entry) => typeof entry === "string" && entry.trim(),
+        );
+        if (first) return first.trim();
+      } else if (parsed && typeof parsed === "object") {
+        const candidates = [
+          parsed.image,
+          parsed.url,
+          parsed.src,
+          parsed.path,
+        ].filter((entry) => typeof entry === "string" && entry.trim());
+        if (candidates.length > 0) return candidates[0].trim();
+      }
+    } catch (_) {}
+  }
+
+  return text;
+}
+
 function toSheetImageFormula(imageUrlRaw) {
-  const raw = String(imageUrlRaw || "").trim();
+  const raw = extractFirstImageValue(imageUrlRaw);
   if (!raw) return "";
+  if (/^=IMAGE\s*\(/i.test(raw)) return raw;
 
   const base = SHEET_IMAGE_BASE_URL || "https://casastrade.com";
   let absoluteUrl = raw;
@@ -443,7 +477,14 @@ function toSheetImageFormula(imageUrlRaw) {
     absoluteUrl = `${base}/${raw.replace(/^\/+/, "")}`;
   }
 
-  const safeUrl = absoluteUrl.replace(/"/g, '""');
+  let targetUrl = absoluteUrl;
+  // Google Sheets가 일부 WEBP를 렌더링하지 못하는 경우가 있어 JPG 변환 프록시를 사용한다.
+  if (/\.webp(?:[?#].*)?$/i.test(absoluteUrl)) {
+    const stripped = absoluteUrl.replace(/^https?:\/\//i, "");
+    targetUrl = `https://images.weserv.nl/?url=${encodeURIComponent(stripped)}&output=jpg`;
+  }
+
+  const safeUrl = targetUrl.replace(/"/g, '""');
   return `=IMAGE("${safeUrl}")`;
 }
 
@@ -534,6 +575,7 @@ async function resolveTargetSheetAndRows({ sheets, sheetId, sheetGid }) {
   const valuesRes = await sheets.spreadsheets.values.get({
     spreadsheetId: sheetId,
     range,
+    valueRenderOption: "FORMULA",
   });
   return {
     targetSheetTitle: targetSheet.title,
@@ -1174,6 +1216,8 @@ function toRepairStageLabel(stageCode) {
       return "4) 고객응답대기";
     case REPAIR_STAGE_CODES.IN_PROGRESS:
       return "5) 진행중";
+    case REPAIR_STAGE_CODES.DONE:
+      return "6) 수선완료존";
     default:
       return "-";
   }
@@ -1232,6 +1276,26 @@ async function resolveRepairMainSheetConfig(conn) {
   };
 }
 
+async function resolveRepairCompletedSheetConfig(conn) {
+  const envSheetId = String(process.env.REPAIR_COMPLETED_SHEET_ID || "").trim();
+  const envSheetGid = String(process.env.REPAIR_COMPLETED_SHEET_GID || "").trim();
+  const envSheetName = String(process.env.REPAIR_COMPLETED_SHEET_NAME || "").trim();
+  if (envSheetId) {
+    return {
+      sheetId: envSheetId,
+      sheetGid: envSheetGid || null,
+      sheetName: envSheetName || DEFAULT_REPAIR_COMPLETED_SHEET_NAME,
+    };
+  }
+
+  const mainSheet = await resolveRepairMainSheetConfig(conn);
+  return {
+    sheetId: mainSheet.sheetId || null,
+    sheetGid: envSheetGid || null,
+    sheetName: envSheetName || DEFAULT_REPAIR_COMPLETED_SHEET_NAME,
+  };
+}
+
 async function syncRepairDailyOverviewSheet(conn) {
   const mainSheetConfig = await resolveRepairMainSheetConfig(conn);
   if (!mainSheetConfig.sheetId) {
@@ -1254,6 +1318,15 @@ async function syncRepairDailyOverviewSheet(conn) {
       i.current_status,
       COALESCE(ci.original_scheduled_date, ci.scheduled_date, i.source_scheduled_date, rc.updated_at, i.updated_at, i.created_at) AS scheduled_at,
       COALESCE(rc.updated_at, i.updated_at, i.created_at) AS updated_at,
+      COALESCE(
+        NULLIF(TRIM(ci.image), ''),
+        CASE
+          WHEN JSON_VALID(ci.additional_images) THEN
+            NULLIF(TRIM(JSON_UNQUOTE(JSON_EXTRACT(ci.additional_images, '$[0]'))), '')
+          ELSE NULL
+        END,
+        ''
+      ) AS product_image,
       rc.id AS case_id,
       rc.case_state,
       rc.decision_type,
@@ -1297,9 +1370,8 @@ async function syncRepairDailyOverviewSheet(conn) {
         row.decision_type,
         normalizeLocationCode(row.current_location_code),
       );
-      // 수선_전체현황 시트는 "수선 진행 대상(2~5단계 및 무수선 처리건)"만 관리한다.
-      // 1단계(국내도착/분기전) 건은 과거 값이 남아 있어도 시트에 재기입하지 않는다.
-      if (stageCode === REPAIR_STAGE_CODES.DOMESTIC) {
+      // 수선_전체현황 시트는 진행중(5단계) 목록만 관리한다.
+      if (stageCode !== REPAIR_STAGE_CODES.IN_PROGRESS) {
         return null;
       }
       const decisionType = String(row.decision_type || "")
@@ -1317,6 +1389,7 @@ async function syncRepairDailyOverviewSheet(conn) {
           String(row.internal_barcode || "").trim(),
           String(row.member_name || "").trim(),
           sanitizeProductTitle(row.product_title || ""),
+          toSheetImageFormula(row.product_image || ""),
           toRepairStageLabel(stageCode),
           toDecisionTypeLabel(decisionType),
           decisionType === "INTERNAL"
@@ -1345,6 +1418,7 @@ async function syncRepairDailyOverviewSheet(conn) {
       "내부바코드",
       "회원사",
       "상품명",
+      "사진",
       "단계",
       "처리구분",
       "업체",
@@ -1382,7 +1456,7 @@ async function syncRepairDailyOverviewSheet(conn) {
   await sheets.spreadsheets.values.update({
     spreadsheetId: mainSheetConfig.sheetId,
     range: `'${tabName}'!A1:${endCell}`,
-    valueInputOption: "RAW",
+    valueInputOption: "USER_ENTERED",
     requestBody: { values },
   });
 
@@ -1394,14 +1468,251 @@ async function syncRepairDailyOverviewSheet(conn) {
   };
 }
 
+async function syncRepairCompletedHistorySheet(conn) {
+  const completedSheetConfig = await resolveRepairCompletedSheetConfig(conn);
+  if (!completedSheetConfig.sheetId) {
+    return {
+      ok: false,
+      skipped: true,
+      reason:
+        "완료누적 시트 ID가 없습니다. REPAIR_COMPLETED_SHEET_ID 또는 내부업체 시트 링크를 먼저 설정하세요.",
+    };
+  }
+
+  const [rows] = await conn.query(
+    `
+    SELECT
+      i.id,
+      COALESCE(NULLIF(TRIM(i.internal_barcode), ''), NULLIF(TRIM(i.external_barcode), '')) AS internal_barcode,
+      COALESCE(u.company_name, i.member_name) AS member_name,
+      COALESCE(ci.original_title, ci.title) AS product_title,
+      COALESCE(
+        NULLIF(TRIM(ci.image), ''),
+        CASE
+          WHEN JSON_VALID(ci.additional_images) THEN
+            NULLIF(TRIM(JSON_UNQUOTE(JSON_EXTRACT(ci.additional_images, '$[0]'))), '')
+          ELSE NULL
+        END,
+        ''
+      ) AS product_image,
+      i.current_location_code,
+      i.current_status,
+      COALESCE(ci.original_scheduled_date, ci.scheduled_date, i.source_scheduled_date, rc.updated_at, i.updated_at, i.created_at) AS scheduled_at,
+      COALESCE(rc.completed_at, rc.updated_at, i.updated_at, i.created_at) AS updated_at,
+      rc.id AS case_id,
+      rc.case_state,
+      rc.decision_type,
+      rc.vendor_name,
+      rc.repair_amount,
+      rc.repair_eta,
+      rc.repair_note,
+      rc.external_sent_at,
+      rc.external_synced_at,
+      rc.internal_sent_at,
+      rc.internal_synced_at
+    FROM wms_items i
+    LEFT JOIN wms_repair_cases rc
+      ON rc.item_id = i.id
+    LEFT JOIN direct_bids d
+      ON i.source_bid_type = 'direct'
+     AND i.source_bid_id = d.id
+    LEFT JOIN live_bids l
+      ON i.source_bid_type = 'live'
+     AND i.source_bid_id = l.id
+    LEFT JOIN users u
+      ON u.id = COALESCE(d.user_id, l.user_id)
+    LEFT JOIN crawled_items ci
+      ON CONVERT(ci.item_id USING utf8mb4) =
+         CONVERT(COALESCE(i.source_item_id, d.item_id, l.item_id) USING utf8mb4)
+    WHERE
+      rc.id IS NOT NULL
+      AND UPPER(TRIM(COALESCE(rc.case_state, ''))) = 'DONE'
+      AND UPPER(TRIM(COALESCE(rc.decision_type, ''))) IN ('INTERNAL', 'EXTERNAL', 'NONE')
+      AND (
+        NULLIF(TRIM(i.internal_barcode), '') IS NOT NULL
+        OR NULLIF(TRIM(i.external_barcode), '') IS NOT NULL
+      )
+    ORDER BY COALESCE(rc.completed_at, rc.updated_at, i.updated_at, i.created_at) ASC
+    `,
+  );
+
+  const completedRows = rows
+    .map((row) => {
+      const decisionType = String(row.decision_type || "")
+        .trim()
+        .toUpperCase();
+      const normalizedZone = normalizeLocationCode(row.current_location_code);
+      const stageLabel =
+        normalizedZone === "OUTBOUND_ZONE" ? "출고완료" : "6) 수선완료존";
+      const repairAmount = toAmount(row.repair_amount);
+      const barcode = String(row.internal_barcode || "").trim();
+      if (!barcode) return null;
+
+      return [
+        toDateTimeKey(row.updated_at),
+        formatDateForSheet(row.scheduled_at),
+        barcode,
+        String(row.member_name || "").trim(),
+        sanitizeProductTitle(row.product_title || ""),
+        toSheetImageFormula(row.product_image || ""),
+        stageLabel,
+        toDecisionTypeLabel(decisionType),
+        decisionType === "INTERNAL"
+          ? INTERNAL_VENDOR_NAME
+          : String(row.vendor_name || "").trim() || "-",
+        repairAmount !== null ? repairAmount : "",
+        String(row.repair_eta || "").trim(),
+        toSheetSyncLabel(row),
+        String(row.case_state || "").trim() || "-",
+        String(normalizedZone || "").trim() || "-",
+        String(row.current_status || "").trim() || "-",
+        String(row.repair_note || "").trim(),
+      ];
+    })
+    .filter(Boolean);
+
+  const headers = [
+    "최종업데이트",
+    "예정일",
+    "내부바코드",
+    "회원사",
+    "상품명",
+    "사진",
+    "단계",
+    "처리구분",
+    "업체",
+    "견적금액(원)",
+    "예상일",
+    "시트상태",
+    "케이스상태",
+    "존코드",
+    "상태코드",
+    "수선요청내용",
+  ];
+  const barcodeIdx = 2;
+  const imageIdx = 5;
+
+  const sheets = await getSheetsClient();
+  const tabInfo = await ensureGoogleSheetTab({
+    sheets,
+    spreadsheetId: completedSheetConfig.sheetId,
+    sheetGid: completedSheetConfig.sheetGid,
+    sheetName: completedSheetConfig.sheetName,
+    createIfMissing: true,
+  });
+  if (tabInfo.error) {
+    return { ok: false, reason: tabInfo.error };
+  }
+
+  const tabName = String(tabInfo.title || "").replace(/'/g, "''");
+  const range = `'${tabName}'!A1:${columnIndexToA1(headers.length - 1)}5000`;
+  const valuesRes = await sheets.spreadsheets.values.get({
+    spreadsheetId: completedSheetConfig.sheetId,
+    range,
+    valueRenderOption: "FORMULA",
+  });
+  const existingRows = Array.isArray(valuesRes?.data?.values)
+    ? valuesRes.data.values
+    : [];
+
+  const hasHeader =
+    existingRows.length > 0 &&
+    normalizeHeader(existingRows[0]?.[0]) === normalizeHeader(headers[0]) &&
+    normalizeHeader(existingRows[0]?.[2]) === normalizeHeader(headers[2]);
+
+  if (!hasHeader) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: completedSheetConfig.sheetId,
+      range: `'${tabName}'!A1:${columnIndexToA1(headers.length - 1)}1`,
+      valueInputOption: "USER_ENTERED",
+      requestBody: { values: [headers] },
+    });
+  }
+
+  const rowMap = new Map();
+  const rowsForIndex = hasHeader ? existingRows : [];
+  for (let i = 1; i < rowsForIndex.length; i += 1) {
+    const row = rowsForIndex[i] || [];
+    const key = normalizeBarcode(row[barcodeIdx]);
+    if (!key) continue;
+    rowMap.set(key, { rowNo: i + 1, row });
+  }
+
+  let updatedCount = 0;
+  let appendedCount = 0;
+
+  for (const values of completedRows) {
+    const barcodeKey = normalizeBarcode(values[barcodeIdx]);
+    if (!barcodeKey) continue;
+    const existing = rowMap.get(barcodeKey);
+    if (existing) {
+      const rowNo = existing.rowNo;
+      const nextValues = Array.from({ length: headers.length }, (_, idx) => values[idx] ?? "");
+      if (!String(nextValues[imageIdx] || "").trim() && String(existing.row[imageIdx] || "").trim()) {
+        nextValues[imageIdx] = existing.row[imageIdx];
+      }
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: completedSheetConfig.sheetId,
+        range: `'${tabName}'!A${rowNo}:${columnIndexToA1(headers.length - 1)}${rowNo}`,
+        valueInputOption: "USER_ENTERED",
+        requestBody: { values: [nextValues] },
+      });
+      updatedCount += 1;
+      continue;
+    }
+
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: completedSheetConfig.sheetId,
+      range: `'${tabName}'!A:${columnIndexToA1(headers.length - 1)}`,
+      valueInputOption: "USER_ENTERED",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: { values: [values] },
+    });
+    appendedCount += 1;
+  }
+
+  return {
+    ok: true,
+    spreadsheetId: completedSheetConfig.sheetId,
+    sheetName: tabInfo.title,
+    sourceCount: completedRows.length,
+    updatedCount,
+    appendedCount,
+  };
+}
+
 async function syncRepairDailyOverviewSheetSafe(conn, contextLabel = "") {
+  let mainResult = null;
+  let completedResult = null;
   try {
-    return await syncRepairDailyOverviewSheet(conn);
+    mainResult = await syncRepairDailyOverviewSheet(conn);
   } catch (error) {
     const reason = error?.message || "알 수 없는 오류";
-    console.error(`repair main sheet sync error${contextLabel ? ` (${contextLabel})` : ""}:`, error);
-    return { ok: false, reason };
+    console.error(
+      `repair main sheet sync error${contextLabel ? ` (${contextLabel})` : ""}:`,
+      error,
+    );
+    mainResult = { ok: false, reason };
   }
+
+  try {
+    completedResult = await syncRepairCompletedHistorySheet(conn);
+  } catch (error) {
+    const reason = error?.message || "알 수 없는 오류";
+    console.error(
+      `repair completed sheet sync error${contextLabel ? ` (${contextLabel})` : ""}:`,
+      error,
+    );
+    completedResult = { ok: false, reason };
+  }
+
+  return {
+    ok: !!mainResult?.ok,
+    skipped: !!mainResult?.skipped,
+    reason: mainResult?.reason || null,
+    rowCount: Number(mainResult?.rowCount || 0),
+    completed: completedResult || null,
+  };
 }
 
 function zoneAndStatusByDecision(decisionType) {
@@ -1562,6 +1873,9 @@ function normalizeRepairStage(stage) {
   if (raw === "5" || raw === REPAIR_STAGE_CODES.IN_PROGRESS) {
     return REPAIR_STAGE_CODES.IN_PROGRESS;
   }
+  if (raw === "6" || raw === REPAIR_STAGE_CODES.DONE) {
+    return REPAIR_STAGE_CODES.DONE;
+  }
   return "";
 }
 
@@ -1576,6 +1890,15 @@ function deriveRepairStage(caseState, decisionType, currentLocationCode) {
     .trim()
     .toUpperCase();
 
+  if (zoneCode === "OUTBOUND_ZONE") {
+    return "";
+  }
+  if (
+    zoneCode === "REPAIR_DONE_ZONE" ||
+    stageCaseState === REPAIR_CASE_STATES.DONE
+  ) {
+    return REPAIR_STAGE_CODES.DONE;
+  }
   if (
     ["INTERNAL_REPAIR_ZONE", "EXTERNAL_REPAIR_ZONE"].includes(zoneCode) ||
     stageCaseState === REPAIR_CASE_STATES.ACCEPTED
@@ -1664,6 +1987,23 @@ async function hideInvalidDomesticArrivals(conn) {
   );
 }
 
+async function reconcileDoneCasesToRepairDoneZone(conn) {
+  // 과거 데이터 중 DONE인데 존코드가 내부/외부에 남아 있는 건을 수선완료존으로 정합한다.
+  await conn.query(
+    `
+    UPDATE wms_items i
+    INNER JOIN wms_repair_cases rc
+      ON rc.item_id = i.id
+    SET i.current_location_code = 'REPAIR_DONE_ZONE',
+        i.current_status = 'REPAIR_DONE',
+        i.updated_at = NOW()
+    WHERE UPPER(TRIM(COALESCE(rc.case_state, ''))) = 'DONE'
+      AND i.current_status <> 'COMPLETED'
+      AND i.current_location_code NOT IN ('REPAIR_DONE_ZONE', 'OUTBOUND_ZONE')
+    `,
+  );
+}
+
 async function syncBidStatusByLocation(conn, item, toLocationCode) {
   const normalizedToLocationCode = normalizeLocationCode(toLocationCode);
   let nextBidStatus = null;
@@ -1724,7 +2064,15 @@ async function fetchRepairItemWithMeta(conn, itemId) {
       i.source_scheduled_date,
       COALESCE(ci.original_scheduled_date, ci.scheduled_date, i.source_scheduled_date) AS scheduled_at,
       COALESCE(ci.original_title, ci.title) AS product_title,
-      COALESCE(ci.image, '') AS product_image,
+      COALESCE(
+        NULLIF(TRIM(ci.image), ''),
+        CASE
+          WHEN JSON_VALID(ci.additional_images) THEN
+            NULLIF(TRIM(JSON_UNQUOTE(JSON_EXTRACT(ci.additional_images, '$[0]'))), '')
+          ELSE NULL
+        END,
+        ''
+      ) AS product_image,
       COALESCE(u.company_name, i.member_name) AS company_name
     FROM wms_items i
     LEFT JOIN direct_bids d
@@ -1960,6 +2308,7 @@ router.get("/domestic-arrivals", isAdmin, async (req, res) => {
     await ensureRepairTables(conn);
     await backfillCompletedWmsItemsByBidStatus(conn);
     await hideInvalidDomesticArrivals(conn);
+    await reconcileDoneCasesToRepairDoneZone(conn);
 
     const q = String(req.query?.q || "").trim();
     const limit = Math.min(Math.max(Number(req.query?.limit) || 300, 50), 1000);
@@ -2021,7 +2370,15 @@ router.get("/domestic-arrivals", isAdmin, async (req, res) => {
         i.current_location_code,
         i.created_at,
         i.updated_at,
-        COALESCE(ci.image, '') AS product_image,
+        COALESCE(
+          NULLIF(TRIM(ci.image), ''),
+          CASE
+            WHEN JSON_VALID(ci.additional_images) THEN
+              NULLIF(TRIM(JSON_UNQUOTE(JSON_EXTRACT(ci.additional_images, '$[0]'))), '')
+            ELSE NULL
+          END,
+          ''
+        ) AS product_image,
         COALESCE(ci.original_scheduled_date, ci.scheduled_date, i.source_scheduled_date) AS scheduled_at,
         COALESCE(ci.original_title, ci.title) AS product_title,
         ci.brand,
@@ -2082,6 +2439,7 @@ router.get("/cases", isAdmin, async (req, res) => {
   const conn = await pool.getConnection();
   try {
     await ensureRepairTables(conn);
+    await reconcileDoneCasesToRepairDoneZone(conn);
 
     const [rows] = await conn.query(
       `
@@ -2113,7 +2471,15 @@ router.get("/cases", isAdmin, async (req, res) => {
         i.current_location_code,
         i.current_status,
         COALESCE(ci.original_title, ci.title) AS product_title,
-        COALESCE(ci.image, '') AS product_image,
+        COALESCE(
+          NULLIF(TRIM(ci.image), ''),
+          CASE
+            WHEN JSON_VALID(ci.additional_images) THEN
+              NULLIF(TRIM(JSON_UNQUOTE(JSON_EXTRACT(ci.additional_images, '$[0]'))), '')
+            ELSE NULL
+          END,
+          ''
+        ) AS product_image,
         COALESCE(ci.original_scheduled_date, ci.scheduled_date, i.source_scheduled_date) AS scheduled_at,
         ci.brand,
         ci.category,
@@ -3478,6 +3844,7 @@ router.post("/items/:itemId/stage", isAdmin, async (req, res) => {
       [REPAIR_STAGE_CODES.READY_TO_SEND]: "3) 견적완료 / 고객전송대기",
       [REPAIR_STAGE_CODES.PROPOSED]: "4) 고객응답대기(PROPOSED)",
       [REPAIR_STAGE_CODES.IN_PROGRESS]: "5) 진행중(내부/외부 수선중)",
+      [REPAIR_STAGE_CODES.DONE]: "6) 수선완료존",
     };
 
     await conn.beginTransaction();
@@ -3569,6 +3936,16 @@ router.post("/items/:itemId/stage", isAdmin, async (req, res) => {
             ? "EXTERNAL_REPAIR_ZONE"
             : "INTERNAL_REPAIR_ZONE";
         break;
+      case REPAIR_STAGE_CODES.DONE:
+        targetCaseState = REPAIR_CASE_STATES.DONE;
+        targetDecisionType =
+          targetDecisionType === "EXTERNAL"
+            ? "EXTERNAL"
+            : targetDecisionType === "NONE"
+              ? "NONE"
+              : "INTERNAL";
+        targetZoneCode = "REPAIR_DONE_ZONE";
+        break;
       default:
         await conn.rollback();
         return res.status(400).json({ ok: false, message: "지원하지 않는 단계입니다." });
@@ -3637,7 +4014,7 @@ router.post("/items/:itemId/stage", isAdmin, async (req, res) => {
             completed_at,
             created_by,
             updated_by
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)
           `,
           [
             itemId,
@@ -3651,6 +4028,7 @@ router.post("/items/:itemId/stage", isAdmin, async (req, res) => {
             String(existingCase?.internal_note || "").trim() || null,
             targetCaseState === REPAIR_CASE_STATES.PROPOSED ? new Date() : null,
             targetCaseState === REPAIR_CASE_STATES.ACCEPTED ? new Date() : null,
+            targetCaseState === REPAIR_CASE_STATES.DONE ? new Date() : null,
             loginId,
             loginId,
           ],
@@ -3703,6 +4081,10 @@ router.post("/items/:itemId/stage", isAdmin, async (req, res) => {
                   WHEN ? = 'PROPOSED' THEN NULL
                   ELSE rejected_at
                 END,
+                completed_at = CASE
+                  WHEN ? = 'DONE' THEN NOW()
+                  ELSE completed_at
+                END,
                 updated_by = ?,
                 updated_at = NOW()
             WHERE id = ?
@@ -3712,6 +4094,7 @@ router.post("/items/:itemId/stage", isAdmin, async (req, res) => {
               targetDecisionType,
               targetVendorName || null,
               proposalText,
+              targetCaseState,
               targetCaseState,
               targetCaseState,
               targetCaseState,

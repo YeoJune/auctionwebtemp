@@ -63,7 +63,8 @@
           <div id="vendorManagementBody" style="display: none">
             <p class="sheet-guide">
               외부수선은 <strong>외주시트전송</strong> → 업체 회신 → <strong>외주시트동기화</strong>로 운영합니다.
-              내부수선도 <strong>내부시트전송</strong>으로 연결되며, 메인시트(<strong>수선_전체현황</strong>)에 내부/외부 전체 건이 통합 목록으로 자동 갱신됩니다.
+              내부수선도 <strong>내부시트전송</strong>으로 연결되며, 메인시트(<strong>수선_전체현황</strong>)는 진행중 건만,
+              별도 시트(<strong>수선_완료내역</strong>)는 완료 건 누적 이력으로 자동 갱신됩니다.
             </p>
             <div class="table-wrap">
               <table class="data-table">
@@ -209,6 +210,32 @@
                 </tr>
               </thead>
               <tbody id="inProgressCasesBody">
+                <tr><td colspan="9" class="text-center">데이터를 불러오는 중입니다...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card" style="margin-top: 16px">
+          <div class="section-header">
+            <h3>6) 수선완료존</h3>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>사진</th>
+                  <th>내부바코드</th>
+                  <th>회원사</th>
+                  <th>상품명</th>
+                  <th>구분</th>
+                  <th>금액</th>
+                  <th>수선상태</th>
+                  <th>위치</th>
+                  <th>작업</th>
+                </tr>
+              </thead>
+              <tbody id="completedCasesBody">
                 <tr><td colspan="9" class="text-center">데이터를 불러오는 중입니다...</td></tr>
               </tbody>
             </table>
