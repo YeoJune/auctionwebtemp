@@ -16,7 +16,7 @@ window.BidProductsCore = (function () {
   // 상태 그룹 - API 요청용
   const STATUS_GROUPS = {
     ACTIVE: ["active", "first", "second", "final"],
-    COMPLETED: ["completed"], // shipping_status는 별도 필드로 관리됨
+    COMPLETED: ["completed", "domestic_arrived", "processing", "shipped"], // shipping_status는 별도 필드로 관리됨
     CANCELLED: ["cancelled"],
     ALL: ["active", "first", "second", "final", "completed", "cancelled"],
   };
