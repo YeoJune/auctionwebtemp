@@ -56,6 +56,7 @@ const state = {
 let autoQuoteSyncInFlight = false;
 let autoQuoteSyncTimer = null;
 const AUTO_QUOTE_SYNC_INTERVAL_MS = 8000;
+const AUTO_QUOTE_SYNC_ENABLED = false;
 let detailImages = [];
 let detailImageIndex = 0;
 let selectedDomesticPrefix = "";
@@ -246,6 +247,32 @@ function getSearchFilteredRows(rows) {
       .join(" ")
       .toLowerCase();
     return text.includes(k);
+  });
+}
+
+function scheduledAtTimestamp(value) {
+  if (!value) return Number.MAX_SAFE_INTEGER;
+  const ts = new Date(value).getTime();
+  return Number.isFinite(ts) ? ts : Number.MAX_SAFE_INTEGER;
+}
+
+function rowSortKey(row) {
+  return String(
+    row?.internal_barcode ||
+      row?.external_barcode ||
+      row?.item_id ||
+      row?.id ||
+      row?.repair_case_id ||
+      "",
+  );
+}
+
+function sortRowsByScheduledAt(rows) {
+  return [...(rows || [])].sort((a, b) => {
+    const aTs = scheduledAtTimestamp(a?.scheduled_at);
+    const bTs = scheduledAtTimestamp(b?.scheduled_at);
+    if (aTs !== bTs) return aTs - bTs;
+    return rowSortKey(a).localeCompare(rowSortKey(b));
   });
 }
 
@@ -547,10 +574,12 @@ function renderArrivalRows(tbody, rows, emptyText, options = {}) {
 
 function renderDomesticArrivals() {
   const tbody = el("domesticArrivalsBody");
-  const domesticRows = getSearchFilteredRows(state.arrivals || []).filter((row) => {
-    const caseInfo = getArrivalCaseInfo(row);
-    return getRepairStageCode(caseInfo) === REPAIR_STAGE.DOMESTIC;
-  });
+  const domesticRows = sortRowsByScheduledAt(
+    getSearchFilteredRows(state.arrivals || []).filter((row) => {
+      const caseInfo = getArrivalCaseInfo(row);
+      return getRepairStageCode(caseInfo) === REPAIR_STAGE.DOMESTIC;
+    }),
+  );
 
   renderDomesticPrefixChips(domesticRows);
   const rows = selectedDomesticPrefix
@@ -568,10 +597,12 @@ function renderDomesticArrivals() {
 
 function renderDraftCases() {
   const tbody = el("draftCasesBody");
-  const rows = getSearchFilteredRows(state.arrivals || []).filter((row) => {
-    const caseInfo = getArrivalCaseInfo(row);
-    return getRepairStageCode(caseInfo) === REPAIR_STAGE.EXTERNAL_WAITING;
-  });
+  const rows = sortRowsByScheduledAt(
+    getSearchFilteredRows(state.arrivals || []).filter((row) => {
+      const caseInfo = getArrivalCaseInfo(row);
+      return getRepairStageCode(caseInfo) === REPAIR_STAGE.EXTERNAL_WAITING;
+    }),
+  );
   renderArrivalRows(tbody, rows, "시트전송완료/견적대기 데이터가 없습니다.", {
     isDraftSection: true,
     mode: "draft",
@@ -580,8 +611,10 @@ function renderDraftCases() {
 
 function renderReadyToSendCases() {
   const tbody = el("readyToSendCasesBody");
-  const rows = getSearchFilteredRows(state.cases || []).filter(
-    (row) => getRepairStageCode(row) === REPAIR_STAGE.READY_TO_SEND,
+  const rows = sortRowsByScheduledAt(
+    getSearchFilteredRows(state.cases || []).filter(
+      (row) => getRepairStageCode(row) === REPAIR_STAGE.READY_TO_SEND,
+    ),
   );
 
   if (!rows.length) {
@@ -634,8 +667,10 @@ function renderReadyToSendCases() {
 
 function renderProposedCases() {
   const tbody = el("proposedCasesBody");
-  const rows = getSearchFilteredRows(state.cases || []).filter(
-    (row) => getRepairStageCode(row) === REPAIR_STAGE.PROPOSED,
+  const rows = sortRowsByScheduledAt(
+    getSearchFilteredRows(state.cases || []).filter(
+      (row) => getRepairStageCode(row) === REPAIR_STAGE.PROPOSED,
+    ),
   );
   if (!rows.length) {
     tbody.innerHTML =
@@ -682,8 +717,10 @@ function renderProposedCases() {
 
 function renderInProgressCases() {
   const tbody = el("inProgressCasesBody");
-  const rows = getSearchFilteredRows(state.cases || []).filter(
-    (row) => getRepairStageCode(row) === REPAIR_STAGE.IN_PROGRESS,
+  const rows = sortRowsByScheduledAt(
+    getSearchFilteredRows(state.cases || []).filter(
+      (row) => getRepairStageCode(row) === REPAIR_STAGE.IN_PROGRESS,
+    ),
   );
   if (!rows.length) {
     tbody.innerHTML =
@@ -744,8 +781,10 @@ function renderInProgressCases() {
 function renderCompletedCases() {
   const tbody = el("completedCasesBody");
   if (!tbody) return;
-  const rows = getSearchFilteredRows(state.cases || []).filter(
-    (row) => getRepairStageCode(row) === REPAIR_STAGE.DONE,
+  const rows = sortRowsByScheduledAt(
+    getSearchFilteredRows(state.cases || []).filter(
+      (row) => getRepairStageCode(row) === REPAIR_STAGE.DONE,
+    ),
   );
   if (!rows.length) {
     tbody.innerHTML =
@@ -1534,36 +1573,47 @@ async function addVendor() {
   buildProposalPreview();
 }
 
-async function pushExternalBatch() {
-  if (!confirm("외부수선 대기건을 외주시트로 일괄 전송할까요?")) return;
+async function runSheetBatchUpdate() {
+  if (
+    !confirm(
+      "수선관리(DB) 기준으로 전체 시트를 강제 동기화할까요?\n(추가/수정/삭제가 모두 반영됩니다.)",
+    )
+  ) {
+    return;
+  }
   const btn = el("btnPushExternalBatch");
   const prevText = btn?.textContent;
   if (btn) {
     btn.disabled = true;
-    btn.textContent = "전송중...";
+    btn.textContent = "업데이트중...";
   }
   try {
-    const result = await api("/api/repair-management/external-sheet/push-pending", {
+    const result = await api("/api/repair-management/sheets/batch-reconcile", {
       method: "POST",
-      body: JSON.stringify({ force: false }),
     });
-    const failCount = Number(result?.result?.failedCount || 0);
-    if (failCount > 0 && Array.isArray(result?.result?.failed)) {
-      const preview = result.result.failed
+    const mismatchCount = Number(result?.result?.mismatchCount || 0);
+    const lines = [
+      result.message || "일괄 업데이트 완료",
+      `대상 ${Number(result?.result?.targetCount || 0)}건`,
+      `적용 ${Number(result?.result?.syncedCount || 0)}건`,
+      `정리 ${Number(result?.result?.removedCount || 0)}건`,
+      `불일치 ${mismatchCount}건`,
+    ];
+    if (mismatchCount > 0 && Array.isArray(result?.result?.mismatches)) {
+      const preview = result.result.mismatches
         .slice(0, 3)
-        .map((f) => `#${f.caseId}: ${f.reason}`)
+        .map((f) => `- ${f.code || "unknown"}: ${f.reason || "-"}`)
         .join("\n");
-      alert(`${result.message}\n\n실패 예시:\n${preview}`);
-    } else {
-      alert(result.message || "외주시트 일괄전송 완료");
+      lines.push("", "불일치 예시:", preview);
     }
+    alert(lines.join("\n"));
     await loadAll();
   } catch (error) {
-    alert(error.message || "외주시트 일괄전송 중 오류가 발생했습니다.");
+    alert(error.message || "시트 일괄 업데이트 중 오류가 발생했습니다.");
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.textContent = prevText || "외부건 일괄전송";
+      btn.textContent = prevText || "일괄 업데이트";
     }
   }
 }
@@ -1631,12 +1681,13 @@ async function autoSyncExternalQuotes() {
 async function loadAll(options = {}) {
   await Promise.all([loadVendors(), loadArrivals(), loadCases()]);
   renderAll();
-  if (!options.skipAutoSync) {
+  if (AUTO_QUOTE_SYNC_ENABLED && !options.skipAutoSync) {
     await autoSyncExternalQuotes();
   }
 }
 
 function startAutoQuoteSyncLoop() {
+  if (!AUTO_QUOTE_SYNC_ENABLED) return;
   if (autoQuoteSyncTimer) return;
   autoQuoteSyncTimer = setInterval(() => {
     autoSyncExternalQuotes().catch(() => {});
@@ -1691,7 +1742,7 @@ function bindEvents() {
   el("repairEta").addEventListener("input", buildProposalPreview);
   el("repairNote").addEventListener("input", buildProposalPreview);
   el("btnAddVendor").addEventListener("click", addVendor);
-  el("btnPushExternalBatch").addEventListener("click", pushExternalBatch);
+  el("btnPushExternalBatch").addEventListener("click", runSheetBatchUpdate);
   el("btnCopyTemplate").addEventListener("click", async () => {
     await navigator.clipboard.writeText(el("proposalText").value || "");
     alert("템플릿이 복사되었습니다.");

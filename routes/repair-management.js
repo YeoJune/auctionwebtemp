@@ -11,6 +11,8 @@ const router = express.Router();
 const INTERNAL_VENDOR_NAME = "까사(내부)";
 const DEFAULT_REPAIR_MAIN_SHEET_NAME = "수선_전체현황";
 const DEFAULT_REPAIR_COMPLETED_SHEET_NAME = "수선_완료내역";
+const VENDOR_ACTIVE_SHEET_NAME = "진행중";
+const VENDOR_COMPLETED_SHEET_NAME = "수선완료";
 
 const DEFAULT_VENDORS = [
   "리리",
@@ -555,21 +557,48 @@ function columnIndexToA1(idx) {
   return out || "A";
 }
 
-async function resolveTargetSheetAndRows({ sheets, sheetId, sheetGid }) {
+async function resolveTargetSheetAndRows({
+  sheets,
+  sheetId,
+  sheetGid,
+  sheetName = "",
+  createIfMissing = false,
+  fallbackToFirst = true,
+}) {
   const book = await sheets.spreadsheets.get({
     spreadsheetId: sheetId,
     fields: "sheets(properties(sheetId,title))",
   });
   const allSheets = Array.isArray(book?.data?.sheets) ? book.data.sheets : [];
-  let targetSheet = allSheets[0]?.properties || null;
+
+  let targetSheet = null;
   if (sheetGid) {
     const found = allSheets.find(
       (s) => String(s?.properties?.sheetId || "") === String(sheetGid),
     );
     if (found?.properties) targetSheet = found.properties;
   }
+  if (!targetSheet && sheetName) {
+    const found = allSheets.find(
+      (s) => String(s?.properties?.title || "") === String(sheetName),
+    );
+    if (found?.properties) targetSheet = found.properties;
+  }
+  if (!targetSheet && createIfMissing && sheetName) {
+    const created = await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: sheetId,
+      requestBody: {
+        requests: [{ addSheet: { properties: { title: String(sheetName) } } }],
+      },
+    });
+    const props = created?.data?.replies?.[0]?.addSheet?.properties || null;
+    if (props?.title) targetSheet = props;
+  }
+  if (!targetSheet && fallbackToFirst) {
+    targetSheet = allSheets[0]?.properties || null;
+  }
   if (!targetSheet?.title) {
-    return { error: "시트 탭을 찾을 수 없습니다. gid를 확인하세요." };
+    return { notFound: true, error: "시트 탭을 찾을 수 없습니다." };
   }
   const range = `'${targetSheet.title.replace(/'/g, "''")}'!A1:Z2000`;
   const valuesRes = await sheets.spreadsheets.values.get({
@@ -636,9 +665,104 @@ function findBarcodeHeaderInfo(rows) {
   return { headerRowIndex, barcodeIdx };
 }
 
+function parseSheetDateSortTs(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return Number.MAX_SAFE_INTEGER;
+  const directTs = new Date(raw).getTime();
+  if (Number.isFinite(directTs)) return directTs;
+  const normalized = raw.replace(/\./g, "-").replace(/\//g, "-");
+  const m = normalized.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (!m) return Number.MAX_SAFE_INTEGER;
+  const ts = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime();
+  return Number.isFinite(ts) ? ts : Number.MAX_SAFE_INTEGER;
+}
+
+function findVendorSheetHeaderInfo(rows) {
+  let headerRowIndex = -1;
+  let barcodeIdx = -1;
+  let bidDateIdx = -1;
+  const scanLimit = Math.min(rows.length, 20);
+  for (let i = 0; i < scanLimit; i += 1) {
+    const row = rows[i] || [];
+    const headers = row.map((h) => String(h || "").trim());
+    if (!headers.some(Boolean)) continue;
+    const nextBarcodeIdx = getHeaderIndex(headers, SHEET_COL_CANDIDATES.barcode);
+    const nextBidDateIdx = getHeaderIndex(headers, SHEET_COL_CANDIDATES.bidDate);
+    if (nextBarcodeIdx >= 0 && nextBidDateIdx >= 0) {
+      headerRowIndex = i;
+      barcodeIdx = nextBarcodeIdx;
+      bidDateIdx = nextBidDateIdx;
+      break;
+    }
+  }
+  return { headerRowIndex, barcodeIdx, bidDateIdx };
+}
+
+async function sortVendorSheetRowsByBidDate({
+  sheetId,
+  sheetGid,
+  sheetName,
+  fallbackToFirst = true,
+}) {
+  if (!sheetId) return { ok: false, error: "시트ID가 없습니다." };
+  const sheets = await getSheetsClient();
+  const resolved = await resolveTargetSheetAndRows({
+    sheets,
+    sheetId,
+    sheetGid,
+    sheetName,
+    createIfMissing: false,
+    fallbackToFirst,
+  });
+  if (resolved?.notFound) return { ok: true, sorted: false, rowCount: 0 };
+  if (resolved.error) return { ok: false, error: resolved.error };
+
+  const rows = Array.isArray(resolved.rows) ? resolved.rows : [];
+  if (!rows.length) return { ok: true, sorted: false, rowCount: 0 };
+
+  const { headerRowIndex, barcodeIdx, bidDateIdx } = findVendorSheetHeaderInfo(rows);
+  if (headerRowIndex < 0 || barcodeIdx < 0 || bidDateIdx < 0) {
+    return { ok: true, sorted: false, rowCount: 0 };
+  }
+
+  const headRows = rows.slice(0, headerRowIndex + 1);
+  const dataRows = rows.slice(headerRowIndex + 1);
+  if (dataRows.length <= 1) return { ok: true, sorted: false, rowCount: dataRows.length };
+
+  const indexed = dataRows.map((row, idx) => ({ row, idx }));
+  const sorted = [...indexed].sort((a, b) => {
+    const aTs = parseSheetDateSortTs(a.row?.[bidDateIdx]);
+    const bTs = parseSheetDateSortTs(b.row?.[bidDateIdx]);
+    if (aTs !== bTs) return aTs - bTs;
+    const aBarcode = normalizeBarcode(a.row?.[barcodeIdx]);
+    const bBarcode = normalizeBarcode(b.row?.[barcodeIdx]);
+    if (aBarcode !== bBarcode) return aBarcode.localeCompare(bBarcode);
+    return a.idx - b.idx;
+  });
+  const changed = sorted.some((entry, idx) => entry.idx !== idx);
+  if (!changed) return { ok: true, sorted: false, rowCount: dataRows.length };
+
+  const nextRows = [...headRows, ...sorted.map((entry) => entry.row)];
+  const width = Math.max(1, ...nextRows.map((row) => (Array.isArray(row) ? row.length : 0)));
+  const endCell = `${columnIndexToA1(width - 1)}${nextRows.length}`;
+  const safeTitle = String(resolved.targetSheetTitle || "").replace(/'/g, "''");
+  await sheets.spreadsheets.values.clear({
+    spreadsheetId: sheetId,
+    range: `'${safeTitle}'!A1:ZZ5000`,
+  });
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: sheetId,
+    range: `'${safeTitle}'!A1:${endCell}`,
+    valueInputOption: "USER_ENTERED",
+    requestBody: { values: nextRows },
+  });
+  return { ok: true, sorted: true, rowCount: dataRows.length };
+}
+
 async function upsertVendorSheetRow({
   sheetId,
   sheetGid,
+  sheetName = "",
   barcode,
   bidDate,
   productTitle,
@@ -654,7 +778,14 @@ async function upsertVendorSheetRow({
     return { error: "시트ID 또는 바코드가 없습니다." };
   }
   const sheets = await getSheetsClient();
-  const resolved = await resolveTargetSheetAndRows({ sheets, sheetId, sheetGid });
+  const resolved = await resolveTargetSheetAndRows({
+    sheets,
+    sheetId,
+    sheetGid,
+    sheetName,
+    createIfMissing: true,
+    fallbackToFirst: true,
+  });
   if (resolved.error) return { error: resolved.error };
 
   const title = resolved.targetSheetTitle;
@@ -706,16 +837,25 @@ async function upsertVendorSheetRow({
     return nextRow;
   });
 
-  await sheets.spreadsheets.values.clear({
-    spreadsheetId: sheetId,
-    range: `'${title.replace(/'/g, "''")}'!A1:ZZ2000`,
-  });
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: sheetId,
-    range: `'${title.replace(/'/g, "''")}'!A1:${columnIndexToA1(headers.length - 1)}${Math.max(1, dataRows.length + 1)}`,
-    valueInputOption: "USER_ENTERED",
-    requestBody: { values: [headers, ...dataRows] },
-  });
+  const shouldRewriteLayout =
+    !originalHeaders.length ||
+    originalHeaders.length !== headers.length ||
+    headers.some(
+      (header, idx) =>
+        normalizeHeader(originalHeaders[idx]) !== normalizeHeader(header),
+    );
+  if (shouldRewriteLayout) {
+    await sheets.spreadsheets.values.clear({
+      spreadsheetId: sheetId,
+      range: `'${title.replace(/'/g, "''")}'!A1:ZZ2000`,
+    });
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: sheetId,
+      range: `'${title.replace(/'/g, "''")}'!A1:${columnIndexToA1(headers.length - 1)}${Math.max(1, dataRows.length + 1)}`,
+      valueInputOption: "USER_ENTERED",
+      requestBody: { values: [headers, ...dataRows] },
+    });
+  }
 
   const bidDateIdx = getHeaderIndex(headers, SHEET_COL_CANDIDATES.bidDate);
   const barcodeIdx = getHeaderIndex(headers, SHEET_COL_CANDIDATES.barcode);
@@ -788,13 +928,27 @@ async function upsertVendorSheetRow({
   return { created: true };
 }
 
-async function deleteVendorSheetRowsByBarcode({ sheetId, sheetGid, barcode }) {
+async function deleteVendorSheetRowsByBarcode({
+  sheetId,
+  sheetGid,
+  sheetName = "",
+  fallbackToFirst = true,
+  barcode,
+}) {
   if (!sheetId || !barcode) {
     return { error: "시트ID 또는 바코드가 없습니다." };
   }
   try {
     const sheets = await getSheetsClient();
-    const resolved = await resolveTargetSheetAndRows({ sheets, sheetId, sheetGid });
+    const resolved = await resolveTargetSheetAndRows({
+      sheets,
+      sheetId,
+      sheetGid,
+      sheetName,
+      createIfMissing: false,
+      fallbackToFirst,
+    });
+    if (resolved?.notFound) return { removed: 0 };
     if (resolved.error) return { error: resolved.error };
 
     const rows = Array.isArray(resolved.rows) ? resolved.rows : [];
@@ -847,13 +1001,83 @@ async function deleteVendorSheetRowsByBarcode({ sheetId, sheetGid, barcode }) {
   }
 }
 
-async function fetchVendorSheetQuote({ sheetId, sheetGid, barcode }) {
+async function cleanupVendorSheetRowsByAllowedBarcodes({
+  sheetId,
+  sheetGid,
+  sheetName,
+  fallbackToFirst = true,
+  allowedBarcodes = [],
+}) {
+  if (!sheetId) return { ok: false, error: "시트ID가 없습니다." };
+  const sheets = await getSheetsClient();
+  const resolved = await resolveTargetSheetAndRows({
+    sheets,
+    sheetId,
+    sheetGid,
+    sheetName,
+    createIfMissing: false,
+    fallbackToFirst,
+  });
+  if (resolved?.notFound) return { ok: true, removed: 0 };
+  if (resolved.error) return { ok: false, error: resolved.error };
+
+  const rows = Array.isArray(resolved.rows) ? resolved.rows : [];
+  if (!rows.length) return { ok: true, removed: 0 };
+  const { headerRowIndex, barcodeIdx } = findBarcodeHeaderInfo(rows);
+  if (headerRowIndex < 0 || barcodeIdx < 0) return { ok: true, removed: 0 };
+
+  const allowedSet = new Set((allowedBarcodes || []).map((v) => normalizeBarcode(v)).filter(Boolean));
+  const seen = new Set();
+  const matchedRowNumbers = [];
+  for (let rowNo = rows.length; rowNo >= headerRowIndex + 2; rowNo -= 1) {
+    const row = rows[rowNo - 1] || [];
+    const key = normalizeBarcode(row?.[barcodeIdx]);
+    if (!key) continue;
+    if (!allowedSet.has(key) || seen.has(key)) {
+      matchedRowNumbers.push(rowNo);
+      continue;
+    }
+    seen.add(key);
+  }
+  if (!matchedRowNumbers.length) return { ok: true, removed: 0 };
+
+  const requests = matchedRowNumbers.map((rowNumber) => ({
+    deleteDimension: {
+      range: {
+        sheetId: Number(resolved.targetSheetId),
+        dimension: "ROWS",
+        startIndex: rowNumber - 1,
+        endIndex: rowNumber,
+      },
+    },
+  }));
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId: sheetId,
+    requestBody: { requests },
+  });
+  return { ok: true, removed: matchedRowNumbers.length };
+}
+
+async function fetchVendorSheetQuote({
+  sheetId,
+  sheetGid,
+  sheetName = "",
+  fallbackToFirst = true,
+  barcode,
+}) {
   if (!sheetId || !barcode) {
     return { error: "시트ID 또는 바코드가 없습니다." };
   }
   try {
     const sheets = await getSheetsClient();
-    const resolved = await resolveTargetSheetAndRows({ sheets, sheetId, sheetGid });
+    const resolved = await resolveTargetSheetAndRows({
+      sheets,
+      sheetId,
+      sheetGid,
+      sheetName,
+      createIfMissing: false,
+      fallbackToFirst,
+    });
     if (resolved.error) return { error: resolved.error };
     const rows = Array.isArray(resolved.rows) ? resolved.rows : [];
     if (!rows.length) {
@@ -939,6 +1163,152 @@ async function resolveRepairVendorSheetInfo(conn, vendorName) {
     sheetUrl: vendor?.sheet_url || null,
     sheetId: vendor?.sheet_id || parsedSheet.sheetId,
     sheetGid: vendor?.sheet_gid || parsedSheet.sheetGid,
+  };
+}
+
+function resolveVendorSheetState(caseState) {
+  const normalized = String(caseState || "")
+    .trim()
+    .toUpperCase();
+  if (normalized === REPAIR_CASE_STATES.DONE) return "COMPLETED";
+  if (
+    [
+      REPAIR_CASE_STATES.DRAFT,
+      REPAIR_CASE_STATES.READY_TO_SEND,
+      REPAIR_CASE_STATES.PROPOSED,
+      REPAIR_CASE_STATES.ACCEPTED,
+    ].includes(normalized)
+  ) {
+    return "ACTIVE";
+  }
+  return "NONE";
+}
+
+async function removeRepairCaseFromVendorSheets({
+  conn,
+  decisionType,
+  vendorName,
+  barcode,
+}) {
+  const normalizedDecision = String(decisionType || "")
+    .trim()
+    .toUpperCase();
+  if (!["INTERNAL", "EXTERNAL"].includes(normalizedDecision)) {
+    return { ok: false, error: "내부/외부 수선건만 시트에서 삭제할 수 있습니다." };
+  }
+  const normalizedBarcode = String(barcode || "").trim();
+  if (!normalizedBarcode) return { ok: false, error: "바코드가 없습니다." };
+
+  const targetVendorName =
+    normalizedDecision === "INTERNAL"
+      ? INTERNAL_VENDOR_NAME
+      : String(vendorName || "").trim();
+  const vendorSheet = await resolveRepairVendorSheetInfo(conn, targetVendorName);
+  if (!vendorSheet.sheetId) {
+    return { ok: false, error: "시트가 연결되지 않아 삭제를 건너뜀" };
+  }
+
+  const activeDeleted = await deleteVendorSheetRowsByBarcode({
+    sheetId: vendorSheet.sheetId,
+    sheetGid: vendorSheet.sheetGid,
+    sheetName: VENDOR_ACTIVE_SHEET_NAME,
+    fallbackToFirst: true,
+    barcode: normalizedBarcode,
+  });
+  if (activeDeleted?.error) return { ok: false, error: activeDeleted.error };
+  const completedDeleted = await deleteVendorSheetRowsByBarcode({
+    sheetId: vendorSheet.sheetId,
+    sheetGid: vendorSheet.sheetGid,
+    sheetName: VENDOR_COMPLETED_SHEET_NAME,
+    fallbackToFirst: false,
+    barcode: normalizedBarcode,
+  });
+  if (completedDeleted?.error) return { ok: false, error: completedDeleted.error };
+
+  return {
+    ok: true,
+    removed: Number(activeDeleted?.removed || 0) + Number(completedDeleted?.removed || 0),
+    removedActive: Number(activeDeleted?.removed || 0),
+    removedCompleted: Number(completedDeleted?.removed || 0),
+  };
+}
+
+async function syncRepairCaseToVendorSheet({
+  conn,
+  caseRow,
+  itemRow,
+  vendorSheet,
+  vendorName,
+  decisionType,
+  sheetState,
+}) {
+  const barcode = String(itemRow.internal_barcode || itemRow.external_barcode || "").trim();
+  if (!barcode) return { ok: false, error: "내부바코드가 없어 시트 전송할 수 없습니다." };
+
+  if (sheetState === "NONE") {
+    const removed = await removeRepairCaseFromVendorSheets({
+      conn,
+      decisionType,
+      vendorName,
+      barcode,
+    });
+    return removed.ok ? { ok: true, removedOnly: true, removed } : removed;
+  }
+
+  if (!vendorSheet.sheetId) {
+    return {
+      ok: false,
+      error:
+        decisionType === "INTERNAL"
+          ? "내부업체 시트 링크가 등록되지 않았습니다. 업체 설정에서 내부 시트를 등록하세요."
+          : "외주업체 시트 링크가 등록되지 않았습니다. 업체 설정에서 외주 시트를 등록하세요.",
+    };
+  }
+
+  const item = await fetchRepairItemWithMeta(conn, caseRow.item_id);
+  const targetSheetName =
+    sheetState === "COMPLETED" ? VENDOR_COMPLETED_SHEET_NAME : VENDOR_ACTIVE_SHEET_NAME;
+  const pushed = await upsertVendorSheetRow({
+    sheetId: vendorSheet.sheetId,
+    sheetGid: vendorSheet.sheetGid,
+    sheetName: targetSheetName,
+    barcode,
+    bidDate: formatDateForSheet(item?.scheduled_at),
+    productTitle: item?.product_title || "",
+    customerName: item?.company_name || item?.member_name || "",
+    repairNote: caseRow.repair_note || "",
+    repairAmount: caseRow.repair_amount,
+    workPeriod: caseRow.repair_eta || "",
+    vendorName,
+    productImage: item?.product_image || "",
+    progressFlag: caseRow.case_state === REPAIR_CASE_STATES.ACCEPTED ? "TRUE" : "FALSE",
+  });
+  if (pushed?.error) return { ok: false, error: pushed.error };
+
+  const deleteFromOpposite =
+    sheetState === "COMPLETED" ? VENDOR_ACTIVE_SHEET_NAME : VENDOR_COMPLETED_SHEET_NAME;
+  const removedOpposite = await deleteVendorSheetRowsByBarcode({
+    sheetId: vendorSheet.sheetId,
+    sheetGid: vendorSheet.sheetGid,
+    sheetName: deleteFromOpposite,
+    fallbackToFirst: deleteFromOpposite === VENDOR_ACTIVE_SHEET_NAME,
+    barcode,
+  });
+  if (removedOpposite?.error) return { ok: false, error: removedOpposite.error };
+
+  const sorted = await sortVendorSheetRowsByBidDate({
+    sheetId: vendorSheet.sheetId,
+    sheetGid: vendorSheet.sheetGid,
+    sheetName: targetSheetName,
+    fallbackToFirst: targetSheetName === VENDOR_ACTIVE_SHEET_NAME,
+  });
+  if (!sorted?.ok) return { ok: false, error: sorted.error || "시트 예정일 정렬 실패" };
+
+  return {
+    ok: true,
+    created: !!pushed.created,
+    sheetName: targetSheetName,
+    removedFromOpposite: Number(removedOpposite?.removed || 0),
   };
 }
 
@@ -1045,8 +1415,10 @@ async function pushRepairCaseToDecisionSheet({
   if (!["INTERNAL", "EXTERNAL"].includes(decisionType)) {
     return { ok: false, error: "내부/외부 수선건만 시트 전송할 수 있습니다." };
   }
-  if (caseState === REPAIR_CASE_STATES.ARRIVED) {
-    return { ok: false, error: "1단계(국내도착) 건은 시트 전송 대상이 아닙니다." };
+  if (
+    [REPAIR_CASE_STATES.ARRIVED, REPAIR_CASE_STATES.REJECTED].includes(caseState)
+  ) {
+    return { ok: false, error: "1단계(국내도착)/거절 건은 시트 전송 대상이 아닙니다." };
   }
   if (normalizedExpected && decisionType !== normalizedExpected) {
     return {
@@ -1078,31 +1450,20 @@ async function pushRepairCaseToDecisionSheet({
     };
   }
 
-  const item = await fetchRepairItemWithMeta(conn, row.item_id);
-  const pushed = await upsertVendorSheetRow({
-    sheetId: vendorSheet.sheetId,
-    sheetGid: vendorSheet.sheetGid,
-    barcode,
-    bidDate: formatDateForSheet(item?.scheduled_at),
-    productTitle: item?.product_title || "",
-    customerName: item?.company_name || item?.member_name || "",
-    repairNote: row.repair_note || "",
-    repairAmount: row.repair_amount,
-    workPeriod: row.repair_eta || "",
+  const sheetState = resolveVendorSheetState(caseState);
+  const synced = await syncRepairCaseToVendorSheet({
+    conn,
+    caseRow: row,
+    itemRow: row,
+    vendorSheet,
     vendorName:
       decisionType === "INTERNAL"
         ? INTERNAL_VENDOR_NAME
         : vendorSheet.vendorName || row.vendor_name || "",
-    productImage: item?.product_image || "",
-    progressFlag: [REPAIR_CASE_STATES.ACCEPTED, REPAIR_CASE_STATES.DONE].includes(
-      row.case_state,
-    )
-      ? "TRUE"
-      : "FALSE",
+    decisionType,
+    sheetState,
   });
-  if (pushed?.error) {
-    return { ok: false, error: pushed.error };
-  }
+  if (!synced?.ok) return { ok: false, error: synced.error };
 
   if (decisionType === "EXTERNAL") {
     await conn.query(
@@ -1145,7 +1506,9 @@ async function pushRepairCaseToDecisionSheet({
       decisionType === "INTERNAL"
         ? INTERNAL_VENDOR_NAME
         : vendorSheet.vendorName || row.vendor_name || "",
-    created: !!pushed.created,
+    created: !!synced.created,
+    sheetState,
+    sheetName: synced.sheetName || "",
   };
 }
 
@@ -1165,25 +1528,12 @@ async function removeRepairCaseFromDecisionSheet({
   if (!["INTERNAL", "EXTERNAL"].includes(normalizedDecision)) {
     return { ok: false, error: "내부/외부 수선건만 시트에서 삭제할 수 있습니다." };
   }
-
-  const targetVendorName =
-    normalizedDecision === "INTERNAL"
-      ? INTERNAL_VENDOR_NAME
-      : String(vendorName || "").trim();
-  const vendorSheet = await resolveRepairVendorSheetInfo(conn, targetVendorName);
-  if (!vendorSheet.sheetId) {
-    return { ok: false, error: "시트가 연결되지 않아 삭제를 건너뜀" };
-  }
-
-  const deleted = await deleteVendorSheetRowsByBarcode({
-    sheetId: vendorSheet.sheetId,
-    sheetGid: vendorSheet.sheetGid,
+  return removeRepairCaseFromVendorSheets({
+    conn,
+    decisionType: normalizedDecision,
+    vendorName,
     barcode: normalizedBarcode,
   });
-  if (deleted?.error) {
-    return { ok: false, error: deleted.error };
-  }
-  return { ok: true, removed: Number(deleted?.removed || 0) };
 }
 
 function toDateKey(value) {
@@ -1380,13 +1730,20 @@ async function syncRepairDailyOverviewSheet(conn) {
       const normalizedZone = normalizeLocationCode(row.current_location_code);
       const repairAmount = toAmount(row.repair_amount);
       const updatedAtTs = new Date(row.updated_at || 0).getTime() || 0;
+      const scheduledAtRawTs = new Date(row.scheduled_at || 0).getTime();
+      const scheduledAtTs = Number.isFinite(scheduledAtRawTs)
+        ? scheduledAtRawTs
+        : Number.MAX_SAFE_INTEGER;
+      const barcode = String(row.internal_barcode || "").trim();
 
       return {
+        scheduledAtTs,
         updatedAtTs,
+        barcode,
         rowValues: [
           toDateTimeKey(row.updated_at),
           formatDateForSheet(row.scheduled_at),
-          String(row.internal_barcode || "").trim(),
+          barcode,
           String(row.member_name || "").trim(),
           sanitizeProductTitle(row.product_title || ""),
           toSheetImageFormula(row.product_image || ""),
@@ -1407,8 +1764,9 @@ async function syncRepairDailyOverviewSheet(conn) {
     })
     .filter(Boolean)
     .sort((a, b) => {
-      if (a.updatedAtTs !== b.updatedAtTs) return b.updatedAtTs - a.updatedAtTs;
-      return String(a.rowValues[2] || "").localeCompare(String(b.rowValues[2] || ""));
+      if (a.scheduledAtTs !== b.scheduledAtTs) return a.scheduledAtTs - b.scheduledAtTs;
+      if (a.updatedAtTs !== b.updatedAtTs) return a.updatedAtTs - b.updatedAtTs;
+      return String(a.barcode || "").localeCompare(String(b.barcode || ""));
     });
 
   const values = [
@@ -1547,29 +1905,45 @@ async function syncRepairCompletedHistorySheet(conn) {
       const repairAmount = toAmount(row.repair_amount);
       const barcode = String(row.internal_barcode || "").trim();
       if (!barcode) return null;
+      const scheduledAtRawTs = new Date(row.scheduled_at || 0).getTime();
+      const scheduledAtTs = Number.isFinite(scheduledAtRawTs)
+        ? scheduledAtRawTs
+        : Number.MAX_SAFE_INTEGER;
+      const updatedAtTs = new Date(row.updated_at || 0).getTime() || 0;
 
-      return [
-        toDateTimeKey(row.updated_at),
-        formatDateForSheet(row.scheduled_at),
+      return {
+        scheduledAtTs,
+        updatedAtTs,
         barcode,
-        String(row.member_name || "").trim(),
-        sanitizeProductTitle(row.product_title || ""),
-        toSheetImageFormula(row.product_image || ""),
-        stageLabel,
-        toDecisionTypeLabel(decisionType),
-        decisionType === "INTERNAL"
-          ? INTERNAL_VENDOR_NAME
-          : String(row.vendor_name || "").trim() || "-",
-        repairAmount !== null ? repairAmount : "",
-        String(row.repair_eta || "").trim(),
-        toSheetSyncLabel(row),
-        String(row.case_state || "").trim() || "-",
-        String(normalizedZone || "").trim() || "-",
-        String(row.current_status || "").trim() || "-",
-        String(row.repair_note || "").trim(),
-      ];
+        rowValues: [
+          toDateTimeKey(row.updated_at),
+          formatDateForSheet(row.scheduled_at),
+          barcode,
+          String(row.member_name || "").trim(),
+          sanitizeProductTitle(row.product_title || ""),
+          toSheetImageFormula(row.product_image || ""),
+          stageLabel,
+          toDecisionTypeLabel(decisionType),
+          decisionType === "INTERNAL"
+            ? INTERNAL_VENDOR_NAME
+            : String(row.vendor_name || "").trim() || "-",
+          repairAmount !== null ? repairAmount : "",
+          String(row.repair_eta || "").trim(),
+          toSheetSyncLabel(row),
+          String(row.case_state || "").trim() || "-",
+          String(normalizedZone || "").trim() || "-",
+          String(row.current_status || "").trim() || "-",
+          String(row.repair_note || "").trim(),
+        ],
+      };
     })
-    .filter(Boolean);
+    .filter(Boolean)
+    .sort((a, b) => {
+      if (a.scheduledAtTs !== b.scheduledAtTs) return a.scheduledAtTs - b.scheduledAtTs;
+      if (a.updatedAtTs !== b.updatedAtTs) return a.updatedAtTs - b.updatedAtTs;
+      return String(a.barcode || "").localeCompare(String(b.barcode || ""));
+    })
+    .map((entry) => entry.rowValues);
 
   const headers = [
     "최종업데이트",
@@ -2420,7 +2794,7 @@ router.get("/domestic-arrivals", isAdmin, async (req, res) => {
         ON CONVERT(ci.item_id USING utf8mb4) =
            CONVERT(COALESCE(i.source_item_id, d.item_id, l.item_id) USING utf8mb4)
       WHERE ${where.join(" AND ")}
-      ORDER BY i.updated_at DESC
+      ORDER BY scheduled_at ASC, i.updated_at ASC, i.id ASC
       LIMIT ?
       `,
       params,
@@ -2503,7 +2877,7 @@ router.get("/cases", isAdmin, async (req, res) => {
            CONVERT(COALESCE(i.source_item_id, d.item_id, l.item_id) USING utf8mb4)
       LEFT JOIN wms_repair_vendors rv
         ON rv.name = rc.vendor_name
-      ORDER BY rc.updated_at DESC
+      ORDER BY scheduled_at ASC, rc.updated_at ASC, rc.id ASC
       LIMIT 1000
       `,
     );
@@ -2894,7 +3268,7 @@ router.post("/external-sheet/push-pending", isAdmin, async (req, res) => {
 
     const where = [
       `rc.decision_type = 'EXTERNAL'`,
-      `rc.case_state IN ('DRAFT', 'REJECTED', 'READY_TO_SEND', 'PROPOSED')`,
+      `rc.case_state IN ('DRAFT', 'READY_TO_SEND', 'PROPOSED', 'ACCEPTED')`,
     ];
     const params = [];
     if (!force) {
@@ -2910,6 +3284,7 @@ router.post("/external-sheet/push-pending", isAdmin, async (req, res) => {
       SELECT
         rc.id,
         rc.item_id,
+        rc.case_state,
         rc.vendor_name,
         rc.repair_note,
         rc.repair_amount,
@@ -2951,6 +3326,7 @@ router.post("/external-sheet/push-pending", isAdmin, async (req, res) => {
         const pushed = await upsertVendorSheetRow({
           sheetId,
           sheetGid,
+          sheetName: VENDOR_ACTIVE_SHEET_NAME,
           barcode,
           bidDate: formatDateForSheet(item?.scheduled_at),
           productTitle: item?.product_title || "",
@@ -2959,10 +3335,20 @@ router.post("/external-sheet/push-pending", isAdmin, async (req, res) => {
           workPeriod: row.repair_eta || "",
           vendorName: row.vendor_name || "",
           productImage: item?.product_image || "",
-          progressFlag: "FALSE",
+          progressFlag: String(row.case_state || "").toUpperCase() === REPAIR_CASE_STATES.ACCEPTED ? "TRUE" : "FALSE",
         });
         if (pushed?.error) {
           failed.push({ caseId: row.id, reason: pushed.error });
+          continue;
+        }
+        const sorted = await sortVendorSheetRowsByBidDate({
+          sheetId,
+          sheetGid,
+          sheetName: VENDOR_ACTIVE_SHEET_NAME,
+          fallbackToFirst: true,
+        });
+        if (!sorted?.ok) {
+          failed.push({ caseId: row.id, reason: sorted.error || "시트 정렬 실패" });
           continue;
         }
         await conn.query(
@@ -3002,6 +3388,255 @@ router.post("/external-sheet/push-pending", isAdmin, async (req, res) => {
   } catch (error) {
     console.error("repair external batch push error:", error);
     res.status(500).json({ ok: false, message: "외주시트 일괄전송 실패" });
+  } finally {
+    conn.release();
+  }
+});
+
+router.post("/sheets/batch-reconcile", isAdmin, async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    await ensureRepairTables(conn);
+    await reconcileDoneCasesToRepairDoneZone(conn);
+    const loginId = String(req.session?.user?.login_id || "admin");
+
+    const [vendorRows] = await conn.query(
+      `
+      SELECT name, sheet_url, sheet_id, sheet_gid
+      FROM wms_repair_vendors
+      ORDER BY name ASC
+      `,
+    );
+
+    const vendorInfoMap = new Map();
+    for (const vendorRow of vendorRows) {
+      const name = String(vendorRow?.name || "").trim();
+      if (!name) continue;
+      const parsedSheet = parseGoogleSheetLink(vendorRow?.sheet_url);
+      vendorInfoMap.set(name, {
+        name,
+        sheetId: String(vendorRow?.sheet_id || parsedSheet.sheetId || "").trim(),
+        sheetGid: String(vendorRow?.sheet_gid || parsedSheet.sheetGid || "").trim(),
+      });
+    }
+    if (!vendorInfoMap.has(INTERNAL_VENDOR_NAME)) {
+      const internalVendor = await resolveRepairVendorSheetInfo(conn, INTERNAL_VENDOR_NAME);
+      vendorInfoMap.set(INTERNAL_VENDOR_NAME, {
+        name: INTERNAL_VENDOR_NAME,
+        sheetId: String(internalVendor?.sheetId || "").trim(),
+        sheetGid: String(internalVendor?.sheetGid || "").trim(),
+      });
+    }
+
+    const [caseRows] = await conn.query(`
+      SELECT
+        rc.id AS case_id,
+        rc.item_id,
+        rc.case_state,
+        rc.decision_type,
+        rc.vendor_name,
+        i.internal_barcode,
+        i.external_barcode,
+        COALESCE(ci.original_scheduled_date, ci.scheduled_date, i.source_scheduled_date, rc.updated_at, i.updated_at, i.created_at) AS scheduled_at
+      FROM wms_repair_cases rc
+      INNER JOIN wms_items i
+        ON i.id = rc.item_id
+      LEFT JOIN direct_bids d
+        ON i.source_bid_type = 'direct'
+       AND i.source_bid_id = d.id
+      LEFT JOIN live_bids l
+        ON i.source_bid_type = 'live'
+       AND i.source_bid_id = l.id
+      LEFT JOIN crawled_items ci
+        ON CONVERT(ci.item_id USING utf8mb4) =
+           CONVERT(COALESCE(i.source_item_id, d.item_id, l.item_id) USING utf8mb4)
+      ORDER BY scheduled_at ASC, rc.id ASC
+    `);
+
+    const mismatches = [];
+    const targets = [];
+    const desiredActiveByVendor = new Map();
+    const desiredCompletedByVendor = new Map();
+
+    for (const row of caseRows) {
+      const caseId = Number(row.case_id || 0);
+      const decisionType = String(row.decision_type || "").trim().toUpperCase();
+      const caseState = String(row.case_state || "").trim().toUpperCase();
+      if (!["INTERNAL", "EXTERNAL"].includes(decisionType)) continue;
+      if ([REPAIR_CASE_STATES.ARRIVED, REPAIR_CASE_STATES.REJECTED].includes(caseState)) continue;
+
+      const barcodeRaw = String(row.internal_barcode || row.external_barcode || "").trim();
+      const barcode = normalizeBarcode(barcodeRaw);
+      if (!barcode) {
+        mismatches.push({
+          code: "missing_barcode",
+          caseId,
+          reason: "내부바코드가 없어 시트 반영 대상에서 제외",
+        });
+        continue;
+      }
+      const vendorName =
+        decisionType === "INTERNAL"
+          ? INTERNAL_VENDOR_NAME
+          : String(row.vendor_name || "").trim();
+      if (!vendorName) {
+        mismatches.push({
+          code: "missing_vendor",
+          caseId,
+          barcode: barcodeRaw,
+          reason: "외부수선인데 업체명이 비어 있음",
+        });
+        continue;
+      }
+      const vendorConfig = vendorInfoMap.get(vendorName);
+      if (!vendorConfig?.sheetId) {
+        mismatches.push({
+          code: "missing_sheet_link",
+          caseId,
+          vendorName,
+          barcode: barcodeRaw,
+          reason: "업체 시트 링크 없음",
+        });
+        continue;
+      }
+
+      const sheetState = resolveVendorSheetState(caseState);
+      if (sheetState === "ACTIVE") {
+        let set = desiredActiveByVendor.get(vendorName);
+        if (!set) {
+          set = new Set();
+          desiredActiveByVendor.set(vendorName, set);
+        }
+        set.add(barcode);
+      } else if (sheetState === "COMPLETED") {
+        let set = desiredCompletedByVendor.get(vendorName);
+        if (!set) {
+          set = new Set();
+          desiredCompletedByVendor.set(vendorName, set);
+        }
+        set.add(barcode);
+      }
+      targets.push({ caseId, decisionType, vendorName, barcode: barcodeRaw });
+    }
+
+    let syncedCount = 0;
+    for (const target of targets) {
+      try {
+        const pushed = await pushRepairCaseToDecisionSheet({
+          conn,
+          caseId: target.caseId,
+          loginId,
+          expectedDecisionType: target.decisionType,
+        });
+        if (pushed?.ok) syncedCount += 1;
+        else {
+          mismatches.push({
+            code: "sheet_upsert_failed",
+            caseId: target.caseId,
+            vendorName: target.vendorName,
+            barcode: target.barcode,
+            reason: pushed?.error || "시트 반영 실패",
+          });
+        }
+      } catch (error) {
+        mismatches.push({
+          code: "sheet_upsert_error",
+          caseId: target.caseId,
+          vendorName: target.vendorName,
+          barcode: target.barcode,
+          reason: error?.message || "시트 반영 중 예외",
+        });
+      }
+    }
+
+    let removedCount = 0;
+    let sortedSheetCount = 0;
+    for (const [vendorName, vendorConfig] of vendorInfoMap.entries()) {
+      if (!vendorConfig?.sheetId) continue;
+
+      const activeAllowed = [...(desiredActiveByVendor.get(vendorName) || new Set())];
+      const completedAllowed = [...(desiredCompletedByVendor.get(vendorName) || new Set())];
+
+      const cleanedActive = await cleanupVendorSheetRowsByAllowedBarcodes({
+        sheetId: vendorConfig.sheetId,
+        sheetGid: vendorConfig.sheetGid,
+        sheetName: VENDOR_ACTIVE_SHEET_NAME,
+        fallbackToFirst: false,
+        allowedBarcodes: activeAllowed,
+      });
+      if (cleanedActive.ok) removedCount += Number(cleanedActive.removed || 0);
+      else {
+        mismatches.push({
+          code: "sheet_cleanup_failed",
+          vendorName,
+          reason: cleanedActive.error || "진행중 시트 정리 실패",
+        });
+      }
+
+      const cleanedCompleted = await cleanupVendorSheetRowsByAllowedBarcodes({
+        sheetId: vendorConfig.sheetId,
+        sheetGid: vendorConfig.sheetGid,
+        sheetName: VENDOR_COMPLETED_SHEET_NAME,
+        fallbackToFirst: false,
+        allowedBarcodes: completedAllowed,
+      });
+      if (cleanedCompleted.ok) removedCount += Number(cleanedCompleted.removed || 0);
+      else {
+        mismatches.push({
+          code: "sheet_cleanup_failed",
+          vendorName,
+          reason: cleanedCompleted.error || "완료 시트 정리 실패",
+        });
+      }
+
+      const sortedActive = await sortVendorSheetRowsByBidDate({
+        sheetId: vendorConfig.sheetId,
+        sheetGid: vendorConfig.sheetGid,
+        sheetName: VENDOR_ACTIVE_SHEET_NAME,
+        fallbackToFirst: false,
+      });
+      if (sortedActive.ok && sortedActive.sorted) sortedSheetCount += 1;
+      if (!sortedActive.ok) {
+        mismatches.push({
+          code: "sheet_sort_failed",
+          vendorName,
+          reason: sortedActive.error || "진행중 시트 정렬 실패",
+        });
+      }
+
+      const sortedCompleted = await sortVendorSheetRowsByBidDate({
+        sheetId: vendorConfig.sheetId,
+        sheetGid: vendorConfig.sheetGid,
+        sheetName: VENDOR_COMPLETED_SHEET_NAME,
+        fallbackToFirst: false,
+      });
+      if (sortedCompleted.ok && sortedCompleted.sorted) sortedSheetCount += 1;
+      if (!sortedCompleted.ok) {
+        mismatches.push({
+          code: "sheet_sort_failed",
+          vendorName,
+          reason: sortedCompleted.error || "완료 시트 정렬 실패",
+        });
+      }
+    }
+
+    const overviewSync = await syncRepairDailyOverviewSheetSafe(conn, "batch-reconcile");
+    return res.json({
+      ok: true,
+      message: `일괄 업데이트 완료: 적용 ${syncedCount}건 / 정리 ${removedCount}건 / 불일치 ${mismatches.length}건`,
+      result: {
+        targetCount: targets.length,
+        syncedCount,
+        removedCount,
+        mismatchCount: mismatches.length,
+        mismatches: mismatches.slice(0, 50),
+        sortedSheetCount,
+        overviewSynced: !!overviewSync.ok,
+      },
+    });
+  } catch (error) {
+    console.error("repair batch reconcile error:", error);
+    return res.status(500).json({ ok: false, message: "시트 일괄 업데이트 실패" });
   } finally {
     conn.release();
   }
@@ -3210,7 +3845,13 @@ router.post("/cases/:id/sync-external-quote", isAdmin, async (req, res) => {
       });
     }
 
-    const quote = await fetchVendorSheetQuote({ sheetId, sheetGid, barcode });
+    const quote = await fetchVendorSheetQuote({
+      sheetId,
+      sheetGid,
+      sheetName: VENDOR_ACTIVE_SHEET_NAME,
+      fallbackToFirst: true,
+      barcode,
+    });
     if (quote?.error) {
       const quoteErrorText = String(quote.error || "");
       const shouldAutoCreateRow =
@@ -3222,6 +3863,7 @@ router.post("/cases/:id/sync-external-quote", isAdmin, async (req, res) => {
         const pushed = await upsertVendorSheetRow({
           sheetId,
           sheetGid,
+          sheetName: VENDOR_ACTIVE_SHEET_NAME,
           barcode,
           bidDate: formatDateForSheet(item?.scheduled_at),
           productTitle: item?.product_title || "",
@@ -3470,61 +4112,25 @@ router.post("/cases/:id/accept", isAdmin, async (req, res) => {
     });
 
     await syncBidStatusByLocation(conn, row, zoneCode);
-    let sheetProgressWarning = null;
-    if (row.decision_type === "EXTERNAL") {
-      const barcode = String(row.internal_barcode || row.external_barcode || "").trim();
-      const parsedSheet = parseGoogleSheetLink(row.sheet_url);
-      const sheetId = row.sheet_id || parsedSheet.sheetId;
-      const sheetGid = row.sheet_gid || parsedSheet.sheetGid;
-      if (!sheetId) {
-        sheetProgressWarning = "외주시트 미연결로 수선진행여부 체크를 건너뜀";
-      } else if (!barcode) {
-        sheetProgressWarning = "바코드 없음으로 수선진행여부 체크를 건너뜀";
-      } else {
-        try {
-          const itemMeta = await fetchRepairItemWithMeta(conn, row.item_id);
-          const pushed = await upsertVendorSheetRow({
-            sheetId,
-            sheetGid,
-            barcode,
-            bidDate: formatDateForSheet(itemMeta?.scheduled_at),
-            productTitle: itemMeta?.product_title || "",
-            customerName: itemMeta?.company_name || itemMeta?.member_name || "",
-            repairNote: row.repair_note || "",
-            workPeriod: row.repair_eta || "",
-            vendorName: row.vendor_name || "",
-            productImage: itemMeta?.product_image || "",
-            progressFlag: "TRUE",
-          });
-          if (pushed?.error) {
-            sheetProgressWarning = `수선진행여부 체크 실패: ${pushed.error}`;
-          }
-        } catch (error) {
-          sheetProgressWarning = `수선진행여부 체크 실패: ${error?.message || "알 수 없는 오류"}`;
-        }
-      }
-    }
     await conn.commit();
-    let internalSheetWarning = null;
-    if (row.decision_type === "INTERNAL") {
+    let decisionSheetWarning = null;
+    if (["INTERNAL", "EXTERNAL"].includes(String(row.decision_type || "").toUpperCase())) {
       try {
         const pushed = await pushRepairCaseToDecisionSheet({
           conn,
           caseId,
           loginId,
-          expectedDecisionType: "INTERNAL",
+          expectedDecisionType: row.decision_type,
         });
         if (!pushed.ok) {
-          internalSheetWarning = `내부시트 동기화 실패: ${pushed.error}`;
+          decisionSheetWarning = `업체시트 동기화 실패: ${pushed.error}`;
         }
       } catch (error) {
-        internalSheetWarning = `내부시트 동기화 실패: ${error?.message || "알 수 없는 오류"}`;
+        decisionSheetWarning = `업체시트 동기화 실패: ${error?.message || "알 수 없는 오류"}`;
       }
     }
     const overviewSync = await syncRepairDailyOverviewSheetSafe(conn, "accept-case");
-    const mergedSheetWarning = [sheetProgressWarning, internalSheetWarning]
-      .filter(Boolean)
-      .join(" / ");
+    const mergedSheetWarning = decisionSheetWarning || null;
 
     res.json({
       ok: true,
@@ -3561,7 +4167,7 @@ router.post("/cases/:id/mark-sent", isAdmin, async (req, res) => {
 
     const [rows] = await conn.query(
       `
-      SELECT id, case_state
+      SELECT id, case_state, decision_type
       FROM wms_repair_cases
       WHERE id = ?
       LIMIT 1
@@ -3592,6 +4198,15 @@ router.post("/cases/:id/mark-sent", isAdmin, async (req, res) => {
       `,
       [REPAIR_CASE_STATES.PROPOSED, loginId, caseId],
     );
+    let decisionSheetSync = null;
+    if (["INTERNAL", "EXTERNAL"].includes(String(row.decision_type || "").toUpperCase())) {
+      decisionSheetSync = await pushRepairCaseToDecisionSheet({
+        conn,
+        caseId,
+        loginId,
+        expectedDecisionType: row.decision_type,
+      });
+    }
     const overviewSync = await syncRepairDailyOverviewSheetSafe(conn, "mark-sent");
 
     return res.json({
@@ -3600,6 +4215,7 @@ router.post("/cases/:id/mark-sent", isAdmin, async (req, res) => {
       result: {
         caseId,
         caseState: REPAIR_CASE_STATES.PROPOSED,
+        decisionSheetSync,
         overviewSynced: !!overviewSync.ok,
       },
     });
@@ -3621,6 +4237,27 @@ router.post("/cases/:id/reject", isAdmin, async (req, res) => {
     }
     const loginId = String(req.session?.user?.login_id || "admin");
 
+    const [beforeRows] = await conn.query(
+      `
+      SELECT
+        rc.id,
+        rc.decision_type,
+        rc.vendor_name,
+        i.internal_barcode,
+        i.external_barcode
+      FROM wms_repair_cases rc
+      INNER JOIN wms_items i
+        ON i.id = rc.item_id
+      WHERE rc.id = ?
+      LIMIT 1
+      `,
+      [caseId],
+    );
+    const before = beforeRows[0] || null;
+    if (!before) {
+      return res.status(404).json({ ok: false, message: "수선건을 찾을 수 없습니다." });
+    }
+
     const [result] = await conn.query(
       `
       UPDATE wms_repair_cases
@@ -3635,11 +4272,28 @@ router.post("/cases/:id/reject", isAdmin, async (req, res) => {
     if (!result.affectedRows) {
       return res.status(404).json({ ok: false, message: "수선건을 찾을 수 없습니다." });
     }
+
+    let sheetCleanup = null;
+    if (["INTERNAL", "EXTERNAL"].includes(String(before.decision_type || "").toUpperCase())) {
+      sheetCleanup = await removeRepairCaseFromVendorSheets({
+        conn,
+        decisionType: before.decision_type,
+        vendorName: before.vendor_name,
+        barcode: String(before.internal_barcode || before.external_barcode || "").trim(),
+      });
+    }
+
     const overviewSync = await syncRepairDailyOverviewSheetSafe(conn, "reject-case");
     res.json({
       ok: true,
-      message: "수선 제안을 거절 처리했습니다.",
-      result: { caseId, overviewSynced: !!overviewSync.ok },
+      message: sheetCleanup?.ok
+        ? `수선 제안을 거절 처리했습니다. (시트 행 ${sheetCleanup.removed || 0}건 삭제)`
+        : "수선 제안을 거절 처리했습니다.",
+      result: {
+        caseId,
+        sheetCleanup,
+        overviewSynced: !!overviewSync.ok,
+      },
     });
   } catch (error) {
     console.error("repair reject error:", error);
@@ -3719,11 +4373,22 @@ router.post("/cases/:id/repair-complete", isAdmin, async (req, res) => {
     await syncBidStatusByLocation(conn, row, "REPAIR_DONE_ZONE");
 
     await conn.commit();
+    let decisionSheetSync = null;
+    if (["INTERNAL", "EXTERNAL"].includes(String(row.decision_type || "").toUpperCase())) {
+      decisionSheetSync = await pushRepairCaseToDecisionSheet({
+        conn,
+        caseId,
+        loginId,
+        expectedDecisionType: row.decision_type,
+      });
+    }
     const overviewSync = await syncRepairDailyOverviewSheetSafe(conn, "repair-complete");
     res.json({
       ok: true,
-      message: "수선완료 처리되었습니다.",
-      result: { caseId, overviewSynced: !!overviewSync.ok },
+      message: decisionSheetSync?.ok
+        ? "수선완료 처리되었습니다. (업체 시트 완료탭 반영)"
+        : "수선완료 처리되었습니다.",
+      result: { caseId, decisionSheetSync, overviewSynced: !!overviewSync.ok },
     });
   } catch (error) {
     try {
@@ -3808,11 +4473,32 @@ router.post("/cases/:id/ship", isAdmin, async (req, res) => {
     await syncBidStatusByLocation(conn, row, "OUTBOUND_ZONE");
 
     await conn.commit();
+    let decisionSheetSync = null;
+    if (row.case_state && caseId) {
+      const [decisionRows] = await conn.query(
+        `
+        SELECT decision_type
+        FROM wms_repair_cases
+        WHERE id = ?
+        LIMIT 1
+        `,
+        [caseId],
+      );
+      const decisionType = String(decisionRows?.[0]?.decision_type || "").trim().toUpperCase();
+      if (["INTERNAL", "EXTERNAL"].includes(decisionType)) {
+        decisionSheetSync = await pushRepairCaseToDecisionSheet({
+          conn,
+          caseId,
+          loginId,
+          expectedDecisionType: decisionType,
+        });
+      }
+    }
     const overviewSync = await syncRepairDailyOverviewSheetSafe(conn, "ship-case");
     res.json({
       ok: true,
       message: "출고완료 처리되었습니다.",
-      result: { caseId, overviewSynced: !!overviewSync.ok },
+      result: { caseId, decisionSheetSync, overviewSynced: !!overviewSync.ok },
     });
   } catch (error) {
     try {
