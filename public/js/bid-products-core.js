@@ -18,7 +18,17 @@ window.BidProductsCore = (function () {
     ACTIVE: ["active", "first", "second", "final"],
     COMPLETED: ["completed", "domestic_arrived", "processing", "shipped"], // shipping_status는 별도 필드로 관리됨
     CANCELLED: ["cancelled"],
-    ALL: ["active", "first", "second", "final", "completed", "cancelled"],
+    ALL: [
+      "active",
+      "first",
+      "second",
+      "final",
+      "completed",
+      "cancelled",
+      "domestic_arrived",
+      "processing",
+      "shipped",
+    ],
   };
 
   // 상태 표시 텍스트
