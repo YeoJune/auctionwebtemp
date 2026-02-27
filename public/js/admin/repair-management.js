@@ -1573,6 +1573,24 @@ async function addVendor() {
   buildProposalPreview();
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForBatchReconcileCompletion({
+  timeoutMs = 10 * 60 * 1000,
+  intervalMs = 3000,
+} = {}) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    const status = await api("/api/repair-management/sheets/batch-reconcile/status");
+    const job = status?.result?.job || null;
+    if (job && !job.running) return job;
+    await sleep(intervalMs);
+  }
+  return { timeout: true };
+}
+
 async function runSheetBatchUpdate() {
   if (
     !confirm(
@@ -1588,19 +1606,41 @@ async function runSheetBatchUpdate() {
     btn.textContent = "업데이트중...";
   }
   try {
-    const result = await api("/api/repair-management/sheets/batch-reconcile", {
+    const kickoff = await api("/api/repair-management/sheets/batch-reconcile", {
       method: "POST",
     });
-    const mismatchCount = Number(result?.result?.mismatchCount || 0);
+    const started = Boolean(kickoff?.result?.started);
+    const isRunning = Boolean(kickoff?.result?.job?.running);
+    if (btn) {
+      btn.textContent = "동기화 실행중...";
+    }
+    if (started) {
+      alert(kickoff?.message || "일괄 업데이트를 시작했습니다.");
+    } else if (isRunning) {
+      alert("이미 실행 중인 일괄 업데이트가 있어 완료까지 기다립니다.");
+    }
+
+    const job = await waitForBatchReconcileCompletion();
+    if (job?.timeout) {
+      alert("일괄 업데이트가 아직 진행 중입니다. 잠시 후 다시 상태를 확인해 주세요.");
+      return;
+    }
+    if (job?.error) {
+      alert(`시트 일괄 업데이트 실패: ${job.error}`);
+      return;
+    }
+
+    const result = job?.summary?.result || {};
+    const mismatchCount = Number(result?.mismatchCount || 0);
     const lines = [
-      result.message || "일괄 업데이트 완료",
-      `대상 ${Number(result?.result?.targetCount || 0)}건`,
-      `적용 ${Number(result?.result?.syncedCount || 0)}건`,
-      `정리 ${Number(result?.result?.removedCount || 0)}건`,
+      job?.summary?.message || "일괄 업데이트 완료",
+      `대상 ${Number(result?.targetCount || 0)}건`,
+      `적용 ${Number(result?.syncedCount || 0)}건`,
+      `정리 ${Number(result?.removedCount || 0)}건`,
       `불일치 ${mismatchCount}건`,
     ];
-    if (mismatchCount > 0 && Array.isArray(result?.result?.mismatches)) {
-      const preview = result.result.mismatches
+    if (mismatchCount > 0 && Array.isArray(result?.mismatches)) {
+      const preview = result.mismatches
         .slice(0, 3)
         .map((f) => `- ${f.code || "unknown"}: ${f.reason || "-"}`)
         .join("\n");
