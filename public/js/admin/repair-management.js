@@ -47,6 +47,10 @@ const INTERNAL_VENDOR_NAME = "까사(내부)";
 
 const state = {
   vendors: [],
+  sheetSettings: {
+    mainOverview: null,
+    completedHistory: null,
+  },
   arrivals: [],
   cases: [],
   keyword: "",
@@ -831,6 +835,7 @@ function renderCompletedCases() {
 }
 
 function renderAll() {
+  renderSheetSettings();
   renderVendors();
   renderDomesticArrivals();
   renderDraftCases();
@@ -870,7 +875,7 @@ function renderVendors() {
     return String(a.name || "").localeCompare(String(b.name || ""));
   });
   if (!vendors.length) {
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center">등록된 수선업체가 없습니다.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center">등록된 수선업체가 없습니다.</td></tr>';
     return;
   }
 
@@ -919,6 +924,15 @@ function renderVendors() {
               ${isInternalVendor ? 'title="내부업체는 삭제할 수 없습니다."' : ""}
             >
               ${isInternalVendor ? "삭제불가" : "삭제"}
+            </button>
+          </td>
+          <td>
+            <button
+              class="btn btn-sm btn-secondary js-sync-vendor"
+              data-vendor-id="${vendorId}"
+              data-vendor-name="${escapeHtml(v.name || "")}"
+            >
+              동기화
             </button>
           </td>
         </tr>
@@ -977,6 +991,44 @@ function renderVendors() {
       }
     });
   });
+
+  tbody.querySelectorAll(".js-sync-vendor").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const vendorId = Number(btn.dataset.vendorId || 0);
+      const vendorName = String(btn.dataset.vendorName || "").trim() || "해당 업체";
+      if (!vendorId) return;
+      if (!confirm(`[${vendorName}] 시트만 동기화할까요?`)) return;
+
+      const prevText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "동기화중...";
+      try {
+        const result = await api(`/api/repair-management/sheets/sync-vendor/${vendorId}`, {
+          method: "POST",
+        });
+        alert(
+          `${result?.message || "업체 시트 동기화 완료"}\n대상 ${Number(result?.result?.targetCount || 0)}건\n적용 ${Number(result?.result?.syncedCount || 0)}건\n정리 ${Number(result?.result?.removedCount || 0)}건\n불일치 ${Number(result?.result?.mismatchCount || 0)}건`,
+        );
+        await loadAll();
+      } catch (error) {
+        alert(error.message || "업체 시트 동기화 중 오류가 발생했습니다.");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = prevText || "동기화";
+      }
+    });
+  });
+}
+
+function renderSheetSettings() {
+  const mainInput = el("mainOverviewSheetUrl");
+  const completedInput = el("completedHistorySheetUrl");
+  if (mainInput) {
+    mainInput.value = state.sheetSettings?.mainOverview?.sheetUrl || "";
+  }
+  if (completedInput) {
+    completedInput.value = state.sheetSettings?.completedHistory?.sheetUrl || "";
+  }
 }
 
 function fillVendorOptions(selected = "") {
@@ -1663,6 +1715,14 @@ async function loadVendors() {
   state.vendors = Array.isArray(data.vendors) ? data.vendors : [];
 }
 
+async function loadSheetSettings() {
+  const data = await api("/api/repair-management/sheet-settings");
+  state.sheetSettings = {
+    mainOverview: data?.settings?.mainOverview || null,
+    completedHistory: data?.settings?.completedHistory || null,
+  };
+}
+
 async function loadArrivals() {
   const q = encodeURIComponent(state.keyword || "");
   const data = await api(`/api/repair-management/domestic-arrivals?limit=500&q=${q}`);
@@ -1719,10 +1779,43 @@ async function autoSyncExternalQuotes() {
 }
 
 async function loadAll(options = {}) {
-  await Promise.all([loadVendors(), loadArrivals(), loadCases()]);
+  await Promise.all([loadVendors(), loadSheetSettings(), loadArrivals(), loadCases()]);
   renderAll();
   if (AUTO_QUOTE_SYNC_ENABLED && !options.skipAutoSync) {
     await autoSyncExternalQuotes();
+  }
+}
+
+async function saveSheetSetting(key, inputId) {
+  const input = el(inputId);
+  if (!input) return;
+  const sheetUrl = String(input.value || "").trim();
+  const label = key === "main" ? "집계시트(전체현황)" : "집계시트(완료내역)";
+  try {
+    await api(`/api/repair-management/sheet-settings/${key}`, {
+      method: "PUT",
+      body: JSON.stringify({ sheetUrl }),
+    });
+    await loadAll();
+    alert(`${label} 설정이 저장되었습니다.`);
+  } catch (error) {
+    alert(error.message || `${label} 저장 중 오류가 발생했습니다.`);
+  }
+}
+
+async function syncSingleTargetSheet(target) {
+  const isMain = target === "main";
+  const endpoint = isMain
+    ? "/api/repair-management/sheets/sync-main-overview"
+    : "/api/repair-management/sheets/sync-completed-history";
+  const label = isMain ? "전체현황" : "완료내역";
+  if (!confirm(`${label} 시트만 동기화할까요?`)) return;
+  try {
+    const result = await api(endpoint, { method: "POST" });
+    alert(result?.message || `${label} 시트 동기화 완료`);
+    await loadAll();
+  } catch (error) {
+    alert(error.message || `${label} 시트 동기화 중 오류가 발생했습니다.`);
   }
 }
 
@@ -1783,6 +1876,18 @@ function bindEvents() {
   el("repairNote").addEventListener("input", buildProposalPreview);
   el("btnAddVendor").addEventListener("click", addVendor);
   el("btnPushExternalBatch").addEventListener("click", runSheetBatchUpdate);
+  el("btnSaveMainOverviewSheet")?.addEventListener("click", () =>
+    saveSheetSetting("main", "mainOverviewSheetUrl"),
+  );
+  el("btnSaveCompletedHistorySheet")?.addEventListener("click", () =>
+    saveSheetSetting("completed", "completedHistorySheetUrl"),
+  );
+  el("btnSyncMainOverviewSheet")?.addEventListener("click", () =>
+    syncSingleTargetSheet("main"),
+  );
+  el("btnSyncCompletedHistorySheet")?.addEventListener("click", () =>
+    syncSingleTargetSheet("completed"),
+  );
   el("btnCopyTemplate").addEventListener("click", async () => {
     await navigator.clipboard.writeText(el("proposalText").value || "");
     alert("템플릿이 복사되었습니다.");
