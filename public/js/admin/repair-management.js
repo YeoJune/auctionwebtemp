@@ -158,6 +158,14 @@ function renderDecisionCell(decisionType, vendorName = "") {
   `;
 }
 
+function renderVendorNameCell(decisionType, vendorName = "") {
+  const type = String(decisionType || "").toUpperCase();
+  if (type === "INTERNAL" || type === "EXTERNAL") {
+    return escapeHtml(String(vendorName || "").trim() || "-");
+  }
+  return "-";
+}
+
 function getCaseByItemId(itemId) {
   return state.cases.find((c) => Number(c.item_id) === Number(itemId)) || null;
 }
@@ -729,7 +737,7 @@ function renderInProgressCases() {
   );
   if (!rows.length) {
     tbody.innerHTML =
-      '<tr><td colspan="9" class="text-center">진행중 데이터가 없습니다.</td></tr>';
+      '<tr><td colspan="10" class="text-center">진행중 데이터가 없습니다.</td></tr>';
     return;
   }
 
@@ -751,6 +759,7 @@ function renderInProgressCases() {
         <td>${escapeHtml(row.member_name || "-")}</td>
         <td>${renderItemOpenButton(row, row.product_title || "-")}</td>
         <td>${renderDecisionCell(row.decision_type, row.vendor_name)}</td>
+        <td>${renderVendorNameCell(row.decision_type, row.vendor_name)}</td>
         <td>${escapeHtml(formatAmount(row.repair_amount))}</td>
         <td>${escapeHtml(CASE_STATE_LABEL[row.case_state] || "-")}</td>
         <td>${escapeHtml(locationLabel(row.current_location_code))}</td>
