@@ -2711,12 +2711,13 @@ router.post("/sheets/sync-vendor/:id", isAdmin, async (req, res) => {
       0,
       Number(req.body?.cursorIndex ?? req.query?.cursorIndex ?? 0) || 0,
     );
-    const limitRaw = Number(req.body?.limit ?? req.query?.limit ?? 8) || 8;
+    const limitRaw = Number(req.body?.limit ?? req.query?.limit ?? 4) || 4;
     const maxTargets = Math.min(10, Math.max(1, limitRaw));
     const summary = await executeBatchReconcile(conn, loginId, {
       vendorNames: [vendor.name],
       includeOverviewSync: false,
       skipCleanup: true,
+      skipSort: true,
       cursorIndex,
       maxTargets,
     });
@@ -3685,6 +3686,7 @@ async function executeBatchReconcile(conn, loginId, options = {}) {
   const hasVendorFilter = targetVendorNames.size > 0;
   const includeOverviewSync = options.includeOverviewSync !== false;
   const skipCleanup = options.skipCleanup === true;
+  const skipSort = options.skipSort === true;
   const cursorIndex = Math.max(0, Number(options.cursorIndex || 0) || 0);
   const maxTargets = Math.max(0, Number(options.maxTargets || 0) || 0);
 
@@ -3892,34 +3894,36 @@ async function executeBatchReconcile(conn, loginId, options = {}) {
       }
     }
 
-    const sortedActive = await sortVendorSheetRowsByBidDate({
-      sheetId: vendorConfig.sheetId,
-      sheetGid: vendorConfig.sheetGid,
-      sheetName: VENDOR_ACTIVE_SHEET_NAME,
-      fallbackToFirst: false,
-    });
-    if (sortedActive.ok && sortedActive.sorted) sortedSheetCount += 1;
-    if (!sortedActive.ok) {
-      mismatches.push({
-        code: "sheet_sort_failed",
-        vendorName,
-        reason: sortedActive.error || "진행중 시트 정렬 실패",
+    if (!skipSort) {
+      const sortedActive = await sortVendorSheetRowsByBidDate({
+        sheetId: vendorConfig.sheetId,
+        sheetGid: vendorConfig.sheetGid,
+        sheetName: VENDOR_ACTIVE_SHEET_NAME,
+        fallbackToFirst: false,
       });
-    }
+      if (sortedActive.ok && sortedActive.sorted) sortedSheetCount += 1;
+      if (!sortedActive.ok) {
+        mismatches.push({
+          code: "sheet_sort_failed",
+          vendorName,
+          reason: sortedActive.error || "진행중 시트 정렬 실패",
+        });
+      }
 
-    const sortedCompleted = await sortVendorSheetRowsByBidDate({
-      sheetId: vendorConfig.sheetId,
-      sheetGid: vendorConfig.sheetGid,
-      sheetName: VENDOR_COMPLETED_SHEET_NAME,
-      fallbackToFirst: false,
-    });
-    if (sortedCompleted.ok && sortedCompleted.sorted) sortedSheetCount += 1;
-    if (!sortedCompleted.ok) {
-      mismatches.push({
-        code: "sheet_sort_failed",
-        vendorName,
-        reason: sortedCompleted.error || "완료 시트 정렬 실패",
+      const sortedCompleted = await sortVendorSheetRowsByBidDate({
+        sheetId: vendorConfig.sheetId,
+        sheetGid: vendorConfig.sheetGid,
+        sheetName: VENDOR_COMPLETED_SHEET_NAME,
+        fallbackToFirst: false,
       });
+      if (sortedCompleted.ok && sortedCompleted.sorted) sortedSheetCount += 1;
+      if (!sortedCompleted.ok) {
+        mismatches.push({
+          code: "sheet_sort_failed",
+          vendorName,
+          reason: sortedCompleted.error || "완료 시트 정렬 실패",
+        });
+      }
     }
   }
 
