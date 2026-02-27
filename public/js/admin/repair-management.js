@@ -1013,13 +1013,26 @@ function renderVendors() {
         const maxRounds = 20;
         while (rounds < maxRounds) {
           rounds += 1;
-          const result = await api(`/api/repair-management/sheets/sync-vendor/${vendorId}`, {
-            method: "POST",
-            body: JSON.stringify({
-              cursorIndex,
-              limit: 6,
-            }),
-          });
+          let result = null;
+          let attempt = 0;
+          while (!result) {
+            attempt += 1;
+            try {
+              result = await api(`/api/repair-management/sheets/sync-vendor/${vendorId}`, {
+                method: "POST",
+                body: JSON.stringify({
+                  cursorIndex,
+                  limit: 3,
+                }),
+              });
+            } catch (error) {
+              if (!isRetryableVendorSyncError(error) || attempt >= 4) {
+                throw error;
+              }
+              btn.textContent = `쿼터대기중... (${totalProcessed}/${totalTargets || "?"})`;
+              await sleep(65000);
+            }
+          }
           const payload = result?.result || {};
           totalTargets = Math.max(totalTargets, Number(payload.targetCount || 0));
           totalProcessed += Number(payload.processedTargetCount || 0);
@@ -1033,7 +1046,7 @@ function renderVendors() {
           cursorIndex = Number(nextCursorIndex || 0);
           state.vendorSyncCursor[vendorId] = cursorIndex;
           btn.textContent = `동기화중... (${totalProcessed}/${totalTargets || "?"})`;
-          await sleep(1200);
+          await sleep(8000);
         }
         alert(
           `[${vendorName}] 시트 동기화 완료\n대상 ${totalTargets}건\n처리 ${totalProcessed}건\n적용 ${totalSynced}건\n불일치 ${totalMismatch}건`,
@@ -1656,6 +1669,16 @@ async function addVendor() {
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryableVendorSyncError(error) {
+  const msg = String(error?.message || error || "").toLowerCase();
+  return (
+    msg.includes("quota exceeded") ||
+    msg.includes("read requests per minute") ||
+    msg.includes("gateway time-out") ||
+    msg.includes("504")
+  );
 }
 
 async function waitForBatchReconcileCompletion({
