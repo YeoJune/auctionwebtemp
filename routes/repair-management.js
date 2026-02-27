@@ -1844,10 +1844,8 @@ async function syncRepairDailyOverviewSheet(conn) {
         row.decision_type,
         normalizeLocationCode(row.current_location_code),
       );
-      // 수선_전체현황 시트는 진행중(5단계) 목록만 관리한다.
-      if (stageCode !== REPAIR_STAGE_CODES.IN_PROGRESS) {
-        return null;
-      }
+      // 수선_전체현황 시트는 수선관리 전체 단계(2~6)를 보여준다.
+      // 별도 완료누적 이력은 수선_완료내역 시트에서 계속 관리한다.
       const decisionType = String(row.decision_type || "")
         .trim()
         .toUpperCase();
