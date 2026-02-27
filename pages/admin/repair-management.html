@@ -68,6 +68,30 @@
               <br />
               <strong>일괄 업데이트</strong>는 수선관리(DB) 기준으로 업체 시트와 집계 시트를 강제 동기화합니다.
             </p>
+            <div class="sheet-target-config" style="margin-bottom: 12px">
+              <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 8px">
+                <strong style="min-width: 120px">집계시트(전체현황)</strong>
+                <input
+                  id="mainOverviewSheetUrl"
+                  type="text"
+                  placeholder="https://docs.google.com/spreadsheets/d/.../edit#gid=..."
+                  style="flex: 1; min-width: 320px"
+                />
+                <button id="btnSaveMainOverviewSheet" class="btn btn-secondary">저장</button>
+                <button id="btnSyncMainOverviewSheet" class="btn btn-secondary">동기화</button>
+              </div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center">
+                <strong style="min-width: 120px">집계시트(완료내역)</strong>
+                <input
+                  id="completedHistorySheetUrl"
+                  type="text"
+                  placeholder="https://docs.google.com/spreadsheets/d/.../edit#gid=..."
+                  style="flex: 1; min-width: 320px"
+                />
+                <button id="btnSaveCompletedHistorySheet" class="btn btn-secondary">저장</button>
+                <button id="btnSyncCompletedHistorySheet" class="btn btn-secondary">동기화</button>
+              </div>
+            </div>
             <div class="table-wrap">
               <table class="data-table">
                 <thead>
@@ -77,10 +101,11 @@
                     <th>sheet_id</th>
                     <th>gid</th>
                     <th>저장</th>
+                    <th>동기화</th>
                   </tr>
                 </thead>
                 <tbody id="vendorsBody">
-                  <tr><td colspan="5" class="text-center">수선업체 정보를 불러오는 중입니다...</td></tr>
+                  <tr><td colspan="6" class="text-center">수선업체 정보를 불러오는 중입니다...</td></tr>
                 </tbody>
               </table>
             </div>
