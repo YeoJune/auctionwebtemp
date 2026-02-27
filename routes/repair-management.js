@@ -581,29 +581,32 @@ async function resolveTargetSheetAndRows({
   const allSheets = Array.isArray(book?.data?.sheets) ? book.data.sheets : [];
 
   let targetSheet = null;
-  if (sheetGid) {
+  const safeSheetName = String(sheetName || "").trim();
+  // 탭명이 명시된 경우에는 gid보다 탭명을 우선한다.
+  // (진행중/수선완료 분리 동기화 시 반대 탭 삭제에서 오삭제 방지)
+  if (safeSheetName) {
+    const found = allSheets.find(
+      (s) => String(s?.properties?.title || "") === safeSheetName,
+    );
+    if (found?.properties) targetSheet = found.properties;
+  }
+  if (!targetSheet && sheetGid && !safeSheetName) {
     const found = allSheets.find(
       (s) => String(s?.properties?.sheetId || "") === String(sheetGid),
     );
     if (found?.properties) targetSheet = found.properties;
   }
-  if (!targetSheet && sheetName) {
-    const found = allSheets.find(
-      (s) => String(s?.properties?.title || "") === String(sheetName),
-    );
-    if (found?.properties) targetSheet = found.properties;
-  }
-  if (!targetSheet && createIfMissing && sheetName) {
+  if (!targetSheet && createIfMissing && safeSheetName) {
     const created = await sheets.spreadsheets.batchUpdate({
       spreadsheetId: sheetId,
       requestBody: {
-        requests: [{ addSheet: { properties: { title: String(sheetName) } } }],
+        requests: [{ addSheet: { properties: { title: safeSheetName } } }],
       },
     });
     const props = created?.data?.replies?.[0]?.addSheet?.properties || null;
     if (props?.title) targetSheet = props;
   }
-  if (!targetSheet && fallbackToFirst) {
+  if (!targetSheet && fallbackToFirst && !safeSheetName) {
     targetSheet = allSheets[0]?.properties || null;
   }
   if (!targetSheet?.title) {
