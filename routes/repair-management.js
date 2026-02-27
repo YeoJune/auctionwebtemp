@@ -13,6 +13,10 @@ const DEFAULT_REPAIR_MAIN_SHEET_NAME = "수선_전체현황";
 const DEFAULT_REPAIR_COMPLETED_SHEET_NAME = "수선_완료내역";
 const VENDOR_ACTIVE_SHEET_NAME = "진행중";
 const VENDOR_COMPLETED_SHEET_NAME = "수선완료";
+const SHEET_SETTING_KEYS = {
+  MAIN_OVERVIEW: "MAIN_OVERVIEW",
+  COMPLETED_HISTORY: "COMPLETED_HISTORY",
+};
 
 const DEFAULT_VENDORS = [
   "리리",
@@ -115,6 +119,19 @@ async function ensureRepairTables(conn) {
       KEY idx_wms_repair_cases_updated_at (updated_at),
       CONSTRAINT fk_wms_repair_cases_item
         FOREIGN KEY (item_id) REFERENCES wms_items(id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+  await conn.query(`
+    CREATE TABLE IF NOT EXISTS wms_repair_sheet_settings (
+      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+      setting_key VARCHAR(60) NOT NULL,
+      sheet_url VARCHAR(600) NULL,
+      sheet_id VARCHAR(180) NULL,
+      sheet_gid VARCHAR(40) NULL,
+      updated_by VARCHAR(100) NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_wms_repair_sheet_settings_key (setting_key)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
   `);
 
@@ -302,6 +319,68 @@ async function ensureRepairTables(conn) {
       [name],
     );
   }
+}
+
+function normalizeSheetSettingKey(value) {
+  const raw = String(value || "")
+    .trim()
+    .toUpperCase();
+  if (raw === "MAIN" || raw === SHEET_SETTING_KEYS.MAIN_OVERVIEW) {
+    return SHEET_SETTING_KEYS.MAIN_OVERVIEW;
+  }
+  if (raw === "COMPLETED" || raw === SHEET_SETTING_KEYS.COMPLETED_HISTORY) {
+    return SHEET_SETTING_KEYS.COMPLETED_HISTORY;
+  }
+  return "";
+}
+
+async function getRepairSheetSetting(conn, settingKey) {
+  const safeKey = normalizeSheetSettingKey(settingKey);
+  if (!safeKey) return null;
+  const [rows] = await conn.query(
+    `
+    SELECT setting_key, sheet_url, sheet_id, sheet_gid, updated_at
+    FROM wms_repair_sheet_settings
+    WHERE setting_key = ?
+    LIMIT 1
+    `,
+    [safeKey],
+  );
+  const row = rows[0] || null;
+  if (!row) return null;
+  return {
+    settingKey: row.setting_key,
+    sheetUrl: row.sheet_url || null,
+    sheetId: row.sheet_id || null,
+    sheetGid: row.sheet_gid || null,
+    updatedAt: row.updated_at || null,
+  };
+}
+
+async function upsertRepairSheetSetting(conn, settingKey, sheetUrl, updatedBy = "admin") {
+  const safeKey = normalizeSheetSettingKey(settingKey);
+  if (!safeKey) return { ok: false, error: "유효하지 않은 시트 설정 키입니다." };
+  const parsed = parseGoogleSheetLink(sheetUrl);
+  await conn.query(
+    `
+    INSERT INTO wms_repair_sheet_settings (setting_key, sheet_url, sheet_id, sheet_gid, updated_by)
+    VALUES (?, ?, ?, ?, ?)
+    ON DUPLICATE KEY UPDATE
+      sheet_url = VALUES(sheet_url),
+      sheet_id = VALUES(sheet_id),
+      sheet_gid = VALUES(sheet_gid),
+      updated_by = VALUES(updated_by),
+      updated_at = NOW()
+    `,
+    [safeKey, parsed.sheetUrl, parsed.sheetId, parsed.sheetGid, String(updatedBy || "admin")],
+  );
+  return {
+    ok: true,
+    settingKey: safeKey,
+    sheetUrl: parsed.sheetUrl || null,
+    sheetId: parsed.sheetId || null,
+    sheetGid: parsed.sheetGid || null,
+  };
 }
 
 function toAmount(value) {
@@ -1616,6 +1695,16 @@ function toSheetSyncLabel(row) {
 }
 
 async function resolveRepairMainSheetConfig(conn) {
+  const configuredMain = await getRepairSheetSetting(conn, SHEET_SETTING_KEYS.MAIN_OVERVIEW);
+  if (configuredMain?.sheetId) {
+    return {
+      sheetId: configuredMain.sheetId,
+      sheetGid: configuredMain.sheetGid || null,
+      sheetName: DEFAULT_REPAIR_MAIN_SHEET_NAME,
+      configuredBy: "DB",
+    };
+  }
+
   const envSheetId = String(process.env.REPAIR_MAIN_SHEET_ID || "").trim();
   const envSheetGid = String(process.env.REPAIR_MAIN_SHEET_GID || "").trim();
   const envSheetName = String(process.env.REPAIR_MAIN_SHEET_NAME || "").trim();
@@ -1624,6 +1713,7 @@ async function resolveRepairMainSheetConfig(conn) {
       sheetId: envSheetId,
       sheetGid: envSheetGid || null,
       sheetName: envSheetName || DEFAULT_REPAIR_MAIN_SHEET_NAME,
+      configuredBy: "ENV",
     };
   }
 
@@ -1635,10 +1725,24 @@ async function resolveRepairMainSheetConfig(conn) {
     // 없으면 새로 생성한다.
     sheetGid: envSheetGid || null,
     sheetName: envSheetName || DEFAULT_REPAIR_MAIN_SHEET_NAME,
+    configuredBy: "INTERNAL_VENDOR_FALLBACK",
   };
 }
 
 async function resolveRepairCompletedSheetConfig(conn) {
+  const configuredCompleted = await getRepairSheetSetting(
+    conn,
+    SHEET_SETTING_KEYS.COMPLETED_HISTORY,
+  );
+  if (configuredCompleted?.sheetId) {
+    return {
+      sheetId: configuredCompleted.sheetId,
+      sheetGid: configuredCompleted.sheetGid || null,
+      sheetName: DEFAULT_REPAIR_COMPLETED_SHEET_NAME,
+      configuredBy: "DB",
+    };
+  }
+
   const envSheetId = String(process.env.REPAIR_COMPLETED_SHEET_ID || "").trim();
   const envSheetGid = String(process.env.REPAIR_COMPLETED_SHEET_GID || "").trim();
   const envSheetName = String(process.env.REPAIR_COMPLETED_SHEET_NAME || "").trim();
@@ -1647,6 +1751,7 @@ async function resolveRepairCompletedSheetConfig(conn) {
       sheetId: envSheetId,
       sheetGid: envSheetGid || null,
       sheetName: envSheetName || DEFAULT_REPAIR_COMPLETED_SHEET_NAME,
+      configuredBy: "ENV",
     };
   }
 
@@ -1655,6 +1760,7 @@ async function resolveRepairCompletedSheetConfig(conn) {
     sheetId: mainSheet.sheetId || null,
     sheetGid: envSheetGid || null,
     sheetName: envSheetName || DEFAULT_REPAIR_COMPLETED_SHEET_NAME,
+    configuredBy: "MAIN_SHEET_FALLBACK",
   };
 }
 
@@ -2479,6 +2585,143 @@ async function fetchRepairItemWithMeta(conn, itemId) {
   );
   return rows[0] || null;
 }
+
+router.get("/sheet-settings", isAdmin, async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    await ensureRepairTables(conn);
+    const [main, completed] = await Promise.all([
+      getRepairSheetSetting(conn, SHEET_SETTING_KEYS.MAIN_OVERVIEW),
+      getRepairSheetSetting(conn, SHEET_SETTING_KEYS.COMPLETED_HISTORY),
+    ]);
+    res.json({
+      ok: true,
+      settings: {
+        mainOverview: main,
+        completedHistory: completed,
+      },
+    });
+  } catch (error) {
+    console.error("repair sheet-settings get error:", error);
+    res.status(500).json({ ok: false, message: "시트 설정 조회 실패" });
+  } finally {
+    conn.release();
+  }
+});
+
+router.put("/sheet-settings/:key", isAdmin, async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    await ensureRepairTables(conn);
+    const normalizedKey = normalizeSheetSettingKey(req.params?.key);
+    if (!normalizedKey) {
+      return res.status(400).json({ ok: false, message: "유효하지 않은 시트 설정 키입니다." });
+    }
+    const sheetUrl = String(req.body?.sheetUrl || req.body?.sheet_url || "").trim();
+    const loginId = String(req.session?.user?.login_id || "admin");
+    const saved = await upsertRepairSheetSetting(conn, normalizedKey, sheetUrl, loginId);
+    if (!saved.ok) {
+      return res.status(400).json({ ok: false, message: saved.error || "시트 설정 저장 실패" });
+    }
+    res.json({
+      ok: true,
+      message: "시트 설정이 저장되었습니다.",
+      setting: saved,
+    });
+  } catch (error) {
+    console.error("repair sheet-settings put error:", error);
+    res.status(500).json({ ok: false, message: "시트 설정 저장 실패" });
+  } finally {
+    conn.release();
+  }
+});
+
+router.post("/sheets/sync-main-overview", isAdmin, async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    await ensureRepairTables(conn);
+    const result = await syncRepairDailyOverviewSheet(conn);
+    if (!result?.ok && !result?.skipped) {
+      return res.status(500).json({ ok: false, message: result?.reason || "전체현황 동기화 실패" });
+    }
+    res.json({
+      ok: true,
+      message: result?.skipped ? `전체현황 동기화 건너뜀: ${result.reason}` : "전체현황 동기화 완료",
+      result,
+    });
+  } catch (error) {
+    console.error("repair sync-main-overview error:", error);
+    res.status(500).json({ ok: false, message: "전체현황 동기화 실패" });
+  } finally {
+    conn.release();
+  }
+});
+
+router.post("/sheets/sync-completed-history", isAdmin, async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    await ensureRepairTables(conn);
+    const result = await syncRepairCompletedHistorySheet(conn);
+    if (!result?.ok && !result?.skipped) {
+      return res.status(500).json({ ok: false, message: result?.reason || "완료내역 동기화 실패" });
+    }
+    res.json({
+      ok: true,
+      message: result?.skipped ? `완료내역 동기화 건너뜀: ${result.reason}` : "완료내역 동기화 완료",
+      result,
+    });
+  } catch (error) {
+    console.error("repair sync-completed-history error:", error);
+    res.status(500).json({ ok: false, message: "완료내역 동기화 실패" });
+  } finally {
+    conn.release();
+  }
+});
+
+router.post("/sheets/sync-vendor/:id", isAdmin, async (req, res) => {
+  const conn = await pool.getConnection();
+  try {
+    await ensureRepairTables(conn);
+    const vendorId = Number(req.params?.id);
+    if (!vendorId) {
+      return res.status(400).json({ ok: false, message: "업체 id가 필요합니다." });
+    }
+    const [rows] = await conn.query(
+      `
+      SELECT id, name, is_active
+      FROM wms_repair_vendors
+      WHERE id = ?
+      LIMIT 1
+      `,
+      [vendorId],
+    );
+    const vendor = rows[0] || null;
+    if (!vendor || Number(vendor.is_active || 0) !== 1) {
+      return res.status(404).json({ ok: false, message: "업체를 찾을 수 없습니다." });
+    }
+
+    const loginId = String(req.session?.user?.login_id || "admin");
+    const summary = await executeBatchReconcile(conn, loginId, {
+      vendorNames: [vendor.name],
+      includeOverviewSync: false,
+    });
+    res.json({
+      ok: true,
+      message: `[${vendor.name}] 시트 동기화 완료`,
+      result: {
+        vendorId,
+        vendorName: vendor.name,
+        ...summary.result,
+        summaryMessage: summary.message,
+      },
+    });
+  } catch (error) {
+    console.error("repair sync-vendor error:", error);
+    res.status(500).json({ ok: false, message: "업체 시트 동기화 실패" });
+  } finally {
+    conn.release();
+  }
+});
 
 router.get("/vendors", isAdmin, async (req, res) => {
   const conn = await pool.getConnection();
@@ -3417,7 +3660,15 @@ function getBatchReconcileJobSnapshot() {
   };
 }
 
-async function executeBatchReconcile(conn, loginId) {
+async function executeBatchReconcile(conn, loginId, options = {}) {
+  const targetVendorNames = new Set(
+    (Array.isArray(options.vendorNames) ? options.vendorNames : [])
+      .map((v) => String(v || "").trim())
+      .filter(Boolean),
+  );
+  const hasVendorFilter = targetVendorNames.size > 0;
+  const includeOverviewSync = options.includeOverviewSync !== false;
+
   await ensureRepairTables(conn);
   await reconcileDoneCasesToRepairDoneZone(conn);
 
@@ -3498,6 +3749,7 @@ async function executeBatchReconcile(conn, loginId) {
     }
     const vendorName =
       decisionType === "INTERNAL" ? INTERNAL_VENDOR_NAME : String(row.vendor_name || "").trim();
+    if (hasVendorFilter && !targetVendorNames.has(vendorName)) continue;
     if (!vendorName) {
       mismatches.push({
         code: "missing_vendor",
@@ -3571,6 +3823,7 @@ async function executeBatchReconcile(conn, loginId) {
   let removedCount = 0;
   let sortedSheetCount = 0;
   for (const [vendorName, vendorConfig] of vendorInfoMap.entries()) {
+    if (hasVendorFilter && !targetVendorNames.has(vendorName)) continue;
     if (!vendorConfig?.sheetId) continue;
 
     const activeAllowed = [...(desiredActiveByVendor.get(vendorName) || new Set())];
@@ -3639,7 +3892,9 @@ async function executeBatchReconcile(conn, loginId) {
     }
   }
 
-  const overviewSync = await syncRepairDailyOverviewSheetSafe(conn, "batch-reconcile");
+  const overviewSync = includeOverviewSync
+    ? await syncRepairDailyOverviewSheetSafe(conn, "batch-reconcile")
+    : { ok: true, skipped: true, reason: "overview sync skipped" };
   return {
     message: `일괄 업데이트 완료: 적용 ${syncedCount}건 / 정리 ${removedCount}건 / 불일치 ${mismatches.length}건`,
     result: {
