@@ -51,6 +51,7 @@ const state = {
     mainOverview: null,
     completedHistory: null,
   },
+  vendorSyncCursor: {},
   arrivals: [],
   cases: [],
   keyword: "",
@@ -1003,11 +1004,39 @@ function renderVendors() {
       btn.disabled = true;
       btn.textContent = "동기화중...";
       try {
-        const result = await api(`/api/repair-management/sheets/sync-vendor/${vendorId}`, {
-          method: "POST",
-        });
+        let cursorIndex = Number(state.vendorSyncCursor?.[vendorId] || 0);
+        let totalTargets = 0;
+        let totalProcessed = 0;
+        let totalSynced = 0;
+        let totalMismatch = 0;
+        let rounds = 0;
+        const maxRounds = 20;
+        while (rounds < maxRounds) {
+          rounds += 1;
+          const result = await api(`/api/repair-management/sheets/sync-vendor/${vendorId}`, {
+            method: "POST",
+            body: JSON.stringify({
+              cursorIndex,
+              limit: 6,
+            }),
+          });
+          const payload = result?.result || {};
+          totalTargets = Math.max(totalTargets, Number(payload.targetCount || 0));
+          totalProcessed += Number(payload.processedTargetCount || 0);
+          totalSynced += Number(payload.syncedCount || 0);
+          totalMismatch += Number(payload.mismatchCount || 0);
+          const nextCursorIndex = payload.nextCursorIndex;
+          if (nextCursorIndex === null || nextCursorIndex === undefined) {
+            state.vendorSyncCursor[vendorId] = 0;
+            break;
+          }
+          cursorIndex = Number(nextCursorIndex || 0);
+          state.vendorSyncCursor[vendorId] = cursorIndex;
+          btn.textContent = `동기화중... (${totalProcessed}/${totalTargets || "?"})`;
+          await sleep(1200);
+        }
         alert(
-          `${result?.message || "업체 시트 동기화 완료"}\n대상 ${Number(result?.result?.targetCount || 0)}건\n적용 ${Number(result?.result?.syncedCount || 0)}건\n정리 ${Number(result?.result?.removedCount || 0)}건\n불일치 ${Number(result?.result?.mismatchCount || 0)}건`,
+          `[${vendorName}] 시트 동기화 완료\n대상 ${totalTargets}건\n처리 ${totalProcessed}건\n적용 ${totalSynced}건\n불일치 ${totalMismatch}건`,
         );
         await loadAll();
       } catch (error) {
