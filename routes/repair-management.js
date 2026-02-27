@@ -1332,6 +1332,7 @@ async function syncRepairCaseToVendorSheet({
   vendorName,
   decisionType,
   sheetState,
+  skipSort = false,
 }) {
   const barcode = String(itemRow.internal_barcode || itemRow.external_barcode || "").trim();
   if (!barcode) return { ok: false, error: "내부바코드가 없어 시트 전송할 수 없습니다." };
@@ -1387,19 +1388,22 @@ async function syncRepairCaseToVendorSheet({
   });
   if (removedOpposite?.error) return { ok: false, error: removedOpposite.error };
 
-  const sorted = await sortVendorSheetRowsByBidDate({
-    sheetId: vendorSheet.sheetId,
-    sheetGid: vendorSheet.sheetGid,
-    sheetName: targetSheetName,
-    fallbackToFirst: targetSheetName === VENDOR_ACTIVE_SHEET_NAME,
-  });
-  if (!sorted?.ok) return { ok: false, error: sorted.error || "시트 예정일 정렬 실패" };
+  if (!skipSort) {
+    const sorted = await sortVendorSheetRowsByBidDate({
+      sheetId: vendorSheet.sheetId,
+      sheetGid: vendorSheet.sheetGid,
+      sheetName: targetSheetName,
+      fallbackToFirst: targetSheetName === VENDOR_ACTIVE_SHEET_NAME,
+    });
+    if (!sorted?.ok) return { ok: false, error: sorted.error || "시트 예정일 정렬 실패" };
+  }
 
   return {
     ok: true,
     created: !!pushed.created,
     sheetName: targetSheetName,
     removedFromOpposite: Number(removedOpposite?.removed || 0),
+    sortSkipped: !!skipSort,
   };
 }
 
@@ -1466,6 +1470,7 @@ async function pushRepairCaseToDecisionSheet({
   caseId,
   loginId,
   expectedDecisionType = "",
+  skipSheetSort = false,
 }) {
   const normalizedExpected = String(expectedDecisionType || "")
     .trim()
@@ -1553,6 +1558,7 @@ async function pushRepairCaseToDecisionSheet({
         : vendorSheet.vendorName || row.vendor_name || "",
     decisionType,
     sheetState,
+    skipSort: !!skipSheetSort,
   });
   if (!synced?.ok) return { ok: false, error: synced.error };
 
@@ -2701,9 +2707,18 @@ router.post("/sheets/sync-vendor/:id", isAdmin, async (req, res) => {
     }
 
     const loginId = String(req.session?.user?.login_id || "admin");
+    const cursorIndex = Math.max(
+      0,
+      Number(req.body?.cursorIndex ?? req.query?.cursorIndex ?? 0) || 0,
+    );
+    const limitRaw = Number(req.body?.limit ?? req.query?.limit ?? 8) || 8;
+    const maxTargets = Math.min(10, Math.max(1, limitRaw));
     const summary = await executeBatchReconcile(conn, loginId, {
       vendorNames: [vendor.name],
       includeOverviewSync: false,
+      skipCleanup: true,
+      cursorIndex,
+      maxTargets,
     });
     res.json({
       ok: true,
@@ -2713,6 +2728,7 @@ router.post("/sheets/sync-vendor/:id", isAdmin, async (req, res) => {
         vendorName: vendor.name,
         ...summary.result,
         summaryMessage: summary.message,
+        limit: maxTargets,
       },
     });
   } catch (error) {
@@ -3668,6 +3684,9 @@ async function executeBatchReconcile(conn, loginId, options = {}) {
   );
   const hasVendorFilter = targetVendorNames.size > 0;
   const includeOverviewSync = options.includeOverviewSync !== false;
+  const skipCleanup = options.skipCleanup === true;
+  const cursorIndex = Math.max(0, Number(options.cursorIndex || 0) || 0);
+  const maxTargets = Math.max(0, Number(options.maxTargets || 0) || 0);
 
   await ensureRepairTables(conn);
   await reconcileDoneCasesToRepairDoneZone(conn);
@@ -3790,14 +3809,24 @@ async function executeBatchReconcile(conn, loginId, options = {}) {
     targets.push({ caseId, decisionType, vendorName, barcode: barcodeRaw });
   }
 
+  const processingTargets =
+    maxTargets > 0
+      ? targets.slice(cursorIndex, cursorIndex + maxTargets)
+      : targets;
+  const nextCursorIndex =
+    maxTargets > 0 && cursorIndex + processingTargets.length < targets.length
+      ? cursorIndex + processingTargets.length
+      : null;
+
   let syncedCount = 0;
-  for (const target of targets) {
+  for (const target of processingTargets) {
     try {
       const pushed = await pushRepairCaseToDecisionSheet({
         conn,
         caseId: target.caseId,
         loginId,
         expectedDecisionType: target.decisionType,
+        skipSheetSort: true,
       });
       if (pushed?.ok) syncedCount += 1;
       else {
@@ -3826,39 +3855,41 @@ async function executeBatchReconcile(conn, loginId, options = {}) {
     if (hasVendorFilter && !targetVendorNames.has(vendorName)) continue;
     if (!vendorConfig?.sheetId) continue;
 
-    const activeAllowed = [...(desiredActiveByVendor.get(vendorName) || new Set())];
-    const completedAllowed = [...(desiredCompletedByVendor.get(vendorName) || new Set())];
+    if (!skipCleanup) {
+      const activeAllowed = [...(desiredActiveByVendor.get(vendorName) || new Set())];
+      const completedAllowed = [...(desiredCompletedByVendor.get(vendorName) || new Set())];
 
-    const cleanedActive = await cleanupVendorSheetRowsByAllowedBarcodes({
-      sheetId: vendorConfig.sheetId,
-      sheetGid: vendorConfig.sheetGid,
-      sheetName: VENDOR_ACTIVE_SHEET_NAME,
-      fallbackToFirst: false,
-      allowedBarcodes: activeAllowed,
-    });
-    if (cleanedActive.ok) removedCount += Number(cleanedActive.removed || 0);
-    else {
-      mismatches.push({
-        code: "sheet_cleanup_failed",
-        vendorName,
-        reason: cleanedActive.error || "진행중 시트 정리 실패",
+      const cleanedActive = await cleanupVendorSheetRowsByAllowedBarcodes({
+        sheetId: vendorConfig.sheetId,
+        sheetGid: vendorConfig.sheetGid,
+        sheetName: VENDOR_ACTIVE_SHEET_NAME,
+        fallbackToFirst: false,
+        allowedBarcodes: activeAllowed,
       });
-    }
+      if (cleanedActive.ok) removedCount += Number(cleanedActive.removed || 0);
+      else {
+        mismatches.push({
+          code: "sheet_cleanup_failed",
+          vendorName,
+          reason: cleanedActive.error || "진행중 시트 정리 실패",
+        });
+      }
 
-    const cleanedCompleted = await cleanupVendorSheetRowsByAllowedBarcodes({
-      sheetId: vendorConfig.sheetId,
-      sheetGid: vendorConfig.sheetGid,
-      sheetName: VENDOR_COMPLETED_SHEET_NAME,
-      fallbackToFirst: false,
-      allowedBarcodes: completedAllowed,
-    });
-    if (cleanedCompleted.ok) removedCount += Number(cleanedCompleted.removed || 0);
-    else {
-      mismatches.push({
-        code: "sheet_cleanup_failed",
-        vendorName,
-        reason: cleanedCompleted.error || "완료 시트 정리 실패",
+      const cleanedCompleted = await cleanupVendorSheetRowsByAllowedBarcodes({
+        sheetId: vendorConfig.sheetId,
+        sheetGid: vendorConfig.sheetGid,
+        sheetName: VENDOR_COMPLETED_SHEET_NAME,
+        fallbackToFirst: false,
+        allowedBarcodes: completedAllowed,
       });
+      if (cleanedCompleted.ok) removedCount += Number(cleanedCompleted.removed || 0);
+      else {
+        mismatches.push({
+          code: "sheet_cleanup_failed",
+          vendorName,
+          reason: cleanedCompleted.error || "완료 시트 정리 실패",
+        });
+      }
     }
 
     const sortedActive = await sortVendorSheetRowsByBidDate({
@@ -3899,6 +3930,10 @@ async function executeBatchReconcile(conn, loginId, options = {}) {
     message: `일괄 업데이트 완료: 적용 ${syncedCount}건 / 정리 ${removedCount}건 / 불일치 ${mismatches.length}건`,
     result: {
       targetCount: targets.length,
+      processedTargetCount: processingTargets.length,
+      cursorIndex,
+      nextCursorIndex,
+      hasMore: nextCursorIndex !== null,
       syncedCount,
       removedCount,
       mismatchCount: mismatches.length,
